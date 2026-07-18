@@ -11,22 +11,22 @@ const MAJOR_ROMAN = [
   "X", "XI", "XII", "XIII", "XIV", "XV", "XVI", "XVII", "XVIII", "XIX", "XX", "XXI",
 ];
 const MAJOR_UP = [
-  "新しい始まり・自由・無邪気な可能性", "創造力・意志・スキルの発揮", "直感・潜在意識・静かな知恵",
-  "豊かさ・母性・創造と成長", "権威・安定・秩序の構築", "伝統・信頼できる助言・学び",
-  "調和・選択・心の結びつき", "意志の勝利・前進・自己統制", "内なる強さ・忍耐・優しい統制",
-  "内省・孤独な探求・導き", "転機・巡り合わせ・サイクル", "公正・バランス・因果",
-  "視点の転換・自己犠牲・保留", "終わりと再生・変容・解放", "調和・バランス・中庸",
-  "誘惑・執着・縛られた状態", "崩壊・突然の変化・覚醒", "希望・癒し・インスピレーション",
-  "不安・幻惑・潜在意識の揺らぎ", "成功・活力・明るい未来", "再生・覚醒・決断の時", "完成・統合・達成",
+  "冒険心・可能性", "知性・はじまり", "洞察力・直感力",
+  "母性・豊かさ", "リーダーシップ・プライド", "社交性・誠実",
+  "共感・安心", "野望・克服", "信念・忍耐",
+  "内観・思慮深い", "好転・チャンス到来", "正当性・バランス",
+  "忍耐・献身的", "方向転換・運命", "平和的解決・柔軟性",
+  "本能・快楽主義", "浄化・葛藤", "可能性・才能",
+  "見えない敵・用心", "成果・解決", "意識改革・復活", "統合・最高地点への到達",
 ];
 const MAJOR_REV = [
-  "軽率・計画性の欠如・無謀", "詐欺・力の誤用・自信過剰", "秘密・判断力の鈍り・表面的な理解",
-  "過保護・依存・停滞", "支配・頑固・権力の濫用", "形式主義・教条的・反抗",
-  "不調和・誤った選択・別離", "方向性の喪失・暴走・対立", "自信の欠如・力の誤用・弱さ",
-  "孤立・頑なさ・閉じた心", "停滞・悪循環・運の低下", "不公平・偏見・責任回避",
-  "無駄な犠牲・停滞・執着", "変化への抵抗・停滞・恐れ", "過剰・不調和・自制の欠如",
-  "解放・束縛の認識・脱出", "危機の回避・変化への抵抗・延命", "失望・自信の欠如・希望の喪失",
-  "不安の解消・真実の発覚・混乱の収束", "一時的な停滞・過信・自己中心", "後悔・優柔不断・機会の逸失", "未完成・停滞・目標の見直し",
+  "空回り・怠ける", "優柔不断・無計画", "情緒不安定・偏見",
+  "不仲・欠如", "強引・空回り", "不道徳・無慈悲",
+  "違和感・気まぐれ", "空回り・独りよがり", "挫ける・依存",
+  "闇雲さ・閉じこもる", "翻弄・悪いタイミング", "不正・矛盾",
+  "不自由・間違った視点", "思いきれない・堂々巡り", "事なかれ主義・節度がない",
+  "解放・断ち切る", "混乱・ショックな気持ち", "停滞・期待はずれ",
+  "徐々に好転・次第に落ち着く", "立場を失う・トラブル", "混乱・後悔", "不完全燃焼・行き詰り",
 ];
 
 /* ---------- 小アルカナ ランク名（14） ---------- */
@@ -208,14 +208,20 @@ function buildMajorPrompt(major, results, reading1, question) {
 }
 
 async function callClaude(prompt) {
-  const response = await fetch("/api/fortune", {
-    method: "POST",
-    headers: { "Content-Type": "application/json" },
-    body: JSON.stringify({ prompt }),
-  });
-  const data = await response.json();
-  if (!data.text) throw new Error("empty response");
-  return data.text;
+  try {
+    const response = await fetch("/api/fortune", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ prompt }),
+    });
+    if (!response.ok) throw new Error(`API error: ${response.status}`);
+    const data = await response.json();
+    if (!data.text) throw new Error("empty response");
+    return data.text;
+  } catch (error) {
+    console.error("callClaude failed:", error);
+    throw error;
+  }
 }
 
 function buildCopyText(majorCard, minorResults, reading1, reading2, stats, question) {
@@ -251,68 +257,72 @@ function buildCopyText(majorCard, minorResults, reading1, reading2, stats, quest
   return lines.join("\n");
 }
 
-// スコア順序: [人運, 金運, 感情, 気力, 仕事, 変化]
+// スコア順序: [人運, 金運, 感情, 気力, 仕事, 変化, 行動, 加護]
+// 元素対応: 火=行動・気力 / 風=変化・人運 / 水=加護・感情 / 地=仕事・金運
 const STAT_CATEGORIES = [
-  { key: "people",  label: "人運" },
-  { key: "money",   label: "金運" },
-  { key: "emotion", label: "感情" },
-  { key: "energy",  label: "気力" },
-  { key: "work",    label: "仕事" },
-  { key: "change",  label: "変化" },
+  { key: "people",     label: "人運", element: "風" },
+  { key: "money",      label: "金運", element: "地" },
+  { key: "emotion",    label: "感情", element: "水" },
+  { key: "energy",     label: "気力", element: "火" },
+  { key: "work",       label: "仕事", element: "地" },
+  { key: "change",     label: "変化", element: "風" },
+  { key: "action",     label: "行動", element: "火" },
+  { key: "blessing",   label: "加護", element: "水" },
 ];
 
-//                          人運  金運  感情  気力  仕事  変化
+//                          人運  金運  感情  気力  仕事  変化  行動  加護
 const STAT_WEIGHTS = {
-  // 小アルカナ（スート）
-  wands:     [0.5,  0.1,  0.3,  1.0,  0.7,  0.8],
-  cups:      [0.9,  0.1,  1.0,  0.2,  0.2,  0.4],
-  swords:    [0.1,  0.2,  0.6,  0.5,  0.6,  0.7],
-  pentacles: [0.2,  1.0,  0.1,  0.5,  0.9,  0.2],
+  // 小アルカナ（スート × 元素）
+  wands:      [0.3,  0.1,  0.2,  1.0,  0.5,  0.6,  1.0,  0.1],  // 火
+  cups:       [0.7,  0.1,  1.0,  0.2,  0.2,  0.3,  0.1,  0.9],  // 水
+  swords:     [0.9,  0.2,  0.5,  0.5,  0.5,  0.9,  0.4,  0.2],  // 風
+  pentacles:  [0.3,  1.0,  0.1,  0.4,  0.9,  0.1,  0.3,  0.4],  // 地
+
   // 大アルカナ（22枚個別）
-  // 0愚者: 自由・衝動・変化への跳躍
-  major_0:   [0.3,  0.1,  0.4,  0.7,  0.2,  0.9],
-  // 1魔術師: 技巧・意志・仕事での実現
-  major_1:   [0.4,  0.5,  0.3,  0.6,  0.9,  0.5],
-  // 2女教皇: 直感・内省・感情の深み
-  major_2:   [0.3,  0.1,  0.9,  0.2,  0.3,  0.5],
-  // 3女帝: 豊かさ・母性・人間関係と金運
-  major_3:   [0.8,  0.6,  0.8,  0.4,  0.4,  0.3],
-  // 4皇帝: 権威・秩序・仕事と財の安定
-  major_4:   [0.5,  0.7,  0.2,  0.6,  0.9,  0.1],
-  // 5教皇: 信頼・人脈・制度的な繋がり
-  major_5:   [0.8,  0.3,  0.4,  0.3,  0.6,  0.1],
-  // 6恋人たち: 絆・感情・人運の核心
-  major_6:   [0.9,  0.2,  0.9,  0.3,  0.2,  0.4],
-  // 7戦車: 前進・意志・気力と仕事の突破
-  major_7:   [0.4,  0.4,  0.3,  0.9,  0.7,  0.6],
-  // 8力: 内なる強さ・感情の制御・気力
-  major_8:   [0.5,  0.2,  0.7,  0.9,  0.5,  0.3],
-  // 9隠者: 孤独・内省・変化を好まない
-  major_9:   [0.1,  0.2,  0.8,  0.3,  0.3,  0.2],
-  // 10運命の輪: 転機・巡り・変化の主役
-  major_10:  [0.5,  0.6,  0.4,  0.5,  0.5,  0.9],
-  // 11正義: 公平・因果・仕事と人間関係の清算
-  major_11:  [0.6,  0.5,  0.4,  0.4,  0.9,  0.2],
-  // 12吊られた男: 保留・視点転換・変化の予兆
-  major_12:  [0.2,  0.1,  0.6,  0.1,  0.2,  0.8],
-  // 13死神: 終焉と再生・変化の極致
-  major_13:  [0.2,  0.3,  0.7,  0.3,  0.2,  0.9],
-  // 14節制: 調和・中庸・感情の安定
-  major_14:  [0.5,  0.4,  0.8,  0.5,  0.4,  0.3],
-  // 15悪魔: 物質・執着・金運と束縛
-  major_15:  [0.2,  0.8,  0.2,  0.5,  0.4,  0.3],
-  // 16塔: 崩壊・急変・変化の激震
-  major_16:  [0.2,  0.3,  0.5,  0.2,  0.2,  0.9],
-  // 17星: 希望・癒し・感情の回復
-  major_17:  [0.5,  0.4,  0.9,  0.5,  0.3,  0.5],
-  // 18月: 不安・幻惑・感情と変化が揺れる
-  major_18:  [0.2,  0.1,  0.9,  0.3,  0.2,  0.8],
-  // 19太陽: 活力・成功・全体的な上昇
-  major_19:  [0.6,  0.6,  0.8,  0.9,  0.6,  0.4],
-  // 20審判: 覚醒・決断・仕事と人生の転換
-  major_20:  [0.5,  0.4,  0.7,  0.5,  0.6,  0.9],
-  // 21世界: 完成・統合・全分野の充実
-  major_21:  [0.7,  0.8,  0.7,  0.7,  0.9,  0.6],
+  // 0愚者: 正=冒険心・可能性 / 逆=空回り・怠ける → 行動・変化が核、金運は低め
+  major_0:   [0.3,  0.2,  0.3,  0.6,  0.2,  0.8,  0.8,  0.3],  // 計3.5
+  // 1魔術師: 正=知性・はじまり / 逆=優柔不断・無計画 → 仕事・行動・気力
+  major_1:   [0.4,  0.5,  0.3,  0.6,  0.8,  0.4,  0.8,  0.3],  // 計4.1
+  // 2女教皇: 正=洞察力・直感力 / 逆=情緒不安定・偏見 → 感情・加護・人運
+  major_2:   [0.5,  0.2,  0.8,  0.2,  0.2,  0.4,  0.2,  0.8],  // 計3.3
+  // 3女帝: 正=母性・豊かさ / 逆=不仲・欠如 → 人運・感情・金運・加護
+  major_3:   [0.8,  0.6,  0.7,  0.3,  0.3,  0.3,  0.3,  0.7],  // 計4.0
+  // 4皇帝: 正=リーダーシップ・プライド / 逆=強引・空回り → 仕事・行動・金運
+  major_4:   [0.5,  0.7,  0.2,  0.5,  0.8,  0.3,  0.8,  0.3],  // 計4.1
+  // 5法王: 正=社交性・誠実 / 逆=不道徳・無慈悲 → 人運・加護・仕事
+  major_5:   [0.8,  0.3,  0.4,  0.3,  0.6,  0.3,  0.2,  0.7],  // 計3.6
+  // 6恋人たち: 正=共感・安心 / 逆=違和感・気まぐれ → 人運・感情・加護
+  major_6:   [0.8,  0.2,  0.8,  0.3,  0.2,  0.3,  0.3,  0.7],  // 計3.6
+  // 7戦車: 正=野望・克服 / 逆=空回り・独りよがり → 行動・気力・変化
+  major_7:   [0.3,  0.4,  0.2,  0.8,  0.6,  0.5,  0.8,  0.3],  // 計3.9
+  // 8力: 正=信念・忍耐 / 逆=挫ける・依存 → 気力・行動・感情
+  major_8:   [0.5,  0.3,  0.6,  0.8,  0.4,  0.3,  0.7,  0.5],  // 計4.1
+  // 9隠者: 正=内観・思慮深い / 逆=闇雲さ・閉じこもる → 感情・加護（静的）
+  major_9:   [0.3,  0.3,  0.7,  0.3,  0.4,  0.3,  0.2,  0.7],  // 計3.2
+  // 10運命の輪: 正=好転・チャンス到来 / 逆=翻弄・悪いタイミング → 変化・金運・気力
+  major_10:  [0.5,  0.6,  0.4,  0.5,  0.5,  0.8,  0.4,  0.5],  // 計4.2
+  // 11正義: 正=正当性・バランス / 逆=不正・矛盾 → 仕事・人運・加護
+  major_11:  [0.6,  0.5,  0.4,  0.3,  0.8,  0.3,  0.4,  0.7],  // 計4.0
+  // 12吊された男: 正=忍耐・献身的 / 逆=不自由・間違った視点 → 加護・変化、行動低め
+  major_12:  [0.3,  0.3,  0.5,  0.2,  0.3,  0.7,  0.2,  0.7],  // 計3.2
+  // 13死神: 正=方向転換・運命 / 逆=思いきれない・堂々巡り → 変化・感情
+  major_13:  [0.2,  0.3,  0.6,  0.3,  0.3,  0.8,  0.4,  0.3],  // 計3.2
+  // 14節制: 正=平和的解決・柔軟性 / 逆=事なかれ主義・節度がない → 感情・加護・変化
+  major_14:  [0.5,  0.4,  0.7,  0.4,  0.4,  0.5,  0.3,  0.7],  // 計3.9
+  // 15悪魔: 正=本能・快楽主義 / 逆=解放・断ち切る → 逆が前向きなので変化・行動も担保
+  major_15:  [0.3,  0.7,  0.3,  0.5,  0.4,  0.5,  0.5,  0.2],  // 計3.4
+  // 16塔: 正=浄化・葛藤 / 逆=混乱・ショックな気持ち → 変化・行動、加護は低め
+  major_16:  [0.2,  0.3,  0.5,  0.3,  0.2,  0.8,  0.6,  0.2],  // 計3.1
+  // 17星: 正=可能性・才能 / 逆=停滞・期待はずれ → 感情・加護・変化
+  major_17:  [0.5,  0.4,  0.8,  0.4,  0.3,  0.5,  0.3,  0.8],  // 計4.0
+  // 18月: 正=見えない敵・用心 / 逆=徐々に好転・次第に落ち着く → 感情高め、逆は加護回復方向
+  major_18:  [0.3,  0.2,  0.8,  0.3,  0.2,  0.6,  0.2,  0.6],  // 計3.2
+  // 19太陽: 正=成果・解決 / 逆=立場を失う・トラブル → 気力・行動・仕事・感情
+  major_19:  [0.6,  0.5,  0.7,  0.8,  0.6,  0.4,  0.7,  0.5],  // 計4.8
+  // 20審判: 正=意識改革・復活 / 逆=混乱・後悔 → 変化・感情・行動
+  major_20:  [0.5,  0.4,  0.7,  0.5,  0.5,  0.8,  0.6,  0.4],  // 計4.4
+  // 21世界: 正=統合・最高地点 / 逆=不完全燃焼・行き詰り → 全分野充実
+  major_21:  [0.6,  0.7,  0.6,  0.6,  0.7,  0.5,  0.6,  0.6],  // 計4.9
 };
 
 function suitKeyOf(card) {
@@ -322,9 +332,93 @@ function suitKeyOf(card) {
   return base;
 }
 
-// { scores: number[], maxIdx: number, minIdx: number | null }
+// カテゴリ番号: 人運=0 金運=1 感情=2 気力=3 仕事=4 変化=5 行動=6 加護=7
+// 元素: 火=行動(6)・気力(3) / 風=変化(5)・人運(0) / 水=加護(7)・感情(2) / 地=仕事(4)・金運(1)
+//
+// 各カードの強制分野定義:
+//   upMax   = 正位置で必ず★6になる分野インデックスの配列
+//   upMin   = 正位置でも必ず★1になる分野（悪魔・死神・塔のみ）
+//   revMax  = 逆位置で必ず★6になる分野
+//   revMin  = 逆位置で必ず★1になる分野
+//
+// 16枚（標準）: upMax×1, upMin×0, revMax×1(=upMax), revMin×1  ← 全8分野に均等2枚ずつ
+// 悪魔・死神・塔: upMax×2, upMin×2, revMax×1, revMin×2        ← 極端
+// 女帝・太陽・世界: upMax×2, upMin×0, revMax×2(=upMax), revMin×1 ← 良い
+
+const CARD_FORCE = [
+  /* 0  愚者    行動★(風冒険→地の仕事が逆で停滞)*/ { upMax:[6],   upMin:[],   revMax:[6],   revMin:[4]   },
+  /* 1  魔術師  仕事★(地の技術→水の感情が逆で乱れ)*/ { upMax:[4],   upMin:[],   revMax:[4],   revMin:[2]   },
+  /* 2  女教皇  加護★(水の直感→風の変化が逆で偏見)*/ { upMax:[7],   upMin:[],   revMax:[7],   revMin:[5]   },
+  /* 3  女帝    人運+感情★(風+水の豊かさ→地の金運が逆で欠如)*/ { upMax:[0,2], upMin:[],   revMax:[0,2], revMin:[1]   },
+  /* 4  皇帝    金運★(地の財力→風の変化が逆で空回り)*/ { upMax:[1],   upMin:[],   revMax:[1],   revMin:[5]   },
+  /* 5  法王    人運★(風の社交→水の加護が逆で失う)*/ { upMax:[0],   upMin:[],   revMax:[0],   revMin:[7]   },
+  /* 6  恋人たち 感情★(水の共感→風の人運が逆で気まぐれ)*/ { upMax:[2],   upMin:[],   revMax:[2],   revMin:[0]   },
+  /* 7  戦車    行動★(火の克服→地の金運が逆で消耗)*/ { upMax:[6],   upMin:[],   revMax:[6],   revMin:[1]   },
+  /* 8  力      気力★(火の忍耐→水の加護が逆で依存)*/ { upMax:[3],   upMin:[],   revMax:[3],   revMin:[7]   },
+  /* 9  隠者    金運★(地の保全→火の行動が逆で閉じこもる)*/ { upMax:[1],   upMin:[],   revMax:[1],   revMin:[6]   },
+  /* 10 運命の輪 変化★(風の転機→地の仕事が逆で停滞)*/ { upMax:[5],   upMin:[],   revMax:[5],   revMin:[4]   },
+  /* 11 正義    人運★(風の公正→水の感情が逆で不正)*/ { upMax:[0],   upMin:[],   revMax:[0],   revMin:[2]   },
+  /* 12 吊された男 仕事★(地の献身→火の気力が逆で不自由)*/ { upMax:[4],   upMin:[],   revMax:[4],   revMin:[3]   },
+  /* 13 死神    変化+感情★ / 仕事+行動★1(正) / 感情★6+変化+行動★1(逆) */
+               { upMax:[5,2], upMin:[4,6], revMax:[2],   revMin:[5,6] },
+  /* 14 節制    気力★(火の安定→地の金運が逆で節度なし)*/ { upMax:[3],   upMin:[],   revMax:[3],   revMin:[1]   },
+  /* 15 悪魔    金運+気力★ / 加護+変化★1(正) / 変化★6+金運+加護★1(逆) */
+               { upMax:[1,3], upMin:[7,5], revMax:[5],   revMin:[1,7] },
+  /* 16 塔      変化+行動★ / 加護+金運★1(正) / 感情★6+変化+金運★1(逆) */
+               { upMax:[5,6], upMin:[7,1], revMax:[2],   revMin:[5,1] },
+  /* 17 星      加護★(水の希望→風の人運が逆で停滞)*/ { upMax:[7],   upMin:[],   revMax:[7],   revMin:[0]   },
+  /* 18 月      感情★(水の用心→火の行動が逆で抑制)*/ { upMax:[2],   upMin:[],   revMax:[2],   revMin:[6]   },
+  /* 19 太陽    仕事+気力★(地+火の成果→風の人運が逆で立場失う)*/ { upMax:[4,3], upMin:[],   revMax:[4,3], revMin:[0]   },
+  /* 20 審判    変化★(風の復活→火の気力が逆で後悔)*/ { upMax:[5],   upMin:[],   revMax:[5],   revMin:[3]   },
+  /* 21 世界    仕事+感情★(地+水の統合→風の変化が逆で行き詰り)*/ { upMax:[4,2], upMin:[],   revMax:[4,2], revMin:[5]   },
+];
+
+// { scores: number[], maxIndices: number[], minIndices: number[] }
+// { scores: number[], maxIndices: number[], minIndices: number[] }
+// 小アルカナが階段パターン（連続する3つの数字）か判定
+function isStairPattern(minorResults) {
+  if (minorResults.length !== 3) return false;
+  const numbers = minorResults.map((r) => {
+    const cardNum = parseInt(r.card.id.split("-")[1]);
+    return cardNum;
+  });
+  const sorted = numbers.slice().sort((a, b) => a - b);
+  // 連続する3つの数が揃っているか
+  return sorted[1] - sorted[0] === 1 && sorted[2] - sorted[1] === 1;
+}
+
+// 大アルカナ2枚から1-22のスコアを算出（各カードを1-11にマップ）
+function calcFortuneScore(card1, card2) {
+  const idx1 = parseInt(card1.id.split("-")[1]);
+  const idx2 = parseInt(card2.id.split("-")[1]);
+  // 各カードは0～21なので、1～11スケールに正規化
+  const score1 = (idx1 % 11) + 1;
+  const score2 = (idx2 % 11) + 1;
+  return score1 + score2; // 2～22
+}
+
+function detectJackpot(minorCards) {
+  if (minorCards.length !== 3) return null;
+  // minorCardsは [{card, reversed}] 形式
+  // card.idは "wands-1", "cups-10" など
+  const numbers = minorCards.map((r) => {
+    const idx = parseInt(r.card.id.split("-")[1]);
+    return idx; // 1～10
+  });
+  
+  // 全部同じ数字か確認
+  const allSame = numbers[0] === numbers[1] && numbers[1] === numbers[2];
+  if (!allSame) return null;
+
+  const num = numbers[0];
+  if (num === 1) return "all_1";      // ALL★1（Ace×3）
+  if (num === 10) return "all_6";     // ALL★6（10×3）
+  if (num >= 2 && num <= 9) return "all_5"; // ALL★5（2～9×3）
+  return null;
+}
+
 function calcStats(majorCard, minorResults) {
-  const N = 6;
+  const N = 8;
   const baseline = 3.5;
   const scores = Array(N).fill(baseline);
   const addCard = (card, reversed) => {
@@ -337,16 +431,98 @@ function calcStats(majorCard, minorResults) {
 
   const raw = scores.map((s) => Math.min(6, Math.max(1, Math.round(s * 2) / 2)));
 
-  const maxIdx = raw.indexOf(Math.max(...raw));
-  raw[maxIdx] = 6;
+  const cardIdx = parseInt(majorCard.card.id.split("-")[1]);
+  const f = CARD_FORCE[cardIdx];
 
-  let minIdx = null;
-  if (majorCard.reversed) {
-    minIdx = raw.indexOf(Math.min(...raw));
-    raw[minIdx] = 1;
+  // 極端カード（悪魔13→15、死神13、塔16）と良いカード（女帝3、太陽19、世界21）は
+  // 自然スコアからランダムに最大・最小を決める
+  const EXTREME_CARDS = new Set([13, 15, 16]);
+  const GOOD_CARDS    = new Set([3, 19, 21]);
+
+  if (EXTREME_CARDS.has(cardIdx)) {
+    // 正位置: 上位2分野★6、下位2分野★1
+    // 逆位置: 上位1分野★6、下位2分野★1
+    const sorted = [...raw.map((v, i) => ({ v, i }))].sort((a, b) => b.v - a.v);
+    const maxCount = majorCard.reversed ? 1 : 2;
+    const minCount = 2;
+    const maxIndices = sorted.slice(0, maxCount).map((x) => x.i);
+    const minIndices = sorted.slice(-minCount).map((x) => x.i);
+    maxIndices.forEach((i) => { raw[i] = 6; });
+    minIndices.forEach((i) => { raw[i] = 1; });
+    
+    // 階段パターンボーナス
+    if (isStairPattern(minorResults)) {
+      const maxSet = new Set(maxIndices);
+      const availableFields = [];
+      for (let i = 0; i < 8; i++) if (!maxSet.has(i)) availableFields.push(i);
+      if (availableFields.length > 0) {
+        const bonusField = availableFields[Math.floor(Math.random() * availableFields.length)];
+        raw[bonusField] = 6;
+        maxIndices.push(bonusField);
+      }
+    }
+    return { scores: raw, maxIndices, minIndices };
   }
 
-  return { scores: raw, maxIdx, minIdx };
+  if (GOOD_CARDS.has(cardIdx)) {
+    // 正位置: 上位2分野★6、★1なし
+    // 逆位置: 上位2分野★6、下位1分野★1
+    const sorted = [...raw.map((v, i) => ({ v, i }))].sort((a, b) => b.v - a.v);
+    const maxIndices = sorted.slice(0, 2).map((x) => x.i);
+    const minIndices = majorCard.reversed ? [sorted[sorted.length - 1].i] : [];
+    maxIndices.forEach((i) => { raw[i] = 6; });
+    minIndices.forEach((i) => { raw[i] = 1; });
+    
+    // 階段パターンボーナス
+    if (isStairPattern(minorResults)) {
+      const maxSet = new Set(maxIndices);
+      const availableFields = [];
+      for (let i = 0; i < 8; i++) if (!maxSet.has(i)) availableFields.push(i);
+      if (availableFields.length > 0) {
+        const bonusField = availableFields[Math.floor(Math.random() * availableFields.length)];
+        raw[bonusField] = 6;
+        maxIndices.push(bonusField);
+      }
+    }
+    return { scores: raw, maxIndices, minIndices };
+  }
+
+  // 標準16枚: 固定インデックスで決定論的に適用
+  if (majorCard.reversed) {
+    f.revMax.forEach((i) => { raw[i] = 6; });
+    f.revMin.forEach((i) => { raw[i] = 1; });
+    const maxIndices = f.revMax.slice();
+    
+    // 階段パターンボーナス
+    if (isStairPattern(minorResults)) {
+      const maxSet = new Set(maxIndices);
+      const availableFields = [];
+      for (let i = 0; i < 8; i++) if (!maxSet.has(i)) availableFields.push(i);
+      if (availableFields.length > 0) {
+        const bonusField = availableFields[Math.floor(Math.random() * availableFields.length)];
+        raw[bonusField] = 6;
+        maxIndices.push(bonusField);
+      }
+    }
+    return { scores: raw, maxIndices, minIndices: f.revMin };
+  } else {
+    f.upMax.forEach((i) => { raw[i] = 6; });
+    f.upMin.forEach((i) => { raw[i] = 1; });
+    const maxIndices = f.upMax.slice();
+    
+    // 階段パターンボーナス
+    if (isStairPattern(minorResults)) {
+      const maxSet = new Set(maxIndices);
+      const availableFields = [];
+      for (let i = 0; i < 8; i++) if (!maxSet.has(i)) availableFields.push(i);
+      if (availableFields.length > 0) {
+        const bonusField = availableFields[Math.floor(Math.random() * availableFields.length)];
+        raw[bonusField] = 6;
+        maxIndices.push(bonusField);
+      }
+    }
+    return { scores: raw, maxIndices, minIndices: f.upMin };
+  }
 }
 
 // variant: "max" = 大アルカナ由来の6（明るい黄色）
@@ -383,6 +559,7 @@ function StarRating({ score, variant }) {
 
 
 export default function TarotDraw() {
+  const [mode, setMode] = useState("select"); // "select" | "normal" | "ranking"
   const [phase, setPhase] = useState("idle");
   const [question, setQuestion] = useState("");
 
@@ -403,6 +580,12 @@ export default function TarotDraw() {
   const [copied, setCopied] = useState(false);
   const [userOrientationChoice, setUserOrientationChoice] = useState(null); // false=正, true=逆
 
+  // ランキングチャレンジ用state
+  const [rankingMajorCards, setRankingMajorCards] = useState([]);
+  const [rankingMinorCards, setRankingMinorCards] = useState([]);
+  const [jackpotType, setJackpotType] = useState(null); // "all_1" | "all_6" | "all_5" | null
+  const [fortuneScore, setFortuneScore] = useState(0);
+
   const atLeast = (p) => PHASE_ORDER.indexOf(phase) >= PHASE_ORDER.indexOf(p);
 
   const start = () => {
@@ -422,7 +605,38 @@ export default function TarotDraw() {
   };
 
   const reset = () => {
+    setQuestion("");
+    setMajorPool([]);
+    setMajorSelectedId(null);
+    setMajorCard(null);
+    setMinorPool([]);
+    setMinorSelectedIds([]);
+    setMinorResults([]);
+    setReading1("");
+    setReading1Loading(false);
+    setReading2("");
+    setReading2Loading(false);
+    setCopied(false);
+    setUserOrientationChoice(null);
+    setRankingMajorCards([]);
+    setRankingMinorCards([]);
+    setJackpotType(null);
+    setFortuneScore(0);
+    setMode("select");
     setPhase("idle");
+  };
+
+  const startNormal = () => {
+    setMode("normal");
+    start();
+  };
+
+  const startRanking = () => {
+    setMode("ranking");
+    // ランキング用大アルカナ3枚をシャッフルして準備
+    const shuffled = shuffle(MAJOR_LIST);
+    setRankingMajorCards(shuffled.slice(0, 3));
+    setPhase("ranking-major-select");
   };
 
   const onPickMajor = (card) => {
@@ -483,17 +697,20 @@ export default function TarotDraw() {
     }
   };
 
-  const openMajor = (chosenReversed) => {
-    // ユーザーの選択を記録するだけ。カードの向きはシャッフル時点の運命（majorCard.reversed）を使う
-    setUserOrientationChoice(chosenReversed);
-    const resolvedMajor = majorCard; // 元の向きをそのまま使う
+  const openMajor = (flip) => {
+    // flip=false: 運命の向きをそのまま受け入れる
+    // flip=true:  向きを反転して修正する
+    setUserOrientationChoice(flip); // trueなら「反転した」記録
+    const resolvedMajor = flip
+      ? { ...majorCard, reversed: !majorCard.reversed }
+      : majorCard;
+    setMajorCard(resolvedMajor);
     setPhase("major-revealed");
     fetchReading2(resolvedMajor);
   };
 
   const handleCopy = async () => {
-    const { scores: stats } = calcStats(majorCard, minorResults);
-    const text = buildCopyText(majorCard, minorResults, reading1, reading2, stats, question);
+    const { scores: stats } = calcStats(majorCard, minorResults);    const text = buildCopyText(majorCard, minorResults, reading1, reading2, stats, question);
     try {
       await navigator.clipboard.writeText(text);
       setCopied(true);
@@ -566,6 +783,13 @@ export default function TarotDraw() {
         .tarot-header p { font-size: 12.5px; color: var(--muted); margin: 0 auto; line-height: 1.75; max-width: 460px; }
 
         .controls { position: relative; z-index: 1; display: flex; justify-content: center; margin-bottom: 18px; }
+
+        .mode-select { display: flex; flex-direction: column; align-items: center; gap: 14px; }
+        .mode-label { font-family: 'Shippori Mincho', serif; font-size: 14px; color: var(--gold-soft); letter-spacing: 0.08em; }
+        .mode-buttons { display: flex; gap: 12px; flex-wrap: wrap; justify-content: center; }
+        .mode-btn { font-size: 13.5px; padding: 13px 26px; }
+        .mode-btn.normal { border-color: var(--gold); color: var(--gold-soft); }
+        .mode-btn.ranking { border-color: var(--star-max); color: var(--star-max); background: linear-gradient(180deg, rgba(255,233,77,0.18), rgba(255,233,77,0.04)); }
 
         .question-field { display: flex; flex-direction: column; align-items: center; gap: 10px; width: 100%; max-width: 360px; }
         .question-field label { font-size: 11.5px; color: var(--muted); letter-spacing: 0.04em; }
@@ -708,7 +932,21 @@ export default function TarotDraw() {
       </header>
 
       <div className="controls">
-        {phase === "idle" ? (
+        {phase === "idle" && mode === "select" ? (
+          <div className="mode-select">
+            <p className="mode-label">どのモードで占いますか？</p>
+            <div className="mode-buttons">
+              <button className="draw-btn mode-btn normal" onClick={startNormal}>
+                <Sparkles size={16} />
+                通常の占い
+              </button>
+              <button className="draw-btn mode-btn ranking" onClick={startRanking}>
+                <Star size={16} />
+                ランキングに挑戦
+              </button>
+            </div>
+          </div>
+        ) : phase === "idle" && mode === "normal" ? (
           <div className="question-field">
             <label htmlFor="tarot-question">占ってほしいことを一言で（任意）</label>
             <input
@@ -831,7 +1069,7 @@ export default function TarotDraw() {
 
           {phase === "minor-revealed" && (
             <div className="open-choice">
-              <p className="open-choice-label">テーマカードをどちらの向きで開きますか？</p>
+              <p className="open-choice-label">テーマカードを開く前に、向きを修正できます。</p>
               <div className="open-choice-btns">
                 <button
                   className="draw-btn climax-btn choice-up"
@@ -839,7 +1077,7 @@ export default function TarotDraw() {
                   disabled={reading1Loading}
                 >
                   <Sparkles size={15} />
-                  正位置で開く
+                  そのまま開く
                 </button>
                 <button
                   className="draw-btn climax-btn choice-rev"
@@ -847,7 +1085,7 @@ export default function TarotDraw() {
                   disabled={reading1Loading}
                 >
                   <RotateCcw size={15} />
-                  逆位置で開く
+                  向きを反転して開く
                 </button>
               </div>
             </div>
@@ -872,10 +1110,10 @@ export default function TarotDraw() {
           <p className="major-keywords">{majorCard.reversed ? majorCard.card.rev : majorCard.card.up}</p>
 
           {userOrientationChoice !== null && (
-            <p className={`intuition-msg ${userOrientationChoice === majorCard.reversed ? "hit" : "miss"}`}>
-              {userOrientationChoice === majorCard.reversed
-                ? "✦ あなたの直感は、カードの運命と一致しました"
-                : "◇ カードはあなたの予感と異なる向きで現れました"}
+            <p className={`intuition-msg ${userOrientationChoice ? "miss" : "hit"}`}>
+              {userOrientationChoice
+                ? "◈ あなたはカードの向きを修正して開きました"
+                : "✦ あなたはカードの運命をそのまま受け入れました"}
             </p>
           )}
 
@@ -884,14 +1122,16 @@ export default function TarotDraw() {
               <Sparkles size={12} /> 今回の運勢（ぱっと見）
             </div>
             {(() => {
-              const { scores, maxIdx, minIdx } = calcStats(majorCard, minorResults);
+              const { scores, maxIndices, minIndices } = calcStats(majorCard, minorResults);
               return STAT_CATEGORIES.map((cat, i) => {
-                const variant = i === maxIdx ? "max" : i === minIdx ? "min" : null;
+                const isMax = maxIndices.includes(i);
+                const isMin = minIndices.includes(i);
+                const variant = isMax ? "max" : isMin ? "min" : null;
                 return (
-                  <div className={`stats-row${variant === "max" ? " row-max" : variant === "min" ? " row-min" : ""}`} key={cat.key}>
+                  <div className={`stats-row${isMax ? " row-max" : isMin ? " row-min" : ""}`} key={cat.key}>
                     <span className="stats-label">{cat.label}</span>
                     <StarRating score={scores[i]} variant={variant} />
-                    <span className="stats-value" style={variant ? { color: variant === "max" ? "var(--star-max)" : "var(--star-min)" } : {}}>
+                    <span className="stats-value" style={variant ? { color: isMax ? "var(--star-max)" : "var(--star-min)" } : {}}>
                       {scores[i]}
                     </span>
                   </div>
