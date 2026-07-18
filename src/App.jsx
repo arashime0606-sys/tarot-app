@@ -559,7 +559,7 @@ function StarRating({ score, variant }) {
 
 
 export default function TarotDraw() {
-  const [mode, setMode] = useState("select"); // "select" | "normal" | "ranking"
+  const [mode, setMode] = useState("normal"); // ランキング機能を非表示にするため常にnormal
   const [phase, setPhase] = useState("idle");
   const [question, setQuestion] = useState("");
 
@@ -622,7 +622,7 @@ export default function TarotDraw() {
     setRankingMinorCards([]);
     setJackpotType(null);
     setFortuneScore(0);
-    setMode("select");
+    setMode("normal");
     setPhase("idle");
   };
 
