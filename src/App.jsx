@@ -676,21 +676,17 @@ export default function TarotDraw() {
   const handleNameChange = (value) => {
     setUserName(value);
     // バックドア: 「tenri」と入力されたら回数をリセット
-    if (value === "tenri") {
+    const trimmed = value.trim().toLowerCase();
+    if (trimmed === "tenri") {
       try {
-        localStorage.removeItem(LS_COUNT_KEY);
-        localStorage.removeItem(LS_HISTORY_KEY);
-        // 即座に状態を更新
+        localStorage.clear(); // 全部リセットする方が確実
         setTodayCount(0);
         setHistory([]);
         setUserName("");
         setShowHistory(false);
-        // 確実に反映させるためalert表示
-        setTimeout(() => {
-          alert("✓ 回数と履歴をリセットしました\nページをリロードしてください");
-        }, 100);
+        alert("✓ 完全リセットしました\nページをリロードしてください");
       } catch (e) {
-        alert("リセット失敗：" + e.message);
+        console.error("Reset error:", e);
       }
     }
   };
