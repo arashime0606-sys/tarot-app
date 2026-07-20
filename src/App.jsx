@@ -173,7 +173,7 @@ function fallbackMajorReading(major) {
   return `テーマカードは「${major.card.name}」（${o}）。${kw}が、これまでの3つの出来事を貫く大きな意味として浮かび上がります。`;
 }
 
-function buildMinorPrompt(results, question) {
+function buildMinorPrompt(results, question, userName) {
   const cardLines = results
     .map((r, i) => {
       const o = r.reversed ? "逆位置" : "正位置";
@@ -184,7 +184,8 @@ function buildMinorPrompt(results, question) {
   const questionLine = question
     ? `相談者が占ってほしいことは「${question}」です。この文脈で各カードを解釈してください。\n\n`
     : "";
-  return `あなたは経験豊かなタロット占い師です。${questionLine}相談者が引いた3枚の小アルカナを読み解いてください。
+  const nameLine = userName ? `相談者の名前は「${userName}」さんです。鑑定文の冒頭で一度だけ自然に名前で呼びかけてください。\n\n` : "";
+  return `あなたは経験豊かなタロット占い師です。${nameLine}${questionLine}相談者が引いた3枚の小アルカナを読み解いてください。
 
 ${cardLines}
 
@@ -558,10 +559,61 @@ function StarRating({ score, variant }) {
 }
 
 
+const FREE_DRAWS_PER_DAY = 3;
+const FREE_REDRAWS = 1;
+const MAX_HISTORY = 10;
+const LS_NAME_KEY = "tarot_user_name";
+const LS_COUNT_KEY = "tarot_draw_log";
+const LS_HISTORY_KEY = "tarot_history";
+
+function loadUserName() {
+  try { return localStorage.getItem(LS_NAME_KEY) || ""; } catch { return ""; }
+}
+function saveUserName(name) {
+  try { localStorage.setItem(LS_NAME_KEY, name); } catch {}
+}
+function todayStr() {
+  const d = new Date();
+  return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}`;
+}
+function loadTodayCount() {
+  try {
+    const raw = localStorage.getItem(LS_COUNT_KEY);
+    if (!raw) return 0;
+    const log = JSON.parse(raw);
+    return log.date === todayStr() ? (log.count || 0) : 0;
+  } catch { return 0; }
+}
+function incrementTodayCount() {
+  try {
+    const next = { date: todayStr(), count: loadTodayCount() + 1 };
+    localStorage.setItem(LS_COUNT_KEY, JSON.stringify(next));
+    return next.count;
+  } catch { return 0; }
+}
+function loadHistory() {
+  try {
+    const raw = localStorage.getItem(LS_HISTORY_KEY);
+    return raw ? JSON.parse(raw) : [];
+  } catch { return []; }
+}
+function saveHistory(entry) {
+  try {
+    const history = loadHistory();
+    const next = [entry, ...history].slice(0, MAX_HISTORY);
+    localStorage.setItem(LS_HISTORY_KEY, JSON.stringify(next));
+  } catch {}
+}
+
 export default function TarotDraw() {
   const [mode, setMode] = useState("normal"); // ランキング機能を非表示にするため常にnormal
   const [phase, setPhase] = useState("idle");
   const [question, setQuestion] = useState("");
+  const [userName, setUserName] = useState(loadUserName());
+  const [todayCount, setTodayCount] = useState(loadTodayCount());
+  const [redrawCount, setRedrawCount] = useState(0);
+  const [history, setHistory] = useState(loadHistory());
+  const [showHistory, setShowHistory] = useState(false);
 
   const [majorPool, setMajorPool] = useState([]);
   const [majorSelectedId, setMajorSelectedId] = useState(null);
@@ -588,7 +640,14 @@ export default function TarotDraw() {
 
   const atLeast = (p) => PHASE_ORDER.indexOf(phase) >= PHASE_ORDER.indexOf(p);
 
+  const canDraw = todayCount < FREE_DRAWS_PER_DAY;
+
   const start = () => {
+    if (!canDraw) return; // 制限チェック
+    // 名前を保存し、当日の占い回数を記録
+    if (userName.trim()) saveUserName(userName.trim());
+    setTodayCount(incrementTodayCount());
+    setRedrawCount(0);
     setMajorPool(buildPool(MAJOR_LIST));
     setMajorSelectedId(null);
     setMajorCard(null);
@@ -626,6 +685,22 @@ export default function TarotDraw() {
     setPhase("idle");
   };
 
+  const canRedraw = redrawCount < FREE_REDRAWS;
+
+  const handleRedraw = () => {
+    if (!canRedraw) return;
+    setRedrawCount(redrawCount + 1);
+    setMinorPool(buildPool(MINOR_LIST));
+    setMinorSelectedIds([]);
+    setMinorResults([]);
+    setReading1("");
+    setReading1Loading(false);
+    setReading2("");
+    setReading2Loading(false);
+    setUserOrientationChoice(null);
+    setPhase("minor-spread");
+  };
+
   const startNormal = () => {
     setMode("normal");
     start();
@@ -653,7 +728,7 @@ export default function TarotDraw() {
   const fetchReading1 = async (results) => {
     setReading1Loading(true);
     try {
-      const text = await callClaude(buildMinorPrompt(results, question));
+      const text = await callClaude(buildMinorPrompt(results, question, userName.trim()));
       setReading1(text);
     } catch (e) {
       setReading1(fallbackMinorReading(results));
@@ -690,6 +765,22 @@ export default function TarotDraw() {
     try {
       const text = await callClaude(buildMajorPrompt(resolvedMajor, minorResults, reading1, question));
       setReading2(text);
+      // 履歴に保存
+      const { scores } = calcStats(resolvedMajor, minorResults);
+      const entry = {
+        id: Date.now(),
+        date: new Date().toLocaleDateString("ja-JP"),
+        time: new Date().toLocaleTimeString("ja-JP", { hour: "2-digit", minute: "2-digit" }),
+        userName: userName.trim(),
+        question,
+        majorCard: { name: resolvedMajor.card.name, reversed: resolvedMajor.reversed, kw: resolvedMajor.reversed ? resolvedMajor.card.rev : resolvedMajor.card.up },
+        minorResults: minorResults.map(r => ({ name: r.card.name, reversed: r.reversed })),
+        scores,
+        reading1,
+        reading2: text,
+      };
+      saveHistory(entry);
+      setHistory(loadHistory());
     } catch (e) {
       setReading2(fallbackMajorReading(resolvedMajor));
     } finally {
@@ -948,6 +1039,15 @@ export default function TarotDraw() {
           </div>
         ) : phase === "idle" && mode === "normal" ? (
           <div className="question-field">
+            <label htmlFor="tarot-name">お名前（ニックネームでOK）</label>
+            <input
+              id="tarot-name"
+              type="text"
+              maxLength={20}
+              value={userName}
+              onChange={(e) => setUserName(e.target.value)}
+              placeholder="例：アキ"
+            />
             <label htmlFor="tarot-question">占ってほしいことを一言で（任意）</label>
             <input
               id="tarot-question"
@@ -955,12 +1055,66 @@ export default function TarotDraw() {
               maxLength={60}
               value={question}
               onChange={(e) => setQuestion(e.target.value)}
-              placeholder="例：転職するべきか迷っている"
+              placeholder="例：来月の恋愛運が知りたい"
             />
-            <button className="draw-btn" onClick={start}>
-              <Shuffle size={16} />
-              占いを始める
-            </button>
+            {canDraw ? (
+              <button className="draw-btn" onClick={start}>
+                <Shuffle size={16} />
+                占いを始める
+              </button>
+            ) : (
+              <div style={{ textAlign: "center" }}>
+                <p style={{ color: "var(--rose)", fontSize: "13px", margin: "0 0 8px" }}>
+                  今日の無料占いは{FREE_DRAWS_PER_DAY}回使いました
+                </p>
+                <p style={{ color: "var(--muted)", fontSize: "11px", margin: "0 0 12px" }}>
+                  明日またお越しください ✦
+                </p>
+              </div>
+            )}
+            {todayCount > 0 && canDraw && (
+              <p style={{ fontSize: "11px", color: "var(--muted)", margin: 0 }}>
+                今日はあと{FREE_DRAWS_PER_DAY - todayCount}回占えます
+              </p>
+            )}
+
+            {history.length > 0 && (
+              <button className="reset-btn" onClick={() => setShowHistory(!showHistory)} style={{ marginTop: "8px" }}>
+                <RotateCcw size={14} />
+                過去の占い履歴（{history.length}件）
+              </button>
+            )}
+
+            {showHistory && (
+              <div style={{ width: "100%", maxWidth: "400px", marginTop: "12px", display: "flex", flexDirection: "column", gap: "10px" }}>
+                {history.map((h) => (
+                  <div key={h.id} style={{ background: "rgba(36,28,77,0.7)", border: "1px solid rgba(201,162,75,0.25)", borderRadius: "10px", padding: "12px 14px" }}>
+                    <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "6px" }}>
+                      <span style={{ fontSize: "11px", color: "var(--muted)" }}>{h.date} {h.time}</span>
+                      {h.userName && <span style={{ fontSize: "11px", color: "var(--gold-soft)" }}>{h.userName}</span>}
+                    </div>
+                    {h.question && <p style={{ fontSize: "12px", color: "var(--gold-soft)", margin: "0 0 6px" }}>「{h.question}」</p>}
+                    <p style={{ fontSize: "13px", fontFamily: "'Shippori Mincho',serif", margin: "0 0 6px" }}>
+                      ✦ {h.majorCard.name}（{h.majorCard.reversed ? "逆" : "正"}位置）
+                    </p>
+                    <div style={{ display: "flex", gap: "6px", flexWrap: "wrap", marginBottom: "6px" }}>
+                      {["過去","現在","未来"].map((pos, i) => (
+                        <span key={i} style={{ fontSize: "10px", color: "var(--muted)", background: "rgba(201,162,75,0.08)", padding: "2px 7px", borderRadius: "999px" }}>
+                          {pos}:{h.minorResults[i]?.name}
+                        </span>
+                      ))}
+                    </div>
+                    <div style={{ display: "flex", gap: "8px", flexWrap: "wrap" }}>
+                      {STAT_CATEGORIES.map((cat, i) => (
+                        <span key={i} style={{ fontSize: "10px", color: h.scores[i] >= 5 ? "var(--star-max)" : h.scores[i] <= 1 ? "var(--star-min)" : "var(--muted)" }}>
+                          {cat.label}:{h.scores[i]}
+                        </span>
+                      ))}
+                    </div>
+                  </div>
+                ))}
+              </div>
+            )}
           </div>
         ) : (
           <button className="reset-btn" onClick={reset}>
@@ -1161,10 +1315,22 @@ export default function TarotDraw() {
             {copied ? "コピーしました" : "結果をコピーする（外部AIで詳しく占う用）"}
           </button>
 
-          <button className="reset-btn" onClick={reset}>
-            <RotateCcw size={14} />
-            もう一度占う
-          </button>
+          <div style={{ display: "flex", flexDirection: "column", alignItems: "center", gap: "10px", marginTop: "8px" }}>
+            {canRedraw ? (
+              <button className="reset-btn" onClick={handleRedraw} style={{ color: "var(--gold-soft)", borderColor: "rgba(201,162,75,0.5)" }}>
+                <Shuffle size={14} />
+                小アルカナを引き直す（あと{FREE_REDRAWS - redrawCount}回）
+              </button>
+            ) : (
+              <p style={{ fontSize: "11px", color: "var(--muted)", margin: 0, textAlign: "center" }}>
+                引き直しは今回使い切りました ✦ 明日また挑戦できます
+              </p>
+            )}
+            <button className="reset-btn" onClick={reset}>
+              <RotateCcw size={14} />
+              もう一度占う（今日あと{Math.max(0, FREE_DRAWS_PER_DAY - todayCount)}回）
+            </button>
+          </div>
         </div>
       )}
     </div>
