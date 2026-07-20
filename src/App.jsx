@@ -680,11 +680,18 @@ export default function TarotDraw() {
       try {
         localStorage.removeItem(LS_COUNT_KEY);
         localStorage.removeItem(LS_HISTORY_KEY);
+        // 即座に状態を更新
         setTodayCount(0);
         setHistory([]);
         setUserName("");
-        alert("✓ 回数と履歴をリセットしました");
-      } catch {}
+        setShowHistory(false);
+        // 確実に反映させるためalert表示
+        setTimeout(() => {
+          alert("✓ 回数と履歴をリセットしました\nページをリロードしてください");
+        }, 100);
+      } catch (e) {
+        alert("リセット失敗：" + e.message);
+      }
     }
   };
 
