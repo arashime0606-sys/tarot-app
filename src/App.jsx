@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { Sparkles, Flame, Droplet, Swords, Coins, RotateCcw, Shuffle, Copy, Check, Star } from "lucide-react";
 
 /* ---------- 大アルカナ（22枚） ---------- */
@@ -640,6 +640,37 @@ export default function TarotDraw() {
 
   const atLeast = (p) => PHASE_ORDER.indexOf(phase) >= PHASE_ORDER.indexOf(p);
 
+  useEffect(() => {
+    // reading2が完成し、majorCardとminorResultsが揃ったら履歴に保存
+    if (
+      reading2 &&
+      !reading2Loading &&
+      majorCard &&
+      minorResults.length === 3 &&
+      phase === "major-revealed"
+    ) {
+      const { scores } = calcStats(majorCard, minorResults);
+      const entry = {
+        id: Date.now(),
+        date: new Date().toLocaleDateString("ja-JP"),
+        time: new Date().toLocaleTimeString("ja-JP", { hour: "2-digit", minute: "2-digit" }),
+        userName: userName.trim(),
+        question,
+        majorCard: {
+          name: majorCard.card.name,
+          reversed: majorCard.reversed,
+          kw: majorCard.reversed ? majorCard.card.rev : majorCard.card.up,
+        },
+        minorResults: minorResults.map((r) => ({ name: r.card.name, reversed: r.reversed })),
+        scores,
+        reading1,
+        reading2,
+      };
+      saveHistory(entry);
+      setHistory(loadHistory());
+    }
+  }, [reading2, reading2Loading, majorCard, minorResults, phase, userName, question, reading1]);
+
   const canDraw = todayCount < FREE_DRAWS_PER_DAY;
 
   const start = () => {
@@ -683,6 +714,9 @@ export default function TarotDraw() {
     setFortuneScore(0);
     setMode("normal");
     setPhase("idle");
+    // 履歴を最新の状態に更新（新しく保存された履歴を読み込む）
+    setHistory(loadHistory());
+    setShowHistory(false);
   };
 
   const canRedraw = redrawCount < FREE_REDRAWS;
@@ -765,22 +799,6 @@ export default function TarotDraw() {
     try {
       const text = await callClaude(buildMajorPrompt(resolvedMajor, minorResults, reading1, question));
       setReading2(text);
-      // 履歴に保存
-      const { scores } = calcStats(resolvedMajor, minorResults);
-      const entry = {
-        id: Date.now(),
-        date: new Date().toLocaleDateString("ja-JP"),
-        time: new Date().toLocaleTimeString("ja-JP", { hour: "2-digit", minute: "2-digit" }),
-        userName: userName.trim(),
-        question,
-        majorCard: { name: resolvedMajor.card.name, reversed: resolvedMajor.reversed, kw: resolvedMajor.reversed ? resolvedMajor.card.rev : resolvedMajor.card.up },
-        minorResults: minorResults.map(r => ({ name: r.card.name, reversed: r.reversed })),
-        scores,
-        reading1,
-        reading2: text,
-      };
-      saveHistory(entry);
-      setHistory(loadHistory());
     } catch (e) {
       setReading2(fallbackMajorReading(resolvedMajor));
     } finally {
