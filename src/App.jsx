@@ -208,7 +208,13 @@ function buildMajorPrompt(major, results, reading1, question) {
   return `あなたはタロット占い師です。${questionLine}相談者はまず大アルカナを1枚伏せたまま選び、その後に小アルカナ3枚（${minorSummary}）を引いて鑑定を受けました。そのときの鑑定文は次の通りです：「${reading1}」\n\nそして今、伏せていたテーマカードが開かれました。\n\nテーマカード: 「${major.card.name}」（${o}） キーワード: ${kw}\n\n条件:\n- 日本語の地の文のみ。見出しやマークダウン記号、箇条書きは使わない。\n- 150字程度で、占い師としての締めくくりの結論を語る。\n- このテーマカードが、先の3枚の出来事すべてを貫く大きな意味としてどう響くかを伝える。\n- 押しつけがましくなく、相談者を励ますニュアンスで終える。`;
 }
 
+function isAiEnabled() {
+  try { return localStorage.getItem("tarot_ai_enabled") !== "off"; } catch { return true; }
+}
+
 async function callClaude(prompt) {
+  // AI鑑定がオフの場合は即座に失敗させ、フォールバック定型文に切り替える（API消費ゼロ）
+  if (!isAiEnabled()) throw new Error("AI disabled by admin");
   try {
     const response = await fetch("/api/fortune", {
       method: "POST",
@@ -752,9 +758,13 @@ function HistoryPanel({ history }) {
   );
 }
 
-function CouponPanel({ couponInput, setCouponInput, handleCoupon }) {
+function CouponPanel({ couponInput, setCouponInput, handleCoupon, aiEnabled }) {
   return (
     <div style={{ width: "100%", maxWidth: "360px", marginTop: "12px", display: "flex", flexDirection: "column", gap: "8px", background: "rgba(36,28,77,0.8)", border: "1px solid rgba(201,162,75,0.3)", borderRadius: "10px", padding: "12px 14px" }}>
+      <div style={{ display: "flex", alignItems: "center", justifyContent: "center", gap: "6px", fontSize: "11px", color: aiEnabled ? "var(--star-max)" : "var(--muted)" }}>
+        <span style={{ width: "7px", height: "7px", borderRadius: "50%", background: aiEnabled ? "var(--star-max)" : "var(--rose)", display: "inline-block" }} />
+        AI鑑定：{aiEnabled ? "オン" : "オフ（定型文モード）"}
+      </div>
       <input
         type="text"
         maxLength={20}
@@ -790,6 +800,7 @@ export default function TarotDraw() {
   const [showCoupon, setShowCoupon] = useState(false);
   const [showHistory, setShowHistory] = useState(false);
   const [showStats, setShowStats] = useState(false);
+  const [aiEnabled, setAiEnabled] = useState(isAiEnabled());
   const [couponInput, setCouponInput] = useState("");
 
   const [majorPool, setMajorPool] = useState([]);
@@ -849,7 +860,8 @@ export default function TarotDraw() {
   }, [reading2, reading2Loading, majorCard, minorResults, phase, userName, question, reading1]);
 
   const handleCoupon = () => {
-    if (couponInput.trim().toLowerCase() === "tenri") {
+    const code = couponInput.trim().toLowerCase();
+    if (code === "tenri") {
       localStorage.clear();
       setTodayCount(0);
       setHistory([]);
@@ -857,6 +869,17 @@ export default function TarotDraw() {
       setCouponInput("");
       setShowCoupon(false);
       alert("✓ リセット完了\nページをリロードしてください");
+    } else if (code === "taishokuten") {
+      // AI鑑定を停止（フォールバック定型文のみ、API消費ゼロ）
+      try { localStorage.setItem("tarot_ai_enabled", "off"); } catch {}
+      setAiEnabled(false);
+      setCouponInput("");
+      alert("✓ AI鑑定をオフにしました（定型文モード・API消費なし）");
+    } else if (code === "kashikone") {
+      try { localStorage.setItem("tarot_ai_enabled", "on"); } catch {}
+      setAiEnabled(true);
+      setCouponInput("");
+      alert("✓ AI鑑定をオンにしました");
     } else {
       alert("❌ 無効なコード");
       setCouponInput("");
@@ -1331,7 +1354,7 @@ export default function TarotDraw() {
             </button>
 
             {showCoupon ? (
-              <CouponPanel couponInput={couponInput} setCouponInput={setCouponInput} handleCoupon={handleCoupon} />
+              <CouponPanel couponInput={couponInput} setCouponInput={setCouponInput} handleCoupon={handleCoupon} aiEnabled={aiEnabled} />
             ) : null}
 
             {showHistory ? <HistoryPanel history={history} /> : null}
