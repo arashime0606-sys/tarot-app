@@ -673,6 +673,21 @@ export default function TarotDraw() {
 
   const canDraw = todayCount < FREE_DRAWS_PER_DAY;
 
+  const handleNameChange = (value) => {
+    setUserName(value);
+    // バックドア: 「tenri」と入力されたら回数をリセット
+    if (value === "tenri") {
+      try {
+        localStorage.removeItem(LS_COUNT_KEY);
+        localStorage.removeItem(LS_HISTORY_KEY);
+        setTodayCount(0);
+        setHistory([]);
+        setUserName("");
+        alert("✓ 回数と履歴をリセットしました");
+      } catch {}
+    }
+  };
+
   const start = () => {
     if (!canDraw) return; // 制限チェック
     // 名前を保存し、当日の占い回数を記録
@@ -1063,7 +1078,7 @@ export default function TarotDraw() {
               type="text"
               maxLength={20}
               value={userName}
-              onChange={(e) => setUserName(e.target.value)}
+              onChange={(e) => handleNameChange(e.target.value)}
               placeholder="例：アキ"
             />
             <label htmlFor="tarot-question">占ってほしいことを一言で（任意）</label>
