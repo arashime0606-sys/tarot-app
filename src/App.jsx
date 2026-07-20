@@ -1165,6 +1165,8 @@ export default function TarotDraw() {
                 </button>
               </div>
             )}
+
+            {showHistory && (
               <div style={{ width: "100%", maxWidth: "400px", marginTop: "12px", display: "flex", flexDirection: "column", gap: "10px" }}>
                 {history.map((h) => (
                   <div key={h.id} style={{ background: "rgba(36,28,77,0.7)", border: "1px solid rgba(201,162,75,0.25)", borderRadius: "10px", padding: "12px 14px" }}>
