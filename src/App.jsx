@@ -561,7 +561,8 @@ function StarRating({ score, variant }) {
 
 const FREE_DRAWS_PER_DAY = 3;
 const FREE_REDRAWS = 1;
-const MAX_HISTORY = 10;
+const MAX_HISTORY = 365;
+const HISTORY_DISPLAY_LIMIT = 10; // 履歴パネルに表示する最大件数
 const LS_NAME_KEY = "tarot_user_name";
 const LS_COUNT_KEY = "tarot_draw_log";
 const LS_HISTORY_KEY = "tarot_history";
@@ -573,7 +574,9 @@ function saveUserName(name) {
   try { localStorage.setItem(LS_NAME_KEY, name); } catch {}
 }
 function todayStr() {
+  // 朝5時を日付の切り替わりとする（朝の日課化を促す設計）
   const d = new Date();
+  d.setHours(d.getHours() - 5);
   return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}`;
 }
 function loadTodayCount() {
@@ -605,10 +608,116 @@ function saveHistory(entry) {
   } catch {}
 }
 
+function calcAvgScores(entries) {
+  const N = STAT_CATEGORIES.length;
+  if (entries.length === 0) return Array(N).fill(0);
+  const sums = Array(N).fill(0);
+  entries.forEach((h) => h.scores.forEach((s, i) => { sums[i] += s; }));
+  return sums.map((s) => Math.round((s / entries.length) * 10) / 10);
+}
+
+// 短期平均と中期平均の差からトレンド記号を返す
+function trendOf(shortAvg, midAvg) {
+  const diff = Math.round((shortAvg - midAvg) * 10) / 10;
+  if (diff >= 0.5) return { symbol: "↑", label: "上昇中", color: "var(--star-max)" };
+  if (diff <= -0.5) return { symbol: "↓", label: "低下中", color: "var(--rose)" };
+  return { symbol: "→", label: "安定", color: "var(--muted)" };
+}
+
+function StatsPanel({ history }) {
+  if (history.length === 0) return null;
+
+  const shortTerm = history.slice(0, 10);   // 短期: 直近10件
+  const midTerm = history.slice(0, 30);     // 中期: 直近30件
+  const longTerm = history;                 // 長期: 全件
+
+  const shortAvg = calcAvgScores(shortTerm);
+  const midAvg = calcAvgScores(midTerm);
+  const longAvg = calcAvgScores(longTerm);
+
+  // 長期: 最頻出の大アルカナ
+  const majorCounts = {};
+  longTerm.forEach((h) => {
+    const key = h.majorCard.name;
+    majorCounts[key] = (majorCounts[key] || 0) + 1;
+  });
+  const sortedMajors = Object.entries(majorCounts).sort((a, b) => b[1] - a[1]);
+  const topMajor = sortedMajors[0];
+
+  const reversedCount = longTerm.filter((h) => h.majorCard.reversed).length;
+  const uprightCount = longTerm.length - reversedCount;
+
+  const bestShortIdx = shortAvg.indexOf(Math.max(...shortAvg));
+  const worstShortIdx = shortAvg.indexOf(Math.min(...shortAvg));
+
+  const hasMidData = history.length > 10;
+
+  return (
+    <div style={{ width: "100%", maxWidth: "400px", marginTop: "12px", display: "flex", flexDirection: "column", gap: "12px" }}>
+
+      <div style={{ background: "rgba(36,28,77,0.7)", border: "1px solid rgba(201,162,75,0.25)", borderRadius: "10px", padding: "14px 16px" }}>
+        <div style={{ fontFamily: "Cinzel, serif", fontSize: "10px", letterSpacing: "0.14em", color: "var(--gold)", marginBottom: "10px" }}>
+          短期（直近{shortTerm.length}回）
+        </div>
+        <p style={{ fontSize: "13px", margin: "0 0 4px" }}>
+          好調：<span style={{ color: "var(--star-max)" }}>{STAT_CATEGORIES[bestShortIdx].label}</span>
+          <span style={{ color: "var(--muted)", fontSize: "11px" }}>（平均{shortAvg[bestShortIdx]}）</span>
+        </p>
+        <p style={{ fontSize: "13px", margin: "0" }}>
+          低調：<span style={{ color: "var(--star-min)" }}>{STAT_CATEGORIES[worstShortIdx].label}</span>
+          <span style={{ color: "var(--muted)", fontSize: "11px" }}>（平均{shortAvg[worstShortIdx]}）</span>
+        </p>
+      </div>
+
+      {hasMidData && (
+        <div style={{ background: "rgba(36,28,77,0.7)", border: "1px solid rgba(201,162,75,0.25)", borderRadius: "10px", padding: "14px 16px" }}>
+          <div style={{ fontFamily: "Cinzel, serif", fontSize: "10px", letterSpacing: "0.14em", color: "var(--gold)", marginBottom: "10px" }}>
+            中期トレンド（直近{midTerm.length}回との比較）
+          </div>
+          {STAT_CATEGORIES.map((cat, i) => {
+            const t = trendOf(shortAvg[i], midAvg[i]);
+            return (
+              <div key={cat.key} style={{ display: "flex", alignItems: "center", justifyContent: "space-between", padding: "3px 0" }}>
+                <span style={{ fontSize: "12px", fontFamily: "'Shippori Mincho',serif" }}>{cat.label}</span>
+                <span style={{ fontSize: "11px", color: t.color }}>
+                  {t.symbol} {t.label}
+                </span>
+              </div>
+            );
+          })}
+        </div>
+      )}
+
+      <div style={{ background: "rgba(36,28,77,0.7)", border: "1px solid rgba(201,162,75,0.25)", borderRadius: "10px", padding: "14px 16px" }}>
+        <div style={{ fontFamily: "Cinzel, serif", fontSize: "10px", letterSpacing: "0.14em", color: "var(--gold)", marginBottom: "10px" }}>
+          長期（全{longTerm.length}回）
+        </div>
+        <p style={{ fontSize: "13px", margin: "0 0 6px" }}>
+          最も引いたカード：<span style={{ color: "var(--gold-soft)", fontFamily: "'Shippori Mincho',serif" }}>{topMajor[0]}</span>
+          <span style={{ color: "var(--muted)", fontSize: "11px" }}>（{topMajor[1]}回）</span>
+        </p>
+        <p style={{ fontSize: "13px", margin: "0 0 10px" }}>
+          正位置 {uprightCount}回 / 逆位置 {reversedCount}回
+        </p>
+        <div style={{ fontFamily: "Cinzel, serif", fontSize: "10px", letterSpacing: "0.14em", color: "var(--gold)", margin: "10px 0 6px" }}>
+          分野別 平均スコア（全期間）
+        </div>
+        {STAT_CATEGORIES.map((cat, i) => (
+          <div key={cat.key} style={{ display: "flex", alignItems: "center", justifyContent: "space-between", padding: "3px 0" }}>
+            <span style={{ fontSize: "12px", fontFamily: "'Shippori Mincho',serif" }}>{cat.label}</span>
+            <span style={{ fontSize: "11px", color: "var(--muted)" }}>{longAvg[i]}</span>
+          </div>
+        ))}
+      </div>
+    </div>
+  );
+}
+
 function HistoryPanel({ history }) {
+  const displayed = history.slice(0, HISTORY_DISPLAY_LIMIT);
   return (
     <div style={{ width: "100%", maxWidth: "400px", marginTop: "12px", display: "flex", flexDirection: "column", gap: "10px" }}>
-      {history.map((h) => (
+      {displayed.map((h) => (
         <div key={h.id} style={{ background: "rgba(36,28,77,0.7)", border: "1px solid rgba(201,162,75,0.25)", borderRadius: "10px", padding: "12px 14px" }}>
           <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "6px" }}>
             <span style={{ fontSize: "11px", color: "var(--muted)" }}>{h.date} {h.time}</span>
@@ -634,6 +743,11 @@ function HistoryPanel({ history }) {
           </div>
         </div>
       ))}
+      {history.length > HISTORY_DISPLAY_LIMIT && (
+        <p style={{ fontSize: "11px", color: "var(--muted)", textAlign: "center", margin: 0 }}>
+          他{history.length - HISTORY_DISPLAY_LIMIT}件は統計に反映されています
+        </p>
+      )}
     </div>
   );
 }
@@ -675,6 +789,7 @@ export default function TarotDraw() {
   const [history, setHistory] = useState(loadHistory());
   const [showCoupon, setShowCoupon] = useState(false);
   const [showHistory, setShowHistory] = useState(false);
+  const [showStats, setShowStats] = useState(false);
   const [couponInput, setCouponInput] = useState("");
 
   const [majorPool, setMajorPool] = useState([]);
@@ -761,6 +876,7 @@ export default function TarotDraw() {
         setHistory([]);
         setUserName("");
         setShowHistory(false);
+        setShowStats(false);
         alert("✓ 完全リセットしました\nページをリロードしてください");
       } catch (e) {
         console.error("Reset error:", e);
@@ -812,6 +928,7 @@ export default function TarotDraw() {
     // 履歴を最新の状態に更新（新しく保存された履歴を読み込む）
     setHistory(loadHistory());
     setShowHistory(false);
+    setShowStats(false);
   };
 
   const canRedraw = redrawCount < FREE_REDRAWS;
@@ -1192,10 +1309,21 @@ export default function TarotDraw() {
             )}
 
             {history.length > 0 && (
-              <button className="reset-btn" onClick={() => setShowHistory(!showHistory)} style={{ marginTop: "8px" }}>
-                <RotateCcw size={14} />
-                過去の占い履歴（{history.length}件）
-              </button>
+              <div style={{ display: "flex", gap: "8px", marginTop: "8px" }}>
+                <button
+                  className="reset-btn"
+                  onClick={() => { setShowHistory(!showHistory); setShowStats(false); }}
+                >
+                  <RotateCcw size={14} />
+                  履歴（{history.length}件）
+                </button>
+                <button
+                  className="reset-btn"
+                  onClick={() => { setShowStats(!showStats); setShowHistory(false); }}
+                >
+                  統計
+                </button>
+              </div>
             )}
 
             <button className="reset-btn" onClick={() => setShowCoupon(!showCoupon)} style={{ marginTop: "8px", fontSize: "10px", opacity: 0.7 }}>
@@ -1207,6 +1335,7 @@ export default function TarotDraw() {
             ) : null}
 
             {showHistory ? <HistoryPanel history={history} /> : null}
+            {showStats ? <StatsPanel history={history} /> : null}
           </div>
         ) : (
           <button className="reset-btn" onClick={reset}>
