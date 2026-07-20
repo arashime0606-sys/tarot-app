@@ -613,7 +613,8 @@ export default function TarotDraw() {
   const [todayCount, setTodayCount] = useState(loadTodayCount());
   const [redrawCount, setRedrawCount] = useState(0);
   const [history, setHistory] = useState(loadHistory());
-  const [showHistory, setShowHistory] = useState(false);
+  const [showCoupon, setShowCoupon] = useState(false);
+  const [couponInput, setCouponInput] = useState("");
 
   const [majorPool, setMajorPool] = useState([]);
   const [majorSelectedId, setMajorSelectedId] = useState(null);
@@ -670,6 +671,21 @@ export default function TarotDraw() {
       setHistory(loadHistory());
     }
   }, [reading2, reading2Loading, majorCard, minorResults, phase, userName, question, reading1]);
+
+  const handleCoupon = () => {
+    if (couponInput.trim().toLowerCase() === "tenri") {
+      localStorage.clear();
+      setTodayCount(0);
+      setHistory([]);
+      setUserName("");
+      setCouponInput("");
+      setShowCoupon(false);
+      alert("✓ リセット完了\nページをリロードしてください");
+    } else {
+      alert("❌ 無効なコード");
+      setCouponInput("");
+    }
+  };
 
   const canDraw = todayCount < FREE_DRAWS_PER_DAY;
 
@@ -1121,7 +1137,34 @@ export default function TarotDraw() {
               </button>
             )}
 
-            {showHistory && (
+            <button className="reset-btn" onClick={() => setShowCoupon(!showCoupon)} style={{ marginTop: "8px", fontSize: "10px", opacity: 0.7 }}>
+              クーポンコード
+            </button>
+
+            {showCoupon && (
+              <div style={{ width: "100%", maxWidth: "360px", marginTop: "12px", display: "flex", flexDirection: "column", gap: "8px", background: "rgba(36,28,77,0.8)", border: "1px solid rgba(201,162,75,0.3)", borderRadius: "10px", padding: "12px 14px" }}>
+                <input
+                  type="text"
+                  maxLength={20}
+                  value={couponInput}
+                  onChange={(e) => setCouponInput(e.target.value)}
+                  onKeyDown={(e) => e.key === "Enter" && handleCoupon()}
+                  placeholder="コードを入力..."
+                  style={{
+                    fontFamily: "inherit",
+                    fontSize: "13px",
+                    padding: "8px 10px",
+                    borderRadius: "6px",
+                    border: "1px solid rgba(201,162,75,0.4)",
+                    background: "rgba(255,255,255,0.04)",
+                    color: "#f1ead8",
+                  }}
+                />
+                <button className="draw-btn" onClick={handleCoupon} style={{ fontSize: "12px", padding: "8px 16px" }}>
+                  確定
+                </button>
+              </div>
+            )}
               <div style={{ width: "100%", maxWidth: "400px", marginTop: "12px", display: "flex", flexDirection: "column", gap: "10px" }}>
                 {history.map((h) => (
                   <div key={h.id} style={{ background: "rgba(36,28,77,0.7)", border: "1px solid rgba(201,162,75,0.25)", borderRadius: "10px", padding: "12px 14px" }}>
