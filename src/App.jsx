@@ -605,6 +605,66 @@ function saveHistory(entry) {
   } catch {}
 }
 
+function HistoryPanel({ history }) {
+  return (
+    <div style={{ width: "100%", maxWidth: "400px", marginTop: "12px", display: "flex", flexDirection: "column", gap: "10px" }}>
+      {history.map((h) => (
+        <div key={h.id} style={{ background: "rgba(36,28,77,0.7)", border: "1px solid rgba(201,162,75,0.25)", borderRadius: "10px", padding: "12px 14px" }}>
+          <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "6px" }}>
+            <span style={{ fontSize: "11px", color: "var(--muted)" }}>{h.date} {h.time}</span>
+            {h.userName ? <span style={{ fontSize: "11px", color: "var(--gold-soft)" }}>{h.userName}</span> : null}
+          </div>
+          {h.question ? <p style={{ fontSize: "12px", color: "var(--gold-soft)", margin: "0 0 6px" }}>「{h.question}」</p> : null}
+          <p style={{ fontSize: "13px", fontFamily: "'Shippori Mincho',serif", margin: "0 0 6px" }}>
+            ✦ {h.majorCard.name}（{h.majorCard.reversed ? "逆" : "正"}位置）
+          </p>
+          <div style={{ display: "flex", gap: "6px", flexWrap: "wrap", marginBottom: "6px" }}>
+            {["過去", "現在", "未来"].map((pos, i) => (
+              <span key={i} style={{ fontSize: "10px", color: "var(--muted)", background: "rgba(201,162,75,0.08)", padding: "2px 7px", borderRadius: "999px" }}>
+                {pos}:{h.minorResults[i] ? h.minorResults[i].name : ""}
+              </span>
+            ))}
+          </div>
+          <div style={{ display: "flex", gap: "8px", flexWrap: "wrap" }}>
+            {STAT_CATEGORIES.map((cat, i) => (
+              <span key={i} style={{ fontSize: "10px", color: h.scores[i] >= 5 ? "var(--star-max)" : h.scores[i] <= 1 ? "var(--star-min)" : "var(--muted)" }}>
+                {cat.label}:{h.scores[i]}
+              </span>
+            ))}
+          </div>
+        </div>
+      ))}
+    </div>
+  );
+}
+
+function CouponPanel({ couponInput, setCouponInput, handleCoupon }) {
+  return (
+    <div style={{ width: "100%", maxWidth: "360px", marginTop: "12px", display: "flex", flexDirection: "column", gap: "8px", background: "rgba(36,28,77,0.8)", border: "1px solid rgba(201,162,75,0.3)", borderRadius: "10px", padding: "12px 14px" }}>
+      <input
+        type="text"
+        maxLength={20}
+        value={couponInput}
+        onChange={(e) => setCouponInput(e.target.value)}
+        onKeyDown={(e) => { if (e.key === "Enter") handleCoupon(); }}
+        placeholder="コードを入力..."
+        style={{
+          fontFamily: "inherit",
+          fontSize: "13px",
+          padding: "8px 10px",
+          borderRadius: "6px",
+          border: "1px solid rgba(201,162,75,0.4)",
+          background: "rgba(255,255,255,0.04)",
+          color: "#f1ead8",
+        }}
+      />
+      <button className="draw-btn" onClick={handleCoupon} style={{ fontSize: "12px", padding: "8px 16px" }}>
+        確定
+      </button>
+    </div>
+  );
+}
+
 export default function TarotDraw() {
   const [mode, setMode] = useState("normal"); // ランキング機能を非表示にするため常にnormal
   const [phase, setPhase] = useState("idle");
@@ -614,6 +674,7 @@ export default function TarotDraw() {
   const [redrawCount, setRedrawCount] = useState(0);
   const [history, setHistory] = useState(loadHistory());
   const [showCoupon, setShowCoupon] = useState(false);
+  const [showHistory, setShowHistory] = useState(false);
   const [couponInput, setCouponInput] = useState("");
 
   const [majorPool, setMajorPool] = useState([]);
@@ -1141,61 +1202,11 @@ export default function TarotDraw() {
               クーポンコード
             </button>
 
-            {showCoupon && (
-              <div style={{ width: "100%", maxWidth: "360px", marginTop: "12px", display: "flex", flexDirection: "column", gap: "8px", background: "rgba(36,28,77,0.8)", border: "1px solid rgba(201,162,75,0.3)", borderRadius: "10px", padding: "12px 14px" }}>
-                <input
-                  type="text"
-                  maxLength={20}
-                  value={couponInput}
-                  onChange={(e) => setCouponInput(e.target.value)}
-                  onKeyDown={(e) => e.key === "Enter" && handleCoupon()}
-                  placeholder="コードを入力..."
-                  style={{
-                    fontFamily: "inherit",
-                    fontSize: "13px",
-                    padding: "8px 10px",
-                    borderRadius: "6px",
-                    border: "1px solid rgba(201,162,75,0.4)",
-                    background: "rgba(255,255,255,0.04)",
-                    color: "#f1ead8",
-                  }}
-                />
-                <button className="draw-btn" onClick={handleCoupon} style={{ fontSize: "12px", padding: "8px 16px" }}>
-                  確定
-                </button>
-              </div>
-            )}
+            {showCoupon ? (
+              <CouponPanel couponInput={couponInput} setCouponInput={setCouponInput} handleCoupon={handleCoupon} />
+            ) : null}
 
-            {showHistory && (
-              <div style={{ width: "100%", maxWidth: "400px", marginTop: "12px", display: "flex", flexDirection: "column", gap: "10px" }}>
-                {history.map((h) => (
-                  <div key={h.id} style={{ background: "rgba(36,28,77,0.7)", border: "1px solid rgba(201,162,75,0.25)", borderRadius: "10px", padding: "12px 14px" }}>
-                    <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "6px" }}>
-                      <span style={{ fontSize: "11px", color: "var(--muted)" }}>{h.date} {h.time}</span>
-                      {h.userName && <span style={{ fontSize: "11px", color: "var(--gold-soft)" }}>{h.userName}</span>}
-                    </div>
-                    {h.question && <p style={{ fontSize: "12px", color: "var(--gold-soft)", margin: "0 0 6px" }}>「{h.question}」</p>}
-                    <p style={{ fontSize: "13px", fontFamily: "'Shippori Mincho',serif", margin: "0 0 6px" }}>
-                      ✦ {h.majorCard.name}（{h.majorCard.reversed ? "逆" : "正"}位置）
-                    </p>
-                    <div style={{ display: "flex", gap: "6px", flexWrap: "wrap", marginBottom: "6px" }}>
-                      {["過去","現在","未来"].map((pos, i) => (
-                        <span key={i} style={{ fontSize: "10px", color: "var(--muted)", background: "rgba(201,162,75,0.08)", padding: "2px 7px", borderRadius: "999px" }}>
-                          {pos}:{h.minorResults[i]?.name}
-                        </span>
-                      ))}
-                    </div>
-                    <div style={{ display: "flex", gap: "8px", flexWrap: "wrap" }}>
-                      {STAT_CATEGORIES.map((cat, i) => (
-                        <span key={i} style={{ fontSize: "10px", color: h.scores[i] >= 5 ? "var(--star-max)" : h.scores[i] <= 1 ? "var(--star-min)" : "var(--muted)" }}>
-                          {cat.label}:{h.scores[i]}
-                        </span>
-                      ))}
-                    </div>
-                  </div>
-                ))}
-              </div>
-            )}
+            {showHistory ? <HistoryPanel history={history} /> : null}
           </div>
         ) : (
           <button className="reset-btn" onClick={reset}>
