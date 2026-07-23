@@ -1090,7 +1090,7 @@ export default function TarotDraw() {
     if (question && question.trim()) {
       setReading3Loading(true);
       try {
-        const text3 = await callClaude(buildFinalJudgmentPrompt(resolvedMajor, minorResults, reading1, text2, question), 1200);
+        const text3 = await callClaude(buildFinalJudgmentPrompt(resolvedMajor, minorResults, reading1, text2, question), 2000);
         setReading3(text3);
       } catch (e) {
         setReading3(""); // 失敗時はこの欄自体を出さない
