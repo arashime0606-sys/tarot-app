@@ -159,13 +159,14 @@ const POSITION_LABELS = ["過去", "現在", "未来"];
 const PHASE_ORDER = ["idle", "major-spread", "major-resolving", "minor-spread", "minor-resolving", "minor-revealed", "major-revealed"];
 
 function fallbackMinorReading(results, userName) {
-  const nameLine = userName ? `${userName}さん、` : "";
-  const parts = results.map((r, i) => {
-    const o = r.reversed ? "逆位置" : "正位置";
-    const kw = r.reversed ? r.card.rev : r.card.up;
-    return `${POSITION_LABELS[i]}に現れた「${r.card.name}」（${o}）のキーワードは「${kw}」。`;
-  });
-  return `${nameLine}${parts.join("")}これらの言葉に、心当たりはありませんか？`;
+  const parts = results
+    .map((r, i) => {
+      const o = r.reversed ? "逆位置" : "正位置";
+      const kw = r.reversed ? r.card.rev : r.card.up;
+      return `${POSITION_LABELS[i]}は「${r.card.name}」（${o}）。${kw}という流れが見えます。`;
+    })
+    .join("");
+  return `${parts}では、テーマカードを開いて、さらに深く読み解いていきましょう。`;
 }
 function fallbackMajorReading(major) {
   const o = major.reversed ? "逆位置" : "正位置";
