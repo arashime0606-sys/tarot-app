@@ -32,7 +32,7 @@ export default async function handler(req, res) {
   }
 
   try {
-    const model = 'gemini-2.5-flash'; // 無料枠が大きく、日本語品質も高いモデル
+    const model = 'gemini-2.5-flash';
     const response = await fetch(
       `https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent?key=${process.env.GEMINI_API_KEY}`,
       {
@@ -46,8 +46,28 @@ export default async function handler(req, res) {
     );
 
     const data = await response.json();
+
+    if (!response.ok) {
+      // Geminiがエラーを返した場合、内容をログに出して原因を特定できるようにする
+      console.error('Gemini API error:', response.status, JSON.stringify(data));
+      return res.status(200).json({ text: '', debug: data.error ? data.error.message : 'unknown error' });
+    }
+
     const text =
       (data.candidates &&
         data.candidates[0] &&
         data.candidates[0].content &&
-        data.candidates[0].content.pa
+        data.candidates[0].content.parts &&
+        data.candidates[0].content.parts.map((p) => p.text || '').join('').trim()) ||
+      '';
+
+    if (!text) {
+      console.error('Gemini returned no text:', JSON.stringify(data));
+    }
+
+    res.status(200).json({ text });
+  } catch (error) {
+    console.error('fortune.js caught error:', error.message);
+    res.status(500).json({ error: 'API error', message: error.message });
+  }
+}
