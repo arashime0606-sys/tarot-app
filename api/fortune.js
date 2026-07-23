@@ -26,13 +26,14 @@ module.exports = async function handler(req, res) {
     return res.status(429).json({ error: 'Too many requests' });
   }
 
-  const { prompt } = req.body;
+  const { prompt, maxTokens } = req.body;
   if (!prompt || typeof prompt !== 'string' || prompt.length > 4000) {
     return res.status(400).json({ error: 'Invalid prompt' });
   }
+  const outputTokens = Number.isFinite(maxTokens) ? Math.min(Math.max(maxTokens, 100), 2000) : 500;
 
   try {
-    const model = 'gemini-3-flash-preview'; // Google AI Studioで実際に選べたモデル
+    const model = 'gemini-3-flash-preview';
     const response = await fetch(
       `https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent?key=${process.env.GEMINI_API_KEY}`,
       {
@@ -40,7 +41,10 @@ module.exports = async function handler(req, res) {
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           contents: [{ parts: [{ text: prompt }] }],
-          generationConfig: { maxOutputTokens: 800 },
+          generationConfig: {
+            maxOutputTokens: outputTokens,
+            thinkingConfig: { thinkingBudget: 0 }, // 思考トークンを消費させず、出力に全振りする
+          },
         }),
       }
     );
