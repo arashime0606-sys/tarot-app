@@ -11,22 +11,52 @@ const MAJOR_ROMAN = [
   "X", "XI", "XII", "XIII", "XIV", "XV", "XVI", "XVII", "XVIII", "XIX", "XX", "XXI",
 ];
 const MAJOR_UP = [
-  "冒険心・可能性", "知性・はじまり", "洞察力・直感力",
-  "母性・豊かさ", "リーダーシップ・プライド", "社交性・誠実",
-  "共感・安心", "野望・克服", "信念・忍耐",
-  "内観・思慮深い", "好転・チャンス到来", "正当性・バランス",
-  "忍耐・献身的", "方向転換・運命", "平和的解決・柔軟性",
-  "本能・快楽主義", "浄化・葛藤", "可能性・才能",
-  "見えない敵・用心", "成果・解決", "意識改革・復活", "統合・最高地点への到達",
+  "冒険心・可能性・無邪気な始まり・自由な魂",
+  "知性・はじまり・意志力・創造の才",
+  "洞察力・直感力・秘められた知恵・静かな神秘",
+  "母性・豊かさ・実り・官能的な喜び",
+  "リーダーシップ・プライド・秩序・確立された権威",
+  "社交性・誠実・伝統・精神的指導",
+  "共感・安心・選択・調和ある結びつき",
+  "野望・克服・意志の勝利・自己統制",
+  "信念・忍耐・内なる強さ・優しい支配力",
+  "内観・思慮深い・孤独な探求・導きの光",
+  "好転・チャンス到来・巡り合わせ・運命の転機",
+  "正当性・バランス・因果応報・公正な裁き",
+  "忍耐・献身的・視点の転換・自己犠牲",
+  "方向転換・運命・変容・終わりと再生",
+  "平和的解決・柔軟性・調和・中庸の美徳",
+  "本能・快楽主義・執着・誘惑への屈服",
+  "浄化・葛藤・突然の啓示・崩壊からの覚醒",
+  "可能性・才能・希望・静かな癒し",
+  "見えない敵・用心・幻惑・潜在意識の揺らぎ",
+  "成果・解決・活力・屈託のない成功",
+  "意識改革・復活・召命・過去からの解放",
+  "統合・最高地点への到達・完成・全体性の実現",
 ];
 const MAJOR_REV = [
-  "空回り・怠ける", "優柔不断・無計画", "情緒不安定・偏見",
-  "不仲・欠如", "強引・空回り", "不道徳・無慈悲",
-  "違和感・気まぐれ", "空回り・独りよがり", "挫ける・依存",
-  "闇雲さ・閉じこもる", "翻弄・悪いタイミング", "不正・矛盾",
-  "不自由・間違った視点", "思いきれない・堂々巡り", "事なかれ主義・節度がない",
-  "解放・断ち切る", "混乱・ショックな気持ち", "停滞・期待はずれ",
-  "徐々に好転・次第に落ち着く", "立場を失う・トラブル", "混乱・後悔", "不完全燃焼・行き詰り",
+  "空回り・怠ける・無謀・計画性の欠如",
+  "優柔不断・無計画・力の誤用・自信過剰",
+  "情緒不安定・偏見・秘密・表面的な理解",
+  "不仲・欠如・過保護・停滞した依存",
+  "強引・空回り・支配・権威の濫用",
+  "不道徳・無慈悲・形式主義・反抗",
+  "違和感・気まぐれ・不調和・誤った選択",
+  "空回り・独りよがり・方向性の喪失・暴走",
+  "挫ける・依存・自信の欠如・弱さの露呈",
+  "闇雲さ・閉じこもる・孤立・頑なさ",
+  "翻弄・悪いタイミング・悪循環・停滞する運",
+  "不正・矛盾・不公平・責任回避",
+  "不自由・間違った視点・無駄な犠牲・執着",
+  "思いきれない・堂々巡り・変化への抵抗・恐れ",
+  "事なかれ主義・節度がない・過剰・自制の欠如",
+  "解放・断ち切る・束縛の自覚・脱出の兆し",
+  "混乱・ショックな気持ち・危機の回避・延命",
+  "停滞・期待はずれ・失望・自信の喪失",
+  "徐々に好転・次第に落ち着く・不安の解消・真実の発覚",
+  "立場を失う・トラブル・一時的な停滞・過信",
+  "混乱・後悔・優柔不断・機会の逸失",
+  "不完全燃焼・行き詰り・未完成・目標の見直し",
 ];
 
 /* ---------- 小アルカナ ランク名（14） ---------- */
@@ -611,12 +641,18 @@ function StarRating({ score, variant }) {
 
 
 const FREE_DRAWS_PER_DAY = 3;
+const EXPANDED_DRAWS_PER_DAY = 21; // クーポンコードで解放される拡張上限
 const FREE_REDRAWS = 1;
 const MAX_HISTORY = 365;
 const HISTORY_DISPLAY_LIMIT = 10; // 履歴パネルに表示する最大件数
 const LS_NAME_KEY = "tarot_user_name";
 const LS_COUNT_KEY = "tarot_draw_log";
 const LS_HISTORY_KEY = "tarot_history";
+const LS_LIMIT_EXPANDED_KEY = "tarot_limit_expanded";
+
+function loadLimitExpanded() {
+  try { return localStorage.getItem(LS_LIMIT_EXPANDED_KEY) === "on"; } catch { return false; }
+}
 
 function loadUserName() {
   try { return localStorage.getItem(LS_NAME_KEY) || ""; } catch { return ""; }
@@ -843,6 +879,7 @@ export default function TarotDraw() {
   const [question, setQuestion] = useState("");
   const [userName, setUserName] = useState(loadUserName());
   const [todayCount, setTodayCount] = useState(loadTodayCount());
+  const [limitExpanded, setLimitExpanded] = useState(loadLimitExpanded());
   const [redrawCount, setRedrawCount] = useState(0);
   const [history, setHistory] = useState(loadHistory());
   const [showCoupon, setShowCoupon] = useState(false);
@@ -915,11 +952,12 @@ export default function TarotDraw() {
 
   const handleCoupon = () => {
     const code = couponInput.trim().toLowerCase();
-    if (code === "tenri") {
+    if (code === "doroumi") {
       localStorage.clear();
       setTodayCount(0);
       setHistory([]);
       setUserName("");
+      setLimitExpanded(false);
       setCouponInput("");
       setShowCoupon(false);
       alert("✓ リセット完了\nページをリロードしてください");
@@ -934,31 +972,22 @@ export default function TarotDraw() {
       setAiEnabled(true);
       setCouponInput("");
       alert("✓ AI鑑定をオンにしました");
+    } else if (code === "namutenriounomikoto") {
+      try { localStorage.setItem(LS_LIMIT_EXPANDED_KEY, "on"); } catch {}
+      setLimitExpanded(true);
+      setCouponInput("");
+      alert(`✓ 今日の占い回数が${EXPANDED_DRAWS_PER_DAY}回に増えました`);
     } else {
       alert("❌ 無効なコード");
       setCouponInput("");
     }
   };
 
-  const canDraw = todayCount < FREE_DRAWS_PER_DAY;
+  const currentLimit = limitExpanded ? EXPANDED_DRAWS_PER_DAY : FREE_DRAWS_PER_DAY;
+  const canDraw = todayCount < currentLimit;
 
   const handleNameChange = (value) => {
     setUserName(value);
-    // バックドア: 「tenri」と入力されたら回数をリセット
-    const trimmed = value.trim().toLowerCase();
-    if (trimmed === "tenri") {
-      try {
-        localStorage.clear(); // 全部リセットする方が確実
-        setTodayCount(0);
-        setHistory([]);
-        setUserName("");
-        setShowHistory(false);
-        setShowStats(false);
-        alert("✓ 完全リセットしました\nページをリロードしてください");
-      } catch (e) {
-        console.error("Reset error:", e);
-      }
-    }
   };
 
   const start = () => {
@@ -1387,7 +1416,7 @@ export default function TarotDraw() {
             ) : (
               <div style={{ textAlign: "center" }}>
                 <p style={{ color: "var(--rose)", fontSize: "13px", margin: "0 0 8px" }}>
-                  今日の無料占いは{FREE_DRAWS_PER_DAY}回使いました
+                  今日の無料占いは{currentLimit}回使いました
                 </p>
                 <p style={{ color: "var(--muted)", fontSize: "11px", margin: "0 0 12px" }}>
                   明日またお越しください ✦
@@ -1396,7 +1425,7 @@ export default function TarotDraw() {
             )}
             {todayCount > 0 && canDraw && (
               <p style={{ fontSize: "11px", color: "var(--muted)", margin: 0 }}>
-                今日はあと{FREE_DRAWS_PER_DAY - todayCount}回占えます
+                今日はあと{currentLimit - todayCount}回占えます
               </p>
             )}
 
@@ -1665,7 +1694,7 @@ export default function TarotDraw() {
             )}
             <button className="reset-btn" onClick={reset}>
               <RotateCcw size={14} />
-              もう一度占う（今日あと{Math.max(0, FREE_DRAWS_PER_DAY - todayCount)}回）
+              もう一度占う（今日あと{Math.max(0, currentLimit - todayCount)}回）
             </button>
           </div>
         </div>
