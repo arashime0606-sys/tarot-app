@@ -163,14 +163,14 @@ function fallbackMinorReading(results, userName) {
   const parts = results.map((r, i) => {
     const o = r.reversed ? "逆位置" : "正位置";
     const kw = r.reversed ? r.card.rev : r.card.up;
-    return `${POSITION_LABELS[i]}に現れた「${r.card.name}」（${o}）は、${kw}を示しています。`;
+    return `${POSITION_LABELS[i]}に現れた「${r.card.name}」（${o}）のキーワードは「${kw}」。`;
   });
-  return `${nameLine}${parts.join("")}`;
+  return `${nameLine}${parts.join("")}これらの言葉に、心当たりはありませんか？`;
 }
 function fallbackMajorReading(major) {
   const o = major.reversed ? "逆位置" : "正位置";
   const kw = major.reversed ? major.card.rev : major.card.up;
-  return `伏せられていたテーマカードは「${major.card.name}」（${o}）でした。${kw}という意味合いが、これまでの3枚が語ってきた流れの奥に、静かに横たわっているようです。`;
+  return `伏せられていたテーマカードは「${major.card.name}」（${o}）でした。キーワードは「${kw}」。これらの言葉に、心当たりはありませんか？`;
 }
 
 // アプリ全体の運用理念（両プロンプト共通のマスクデータとして注入）
@@ -1629,7 +1629,7 @@ export default function TarotDraw() {
               </div>
               {reading3Loading ? (
                 <p>
-                  占断を導いています
+                  占断を導いています（30秒ほどお待ちください）
                   <span className="loading-dots">
                     <span></span><span></span><span></span>
                   </span>
