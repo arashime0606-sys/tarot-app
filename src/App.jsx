@@ -1627,15 +1627,16 @@ function calcAvgScores(entries) {
 }
 
 // 短期平均と中期平均の差からトレンド記号を返す
-function trendOf(shortAvg, midAvg) {
+function trendOf(shortAvg, midAvg, t) {
   const diff = Math.round((shortAvg - midAvg) * 10) / 10;
-  if (diff >= 0.5) return { symbol: "↑", label: "上昇中", color: "var(--star-max)" };
-  if (diff <= -0.5) return { symbol: "↓", label: "低下中", color: "var(--rose)" };
-  return { symbol: "→", label: "安定", color: "var(--muted)" };
+  if (diff >= 0.5) return { symbol: "↑", label: t.trendUp, color: "var(--star-max)" };
+  if (diff <= -0.5) return { symbol: "↓", label: t.trendDown, color: "var(--rose)" };
+  return { symbol: "→", label: t.trendStable, color: "var(--muted)" };
 }
 
-function StatsPanel({ history }) {
+function StatsPanel({ history, lang }) {
   if (history.length === 0) return null;
+  const t = T[lang] || T.ja;
 
   const shortTerm = history.slice(0, 10);   // 短期: 直近10件
   const midTerm = history.slice(0, 30);     // 中期: 直近30件
@@ -1645,14 +1646,19 @@ function StatsPanel({ history }) {
   const midAvg = calcAvgScores(midTerm);
   const longAvg = calcAvgScores(longTerm);
 
-  // 長期: 最頻出の大アルカナ
+  // 長期: 最頻出の大アルカナ（IDベースで集計し、表示時に言語別名称に変換）
   const majorCounts = {};
   longTerm.forEach((h) => {
-    const key = h.majorCard.name;
+    const key = h.majorCard.id || h.majorCard.name;
     majorCounts[key] = (majorCounts[key] || 0) + 1;
   });
   const sortedMajors = Object.entries(majorCounts).sort((a, b) => b[1] - a[1]);
-  const topMajor = sortedMajors[0];
+  const topMajorKey = sortedMajors[0][0];
+  const topMajorCount = sortedMajors[0][1];
+  const topMajorEntry = longTerm.find((h) => (h.majorCard.id || h.majorCard.name) === topMajorKey);
+  const topMajorDisplayName = topMajorEntry
+    ? (topMajorEntry.majorCard.id ? getCardName({ id: topMajorEntry.majorCard.id }, lang) : topMajorEntry.majorCard.name)
+    : topMajorKey;
 
   const reversedCount = longTerm.filter((h) => h.majorCard.reversed).length;
   const uprightCount = longTerm.length - reversedCount;
@@ -1667,30 +1673,30 @@ function StatsPanel({ history }) {
 
       <div style={{ background: "rgba(36,28,77,0.7)", border: "1px solid rgba(201,162,75,0.25)", borderRadius: "10px", padding: "14px 16px" }}>
         <div style={{ fontFamily: "Cinzel, serif", fontSize: "10px", letterSpacing: "0.14em", color: "var(--gold)", marginBottom: "10px" }}>
-          短期（直近{shortTerm.length}回）
+          {t.statsShortTitle(shortTerm.length)}
         </div>
         <p style={{ fontSize: "13px", margin: "0 0 4px" }}>
-          好調：<span style={{ color: "var(--star-max)" }}>{STAT_CATEGORIES[bestShortIdx].label}</span>
-          <span style={{ color: "var(--muted)", fontSize: "11px" }}>（平均{shortAvg[bestShortIdx]}）</span>
+          {t.statsGood}：<span style={{ color: "var(--star-max)" }}>{statLabel(STAT_CATEGORIES[bestShortIdx].key, lang)}</span>
+          <span style={{ color: "var(--muted)", fontSize: "11px" }}>{t.statsAvgSuffix(shortAvg[bestShortIdx])}</span>
         </p>
         <p style={{ fontSize: "13px", margin: "0" }}>
-          低調：<span style={{ color: "var(--star-min)" }}>{STAT_CATEGORIES[worstShortIdx].label}</span>
-          <span style={{ color: "var(--muted)", fontSize: "11px" }}>（平均{shortAvg[worstShortIdx]}）</span>
+          {t.statsBad}：<span style={{ color: "var(--star-min)" }}>{statLabel(STAT_CATEGORIES[worstShortIdx].key, lang)}</span>
+          <span style={{ color: "var(--muted)", fontSize: "11px" }}>{t.statsAvgSuffix(shortAvg[worstShortIdx])}</span>
         </p>
       </div>
 
       {hasMidData && (
         <div style={{ background: "rgba(36,28,77,0.7)", border: "1px solid rgba(201,162,75,0.25)", borderRadius: "10px", padding: "14px 16px" }}>
           <div style={{ fontFamily: "Cinzel, serif", fontSize: "10px", letterSpacing: "0.14em", color: "var(--gold)", marginBottom: "10px" }}>
-            中期トレンド（直近{midTerm.length}回との比較）
+            {t.statsMidTitle(midTerm.length)}
           </div>
           {STAT_CATEGORIES.map((cat, i) => {
-            const t = trendOf(shortAvg[i], midAvg[i]);
+            const trend = trendOf(shortAvg[i], midAvg[i], t);
             return (
               <div key={cat.key} style={{ display: "flex", alignItems: "center", justifyContent: "space-between", padding: "3px 0" }}>
-                <span style={{ fontSize: "12px", fontFamily: "'Shippori Mincho',serif" }}>{cat.label}</span>
-                <span style={{ fontSize: "11px", color: t.color }}>
-                  {t.symbol} {t.label}
+                <span style={{ fontSize: "12px", fontFamily: "'Shippori Mincho',serif" }}>{statLabel(cat.key, lang)}</span>
+                <span style={{ fontSize: "11px", color: trend.color }}>
+                  {trend.symbol} {trend.label}
                 </span>
               </div>
             );
@@ -1700,21 +1706,21 @@ function StatsPanel({ history }) {
 
       <div style={{ background: "rgba(36,28,77,0.7)", border: "1px solid rgba(201,162,75,0.25)", borderRadius: "10px", padding: "14px 16px" }}>
         <div style={{ fontFamily: "Cinzel, serif", fontSize: "10px", letterSpacing: "0.14em", color: "var(--gold)", marginBottom: "10px" }}>
-          長期（全{longTerm.length}回）
+          {t.statsLongTitle(longTerm.length)}
         </div>
         <p style={{ fontSize: "13px", margin: "0 0 6px" }}>
-          最も引いたカード：<span style={{ color: "var(--gold-soft)", fontFamily: "'Shippori Mincho',serif" }}>{topMajor[0]}</span>
-          <span style={{ color: "var(--muted)", fontSize: "11px" }}>（{topMajor[1]}回）</span>
+          {t.statsTopCard}：<span style={{ color: "var(--gold-soft)", fontFamily: "'Shippori Mincho',serif" }}>{topMajorDisplayName}</span>
+          <span style={{ color: "var(--muted)", fontSize: "11px" }}>{t.statsTimesSuffix(topMajorCount)}</span>
         </p>
         <p style={{ fontSize: "13px", margin: "0 0 10px" }}>
-          正位置 {uprightCount}回 / 逆位置 {reversedCount}回
+          {t.statsUprightReversed(uprightCount, reversedCount)}
         </p>
         <div style={{ fontFamily: "Cinzel, serif", fontSize: "10px", letterSpacing: "0.14em", color: "var(--gold)", margin: "10px 0 6px" }}>
-          分野別 平均スコア（全期間）
+          {t.statsAvgAllTime}
         </div>
         {STAT_CATEGORIES.map((cat, i) => (
           <div key={cat.key} style={{ display: "flex", alignItems: "center", justifyContent: "space-between", padding: "3px 0" }}>
-            <span style={{ fontSize: "12px", fontFamily: "'Shippori Mincho',serif" }}>{cat.label}</span>
+            <span style={{ fontSize: "12px", fontFamily: "'Shippori Mincho',serif" }}>{statLabel(cat.key, lang)}</span>
             <span style={{ fontSize: "11px", color: "var(--muted)" }}>{longAvg[i]}</span>
           </div>
         ))}
@@ -1723,12 +1729,13 @@ function StatsPanel({ history }) {
   );
 }
 
-function HistoryPanel({ history }) {
+function HistoryPanel({ history, lang }) {
+  const t = T[lang] || T.ja;
   const displayed = history.slice(0, HISTORY_DISPLAY_LIMIT);
   return (
     <div style={{ width: "100%", maxWidth: "400px", marginTop: "12px", display: "flex", flexDirection: "column", gap: "10px" }}>
       <p style={{ fontSize: "10.5px", color: "var(--gold-soft)", opacity: 0.85, textAlign: "center", margin: "0 0 2px" }}>
-        ✦ この記録は、あなたの端末にしか存在しません ✦
+        {t.historyPrivacyNote}
       </p>
       {displayed.map((h) => (
         <div key={h.id} style={{ background: "rgba(36,28,77,0.7)", border: "1px solid rgba(201,162,75,0.25)", borderRadius: "10px", padding: "12px 14px" }}>
@@ -1738,19 +1745,19 @@ function HistoryPanel({ history }) {
           </div>
           {h.question ? <p style={{ fontSize: "12px", color: "var(--gold-soft)", margin: "0 0 6px" }}>「{h.question}」</p> : null}
           <p style={{ fontSize: "13px", fontFamily: "'Shippori Mincho',serif", margin: "0 0 6px" }}>
-            ✦ {h.majorCard.name}（{h.majorCard.reversed ? "逆" : "正"}位置）
+            ✦ {h.majorCard.id ? getCardName({ id: h.majorCard.id }, lang) : h.majorCard.name}（{t.historyOrientation(h.majorCard.reversed)}）
           </p>
           <div style={{ display: "flex", gap: "6px", flexWrap: "wrap", marginBottom: "6px" }}>
-            {["過去", "現在", "未来"].map((pos, i) => (
+            {(POSITION_LABELS_I18N[lang] || POSITION_LABELS).map((pos, i) => (
               <span key={i} style={{ fontSize: "10px", color: "var(--muted)", background: "rgba(201,162,75,0.08)", padding: "2px 7px", borderRadius: "999px" }}>
-                {pos}:{h.minorResults[i] ? h.minorResults[i].name : ""}
+                {pos}:{h.minorResults[i] ? (h.minorResults[i].id ? getCardName({ id: h.minorResults[i].id }, lang) : h.minorResults[i].name) : ""}
               </span>
             ))}
           </div>
           <div style={{ display: "flex", gap: "8px", flexWrap: "wrap" }}>
             {STAT_CATEGORIES.map((cat, i) => (
               <span key={i} style={{ fontSize: "10px", color: h.scores[i] >= 5 ? "var(--star-max)" : h.scores[i] <= 1 ? "var(--star-min)" : "var(--muted)" }}>
-                {cat.label}:{h.scores[i]}
+                {statLabel(cat.key, lang)}:{h.scores[i]}
               </span>
             ))}
           </div>
@@ -1758,19 +1765,20 @@ function HistoryPanel({ history }) {
       ))}
       {history.length > HISTORY_DISPLAY_LIMIT && (
         <p style={{ fontSize: "11px", color: "var(--muted)", textAlign: "center", margin: 0 }}>
-          他{history.length - HISTORY_DISPLAY_LIMIT}件は統計に反映されています
+          {t.historyRemaining(history.length - HISTORY_DISPLAY_LIMIT)}
         </p>
       )}
     </div>
   );
 }
 
-function CouponPanel({ couponInput, setCouponInput, handleCoupon, aiEnabled }) {
+function CouponPanel({ couponInput, setCouponInput, handleCoupon, aiEnabled, lang }) {
+  const t = T[lang] || T.ja;
   return (
     <div style={{ width: "100%", maxWidth: "360px", marginTop: "12px", display: "flex", flexDirection: "column", gap: "8px", background: "rgba(36,28,77,0.8)", border: "1px solid rgba(201,162,75,0.3)", borderRadius: "10px", padding: "12px 14px" }}>
       <div style={{ display: "flex", alignItems: "center", justifyContent: "center", gap: "6px", fontSize: "11px", color: aiEnabled ? "var(--star-max)" : "var(--muted)" }}>
         <span style={{ width: "7px", height: "7px", borderRadius: "50%", background: aiEnabled ? "var(--star-max)" : "var(--rose)", display: "inline-block" }} />
-        AI鑑定：{aiEnabled ? "オン" : "オフ（定型文モード）"}
+        {t.aiStatusLabel}：{aiEnabled ? t.aiStatusOn : t.aiStatusOff}
       </div>
       <input
         type="text"
@@ -1778,7 +1786,7 @@ function CouponPanel({ couponInput, setCouponInput, handleCoupon, aiEnabled }) {
         value={couponInput}
         onChange={(e) => setCouponInput(e.target.value)}
         onKeyDown={(e) => { if (e.key === "Enter") handleCoupon(); }}
-        placeholder="コードを入力..."
+        placeholder={t.couponPlaceholder}
         style={{
           fontFamily: "inherit",
           fontSize: "13px",
@@ -1790,7 +1798,7 @@ function CouponPanel({ couponInput, setCouponInput, handleCoupon, aiEnabled }) {
         }}
       />
       <button className="draw-btn" onClick={handleCoupon} style={{ fontSize: "12px", padding: "8px 16px" }}>
-        確定
+        {t.confirmButton}
       </button>
     </div>
   );
@@ -1850,6 +1858,28 @@ const T = {
     intuitionHit: "✦ あなたはカードの運命をそのまま受け入れました",
     questionBannerPrefix: "占ってほしいこと",
     heldChipMessage: "テーマカードを1枚伏せて保留中・あとで開きます",
+    // 統計・履歴・クーポンパネル
+    statsShortTitle: (n) => `短期（直近${n}回）`,
+    statsGood: "好調",
+    statsBad: "低調",
+    statsAvgSuffix: (v) => `（平均${v}）`,
+    statsMidTitle: (n) => `中期トレンド（直近${n}回との比較）`,
+    trendUp: "上昇中",
+    trendDown: "低下中",
+    trendStable: "安定",
+    statsLongTitle: (n) => `長期（全${n}回）`,
+    statsTopCard: "最も引いたカード",
+    statsTimesSuffix: (n) => `（${n}回）`,
+    statsUprightReversed: (up, rev) => `正位置 ${up}回 / 逆位置 ${rev}回`,
+    statsAvgAllTime: "分野別 平均スコア（全期間）",
+    historyPrivacyNote: "✦ この記録は、あなたの端末にしか存在しません ✦",
+    historyOrientation: (rev) => (rev ? "逆位置" : "正位置"),
+    historyRemaining: (n) => `他${n}件は統計に反映されています`,
+    aiStatusLabel: "AI鑑定",
+    aiStatusOn: "オン",
+    aiStatusOff: "オフ（定型文モード）",
+    couponPlaceholder: "コードを入力...",
+    confirmButton: "確定",
   },
   "zh-TW": {
     appTitle: "塔羅占卜",
@@ -1889,6 +1919,27 @@ const T = {
     intuitionHit: "✦ 你原封不動地接受了卡牌的命運",
     questionBannerPrefix: "想占卜的事情",
     heldChipMessage: "主題牌暫時保留、稍後翻開",
+    statsShortTitle: (n) => `短期（近${n}次）`,
+    statsGood: "順利",
+    statsBad: "低迷",
+    statsAvgSuffix: (v) => `（平均${v}）`,
+    statsMidTitle: (n) => `中期趨勢（與近${n}次比較）`,
+    trendUp: "上升中",
+    trendDown: "下降中",
+    trendStable: "穩定",
+    statsLongTitle: (n) => `長期（共${n}次）`,
+    statsTopCard: "最常抽到的牌",
+    statsTimesSuffix: (n) => `（${n}次）`,
+    statsUprightReversed: (up, rev) => `正位 ${up}次 / 逆位 ${rev}次`,
+    statsAvgAllTime: "各領域 平均分數（全期間）",
+    historyPrivacyNote: "✦ 此記錄僅保留在您的裝置中 ✦",
+    historyOrientation: (rev) => (rev ? "逆位" : "正位"),
+    historyRemaining: (n) => `其餘${n}筆已反映於統計中`,
+    aiStatusLabel: "AI占卜",
+    aiStatusOn: "開啟",
+    aiStatusOff: "關閉（固定文字模式）",
+    couponPlaceholder: "輸入代碼...",
+    confirmButton: "確認",
   },
   en: {
     appTitle: "Tarot Reading",
@@ -1928,6 +1979,27 @@ const T = {
     intuitionHit: "✦ You accepted the card's fate as it was",
     questionBannerPrefix: "Your question",
     heldChipMessage: "One theme card is set aside face-down — it will be revealed later",
+    statsShortTitle: (n) => `Short-term (last ${n})`,
+    statsGood: "Strong",
+    statsBad: "Weak",
+    statsAvgSuffix: (v) => ` (avg ${v})`,
+    statsMidTitle: (n) => `Mid-term trend (vs. last ${n})`,
+    trendUp: "Rising",
+    trendDown: "Falling",
+    trendStable: "Stable",
+    statsLongTitle: (n) => `Long-term (all ${n})`,
+    statsTopCard: "Most drawn card",
+    statsTimesSuffix: (n) => ` (${n} times)`,
+    statsUprightReversed: (up, rev) => `Upright ${up} / Reversed ${rev}`,
+    statsAvgAllTime: "Average score by category (all time)",
+    historyPrivacyNote: "✦ This record exists only on your device ✦",
+    historyOrientation: (rev) => (rev ? "Reversed" : "Upright"),
+    historyRemaining: (n) => `${n} more entries are reflected in your stats`,
+    aiStatusLabel: "AI Reading",
+    aiStatusOn: "On",
+    aiStatusOff: "Off (template mode)",
+    couponPlaceholder: "Enter code...",
+    confirmButton: "Confirm",
   },
   tl: {
     appTitle: "Tarot Reading",
@@ -1967,6 +2039,27 @@ const T = {
     intuitionHit: "✦ Tinanggap mo ang kapalaran ng card gaya ng dati",
     questionBannerPrefix: "Tanong mo",
     heldChipMessage: "May isang theme card na nakatago pa — ibubunyag ito mamaya",
+    statsShortTitle: (n) => `Panandalian (huling ${n})`,
+    statsGood: "Malakas",
+    statsBad: "Mahina",
+    statsAvgSuffix: (v) => ` (avg ${v})`,
+    statsMidTitle: (n) => `Uso sa katamtamang panahon (kumpara sa huling ${n})`,
+    trendUp: "Pataas",
+    trendDown: "Pababa",
+    trendStable: "Matatag",
+    statsLongTitle: (n) => `Pangmatagalan (lahat ng ${n})`,
+    statsTopCard: "Pinaka-madalas na nakuha",
+    statsTimesSuffix: (n) => ` (${n} beses)`,
+    statsUprightReversed: (up, rev) => `Upright ${up} / Reversed ${rev}`,
+    statsAvgAllTime: "Average score kada kategorya (lahat ng panahon)",
+    historyPrivacyNote: "✦ Ang talaang ito ay nasa device mo lamang ✦",
+    historyOrientation: (rev) => (rev ? "Reversed" : "Upright"),
+    historyRemaining: (n) => `${n} pang entry ang nakapaloob sa stats mo`,
+    aiStatusLabel: "AI Reading",
+    aiStatusOn: "Naka-on",
+    aiStatusOff: "Naka-off (template mode)",
+    couponPlaceholder: "Ilagay ang code...",
+    confirmButton: "Kumpirmahin",
   },
   th: {
     appTitle: "ไพ่ทาโรต์",
@@ -2006,6 +2099,27 @@ const T = {
     intuitionHit: "✦ คุณยอมรับชะตากรรมของไพ่ตามที่เป็น",
     questionBannerPrefix: "คำถามของคุณ",
     heldChipMessage: "มีไพ่ธีมหนึ่งใบถูกเก็บไว้ — จะเปิดเผยในภายหลัง",
+    statsShortTitle: (n) => `ระยะสั้น (${n} ครั้งล่าสุด)`,
+    statsGood: "ดี",
+    statsBad: "ต่ำ",
+    statsAvgSuffix: (v) => `（เฉลี่ย ${v}）`,
+    statsMidTitle: (n) => `แนวโน้มระยะกลาง (เทียบกับ ${n} ครั้งล่าสุด)`,
+    trendUp: "กำลังเพิ่มขึ้น",
+    trendDown: "กำลังลดลง",
+    trendStable: "คงที่",
+    statsLongTitle: (n) => `ระยะยาว (ทั้งหมด ${n} ครั้ง)`,
+    statsTopCard: "ไพ่ที่จับได้บ่อยที่สุด",
+    statsTimesSuffix: (n) => `（${n} ครั้ง）`,
+    statsUprightReversed: (up, rev) => `ตั้งตรง ${up} ครั้ง / กลับหัว ${rev} ครั้ง`,
+    statsAvgAllTime: "คะแนนเฉลี่ยแต่ละด้าน (ทั้งหมด)",
+    historyPrivacyNote: "✦ บันทึกนี้อยู่ในอุปกรณ์ของคุณเท่านั้น ✦",
+    historyOrientation: (rev) => (rev ? "กลับหัว" : "ตั้งตรง"),
+    historyRemaining: (n) => `อีก ${n} รายการถูกรวมอยู่ในสถิติแล้ว`,
+    aiStatusLabel: "การทำนายด้วย AI",
+    aiStatusOn: "เปิด",
+    aiStatusOff: "ปิด (โหมดข้อความสำเร็จรูป)",
+    couponPlaceholder: "ป้อนรหัส...",
+    confirmButton: "ยืนยัน",
   },
 };
 
@@ -2088,11 +2202,12 @@ export default function TarotDraw() {
         userName: userName.trim(),
         question,
         majorCard: {
+          id: majorCard.card.id,
           name: majorCard.card.name,
           reversed: majorCard.reversed,
           kw: majorCard.reversed ? majorCard.card.rev : majorCard.card.up,
         },
-        minorResults: minorResults.map((r) => ({ name: r.card.name, reversed: r.reversed })),
+        minorResults: minorResults.map((r) => ({ id: r.card.id, name: r.card.name, reversed: r.reversed })),
         scores,
         reading1,
         reading2,
@@ -2626,11 +2741,11 @@ export default function TarotDraw() {
             </button>
 
             {showCoupon ? (
-              <CouponPanel couponInput={couponInput} setCouponInput={setCouponInput} handleCoupon={handleCoupon} aiEnabled={aiEnabled} />
+              <CouponPanel couponInput={couponInput} setCouponInput={setCouponInput} handleCoupon={handleCoupon} aiEnabled={aiEnabled} lang={lang} />
             ) : null}
 
-            {showHistory ? <HistoryPanel history={history} /> : null}
-            {showStats ? <StatsPanel history={history} /> : null}
+            {showHistory ? <HistoryPanel history={history} lang={lang} /> : null}
+            {showStats ? <StatsPanel history={history} lang={lang} /> : null}
           </div>
         ) : (
           <button className="reset-btn" onClick={reset}>
