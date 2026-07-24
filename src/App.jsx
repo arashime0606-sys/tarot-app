@@ -1,4 +1,4 @@
-		import { useState, useEffect } from "react";
+import { useState, useEffect } from "react";
 import { Sparkles, Flame, Droplet, Swords, Coins, RotateCcw, Shuffle, Copy, Check, Star } from "lucide-react";
 
 /* ---------- 大アルカナ（22枚） ---------- */
@@ -903,6 +903,24 @@ const T = {
     limitReached: (n) => `今日の無料占いは${n}回使いました`,
     limitTomorrow: "明日またお越しください ✦",
     limitRemaining: (n) => `今日はあと${n}回占えます`,
+    resetButton: "やり直す",
+    pickMajorPrompt: "大アルカナから、いちばん気になる1枚を選んでください。",
+    pickMajorSub: "これは後で開く「テーマカード」になります。",
+    pickMinorPrompt: (n) => `直近の出来事を表す小アルカナを3枚選んでください（あと${n}枚）。`,
+    minorReadingLabel: "小アルカナの解釈（選んだ3枚のカードについて）",
+    majorReadingLabel: "大アルカナの解釈（向きまで選んだ最初の1枚のカードについて）",
+    finalJudgmentLabel: "問いに対する占断",
+    finalJudgmentLoading: "占断を導いています（30秒ほどお待ちください）",
+    orientationPrompt: "あなたの引いたカードの向きは、正しいと思いますか？",
+    orientationYes: "正しいと思う",
+    orientationNo: "逆だと思う",
+    copyButton: "結果をコピーする（外部AIで詳しく占う用）",
+    copyDone: "コピーしました",
+    redrawButton: (n) => `小アルカナを引き直す（あと${n}回）`,
+    redrawUsed: "引き直しは今回使い切りました ✦ 明日また挑戦できます",
+    drawAgainButton: (n) => `もう一度占う（今日あと${n}回）`,
+    endOfPrivacyResult: "✦ この結果は、あなたの端末にしか残りません ✦",
+    themeThemeLabel: "テーマ・解釈",
   },
   "zh-TW": {
     appTitle: "塔羅占卜",
@@ -918,6 +936,24 @@ const T = {
     limitReached: (n) => `今天的免費占卜已使用${n}次`,
     limitTomorrow: "請明天再來 ✦",
     limitRemaining: (n) => `今天還可以占卜${n}次`,
+    resetButton: "重新開始",
+    pickMajorPrompt: "請從大阿爾克那中，選出最讓你在意的一張。",
+    pickMajorSub: "這將成為稍後翻開的「主題牌」。",
+    pickMinorPrompt: (n) => `請選出3張代表近期事件的小阿爾克那（還差${n}張）。`,
+    minorReadingLabel: "小阿爾克那的解讀（關於所選的3張牌）",
+    majorReadingLabel: "大阿爾克那的解讀（關於第一張選中的主題牌，含正逆位）",
+    finalJudgmentLabel: "針對提問的占斷",
+    finalJudgmentLoading: "正在導出占斷結果（請稍候約30秒）",
+    orientationPrompt: "你認為抽到的這張牌，方向是正的嗎？",
+    orientationYes: "我認為是正位",
+    orientationNo: "我認為是逆位",
+    copyButton: "複製占卜結果（供其他AI進一步解讀）",
+    copyDone: "已複製",
+    redrawButton: (n) => `重新選擇小阿爾克那（還可以${n}次）`,
+    redrawUsed: "本次重抽機會已用完 ✦ 明天可以再挑戰",
+    drawAgainButton: (n) => `再占卜一次（今天還可以${n}次）`,
+    endOfPrivacyResult: "✦ 此結果僅保留在您的裝置中 ✦",
+    themeThemeLabel: "主題・解讀",
   },
   en: {
     appTitle: "Tarot Reading",
@@ -933,6 +969,24 @@ const T = {
     limitReached: (n) => `You've used your ${n} free readings for today`,
     limitTomorrow: "Please come back tomorrow ✦",
     limitRemaining: (n) => `You have ${n} readings left today`,
+    resetButton: "Start Over",
+    pickMajorPrompt: "Choose the one Major Arcana card that catches your attention most.",
+    pickMajorSub: "This will become your \"theme card,\" revealed later.",
+    pickMinorPrompt: (n) => `Choose 3 Minor Arcana cards representing recent events (${n} more to go).`,
+    minorReadingLabel: "Minor Arcana Reading (about the 3 cards you chose)",
+    majorReadingLabel: "Major Arcana Reading (about your first chosen card, including orientation)",
+    finalJudgmentLabel: "Judgment on Your Question",
+    finalJudgmentLoading: "Drawing out your judgment (about 30 seconds)",
+    orientationPrompt: "Do you think the card you drew is upright?",
+    orientationYes: "I think it's upright",
+    orientationNo: "I think it's reversed",
+    copyButton: "Copy Result (for deeper reading with another AI)",
+    copyDone: "Copied",
+    redrawButton: (n) => `Redraw Minor Arcana (${n} left)`,
+    redrawUsed: "You've used your redraw for this reading ✦ Try again tomorrow",
+    drawAgainButton: (n) => `Read Again (${n} left today)`,
+    endOfPrivacyResult: "✦ This result stays only on your device ✦",
+    themeThemeLabel: "Theme & Reading",
   },
   tl: {
     appTitle: "Tarot Reading",
@@ -948,6 +1002,24 @@ const T = {
     limitReached: (n) => `Nagamit mo na ang ${n} free readings mo ngayong araw`,
     limitTomorrow: "Bumalik ka na lang bukas ✦",
     limitRemaining: (n) => `May natitira ka pang ${n} reading ngayong araw`,
+    resetButton: "Ulitin",
+    pickMajorPrompt: "Pumili ng isang Major Arcana card na pinaka-nakakuha ng atensyon mo.",
+    pickMajorSub: "Ito ang magiging \"theme card\" mo, na ibubunyag mamaya.",
+    pickMinorPrompt: (n) => `Pumili ng 3 Minor Arcana card na kumakatawan sa mga kamakailang pangyayari (${n} pa ang kailangan).`,
+    minorReadingLabel: "Minor Arcana Reading (tungkol sa 3 cards na napili mo)",
+    majorReadingLabel: "Major Arcana Reading (tungkol sa unang card mo, kasama ang orientation)",
+    finalJudgmentLabel: "Hula Ukol sa Tanong Mo",
+    finalJudgmentLoading: "Ginagawa ang huling hula (mga 30 segundo)",
+    orientationPrompt: "Sa tingin mo, upright ba ang card na hinugot mo?",
+    orientationYes: "Sa tingin ko upright",
+    orientationNo: "Sa tingin ko reversed",
+    copyButton: "I-copy ang Resulta (para sa mas malalim na reading gamit ang ibang AI)",
+    copyDone: "Na-copy na",
+    redrawButton: (n) => `Muling Pumili ng Minor Arcana (${n} na lang)`,
+    redrawUsed: "Nagamit mo na ang redraw mo ✦ Subukan ulit bukas",
+    drawAgainButton: (n) => `Magbasa Ulit (${n} na lang ngayong araw)`,
+    endOfPrivacyResult: "✦ Ang resultang ito ay nananatili lamang sa device mo ✦",
+    themeThemeLabel: "Tema at Reading",
   },
 };
 
@@ -1569,7 +1641,7 @@ export default function TarotDraw() {
         ) : (
           <button className="reset-btn" onClick={reset}>
             <RotateCcw size={14} />
-            やり直す
+            {t.resetButton}
           </button>
         )}
       </div>
@@ -1579,8 +1651,8 @@ export default function TarotDraw() {
       {showMajorGrid && (
         <>
           <p className="round-label">
-            大アルカナから、いちばん気になる1枚を選んでください。<br />
-            これは後で開く「テーマカード」になります。
+            {t.pickMajorPrompt}<br />
+            {t.pickMajorSub}
           </p>
           <div className="spread-grid">
             {majorPool.map((card) => {
@@ -1612,7 +1684,7 @@ export default function TarotDraw() {
       {showMinorGrid && (
         <>
           <p className="round-label">
-            直近の出来事を表す小アルカナを3枚選んでください（あと{3 - minorSelectedIds.length}枚）。
+            {t.pickMinorPrompt(3 - minorSelectedIds.length)}
           </p>
           <div className="spread-grid">
             {minorPool.map((card) => {
@@ -1657,7 +1729,7 @@ export default function TarotDraw() {
 
           <div className="ai-reading" aria-live="polite">
             <div className="ai-label">
-              <Sparkles size={12} /> 小アルカナの解釈（選んだ3枚のカードについて）
+              <Sparkles size={12} /> {t.minorReadingLabel}
             </div>
             {reading1Loading ? (
               <p>
@@ -1673,7 +1745,7 @@ export default function TarotDraw() {
 
           {phase === "minor-revealed" && (
             <div className="open-choice">
-              <p className="open-choice-label">あなたの引いたカードの向きは、正しいと思いますか？</p>
+              <p className="open-choice-label">{t.orientationPrompt}</p>
               <div className="open-choice-btns">
                 <button
                   className="draw-btn climax-btn choice-up"
@@ -1681,7 +1753,7 @@ export default function TarotDraw() {
                   disabled={reading1Loading}
                 >
                   <Sparkles size={15} />
-                  正しいと思う
+                  {t.orientationYes}
                 </button>
                 <button
                   className="draw-btn climax-btn choice-rev"
@@ -1689,7 +1761,7 @@ export default function TarotDraw() {
                   disabled={reading1Loading}
                 >
                   <RotateCcw size={15} />
-                  逆だと思う
+                  {t.orientationNo}
                 </button>
               </div>
             </div>
@@ -1699,7 +1771,7 @@ export default function TarotDraw() {
 
       {phase === "major-revealed" && majorCard && (
         <div className="major-stage">
-          <span className="position-label">テーマ・解釈</span>
+          <span className="position-label">{t.themeThemeLabel}</span>
           <div className="static-card big">
             <div className={`card-face ${majorCard.reversed ? "reversed" : ""}`} style={{ "--accent": "var(--gold)" }}>
               <div className="card-corner">{majorCard.card.corner}</div>
@@ -1746,7 +1818,7 @@ export default function TarotDraw() {
 
           <div className="ai-reading" aria-live="polite">
             <div className="ai-label">
-              <Sparkles size={12} /> 大アルカナの解釈（向きまで選んだ最初の1枚のカードについて）
+              <Sparkles size={12} /> {t.majorReadingLabel}
             </div>
             {reading2Loading ? (
               <p>
@@ -1763,11 +1835,11 @@ export default function TarotDraw() {
           {question && question.trim() && (
             <div className="ai-reading final-judgment" aria-live="polite">
               <div className="ai-label">
-                <Sparkles size={12} /> 問いに対する占断
+                <Sparkles size={12} /> {t.finalJudgmentLabel}
               </div>
               {reading3Loading ? (
                 <p>
-                  占断を導いています（30秒ほどお待ちください）
+                  {t.finalJudgmentLoading}
                   <span className="loading-dots">
                     <span></span><span></span><span></span>
                   </span>
@@ -1780,29 +1852,29 @@ export default function TarotDraw() {
 
           {!reading2Loading && !reading3Loading && (
             <p className="privacy-note" style={{ marginTop: "-4px", fontSize: "10.5px" }}>
-              ✦ この結果は、あなたの端末にしか残りません ✦
+              {t.endOfPrivacyResult}
             </p>
           )}
 
           <button className="draw-btn copy-btn" onClick={handleCopy} disabled={reading2Loading}>
             {copied ? <Check size={16} /> : <Copy size={16} />}
-            {copied ? "コピーしました" : "結果をコピーする（外部AIで詳しく占う用）"}
+            {copied ? t.copyDone : t.copyButton}
           </button>
 
           <div style={{ display: "flex", flexDirection: "column", alignItems: "center", gap: "10px", marginTop: "8px" }}>
             {canRedraw ? (
               <button className="reset-btn" onClick={handleRedraw} style={{ color: "var(--gold-soft)", borderColor: "rgba(201,162,75,0.5)" }}>
                 <Shuffle size={14} />
-                小アルカナを引き直す（あと{FREE_REDRAWS - redrawCount}回）
+                {t.redrawButton(FREE_REDRAWS - redrawCount)}
               </button>
             ) : (
               <p style={{ fontSize: "11px", color: "var(--muted)", margin: 0, textAlign: "center" }}>
-                引き直しは今回使い切りました ✦ 明日また挑戦できます
+                {t.redrawUsed}
               </p>
             )}
             <button className="reset-btn" onClick={reset}>
               <RotateCcw size={14} />
-              もう一度占う（今日あと{Math.max(0, currentLimit - todayCount)}回）
+              {t.drawAgainButton(Math.max(0, currentLimit - todayCount))}
             </button>
           </div>
         </div>
