@@ -81,6 +81,162 @@ const MAJOR_REV = [
   "不完全燃焼・行き詰り・未完成・目標の見直し",
 ];
 
+// 大アルカナ キーワードの多言語対応（順序はMAJOR_UP/REVと同一・22枚）
+const MAJOR_UP_I18N = {
+  "zh-TW": [
+    "冒險心・可能性・天真的開始・自由的靈魂",
+    "才智・起點・意志力・創造的天賦",
+    "洞察力・直覺力・隱藏的智慧・靜謐的神秘",
+    "母性・豐盈・果實・感官的喜悅",
+    "領導力・自尊・秩序・穩固的權威",
+    "社交性・誠信・傳統・精神上的指引",
+    "共鳴・安心感・選擇・和諧的連結",
+    "野心・克服・意志的勝利・自我掌控",
+    "信念・耐心・內在的力量・溫柔的支配力",
+    "內省・深思熟慮・孤獨的探索・指引之光",
+    "好轉・機會來臨・機緣際會・命運的轉機",
+    "正當性・平衡・因果報應・公正的裁決",
+    "忍耐・奉獻・視角的轉換・自我犧牲",
+    "轉向・命運・蛻變・終結與重生",
+    "和平的解決方案・柔軟性・和諧・中庸之美",
+    "本能・享樂主義・執著・向誘惑屈服",
+    "淨化・衝突・突發的啟示・崩解後的覺醒",
+    "可能性・才能・希望・靜謐的療癒",
+    "看不見的敵人・謹慎・迷惑・潛意識的動搖",
+    "成果・解決・活力・無憂無慮的成功",
+    "意識的變革・重生・召喚・從過去解放",
+    "整合・抵達最高點・完成・全體性的實現",
+  ],
+  en: [
+    "Adventure · possibility · innocent beginnings · a free spirit",
+    "Intellect · new beginnings · willpower · creative talent",
+    "Insight · intuition · hidden wisdom · quiet mystery",
+    "Motherhood · abundance · fruitfulness · sensual joy",
+    "Leadership · pride · order · established authority",
+    "Sociability · sincerity · tradition · spiritual guidance",
+    "Empathy · reassurance · choice · harmonious bonds",
+    "Ambition · overcoming odds · triumph of will · self-mastery",
+    "Conviction · patience · inner strength · gentle control",
+    "Introspection · thoughtfulness · solitary quest · guiding light",
+    "A turn for the better · opportunity · fateful encounters · a turning point",
+    "Fairness · balance · cause and effect · impartial judgment",
+    "Patience · devotion · a shift in perspective · self-sacrifice",
+    "A change of direction · destiny · transformation · endings and rebirth",
+    "Peaceful resolution · flexibility · harmony · the virtue of moderation",
+    "Instinct · hedonism · attachment · yielding to temptation",
+    "Purification · conflict · sudden revelation · awakening from collapse",
+    "Possibility · talent · hope · quiet healing",
+    "An unseen threat · caution · illusion · stirrings of the subconscious",
+    "Achievement · resolution · vitality · effortless success",
+    "A shift in consciousness · revival · a calling · release from the past",
+    "Integration · reaching the highest point · completion · wholeness realized",
+  ],
+  tl: [
+    "Adventure · posibilidad · inosenteng simula · malayang kaluluwa",
+    "Talino · simula · lakas ng loob · likas na talento",
+    "Kaalaman · instinct · nakatagong karunungan · tahimik na hiwaga",
+    "Pagka-ina · kasaganaan · bunga · sensual na kaligayahan",
+    "Pamumuno · pagmamalaki · kaayusan · matatag na awtoridad",
+    "Pakikisalamuha · katapatan · tradisyon · gabay na espirituwal",
+    "Pakikiramay · katiyakan · pagpili · magkatugmang ugnayan",
+    "Ambisyon · pagtagumpay sa hadlang · tagumpay ng kalooban · pagpipigil sa sarili",
+    "Paninindigan · pasensya · panloob na lakas · malumanay na kontrol",
+    "Pagninilay · pag-iisip nang malalim · nag-iisang paghahanap · gabay na liwanag",
+    "Pagbabago sa mabuti · pagkakataon · mapalad na pagtatagpo · punto ng pagbabago",
+    "Katarungan · balanse · sanhi at bunga · walang kinikilingang paghatol",
+    "Pasensya · debosyon · pagbabago ng pananaw · sakripisyo sa sarili",
+    "Pagbabago ng direksyon · kapalaran · pagbabagong-anyo · katapusan at muling pagsilang",
+    "Mapayapang paglutas · kakayahang umangkop · pagkakaisa · birtud ng katamtaman",
+    "Instinct · paghahangad ng ligaya · pagkakabit · pagsuko sa tukso",
+    "Paglilinis · tunggalian · biglaang paghahayag · paggising mula sa pagbagsak",
+    "Posibilidad · talento · pag-asa · tahimik na paggaling",
+    "Hindi nakikitang banta · pag-iingat · ilusyon · pagbabago sa subconscious",
+    "Tagumpay · resolusyon · sigla · walang-pagod na tagumpay",
+    "Pagbabago ng kamalayan · muling pagsilang · panawagan · paglaya mula sa nakaraan",
+    "Integrasyon · pag-abot sa pinakamataas na punto · pagkumpleto · kabuuang naisakatuparan",
+  ],
+};
+
+const MAJOR_REV_I18N = {
+  "zh-TW": [
+    "空轉・懶散・魯莽・缺乏計劃",
+    "優柔寡斷・毫無計劃・濫用力量・過度自信",
+    "情緒不穩・偏見・秘密・表面的理解",
+    "不和睦・匱乏・過度保護・停滯的依賴",
+    "強硬・空轉・支配・濫用權威",
+    "不道德・無情・形式主義・反抗",
+    "不協調感・善變・不和諧・錯誤的選擇",
+    "空轉・自以為是・失去方向・失控",
+    "受挫・依賴・缺乏自信・軟弱的顯露",
+    "盲目・封閉自我・孤立・頑固",
+    "被玩弄・時機不佳・惡性循環・運勢停滯",
+    "不公・矛盾・不公平・逃避責任",
+    "不自由・錯誤的觀點・徒勞的犧牲・執著",
+    "無法下定決心・原地打轉・抗拒改變・恐懼",
+    "得過且過・毫無節制・過度・缺乏自制",
+    "解放・斬斷・意識到束縛・脫離的跡象",
+    "混亂・受到打擊的心情・危機的迴避・苟延殘喘",
+    "停滯・事與願違・失望・喪失信心",
+    "逐漸好轉・漸漸平靜・不安的消解・真相大白",
+    "失去立場・麻煩・暫時的停滯・過度自信",
+    "混亂・後悔・優柔寡斷・錯失良機",
+    "未竟全功・停滯不前・尚未完成・重新檢視目標",
+  ],
+  en: [
+    "Spinning your wheels · laziness · recklessness · lack of planning",
+    "Indecision · lack of planning · misuse of power · overconfidence",
+    "Emotional instability · bias · secrecy · a shallow understanding",
+    "Discord · deprivation · overprotection · stagnant dependence",
+    "Forcefulness · going in circles · domination · abuse of authority",
+    "Immorality · cruelty · rigid formalism · rebellion",
+    "A sense of unease · fickleness · discord · a wrong choice",
+    "Spinning your wheels · self-righteousness · loss of direction · running out of control",
+    "Discouragement · dependence · lack of confidence · exposed weakness",
+    "Blind stubbornness · withdrawal · isolation · rigidity",
+    "Being tossed around · bad timing · a vicious cycle · stalled fortune",
+    "Injustice · contradiction · unfairness · avoiding responsibility",
+    "A lack of freedom · a mistaken perspective · needless sacrifice · attachment",
+    "Inability to let go · going in circles · resistance to change · fear",
+    "Complacency · lack of moderation · excess · loss of self-control",
+    "Liberation · cutting ties · awareness of restraint · signs of escape",
+    "Confusion · shock · avoiding a crisis · a temporary reprieve",
+    "Stagnation · disappointment · loss of hope · loss of confidence",
+    "Gradual improvement · settling down · easing anxiety · truth coming to light",
+    "Losing one's footing · trouble · a temporary lull · overconfidence",
+    "Confusion · regret · indecision · a missed opportunity",
+    "Falling short · being stuck · incompleteness · reconsidering your goals",
+  ],
+  tl: [
+    "Nag-aaksaya ng oras · katamaran · kawalang-ingat · kakulangan sa pagpaplano",
+    "Pag-aalinlangan · walang plano · maling paggamit ng kapangyarihan · sobrang tiwala sa sarili",
+    "Hindi matatag na emosyon · pagkiling · lihim · mababaw na pag-unawa",
+    "Alitan · kakulangan · sobrang proteksyon · nakasandal na pananalig",
+    "Puwersahan · umiikot lang · pananakop · pang-aabuso sa awtoridad",
+    "Imoralidad · kalupitan · matigas na paniniwala · paglaban",
+    "Kaba · pagbabago-bago ng isip · alitan · maling pagpili",
+    "Nag-aaksaya ng oras · pagmamalaki sa sarili · nawalan ng direksyon · hindi makontrol",
+    "Panghihina ng loob · pag-asa sa iba · kawalan ng tiwala sa sarili · nalantad na kahinaan",
+    "Bulag na katigasan ng ulo · pag-atras · paghihiwalay · kakulitan",
+    "Nadala ng agos · maling panahon · masamang siklo · natigil na kapalaran",
+    "Kawalang-katarungan · kontradiksyon · hindi pagkakapantay-pantay · pag-iwas sa responsibilidad",
+    "Kakulangan sa kalayaan · maling pananaw · walang-saysay na sakripisyo · pagkakabit",
+    "Hindi mapakawalan · umiikot lang · paglaban sa pagbabago · takot",
+    "Kampante · kakulangan sa pagpipigil · labis · nawalan ng kontrol sa sarili",
+    "Kalayaan · pagputol ng ugnayan · kamalayan sa paghihigpit · palatandaan ng pagtakas",
+    "Pagkalito · pagkabigla · pag-iwas sa krisis · pansamantalang ginhawa",
+    "Katamlayan · pagkabigo · nawalan ng pag-asa · nawalan ng tiwala sa sarili",
+    "Unti-unting paggaling · unti-unting kumakalma · nawawalang pagkabalisa · katotohanang lumalabas",
+    "Nawalan ng tuntungan · gulo · pansamantalang katahimikan · sobrang tiwala sa sarili",
+    "Pagkalito · pagsisisi · pag-aalinlangan · napalampas na pagkakataon",
+    "Hindi kumpleto · natigil · hindi pa tapos · muling pag-iisip ng mga layunin",
+  ],
+};
+function majorKeyword(index, reversed, lang) {
+  const table = reversed ? MAJOR_REV_I18N[lang] : MAJOR_UP_I18N[lang];
+  if (table && table[index]) return table[index];
+  return reversed ? MAJOR_REV[index] : MAJOR_UP[index];
+}
+
 /* ---------- 小アルカナ ランク名（14） ---------- */
 const RANK_LABEL = ["エース", "2", "3", "4", "5", "6", "7", "8", "9", "10", "従者", "騎士", "女王", "王"];
 const RANK_CORNER = ["A", "2", "3", "4", "5", "6", "7", "8", "9", "10", "P", "N", "Q", "K"];
@@ -190,6 +346,419 @@ const PENT_REV = [
   "過保護・物質への偏重・自己犠牲", "権威への執着・物欲・頑固な保守",
 ];
 
+// 小アルカナ キーワードの多言語対応（各スート14枚・正逆）
+const MINOR_UP_I18N = {
+  wands: {
+    en: [
+      "A new challenge · budding passion · inspiration",
+      "Planning and choices · a vision for the future · command",
+      "Expansion · moving forward · teamwork paying off",
+      "Settled joy · celebration · belonging",
+      "Competition · clashing opinions · healthy rivalry",
+      "Victory · recognition · restored confidence",
+      "Defense · holding your ground · persistence",
+      "Rapid progress · speed · good news",
+      "Perseverance · one last push · resilience",
+      "A heavy burden · pressure to finish · overload",
+      "Curiosity · a new passion discovered · exploration",
+      "Bold action · adventure · forward momentum",
+      "Confidence · warm charisma · independent drive",
+      "Leadership · realizing a vision · bold command",
+    ],
+    "zh-TW": [
+      "新的挑戰・熱情萌芽・靈感乍現",
+      "計劃與抉擇・對未來的展望・掌控力",
+      "擴展・前進・團隊合作有成",
+      "安穩的喜悅・慶祝・歸屬感",
+      "競爭・意見衝突・良性較量",
+      "勝利・獲得認可・信心恢復",
+      "防禦・堅守優勢・堅持不懈",
+      "快速進展・速度・好消息",
+      "堅忍不拔・最後衝刺・恢復力",
+      "沉重的責任・完成的壓力・負擔",
+      "好奇心・發現新的熱情・探索",
+      "大膽行動・冒險・前進的氣勢",
+      "自信・溫暖的魅力・獨立的行動力",
+      "領導力・實現願景・果敢的統率",
+    ],
+    tl: [
+      "Bagong hamon · umuusbong na sigasig · inspirasyon",
+      "Pagpaplano at pagpili · bisyon para sa hinaharap · kontrol",
+      "Paglawak · pagsulong · nagbunga ang teamwork",
+      "Matatag na saya · pagdiriwang · pagiging kabilang",
+      "Kompetisyon · magkasalungat na opinyon · malusog na tunggalian",
+      "Tagumpay · pagkilala · nanumbalik na tiwala sa sarili",
+      "Depensa · pagpapanatili ng bentahe · pagtitiyaga",
+      "Mabilis na pag-unlad · bilis · magandang balita",
+      "Pagtitiis · huling pagsisikap · katatagan",
+      "Mabigat na responsibilidad · presyon na tapusin · sobrang bigat",
+      "Pagkamausisa · bagong sigasig na natuklasan · paggalugad",
+      "Matapang na aksyon · pakikipagsapalaran · pagsulong",
+      "Tiwala sa sarili · maligayang karisma · malayang pagkilos",
+      "Pamumuno · pagsasakatuparan ng bisyon · matapang na pamumuno",
+    ],
+  },
+  cups: {
+    en: [
+      "New love · emotional fulfillment · blossoming intuition",
+      "A heart-to-heart bond · mutual understanding · partnership",
+      "Friendship · celebration · shared joy",
+      "Introspection · apathy · stagnant boredom",
+      "Regret · disappointment · heartache",
+      "Nostalgia · innocent memories · reunion",
+      "Too many choices · daydreaming · illusion",
+      "Leaving to seek something more · setting out on a new path",
+      "Satisfaction · a wish fulfilled · emotional contentment",
+      "A happy home · harmony of heart · a fulfilling relationship",
+      "Sensitive news · pure curiosity",
+      "Romance · following your heart · a graceful offer",
+      "Deep intuition · gentleness · emotional maturity",
+      "Emotional mastery · generous leadership · mature love",
+    ],
+    "zh-TW": [
+      "新的愛情・情感的充實・直覺的綻放",
+      "心靈的連結・相互理解・夥伴關係",
+      "友誼・祝福・共享的喜悅",
+      "內省・漠不關心・停滯的倦怠",
+      "後悔・失望・心痛",
+      "懷舊・純真的回憶・重逢",
+      "選擇太多・幻想・空想",
+      "為了探索而離開・邁向新的道路",
+      "滿足・願望實現・心靈的充實",
+      "幸福的家庭・心靈的和諧・圓滿的關係",
+      "細膩的消息・純粹的好奇心",
+      "浪漫・順從情感而行動・優雅的提議",
+      "深刻的直覺・溫柔・情感的成熟",
+      "情感的掌控・寬容的領導力・成熟的愛",
+    ],
+    tl: [
+      "Bagong pag-ibig · kaganapan ng damdamin · umuusbong na instinct",
+      "Malalim na ugnayan · pagkakaunawaan · pagsosyo",
+      "Pagkakaibigan · pagdiriwang · magkasamang kaligayahan",
+      "Pagninilay · walang pakialam · nakakaboring na katamlayan",
+      "Pagsisisi · pagkabigo · sakit ng puso",
+      "Pananabik sa nakaraan · inosenteng alaala · muling pagkikita",
+      "Sobrang dami ng pagpipilian · pangangarap · ilusyon",
+      "Paglisan para maghanap ng higit pa · pagsisimula ng bagong landas",
+      "Kasiyahan · natupad na hiling · kaganapan ng damdamin",
+      "Masayang tahanan · pagkakaisa ng puso · maganda ang relasyon",
+      "Sensitibong balita · dalisay na pagkamausisa",
+      "Romansa · pagsunod sa puso · magiliw na alok",
+      "Malalim na instinct · kagandahang-loob · pagkahinog ng damdamin",
+      "Pagkontrol sa damdamin · mapagbigay na pamumuno · hinog na pag-ibig",
+    ],
+  },
+  swords: {
+    en: [
+      "Clear thinking · a discovery of truth · a breakthrough",
+      "Conflict · a decision withheld · balanced tension",
+      "Heartache · betrayal · sorrow",
+      "Rest · gathering your thoughts · a temporary retreat",
+      "Victory at a cost · conflict · a self-centered win",
+      "Escaping hardship · transition · moving forward",
+      "Strategy · cunning · hidden action",
+      "Restriction · self-imposed limits · a feeling of being stuck",
+      "Anxiety · nightmares · a spiraling mind",
+      "The end of hardship · a fresh start from rock bottom",
+      "Sharp observation · new information · vigilance",
+      "Swift action · decisiveness · a direct will",
+      "Clear judgment · independence · candor",
+      "Intellectual authority · fair judgment · logical command",
+    ],
+    "zh-TW": [
+      "清晰的思路・發現真相・突破口",
+      "衝突・懸而未決・緊繃的平衡",
+      "心痛・背叛・悲傷",
+      "休息・整理思緒・暫時的撤退",
+      "以代價換取的勝利・對立・以自我為中心的勝利",
+      "擺脫困境・過渡・向前邁進",
+      "策略・精明・隱藏的行動",
+      "限制・自我束縛・停滯不前的感覺",
+      "焦慮・惡夢・思緒的反覆糾結",
+      "苦難的終結・從谷底重新出發",
+      "敏銳的觀察力・新的資訊・警覺心",
+      "迅速的行動・決斷力・直接的意志",
+      "清晰的判斷・獨立性・坦率",
+      "智識上的權威・公正的判斷・邏輯統御",
+    ],
+    tl: [
+      "Malinaw na pag-iisip · pagtuklas ng katotohanan · abot-tagumpay",
+      "Tunggalian · pagpapaliban ng desisyon · balanseng tensyon",
+      "Sakit ng puso · pagtataksil · kalungkutan",
+      "Pahinga · pag-aayos ng iniisip · pansamantalang pag-atras",
+      "Tagumpay na may kapalit · tunggalian · makasariling panalo",
+      "Pagtakas sa hirap · paglipat · pagsulong",
+      "Estratehiya · katusuhan · nakatagong galaw",
+      "Paghihigpit · sariling limitasyon · pakiramdam ng pagkakulong",
+      "Pagkabalisa · bangungot · umiikot na isipan",
+      "Katapusan ng hirap · panibagong simula mula sa kaibuturan",
+      "Matalas na pagmamasid · bagong impormasyon · pag-iingat",
+      "Mabilis na aksyon · kapasyahan · tuwirang kalooban",
+      "Malinaw na paghatol · kalayaan · katapatan",
+      "Intelektwal na awtoridad · makatarungang paghatol · lohikal na pamumuno",
+    ],
+  },
+  pentacles: {
+    en: [
+      "A new opportunity · material beginnings · a seed of prosperity",
+      "Juggling priorities · flexibility · balance",
+      "Cooperation · craftsmanship · steady progress",
+      "Stability · conservatism · attachment to possessions",
+      "Financial hardship · isolation · a trial",
+      "Sharing · generosity · mutual support",
+      "Investment · patient effort · future reward",
+      "Skill-building · diligence · steady progress",
+      "Self-made abundance · refinement · enjoying the fruits of labor",
+      "Prosperity · family stability · inherited wealth",
+      "Eagerness to learn · practical curiosity · new plans",
+      "Steady effort · patient progress · a sense of responsibility",
+      "Practical abundance · grounded kindness · stable nurturing",
+      "Material success · grounded command · lasting prosperity",
+    ],
+    "zh-TW": [
+      "新的機會・物質上的開端・繁榮的種子",
+      "兼顧多項事務・靈活性・平衡",
+      "合作・精湛技藝・穩步累積",
+      "穩定・保守・對財物的執著",
+      "經濟困境・孤立感・考驗",
+      "分享・慷慨・互惠關係",
+      "投資・耐心的努力・未來的回報",
+      "技能養成・勤奮・穩步前進",
+      "自立而來的豐盛・洗練・享受成果",
+      "繁榮・家庭穩定・傳承的財富",
+      "求知慾・務實的好奇心・新的計畫",
+      "穩健的努力・耐心的前進・責任感",
+      "務實的豐盛・踏實的善意・穩定的養育",
+      "物質上的成功・踏實的統御・持久的繁榮",
+    ],
+    tl: [
+      "Bagong pagkakataon · materyal na simula · binhi ng kasaganaan",
+      "Pagbabalanse ng prayoridad · kakayahang umangkop · balanse",
+      "Kooperasyon · kasanayan sa gawa · tuloy-tuloy na pag-unlad",
+      "Katatagan · konserbatismo · pagkakabit sa ari-arian",
+      "Pinansyal na hirap · paghihiwalay · pagsubok",
+      "Pagbabahagi · kabutihang-loob · magkabilaang suporta",
+      "Pamumuhunan · matiyagang pagsisikap · gantimpala sa hinaharap",
+      "Paglinang ng kasanayan · sipag · tuloy-tuloy na pag-unlad",
+      "Sariling pinaghirapang kasaganaan · kaselanan · pagtamasa sa bunga ng pagod",
+      "Kasaganaan · katatagan ng pamilya · minanang kayamanan",
+      "Sabik matuto · praktikal na pagkamausisa · bagong plano",
+      "Tuloy-tuloy na pagsisikap · matiyagang pag-unlad · pananagutan",
+      "Praktikal na kasaganaan · nakabase-sa-lupang kabaitan · matatag na pag-aalaga",
+      "Materyal na tagumpay · nakabase-sa-lupang pamumuno · pangmatagalang kasaganaan",
+    ],
+  },
+};
+
+const MINOR_REV_I18N = {
+  wands: {
+    en: [
+      "A slow start · burnout · stalled plans",
+      "Hesitation · indecision · tunnel vision",
+      "Delays · miscommunication · a misjudged outlook",
+      "An unstable foundation · disharmony · isolation",
+      "A fruitless fight · escalating conflict · lack of cooperation",
+      "Unrecognized effort · arrogance · a sense of defeat",
+      "Feeling overwhelmed · playing defense · reaching a limit",
+      "Delay · spinning your wheels · haste leading to failure",
+      "Burnout · stubbornness · giving up",
+      "Relief from a burden · reaching a limit · abandoning responsibility",
+      "Aimless action · fickleness · spinning your wheels",
+      "Rashness · recklessness · an impulsive decision",
+      "Jealousy · fickleness · shaken confidence",
+      "Tyranny · a reckless decision · abuse of authority",
+    ],
+    "zh-TW": [
+      "起步遲緩・精力耗盡・計劃停滯",
+      "猶豫不決・優柔寡斷・視野狹隘",
+      "延遲・協調失誤・判斷錯誤",
+      "根基不穩・失去和諧・孤立感",
+      "徒勞的爭鬥・對立加劇・缺乏合作",
+      "不被認可的努力・傲慢・挫敗感",
+      "感到不堪重負・處於守勢・已達極限",
+      "延遲・空轉・急躁導致失敗",
+      "精疲力盡・固執・放棄",
+      "卸下重擔・已達極限・放棄責任",
+      "漫無目的的行動・善變・空轉",
+      "魯莽・無謀・衝動的決定",
+      "嫉妒・善變・信心動搖",
+      "專橫・魯莽的決定・濫用權威",
+    ],
+    tl: [
+      "Mabagal na simula · pagkasunog · natigil na plano",
+      "Pag-aalinlangan · kawalan ng desisyon · makitid na pananaw",
+      "Pagkaantala · maling komunikasyon · maling pagtingin",
+      "Hindi matatag na pundasyon · kawalan ng pagkakaisa · paghihiwalay",
+      "Walang kabuluhang laban · lumalalang tunggalian · kawalan ng kooperasyon",
+      "Hindi kinikilalang pagsisikap · pagmamataas · pakiramdam ng pagkatalo",
+      "Pakiramdam ng sobrang bigat · pagtatanggol · naabot na ang limitasyon",
+      "Pagkaantala · umiikot lang · nagmamadaling nabigo",
+      "Pagkasunog · katigasan ng ulo · pagsuko",
+      "Kaginhawaan mula sa pasanin · naabot ang limitasyon · pag-iwan ng responsibilidad",
+      "Walang layuning aksyon · pagbabago-bago · umiikot lang",
+      "Padalus-dalos · kawalang-ingat · impulsibong desisyon",
+      "Pagseselos · pabago-bago · nayanig na tiwala sa sarili",
+      "Panunupil · padalus-dalos na desisyon · pang-aabuso sa awtoridad",
+    ],
+  },
+  cups: {
+    en: [
+      "Emotional repression · love in stasis · a sense of emptiness",
+      "A mismatch · an imbalanced relationship · misunderstanding",
+      "Overindulgence · a love triangle · isolation",
+      "Discovering new interest · breaking free from stagnation",
+      "Moving past the past · an awakening toward renewal",
+      "Clinging to the past · escapism",
+      "Facing reality · a clear choice",
+      "Lingering attachment · stuck in the present",
+      "Superficial satisfaction · excessive self-satisfaction",
+      "Discord · a gap between ideal and reality",
+      "Oversensitivity · unrealistic daydreaming",
+      "Fickleness · being swept up in emotion · empty promises",
+      "Excessive sensitivity · self-sacrifice · emotional instability",
+      "Emotional manipulation · moodiness · coldness",
+    ],
+    "zh-TW": [
+      "情感的壓抑・愛的停滯・空虛感",
+      "錯位・不平衡的關係・誤解",
+      "過度享樂・三角關係・孤立",
+      "發現新的興趣・擺脫停滯",
+      "跨越過去・邁向重生的覺醒",
+      "執著於過去・逃避現實",
+      "面對現實・明確的選擇",
+      "未了的眷戀・停滯於當下",
+      "表面的滿足・過度的自我滿足",
+      "不和・理想與現實的落差",
+      "過度敏感・不切實際的幻想",
+      "善變・被情感左右・空洞的承諾",
+      "過度的敏感・自我犧牲・情緒不穩",
+      "情感的操控・情緒起伏・冷漠",
+    ],
+    tl: [
+      "Pagpigil ng damdamin · nakatigil na pag-ibig · pakiramdam ng kawalan",
+      "Hindi pagkakatugma · hindi balanseng relasyon · hindi pagkakaunawaan",
+      "Sobrang indulhensya · love triangle · paghihiwalay",
+      "Pagtuklas ng bagong interes · paglaya mula sa katamlayan",
+      "Paglampas sa nakaraan · paggising tungo sa pagbabago",
+      "Pananabik sa nakaraan · pagtakas sa katotohanan",
+      "Pagharap sa katotohanan · malinaw na pagpipilian",
+      "Natitirang pagkakabit · natigil sa kasalukuyan",
+      "Ibabaw na kasiyahan · sobrang kasiyahan sa sarili",
+      "Alitan · agwat sa pagitan ng ideal at katotohanan",
+      "Sobrang sensitibo · di-makatotohanang pangangarap",
+      "Pabago-bago · natangay ng damdamin · walang-laman na pangako",
+      "Sobrang sensitibo · sakripisyo sa sarili · hindi matatag na emosyon",
+      "Pagmamanipula ng damdamin · pabagu-bagong ugali · lamig",
+    ],
+  },
+  swords: {
+    en: [
+      "Confusion · misjudgment · destructive words",
+      "Paralysis from too much information · indecision",
+      "Recovering from pain · healing old wounds",
+      "A restart born of urgency · lack of rest",
+      "Reconciliation · the end of a pointless fight",
+      "An unresolved issue · standing still",
+      "Exposure · reflection after self-deception",
+      "Freedom from restriction · a broadening view",
+      "Relief from anxiety · a glimmer of hope",
+      "The start of renewal · the end of excessive pessimism",
+      "Misinformation · prying · careless words",
+      "Impulsive · aggressive · lacking consideration",
+      "Coldness · criticism · loneliness",
+      "Abuse of authority · cold-hearted control",
+    ],
+    "zh-TW": [
+      "混亂・誤判・具破壞性的言語",
+      "資訊過多導致的麻痺・優柔寡斷",
+      "從痛苦中恢復・舊傷的療癒",
+      "因焦躁而重新開始・休息不足",
+      "和解・無謂爭鬥的終結",
+      "未解決的問題・停滯不前",
+      "真相浮現・自我欺騙後的反省",
+      "擺脫束縛・視野的開闊",
+      "不安的消解・希望之光",
+      "重生的開始・過度悲觀的終結",
+      "錯誤資訊・打探・輕率的言語",
+      "衝動的・具攻擊性的・缺乏顧慮",
+      "冷酷・批判性・孤獨感",
+      "濫用權威・冷酷的支配",
+    ],
+    tl: [
+      "Pagkalito · maling paghatol · mapaminsalang mga salita",
+      "Pagkaparalisa dahil sa sobrang impormasyon · kawalan ng desisyon",
+      "Paggaling mula sa sakit · paggamot sa lumang sugat",
+      "Panibagong simula dahil sa pagmamadali · kakulangan sa pahinga",
+      "Pakikipagkasundo · pagtatapos ng walang-saysay na away",
+      "Hindi nalutas na isyu · nakatigil",
+      "Paglantad · pagninilay matapos ang panlilinlang sa sarili",
+      "Kalayaan mula sa paghihigpit · lumalawak na pananaw",
+      "Ginhawa mula sa pagkabalisa · sinag ng pag-asa",
+      "Simula ng pagbabago · katapusan ng sobrang pesimismo",
+      "Maling impormasyon · pakikialam · walang-ingat na salita",
+      "Padalus-dalos · agresibo · kulang sa pagsasaalang-alang",
+      "Lamig · pagpuna · kalungkutan",
+      "Pang-aabuso sa awtoridad · malamig na pananakop",
+    ],
+  },
+  pentacles: {
+    en: [
+      "A missed opportunity · delayed plans · lack of preparation",
+      "Loss of balance · poor management · overspending",
+      "Poor teamwork · declining quality · mismatched evaluation",
+      "Excessive clinging · materialism · stinginess",
+      "Recovery from hardship · finding support",
+      "Unfair distribution · giving with strings attached",
+      "Stalled effort · a misjudged outlook",
+      "Careless work · lack of motivation",
+      "Excessive materialism · lonely success",
+      "A dispute over inheritance · a crumbling foundation",
+      "Lack of planning · escapism",
+      "Stagnation · stubbornness · no progress",
+      "Overprotection · excessive focus on material things · self-sacrifice",
+      "Attachment to authority · greed · stubborn conservatism",
+    ],
+    "zh-TW": [
+      "錯失良機・計劃延誤・準備不足",
+      "失衡・管理不當・浪費",
+      "缺乏合作・品質下降・評價不一致",
+      "過度執著・物慾・吝嗇",
+      "從困境中恢復・尋得支援",
+      "分配不公・帶有條件的施予",
+      "努力停滯・判斷失誤",
+      "草率的工作・動機低落",
+      "過度的物質主義・孤獨的成功",
+      "財產爭端・根基崩塌",
+      "缺乏計劃性・逃避現實",
+      "停滯・固執・沒有進展",
+      "過度保護・過於重視物質・自我犧牲",
+      "對權威的執著・物慾・頑固的保守",
+    ],
+    tl: [
+      "Napalampas na pagkakataon · naantalang plano · kakulangan sa paghahanda",
+      "Nawalan ng balanse · maling pamamahala · sobrang paggasta",
+      "Kulang na kooperasyon · bumabang kalidad · hindi pagkakatugma sa pagtaya",
+      "Sobrang pagkakabit · materyalismo · kuripot",
+      "Paggaling mula sa hirap · paghahanap ng suporta",
+      "Hindi patas na paghahati · pagbibigay na may kapalit",
+      "Natigil na pagsisikap · maling pagtingin",
+      "Pabayang trabaho · kakulangan sa motibasyon",
+      "Sobrang materyalismo · nag-iisang tagumpay",
+      "Alitan sa mana · gumuguhong pundasyon",
+      "Kakulangan sa pagpaplano · pagtakas sa katotohanan",
+      "Katamlayan · katigasan ng ulo · walang pag-unlad",
+      "Sobrang proteksyon · sobrang pagtuon sa materyal na bagay · sakripisyo sa sarili",
+      "Pagkakabit sa awtoridad · kasakiman · matigas na konserbatismo",
+    ],
+  },
+};
+
+function minorKeyword(suitKey, rankIndex, reversed, lang, fallbackUp, fallbackRev) {
+  const table = reversed ? MINOR_REV_I18N[suitKey] : MINOR_UP_I18N[suitKey];
+  if (table && table[lang] && table[lang][rankIndex]) return table[lang][rankIndex];
+  return reversed ? fallbackRev : fallbackUp;
+}
+
 const SUITS = [
   { key: "wands", label: "棒", element: "火", accent: "var(--wand)", Icon: Flame, up: WANDS_UP, rev: WANDS_REV },
   { key: "cups", label: "聖杯", element: "水", accent: "var(--cup)", Icon: Droplet, up: CUPS_UP, rev: CUPS_REV },
@@ -283,20 +852,53 @@ function buildPool(list) {
 const POSITION_LABELS = ["過去", "現在", "未来"];
 const PHASE_ORDER = ["idle", "major-spread", "major-resolving", "minor-spread", "minor-resolving", "minor-revealed", "major-revealed"];
 
-function fallbackMinorReading(results, userName) {
+// フォールバック文の文型（カード名・キーワードは呼び出し側で埋め込む）
+const FALLBACK_TEMPLATES = {
+  ja: {
+    minorLine: (pos, name, o, kw) => `${pos}は「${name}」（${o}）。${kw}という流れが見えます。`,
+    minorClosing: "では、テーマカードを開いて、さらに深く読み解いていきましょう。",
+    majorLine: (name, o, kw) => `伏せられていたテーマカードは「${name}」（${o}）でした。キーワードは「${kw}」。これらの言葉に、心当たりはありませんか？`,
+  },
+  "zh-TW": {
+    minorLine: (pos, name, o, kw) => `${pos}是「${name}」（${o}）。可以感受到「${kw}」的流動。`,
+    minorClosing: "接下來，讓我們翻開主題牌，深入解讀吧。",
+    majorLine: (name, o, kw) => `原本蓋著的主題牌是「${name}」（${o}）。關鍵字是「${kw}」。這些話語，你是否有所感觸？`,
+  },
+  en: {
+    minorLine: (pos, name, o, kw) => `Your ${pos} card is "${name}" (${o}). A sense of ${kw} seems to be flowing here.`,
+    minorClosing: "Now, let's reveal the theme card and dive deeper.",
+    majorLine: (name, o, kw) => `Your hidden theme card was "${name}" (${o}). Its keywords are "${kw}." Does this resonate with you?`,
+  },
+  tl: {
+    minorLine: (pos, name, o, kw) => `Ang ${pos} mo ay "${name}" (${o}). Parang may dumadaloy na ${kw} dito.`,
+    minorClosing: "Ngayon, buksan na natin ang theme card mo para mas malalim na pagbasa.",
+    majorLine: (name, o, kw) => `Ang nakatagong theme card mo ay "${name}" (${o}). Ang keywords nito ay "${kw}." May tumatak ba sa 'yo dito?`,
+  },
+};
+
+function fallbackMinorReading(results, userName, lang) {
+  const tpl = FALLBACK_TEMPLATES[lang] || FALLBACK_TEMPLATES.ja;
   const parts = results
     .map((r, i) => {
-      const o = r.reversed ? "逆位置" : "正位置";
-      const kw = r.reversed ? r.card.rev : r.card.up;
-      return `${POSITION_LABELS[i]}は「${r.card.name}」（${o}）。${kw}という流れが見えます。`;
+      const o = orientationLabel(r.reversed, lang);
+      const idParts = r.card.id.split("-");
+      const suitKey = idParts[0];
+      const rankIdx = parseInt(idParts[1], 10);
+      const kw = minorKeyword(suitKey, rankIdx, r.reversed, lang, r.card.up, r.card.rev);
+      const name = getCardName(r.card, lang);
+      const pos = POSITION_LABELS_I18N[lang] ? POSITION_LABELS_I18N[lang][i] : POSITION_LABELS[i];
+      return tpl.minorLine(pos, name, o, kw);
     })
-    .join("");
-  return `${parts}では、テーマカードを開いて、さらに深く読み解いていきましょう。`;
+    .join(lang === "en" || lang === "tl" ? " " : "");
+  return `${parts}${lang === "en" || lang === "tl" ? " " : ""}${tpl.minorClosing}`;
 }
-function fallbackMajorReading(major) {
-  const o = major.reversed ? "逆位置" : "正位置";
-  const kw = major.reversed ? major.card.rev : major.card.up;
-  return `伏せられていたテーマカードは「${major.card.name}」（${o}）でした。キーワードは「${kw}」。これらの言葉に、心当たりはありませんか？`;
+function fallbackMajorReading(major, lang) {
+  const tpl = FALLBACK_TEMPLATES[lang] || FALLBACK_TEMPLATES.ja;
+  const o = orientationLabel(major.reversed, lang);
+  const majorIdx = parseInt(major.card.id.split("-")[1], 10);
+  const kw = majorKeyword(majorIdx, major.reversed, lang);
+  const name = getCardName(major.card, lang);
+  return tpl.majorLine(name, o, kw);
 }
 
 // アプリ全体の運用理念（両プロンプト共通のマスクデータとして注入）
@@ -1051,6 +1653,7 @@ const T = {
     intuitionMiss: "◈ あなたはカードの向きを修正して開きました",
     intuitionHit: "✦ あなたはカードの運命をそのまま受け入れました",
     questionBannerPrefix: "占ってほしいこと",
+    heldChipMessage: "テーマカードを1枚伏せて保留中・あとで開きます",
   },
   "zh-TW": {
     appTitle: "塔羅占卜",
@@ -1088,6 +1691,7 @@ const T = {
     intuitionMiss: "◈ 你修正了卡牌的方向後翻開",
     intuitionHit: "✦ 你原封不動地接受了卡牌的命運",
     questionBannerPrefix: "想占卜的事情",
+    heldChipMessage: "主題牌暫時保留、稍後翻開",
   },
   en: {
     appTitle: "Tarot Reading",
@@ -1125,6 +1729,7 @@ const T = {
     intuitionMiss: "◈ You corrected the card's orientation before revealing it",
     intuitionHit: "✦ You accepted the card's fate as it was",
     questionBannerPrefix: "Your question",
+    heldChipMessage: "One theme card is set aside face-down — it will be revealed later",
   },
   tl: {
     appTitle: "Tarot Reading",
@@ -1162,6 +1767,7 @@ const T = {
     intuitionMiss: "◈ Binago mo ang direksyon ng card bago ito binuksan",
     intuitionHit: "✦ Tinanggap mo ang kapalaran ng card gaya ng dati",
     questionBannerPrefix: "Tanong mo",
+    heldChipMessage: "May isang theme card na nakatago pa — ibubunyag ito mamaya",
   },
 };
 
@@ -1393,7 +1999,7 @@ export default function TarotDraw() {
 
   const fetchReading1 = (results) => {
     // 1番目はAIを使わず、テンプレート文を即時表示（体感速度優先）
-    setReading1(fallbackMinorReading(results, userName.trim()));
+    setReading1(fallbackMinorReading(results, userName.trim(), lang));
   };
 
   const onPickMinor = (card) => {
@@ -1421,7 +2027,7 @@ export default function TarotDraw() {
 
   const fetchReading2 = async (resolvedMajor) => {
     // 2番目もAIを使わず、テンプレート文を即時表示（体感速度優先）
-    const text2 = fallbackMajorReading(resolvedMajor);
+    const text2 = fallbackMajorReading(resolvedMajor, lang);
     setReading2(text2);
 
     // 相談内容がある場合のみ、問いそのものへの占断を追加生成
@@ -1819,7 +2425,7 @@ export default function TarotDraw() {
       {showHeldChip && (
         <div className="held-chip">
           <span className="mini-back">✦</span>
-          <span>テーマカードを1枚伏せて保留中・あとで開きます</span>
+          <span>{t.heldChipMessage}</span>
         </div>
       )}
 
@@ -1925,7 +2531,7 @@ export default function TarotDraw() {
             </div>
           </div>
           <span className={`orientation ${majorCard.reversed ? "rev" : "up"}`}>{orientationLabel(majorCard.reversed, lang)}</span>
-          <p className="major-keywords">{majorCard.reversed ? majorCard.card.rev : majorCard.card.up}</p>
+          <p className="major-keywords">{majorKeyword(parseInt(majorCard.card.id.split("-")[1], 10), majorCard.reversed, lang)}</p>
 
           {userOrientationChoice !== null && (
             <p className={`intuition-msg ${userOrientationChoice ? "miss" : "hit"}`}>
