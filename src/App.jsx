@@ -1880,6 +1880,9 @@ const T = {
     aiStatusOff: "オフ（定型文モード）",
     couponPlaceholder: "コードを入力...",
     confirmButton: "確定",
+    historyButtonLabel: (n) => `履歴（${n}件）`,
+    statsButtonLabel: "統計",
+    couponButtonLabel: "クーポンコード",
   },
   "zh-TW": {
     appTitle: "塔羅占卜",
@@ -1940,6 +1943,9 @@ const T = {
     aiStatusOff: "關閉（固定文字模式）",
     couponPlaceholder: "輸入代碼...",
     confirmButton: "確認",
+    historyButtonLabel: (n) => `歷史紀錄（${n}筆）`,
+    statsButtonLabel: "統計",
+    couponButtonLabel: "優惠代碼",
   },
   en: {
     appTitle: "Tarot Reading",
@@ -2000,6 +2006,9 @@ const T = {
     aiStatusOff: "Off (template mode)",
     couponPlaceholder: "Enter code...",
     confirmButton: "Confirm",
+    historyButtonLabel: (n) => `History (${n})`,
+    statsButtonLabel: "Stats",
+    couponButtonLabel: "Coupon Code",
   },
   tl: {
     appTitle: "Tarot Reading",
@@ -2060,6 +2069,9 @@ const T = {
     aiStatusOff: "Naka-off (template mode)",
     couponPlaceholder: "Ilagay ang code...",
     confirmButton: "Kumpirmahin",
+    historyButtonLabel: (n) => `Kasaysayan (${n})`,
+    statsButtonLabel: "Stats",
+    couponButtonLabel: "Coupon Code",
   },
   th: {
     appTitle: "ไพ่ทาโรต์",
@@ -2120,6 +2132,9 @@ const T = {
     aiStatusOff: "ปิด (โหมดข้อความสำเร็จรูป)",
     couponPlaceholder: "ป้อนรหัส...",
     confirmButton: "ยืนยัน",
+    historyButtonLabel: (n) => `ประวัติ (${n})`,
+    statsButtonLabel: "สถิติ",
+    couponButtonLabel: "รหัสคูปอง",
   },
 };
 
@@ -2725,19 +2740,19 @@ export default function TarotDraw() {
                   onClick={() => { setShowHistory(!showHistory); setShowStats(false); }}
                 >
                   <RotateCcw size={14} />
-                  履歴（{history.length}件）
+                  {t.historyButtonLabel(history.length)}
                 </button>
                 <button
                   className="reset-btn"
                   onClick={() => { setShowStats(!showStats); setShowHistory(false); }}
                 >
-                  統計
+                  {t.statsButtonLabel}
                 </button>
               </div>
             )}
 
             <button className="reset-btn" onClick={() => setShowCoupon(!showCoupon)} style={{ marginTop: "8px", fontSize: "10px", opacity: 0.7 }}>
-              クーポンコード
+              {t.couponButtonLabel}
             </button>
 
             {showCoupon ? (
