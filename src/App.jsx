@@ -1454,17 +1454,21 @@ function detectJackpot(minorCards) {
     let variant = null;
     if (allUpright) variant = "glowing"; // ★1だけど光っている
     else if (allReversed) variant = "void"; // ★0・真っ黒
-    return { type: "all_1", luck: "misfortune", variant };
+    return { type: "all_1", luck: "misfortune", variant, fixedValue: 1 };
   }
-  if (rank >= 1 && rank <= 9) {
-    return { type: "all_5", luck: "neutral", variant: null }; // 運命のトリプル（2〜10×3）→ 全分野★5
+  // rank: 1=数字2, 2=数字3, 3=数字4, 4-8=数字5〜9, 9=数字10
+  if (rank === 1) return { type: "all_2", luck: "neutral", variant: null, fixedValue: 2 }; // 全部「2」×3 → 全分野★2
+  if (rank === 2) return { type: "all_3", luck: "neutral", variant: null, fixedValue: 3 }; // 全部「3」×3 → 全分野★3
+  if (rank === 3) return { type: "all_4", luck: "neutral", variant: null, fixedValue: 4 }; // 全部「4」×3 → 全分野★4
+  if (rank >= 4 && rank <= 9) {
+    return { type: "all_5", luck: "neutral", variant: null, fixedValue: 5 }; // 運命のトリプル（5〜10×3）→ 全分野★5
   }
   if (rank >= 10 && rank <= 13) {
     // 黄金のトリプル（P/N/Q/K×3）→ 全分野★6（基本）
     let variant = null;
     if (allReversed) variant = "dull"; // ★6だけど光らない普通色
     else if (allUpright) variant = "holo"; // 虹色に輝く
-    return { type: "all_6", luck: "fortune", variant };
+    return { type: "all_6", luck: "fortune", variant, fixedValue: 6 };
   }
   return null;
 }
@@ -1516,18 +1520,23 @@ function calcStats(majorCard, minorResults) {
   // 最優先：ぞろ目（poker規範のスリーカード）。全分野を確定させて即返す
   const jackpot = detectJackpot(minorResults);
   if (jackpot) {
-    let fixedValue;
-    if (jackpot.type === "all_1") fixedValue = jackpot.variant === "void" ? 0 : 1;
-    else if (jackpot.type === "all_5") fixedValue = 5;
-    else fixedValue = 6; // all_6
+    const fixedValue = jackpot.type === "all_1" && jackpot.variant === "void" ? 0 : jackpot.fixedValue;
     const fixed = Array(N).fill(fixedValue);
     const allIndices = Array.from({ length: N }, (_, i) => i);
+
+    // ニュートラルなぞろ目（2〜10）で、小アルカナ3枚＋大アルカナも全部正位置ならホロ演出（スコアは変えない）
+    let variantOverride = jackpot.variant;
+    if (jackpot.luck === "neutral") {
+      const allMinorUpright = minorResults.every((r) => !r.reversed);
+      if (allMinorUpright && !majorCard.reversed) variantOverride = "holo";
+    }
+
     return {
       scores: fixed,
       maxIndices: jackpot.luck === "fortune" ? allIndices : [],
       minIndices: jackpot.luck === "misfortune" ? allIndices : [],
       jackpot: jackpot.type,
-      jackpotVariant: jackpot.variant, // "glowing" | "void" | "dull" | "holo" | null
+      jackpotVariant: variantOverride, // "glowing" | "void" | "dull" | "holo" | null
     };
   }
 
@@ -3054,6 +3063,7 @@ export default function TarotDraw() {
                 const isMin = minIndices.includes(i);
                 const variant = isMax ? "max" : isMin ? "min" : null;
                 const effectiveVariant = forcedVariant || jackpotVariant || (fieldVariants && fieldVariants[i]) || null;
+                const showMaxLabel = effectiveVariant === "holo" && scores[i] === 6;
                 return (
                   <div className={`stats-row${isMax ? " row-max" : isMin ? " row-min" : ""}`} key={cat.key}>
                     <span className="stats-label">{statLabel(cat.key, lang)}</span>
@@ -3068,7 +3078,7 @@ export default function TarotDraw() {
                           : {}
                       }
                     >
-                      {effectiveVariant === "holo" ? "MAX" : scores[i]}
+                      {showMaxLabel ? "MAX" : scores[i]}
                     </span>
                   </div>
                 );
