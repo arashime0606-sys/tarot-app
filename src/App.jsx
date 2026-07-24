@@ -2261,15 +2261,17 @@ export default function TarotDraw() {
       setCouponInput("");
       alert("✓ AI鑑定をオンにしました");
     } else if (code === "namutenriounomikoto") {
-      try { localStorage.setItem(LS_LIMIT_EXPANDED_KEY, String(EXPANDED_DRAWS_PER_DAY)); } catch {}
-      setLimitExpanded(EXPANDED_DRAWS_PER_DAY);
+      const newLimit = Math.max(limitExpanded || FREE_DRAWS_PER_DAY, EXPANDED_DRAWS_PER_DAY);
+      try { localStorage.setItem(LS_LIMIT_EXPANDED_KEY, String(newLimit)); } catch {}
+      setLimitExpanded(newLimit);
       setCouponInput("");
-      alert(`✓ 今日の占い回数が${EXPANDED_DRAWS_PER_DAY}回に増えました`);
-    } else if (code === "suzuhayasaku") {
-      try { localStorage.setItem(LS_LIMIT_EXPANDED_KEY, String(MEDIUM_DRAWS_PER_DAY)); } catch {}
-      setLimitExpanded(MEDIUM_DRAWS_PER_DAY);
+      alert(`✓ 今日の占い回数が${newLimit}回になりました`);
+    } else if (code === "suzuhayasakuhito") {
+      const newLimit = Math.max(limitExpanded || FREE_DRAWS_PER_DAY, MEDIUM_DRAWS_PER_DAY);
+      try { localStorage.setItem(LS_LIMIT_EXPANDED_KEY, String(newLimit)); } catch {}
+      setLimitExpanded(newLimit);
       setCouponInput("");
-      alert(`✓ 今日の占い回数が${MEDIUM_DRAWS_PER_DAY}回に増えました`);
+      alert(`✓ 今日の占い回数が${newLimit}回になりました`);
     } else {
       alert("❌ 無効なコード");
       setCouponInput("");
