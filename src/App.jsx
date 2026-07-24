@@ -1352,17 +1352,17 @@ function suitKeyOf(card) {
 
 const CARD_FORCE = [
   /* 0  愚者    行動★(風冒険→地の仕事が逆で停滞)*/ { upMax:[6],   upMin:[],   revMax:[6],   revMin:[4]   },
-  /* 1  魔術師  仕事★(地の技術→水の感情が逆で乱れ)*/ { upMax:[4],   upMin:[],   revMax:[4],   revMin:[2]   },
-  /* 2  女教皇  加護★(水の直感→風の変化が逆で偏見)*/ { upMax:[7],   upMin:[],   revMax:[7],   revMin:[5]   },
-  /* 3  女帝    人運+感情★(風+水の豊かさ→地の金運が逆で欠如)*/ { upMax:[0,2], upMin:[],   revMax:[0,2], revMin:[1]   },
-  /* 4  皇帝    金運★(地の財力→風の変化が逆で空回り)*/ { upMax:[1],   upMin:[],   revMax:[1],   revMin:[5]   },
+  /* 1  魔術師  仕事★(地の技術→火の気力が逆で自信過剰による空転)*/ { upMax:[4],   upMin:[],   revMax:[4],   revMin:[3]   },
+  /* 2  女教皇  加護★(水の直感→水の感情が逆で情緒不安定)*/ { upMax:[7],   upMin:[],   revMax:[7],   revMin:[2]   },
+  /* 3  女帝    金運★(地の豊かさ・実り→水の感情が逆で過保護な依存)*/ { upMax:[1],   upMin:[],   revMax:[1],   revMin:[2]   },
+  /* 4  皇帝    金運★(地の財力→風の人運が逆で権威の濫用)*/ { upMax:[1],   upMin:[],   revMax:[1],   revMin:[0]   },
   /* 5  法王    人運★(風の社交→水の加護が逆で失う)*/ { upMax:[0],   upMin:[],   revMax:[0],   revMin:[7]   },
   /* 6  恋人たち 感情★(水の共感→風の人運が逆で気まぐれ)*/ { upMax:[2],   upMin:[],   revMax:[2],   revMin:[0]   },
-  /* 7  戦車    行動★(火の克服→地の金運が逆で消耗)*/ { upMax:[6],   upMin:[],   revMax:[6],   revMin:[1]   },
+  /* 7  戦車    行動★(火の克服→火の気力が逆で暴走による消耗)*/ { upMax:[6],   upMin:[],   revMax:[6],   revMin:[3]   },
   /* 8  力      気力★(火の忍耐→水の加護が逆で依存)*/ { upMax:[3],   upMin:[],   revMax:[3],   revMin:[7]   },
-  /* 9  隠者    金運★(地の保全→火の行動が逆で閉じこもる)*/ { upMax:[1],   upMin:[],   revMax:[1],   revMin:[6]   },
+  /* 9  隠者    加護★(水の導きの光→火の行動が逆で閉じこもる)*/ { upMax:[7],   upMin:[],   revMax:[7],   revMin:[6]   },
   /* 10 運命の輪 変化★(風の転機→地の仕事が逆で停滞)*/ { upMax:[5],   upMin:[],   revMax:[5],   revMin:[4]   },
-  /* 11 正義    人運★(風の公正→水の感情が逆で不正)*/ { upMax:[0],   upMin:[],   revMax:[0],   revMin:[2]   },
+  /* 11 正義    人運★(風の公正→地の仕事が逆で責任回避)*/ { upMax:[0],   upMin:[],   revMax:[0],   revMin:[4]   },
   /* 12 吊された男 仕事★(地の献身→火の気力が逆で不自由)*/ { upMax:[4],   upMin:[],   revMax:[4],   revMin:[3]   },
   /* 13 死神    変化+感情★ / 仕事+行動★1(正) / 感情★6+変化+行動★1(逆) */
                { upMax:[5,2], upMin:[4,6], revMax:[2],   revMin:[5,6] },
@@ -1371,10 +1371,12 @@ const CARD_FORCE = [
                { upMax:[1,3], upMin:[7,5], revMax:[5],   revMin:[1,7] },
   /* 16 塔      変化+行動★ / 加護+金運★1(正) / 感情★6+変化+金運★1(逆) */
                { upMax:[5,6], upMin:[7,1], revMax:[2],   revMin:[5,1] },
-  /* 17 星      加護★(水の希望→風の人運が逆で停滞)*/ { upMax:[7],   upMin:[],   revMax:[7],   revMin:[0]   },
-  /* 18 月      感情★(水の用心→火の行動が逆で抑制)*/ { upMax:[2],   upMin:[],   revMax:[2],   revMin:[6]   },
+  /* 17 星      GOOD_CARDS化（動的上位・下位判定）。可能性・才能・希望・静かな癒し / 逆=停滞・自信喪失 */
+               { upMax:[7],   upMin:[],   revMax:[7],   revMin:[3]   },
+  /* 18 月      正位置は感情★6(幻惑・感情の高ぶり)+行動★1(警戒心で動けない)／逆位置は感情★6維持、行動のデバフは解除（強制なし） */
+               { upMax:[2],   upMin:[6],  revMax:[2],   revMin:[]    },
   /* 19 太陽    仕事+気力★(地+火の成果→風の人運が逆で立場失う)*/ { upMax:[4,3], upMin:[],   revMax:[4,3], revMin:[0]   },
-  /* 20 審判    変化★(風の復活→火の気力が逆で後悔)*/ { upMax:[5],   upMin:[],   revMax:[5],   revMin:[3]   },
+  /* 20 審判    変化★(風の復活→水の感情が逆で後悔)*/ { upMax:[5],   upMin:[],   revMax:[5],   revMin:[2]   },
   /* 21 世界    仕事+感情★(地+水の統合→風の変化が逆で行き詰り)*/ { upMax:[4,2], upMin:[],   revMax:[4,2], revMin:[5]   },
 ];
 
@@ -1535,7 +1537,7 @@ function calcStats(majorCard, minorResults) {
   // 極端カード（悪魔13→15、死神13、塔16）と良いカード（女帝3、太陽19、世界21）は
   // 自然スコアからランダムに最大・最小を決める
   const EXTREME_CARDS = new Set([13, 15, 16]);
-  const GOOD_CARDS    = new Set([3, 19, 21]);
+  const GOOD_CARDS    = new Set([17, 19, 21]); // 星・太陽・世界（女帝と星を交換）
 
   let maxIndices, minIndices;
 
