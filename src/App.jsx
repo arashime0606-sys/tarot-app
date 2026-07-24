@@ -2728,18 +2728,13 @@ export default function TarotDraw() {
         .star-dull .star-fill { animation: none !important; filter: none !important; }
         .star-dull .star-wrap { animation: none !important; }
 
-        /* 黄金のトリプル・全部正位置: 虹色（ホロ）に輝く */
+        /* 黄金のトリプル・全部正位置: 虹色（ホロ）に輝く（SVGなのでhue-rotateで実現） */
         .star-fill-holo {
-          background: linear-gradient(90deg, #ff6b6b, #ffd93d, #6bff8f, #6bcfff, #b06bff, #ff6bd6, #ff6b6b);
-          background-size: 300% 100%;
-          -webkit-background-clip: text;
-          background-clip: text;
-          color: transparent !important;
-          animation: holoShift 2.2s linear infinite, starGlowPulse 1.6s ease-in-out infinite;
+          animation: holoHueRotate 2s linear infinite;
         }
-        @keyframes holoShift {
-          0%   { background-position: 0% 50%; }
-          100% { background-position: 300% 50%; }
+        @keyframes holoHueRotate {
+          0%   { filter: hue-rotate(0deg) saturate(2.2) brightness(1.3) drop-shadow(0 0 4px rgba(255,255,255,0.5)); }
+          100% { filter: hue-rotate(360deg) saturate(2.2) brightness(1.3) drop-shadow(0 0 4px rgba(255,255,255,0.5)); }
         }
 
         @keyframes starPop {
