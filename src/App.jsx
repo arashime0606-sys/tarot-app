@@ -1787,6 +1787,7 @@ export default function TarotDraw() {
   const [question, setQuestion] = useState("");
   const [lang, setLang] = useState(loadLang());
   const t = T[lang];
+  const isLatinScript = lang === "en" || lang === "tl"; // アルファベット言語は逆位置でも文字を読める向きに補正する
   const handleLangChange = (newLang) => {
     setLang(newLang);
     saveLang(newLang);
@@ -2202,7 +2203,7 @@ export default function TarotDraw() {
         .static-card.big { width: 168px; height: 252px; }
         .card-face { width: 100%; height: 100%; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 9px; padding: 14px 8px; text-align: center; }
         .card-face.reversed { transform: rotate(180deg); }
-        .card-face.reversed .card-text-wrap { transform: rotate(180deg); }
+        .card-face.reversed .card-text-wrap.keep-readable { transform: rotate(180deg); }
         .card-corner { font-family: 'Cinzel', serif; font-size: 13px; color: var(--accent, var(--gold)); letter-spacing: 0.1em; }
         .card-icon { color: var(--accent, var(--gold)); display: flex; }
         .card-name { font-family: 'Shippori Mincho', serif; font-size: 15px; font-weight: 600; color: var(--parchment); line-height: 1.3; }
@@ -2467,7 +2468,7 @@ export default function TarotDraw() {
                   <div className={`card-face ${d.reversed ? "reversed" : ""}`} style={{ "--accent": d.card.accent || "var(--gold)" }}>
                     <div className="card-corner">{d.card.corner}</div>
                     <div className="card-icon">{d.card.Icon ? <d.card.Icon size={24} /> : <Sparkles size={24} />}</div>
-                    <div className="card-text-wrap">
+                    <div className={`card-text-wrap${isLatinScript ? " keep-readable" : ""}`}>
                       <div className="card-name">{getCardName(d.card, lang)}</div>
                       <div className="card-sub">{getCardSub(d.card, lang)}</div>
                     </div>
@@ -2529,7 +2530,7 @@ export default function TarotDraw() {
               <div className="card-icon">
                 <Sparkles size={30} />
               </div>
-              <div className="card-text-wrap">
+              <div className={`card-text-wrap${isLatinScript ? " keep-readable" : ""}`}>
                 <div className="card-name">{getCardName(majorCard.card, lang)}</div>
                 <div className="card-sub">{getCardSub(majorCard.card, lang)}</div>
               </div>
