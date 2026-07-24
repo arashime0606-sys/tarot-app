@@ -2714,7 +2714,7 @@ export default function TarotDraw() {
         .stats-row.row-min { opacity: 0.65; }
 
         /* 奈落のトリプル・全部正位置: ★1だけど光っている */
-        .star-glowing .star-fill { animation: starGlowPulse 1.6s ease-in-out infinite; filter: drop-shadow(0 0 4px rgba(201,162,75,0.9)); }
+        .star-glowing .star-fill { animation: starGlowPulse 1.6s ease-in-out infinite !important; filter: drop-shadow(0 0 4px rgba(201,162,75,0.9)); }
         @keyframes starGlowPulse {
           0%, 100% { filter: drop-shadow(0 0 2px rgba(201,162,75,0.5)); }
           50%      { filter: drop-shadow(0 0 8px rgba(201,162,75,1)); }
@@ -2722,15 +2722,16 @@ export default function TarotDraw() {
 
         /* 奈落のトリプル・全部逆位置: ★0・真っ黒 */
         .star-void .star-bg { color: rgba(10,8,16,0.6); }
-        .star-void .star-fill { filter: none; }
+        .star-void .star-fill { filter: none !important; animation: none !important; }
 
         /* 黄金のトリプル・全部逆位置: ★6だけど光らない普通の星色 */
         .star-dull .star-fill { animation: none !important; filter: none !important; }
         .star-dull .star-wrap { animation: none !important; }
 
         /* 黄金のトリプル・全部正位置: 虹色（ホロ）に輝く（SVGなのでhue-rotateで実現） */
+        /* !importantで .stars-max .star-fill の詳細度に打ち勝ち、常に最優先で適用する */
         .star-fill-holo {
-          animation: holoHueRotate 2s linear infinite;
+          animation: holoHueRotate 2s linear infinite !important;
         }
         @keyframes holoHueRotate {
           0%   { filter: hue-rotate(0deg) saturate(2.2) brightness(1.3) drop-shadow(0 0 4px rgba(255,255,255,0.5)); }
@@ -3054,8 +3055,17 @@ export default function TarotDraw() {
                   <div className={`stats-row${isMax ? " row-max" : isMin ? " row-min" : ""}`} key={cat.key}>
                     <span className="stats-label">{statLabel(cat.key, lang)}</span>
                     <StarRating score={scores[i]} variant={variant} jackpotVariant={effectiveVariant} />
-                    <span className="stats-value" style={variant ? { color: isMax ? "var(--star-max)" : "var(--star-min)" } : {}}>
-                      {scores[i]}
+                    <span
+                      className="stats-value"
+                      style={
+                        effectiveVariant === "holo"
+                          ? { fontWeight: 700, animation: "holoHueRotate 2s linear infinite" }
+                          : variant
+                          ? { color: isMax ? "var(--star-max)" : "var(--star-min)" }
+                          : {}
+                      }
+                    >
+                      {effectiveVariant === "holo" ? "MAX" : scores[i]}
                     </span>
                   </div>
                 );
@@ -3112,20 +3122,4 @@ export default function TarotDraw() {
             {canRedraw ? (
               <button className="reset-btn" onClick={handleRedraw} style={{ color: "var(--gold-soft)", borderColor: "rgba(201,162,75,0.5)" }}>
                 <Shuffle size={14} />
-                {t.redrawButton(FREE_REDRAWS - redrawCount)}
-              </button>
-            ) : (
-              <p style={{ fontSize: "11px", color: "var(--muted)", margin: 0, textAlign: "center" }}>
-                {t.redrawUsed}
-              </p>
-            )}
-            <button className="reset-btn" onClick={reset}>
-              <RotateCcw size={14} />
-              {t.drawAgainButton(Math.max(0, currentLimit - todayCount))}
-            </button>
-          </div>
-        </div>
-      )}
-    </div>
-  );
-}
+                {t.redrawButton(FREE_R
