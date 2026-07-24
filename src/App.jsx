@@ -353,6 +353,37 @@ const STAT_CATEGORIES = [
   { key: "blessing",   label: "加護", element: "水" },
 ];
 
+// 8分野ラベルの多言語対応（key経由で参照）
+const STAT_LABELS = {
+  ja: { people: "人運", money: "金運", emotion: "感情", energy: "気力", work: "仕事", change: "変化", action: "行動", blessing: "加護" },
+  "zh-TW": { people: "人緣", money: "財運", emotion: "感情", energy: "活力", work: "工作", change: "變化", action: "行動", blessing: "庇佑" },
+  en: { people: "People", money: "Money", emotion: "Emotion", energy: "Energy", work: "Work", change: "Change", action: "Action", blessing: "Blessing" },
+  tl: { people: "Relasyon", money: "Pera", emotion: "Emosyon", energy: "Enerhiya", work: "Trabaho", change: "Pagbabago", action: "Aksyon", blessing: "Biyaya" },
+};
+function statLabel(key, lang) {
+  return (STAT_LABELS[lang] && STAT_LABELS[lang][key]) || STAT_LABELS.ja[key];
+}
+
+// 過去・現在・未来ラベルの多言語対応
+const POSITION_LABELS_I18N = {
+  ja: ["過去", "現在", "未来"],
+  "zh-TW": ["過去", "現在", "未來"],
+  en: ["Past", "Present", "Future"],
+  tl: ["Nakaraan", "Kasalukuyan", "Hinaharap"],
+};
+
+// 正位置・逆位置ラベルの多言語対応
+const ORIENTATION_LABELS = {
+  ja: { up: "正位置", rev: "逆位置" },
+  "zh-TW": { up: "正位", rev: "逆位" },
+  en: { up: "Upright", rev: "Reversed" },
+  tl: { up: "Upright", rev: "Reversed" },
+};
+function orientationLabel(reversed, lang) {
+  const d = ORIENTATION_LABELS[lang] || ORIENTATION_LABELS.ja;
+  return reversed ? d.rev : d.up;
+}
+
 //                          人運  金運  感情  気力  仕事  変化  行動  加護
 const STAT_WEIGHTS = {
   // 小アルカナ（スート × 元素）
@@ -921,6 +952,10 @@ const T = {
     drawAgainButton: (n) => `もう一度占う（今日あと${n}回）`,
     endOfPrivacyResult: "✦ この結果は、あなたの端末にしか残りません ✦",
     themeThemeLabel: "テーマ・解釈",
+    fortuneGlanceTitle: "今回の運勢（ぱっと見）",
+    intuitionMiss: "◈ あなたはカードの向きを修正して開きました",
+    intuitionHit: "✦ あなたはカードの運命をそのまま受け入れました",
+    questionBannerPrefix: "占ってほしいこと",
   },
   "zh-TW": {
     appTitle: "塔羅占卜",
@@ -954,6 +989,10 @@ const T = {
     drawAgainButton: (n) => `再占卜一次（今天還可以${n}次）`,
     endOfPrivacyResult: "✦ 此結果僅保留在您的裝置中 ✦",
     themeThemeLabel: "主題・解讀",
+    fortuneGlanceTitle: "今日運勢一覽",
+    intuitionMiss: "◈ 你修正了卡牌的方向後翻開",
+    intuitionHit: "✦ 你原封不動地接受了卡牌的命運",
+    questionBannerPrefix: "想占卜的事情",
   },
   en: {
     appTitle: "Tarot Reading",
@@ -987,6 +1026,10 @@ const T = {
     drawAgainButton: (n) => `Read Again (${n} left today)`,
     endOfPrivacyResult: "✦ This result stays only on your device ✦",
     themeThemeLabel: "Theme & Reading",
+    fortuneGlanceTitle: "Today's Fortune at a Glance",
+    intuitionMiss: "◈ You corrected the card's orientation before revealing it",
+    intuitionHit: "✦ You accepted the card's fate as it was",
+    questionBannerPrefix: "Your question",
   },
   tl: {
     appTitle: "Tarot Reading",
@@ -1020,6 +1063,10 @@ const T = {
     drawAgainButton: (n) => `Magbasa Ulit (${n} na lang ngayong araw)`,
     endOfPrivacyResult: "✦ Ang resultang ito ay nananatili lamang sa device mo ✦",
     themeThemeLabel: "Tema at Reading",
+    fortuneGlanceTitle: "Kapalaran Mo Ngayon (Sulyap)",
+    intuitionMiss: "◈ Binago mo ang direksyon ng card bago ito binuksan",
+    intuitionHit: "✦ Tinanggap mo ang kapalaran ng card gaya ng dati",
+    questionBannerPrefix: "Tanong mo",
   },
 };
 
@@ -1646,7 +1693,7 @@ export default function TarotDraw() {
         )}
       </div>
 
-      {phase !== "idle" && question && <p className="question-banner">占ってほしいこと:「{question}」</p>}
+      {phase !== "idle" && question && <p className="question-banner">{t.questionBannerPrefix}:「{question}」</p>}
 
       {showMajorGrid && (
         <>
@@ -1713,7 +1760,7 @@ export default function TarotDraw() {
           <div className="cards-row">
             {minorResults.map((d, i) => (
               <div className="card-slot" key={d.card.id}>
-                <span className="position-label">{POSITION_LABELS[i]}</span>
+                <span className="position-label">{POSITION_LABELS_I18N[lang][i]}</span>
                 <div className="static-card">
                   <div className={`card-face ${d.reversed ? "reversed" : ""}`} style={{ "--accent": d.card.accent || "var(--gold)" }}>
                     <div className="card-corner">{d.card.corner}</div>
@@ -1722,7 +1769,7 @@ export default function TarotDraw() {
                     <div className="card-sub">{d.card.sub}</div>
                   </div>
                 </div>
-                <span className={`orientation ${d.reversed ? "rev" : "up"}`}>{d.reversed ? "逆位置" : "正位置"}</span>
+                <span className={`orientation ${d.reversed ? "rev" : "up"}`}>{orientationLabel(d.reversed, lang)}</span>
               </div>
             ))}
           </div>
@@ -1782,20 +1829,18 @@ export default function TarotDraw() {
               <div className="card-sub">{majorCard.card.sub}</div>
             </div>
           </div>
-          <span className={`orientation ${majorCard.reversed ? "rev" : "up"}`}>{majorCard.reversed ? "逆位置" : "正位置"}</span>
+          <span className={`orientation ${majorCard.reversed ? "rev" : "up"}`}>{orientationLabel(majorCard.reversed, lang)}</span>
           <p className="major-keywords">{majorCard.reversed ? majorCard.card.rev : majorCard.card.up}</p>
 
           {userOrientationChoice !== null && (
             <p className={`intuition-msg ${userOrientationChoice ? "miss" : "hit"}`}>
-              {userOrientationChoice
-                ? "◈ あなたはカードの向きを修正して開きました"
-                : "✦ あなたはカードの運命をそのまま受け入れました"}
+              {userOrientationChoice ? t.intuitionMiss : t.intuitionHit}
             </p>
           )}
 
           <div className="stats-panel">
             <div className="stats-title">
-              <Sparkles size={12} /> 今回の運勢（ぱっと見）
+              <Sparkles size={12} /> {t.fortuneGlanceTitle}
             </div>
             {(() => {
               const { scores, maxIndices, minIndices } = calcStats(majorCard, minorResults);
@@ -1805,7 +1850,7 @@ export default function TarotDraw() {
                 const variant = isMax ? "max" : isMin ? "min" : null;
                 return (
                   <div className={`stats-row${isMax ? " row-max" : isMin ? " row-min" : ""}`} key={cat.key}>
-                    <span className="stats-label">{cat.label}</span>
+                    <span className="stats-label">{statLabel(cat.key, lang)}</span>
                     <StarRating score={scores[i]} variant={variant} />
                     <span className="stats-value" style={variant ? { color: isMax ? "var(--star-max)" : "var(--star-min)" } : {}}>
                       {scores[i]}
