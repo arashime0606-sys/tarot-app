@@ -1619,6 +1619,7 @@ const AI_LANG_INSTRUCTION = {
 const T = {
   ja: {
     appTitle: "タロット占い",
+    tagline: "",
     eyebrow: "ARCANA DRAW",
     intro: "まず大アルカナ22枚から、全体のテーマを表す1枚を選びます（このカードはすぐには開きません）。続いて小アルカナ56枚から3枚を選ぶと、過去・現在・未来が一度に開かれ、AIが鑑定します。最後にテーマカードが開かれ、解釈と占断が導かれます。",
     privacyIntro: "✦ 誰にも知られず、AIだけがあなたの悩みに向き合います ✦",
@@ -1657,6 +1658,7 @@ const T = {
   },
   "zh-TW": {
     appTitle: "塔羅占卜",
+    tagline: "來自日本的全新塔羅體驗",
     eyebrow: "ARCANA DRAW",
     intro: "首先從22張大阿爾克那中選出代表整體主題的一張（此牌不會立即翻開）。接著從56張小阿爾克那中選出3張，過去、現在、未來將同時揭曉，由AI進行解讀。最後翻開主題牌，導出解釋與占斷。",
     privacyIntro: "✦ 不會被任何人知道，只有AI會傾聽你的煩惱 ✦",
@@ -1695,6 +1697,7 @@ const T = {
   },
   en: {
     appTitle: "Tarot Reading",
+    tagline: "A new tarot experience designed in Japan",
     eyebrow: "ARCANA DRAW",
     intro: "First, choose one card from the 22 Major Arcana to represent your overall theme (this card won't be revealed right away). Then choose 3 Minor Arcana cards from 56 — your past, present, and future will be revealed together, read by AI. Finally, your theme card is revealed, bringing interpretation and judgment.",
     privacyIntro: "✦ No one else will know — only the AI listens to your concerns ✦",
@@ -1733,6 +1736,7 @@ const T = {
   },
   tl: {
     appTitle: "Tarot Reading",
+    tagline: "A new tarot experience designed in Japan",
     eyebrow: "ARCANA DRAW",
     intro: "Una, pumili ng isang card mula sa 22 Major Arcana na kumakatawan sa pangkalahatang tema mo (hindi agad ito ibubunyag). Pagkatapos, pumili ng 3 Minor Arcana card mula sa 56 — sabay na ibubunyag ang past, present, at future mo, at babasahin ng AI. Sa huli, bubuksan ang theme card mo para sa interpretasyon at final na hula.",
     privacyIntro: "✦ Walang ibang makakaalam — ang AI lang ang makikinig sa iyong alalahanin ✦",
@@ -2129,8 +2133,13 @@ export default function TarotDraw() {
         .tarot-header { text-align: center; position: relative; z-index: 1; margin-bottom: 22px; }
         .eyebrow { display: inline-flex; align-items: center; gap: 6px; font-family: 'Cinzel', serif; font-size: 11px; letter-spacing: 0.18em; color: var(--gold); margin-bottom: 10px; }
         .privacy-note { font-size: 11px; color: var(--gold-soft); opacity: 0.8; margin-top: 10px; letter-spacing: 0.02em; }
-        .tarot-header h1 { font-family: 'Shippori Mincho', serif; font-size: 30px; font-weight: 700; margin: 0 0 10px; letter-spacing: 0.04em; }
+        .tarot-header h1 { font-family: 'Shippori Mincho', serif; font-size: 30px; font-weight: 700; margin: 0 0 10px; letter-spacing: 0.04em; color: var(--parchment); animation: titleGlow 3.2s ease-in-out infinite; }
+        @keyframes titleGlow {
+          0%, 100% { text-shadow: 0 0 0px rgba(201,162,75,0); }
+          50%      { text-shadow: 0 0 14px rgba(201,162,75,0.45); }
+        }
         .tarot-header p { font-size: 12.5px; color: var(--muted); margin: 0 auto; line-height: 1.75; max-width: 460px; }
+        .app-tagline { font-family: 'Cinzel', serif; font-size: 12px; color: var(--gold-soft); letter-spacing: 0.06em; margin: 0 0 12px; opacity: 0.9; }
 
         .controls { position: relative; z-index: 1; display: flex; justify-content: center; margin-bottom: 18px; }
 
@@ -2257,7 +2266,7 @@ export default function TarotDraw() {
         @keyframes popIn { from { opacity: 0; transform: scale(0.88) translateY(8px); } to { opacity: 1; transform: scale(1) translateY(0); } }
 
         @media (prefers-reduced-motion: reduce) {
-          .mini-card, .draw-btn, .climax-btn, .held-chip, .result-area, .major-stage, .mini-card.vanish { animation: none !important; transition: none !important; }
+          .mini-card, .draw-btn, .climax-btn, .held-chip, .result-area, .major-stage, .mini-card.vanish, .tarot-header h1 { animation: none !important; transition: none !important; }
         }
         @media (max-width: 520px) {
           .tarot-header h1 { font-size: 24px; }
@@ -2296,6 +2305,7 @@ export default function TarotDraw() {
           <span>{t.eyebrow}</span>
         </div>
         <h1>{t.appTitle}</h1>
+        {t.tagline && <p className="app-tagline">{t.tagline}</p>}
         <p>{t.intro}</p>
         <p className="privacy-note">{t.privacyIntro}</p>
       </header>
