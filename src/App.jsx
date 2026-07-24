@@ -1564,6 +1564,7 @@ function StarRating({ score, variant }) {
 
 
 const FREE_DRAWS_PER_DAY = 3;
+const MEDIUM_DRAWS_PER_DAY = 8; // クーポンコードで解放される中間拡張上限
 const EXPANDED_DRAWS_PER_DAY = 21; // クーポンコードで解放される拡張上限
 const FREE_REDRAWS = 1;
 const MAX_HISTORY = 365;
@@ -1574,7 +1575,11 @@ const LS_HISTORY_KEY = "tarot_history";
 const LS_LIMIT_EXPANDED_KEY = "tarot_limit_expanded";
 
 function loadLimitExpanded() {
-  try { return localStorage.getItem(LS_LIMIT_EXPANDED_KEY) === "on"; } catch { return false; }
+  try {
+    const v = localStorage.getItem(LS_LIMIT_EXPANDED_KEY);
+    const n = parseInt(v, 10);
+    return Number.isFinite(n) ? n : null;
+  } catch { return null; }
 }
 
 function loadUserName() {
@@ -2240,7 +2245,7 @@ export default function TarotDraw() {
       setTodayCount(0);
       setHistory([]);
       setUserName("");
-      setLimitExpanded(false);
+      setLimitExpanded(null);
       setCouponInput("");
       setShowCoupon(false);
       alert("✓ リセット完了\nページをリロードしてください");
@@ -2256,17 +2261,22 @@ export default function TarotDraw() {
       setCouponInput("");
       alert("✓ AI鑑定をオンにしました");
     } else if (code === "namutenriounomikoto") {
-      try { localStorage.setItem(LS_LIMIT_EXPANDED_KEY, "on"); } catch {}
-      setLimitExpanded(true);
+      try { localStorage.setItem(LS_LIMIT_EXPANDED_KEY, String(EXPANDED_DRAWS_PER_DAY)); } catch {}
+      setLimitExpanded(EXPANDED_DRAWS_PER_DAY);
       setCouponInput("");
       alert(`✓ 今日の占い回数が${EXPANDED_DRAWS_PER_DAY}回に増えました`);
+    } else if (code === "suzuhayasaku") {
+      try { localStorage.setItem(LS_LIMIT_EXPANDED_KEY, String(MEDIUM_DRAWS_PER_DAY)); } catch {}
+      setLimitExpanded(MEDIUM_DRAWS_PER_DAY);
+      setCouponInput("");
+      alert(`✓ 今日の占い回数が${MEDIUM_DRAWS_PER_DAY}回に増えました`);
     } else {
       alert("❌ 無効なコード");
       setCouponInput("");
     }
   };
 
-  const currentLimit = limitExpanded ? EXPANDED_DRAWS_PER_DAY : FREE_DRAWS_PER_DAY;
+  const currentLimit = limitExpanded || FREE_DRAWS_PER_DAY;
   const canDraw = todayCount < currentLimit;
 
   const handleNameChange = (value) => {
