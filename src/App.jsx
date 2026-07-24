@@ -2232,6 +2232,8 @@ export default function TarotDraw() {
   const [userName, setUserName] = useState(loadUserName());
   const [todayCount, setTodayCount] = useState(loadTodayCount());
   const [limitExpanded, setLimitExpanded] = useState(loadLimitExpanded());
+  const [forceStarVariant, setForceStarVariant] = useState(null); // "holo" | "kuro" | null（次の1回だけ星の色を強制上書き・クーポン投入で予約）
+  const [activeStarVariant, setActiveStarVariant] = useState(null); // 今回の占いに実際に適用される値（start時に確定）
   const [redrawCount, setRedrawCount] = useState(0);
   const [history, setHistory] = useState(loadHistory());
   const [showCoupon, setShowCoupon] = useState(false);
@@ -2311,6 +2313,8 @@ export default function TarotDraw() {
       setHistory([]);
       setUserName("");
       setLimitExpanded(null);
+      setForceStarVariant(null);
+      setActiveStarVariant(null);
       setCouponInput("");
       setShowCoupon(false);
       alert("✓ リセット完了\nページをリロードしてください");
@@ -2337,6 +2341,16 @@ export default function TarotDraw() {
       setLimitExpanded(newLimit);
       setCouponInput("");
       alert(`✓ 今日の占い回数が${newLimit}回になりました`);
+    } else if (code === "holo") {
+      setForceStarVariant("holo");
+      setCouponInput("");
+      setShowCoupon(false);
+      alert("✓ 次の1回の占いで、星がすべてホロ演出になります（スコア自体は変わりません）");
+    } else if (code === "kuro") {
+      setForceStarVariant("kuro");
+      setCouponInput("");
+      setShowCoupon(false);
+      alert("✓ 次の1回の占いで、星がすべて黒くなります（スコア自体は変わりません）");
     } else {
       alert("❌ 無効なコード");
       setCouponInput("");
@@ -2356,6 +2370,9 @@ export default function TarotDraw() {
     if (userName.trim()) saveUserName(userName.trim());
     setTodayCount(incrementTodayCount());
     setRedrawCount(0);
+    // 予約されたテスト用星演出を、今回の占いにだけ適用して消費する
+    setActiveStarVariant(forceStarVariant);
+    setForceStarVariant(null);
     setMajorPool(buildPool(MAJOR_LIST));
     setMajorSelectedId(null);
     setMajorCard(null);
@@ -2389,6 +2406,7 @@ export default function TarotDraw() {
     setReading3Loading(false);
     setCopied(false);
     setUserOrientationChoice(null);
+    setActiveStarVariant(null);
     setRankingMajorCards([]);
     setRankingMinorCards([]);
     setJackpotType(null);
@@ -3031,11 +3049,12 @@ export default function TarotDraw() {
             </div>
             {(() => {
               const { scores, maxIndices, minIndices, jackpotVariant, fieldVariants } = calcStats(majorCard, minorResults);
+              const forcedVariant = activeStarVariant === "kuro" ? "void" : activeStarVariant === "holo" ? "holo" : null;
               return STAT_CATEGORIES.map((cat, i) => {
                 const isMax = maxIndices.includes(i);
                 const isMin = minIndices.includes(i);
                 const variant = isMax ? "max" : isMin ? "min" : null;
-                const effectiveVariant = jackpotVariant || (fieldVariants && fieldVariants[i]) || null;
+                const effectiveVariant = forcedVariant || jackpotVariant || (fieldVariants && fieldVariants[i]) || null;
                 return (
                   <div className={`stats-row${isMax ? " row-max" : isMin ? " row-min" : ""}`} key={cat.key}>
                     <span className="stats-label">{statLabel(cat.key, lang)}</span>
