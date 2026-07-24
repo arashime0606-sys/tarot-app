@@ -2729,8 +2729,9 @@ export default function TarotDraw() {
         .star-dull .star-wrap { animation: none !important; }
 
         /* 黄金のトリプル・全部正位置: 虹色（ホロ）に輝く（SVGなのでhue-rotateで実現） */
-        /* !importantで .stars-max .star-fill の詳細度に打ち勝ち、常に最優先で適用する */
-        .star-fill-holo {
+        /* セレクタ詳細度を上げつつ!importantも付け、.stars-max .star-fill に確実に勝つ */
+        .star-fill.star-fill-holo,
+        .stars-max .star-fill.star-fill-holo {
           animation: holoHueRotate 2s linear infinite !important;
         }
         @keyframes holoHueRotate {
@@ -3122,4 +3123,20 @@ export default function TarotDraw() {
             {canRedraw ? (
               <button className="reset-btn" onClick={handleRedraw} style={{ color: "var(--gold-soft)", borderColor: "rgba(201,162,75,0.5)" }}>
                 <Shuffle size={14} />
-                {t.redrawButton(FREE_R
+                {t.redrawButton(FREE_REDRAWS - redrawCount)}
+              </button>
+            ) : (
+              <p style={{ fontSize: "11px", color: "var(--muted)", margin: 0, textAlign: "center" }}>
+                {t.redrawUsed}
+              </p>
+            )}
+            <button className="reset-btn" onClick={reset}>
+              <RotateCcw size={14} />
+              {t.drawAgainButton(Math.max(0, currentLimit - todayCount))}
+            </button>
+          </div>
+        </div>
+      )}
+    </div>
+  );
+}
