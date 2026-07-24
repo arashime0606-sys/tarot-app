@@ -28,7 +28,7 @@ const MAJOR_NAME_I18N = {
     "เดอะฟูล", "เดอะเมจิเชียน", "เดอะไฮพรีสเตส", "เอ็มเพรส", "เอ็มเพอเรอร์", "ไฮโรแฟนท์",
     "เดอะเลิฟเวอร์ส", "เดอะแชริออท", "สเตรงธ์", "เดอะเฮอร์มิท",
     "วีลออฟฟอร์จูน", "จัสทิส", "เดอะแฮงด์แมน", "เดธ", "เทมเพอแรนซ์", "เดอะเดวิล", "เดอะทาวเวอร์",
-    "เดอะสตาร์", "เดอะมูน", "เดอะซัน", "จัดจ์เมนท์", "เดอะเวิลด์",
+    "เดอะสตาร์", "เดอะมูน", "เดอะซัน", "จัดจ์เมนท์", "เดอะเวิลด์",a
   ],
 };
 function majorName(index, lang) {
@@ -968,10 +968,10 @@ function getCardName(card, lang) {
 
 // カードのサブラベル（「大アルカナ」「小アルカナ・棒（火）」等）を言語別に返す
 const MAJOR_ARCANA_LABEL_I18N = {
-  ja: "大アルカナ", "zh-TW": "大阿爾克那", en: "Major Arcana", tl: "Major Arcana",
+  ja: "大アルカナ", "zh-TW": "大阿爾克那", en: "Major Arcana", tl: "Major Arcana", th: "ไพ่ชุดใหญ่ (Major Arcana)",
 };
 const MINOR_ARCANA_PREFIX_I18N = {
-  ja: "小アルカナ・", "zh-TW": "小阿爾克那・", en: "Minor Arcana · ", tl: "Minor Arcana · ",
+  ja: "小アルカナ・", "zh-TW": "小阿爾克那・", en: "Minor Arcana · ", tl: "Minor Arcana · ", th: "ไพ่ชุดเล็ก · ",
 };
 function getCardSub(card, lang) {
   if (!card || !card.id) return card ? card.sub : "";
@@ -2025,7 +2025,7 @@ export default function TarotDraw() {
   const [question, setQuestion] = useState("");
   const [lang, setLang] = useState(loadLang());
   const t = T[lang];
-  const isLatinScript = lang === "en" || lang === "tl"; // アルファベット言語は逆位置でも文字を読める向きに補正する
+  const needsUprightText = lang === "en" || lang === "tl" || lang === "th"; // CJK以外は逆位置でも文字を読める向きに補正する
   const handleLangChange = (newLang) => {
     setLang(newLang);
     saveLang(newLang);
@@ -2712,7 +2712,7 @@ export default function TarotDraw() {
                   <div className={`card-face ${d.reversed ? "reversed" : ""}`} style={{ "--accent": d.card.accent || "var(--gold)" }}>
                     <div className="card-corner">{d.card.corner}</div>
                     <div className="card-icon">{d.card.Icon ? <d.card.Icon size={24} /> : <Sparkles size={24} />}</div>
-                    <div className={`card-text-wrap${isLatinScript ? " keep-readable" : ""}`}>
+                    <div className={`card-text-wrap${needsUprightText ? " keep-readable" : ""}`}>
                       <div className="card-name">{getCardName(d.card, lang)}</div>
                       <div className="card-sub">{getCardSub(d.card, lang)}</div>
                     </div>
@@ -2774,7 +2774,7 @@ export default function TarotDraw() {
               <div className="card-icon">
                 <Sparkles size={30} />
               </div>
-              <div className={`card-text-wrap${isLatinScript ? " keep-readable" : ""}`}>
+              <div className={`card-text-wrap${needsUprightText ? " keep-readable" : ""}`}>
                 <div className="card-name">{getCardName(majorCard.card, lang)}</div>
                 <div className="card-sub">{getCardSub(majorCard.card, lang)}</div>
               </div>
