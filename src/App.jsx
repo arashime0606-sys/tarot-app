@@ -1392,6 +1392,36 @@ function isStairPattern(minorResults) {
   return sorted[1] - sorted[0] === 1 && sorted[2] - sorted[1] === 1;
 }
 
+// フラッシュ判定：3枚が同じスート（poker規範のフラッシュに相当）
+// 戻り値: { suitKey, luck, variant } luck: "fortune"|"misfortune"|null
+// variant: "holo"(吉・全部正位置) | "void"(凶・全部逆位置) | null(通常の2枚判定)
+function detectFlush(minorResults) {
+  if (minorResults.length !== 3) return null;
+  const suitKeys = minorResults.map((r) => r.card.id.split("-")[0]);
+  const allSameSuit = suitKeys[0] === suitKeys[1] && suitKeys[1] === suitKeys[2];
+  if (!allSameSuit) return null;
+
+  const suitKey = suitKeys[0];
+  const allUpright = minorResults.every((r) => !r.reversed);
+  const allReversed = minorResults.every((r) => r.reversed);
+  const reversedCount = minorResults.filter((r) => r.reversed).length;
+
+  if (allUpright) return { suitKey, luck: "fortune", variant: "holo" };       // 運命のフラッシュ・全部正位置
+  if (allReversed) return { suitKey, luck: "misfortune", variant: "void" };   // 凶兆のフラッシュ・全部逆位置
+  if (reversedCount <= 1) return { suitKey, luck: "fortune", variant: null }; // 運命のフラッシュ・通常（正位置2枚）
+  return { suitKey, luck: "misfortune", variant: null };                     // 凶兆のフラッシュ・通常（逆位置2枚）
+}
+
+// そのスートが最も強く関わる分野インデックスを2つ返す（STAT_WEIGHTSの上位2値）
+function topFieldsForSuit(suitKey) {
+  const w = STAT_WEIGHTS[suitKey] || [];
+  return w
+    .map((v, i) => ({ v, i }))
+    .sort((a, b) => b.v - a.v)
+    .slice(0, 2)
+    .map((x) => x.i);
+}
+
 // 大アルカナ2枚から1-22のスコアを算出（各カードを1-11にマップ）
 function calcFortuneScore(card1, card2) {
   const idx1 = parseInt(card1.id.split("-")[1]);
@@ -1402,24 +1432,69 @@ function calcFortuneScore(card1, card2) {
   return score1 + score2; // 2～22
 }
 
+// ぞろ目判定（poker規範のスリーカードに相当）
+// RANK_LABELインデックス: 0=エース, 1-8=2〜9, 9=10, 10-13=従者・騎士・女王・王
+// 戻り値: { type, luck, variant } luck: "fortune"(幸運) | "misfortune"(不運) | "neutral"
+// variant: "glowing"(奈落・全正位置=光る) | "void"(奈落・全逆位置=★0真っ黒)
+//        | "dull"(黄金・全逆位置=光らない普通色) | "holo"(黄金・全正位置=虹色) | null
 function detectJackpot(minorCards) {
   if (minorCards.length !== 3) return null;
-  // minorCardsは [{card, reversed}] 形式
-  // card.idは "wands-1", "cups-10" など
-  const numbers = minorCards.map((r) => {
-    const idx = parseInt(r.card.id.split("-")[1]);
-    return idx; // 1～10
-  });
-  
-  // 全部同じ数字か確認
-  const allSame = numbers[0] === numbers[1] && numbers[1] === numbers[2];
+  const ranks = minorCards.map((r) => parseInt(r.card.id.split("-")[1]));
+  const allSame = ranks[0] === ranks[1] && ranks[1] === ranks[2];
   if (!allSame) return null;
 
-  const num = numbers[0];
-  if (num === 1) return "all_1";      // ALL★1（Ace×3）
-  if (num === 10) return "all_6";     // ALL★6（10×3）
-  if (num >= 2 && num <= 9) return "all_5"; // ALL★5（2～9×3）
+  const rank = ranks[0];
+  const allUpright = minorCards.every((r) => !r.reversed);
+  const allReversed = minorCards.every((r) => r.reversed);
+
+  if (rank === 0) {
+    // 奈落のトリプル（Ace×3）→ 全分野★1（基本）
+    let variant = null;
+    if (allUpright) variant = "glowing"; // ★1だけど光っている
+    else if (allReversed) variant = "void"; // ★0・真っ黒
+    return { type: "all_1", luck: "misfortune", variant };
+  }
+  if (rank >= 1 && rank <= 9) {
+    return { type: "all_5", luck: "neutral", variant: null }; // 運命のトリプル（2〜10×3）→ 全分野★5
+  }
+  if (rank >= 10 && rank <= 13) {
+    // 黄金のトリプル（P/N/Q/K×3）→ 全分野★6（基本）
+    let variant = null;
+    if (allReversed) variant = "dull"; // ★6だけど光らない普通色
+    else if (allUpright) variant = "holo"; // 虹色に輝く
+    return { type: "all_6", luck: "fortune", variant };
+  }
   return null;
+}
+
+// 階段パターンのボーナスを1分野だけ★6にする共通処理（maxIndicesに追加で反映）
+function applyStairBonus(raw, maxIndices, minorResults) {
+  if (!isStairPattern(minorResults)) return;
+  const maxSet = new Set(maxIndices);
+  const availableFields = [];
+  for (let i = 0; i < raw.length; i++) if (!maxSet.has(i)) availableFields.push(i);
+  if (availableFields.length > 0) {
+    const bonusField = availableFields[Math.floor(Math.random() * availableFields.length)];
+    raw[bonusField] = 6;
+    maxIndices.push(bonusField);
+  }
+}
+
+// フラッシュ（同スート3枚）を、既に確定したmax/minIndicesの上に追加で反映する
+// 正位置多数=運命のフラッシュ（吉、該当2分野を★6）／逆位置多数=凶兆のフラッシュ（凶、該当2分野を★1）
+// 全部正位置ならholo演出、全部逆位置なら★0の黒演出
+function applyFlushBonus(raw, maxIndices, minIndices, minorResults) {
+  const flush = detectFlush(minorResults);
+  if (!flush) return null;
+  const fields = topFieldsForSuit(flush.suitKey);
+  if (flush.luck === "fortune") {
+    const value = flush.variant === "holo" ? 6 : 6; // holoでも通常でも★6（見た目だけ変わる）
+    fields.forEach((i) => { raw[i] = value; if (!maxIndices.includes(i)) maxIndices.push(i); });
+  } else {
+    const value = flush.variant === "void" ? 0 : 1; // 全部逆位置は★0、通常は★1
+    fields.forEach((i) => { raw[i] = value; if (!minIndices.includes(i)) minIndices.push(i); });
+  }
+  return { suitKey: flush.suitKey, luck: flush.luck, variant: flush.variant, fields };
 }
 
 function calcStats(majorCard, minorResults) {
@@ -1436,6 +1511,24 @@ function calcStats(majorCard, minorResults) {
 
   const raw = scores.map((s) => Math.min(6, Math.max(1, Math.round(s * 2) / 2)));
 
+  // 最優先：ぞろ目（poker規範のスリーカード）。全分野を確定させて即返す
+  const jackpot = detectJackpot(minorResults);
+  if (jackpot) {
+    let fixedValue;
+    if (jackpot.type === "all_1") fixedValue = jackpot.variant === "void" ? 0 : 1;
+    else if (jackpot.type === "all_5") fixedValue = 5;
+    else fixedValue = 6; // all_6
+    const fixed = Array(N).fill(fixedValue);
+    const allIndices = Array.from({ length: N }, (_, i) => i);
+    return {
+      scores: fixed,
+      maxIndices: jackpot.luck === "fortune" ? allIndices : [],
+      minIndices: jackpot.luck === "misfortune" ? allIndices : [],
+      jackpot: jackpot.type,
+      jackpotVariant: jackpot.variant, // "glowing" | "void" | "dull" | "holo" | null
+    };
+  }
+
   const cardIdx = parseInt(majorCard.card.id.split("-")[1]);
   const f = CARD_FORCE[cardIdx];
 
@@ -1444,114 +1537,86 @@ function calcStats(majorCard, minorResults) {
   const EXTREME_CARDS = new Set([13, 15, 16]);
   const GOOD_CARDS    = new Set([3, 19, 21]);
 
+  let maxIndices, minIndices;
+
   if (EXTREME_CARDS.has(cardIdx)) {
     // 正位置: 上位2分野★6、下位2分野★1
     // 逆位置: 上位1分野★6、下位2分野★1
     const sorted = [...raw.map((v, i) => ({ v, i }))].sort((a, b) => b.v - a.v);
     const maxCount = majorCard.reversed ? 1 : 2;
     const minCount = 2;
-    const maxIndices = sorted.slice(0, maxCount).map((x) => x.i);
-    const minIndices = sorted.slice(-minCount).map((x) => x.i);
+    maxIndices = sorted.slice(0, maxCount).map((x) => x.i);
+    minIndices = sorted.slice(-minCount).map((x) => x.i);
     maxIndices.forEach((i) => { raw[i] = 6; });
     minIndices.forEach((i) => { raw[i] = 1; });
-    
-    // 階段パターンボーナス
-    if (isStairPattern(minorResults)) {
-      const maxSet = new Set(maxIndices);
-      const availableFields = [];
-      for (let i = 0; i < 8; i++) if (!maxSet.has(i)) availableFields.push(i);
-      if (availableFields.length > 0) {
-        const bonusField = availableFields[Math.floor(Math.random() * availableFields.length)];
-        raw[bonusField] = 6;
-        maxIndices.push(bonusField);
-      }
-    }
-    return { scores: raw, maxIndices, minIndices };
-  }
-
-  if (GOOD_CARDS.has(cardIdx)) {
+    applyStairBonus(raw, maxIndices, minorResults);
+  } else if (GOOD_CARDS.has(cardIdx)) {
     // 正位置: 上位2分野★6、★1なし
     // 逆位置: 上位2分野★6、下位1分野★1
     const sorted = [...raw.map((v, i) => ({ v, i }))].sort((a, b) => b.v - a.v);
-    const maxIndices = sorted.slice(0, 2).map((x) => x.i);
-    const minIndices = majorCard.reversed ? [sorted[sorted.length - 1].i] : [];
+    maxIndices = sorted.slice(0, 2).map((x) => x.i);
+    minIndices = majorCard.reversed ? [sorted[sorted.length - 1].i] : [];
     maxIndices.forEach((i) => { raw[i] = 6; });
     minIndices.forEach((i) => { raw[i] = 1; });
-    
-    // 階段パターンボーナス
-    if (isStairPattern(minorResults)) {
-      const maxSet = new Set(maxIndices);
-      const availableFields = [];
-      for (let i = 0; i < 8; i++) if (!maxSet.has(i)) availableFields.push(i);
-      if (availableFields.length > 0) {
-        const bonusField = availableFields[Math.floor(Math.random() * availableFields.length)];
-        raw[bonusField] = 6;
-        maxIndices.push(bonusField);
-      }
+    applyStairBonus(raw, maxIndices, minorResults);
+  } else {
+    // 標準16枚: 固定インデックスで決定論的に適用
+    if (majorCard.reversed) {
+      f.revMax.forEach((i) => { raw[i] = 6; });
+      f.revMin.forEach((i) => { raw[i] = 1; });
+      maxIndices = f.revMax.slice();
+      minIndices = f.revMin.slice();
+    } else {
+      f.upMax.forEach((i) => { raw[i] = 6; });
+      f.upMin.forEach((i) => { raw[i] = 1; });
+      maxIndices = f.upMax.slice();
+      minIndices = f.upMin.slice();
     }
-    return { scores: raw, maxIndices, minIndices };
+    applyStairBonus(raw, maxIndices, minorResults);
   }
 
-  // 標準16枚: 固定インデックスで決定論的に適用
-  if (majorCard.reversed) {
-    f.revMax.forEach((i) => { raw[i] = 6; });
-    f.revMin.forEach((i) => { raw[i] = 1; });
-    const maxIndices = f.revMax.slice();
-    
-    // 階段パターンボーナス
-    if (isStairPattern(minorResults)) {
-      const maxSet = new Set(maxIndices);
-      const availableFields = [];
-      for (let i = 0; i < 8; i++) if (!maxSet.has(i)) availableFields.push(i);
-      if (availableFields.length > 0) {
-        const bonusField = availableFields[Math.floor(Math.random() * availableFields.length)];
-        raw[bonusField] = 6;
-        maxIndices.push(bonusField);
-      }
-    }
-    return { scores: raw, maxIndices, minIndices: f.revMin };
-  } else {
-    f.upMax.forEach((i) => { raw[i] = 6; });
-    f.upMin.forEach((i) => { raw[i] = 1; });
-    const maxIndices = f.upMax.slice();
-    
-    // 階段パターンボーナス
-    if (isStairPattern(minorResults)) {
-      const maxSet = new Set(maxIndices);
-      const availableFields = [];
-      for (let i = 0; i < 8; i++) if (!maxSet.has(i)) availableFields.push(i);
-      if (availableFields.length > 0) {
-        const bonusField = availableFields[Math.floor(Math.random() * availableFields.length)];
-        raw[bonusField] = 6;
-        maxIndices.push(bonusField);
-      }
-    }
-    return { scores: raw, maxIndices, minIndices: f.upMin };
+  // フラッシュ（同スート3枚）：運命のフラッシュ（吉）／凶兆のフラッシュ（凶）
+  const flushResult = applyFlushBonus(raw, maxIndices, minIndices, minorResults);
+
+  // 分野ごとの特殊演出マップ（フラッシュのholo/voidのみ、対象2分野だけに適用）
+  const fieldVariants = {};
+  if (flushResult && flushResult.variant) {
+    flushResult.fields.forEach((i) => { fieldVariants[i] = flushResult.variant; });
   }
+
+  return { scores: raw, maxIndices, minIndices, flush: flushResult, fieldVariants };
 }
 
 // variant: "max" = 大アルカナ由来の6（明るい黄色）
 //          "min" = 大アルカナ逆位置由来の1（くすんだ黄色）
 //          null  = 通常
-function StarRating({ score, variant }) {
+function StarRating({ score, variant, jackpotVariant }) {
   const slots = [1, 2, 3, 4, 5, 6];
   const fillColor =
+    jackpotVariant === "void" ? "#1a1420" :
+    jackpotVariant === "dull" ? "var(--gold)" :
+    jackpotVariant === "holo" ? "var(--gold)" : // holoはCSS側でグラデーションを上書き
     variant === "max" ? "var(--star-max)" :
     variant === "min" ? "var(--star-min)" :
     "var(--gold)";
+  const wrapClass =
+    jackpotVariant === "glowing" ? " star-glowing" :
+    jackpotVariant === "void" ? " star-void" :
+    jackpotVariant === "holo" ? " star-holo" :
+    jackpotVariant === "dull" ? " star-dull" : "";
   return (
-    <span className={`stats-stars ${variant === "max" ? "stars-max" : ""}`}>
+    <span className={`stats-stars ${variant === "max" ? "stars-max" : ""}${wrapClass}`}>
       {slots.map((slot) => {
         const ratio = Math.max(0, Math.min(1, score - (slot - 1)));
         return (
           <span
             className="star-wrap"
             key={slot}
-            style={variant === "max" ? { animationDelay: `${(slot - 1) * 0.1}s` } : {}}
+            style={variant === "max" && !jackpotVariant ? { animationDelay: `${(slot - 1) * 0.1}s` } : {}}
           >
             <Star size={15} className="star-bg" fill="currentColor" stroke="none" />
             {ratio > 0 && (
-              <span className="star-fill" style={{ width: `${ratio * 100}%`, color: fillColor }}>
+              <span className={`star-fill${jackpotVariant === "holo" ? " star-fill-holo" : ""}`} style={{ width: `${ratio * 100}%`, color: fillColor }}>
                 <Star size={15} fill="currentColor" stroke="none" />
               </span>
             )}
@@ -2630,6 +2695,35 @@ export default function TarotDraw() {
         .stats-row.row-max { background: rgba(255,233,77,0.05); border-radius: 8px; }
         .stats-row.row-min { opacity: 0.65; }
 
+        /* 奈落のトリプル・全部正位置: ★1だけど光っている */
+        .star-glowing .star-fill { animation: starGlowPulse 1.6s ease-in-out infinite; filter: drop-shadow(0 0 4px rgba(201,162,75,0.9)); }
+        @keyframes starGlowPulse {
+          0%, 100% { filter: drop-shadow(0 0 2px rgba(201,162,75,0.5)); }
+          50%      { filter: drop-shadow(0 0 8px rgba(201,162,75,1)); }
+        }
+
+        /* 奈落のトリプル・全部逆位置: ★0・真っ黒 */
+        .star-void .star-bg { color: rgba(10,8,16,0.6); }
+        .star-void .star-fill { filter: none; }
+
+        /* 黄金のトリプル・全部逆位置: ★6だけど光らない普通の星色 */
+        .star-dull .star-fill { animation: none !important; filter: none !important; }
+        .star-dull .star-wrap { animation: none !important; }
+
+        /* 黄金のトリプル・全部正位置: 虹色（ホロ）に輝く */
+        .star-fill-holo {
+          background: linear-gradient(90deg, #ff6b6b, #ffd93d, #6bff8f, #6bcfff, #b06bff, #ff6bd6, #ff6b6b);
+          background-size: 300% 100%;
+          -webkit-background-clip: text;
+          background-clip: text;
+          color: transparent !important;
+          animation: holoShift 2.2s linear infinite, starGlowPulse 1.6s ease-in-out infinite;
+        }
+        @keyframes holoShift {
+          0%   { background-position: 0% 50%; }
+          100% { background-position: 300% 50%; }
+        }
+
         @keyframes starPop {
           0%   { transform: scale(0) rotate(-20deg); opacity: 0; }
           70%  { transform: scale(1.25) rotate(6deg); opacity: 1; }
@@ -2936,15 +3030,16 @@ export default function TarotDraw() {
               <Sparkles size={12} /> {t.fortuneGlanceTitle}
             </div>
             {(() => {
-              const { scores, maxIndices, minIndices } = calcStats(majorCard, minorResults);
+              const { scores, maxIndices, minIndices, jackpotVariant, fieldVariants } = calcStats(majorCard, minorResults);
               return STAT_CATEGORIES.map((cat, i) => {
                 const isMax = maxIndices.includes(i);
                 const isMin = minIndices.includes(i);
                 const variant = isMax ? "max" : isMin ? "min" : null;
+                const effectiveVariant = jackpotVariant || (fieldVariants && fieldVariants[i]) || null;
                 return (
                   <div className={`stats-row${isMax ? " row-max" : isMin ? " row-min" : ""}`} key={cat.key}>
                     <span className="stats-label">{statLabel(cat.key, lang)}</span>
-                    <StarRating score={scores[i]} variant={variant} />
+                    <StarRating score={scores[i]} variant={variant} jackpotVariant={effectiveVariant} />
                     <span className="stats-value" style={variant ? { color: isMax ? "var(--star-max)" : "var(--star-min)" } : {}}>
                       {scores[i]}
                     </span>
