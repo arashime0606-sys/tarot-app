@@ -6,6 +6,28 @@ const MAJOR_NAME = [
   "愚者", "魔術師", "女教皇", "女帝", "皇帝", "教皇", "恋人たち", "戦車", "力", "隠者",
   "運命の輪", "正義", "吊られた男", "死神", "節制", "悪魔", "塔", "星", "月", "太陽", "審判", "世界",
 ];
+// 大アルカナ名の多言語対応
+const MAJOR_NAME_I18N = {
+  "zh-TW": [
+    "愚者", "魔術師", "女祭司", "皇后", "皇帝", "教皇", "戀人", "戰車", "力量", "隱士",
+    "命運之輪", "正義", "吊人", "死神", "節制", "惡魔", "塔", "星星", "月亮", "太陽", "審判", "世界",
+  ],
+  en: [
+    "The Fool", "The Magician", "The High Priestess", "The Empress", "The Emperor", "The Hierophant",
+    "The Lovers", "The Chariot", "Strength", "The Hermit",
+    "Wheel of Fortune", "Justice", "The Hanged Man", "Death", "Temperance", "The Devil", "The Tower",
+    "The Star", "The Moon", "The Sun", "Judgement", "The World",
+  ],
+  tl: [
+    "Ang Hangal", "Ang Mahikero", "Ang Mataas na Saserdotisa", "Ang Emperatriz", "Ang Emperador", "Ang Hierophant",
+    "Ang mga Magkasintahan", "Ang Karwahe", "Lakas", "Ang Ermitanyo",
+    "Gulong ng Kapalaran", "Katarungan", "Ang Bitin", "Kamatayan", "Katamtaman", "Ang Diyablo", "Ang Tore",
+    "Ang Bituin", "Ang Buwan", "Ang Araw", "Paghuhukom", "Ang Mundo",
+  ],
+};
+function majorName(index, lang) {
+  return (MAJOR_NAME_I18N[lang] && MAJOR_NAME_I18N[lang][index]) || MAJOR_NAME[index];
+}
 const MAJOR_ROMAN = [
   "0", "I", "II", "III", "IV", "V", "VI", "VII", "VIII", "IX",
   "X", "XI", "XII", "XIII", "XIV", "XV", "XVI", "XVII", "XVIII", "XIX", "XX", "XXI",
@@ -62,6 +84,47 @@ const MAJOR_REV = [
 /* ---------- 小アルカナ ランク名（14） ---------- */
 const RANK_LABEL = ["エース", "2", "3", "4", "5", "6", "7", "8", "9", "10", "従者", "騎士", "女王", "王"];
 const RANK_CORNER = ["A", "2", "3", "4", "5", "6", "7", "8", "9", "10", "P", "N", "Q", "K"];
+
+// ランク名の多言語対応
+const RANK_LABEL_I18N = {
+  "zh-TW": ["王牌", "2", "3", "4", "5", "6", "7", "8", "9", "10", "侍者", "騎士", "皇后", "國王"],
+  en: ["Ace", "2", "3", "4", "5", "6", "7", "8", "9", "10", "Page", "Knight", "Queen", "King"],
+  tl: ["Ace", "2", "3", "4", "5", "6", "7", "8", "9", "10", "Pahina", "Kabalyero", "Reyna", "Hari"],
+};
+function rankLabel(index, lang) {
+  return (RANK_LABEL_I18N[lang] && RANK_LABEL_I18N[lang][index]) || RANK_LABEL[index];
+}
+
+// スート名の多言語対応（key経由）
+const SUIT_LABEL_I18N = {
+  ja: { wands: "棒", cups: "聖杯", swords: "剣", pentacles: "貨幣" },
+  "zh-TW": { wands: "權杖", cups: "聖杯", swords: "寶劍", pentacles: "錢幣" },
+  en: { wands: "Wands", cups: "Cups", swords: "Swords", pentacles: "Pentacles" },
+  tl: { wands: "Wands", cups: "Cups", swords: "Swords", pentacles: "Pentacles" },
+};
+function suitLabel(key, lang) {
+  return (SUIT_LABEL_I18N[lang] && SUIT_LABEL_I18N[lang][key]) || SUIT_LABEL_I18N.ja[key];
+}
+
+// 元素名の多言語対応
+const ELEMENT_I18N = {
+  ja: { 火: "火", 水: "水", 風: "風", 地: "地" },
+  "zh-TW": { 火: "火", 水: "水", 風: "風", 地: "地" },
+  en: { 火: "Fire", 水: "Water", 風: "Air", 地: "Earth" },
+  tl: { 火: "Apoy", 水: "Tubig", 風: "Hangin", 地: "Lupa" },
+};
+function elementLabel(el, lang) {
+  return (ELEMENT_I18N[lang] && ELEMENT_I18N[lang][el]) || el;
+}
+
+// カード名（小アルカナ）を組み立てる: 「棒のエース」→「Ace of Wands」等
+function minorCardName(suitKey, rankIndex, lang) {
+  const rank = rankLabel(rankIndex, lang);
+  const suit = suitLabel(suitKey, lang);
+  if (lang === "en" || lang === "tl") return `${rank} of ${suit}`;
+  if (lang === "zh-TW") return `${suit}${rank}`;
+  return `${suit}の${rank}`; // ja
+}
 
 /* ---------- 棒（火） ---------- */
 const WANDS_UP = [
@@ -133,6 +196,38 @@ const SUITS = [
   { key: "swords", label: "剣", element: "風", accent: "var(--sword)", Icon: Swords, up: SWORDS_UP, rev: SWORDS_REV },
   { key: "pentacles", label: "貨幣", element: "地", accent: "var(--pentacle)", Icon: Coins, up: PENT_UP, rev: PENT_REV },
 ];
+
+// カードのidから、指定言語での表示名を動的に解決する
+// major-N → 大アルカナ名 / suitkey-N → 小アルカナ名
+function getCardName(card, lang) {
+  if (!card || !card.id) return card ? card.name : "";
+  if (lang === "ja" || !lang) return card.name;
+  const parts = card.id.split("-");
+  const suitKey = parts[0];
+  const idx = parseInt(parts[1], 10);
+  if (suitKey === "major") {
+    return majorName(idx, lang);
+  }
+  return minorCardName(suitKey, idx, lang);
+}
+
+// カードのサブラベル（「大アルカナ」「小アルカナ・棒（火）」等）を言語別に返す
+const MAJOR_ARCANA_LABEL_I18N = {
+  ja: "大アルカナ", "zh-TW": "大阿爾克那", en: "Major Arcana", tl: "Major Arcana",
+};
+const MINOR_ARCANA_PREFIX_I18N = {
+  ja: "小アルカナ・", "zh-TW": "小阿爾克那・", en: "Minor Arcana · ", tl: "Minor Arcana · ",
+};
+function getCardSub(card, lang) {
+  if (!card || !card.id) return card ? card.sub : "";
+  if (lang === "ja" || !lang) return card.sub;
+  const parts = card.id.split("-");
+  const suitKey = parts[0];
+  if (suitKey === "major") return MAJOR_ARCANA_LABEL_I18N[lang] || MAJOR_ARCANA_LABEL_I18N.ja;
+  const suitObj = SUITS.find((s) => s.key === suitKey);
+  const el = suitObj ? suitObj.element : "";
+  return `${MINOR_ARCANA_PREFIX_I18N[lang] || MINOR_ARCANA_PREFIX_I18N.ja}${suitLabel(suitKey, lang)}（${elementLabel(el, lang)}）`;
+}
 
 function buildMajorList() {
   return MAJOR_NAME.map((name, i) => ({
@@ -1765,8 +1860,8 @@ export default function TarotDraw() {
                   <div className={`card-face ${d.reversed ? "reversed" : ""}`} style={{ "--accent": d.card.accent || "var(--gold)" }}>
                     <div className="card-corner">{d.card.corner}</div>
                     <div className="card-icon">{d.card.Icon ? <d.card.Icon size={24} /> : <Sparkles size={24} />}</div>
-                    <div className="card-name">{d.card.name}</div>
-                    <div className="card-sub">{d.card.sub}</div>
+                    <div className="card-name">{getCardName(d.card, lang)}</div>
+                    <div className="card-sub">{getCardSub(d.card, lang)}</div>
                   </div>
                 </div>
                 <span className={`orientation ${d.reversed ? "rev" : "up"}`}>{orientationLabel(d.reversed, lang)}</span>
@@ -1825,8 +1920,8 @@ export default function TarotDraw() {
               <div className="card-icon">
                 <Sparkles size={30} />
               </div>
-              <div className="card-name">{majorCard.card.name}</div>
-              <div className="card-sub">{majorCard.card.sub}</div>
+              <div className="card-name">{getCardName(majorCard.card, lang)}</div>
+              <div className="card-sub">{getCardSub(majorCard.card, lang)}</div>
             </div>
           </div>
           <span className={`orientation ${majorCard.reversed ? "rev" : "up"}`}>{orientationLabel(majorCard.reversed, lang)}</span>
