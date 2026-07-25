@@ -1048,27 +1048,27 @@ const FALLBACK_TEMPLATES = {
   ja: {
     minorLine: (pos, name, o, kw) => `${pos}は「${name}」（${o}）。${kw}という流れが見えます。`,
     minorClosing: "では、テーマカードを開いて、さらに深く読み解いていきましょう。",
-    majorLine: (name, o, kw) => `伏せられていたテーマカードは「${name}」（${o}）でした。キーワードは「${kw}」。これらの言葉に、心当たりはありませんか？`,
+    majorLine: (name, o, kw) => `伏せられていたテーマカードは「${name}」（${o}）でした。\nキーワードは「${kw}」。\nこれらの言葉に、心当たりはありませんか？`,
   },
   "zh-TW": {
     minorLine: (pos, name, o, kw) => `${pos}是「${name}」（${o}）。可以感受到「${kw}」的流動。`,
     minorClosing: "接下來，讓我們翻開主題牌，深入解讀吧。",
-    majorLine: (name, o, kw) => `原本蓋著的主題牌是「${name}」（${o}）。關鍵字是「${kw}」。這些話語，你是否有所感觸？`,
+    majorLine: (name, o, kw) => `原本蓋著的主題牌是「${name}」（${o}）。\n關鍵字是「${kw}」。\n這些話語，你是否有所感觸？`,
   },
   en: {
     minorLine: (pos, name, o, kw) => `Your ${pos} card is "${name}" (${o}). A sense of ${kw} seems to be flowing here.`,
     minorClosing: "Now, let's reveal the theme card and dive deeper.",
-    majorLine: (name, o, kw) => `Your hidden theme card was "${name}" (${o}). Its keywords are "${kw}." Does this resonate with you?`,
+    majorLine: (name, o, kw) => `Your hidden theme card was "${name}" (${o}).\nIts keywords are "${kw}."\nDoes this resonate with you?`,
   },
   tl: {
     minorLine: (pos, name, o, kw) => `Ang ${pos} mo ay "${name}" (${o}). Parang may dumadaloy na ${kw} dito.`,
     minorClosing: "Ngayon, buksan na natin ang theme card mo para mas malalim na pagbasa.",
-    majorLine: (name, o, kw) => `Ang nakatagong theme card mo ay "${name}" (${o}). Ang keywords nito ay "${kw}." May tumatak ba sa 'yo dito?`,
+    majorLine: (name, o, kw) => `Ang nakatagong theme card mo ay "${name}" (${o}).\nAng keywords nito ay "${kw}."\nMay tumatak ba sa 'yo dito?`,
   },
   th: {
     minorLine: (pos, name, o, kw) => `${pos}ของคุณคือ "${name}" (${o}) ดูเหมือนจะมีกระแสของ${kw}ไหลอยู่ตรงนี้`,
     minorClosing: "ตอนนี้ มาเปิดไพ่ธีมกันเพื่อตีความให้ลึกซึ้งยิ่งขึ้น",
-    majorLine: (name, o, kw) => `ไพ่ธีมที่ซ่อนอยู่ของคุณคือ "${name}" (${o}) คีย์เวิร์ดของไพ่ใบนี้คือ "${kw}" คุณรู้สึกคุ้นเคยกับคำเหล่านี้หรือไม่?`,
+    majorLine: (name, o, kw) => `ไพ่ธีมที่ซ่อนอยู่ของคุณคือ "${name}" (${o})\nคีย์เวิร์ดของไพ่ใบนี้คือ "${kw}"\nคุณรู้สึกคุ้นเคยกับคำเหล่านี้หรือไม่?`,
   },
 };
 
