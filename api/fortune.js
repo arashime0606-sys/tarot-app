@@ -30,10 +30,10 @@ module.exports = async function handler(req, res) {
   if (!prompt || typeof prompt !== 'string' || prompt.length > 4000) {
     return res.status(400).json({ error: 'Invalid prompt' });
   }
-  const outputTokens = Number.isFinite(maxTokens) ? Math.min(Math.max(maxTokens, 100), 2000) : 500;
+  const outputTokens = Number.isFinite(maxTokens) ? Math.min(Math.max(maxTokens, 100), 4000) : 500;
 
   try {
-    const model = 'gemini-3-flash-preview';
+    const model = 'gemini-2.5-flash-lite'; // 無料枠が最も大きいモデルに変更（RPD上限が高い）
     const response = await fetch(
       `https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent?key=${process.env.GEMINI_API_KEY}`,
       {
@@ -64,6 +64,11 @@ module.exports = async function handler(req, res) {
         data.candidates[0].content.parts &&
         data.candidates[0].content.parts.map((p) => p.text || '').join('').trim()) ||
       '';
+
+    const finishReason = data.candidates && data.candidates[0] && data.candidates[0].finishReason;
+    if (finishReason && finishReason !== 'STOP') {
+      console.error('Gemini finishReason:', finishReason, 'textLength:', text.length);
+    }
 
     if (!text) {
       console.error('Gemini returned no text:', JSON.stringify(data));
