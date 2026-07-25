@@ -2312,8 +2312,8 @@ const T = {
     appTitle: "タロット占い",
     tagline: "",
     eyebrow: "ARCANA DRAW",
-    intro: "まず大アルカナ22枚から、全体のテーマを表す1枚を選びます（このカードはすぐには開きません）。続いて小アルカナ56枚から3枚を選ぶと、過去・現在・未来が一度に開かれ、AIが鑑定します。最後にテーマカードが開かれ、解釈と占断が導かれます。",
-    privacyIntro: "✦ 誰にも知られず、AIだけがあなたの悩みに向き合います ✦",
+    intro: "秘密厳守。AIがあなたの心の声に、静かに寄り添います。\n理論上、結果に一切の偏りがない完全公平設計。",
+    privacyIntro: "",
     nameLabel: "お名前（ニックネームでOK）",
     namePlaceholder: "例：アキ",
     questionLabel: "占ってほしいことを一言で（任意）",
@@ -2342,6 +2342,8 @@ const T = {
     confirmMinorPrompt: "この3枚でよろしいですか？",
     confirmYes: "これでいい",
     confirmNo: "選び直す",
+    reshuffleButton: "シャッフルし直す",
+    reshuffleCooldown: "カードが傷むのでこれくらいにしておきましょう。直感を信じて、運命のカードを選んでみませんか。",
     orientationPrompt: "あなたの引いたカードの向きは、正しいと思いますか？",
     orientationYes: "正しいと思う",
     orientationNo: "逆だと思う",
@@ -2387,8 +2389,8 @@ const T = {
     appTitle: "塔羅占卜",
     tagline: "來自日本的全新塔羅體驗",
     eyebrow: "ARCANA DRAW",
-    intro: "首先從22張大阿爾克那中選出代表整體主題的一張（此牌不會立即翻開）。接著從56張小阿爾克那中選出3張，過去、現在、未來將同時揭曉，由AI進行解讀。最後翻開主題牌，導出解釋與占斷。",
-    privacyIntro: "✦ 不會被任何人知道，只有AI會傾聽你的煩惱 ✦",
+    intro: "絕對保密。AI靜靜地傾聽你內心的聲音。\n理論上結果完全不偏頗的公平設計。",
+    privacyIntro: "",
     nameLabel: "您的名字（暱稱也可以）",
     namePlaceholder: "例：小明",
     questionLabel: "想占卜的事情，請簡短輸入（選填）",
@@ -2417,6 +2419,8 @@ const T = {
     confirmMinorPrompt: "確定選擇這3張牌嗎？",
     confirmYes: "確定",
     confirmNo: "重新選擇",
+    reshuffleButton: "重新洗牌",
+    reshuffleCooldown: "牌都要洗壞了，就先到這裡吧。要不要相信直覺，選出命運的牌呢？",
     orientationPrompt: "你認為抽到的這張牌，方向是正的嗎？",
     orientationYes: "我認為是正位",
     orientationNo: "我認為是逆位",
@@ -2461,8 +2465,8 @@ const T = {
     appTitle: "Tarot Reading",
     tagline: "A new tarot experience designed in Japan",
     eyebrow: "ARCANA DRAW",
-    intro: "First, choose one card from the 22 Major Arcana to represent your overall theme (this card won't be revealed right away). Then choose 3 Minor Arcana cards from 56 — your past, present, and future will be revealed together, read by AI. Finally, your theme card is revealed, bringing interpretation and judgment.",
-    privacyIntro: "✦ No one else will know — only the AI listens to your concerns ✦",
+    intro: "Completely confidential. AI quietly listens to what's on your mind.\nDesigned to be fully fair, with no bias in the outcome — in theory.",
+    privacyIntro: "",
     nameLabel: "Your name (nickname is fine)",
     namePlaceholder: "e.g. Alex",
     questionLabel: "What would you like to ask? (optional)",
@@ -2491,6 +2495,8 @@ const T = {
     confirmMinorPrompt: "Are you happy with these 3 cards?",
     confirmYes: "Yes, this is right",
     confirmNo: "Choose again",
+    reshuffleButton: "Reshuffle",
+    reshuffleCooldown: "Careful, the cards are getting dizzy. Maybe trust your instinct and choose your fated card.",
     orientationPrompt: "Do you think the card you drew is upright?",
     orientationYes: "I think it's upright",
     orientationNo: "I think it's reversed",
@@ -2535,8 +2541,8 @@ const T = {
     appTitle: "Tarot Reading",
     tagline: "A new tarot experience designed in Japan",
     eyebrow: "ARCANA DRAW",
-    intro: "Una, pumili ng isang card mula sa 22 Major Arcana na kumakatawan sa pangkalahatang tema mo (hindi agad ito ibubunyag). Pagkatapos, pumili ng 3 Minor Arcana card mula sa 56 — sabay na ibubunyag ang past, present, at future mo, at babasahin ng AI. Sa huli, bubuksan ang theme card mo para sa interpretasyon at final na hula.",
-    privacyIntro: "✦ Walang ibang makakaalam — ang AI lang ang makikinig sa iyong alalahanin ✦",
+    intro: "Ganap na kumpidensyal. Tahimik na pinapakinggan ng AI ang laman ng puso mo.\nDisenyong ganap na patas, walang kiling sa resulta — sa teorya.",
+    privacyIntro: "",
     nameLabel: "Pangalan mo (pwede ring nickname)",
     namePlaceholder: "hal. Maria",
     questionLabel: "Ano ang gusto mong itanong? (opsyonal)",
@@ -2565,6 +2571,8 @@ const T = {
     confirmMinorPrompt: "Okay ka na ba sa 3 card na ito?",
     confirmYes: "Oo, tama ito",
     confirmNo: "Pumili ulit",
+    reshuffleButton: "I-shuffle Ulit",
+    reshuffleCooldown: "Baka mahilo na ang mga card. Baka oras na para tiwalaan ang instinct mo at piliin ang kapalaran mong card.",
     orientationPrompt: "Sa tingin mo, upright ba ang card na hinugot mo?",
     orientationYes: "Sa tingin ko upright",
     orientationNo: "Sa tingin ko reversed",
@@ -2609,8 +2617,8 @@ const T = {
     appTitle: "ไพ่ทาโรต์",
     tagline: "ประสบการณ์ไพ่ทาโรต์รูปแบบใหม่ ออกแบบจากญี่ปุ่น",
     eyebrow: "ARCANA DRAW",
-    intro: "ก่อนอื่น เลือกไพ่ 1 ใบจาก Major Arcana ทั้ง 22 ใบเพื่อเป็นธีมโดยรวมของคุณ (ไพ่ใบนี้จะยังไม่เปิดทันที) จากนั้นเลือกไพ่ Minor Arcana 3 ใบจากทั้งหมด 56 ใบ — อดีต ปัจจุบัน และอนาคตของคุณจะถูกเปิดพร้อมกัน และตีความโดย AI สุดท้าย ไพ่ธีมของคุณจะถูกเปิดเผยเพื่อการตีความและคำพยากรณ์",
-    privacyIntro: "✦ ไม่มีใครล่วงรู้ — มีเพียง AI เท่านั้นที่รับฟังความกังวลของคุณ ✦",
+    intro: "เก็บเป็นความลับอย่างสมบูรณ์ AI รับฟังเสียงในใจคุณอย่างเงียบๆ\nออกแบบมาให้ยุติธรรมอย่างสมบูรณ์ ไม่มีความลำเอียงในผลลัพธ์ — ในทางทฤษฎี",
+    privacyIntro: "",
     nameLabel: "ชื่อของคุณ (ใช้ชื่อเล่นก็ได้)",
     namePlaceholder: "เช่น มานี",
     questionLabel: "อยากถามอะไร? (ไม่บังคับ)",
@@ -2639,6 +2647,8 @@ const T = {
     confirmMinorPrompt: "พอใจกับไพ่ทั้ง 3 ใบนี้หรือไม่?",
     confirmYes: "ใช่ ถูกต้องแล้ว",
     confirmNo: "เลือกใหม่",
+    reshuffleButton: "สับไพ่ใหม่",
+    reshuffleCooldown: "เดี๋ยวไพ่จะเวียนหัวเอา พอแค่นี้ก่อนดีกว่า ลองเชื่อสัญชาตญาณแล้วเลือกไพ่แห่งโชคชะตาดูไหม",
     orientationPrompt: "คุณคิดว่าไพ่ที่จับได้นั้นตั้งตรงหรือไม่?",
     orientationYes: "ฉันคิดว่าตั้งตรง",
     orientationNo: "ฉันคิดว่ากลับหัว",
@@ -2706,6 +2716,8 @@ export default function TarotDraw() {
   const [todayCount, setTodayCount] = useState(loadTodayCount());
   const [limitExpanded, setLimitExpanded] = useState(loadLimitExpanded());
   const [pendingSession, setPendingSession] = useState(loadPendingSession()); // 不意の離脱からの復帰用
+  const [majorShuffleCount, setMajorShuffleCount] = useState(0); // 連続シャッフル抑止用
+  const [minorShuffleCount, setMinorShuffleCount] = useState(0);
   const [forceStarVariant, setForceStarVariant] = useState(null); // "holo" | "kuro" | "same" | null（次の1回だけ星の見た目を強制上書き・クーポン投入で予約）
   const [activeStarVariant, setActiveStarVariant] = useState(null); // 今回の占いに実際に適用される値（start時に確定）
   const [redrawCount, setRedrawCount] = useState(0);
@@ -2888,6 +2900,8 @@ export default function TarotDraw() {
     setMinorPool([]);
     setMinorSelectedIds([]);
     setMinorResults([]);
+    setMajorShuffleCount(0);
+    setMinorShuffleCount(0);
     setReading1("");
     setReading1Loading(false);
     setReading2("");
@@ -2946,6 +2960,7 @@ export default function TarotDraw() {
   const onPickMajor = (card) => {
     if (phase !== "major-spread") return;
     setMajorSelectedId(card.id);
+    setMajorShuffleCount(0); // カードを選んだので、シャッフル連打のカウントはリセットする
     // 即確定させず、いったん確認フェーズに止める（誤タップでの後戻りできない確定を防ぐ）
     setPhase("major-confirm");
   };
@@ -2966,6 +2981,16 @@ export default function TarotDraw() {
     if (phase !== "major-confirm") return;
     setMajorSelectedId(null);
     setPhase("major-spread");
+  };
+
+  // 大アルカナの再シャッフル（選択前のみ）：手続き保障として、いつでも配置を引き直せることを見せる
+  const MAX_RESHUFFLE = 4; // 連続シャッフルの上限（唯一の無制限アクションなので、依存的な連打を防ぐ）
+
+  const reshuffleMajor = () => {
+    if (phase !== "major-spread") return;
+    if (majorShuffleCount >= MAX_RESHUFFLE) return;
+    setMajorPool(buildPool(MAJOR_LIST));
+    setMajorShuffleCount((n) => n + 1);
   };
 
   const fetchReading1 = (results) => {
@@ -3012,6 +3037,7 @@ export default function TarotDraw() {
     if (minorSelectedIds.length >= 3) return;
     const next = [...minorSelectedIds, card.id];
     setMinorSelectedIds(next);
+    setMinorShuffleCount(0); // カードを選んだので、シャッフル連打のカウントはリセットする
     if (next.length === 3) {
       // 3枚選び終えた時点で、まだ確定しない。1枚ごとの確認はせず、3枚まとめて1回だけ確認する
       setPhase("minor-confirm");
@@ -3048,6 +3074,15 @@ export default function TarotDraw() {
     if (phase !== "minor-confirm") return;
     setMinorSelectedIds([]);
     setPhase("minor-spread");
+  };
+
+  // 小アルカナの再シャッフル（選択前のみ）：選択途中だった場合はプールと不整合になるため一緒にリセットする
+  const reshuffleMinor = () => {
+    if (phase !== "minor-spread") return;
+    if (minorShuffleCount >= MAX_RESHUFFLE) return;
+    setMinorPool(buildPool(MINOR_LIST));
+    setMinorSelectedIds([]);
+    setMinorShuffleCount((n) => n + 1);
   };
 
   const fetchReading2 = async (resolvedMajor) => {
@@ -3166,7 +3201,7 @@ export default function TarotDraw() {
           0%, 100% { text-shadow: 0 0 0px rgba(201,162,75,0); }
           50%      { text-shadow: 0 0 14px rgba(201,162,75,0.45); }
         }
-        .tarot-header p { font-size: 12.5px; color: var(--muted); margin: 0 auto; line-height: 1.75; max-width: 460px; }
+        .tarot-header p { font-size: 12.5px; color: var(--muted); margin: 0 auto; line-height: 1.75; max-width: 460px; white-space: pre-line; }
         .app-tagline { font-family: 'Cinzel', serif; font-size: 12px; color: var(--gold-soft); letter-spacing: 0.06em; margin: 0 0 12px; opacity: 0.9; }
 
         .controls { position: relative; z-index: 1; display: flex; justify-content: center; margin-bottom: 18px; }
@@ -3379,7 +3414,7 @@ export default function TarotDraw() {
         <h1>{t.appTitle}</h1>
         {t.tagline && <p className="app-tagline">{t.tagline}</p>}
         <p>{t.intro}</p>
-        <p className="privacy-note">{t.privacyIntro}</p>
+        {t.privacyIntro && <p className="privacy-note">{t.privacyIntro}</p>}
       </header>
 
       <div className="controls">
@@ -3512,6 +3547,25 @@ export default function TarotDraw() {
             {t.pickMajorPrompt}<br />
             {t.pickMajorSub}
           </p>
+          {phase === "major-spread" && (
+            <div style={{ display: "flex", flexDirection: "column", alignItems: "center", gap: "6px", marginBottom: "10px" }}>
+              <button
+                className="reset-btn"
+                onClick={reshuffleMajor}
+                disabled={majorShuffleCount >= MAX_RESHUFFLE}
+                style={majorShuffleCount >= MAX_RESHUFFLE ? { opacity: 0.4, cursor: "default" } : {}}
+              >
+                <Shuffle size={14} />
+                {t.reshuffleButton}
+                {majorShuffleCount > 0 && ` (${MAX_RESHUFFLE - majorShuffleCount})`}
+              </button>
+              {majorShuffleCount >= MAX_RESHUFFLE && (
+                <p style={{ fontSize: "10.5px", color: "var(--rose)", margin: 0, textAlign: "center" }}>
+                  {t.reshuffleCooldown}
+                </p>
+              )}
+            </div>
+          )}
           <div className="spread-grid">
             {majorPool.map((card) => {
               const cls = card.id === majorSelectedId ? "chosen" : phase === "major-resolving" ? "vanish" : "";
@@ -3559,6 +3613,25 @@ export default function TarotDraw() {
           <p className="round-label">
             {phase === "minor-confirm" ? t.confirmMinorPrompt : t.pickMinorPrompt(3 - minorSelectedIds.length)}
           </p>
+          {phase === "minor-spread" && (
+            <div style={{ display: "flex", flexDirection: "column", alignItems: "center", gap: "6px", marginBottom: "10px" }}>
+              <button
+                className="reset-btn"
+                onClick={reshuffleMinor}
+                disabled={minorShuffleCount >= MAX_RESHUFFLE}
+                style={minorShuffleCount >= MAX_RESHUFFLE ? { opacity: 0.4, cursor: "default" } : {}}
+              >
+                <Shuffle size={14} />
+                {t.reshuffleButton}
+                {minorShuffleCount > 0 && ` (${MAX_RESHUFFLE - minorShuffleCount})`}
+              </button>
+              {minorShuffleCount >= MAX_RESHUFFLE && (
+                <p style={{ fontSize: "10.5px", color: "var(--rose)", margin: 0, textAlign: "center" }}>
+                  {t.reshuffleCooldown}
+                </p>
+              )}
+            </div>
+          )}
           <div className="spread-grid">
             {minorPool.map((card) => {
               const idx = minorSelectedIds.indexOf(card.id);
