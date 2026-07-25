@@ -33,7 +33,7 @@ module.exports = async function handler(req, res) {
   const outputTokens = Number.isFinite(maxTokens) ? Math.min(Math.max(maxTokens, 100), 4000) : 500;
 
   try {
-    const model = 'gemini-2.5-flash-lite'; // 無料枠が最も大きいモデルに変更（RPD上限が高い）
+    const model = 'gemini-3-flash-preview'; // 課金設定済み。動作実績のあるモデルに戻す
     const response = await fetch(
       `https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent?key=${process.env.GEMINI_API_KEY}`,
       {
