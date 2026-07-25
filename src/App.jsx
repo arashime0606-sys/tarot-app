@@ -1797,7 +1797,7 @@ function StatsPanel({ history, lang }) {
   const topMajorCount = sortedMajors[0][1];
   const topMajorEntry = longTerm.find((h) => (h.majorCard.id || h.majorCard.name) === topMajorKey);
   const topMajorDisplayName = topMajorEntry
-    ? (topMajorEntry.majorCard.id ? getCardName({ id: topMajorEntry.majorCard.id }, lang) : topMajorEntry.majorCard.name)
+    ? (topMajorEntry.majorCard.id ? getCardName({ id: topMajorEntry.majorCard.id, name: topMajorEntry.majorCard.name }, lang) : topMajorEntry.majorCard.name)
     : topMajorKey;
 
   const reversedCount = longTerm.filter((h) => h.majorCard.reversed).length;
@@ -1885,12 +1885,12 @@ function HistoryPanel({ history, lang }) {
           </div>
           {h.question ? <p style={{ fontSize: "12px", color: "var(--gold-soft)", margin: "0 0 6px" }}>「{h.question}」</p> : null}
           <p style={{ fontSize: "13px", fontFamily: "'Shippori Mincho',serif", margin: "0 0 6px" }}>
-            ✦ {h.majorCard.id ? getCardName({ id: h.majorCard.id }, lang) : h.majorCard.name}（{t.historyOrientation(h.majorCard.reversed)}）
+            ✦ {h.majorCard.id ? getCardName({ id: h.majorCard.id, name: h.majorCard.name }, lang) : h.majorCard.name}（{t.historyOrientation(h.majorCard.reversed)}）
           </p>
           <div style={{ display: "flex", gap: "6px", flexWrap: "wrap", marginBottom: "6px" }}>
             {(POSITION_LABELS_I18N[lang] || POSITION_LABELS).map((pos, i) => (
               <span key={i} style={{ fontSize: "10px", color: "var(--muted)", background: "rgba(201,162,75,0.08)", padding: "2px 7px", borderRadius: "999px" }}>
-                {pos}:{h.minorResults[i] ? (h.minorResults[i].id ? getCardName({ id: h.minorResults[i].id }, lang) : h.minorResults[i].name) : ""}
+                {pos}:{h.minorResults[i] ? (h.minorResults[i].id ? getCardName({ id: h.minorResults[i].id, name: h.minorResults[i].name }, lang) : h.minorResults[i].name) : ""}
               </span>
             ))}
           </div>
@@ -2173,7 +2173,9 @@ function LastResultPanel({ entry, lang, onClose }) {
   const t = T[lang] || T.ja;
   if (!entry) return null;
 
-  const majorName = entry.majorCard.id ? getCardName({ id: entry.majorCard.id }, lang) : entry.majorCard.name;
+  const majorName = entry.majorCard.id
+    ? getCardName({ id: entry.majorCard.id, name: entry.majorCard.name }, lang)
+    : entry.majorCard.name;
 
   return (
     <div style={{ width: "100%", maxWidth: "420px", display: "flex", flexDirection: "column", gap: "14px" }}>
@@ -2188,6 +2190,19 @@ function LastResultPanel({ entry, lang, onClose }) {
         </p>
       )}
 
+      <div style={{ display: "flex", gap: "6px", flexWrap: "wrap", justifyContent: "center" }}>
+        {(POSITION_LABELS_I18N[lang] || POSITION_LABELS).map((pos, i) => {
+          const r = entry.minorResults[i];
+          if (!r) return null;
+          const name = r.id ? getCardName({ id: r.id, name: r.name }, lang) : r.name;
+          return (
+            <span key={i} style={{ fontSize: "10.5px", color: "var(--muted)", background: "rgba(201,162,75,0.08)", padding: "3px 9px", borderRadius: "999px" }}>
+              {pos}: {name}（{t.historyOrientation(r.reversed)}）
+            </span>
+          );
+        })}
+      </div>
+
       <div style={{ background: "rgba(36,28,77,0.7)", border: "1px solid rgba(201,162,75,0.3)", borderRadius: "12px", padding: "16px 18px", textAlign: "center" }}>
         <p style={{ fontFamily: "'Shippori Mincho',serif", fontSize: "16px", fontWeight: 700, margin: "0 0 6px" }}>
           ✦ {majorName}（{t.historyOrientation(entry.majorCard.reversed)}）
@@ -2199,14 +2214,20 @@ function LastResultPanel({ entry, lang, onClose }) {
         <div style={{ fontFamily: "Cinzel, serif", fontSize: "10px", letterSpacing: "0.1em", color: "var(--gold)", marginBottom: "8px" }}>
           {t.statsAvgAllTime}
         </div>
-        {STAT_CATEGORIES.map((cat, i) => (
-          <div key={cat.key} style={{ display: "flex", alignItems: "center", justifyContent: "space-between", padding: "3px 0" }}>
-            <span style={{ fontSize: "12px", fontFamily: "'Shippori Mincho',serif" }}>{statLabel(cat.key, lang)}</span>
-            <span style={{ fontSize: "11px", color: entry.scores[i] >= 5 ? "var(--star-max)" : entry.scores[i] <= 1 ? "var(--star-min)" : "var(--muted)" }}>
-              {entry.scores[i]}
-            </span>
-          </div>
-        ))}
+        {STAT_CATEGORIES.map((cat, i) => {
+          const isMax = entry.scores[i] >= 6;
+          const isMin = entry.scores[i] <= 1;
+          const variant = isMax ? "max" : isMin ? "min" : null;
+          return (
+            <div key={cat.key} style={{ display: "flex", alignItems: "center", justifyContent: "space-between", padding: "4px 0" }}>
+              <span style={{ fontSize: "12px", fontFamily: "'Shippori Mincho',serif", width: "44px", flexShrink: 0 }}>{statLabel(cat.key, lang)}</span>
+              <StarRating score={entry.scores[i]} variant={variant} />
+              <span style={{ fontSize: "11px", color: isMax ? "var(--star-max)" : isMin ? "var(--star-min)" : "var(--muted)", width: "26px", textAlign: "right" }}>
+                {entry.scores[i]}
+              </span>
+            </div>
+          );
+        })}
       </div>
 
       {entry.reading1 && (
