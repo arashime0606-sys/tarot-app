@@ -1017,6 +1017,11 @@ function buildMinorList() {
 const MAJOR_LIST = buildMajorList(); // 22枚
 const MINOR_LIST = buildMinorList(); // 56枚
 
+// カードIDから完全なカードオブジェクトを復元する（セッション復元用）
+function findCardById(id) {
+  return MAJOR_LIST.find((c) => c.id === id) || MINOR_LIST.find((c) => c.id === id) || null;
+}
+
 function shuffle(arr) {
   const a = [...arr];
   for (let i = a.length - 1; i > 0; i--) {
@@ -1678,6 +1683,7 @@ function StarRating({ score, variant, jackpotVariant }) {
 
 
 const FREE_DRAWS_PER_DAY = 3;
+const SMALL_DRAWS_PER_DAY = 5; // クーポンコード「asakusa」で解放される小拡張上限
 const MEDIUM_DRAWS_PER_DAY = 8; // クーポンコードで解放される中間拡張上限
 const EXPANDED_DRAWS_PER_DAY = 21; // クーポンコードで解放される拡張上限
 const FREE_REDRAWS = 1;
@@ -1687,6 +1693,21 @@ const LS_NAME_KEY = "tarot_user_name";
 const LS_COUNT_KEY = "tarot_draw_log";
 const LS_HISTORY_KEY = "tarot_history";
 const LS_LIMIT_EXPANDED_KEY = "tarot_limit_expanded";
+const LS_SESSION_KEY = "tarot_pending_session"; // 進行中セッション（不意の離脱からの復帰用）
+
+// 進行中セッションの保存：小アルカナ確定時点（回数消費と同じタイミング）で呼ぶ
+function savePendingSession(data) {
+  try { localStorage.setItem(LS_SESSION_KEY, JSON.stringify(data)); } catch {}
+}
+function loadPendingSession() {
+  try {
+    const raw = localStorage.getItem(LS_SESSION_KEY);
+    return raw ? JSON.parse(raw) : null;
+  } catch { return null; }
+}
+function clearPendingSession() {
+  try { localStorage.removeItem(LS_SESSION_KEY); } catch {}
+}
 
 function loadLimitExpanded() {
   try {
@@ -2147,6 +2168,77 @@ function developerNote(majorCard, lang) {
   return table[idx] || "";
 }
 
+// 「前回の結果を見る」：直近の履歴1件を、新しい占いを始めずにそのまま表示する
+function LastResultPanel({ entry, lang, onClose }) {
+  const t = T[lang] || T.ja;
+  if (!entry) return null;
+
+  const majorName = entry.majorCard.id ? getCardName({ id: entry.majorCard.id }, lang) : entry.majorCard.name;
+
+  return (
+    <div style={{ width: "100%", maxWidth: "420px", display: "flex", flexDirection: "column", gap: "14px" }}>
+      <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+        <span style={{ fontSize: "11px", color: "var(--muted)" }}>{entry.date} {entry.time}</span>
+        {entry.userName ? <span style={{ fontSize: "11px", color: "var(--gold-soft)" }}>{entry.userName}</span> : null}
+      </div>
+
+      {entry.question && (
+        <p style={{ fontSize: "12.5px", color: "var(--gold-soft)", margin: 0, textAlign: "center" }}>
+          「{entry.question}」
+        </p>
+      )}
+
+      <div style={{ background: "rgba(36,28,77,0.7)", border: "1px solid rgba(201,162,75,0.3)", borderRadius: "12px", padding: "16px 18px", textAlign: "center" }}>
+        <p style={{ fontFamily: "'Shippori Mincho',serif", fontSize: "16px", fontWeight: 700, margin: "0 0 6px" }}>
+          ✦ {majorName}（{t.historyOrientation(entry.majorCard.reversed)}）
+        </p>
+        <p style={{ fontSize: "12px", color: "var(--muted)", margin: 0 }}>{entry.majorCard.kw}</p>
+      </div>
+
+      <div style={{ background: "rgba(36,28,77,0.6)", border: "1px solid rgba(201,162,75,0.2)", borderRadius: "10px", padding: "12px 14px" }}>
+        <div style={{ fontFamily: "Cinzel, serif", fontSize: "10px", letterSpacing: "0.1em", color: "var(--gold)", marginBottom: "8px" }}>
+          {t.statsAvgAllTime}
+        </div>
+        {STAT_CATEGORIES.map((cat, i) => (
+          <div key={cat.key} style={{ display: "flex", alignItems: "center", justifyContent: "space-between", padding: "3px 0" }}>
+            <span style={{ fontSize: "12px", fontFamily: "'Shippori Mincho',serif" }}>{statLabel(cat.key, lang)}</span>
+            <span style={{ fontSize: "11px", color: entry.scores[i] >= 5 ? "var(--star-max)" : entry.scores[i] <= 1 ? "var(--star-min)" : "var(--muted)" }}>
+              {entry.scores[i]}
+            </span>
+          </div>
+        ))}
+      </div>
+
+      {entry.reading1 && (
+        <div className="ai-reading">
+          <div className="ai-label"><Sparkles size={12} /> {t.minorReadingLabel}</div>
+          <p>{entry.reading1}</p>
+        </div>
+      )}
+      {entry.reading2 && (
+        <div className="ai-reading">
+          <div className="ai-label"><Sparkles size={12} /> {t.majorReadingLabel}</div>
+          <p>{entry.reading2}</p>
+        </div>
+      )}
+      {entry.reading3 && (
+        <div className="ai-reading final-judgment">
+          <div className="ai-label"><Sparkles size={12} /> {t.finalJudgmentLabel}</div>
+          <p>{entry.reading3}</p>
+        </div>
+      )}
+
+      <p className="privacy-note" style={{ fontSize: "10.5px", textAlign: "center" }}>
+        {t.endOfPrivacyResult}
+      </p>
+
+      <button className="reset-btn" onClick={onClose}>
+        {t.closeLastResultButton}
+      </button>
+    </div>
+  );
+}
+
 function CouponPanel({ couponInput, setCouponInput, handleCoupon, aiEnabled, lang }) {
   const t = T[lang] || T.ja;
   return (
@@ -2218,6 +2310,13 @@ const T = {
     majorReadingLabel: "大アルカナの解釈（向きまで選んだ最初の1枚のカードについて）",
     finalJudgmentLabel: "問いに対する占断",
     finalJudgmentLoading: "占断を導いています（30秒ほどお待ちください）",
+    finalJudgmentFailed: "只今、占断を導くことができませんでした。時間をおいてもう一度お試しください。",
+    resumeSessionTitle: "✦ 前回、占いの途中で終了しています ✦",
+    resumeSessionBody: "小アルカナの結果はすでに引かれています。続きから、結果を最後まで見ることができます。",
+    resumeSessionButton: "続きから再開する",
+    discardSessionButton: "この記録を消して、新しく占い直す",
+    lastResultButton: "前回の結果を見る",
+    closeLastResultButton: "閉じる",
     orientationPrompt: "あなたの引いたカードの向きは、正しいと思いますか？",
     orientationYes: "正しいと思う",
     orientationNo: "逆だと思う",
@@ -2282,6 +2381,13 @@ const T = {
     majorReadingLabel: "大阿爾克那的解讀（關於第一張選中的主題牌，含正逆位）",
     finalJudgmentLabel: "針對提問的占斷",
     finalJudgmentLoading: "正在導出占斷結果（請稍候約30秒）",
+    finalJudgmentFailed: "目前無法導出占斷結果，請稍後再試一次。",
+    resumeSessionTitle: "✦ 上次的占卜尚未完成 ✦",
+    resumeSessionBody: "小阿爾克那的結果已經抽出。您可以繼續查看完整的結果。",
+    resumeSessionButton: "繼續上次的占卜",
+    discardSessionButton: "刪除記錄，重新開始占卜",
+    lastResultButton: "查看上次的結果",
+    closeLastResultButton: "關閉",
     orientationPrompt: "你認為抽到的這張牌，方向是正的嗎？",
     orientationYes: "我認為是正位",
     orientationNo: "我認為是逆位",
@@ -2345,6 +2451,13 @@ const T = {
     majorReadingLabel: "Major Arcana Reading (about your first chosen card, including orientation)",
     finalJudgmentLabel: "Judgment on Your Question",
     finalJudgmentLoading: "Drawing out your judgment (about 30 seconds)",
+    finalJudgmentFailed: "We couldn't draw out your judgment right now. Please try again in a moment.",
+    resumeSessionTitle: "✦ Your last reading wasn't finished ✦",
+    resumeSessionBody: "Your Minor Arcana cards have already been drawn. You can continue to see the full result.",
+    resumeSessionButton: "Resume where you left off",
+    discardSessionButton: "Discard this and start a new reading",
+    lastResultButton: "View Last Result",
+    closeLastResultButton: "Close",
     orientationPrompt: "Do you think the card you drew is upright?",
     orientationYes: "I think it's upright",
     orientationNo: "I think it's reversed",
@@ -2408,6 +2521,13 @@ const T = {
     majorReadingLabel: "Major Arcana Reading (tungkol sa unang card mo, kasama ang orientation)",
     finalJudgmentLabel: "Hula Ukol sa Tanong Mo",
     finalJudgmentLoading: "Ginagawa ang huling hula (mga 30 segundo)",
+    finalJudgmentFailed: "Hindi namin nagawang ilabas ang hula ngayon. Subukan ulit mamaya.",
+    resumeSessionTitle: "✦ Hindi natapos ang huling reading mo ✦",
+    resumeSessionBody: "Nakuha mo na ang mga Minor Arcana card mo. Maaari mong ipagpatuloy para makita ang buong resulta.",
+    resumeSessionButton: "Ituloy kung saan ka huminto",
+    discardSessionButton: "Tanggalin ito at magsimula ng bagong reading",
+    lastResultButton: "Tingnan ang Huling Resulta",
+    closeLastResultButton: "Isara",
     orientationPrompt: "Sa tingin mo, upright ba ang card na hinugot mo?",
     orientationYes: "Sa tingin ko upright",
     orientationNo: "Sa tingin ko reversed",
@@ -2471,6 +2591,13 @@ const T = {
     majorReadingLabel: "การตีความ Major Arcana (เกี่ยวกับไพ่ใบแรกของคุณ รวมถึงทิศทาง)",
     finalJudgmentLabel: "คำพยากรณ์ต่อคำถามของคุณ",
     finalJudgmentLoading: "กำลังพยากรณ์ (ใช้เวลาประมาณ 30 วินาที)",
+    finalJudgmentFailed: "ขณะนี้ไม่สามารถพยากรณ์ได้ กรุณาลองใหม่อีกครั้งในภายหลัง",
+    resumeSessionTitle: "✦ การดูดวงครั้งก่อนยังไม่เสร็จสมบูรณ์ ✦",
+    resumeSessionBody: "ไพ่ Minor Arcana ของคุณถูกจับไปแล้ว คุณสามารถดูผลลัพธ์ที่สมบูรณ์ต่อได้",
+    resumeSessionButton: "ดำเนินการต่อจากที่ค้างไว้",
+    discardSessionButton: "ลบข้อมูลนี้และเริ่มดูดวงใหม่",
+    lastResultButton: "ดูผลลัพธ์ครั้งล่าสุด",
+    closeLastResultButton: "ปิด",
     orientationPrompt: "คุณคิดว่าไพ่ที่จับได้นั้นตั้งตรงหรือไม่?",
     orientationYes: "ฉันคิดว่าตั้งตรง",
     orientationNo: "ฉันคิดว่ากลับหัว",
@@ -2537,6 +2664,7 @@ export default function TarotDraw() {
   const [userName, setUserName] = useState(loadUserName());
   const [todayCount, setTodayCount] = useState(loadTodayCount());
   const [limitExpanded, setLimitExpanded] = useState(loadLimitExpanded());
+  const [pendingSession, setPendingSession] = useState(loadPendingSession()); // 不意の離脱からの復帰用
   const [forceStarVariant, setForceStarVariant] = useState(null); // "holo" | "kuro" | "same" | null（次の1回だけ星の見た目を強制上書き・クーポン投入で予約）
   const [activeStarVariant, setActiveStarVariant] = useState(null); // 今回の占いに実際に適用される値（start時に確定）
   const [redrawCount, setRedrawCount] = useState(0);
@@ -2544,6 +2672,7 @@ export default function TarotDraw() {
   const [showCoupon, setShowCoupon] = useState(false);
   const [showHistory, setShowHistory] = useState(false);
   const [showStats, setShowStats] = useState(false);
+  const [showLastResult, setShowLastResult] = useState(false);
   const [aiEnabled, setAiEnabled] = useState(isAiEnabled());
   const [couponInput, setCouponInput] = useState("");
 
@@ -2640,6 +2769,12 @@ export default function TarotDraw() {
       setLimitExpanded(newLimit);
       setCouponInput("");
       alert(`✓ 今日の占い回数が${newLimit}回になりました`);
+    } else if (code === "asakusa") {
+      const newLimit = Math.max(limitExpanded || FREE_DRAWS_PER_DAY, SMALL_DRAWS_PER_DAY);
+      try { localStorage.setItem(LS_LIMIT_EXPANDED_KEY, String(newLimit)); } catch {}
+      setLimitExpanded(newLimit);
+      setCouponInput("");
+      alert(`✓ 今日の占い回数が${newLimit}回になりました`);
     } else if (code === "suzuhayasakuhito") {
       const newLimit = Math.max(limitExpanded || FREE_DRAWS_PER_DAY, MEDIUM_DRAWS_PER_DAY);
       try { localStorage.setItem(LS_LIMIT_EXPANDED_KEY, String(newLimit)); } catch {}
@@ -2681,9 +2816,8 @@ export default function TarotDraw() {
 
   const start = () => {
     if (!canDraw) return; // 制限チェック
-    // 名前を保存し、当日の占い回数を記録
+    // 名前を保存
     if (userName.trim()) saveUserName(userName.trim());
-    setTodayCount(incrementTodayCount());
     setRedrawCount(0);
     // 予約されたテスト用星演出を、今回の占いにだけ適用して消費する
     setActiveStarVariant(forceStarVariant);
@@ -2732,6 +2866,9 @@ export default function TarotDraw() {
     setHistory(loadHistory());
     setShowHistory(false);
     setShowStats(false);
+    // 安全のため、ここでも進行中セッションをクリアしておく（既に破棄済みのはずだが二重の安全策）
+    clearPendingSession();
+    setPendingSession(null);
   };
 
   const canRedraw = redrawCount < FREE_REDRAWS;
@@ -2781,6 +2918,36 @@ export default function TarotDraw() {
     setReading1(fallbackMinorReading(results, userName.trim(), lang));
   };
 
+  // 進行中セッションから復帰する（不意のリロード・離脱からの救済）
+  const resumePendingSession = () => {
+    if (!pendingSession) return;
+    const majorCardObj = findCardById(pendingSession.majorCardId);
+    if (!majorCardObj) { discardPendingSession(); return; } // データ不整合時は安全に破棄
+
+    const resolvedMajor = { card: majorCardObj, reversed: pendingSession.majorReversed };
+    const results = pendingSession.minorResults
+      .map((r) => {
+        const c = findCardById(r.id);
+        return c ? { card: c, reversed: r.reversed } : null;
+      })
+      .filter(Boolean);
+
+    if (results.length !== 3) { discardPendingSession(); return; } // データ不整合時は安全に破棄
+
+    setUserName(pendingSession.userName || "");
+    setQuestion(pendingSession.question || "");
+    setMajorCard(resolvedMajor);
+    setMinorResults(results);
+    setPhase("minor-revealed");
+    fetchReading1(results);
+  };
+
+  // 進行中セッションを破棄する（新しく占い直す選択、またはデータ不整合時の安全弁）
+  const discardPendingSession = () => {
+    clearPendingSession();
+    setPendingSession(null);
+  };
+
   const onPickMinor = (card) => {
     if (phase !== "minor-spread") return;
     if (minorSelectedIds.includes(card.id)) {
@@ -2796,6 +2963,18 @@ export default function TarotDraw() {
         return { card: c, reversed: c.reversed };
       });
       setMinorResults(results);
+      // 小アルカナ3枚が確定した瞬間＝結果の中身が決まる瞬間なので、ここで回数を消費する
+      // （テーマカードを開く前にリロードして引き直す、というリセマラ抜け道を防ぐ）
+      setTodayCount(incrementTodayCount());
+      // 進行中セッションを保存（不意のリロード・離脱からの復帰用。課金導線実装後の信頼性に直結する）
+      savePendingSession({
+        majorCardId: majorCard.card.id,
+        majorReversed: majorCard.reversed,
+        minorResults: results.map((r) => ({ id: r.card.id, reversed: r.reversed })),
+        question,
+        userName: userName.trim(),
+        savedAt: Date.now(),
+      });
       setPhase("minor-resolving");
       setTimeout(() => {
         setPhase("minor-revealed");
@@ -2809,21 +2988,29 @@ export default function TarotDraw() {
     const text2 = fallbackMajorReading(resolvedMajor, lang);
     setReading2(text2);
 
-    // 相談内容がある場合のみ、問いそのものへの占断を追加生成
-    if (question && question.trim()) {
+    // 相談内容があり、かつAIがオンの場合のみ、問いそのものへの占断を追加生成
+    // ※回数は既に小アルカナ確定時点（onPickMinor）で消費済みのため、ここでは消費しない
+    const willUseAi = isAiEnabled() && question && question.trim();
+
+    if (willUseAi) {
       setReading3Loading(true);
       try {
         const text3 = await callClaude(buildFinalJudgmentPrompt(resolvedMajor, minorResults, reading1, text2, question, AI_LANG_INSTRUCTION[lang]), 2000);
         setReading3(text3);
       } catch (e) {
-        setReading3(""); // 失敗時はこの欄自体を出さない
+        setReading3(t.finalJudgmentFailed); // 失敗時も無音にせず、分かりやすいメッセージを表示
       } finally {
         setReading3Loading(false);
       }
     }
+
+    // ここまで到達すれば占いは完了とみなし、進行中セッションを破棄する
+    // （AI占断が成功・失敗どちらでも、テーマカードの解釈自体は表示できているため）
+    discardPendingSession();
   };
 
   const openMajor = (flip) => {
+    if (phase === "major-revealed") return; // 二重呼び出しガード（連打やイベント重複でAPIが2回叩かれるのを防ぐ）
     // flip=false: 運命の向きをそのまま受け入れる
     // flip=true:  向きを反転して修正する
     setUserOrientationChoice(flip); // trueなら「反転した」記録
@@ -3143,6 +3330,22 @@ export default function TarotDraw() {
               </button>
             </div>
           </div>
+        ) : phase === "idle" && mode === "normal" && pendingSession ? (
+          <div className="question-field">
+            <p style={{ fontSize: "13px", color: "var(--gold-soft)", textAlign: "center", margin: "0 0 6px", fontFamily: "'Shippori Mincho',serif" }}>
+              {t.resumeSessionTitle}
+            </p>
+            <p style={{ fontSize: "11.5px", color: "var(--muted)", textAlign: "center", margin: "0 0 16px", maxWidth: "300px" }}>
+              {t.resumeSessionBody}
+            </p>
+            <button className="draw-btn" onClick={resumePendingSession}>
+              <Sparkles size={16} />
+              {t.resumeSessionButton}
+            </button>
+            <button className="reset-btn" onClick={discardPendingSession} style={{ marginTop: "10px" }}>
+              {t.discardSessionButton}
+            </button>
+          </div>
         ) : phase === "idle" && mode === "normal" ? (
           <div className="question-field">
             <label htmlFor="tarot-name">{t.nameLabel}</label>
@@ -3188,19 +3391,26 @@ export default function TarotDraw() {
             )}
 
             {history.length > 0 && (
-              <div style={{ display: "flex", gap: "8px", marginTop: "8px" }}>
+              <div style={{ display: "flex", gap: "8px", marginTop: "8px", flexWrap: "wrap", justifyContent: "center" }}>
                 <button
                   className="reset-btn"
-                  onClick={() => { setShowHistory(!showHistory); setShowStats(false); }}
+                  onClick={() => { setShowHistory(!showHistory); setShowStats(false); setShowLastResult(false); }}
                 >
                   <RotateCcw size={14} />
                   {t.historyButtonLabel(history.length)}
                 </button>
                 <button
                   className="reset-btn"
-                  onClick={() => { setShowStats(!showStats); setShowHistory(false); }}
+                  onClick={() => { setShowStats(!showStats); setShowHistory(false); setShowLastResult(false); }}
                 >
                   {t.statsButtonLabel}
+                </button>
+                <button
+                  className="reset-btn"
+                  onClick={() => { setShowLastResult(!showLastResult); setShowHistory(false); setShowStats(false); }}
+                >
+                  <Sparkles size={14} />
+                  {t.lastResultButton}
                 </button>
               </div>
             )}
@@ -3215,6 +3425,9 @@ export default function TarotDraw() {
 
             {showHistory ? <HistoryPanel history={history} lang={lang} /> : null}
             {showStats ? <StatsPanel history={history} lang={lang} /> : null}
+            {showLastResult ? (
+              <LastResultPanel entry={history[0]} lang={lang} onClose={() => setShowLastResult(false)} />
+            ) : null}
           </div>
         ) : (
           <button className="reset-btn" onClick={reset}>
