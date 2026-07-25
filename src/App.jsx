@@ -1085,8 +1085,8 @@ function fallbackMinorReading(results, userName, lang) {
       const pos = POSITION_LABELS_I18N[lang] ? POSITION_LABELS_I18N[lang][i] : POSITION_LABELS[i];
       return tpl.minorLine(pos, name, o, kw);
     })
-    .join(lang === "en" || lang === "tl" ? " " : "");
-  return `${parts}${lang === "en" || lang === "tl" ? " " : ""}${tpl.minorClosing}`;
+    .join("\n"); // 過去・現在・未来を1行ずつ改行して表示（定型文の読みやすさ優先）
+  return `${parts}\n${tpl.minorClosing}`;
 }
 function fallbackMajorReading(major, lang) {
   const tpl = FALLBACK_TEMPLATES[lang] || FALLBACK_TEMPLATES.ja;
@@ -3288,7 +3288,7 @@ export default function TarotDraw() {
         .ai-reading { width: 100%; max-width: 480px; margin: 4px auto 0; padding: 18px 22px; border-radius: 14px; border: 1px solid rgba(201,162,75,0.35); background: linear-gradient(160deg, rgba(36,28,77,0.65), rgba(18,15,36,0.65)); box-sizing: border-box; }
         .ai-reading.final-judgment { border-color: rgba(231, 207, 153, 0.55); background: linear-gradient(160deg, rgba(60,45,110,0.7), rgba(24,18,48,0.7)); }
         .ai-label { display: flex; align-items: center; gap: 6px; font-family: 'Cinzel', serif; font-size: 10px; letter-spacing: 0.14em; color: var(--gold); margin-bottom: 10px; }
-        .ai-reading p { font-size: 13px; line-height: 1.85; color: var(--parchment); margin: 0; }
+        .ai-reading p { font-size: 13px; line-height: 1.85; color: var(--parchment); margin: 0; white-space: pre-line; word-break: keep-all; overflow-wrap: break-word; }
         .loading-dots { display: inline-flex; gap: 4px; margin-left: 6px; vertical-align: middle; }
         .loading-dots span { width: 5px; height: 5px; border-radius: 50%; background: var(--gold); display: inline-block; animation: dotPulse 1.1s ease-in-out infinite; }
         .loading-dots span:nth-child(2) { animation-delay: .15s; }
