@@ -1603,6 +1603,9 @@ function calcStats(majorCard, minorResults) {
 //          null  = 通常
 function StarRating({ score, variant, jackpotVariant }) {
   const slots = [1, 2, 3, 4, 5, 6];
+  const isShark = jackpotVariant === "shark";
+  const isCandy = jackpotVariant === "candy";
+  const CANDY_EMOJIS = ["🍬", "🍭", "🍫", "🍪", "🧁", "🍩"];
   const fillColor =
     jackpotVariant === "void" ? "#1a1420" :
     jackpotVariant === "dull" ? "var(--gold)" :
@@ -1614,7 +1617,42 @@ function StarRating({ score, variant, jackpotVariant }) {
     jackpotVariant === "glowing" ? " star-glowing" :
     jackpotVariant === "void" ? " star-void" :
     jackpotVariant === "holo" ? " star-holo" :
-    jackpotVariant === "dull" ? " star-dull" : "";
+    jackpotVariant === "dull" ? " star-dull" :
+    isShark ? " star-shark" :
+    isCandy ? " star-candy" : "";
+
+  if (isShark) {
+    // クーポン「same」：星の代わりに鮫を表示する（スコアの数値・判定ロジックには一切影響しない演出のみ）
+    return (
+      <span className="stats-stars star-shark">
+        {slots.map((slot) => {
+          const filled = score >= slot - 0.5;
+          return (
+            <span key={slot} className="shark-emoji" style={{ opacity: filled ? 1 : 0.25 }}>
+              🦈
+            </span>
+          );
+        })}
+      </span>
+    );
+  }
+
+  if (isCandy) {
+    // クーポン「candy」：星の代わりにお菓子を表示する（スコアの数値・判定ロジックには一切影響しない演出のみ）
+    return (
+      <span className="stats-stars star-candy">
+        {slots.map((slot) => {
+          const filled = score >= slot - 0.5;
+          return (
+            <span key={slot} className="candy-emoji" style={{ opacity: filled ? 1 : 0.25 }}>
+              {CANDY_EMOJIS[(slot - 1) % CANDY_EMOJIS.length]}
+            </span>
+          );
+        })}
+      </span>
+    );
+  }
+
   return (
     <span className={`stats-stars ${variant === "max" ? "stars-max" : ""}${wrapClass}`}>
       {slots.map((slot) => {
@@ -1851,6 +1889,262 @@ function HistoryPanel({ history, lang }) {
       )}
     </div>
   );
+}
+
+// 「開発者の一言」：大アルカナ22枚×正逆44通り、渾身の寄り添う言葉
+// 順序はMAJOR_NAMEと同一。上=正位置、下=逆位置
+// 「開発者の一言」：大アルカナ22枚×正逆44通り、渾身の寄り添う言葉（多言語対応）
+const DEVELOPER_NOTE_UP_I18N = {
+  ja: [
+    "新しい一歩を踏み出すあなたを、誰も笑いません。怖さごと連れて、歩き出していい。",
+    "あなたの中にある力は、もう使える状態で待っています。",
+    "言葉にならない予感を、どうか信じてあげてください。",
+    "あなたが育てているものは、ちゃんと実っていきます。",
+    "積み上げてきた秩序は、あなたを守る盾になっています。",
+    "誰かに頼っていい。それは弱さではありません。",
+    "心が通じ合う瞬間は、思っているよりすぐそこにあります。",
+    "前に進む力は、もうあなたの中にあります。",
+    "優しさは、弱さではなく強さの証です。",
+    "一人の時間は、あなたを見捨てているわけじゃない。",
+    "巡ってきた流れに、そっと身を任せてみてください。",
+    "あなたの誠実さは、ちゃんと誰かに届いています。",
+    "立ち止まる時間も、意味のある時間です。",
+    "何かが終わるのは、次が始まる合図です。",
+    "ちょうどいい塩梅を、あなたはちゃんと知っています。",
+    "縛られていると感じるものから、少しずつ離れていい。",
+    "崩れたものの下には、新しい景色が待っています。",
+    "あなたが願うことには、ちゃんと意味があります。",
+    "不安な気持ちは、あなたが繊細である証です。",
+    "あなたが放つ明るさは、ちゃんと誰かに届いています。",
+    "過去を振り返る勇気は、前に進む力になります。",
+    "あなたはもう、ここまでよくやってきました。",
+  ],
+  "zh-TW": [
+    "邁出新的一步的你，沒有人會嘲笑。帶著恐懼，也可以往前走。",
+    "你心中的力量，早已準備好了。",
+    "那些說不清的預感，請試著相信自己。",
+    "你正在培育的東西，正在悄悄結果。",
+    "你累積起來的秩序，正保護著你。",
+    "可以依靠別人。那不是軟弱。",
+    "心意相通的瞬間，其實比想像中更近。",
+    "前進的力量，早已在你心中。",
+    "溫柔不是軟弱，而是一種力量的證明。",
+    "一個人的時間，不代表被世界遺棄。",
+    "順著這股到來的流動，輕輕交託自己吧。",
+    "你的真誠，已經確實傳達給某個人了。",
+    "停下腳步的時光，也是有意義的時光。",
+    "有些事情的結束，是下一段的開始。",
+    "恰到好處的分寸，你其實一直都懂。",
+    "如果感覺被束縛，可以一點一點地離開。",
+    "崩塌之後，新的風景正在等著你。",
+    "你所許下的願望，是有意義的。",
+    "不安的心情，正是你細膩的證明。",
+    "你散發的光，已經確實照到了某個人。",
+    "回顧過去的勇氣，會成為前進的力量。",
+    "你已經走到這裡，做得很好了。",
+  ],
+  en: [
+    "No one is laughing at you for taking a new step. It's okay to walk forward, fear and all.",
+    "The strength inside you is already ready to be used.",
+    "Please trust that feeling you can't quite put into words.",
+    "What you've been nurturing is quietly bearing fruit.",
+    "The order you've built is a shield protecting you now.",
+    "It's okay to rely on someone. That isn't weakness.",
+    "A moment of true connection is closer than you think.",
+    "The strength to move forward is already within you.",
+    "Gentleness isn't weakness — it's proof of strength.",
+    "Time alone doesn't mean the world has left you behind.",
+    "Let yourself gently ride the current that's arrived.",
+    "Your sincerity has already reached someone, quietly.",
+    "Even a pause has meaning of its own.",
+    "An ending is simply a signal that something new is starting.",
+    "You already know the right balance, more than you think.",
+    "It's okay to slowly step away from what feels like a cage.",
+    "A new view is waiting beneath what has fallen.",
+    "What you hope for carries real meaning.",
+    "That uneasy feeling is proof of how deeply you feel things.",
+    "The light you give off has already reached someone.",
+    "The courage to look back becomes the strength to move on.",
+    "You've already come this far, and that matters.",
+  ],
+  tl: [
+    "Walang tumatawa sa 'yo dahil sa bagong hakbang na ginagawa mo. Okay lang lumakad kahit takot ka.",
+    "Ang lakas na nasa loob mo ay handa nang gamitin.",
+    "Paniwalaan mo na lang ang kutob na hindi mo masabi sa salita.",
+    "Ang pinapalago mo ay tahimik na namumunga.",
+    "Ang kaayusang itinayo mo ang siyang nagbabantay sa 'yo ngayon.",
+    "Okay lang umasa sa iba. Hindi ito kahinaan.",
+    "Mas malapit na pala ang sandali ng tunay na koneksyon kaysa akala mo.",
+    "Ang lakas na kailangan mo para sumulong ay nasa 'yo na.",
+    "Ang kagandahang-loob ay hindi kahinaan — patunay ito ng lakas.",
+    "Ang pag-iisa ay hindi ibig sabihin iniwan ka ng mundo.",
+    "Hayaan mong dalhin ka ng agos na dumating.",
+    "Ang katapatan mo ay tahimik nang narating ang iba.",
+    "May kahulugan din ang paghinto.",
+    "Ang katapusan ay tanda lang na may magsisimula.",
+    "Alam mo na pala ang tamang balanse, higit pa sa akala mo.",
+    "Okay lang unti-unting lumayo sa nakakabit sa 'yo.",
+    "May bagong tanawin na naghihintay sa ilalim ng nawasak.",
+    "May kahulugan ang mga hinahangad mo.",
+    "Ang kaba mo ay patunay ng lalim ng pakiramdam mo.",
+    "Ang liwanag mo ay naabot na pala ang iba.",
+    "Ang tapang na lumingon sa nakaraan ay nagiging lakas para sumulong.",
+    "Nakarating ka na hanggang dito, at may saysay iyon.",
+  ],
+  th: [
+    "ไม่มีใครหัวเราะเยาะคุณที่ก้าวไปข้างหน้า แม้จะกลัวก็ก้าวไปได้",
+    "พลังที่อยู่ในตัวคุณพร้อมใช้งานแล้ว",
+    "ลางสังหรณ์ที่พูดไม่ออกนั้น จงเชื่อมันดูสักครั้ง",
+    "สิ่งที่คุณกำลังบ่มเพาะอยู่ กำลังค่อยๆ ออกผล",
+    "ระเบียบที่คุณสั่งสมมา กำลังปกป้องคุณอยู่",
+    "การพึ่งพาใครสักคนไม่ใช่ความอ่อนแอ",
+    "ช่วงเวลาที่หัวใจเชื่อมกันนั้นใกล้กว่าที่คิด",
+    "พลังที่จะก้าวไปข้างหน้าอยู่ในตัวคุณแล้ว",
+    "ความอ่อนโยนไม่ใช่ความอ่อนแอ แต่คือเครื่องพิสูจน์ความเข้มแข็ง",
+    "เวลาที่อยู่คนเดียวไม่ได้แปลว่าโลกทอดทิ้งคุณ",
+    "ปล่อยตัวไปกับกระแสที่มาถึงเบาๆ ดูบ้าง",
+    "ความจริงใจของคุณได้ไปถึงใครบางคนแล้วอย่างเงียบๆ",
+    "แม้แต่การหยุดพักก็มีความหมายของมันเอง",
+    "การจบลงคือสัญญาณว่ามีอะไรใหม่กำลังเริ่มต้น",
+    "คุณรู้จักความพอดีอยู่แล้ว มากกว่าที่คิด",
+    "ค่อยๆ ห่างจากสิ่งที่รู้สึกเหมือนกรงขังได้",
+    "ทัศนียภาพใหม่กำลังรอคุณอยู่ใต้สิ่งที่พังทลายไป",
+    "สิ่งที่คุณปรารถนามีความหมายอยู่จริง",
+    "ความรู้สึกไม่สบายใจคือเครื่องพิสูจน์ว่าคุณรู้สึกลึกซึ้งเพียงใด",
+    "แสงสว่างที่คุณส่งออกไปได้ไปถึงใครบางคนแล้ว",
+    "ความกล้าที่จะมองย้อนกลับไปจะกลายเป็นพลังที่จะก้าวต่อไป",
+    "คุณเดินทางมาไกลถึงขนาดนี้แล้ว และนั่นมีความหมาย",
+  ],
+};
+const DEVELOPER_NOTE_REV_I18N = {
+  ja: [
+    "動けない自分を責めなくていい。まだ準備をしている最中なだけです。",
+    "空回りしても、それは挑戦した証です。自信を失わないで。",
+    "感情が波立つ夜は、無理に整理しなくていい。",
+    "誰かに与えすぎて疲れたなら、今日は自分を甘やかしていい。",
+    "強く見せなくていい瞬間も、ちゃんとあっていい。",
+    "型にはまらない自分を、否定しなくていい。",
+    "選べずに迷う夜も、それはあなたが本気だからです。",
+    "息切れした日は、無理に前に進まなくていい。",
+    "頑張れない日があっても、あなたの価値は変わりません。",
+    "閉じこもってしまう日も、それでいい。",
+    "タイミングが悪く感じても、それはあなたのせいじゃない。",
+    "割り切れない気持ちを、無理に納得させなくていい。",
+    "我慢が続く日々に、疲れてもいい。",
+    "変わることが怖くても、それは自然なことです。",
+    "うまくいかない日も、自分を責めすぎないで。",
+    "抜け出したい気持ちに気づけたなら、もう半分は抜け出せています。",
+    "まだ揺れが収まらない日は、無理に立ち直らなくていい。",
+    "希望が見えにくい夜も、消えてしまったわけじゃない。",
+    "霧が晴れる瞬間は、思っているより近いです。",
+    "輝けない日があっても、あなたの光は消えていません。",
+    "まだ決断できなくても、それは考えている証拠です。",
+    "完成しきれない日々も、ちゃんと積み重なっています。",
+  ],
+  "zh-TW": [
+    "不用責怪動彈不得的自己。你只是還在準備中而已。",
+    "就算空轉了，那也是你嘗試過的證明。別失去自信。",
+    "情緒起伏的夜晚，不用勉強自己整理心情。",
+    "如果為了別人付出太多而累了，今天可以寵愛自己一下。",
+    "不需要逞強的時刻，也可以存在。",
+    "不合常規的自己，也不用否定它。",
+    "猶豫不決的夜晚，正是因為你很認真。",
+    "喘不過氣的日子，不用勉強自己往前走。",
+    "就算有無法努力的日子，你的價值也不會改變。",
+    "想把自己關起來的日子，那樣也可以。",
+    "就算感覺時機不對，那也不是你的錯。",
+    "無法釋懷的心情，不用勉強自己說服自己。",
+    "持續忍耐的日子裡，累了也沒關係。",
+    "就算害怕改變，那也是很自然的事。",
+    "不順利的日子，也不要太責怪自己。",
+    "只要察覺到想要擺脫的念頭，其實已經擺脫了一半。",
+    "還無法平復動搖的日子，不用勉強自己振作。",
+    "看不見希望的夜晚，並不代表希望已經消失。",
+    "迷霧散去的瞬間，其實比想像中更近。",
+    "就算有無法發光的日子，你的光芒也沒有熄滅。",
+    "還無法下決定，也是正在認真思考的證明。",
+    "無法完成的日子，也正確實地累積著。",
+  ],
+  en: [
+    "Don't blame yourself for feeling stuck. You're simply still preparing.",
+    "Even spinning your wheels proves you tried. Don't lose your confidence.",
+    "On nights when emotions run high, you don't have to sort them out right away.",
+    "If you've given too much to others and feel worn out, it's okay to be gentle with yourself today.",
+    "It's okay to have moments where you don't have to look strong.",
+    "Don't deny the part of you that doesn't fit the mold.",
+    "A night of indecision only shows how much this truly matters to you.",
+    "On breathless days, you don't have to force yourself forward.",
+    "Even on days you can't try your best, your worth hasn't changed.",
+    "It's okay to want to shut yourself away sometimes.",
+    "Even if the timing feels wrong, that isn't your fault.",
+    "You don't have to force yourself to make peace with feelings that don't add up.",
+    "It's okay to feel tired after days of holding on.",
+    "It's natural to be afraid of change.",
+    "On days that don't go well, don't be too hard on yourself.",
+    "Noticing you want to break free means you're already halfway there.",
+    "On days the shaking hasn't settled, you don't have to force yourself to recover.",
+    "A night where hope feels distant doesn't mean it's gone.",
+    "The moment the fog clears is closer than you think.",
+    "Even on days you can't shine, your light hasn't gone out.",
+    "Not being able to decide yet is proof you're still thinking it through.",
+    "Even unfinished days are quietly adding up to something.",
+  ],
+  tl: [
+    "Huwag mong sisihin ang sarili mo dahil parang natitigil ka. Naghahanda ka pa lang talaga.",
+    "Kahit umiikot lang sa parehong lugar, patunay iyon na sinubukan mo. Wag mawalan ng tiwala sa sarili.",
+    "Sa mga gabing magulo ang damdamin, hindi mo kailangang ayusin agad ito.",
+    "Kung sobra kang nagbigay sa iba at napagod ka na, okay lang pagpahingahin ang sarili ngayon.",
+    "Okay lang magkaroon ng sandaling hindi mo kailangang magmukhang matatag.",
+    "Huwag itanggi ang bahagi mo na hindi bagay sa karaniwang hulma.",
+    "Ang gabi ng pag-aalinlangan ay nagpapakita lang kung gaano kahalaga ito sa 'yo.",
+    "Sa mga araw na hingal ka na, hindi mo kailangang ipilit ang sarili sumulong.",
+    "Kahit may araw na hindi mo magawang sumikap, hindi nagbabago ang halaga mo.",
+    "Okay lang minsan gustong magsarado sa sarili.",
+    "Kahit mali ang oras, hindi iyon kasalanan mo.",
+    "Hindi mo kailangang ipilit makipagkasundo sa damdaming hindi maintindihan.",
+    "Okay lang mapagod matapos ang mga araw ng pagtitiis.",
+    "Likas lang na matakot sa pagbabago.",
+    "Sa mga araw na hindi maganda ang takbo, huwag masyadong sisihin ang sarili.",
+    "Ang pagkapansin na gusto mong makawala ay tanda na kalahati ka na roon.",
+    "Sa mga araw na hindi pa tumitigil ang pagyanig, hindi mo kailangang ipilit bumangon.",
+    "Ang gabing malayo ang pag-asa ay hindi ibig sabihin nawala na ito.",
+    "Mas malapit na pala ang sandali ng paglinaw kaysa akala mo.",
+    "Kahit may araw na hindi ka makasilay, hindi pa rin namamatay ang liwanag mo.",
+    "Ang hindi pa pagkakadesisyon ay tanda na malalim mo pa itong iniisip.",
+    "Kahit hindi kumpleto ang mga araw, tahimik itong sama-samang nagdaragdag.",
+  ],
+  th: [
+    "ไม่ต้องโทษตัวเองที่ขยับไม่ได้ คุณแค่ยังเตรียมตัวอยู่",
+    "แม้จะวนเวียนอยู่กับที่ นั่นก็คือหลักฐานว่าคุณพยายามแล้ว อย่าเสียความมั่นใจ",
+    "คืนที่อารมณ์แปรปรวน ไม่ต้องรีบจัดการมันก็ได้",
+    "ถ้าให้คนอื่นมากเกินไปจนเหนื่อย วันนี้ตามใจตัวเองบ้างก็ได้",
+    "ช่วงเวลาที่ไม่ต้องทำเข้มแข็งก็มีอยู่ได้",
+    "อย่าปฏิเสธส่วนของตัวเองที่ไม่เข้ากรอบ",
+    "คืนที่ลังเลใจนั้น เป็นเพราะเรื่องนี้สำคัญกับคุณจริงๆ",
+    "วันที่หายใจไม่ทัน ไม่ต้องฝืนก้าวต่อไปก็ได้",
+    "แม้มีวันที่พยายามไม่ไหว คุณค่าของคุณก็ไม่เปลี่ยนไป",
+    "บางครั้งอยากปิดตัวเองก็ไม่เป็นไร",
+    "แม้จังหวะจะรู้สึกไม่ดี นั่นก็ไม่ใช่ความผิดของคุณ",
+    "ไม่ต้องฝืนทำใจกับความรู้สึกที่ยังสะสางไม่ได้",
+    "เหนื่อยได้หลังวันที่อดทนมานาน",
+    "การกลัวการเปลี่ยนแปลงเป็นเรื่องธรรมชาติ",
+    "วันที่ไม่ราบรื่น อย่าโทษตัวเองมากเกินไป",
+    "การสังเกตว่าอยากหลุดพ้น หมายความว่าคุณหลุดพ้นไปครึ่งหนึ่งแล้ว",
+    "วันที่ความสั่นไหวยังไม่สงบ ไม่ต้องฝืนตั้งสติก็ได้",
+    "คืนที่ความหวังริบหรี่ ไม่ได้แปลว่ามันหายไปแล้ว",
+    "ช่วงเวลาที่หมอกจางคลี่คลายนั้นใกล้กว่าที่คิด",
+    "แม้มีวันที่ส่องแสงไม่ได้ แสงของคุณก็ยังไม่ดับ",
+    "การยังตัดสินใจไม่ได้ คือหลักฐานว่าคุณกำลังคิดอย่างจริงจัง",
+    "แม้วันที่ยังไม่สมบูรณ์ ก็กำลังสะสมกันอย่างเงียบๆ",
+  ],
+};
+function developerNote(majorCard, lang) {
+  if (!majorCard || !majorCard.card || !majorCard.card.id) return "";
+  const idx = parseInt(majorCard.card.id.split("-")[1], 10);
+  const upTable = DEVELOPER_NOTE_UP_I18N[lang] || DEVELOPER_NOTE_UP_I18N.ja;
+  const revTable = DEVELOPER_NOTE_REV_I18N[lang] || DEVELOPER_NOTE_REV_I18N.ja;
+  const table = majorCard.reversed ? revTable : upTable;
+  return table[idx] || "";
 }
 
 function CouponPanel({ couponInput, setCouponInput, handleCoupon, aiEnabled, lang }) {
@@ -2243,7 +2537,7 @@ export default function TarotDraw() {
   const [userName, setUserName] = useState(loadUserName());
   const [todayCount, setTodayCount] = useState(loadTodayCount());
   const [limitExpanded, setLimitExpanded] = useState(loadLimitExpanded());
-  const [forceStarVariant, setForceStarVariant] = useState(null); // "holo" | "kuro" | null（次の1回だけ星の色を強制上書き・クーポン投入で予約）
+  const [forceStarVariant, setForceStarVariant] = useState(null); // "holo" | "kuro" | "same" | null（次の1回だけ星の見た目を強制上書き・クーポン投入で予約）
   const [activeStarVariant, setActiveStarVariant] = useState(null); // 今回の占いに実際に適用される値（start時に確定）
   const [redrawCount, setRedrawCount] = useState(0);
   const [history, setHistory] = useState(loadHistory());
@@ -2362,6 +2656,16 @@ export default function TarotDraw() {
       setCouponInput("");
       setShowCoupon(false);
       alert("✓ 次の1回の占いで、星がすべて黒くなります（スコア自体は変わりません）");
+    } else if (code === "same") {
+      setForceStarVariant("same");
+      setCouponInput("");
+      setShowCoupon(false);
+      alert("✓ 次の1回の占いで、星がすべて鮫になります（スコア自体は変わりません）");
+    } else if (code === "candy") {
+      setForceStarVariant("candy");
+      setCouponInput("");
+      setShowCoupon(false);
+      alert("✓ 次の1回の占いで、星がすべてお菓子になります（スコア自体は変わりません）");
     } else {
       alert("❌ 無効なコード");
       setCouponInput("");
@@ -2739,6 +3043,24 @@ export default function TarotDraw() {
         .star-dull .star-fill { animation: none !important; filter: none !important; }
         .star-dull .star-wrap { animation: none !important; }
 
+        /* クーポン「same」：星を鮫の絵文字に差し替える演出 */
+        .shark-emoji { font-size: 14px; line-height: 1; display: inline-block; transition: opacity 0.2s ease; }
+        .candy-emoji { font-size: 14px; line-height: 1; display: inline-block; transition: opacity 0.2s ease; }
+
+        /* 開発者の一言：控えめだが温かみのある表示 */
+        .developer-note {
+          font-family: 'Shippori Mincho', serif;
+          font-size: 12.5px;
+          color: var(--gold-soft);
+          opacity: 0.85;
+          text-align: center;
+          max-width: 340px;
+          margin: 4px auto 0;
+          line-height: 1.8;
+          letter-spacing: 0.02em;
+          font-style: italic;
+        }
+
         /* 黄金のトリプル・全部正位置: 虹色（ホロ）に輝く（SVGなのでhue-rotateで実現） */
         /* セレクタ詳細度を上げつつ!importantも付け、.stars-max .star-fill に確実に勝つ */
         .star-fill.star-fill-holo,
@@ -3057,7 +3379,7 @@ export default function TarotDraw() {
             </div>
             {(() => {
               const { scores, maxIndices, minIndices, jackpotVariant, fieldVariants } = calcStats(majorCard, minorResults);
-              const forcedVariant = activeStarVariant === "kuro" ? "void" : activeStarVariant === "holo" ? "holo" : null;
+              const forcedVariant = activeStarVariant === "kuro" ? "void" : activeStarVariant === "holo" ? "holo" : activeStarVariant === "same" ? "shark" : activeStarVariant === "candy" ? "candy" : null;
               return STAT_CATEGORIES.map((cat, i) => {
                 const isMax = maxIndices.includes(i);
                 const isMin = minIndices.includes(i);
@@ -3132,21 +3454,18 @@ export default function TarotDraw() {
           </button>
 
           <div style={{ display: "flex", flexDirection: "column", alignItems: "center", gap: "10px", marginTop: "8px" }}>
-            {canRedraw ? (
-              <button className="reset-btn" onClick={handleRedraw} style={{ color: "var(--gold-soft)", borderColor: "rgba(201,162,75,0.5)" }}>
-                <Shuffle size={14} />
-                {t.redrawButton(FREE_REDRAWS - redrawCount)}
-              </button>
-            ) : (
-              <p style={{ fontSize: "11px", color: "var(--muted)", margin: 0, textAlign: "center" }}>
-                {t.redrawUsed}
-              </p>
-            )}
+            {/* 小アルカナ引き直し機能は休眠中（将来の課金導線として復活予定、ロジックは維持） */}
             <button className="reset-btn" onClick={reset}>
               <RotateCcw size={14} />
               {t.drawAgainButton(Math.max(0, currentLimit - todayCount))}
             </button>
           </div>
+
+          {developerNote(majorCard, lang) && (
+            <p className="developer-note">
+              {developerNote(majorCard, lang)}
+            </p>
+          )}
         </div>
       )}
     </div>
