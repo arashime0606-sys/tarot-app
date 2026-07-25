@@ -1041,7 +1041,7 @@ function buildPool(list) {
 }
 
 const POSITION_LABELS = ["過去", "現在", "未来"];
-const PHASE_ORDER = ["idle", "major-spread", "major-resolving", "minor-spread", "minor-resolving", "minor-revealed", "major-revealed"];
+const PHASE_ORDER = ["idle", "major-spread", "major-confirm", "major-resolving", "minor-spread", "minor-confirm", "minor-resolving", "minor-revealed", "major-revealed"];
 
 // フォールバック文の文型（カード名・キーワードは呼び出し側で埋め込む）
 const FALLBACK_TEMPLATES = {
@@ -2338,6 +2338,10 @@ const T = {
     discardSessionButton: "この記録を消して、新しく占い直す",
     lastResultButton: "前回の結果を見る",
     closeLastResultButton: "閉じる",
+    confirmMajorPrompt: "このカードでよろしいですか？",
+    confirmMinorPrompt: "この3枚でよろしいですか？",
+    confirmYes: "これでいい",
+    confirmNo: "選び直す",
     orientationPrompt: "あなたの引いたカードの向きは、正しいと思いますか？",
     orientationYes: "正しいと思う",
     orientationNo: "逆だと思う",
@@ -2409,6 +2413,10 @@ const T = {
     discardSessionButton: "刪除記錄，重新開始占卜",
     lastResultButton: "查看上次的結果",
     closeLastResultButton: "關閉",
+    confirmMajorPrompt: "確定選擇這張牌嗎？",
+    confirmMinorPrompt: "確定選擇這3張牌嗎？",
+    confirmYes: "確定",
+    confirmNo: "重新選擇",
     orientationPrompt: "你認為抽到的這張牌，方向是正的嗎？",
     orientationYes: "我認為是正位",
     orientationNo: "我認為是逆位",
@@ -2479,6 +2487,10 @@ const T = {
     discardSessionButton: "Discard this and start a new reading",
     lastResultButton: "View Last Result",
     closeLastResultButton: "Close",
+    confirmMajorPrompt: "Is this the card you want?",
+    confirmMinorPrompt: "Are you happy with these 3 cards?",
+    confirmYes: "Yes, this is right",
+    confirmNo: "Choose again",
     orientationPrompt: "Do you think the card you drew is upright?",
     orientationYes: "I think it's upright",
     orientationNo: "I think it's reversed",
@@ -2549,6 +2561,10 @@ const T = {
     discardSessionButton: "Tanggalin ito at magsimula ng bagong reading",
     lastResultButton: "Tingnan ang Huling Resulta",
     closeLastResultButton: "Isara",
+    confirmMajorPrompt: "Ito ba ang card na gusto mo?",
+    confirmMinorPrompt: "Okay ka na ba sa 3 card na ito?",
+    confirmYes: "Oo, tama ito",
+    confirmNo: "Pumili ulit",
     orientationPrompt: "Sa tingin mo, upright ba ang card na hinugot mo?",
     orientationYes: "Sa tingin ko upright",
     orientationNo: "Sa tingin ko reversed",
@@ -2619,6 +2635,10 @@ const T = {
     discardSessionButton: "ลบข้อมูลนี้และเริ่มดูดวงใหม่",
     lastResultButton: "ดูผลลัพธ์ครั้งล่าสุด",
     closeLastResultButton: "ปิด",
+    confirmMajorPrompt: "ใช่ไพ่ใบที่คุณต้องการหรือไม่?",
+    confirmMinorPrompt: "พอใจกับไพ่ทั้ง 3 ใบนี้หรือไม่?",
+    confirmYes: "ใช่ ถูกต้องแล้ว",
+    confirmNo: "เลือกใหม่",
     orientationPrompt: "คุณคิดว่าไพ่ที่จับได้นั้นตั้งตรงหรือไม่?",
     orientationYes: "ฉันคิดว่าตั้งตรง",
     orientationNo: "ฉันคิดว่ากลับหัว",
@@ -2926,12 +2946,26 @@ export default function TarotDraw() {
   const onPickMajor = (card) => {
     if (phase !== "major-spread") return;
     setMajorSelectedId(card.id);
+    // 即確定させず、いったん確認フェーズに止める（誤タップでの後戻りできない確定を防ぐ）
+    setPhase("major-confirm");
+  };
+
+  const confirmMajorPick = () => {
+    if (phase !== "major-confirm" || !majorSelectedId) return;
+    const card = MAJOR_LIST.find((c) => c.id === majorSelectedId);
+    if (!card) return;
     setMajorCard({ card, reversed: card.reversed });
     setPhase("major-resolving");
     setTimeout(() => {
       setMinorPool(buildPool(MINOR_LIST));
       setPhase("minor-spread");
     }, 480);
+  };
+
+  const cancelMajorPick = () => {
+    if (phase !== "major-confirm") return;
+    setMajorSelectedId(null);
+    setPhase("major-spread");
   };
 
   const fetchReading1 = (results) => {
@@ -2979,29 +3013,41 @@ export default function TarotDraw() {
     const next = [...minorSelectedIds, card.id];
     setMinorSelectedIds(next);
     if (next.length === 3) {
-      const results = next.map((id) => {
-        const c = minorPool.find((cc) => cc.id === id);
-        return { card: c, reversed: c.reversed };
-      });
-      setMinorResults(results);
-      // 小アルカナ3枚が確定した瞬間＝結果の中身が決まる瞬間なので、ここで回数を消費する
-      // （テーマカードを開く前にリロードして引き直す、というリセマラ抜け道を防ぐ）
-      setTodayCount(incrementTodayCount());
-      // 進行中セッションを保存（不意のリロード・離脱からの復帰用。課金導線実装後の信頼性に直結する）
-      savePendingSession({
-        majorCardId: majorCard.card.id,
-        majorReversed: majorCard.reversed,
-        minorResults: results.map((r) => ({ id: r.card.id, reversed: r.reversed })),
-        question,
-        userName: userName.trim(),
-        savedAt: Date.now(),
-      });
-      setPhase("minor-resolving");
-      setTimeout(() => {
-        setPhase("minor-revealed");
-        fetchReading1(results);
-      }, 480);
+      // 3枚選び終えた時点で、まだ確定しない。1枚ごとの確認はせず、3枚まとめて1回だけ確認する
+      setPhase("minor-confirm");
     }
+  };
+
+  const confirmMinorPick = () => {
+    if (phase !== "minor-confirm" || minorSelectedIds.length !== 3) return;
+    const results = minorSelectedIds.map((id) => {
+      const c = minorPool.find((cc) => cc.id === id);
+      return { card: c, reversed: c.reversed };
+    });
+    setMinorResults(results);
+    // 小アルカナ3枚が確定した瞬間＝結果の中身が決まる瞬間なので、ここで回数を消費する
+    // （テーマカードを開く前にリロードして引き直す、というリセマラ抜け道を防ぐ）
+    setTodayCount(incrementTodayCount());
+    // 進行中セッションを保存（不意のリロード・離脱からの復帰用。課金導線実装後の信頼性に直結する）
+    savePendingSession({
+      majorCardId: majorCard.card.id,
+      majorReversed: majorCard.reversed,
+      minorResults: results.map((r) => ({ id: r.card.id, reversed: r.reversed })),
+      question,
+      userName: userName.trim(),
+      savedAt: Date.now(),
+    });
+    setPhase("minor-resolving");
+    setTimeout(() => {
+      setPhase("minor-revealed");
+      fetchReading1(results);
+    }, 480);
+  };
+
+  const cancelMinorPick = () => {
+    if (phase !== "minor-confirm") return;
+    setMinorSelectedIds([]);
+    setPhase("minor-spread");
   };
 
   const fetchReading2 = async (resolvedMajor) => {
@@ -3068,8 +3114,8 @@ export default function TarotDraw() {
     setTimeout(() => setCopied(false), 2200);
   };
 
-  const showMajorGrid = phase === "major-spread" || phase === "major-resolving";
-  const showMinorGrid = phase === "minor-spread" || phase === "minor-resolving";
+  const showMajorGrid = phase === "major-spread" || phase === "major-confirm" || phase === "major-resolving";
+  const showMinorGrid = phase === "minor-spread" || phase === "minor-confirm" || phase === "minor-resolving";
   const showHeldChip = atLeast("minor-spread") && phase !== "major-revealed" && majorCard;
 
   return (
@@ -3475,7 +3521,7 @@ export default function TarotDraw() {
                   className={`mini-card ${cls}`}
                   style={{ "--rot": `${card.rot}deg` }}
                   onClick={() => onPickMajor(card)}
-                  disabled={phase === "major-resolving"}
+                  disabled={phase === "major-confirm" || phase === "major-resolving"}
                   aria-label="カードを選ぶ"
                 >
                   <span className="mini-emblem">✦</span>
@@ -3483,6 +3529,21 @@ export default function TarotDraw() {
               );
             })}
           </div>
+          {phase === "major-confirm" && (
+            <div className="open-choice">
+              <p className="open-choice-label">{t.confirmMajorPrompt}</p>
+              <div className="open-choice-btns">
+                <button className="draw-btn climax-btn choice-up" onClick={confirmMajorPick}>
+                  <Sparkles size={15} />
+                  {t.confirmYes}
+                </button>
+                <button className="draw-btn climax-btn choice-rev" onClick={cancelMajorPick}>
+                  <RotateCcw size={15} />
+                  {t.confirmNo}
+                </button>
+              </div>
+            </div>
+          )}
         </>
       )}
 
@@ -3496,7 +3557,7 @@ export default function TarotDraw() {
       {showMinorGrid && (
         <>
           <p className="round-label">
-            {t.pickMinorPrompt(3 - minorSelectedIds.length)}
+            {phase === "minor-confirm" ? t.confirmMinorPrompt : t.pickMinorPrompt(3 - minorSelectedIds.length)}
           </p>
           <div className="spread-grid">
             {minorPool.map((card) => {
@@ -3508,7 +3569,7 @@ export default function TarotDraw() {
                   className={`mini-card ${cls}`}
                   style={{ "--rot": `${card.rot}deg` }}
                   onClick={() => onPickMinor(card)}
-                  disabled={phase === "minor-resolving"}
+                  disabled={phase === "minor-confirm" || phase === "minor-resolving"}
                   aria-label="カードを選ぶ"
                 >
                   <span className="mini-emblem">✦</span>
@@ -3517,6 +3578,20 @@ export default function TarotDraw() {
               );
             })}
           </div>
+          {phase === "minor-confirm" && (
+            <div className="open-choice">
+              <div className="open-choice-btns">
+                <button className="draw-btn climax-btn choice-up" onClick={confirmMinorPick}>
+                  <Sparkles size={15} />
+                  {t.confirmYes}
+                </button>
+                <button className="draw-btn climax-btn choice-rev" onClick={cancelMinorPick}>
+                  <RotateCcw size={15} />
+                  {t.confirmNo}
+                </button>
+              </div>
+            </div>
+          )}
         </>
       )}
 
