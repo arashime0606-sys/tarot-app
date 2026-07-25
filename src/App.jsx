@@ -3851,3 +3851,5 @@ export default function TarotDraw() {
         </div>
       )}
     </div>
+  );
+}
