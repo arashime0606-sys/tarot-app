@@ -2,8 +2,71 @@
 <html lang="ja">
   <head>
     <meta charset="UTF-8" />
-    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>タロット占い</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
+
+    <!--
+      OGPは静的に1つしか持てない（言語ごとに出し分けられない）。
+      主戦場はアジア太平洋だが、掲示板やSNSに貼られたときに最も広く伝わるのは英語なので、
+      説明文は英語を基準にし、タイトルに日本語を併記して「日本で作られた」ことを示す。
+      アプリ本体は10言語対応しており、アクセス後にユーザー自身が切り替える。
+    -->
+    <title>Tarot ✦ タロット占い — Designed in Japan</title>
+    <meta name="description" content="A tarot reading that keeps your secrets. Nothing is stored on any server. Completely fair by design — in theory, no bias in the cards. Free, no sign-up. 10 languages." />
+
+    <link rel="canonical" href="https://tarot-app-jade-theta.vercel.app/" />
+
+    <!-- Open Graph -->
+    <meta property="og:type" content="website" />
+    <meta property="og:site_name" content="Tarot — Designed in Japan" />
+    <meta property="og:url" content="https://tarot-app-jade-theta.vercel.app/" />
+    <meta property="og:title" content="Tarot ✦ A reading that keeps your secrets" />
+    <meta property="og:description" content="No sign-up. Nothing stored on any server. Completely fair by design. Available in 10 languages — 日本語 / 한국어 / 繁體中文 / 简体中文 / English / Tagalog / ไทย / Bahasa Indonesia / Bahasa Melayu / Tiếng Việt" />
+    <meta property="og:image" content="https://tarot-app-jade-theta.vercel.app/ogp.png" />
+    <meta property="og:image:width" content="1200" />
+    <meta property="og:image:height" content="630" />
+    <meta property="og:image:alt" content="Tarot — Designed in Japan" />
+    <meta property="og:locale" content="ja_JP" />
+    <meta property="og:locale:alternate" content="en_US" />
+    <meta property="og:locale:alternate" content="ko_KR" />
+    <meta property="og:locale:alternate" content="zh_TW" />
+    <meta property="og:locale:alternate" content="zh_CN" />
+    <meta property="og:locale:alternate" content="th_TH" />
+    <meta property="og:locale:alternate" content="tl_PH" />
+    <meta property="og:locale:alternate" content="id_ID" />
+    <meta property="og:locale:alternate" content="ms_MY" />
+    <meta property="og:locale:alternate" content="vi_VN" />
+
+    <!-- Twitter / X -->
+    <meta name="twitter:card" content="summary_large_image" />
+    <meta name="twitter:title" content="Tarot ✦ A reading that keeps your secrets" />
+    <meta name="twitter:description" content="No sign-up. Nothing stored on any server. Completely fair by design. 10 languages." />
+    <meta name="twitter:image" content="https://tarot-app-jade-theta.vercel.app/ogp.png" />
+
+    <!-- アイコン。ホーム画面に追加されたときの見え方を決める -->
+    <link rel="icon" type="image/svg+xml" href="/favicon.svg" />
+    <link rel="apple-touch-icon" href="/apple-touch-icon.png" />
+    <meta name="theme-color" content="#12101c" />
+
+    <!-- ホーム画面から起動したときに、ブラウザUIを隠して全画面にする -->
+    <meta name="apple-mobile-web-app-capable" content="yes" />
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
+    <meta name="apple-mobile-web-app-title" content="Tarot" />
+
+    <!-- 検索エンジンには載せる（占い系は競合が多いので過度な期待はしない） -->
+    <meta name="robots" content="index, follow" />
+
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link
+      href="https://fonts.googleapis.com/css2?family=Cinzel:wght@400;600&family=Shippori+Mincho:wght@400;600&display=swap"
+      rel="stylesheet"
+    />
+
+    <style>
+      html, body { margin: 0; padding: 0; background: #12101c; }
+      /* 初期表示の白フラッシュを防ぐ。JSが立ち上がるまでの一瞬、背景色が出ない問題への対処 */
+      #root { min-height: 100dvh; background: #12101c; }
+    </style>
   </head>
   <body>
     <div id="root"></div>
