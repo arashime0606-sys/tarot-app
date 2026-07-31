@@ -8,6 +8,30 @@ const MAJOR_NAME = [
 ];
 // 大アルカナ名の多言語対応
 const MAJOR_NAME_I18N = {
+  vi: [
+    "Gã Khờ",
+    "Nhà Ảo Thuật",
+    "Nữ Tư Tế",
+    "Nữ Hoàng",
+    "Hoàng Đế",
+    "Giáo Hoàng",
+    "Tình Nhân",
+    "Cỗ Xe",
+    "Sức Mạnh",
+    "Ẩn Sĩ",
+    "Bánh Xe Số Phận",
+    "Công Lý",
+    "Người Treo Ngược",
+    "Cái Chết",
+    "Tiết Độ",
+    "Quỷ Dữ",
+    "Tòa Tháp",
+    "Ngôi Sao",
+    "Mặt Trăng",
+    "Mặt Trời",
+    "Phán Xét",
+    "Thế Giới",
+  ],
   id: [
     "Si Bodoh", "Sang Pesulap", "Pendeta Tinggi", "Sang Permaisuri", "Sang Kaisar", "Sang Hierofan",
     "Sepasang Kekasih", "Kereta Perang", "Kekuatan", "Sang Pertapa",
@@ -95,6 +119,30 @@ const MAJOR_REV = [
 
 // 大アルカナ キーワードの多言語対応（順序はMAJOR_UP/REVと同一・22枚）
 const MAJOR_UP_I18N = {
+  vi: [
+    "Tinh thần phiêu lưu・khả năng mới・khởi đầu hồn nhiên・tâm hồn tự do",
+    "Trí tuệ・sự khởi đầu・ý chí・tài năng sáng tạo",
+    "Sự nhạy bén・trực giác・trí tuệ ẩn giấu・điều bí ẩn lặng lẽ",
+    "Tính mẫu tử・sự sung túc・quả ngọt chín muồi・niềm vui giác quan",
+    "Khả năng lãnh đạo・lòng tự trọng・trật tự・uy thế vững vàng",
+    "Sự khéo léo trong giao tiếp・lòng chân thành・truyền thống・dẫn dắt tinh thần",
+    "Sự đồng điệu・lòng an yên・lựa chọn・mối duyên hòa hợp",
+    "Hoài bão・vượt qua trở ngại・chiến thắng của ý chí・tự chủ",
+    "Niềm tin・lòng kiên nhẫn・dũng khí dịu dàng・sức mạnh nội tâm",
+    "Sự chiêm nghiệm・chiều sâu suy tư・tìm kiếm trong tĩnh lặng・ánh sáng dẫn đường",
+    "Chuyển biến tốt lành・cơ hội đến・bước ngoặt・dòng chảy số phận",
+    "Sự thật・cân bằng・phán quyết công minh・trách nhiệm",
+    "Lòng kiên nhẫn・sự hiến dâng・góc nhìn mới・sẵn lòng chờ đợi",
+    "Chuyển hướng・định mệnh・kết thúc cần thiết・tái sinh",
+    "Sự bình yên・hài hòa・tự chủ・pha trộn vừa vặn",
+    "Sức hút mãnh liệt・khát khao・ràng buộc trần tục・bản năng chân thật",
+    "Biến động bất ngờ・giải phóng・sụp đổ của điều giả tạo・cú sốc",
+    "Hy vọng・chữa lành・lý tưởng・ánh sáng nơi xa",
+    "Trí tưởng tượng・sự nhạy cảm・thế giới vô thức・vẻ quyến rũ mơ hồ",
+    "Thành công・sức sống・niềm vui rạng rỡ・sự công nhận",
+    "Sự thức tỉnh・tiếng gọi・đánh giá lại・tha thứ",
+    "Sự hoàn tất・trọn vẹn・thành tựu・hài hòa của vũ trụ",
+  ],
   id: [
     "Jiwa petualang・kemungkinan・awal yang polos・jiwa yang bebas",
     "Kecerdasan・permulaan・kekuatan kehendak・bakat mencipta",
@@ -218,6 +266,30 @@ const MAJOR_UP_I18N = {
 };
 
 const MAJOR_REV_I18N = {
+  vi: [
+    "Nỗ lực vô ích・lười biếng・bất cẩn・kế hoạch mơ hồ",
+    "Do dự・thiếu kế hoạch・tài năng bị lãng phí・mưu mẹo",
+    "Nội tâm chao đảo・thành kiến・phớt lờ tiếng lòng・bối rối",
+    "Bất hòa・thiếu thốn・trì trệ・nuông chiều thái quá",
+    "Áp đặt ý muốn・vô ích・quyền lực cứng nhắc・cố chấp",
+    "Thiếu chân thành・thiếu lòng trắc ẩn・quy tắc rỗng tuếch・lời khuyên lệch lạc",
+    "Cảm giác gượng gạo・thay đổi thất thường・lựa chọn sai・mối duyên rạn nứt",
+    "Nỗ lực chệch hướng・ích kỷ・mất phương hướng・hung hăng",
+    "Nản lòng・phụ thuộc・mất tự tin・tuyệt vọng",
+    "Mù quáng・khép kín・cô độc・từ chối giúp đỡ",
+    "Bị hoàn cảnh xoay vần・thời điểm xấu・cơ hội vuột mất・thụt lùi",
+    "Bất công・xung đột・thiên vị・trốn tránh trách nhiệm",
+    "Cảm giác bị trói buộc・góc nhìn sai lệch・hy sinh vô nghĩa・bế tắc",
+    "Không nỡ buông bỏ・luẩn quẩn・chối bỏ đổi thay・đình trệ",
+    "Mất cân bằng・thái quá・không tương hợp・cạn kiệt kiên nhẫn",
+    "Bị trói buộc・nghiện ngập・cám dỗ・mối quan hệ giam cầm",
+    "Sụp đổ・hỗn loạn・mất mát đột ngột・đòn giáng bất ngờ",
+    "Mất hy vọng・thất vọng・lý tưởng phai nhạt・hoài nghi bản thân",
+    "Lo âu・hoang mang・dối trá・sự thật bị che giấu",
+    "Thành công bị trì hoãn・kiệt sức・kiêu ngạo・nhiệt huyết lụi tàn",
+    "Nuối tiếc quá khứ・chối bỏ tiếng gọi・phán đoán sai・chần chừ",
+    "Còn dang dở・cảm giác trống rỗng・bị bỏ lại・vòng tròn chưa khép",
+  ],
   id: [
     "Usaha sia-sia・kemalasan・kecerobohan・rencana yang kabur",
     "Keraguan・tanpa rencana・bakat yang disia-siakan・tipu daya",
@@ -356,6 +428,7 @@ const RANK_LABEL_I18N = {
   tl: ["Ace", "2", "3", "4", "5", "6", "7", "8", "9", "10", "Pahina", "Kabalyero", "Reyna", "Hari"],
   th: ["เอซ", "2", "3", "4", "5", "6", "7", "8", "9", "10", "เพจ", "อัศวิน", "ราชินี", "ราชา"],
   id: ["As", "2", "3", "4", "5", "6", "7", "8", "9", "10", "Pelayan", "Ksatria", "Ratu", "Raja"],
+  vi: ["Át", "2", "3", "4", "5", "6", "7", "8", "9", "10", "Tiểu Đồng", "Hiệp Sĩ", "Nữ Hoàng", "Vua"],
 };
 function rankLabel(index, lang) {
   return (RANK_LABEL_I18N[lang] && RANK_LABEL_I18N[lang][index]) || RANK_LABEL[index];
@@ -369,6 +442,7 @@ const SUIT_LABEL_I18N = {
   tl: { wands: "Wands", cups: "Cups", swords: "Swords", pentacles: "Pentacles" },
   th: { wands: "ไม้เท้า", cups: "ถ้วย", swords: "ดาบ", pentacles: "เหรียญ" },
   id: { wands: "Tongkat", cups: "Piala", swords: "Pedang", pentacles: "Koin" },
+  vi: { wands: "Gậy", cups: "Cốc", swords: "Kiếm", pentacles: "Tiền" },
 };
 function suitLabel(key, lang) {
   return (SUIT_LABEL_I18N[lang] && SUIT_LABEL_I18N[lang][key]) || SUIT_LABEL_I18N.ja[key];
@@ -382,6 +456,7 @@ const ELEMENT_I18N = {
   tl: { 火: "Apoy", 水: "Tubig", 風: "Hangin", 地: "Lupa" },
   th: { 火: "ไฟ", 水: "น้ำ", 風: "ลม", 地: "ดิน" },
   id: { 火: "Api", 水: "Air", 風: "Udara", 地: "Tanah" },
+  vi: { 火: "Lửa", 水: "Nước", 風: "Khí", 地: "Đất" },
 };
 function elementLabel(el, lang) {
   return (ELEMENT_I18N[lang] && ELEMENT_I18N[lang][el]) || el;
@@ -390,7 +465,7 @@ function elementLabel(el, lang) {
 // カード名（小アルカナ）を組み立てる: 「棒のエース」→「Ace of Wands」等
 // キーワードの区切り文字。CJK圏は中黒、ラテン文字圏は中点スペース区切りにする
 // （「・」はラテン文字の間に置くと詰まって見え、日本語の混入としても目立つ）
-const KEYWORD_SEPARATOR = { ja: "・", "zh-TW": "・", th: "・", en: " · ", tl: " · ", id: " · " };
+const KEYWORD_SEPARATOR = { ja: "・", "zh-TW": "・", th: "・", en: " · ", tl: " · ", id: " · ", vi: " · " };
 function localizeKeywords(text, lang) {
   const sep = KEYWORD_SEPARATOR[lang];
   if (!sep || sep === "・") return text;
@@ -401,7 +476,8 @@ function minorCardName(suitKey, rankIndex, lang) {
   const rank = rankLabel(rankIndex, lang);
   const suit = suitLabel(suitKey, lang);
   if (lang === "en" || lang === "tl") return `${rank} of ${suit}`;
-  if (lang === "id") return `${rank} ${suit}`; // 例: As Piala / Raja Pedang（インドネシア語は修飾語が後ろ）
+  if (lang === "id") return `${rank} ${suit}`;
+  if (lang === "vi") return `${rank} ${suit}`; // 例: Át Cốc / Vua Kiếm // 例: As Piala / Raja Pedang（インドネシア語は修飾語が後ろ）
   if (lang === "zh-TW") return `${suit}${rank}`;
   if (lang === "th") return `${suit}${rank}`;
   return `${suit}の${rank}`; // ja
@@ -474,6 +550,22 @@ const PENT_REV = [
 // 小アルカナ キーワードの多言語対応（各スート14枚・正逆）
 const MINOR_UP_I18N = {
   wands: {
+    vi: [
+      "Thử thách mới・đam mê chớm nở・cảm hứng",
+      "Hoạch định và lựa chọn・tầm nhìn xa・quyền kiểm soát",
+      "Mở rộng・tiến bước・thành quả của hợp tác",
+      "Niềm vui ổn định・lễ hội・cảm giác thuộc về",
+      "Cạnh tranh・va chạm quan điểm・thi đua lành mạnh",
+      "Chiến thắng・được công nhận・lấy lại tự tin",
+      "Phòng thủ・giữ vững vị thế・bền bỉ",
+      "Tiến triển nhanh・tốc độ・tin vui",
+      "Kiên trì・nỗ lực cuối cùng・sức bền",
+      "Trách nhiệm nặng nề・áp lực hoàn thành・quá tải",
+      "Tinh thần khám phá・tin tức・bước đầu hồn nhiên",
+      "Hành động táo bạo・chuyến đi・khí thế bừng cháy",
+      "Sức hút・sự ấm áp・niềm tin thu hút người khác",
+      "Khả năng lãnh đạo・tầm nhìn・dũng khí dẫn đầu",
+    ],
     id: [
       "Tantangan baru・gairah yang bertunas・ilham",
       "Perencanaan dan pilihan・pandangan ke depan・kendali",
@@ -556,6 +648,22 @@ const MINOR_UP_I18N = {
     ],
   },
   cups: {
+    vi: [
+      "Khởi đầu của cảm xúc・tình yêu tràn đầy・trái tim rộng mở",
+      "Sự gắn kết・thấu hiểu lẫn nhau・lời hẹn ước đôi lứa",
+      "Niềm vui chung・tình bạn・buổi ăn mừng nhỏ",
+      "Sự chiêm nghiệm・cảm giác chán・lời mời chưa nhận ra",
+      "Chấp nhận mất mát・nỗi buồn chân thật・điều còn sót lại",
+      "Ký ức・lòng tốt chân thành・cuộc hội ngộ cũ",
+      "Nhiều lựa chọn・mộng tưởng・trí tưởng tượng",
+      "Rời bỏ điều cũ・tìm kiếm ý nghĩa・hành trình nội tâm",
+      "Sự mãn nguyện・ước nguyện thành・cảm giác đủ đầy",
+      "Hạnh phúc trọn vẹn・gia đình・bình yên đủ đầy",
+      "Sự nhạy cảm・tin nhắn dịu dàng・tò mò trong sáng",
+      "Lòng chân thành・theo đuổi lý tưởng・lời mời từ trái tim",
+      "Lòng yêu thương・sự bao dung・chiều sâu cảm xúc",
+      "Sự chín chắn của tâm hồn・lòng rộng lượng・dẫn dắt điềm tĩnh",
+    ],
     id: [
       "Awal perasaan・cinta yang meluap・hati yang terbuka",
       "Ikatan・saling memahami・janji berdua",
@@ -638,6 +746,22 @@ const MINOR_UP_I18N = {
     ],
   },
   swords: {
+    vi: [
+      "Đột phá tư duy・sự thật・sự sáng rõ sắc bén",
+      "Quyết định bị hoãn・cân bằng・khoảng lặng để nghĩ",
+      "Nỗi buồn chân thật・vết thương lộ rõ・hiện thực cay đắng",
+      "Nghỉ ngơi・hồi phục・sự tĩnh lặng cần thiết",
+      "Chiến thắng đắt giá・xung đột・cái giá của ưu thế",
+      "Chuyển dời・rời bỏ khó khăn・hành trình tới bình yên",
+      "Mưu lược・thận trọng・nước đi khôn khéo",
+      "Cảm giác bị giam・giới hạn・xiềng xích của tư duy",
+      "Lo âu・đêm dài・nỗi sợ trong đầu",
+      "Kết thúc dứt khoát・đáy vực・khởi đầu đang chờ",
+      "Sự cảnh giác・quan sát・tò mò sắc bén",
+      "Hành động nhanh・dũng khí・tấn công trực diện",
+      "Sự dứt khoát・rõ ràng・thẳng thắn không vòng vo",
+      "Cương quyết dựa trên lý trí・công minh・uy quyền ngay thẳng",
+    ],
     id: [
       "Terobosan pikiran・kebenaran・kejernihan yang tajam",
       "Keputusan yang tertunda・keseimbangan・jeda untuk berpikir",
@@ -720,6 +844,22 @@ const MINOR_UP_I18N = {
     ],
   },
   pentacles: {
+    vi: [
+      "Cơ hội hữu hình・mầm thịnh vượng・khởi đầu vững chắc",
+      "Cân bằng・linh hoạt・xoay xở hai việc cùng lúc",
+      "Tay nghề・hợp tác・thành quả của cần mẫn",
+      "Ổn định・tiết kiệm・nắm giữ an toàn",
+      "Khó khăn tạm thời・nương tựa nhau・sự giúp đỡ ở gần",
+      "Chia sẻ・lòng hào phóng・cho và nhận",
+      "Chờ đợi kết quả・kiên nhẫn・xem xét lại",
+      "Cần mẫn・rèn luyện・tiến bộ từng chút",
+      "Tự lập・quả ngọt của nỗ lực・sự thoải mái tự giành",
+      "Thừa kế・thịnh vượng gia tộc・nền móng lâu dài",
+      "Học hỏi・tò mò chuyên cần・bước đầu siêng năng",
+      "Tỉ mỉ・đáng tin cậy・tiến bước chắc chắn",
+      "Sự phì nhiêu・nuôi dưỡng・sung túc thiết thực",
+      "Vững vàng・đáng tin・thành công bền lâu",
+    ],
     id: [
       "Peluang nyata・benih kemakmuran・awal yang kokoh",
       "Keseimbangan・kelenturan・mengatur dua hal sekaligus",
@@ -805,6 +945,22 @@ const MINOR_UP_I18N = {
 
 const MINOR_REV_I18N = {
   wands: {
+    vi: [
+      "Nhiệt huyết lụi tàn・khởi đầu bị hoãn・cảm hứng bế tắc",
+      "Do dự quyết định・kế hoạch đình trệ・tầm nhìn hạn hẹp",
+      "Kế hoạch chệch hướng・hợp tác rạn nứt・chờ đợi vô ích",
+      "Rạn nứt・mất chỗ đứng・lễ hội nhạt nhẽo",
+      "Tranh cãi vô ích・xích mích・cạnh tranh mệt mỏi",
+      "Kiêu ngạo・không được ghi nhận・chiến thắng rỗng",
+      "Bị dồn ép・mất chỗ đứng・phòng tuyến sụp đổ",
+      "Vội vàng・hỗn loạn・tin tức chậm trễ",
+      "Kiệt sức・cảnh giác quá mức・bỏ cuộc ở phút chót",
+      "Quá tải・ôm đồm quá nhiều・cạn sức",
+      "Tin xấu・thiếu chín chắn・tò mò lệch hướng",
+      "Hấp tấp・chuyến đi bị hoãn・hành động vô định",
+      "Cố chấp・ghen tuông・sự ấm áp hóa nóng nảy",
+      "Độc đoán・gồng ép bản thân・lãnh đạo lung lay",
+    ],
     id: [
       "Semangat yang padam・awal yang tertunda・ilham yang buntu",
       "Ragu memutuskan・rencana yang mandek・pandangan yang sempit",
@@ -887,6 +1043,22 @@ const MINOR_REV_I18N = {
     ],
   },
   cups: {
+    vi: [
+      "Cảm xúc khép kín・tình yêu kìm nén・trái tim nguội lạnh",
+      "Hiểu lầm・gắn kết lỏng lẻo・lời hứa lung lay",
+      "Thái quá・lời đồn・niềm vui hời hợt",
+      "Bất mãn・nhắm mắt làm ngơ・cơ hội vuột mất",
+      "Ám ảnh mất mát・hối tiếc・từ chối đứng dậy",
+      "Mắc kẹt quá khứ・ký ức đè nặng・hoài niệm giam cầm",
+      "Mộng tưởng hão huyền・bối rối・trốn chạy thực tại",
+      "Ngại bước đi・quay về giữa chừng・do dự",
+      "Tham lam・mãn nguyện trống rỗng・ham muốn không dứt",
+      "Gia đình rạn nứt・hạnh phúc nứt vỡ・khoảng cách",
+      "Cảm xúc thất thường・tin nhắn gây thất vọng・trẻ con",
+      "Lời hứa hão・lý tưởng mơ hồ・sự giả tạo",
+      "Chìm đắm quá mức・phụ thuộc・yêu thương trói buộc",
+      "Thao túng cảm xúc・bất ổn・dịu dàng giả tạo",
+    ],
     id: [
       "Perasaan yang tertutup・cinta yang tertahan・hati yang dingin",
       "Salah paham・ikatan yang renggang・janji yang goyah",
@@ -969,6 +1141,22 @@ const MINOR_REV_I18N = {
     ],
   },
   swords: {
+    vi: [
+      "Tư duy rối loạn・sự thật bị bóp méo・hoang mang",
+      "Bế tắc・né tránh quyết định・cân bằng giả tạo",
+      "Vết thương giấu kín・hồi phục chậm・nỗi buồn nén lại",
+      "Bồn chồn・nghỉ ngơi bị hoãn・mệt mỏi chồng chất",
+      "Thất bại・thù hằn còn lại・chiến thắng vô nghĩa",
+      "Đình trệ・khó khăn mang theo・hành trình bị hoãn",
+      "Mưu mẹo bị lộ・không trung thực・kế hoạch thất bại",
+      "Bắt đầu được giải thoát・nhận ra lựa chọn・xiềng xích nới lỏng",
+      "Lo âu phình to・ác mộng・suy nghĩ luẩn quẩn",
+      "Không nỡ kết thúc・kéo dài đau khổ・cay đắng",
+      "Lời nói gây tổn thương・dò xét・buột miệng bất cẩn",
+      "Hấp tấp・hung hăng vô định・hành động liều lĩnh",
+      "Cứng nhắc・lạnh lùng・lời phê phán gây đau",
+      "Lạm dụng quyền lực・quy tắc hà khắc・phán xét nghiệt ngã",
+    ],
     id: [
       "Pikiran yang kacau・kebenaran yang dipelintir・kebingungan",
       "Kebuntuan・menghindar dari keputusan・keseimbangan yang palsu",
@@ -1051,6 +1239,22 @@ const MINOR_REV_I18N = {
     ],
   },
   pentacles: {
+    vi: [
+      "Cơ hội vuột mất・kế hoạch lung lay・khởi đầu bị hoãn",
+      "Mất cân bằng・quá tải・sắp xếp kém",
+      "Chất lượng đi xuống・hợp tác rạn nứt・nỗ lực không được ghi nhận",
+      "Keo kiệt・nắm giữ quá chặt・sợ mất mát",
+      "Khó khăn kéo dài・cô độc・sự giúp đỡ không thấy",
+      "Cho đi lệch lạc・món nợ ân tình・hào phóng có điều kiện",
+      "Cạn kiên nhẫn・kết quả gây thất vọng・đầu tư chệch hướng",
+      "Làm việc vô nghĩa・lặp lại đến chai sạn・mất hứng thú",
+      "Phụ thuộc・thoải mái mong manh・tự lập giả tạo",
+      "Tranh chấp thừa kế・nền móng nứt vỡ・gánh nặng gia đình",
+      "Lơ là học hỏi・lười biếng・tò mò lụi tàn",
+      "Đình trệ・cứng nhắc・tiến bộ quá chậm",
+      "Hoang phí・nuông chiều・sung túc bị lãng phí",
+      "Tham lam・cứng nhắc・thành công hóa kiêu ngạo",
+    ],
     id: [
       "Peluang yang terlewat・rencana yang goyah・awal yang tertunda",
       "Kehilangan keseimbangan・kewalahan・pengaturan yang buruk",
@@ -1163,10 +1367,10 @@ function getCardName(card, lang) {
 
 // カードのサブラベル（「大アルカナ」「小アルカナ・棒（火）」等）を言語別に返す
 const MAJOR_ARCANA_LABEL_I18N = {
-  ja: "大アルカナ", "zh-TW": "大阿爾克那", en: "Major Arcana", tl: "Major Arcana", th: "ไพ่ชุดใหญ่ (Major Arcana)", id: "Major Arcana",
+  ja: "大アルカナ", "zh-TW": "大阿爾克那", en: "Major Arcana", tl: "Major Arcana", th: "ไพ่ชุดใหญ่ (Major Arcana)", id: "Major Arcana", vi: "Ẩn Chính",
 };
 const MINOR_ARCANA_PREFIX_I18N = {
-  ja: "小アルカナ・", "zh-TW": "小阿爾克那・", en: "Minor Arcana · ", tl: "Minor Arcana · ", th: "ไพ่ชุดเล็ก · ", id: "Minor Arcana · ",
+  ja: "小アルカナ・", "zh-TW": "小阿爾克那・", en: "Minor Arcana · ", tl: "Minor Arcana · ", th: "ไพ่ชุดเล็ก · ", id: "Minor Arcana · ", vi: "Ẩn Phụ · ",
 };
 function getCardSub(card, lang) {
   if (!card || !card.id) return card ? card.sub : "";
@@ -1335,6 +1539,11 @@ const PHASE_ORDER = ["idle", "major-spread", "major-confirm", "major-resolving",
 
 // フォールバック文の文型（カード名・キーワードは呼び出し側で埋め込む）
 const FALLBACK_TEMPLATES = {
+  vi: {
+    minorLine: (pos, name, o, kw) => `${pos} của bạn là "${name}" (${o}).\nCó vẻ như dòng chảy ${kw} đang trôi ở đây.`,
+    minorClosing: "Giờ thì, hãy lật Lá Chủ Đề lên và đọc sâu hơn nữa.",
+    majorLine: (name, o, kw) => `Lá Chủ Đề được úp xuống chính là "${name}" (${o}).\nTừ khóa của nó là "${kw}".\nNhững lời này có chạm đến điều gì trong lòng bạn không?`,
+  },
   ja: {
     minorLine: (pos, name, o, kw) => `${pos}は「${name}」（${o}）。\n${kw}という流れが見えます。`,
     minorClosing: "では、テーマカードを開いて、さらに深く読み解いていきましょう。",
@@ -1746,6 +1955,7 @@ const TTS_LANG_TAGS = {
   tl: ["fil-PH", "tl-PH", "tl", "fil"],
   th: ["th-TH", "th"],
   id: ["id-ID", "id"],
+  vi: ["vi-VN", "vi"],
 };
 
 function ttsSupported() {
@@ -1838,6 +2048,7 @@ const SHARE_TEXT_I18N = {
   tl: (cardName, o) => `Ang theme card ko ngayon ay "${cardName}" (${o}).\nSubukan mo rin itong ganap na kumpidensyal na tarot reading?`,
   th: (cardName, o) => `ไพ่ธีมของฉันวันนี้คือ "${cardName}" (${o})\nลองดูดวงไพ่ทาโรต์ที่เก็บเป็นความลับอย่างสมบูรณ์นี้ดูไหม?`,
   id: (cardName, o) => `Kartu temaku hari ini adalah "${cardName}" (${o}).\nMau coba ramalan tarot yang sepenuhnya rahasia ini juga?`,
+  vi: (cardName, o) => `Lá Chủ Đề của tôi hôm nay là "${cardName}" (${o}).\nBạn có muốn thử bói tarot hoàn toàn bảo mật này không?`,
 };
 function buildShareText(majorCard, lang, appUrl) {
   const cardName = getCardName(majorCard.card, lang);
@@ -2050,6 +2261,7 @@ const STAT_LABELS = {
   tl: { people: "Relasyon", money: "Pera", emotion: "Emosyon", energy: "Enerhiya", work: "Trabaho", change: "Pagbabago", action: "Aksyon", blessing: "Biyaya" },
   th: { people: "ความสัมพันธ์", money: "การเงิน", emotion: "อารมณ์", energy: "พลังงาน", work: "การงาน", change: "การเปลี่ยนแปลง", action: "การกระทำ", blessing: "พร" },
   id: { people: "Relasi", money: "Rezeki", emotion: "Perasaan", energy: "Semangat", work: "Pekerjaan", change: "Perubahan", action: "Tindakan", blessing: "Perlindungan" },
+  vi: { people: "Nhân duyên", money: "Tài lộc", emotion: "Cảm xúc", energy: "Sinh khí", work: "Công việc", change: "Biến chuyển", action: "Hành động", blessing: "Phúc trợ" },
 };
 function statLabel(key, lang) {
   return (STAT_LABELS[lang] && STAT_LABELS[lang][key]) || STAT_LABELS.ja[key];
@@ -2063,6 +2275,7 @@ const POSITION_LABELS_I18N = {
   tl: ["Nakaraan", "Kasalukuyan", "Hinaharap"],
   th: ["อดีต", "ปัจจุบัน", "อนาคต"],
   id: ["Masa Lalu", "Masa Kini", "Masa Depan"],
+  vi: ["Quá Khứ", "Hiện Tại", "Tương Lai"],
 };
 
 // 正位置・逆位置ラベルの多言語対応
@@ -2073,6 +2286,7 @@ const ORIENTATION_LABELS = {
   tl: { up: "Upright", rev: "Reversed" },
   th: { up: "ตั้งตรง", rev: "กลับหัว" },
   id: { up: "Tegak", rev: "Terbalik" },
+  vi: { up: "Xuôi", rev: "Ngược" },
 };
 function orientationLabel(reversed, lang) {
   const d = ORIENTATION_LABELS[lang] || ORIENTATION_LABELS.ja;
@@ -3065,6 +3279,30 @@ function HistoryPanel({ history, lang }) {
 // 順序はMAJOR_NAMEと同一。上=正位置、下=逆位置
 // 「開発者の一言」：大アルカナ22枚×正逆44通り、渾身の寄り添う言葉（多言語対応）
 const DEVELOPER_NOTE_UP_I18N = {
+  vi: [
+    "Không ai cười bước đi mới của bạn đâu. Cứ mang theo cả nỗi sợ, rồi bắt đầu bước.",
+    "Sức mạnh bên trong bạn đã sẵn sàng, nó chỉ đang chờ được dùng đến.",
+    "Linh cảm chưa kịp thành lời ấy, xin hãy tin vào nó.",
+    "Điều bạn đang vun trồng rồi sẽ đơm hoa kết trái.",
+    "Trật tự bạn dựng nên bấy lâu đã thành tấm khiên che chở cho bạn.",
+    "Dựa vào ai đó cũng không sao cả. Đó không phải là yếu đuối.",
+    "Khoảnh khắc hai trái tim chạm nhau ở gần hơn bạn tưởng.",
+    "Sức mạnh để bước tới đã có sẵn trong bạn rồi.",
+    "Sự dịu dàng không phải dấu hiệu của yếu đuối, mà là bằng chứng của sức mạnh.",
+    "Thời gian một mình không có nghĩa là thế giới đã bỏ rơi bạn.",
+    "Hãy thử nhẹ nhàng thả mình theo dòng chảy đang đến.",
+    "Lòng chân thành của bạn có đến được với ai đó, thật đấy.",
+    "Khoảng thời gian dừng lại cũng mang ý nghĩa riêng của nó.",
+    "Một điều kết thúc là dấu hiệu cho điều tiếp theo sắp bắt đầu.",
+    "Cái mức vừa vặn ấy, thật ra bạn đã biết rồi.",
+    "Rời xa dần khỏi điều khiến bạn thấy trói buộc cũng không sao cả.",
+    "Dưới những đổ vỡ, có một khung cảnh mới đang đợi.",
+    "Điều bạn ước mong là có ý nghĩa, thật vậy.",
+    "Cảm giác bất an là bằng chứng cho thấy lòng bạn nhạy cảm.",
+    "Ánh sáng bạn tỏa ra có đến được với ai đó.",
+    "Dũng khí ngoảnh nhìn quá khứ sẽ thành sức lực để bước tới.",
+    "Đến được điểm này, bạn đã làm rất tốt rồi.",
+  ],
   id: [
     "Tak seorang pun akan menertawakan langkah barumu. Bawa saja rasa takutmu, lalu mulailah berjalan.",
     "Kekuatan di dalam dirimu sudah siap dipakai, ia hanya sedang menunggu.",
@@ -3211,6 +3449,30 @@ const DEVELOPER_NOTE_UP_I18N = {
   ],
 };
 const DEVELOPER_NOTE_REV_I18N = {
+  vi: [
+    "Đừng tự trách vì chưa thể bước đi. Bạn chỉ đang chuẩn bị thôi.",
+    "Dù nỗ lực có vẻ vô ích, đó vẫn là bằng chứng bạn đã thử. Đừng mất tự tin.",
+    "Trong đêm cảm xúc dậy sóng, không cần ép mình phải sắp xếp lại.",
+    "Nếu bạn mệt vì cho đi quá nhiều, hôm nay hãy chiều chuộng chính mình.",
+    "Cũng nên có những lúc bạn không cần phải tỏ ra mạnh mẽ.",
+    "Không cần phủ nhận con người bạn không vừa với khuôn mẫu.",
+    "Đêm phân vân không chọn được, chính là vì bạn đang thật lòng.",
+    "Ngày mà hơi thở đã cạn, không cần ép mình bước tới.",
+    "Dù có ngày bạn không gắng gượng nổi, giá trị của bạn vẫn không đổi.",
+    "Ngày bạn khép mình lại cũng không sao cả.",
+    "Nếu thời điểm có vẻ không thuận, đó không phải lỗi của bạn.",
+    "Những cảm xúc chưa thể dứt khoát, không cần ép mình phải chấp nhận.",
+    "Cứ mệt cũng được, trong những ngày dài phải nhẫn nhịn.",
+    "Sợ hãi trước đổi thay là điều rất bình thường.",
+    "Ngày mọi thứ không suôn sẻ, đừng tự trách mình quá nhiều.",
+    "Nếu bạn đã nhận ra mình muốn thoát ra, thì nửa đường bạn đã đi rồi.",
+    "Ngày chấn động chưa lắng xuống, không cần ép mình phải đứng dậy.",
+    "Đêm khó nhìn thấy hy vọng, không có nghĩa là nó đã tắt.",
+    "Khoảnh khắc sương tan ở gần hơn bạn tưởng.",
+    "Dù có ngày bạn không tỏa sáng được, ánh sáng của bạn vẫn chưa tắt.",
+    "Dù chưa quyết định được, đó là bằng chứng bạn đang suy nghĩ.",
+    "Cả những ngày còn dang dở cũng đang góp lại thành một điều gì đó.",
+  ],
   id: [
     "Tak perlu menyalahkan dirimu karena belum bisa bergerak. Kamu hanya sedang bersiap.",
     "Meski usahamu terasa sia-sia, itu bukti bahwa kamu mencoba. Jangan kehilangan percaya diri.",
@@ -3491,9 +3753,9 @@ function CouponPanel({ couponInput, setCouponInput, handleCoupon, aiEnabled, lan
 
 // ---- 多言語対応（土台） ----
 const LS_LANG_KEY = "tarot_lang";
-const SUPPORTED_LANGS = ["ja", "zh-TW", "en", "tl", "th", "id"]; // 日本語・繁体字中国語(台湾)・英語・タガログ語(フィリピン)・タイ語・インドネシア語。今後 vi を追加予定
+const SUPPORTED_LANGS = ["ja", "zh-TW", "en", "tl", "th", "id", "vi"]; // 日本語・繁体字中国語(台湾)・英語・タガログ語(フィリピン)・タイ語・インドネシア語。今後 vi を追加予定
 
-const LANG_LABELS = { ja: "日本語", "zh-TW": "繁體中文", en: "English", tl: "Tagalog", th: "ภาษาไทย", id: "Bahasa Indonesia" };
+const LANG_LABELS = { ja: "日本語", "zh-TW": "繁體中文", en: "English", tl: "Tagalog", th: "ภาษาไทย", id: "Bahasa Indonesia", vi: "Tiếng Việt" };
 
 // AIへの出力言語指示（プロンプトに注入する）
 const AI_LANG_INSTRUCTION = {
@@ -3503,9 +3765,140 @@ const AI_LANG_INSTRUCTION = {
   tl: "Mangyaring sumagot sa Tagalog (Filipino).",
   th: "กรุณาตอบเป็นภาษาไทย",
   id: "Mohon jawab dalam Bahasa Indonesia.",
+  vi: "Vui lòng trả lời bằng tiếng Việt.",
 };
 
 const T = {
+  vi: {
+    appTitle: "Bói Bài Tarot",
+    tagline: "",
+    eyebrow: "ARCANA DRAW",
+    intro: "Xin thề, ở đây tuyệt đối không có gì được dàn dựng.\nThiết kế hoàn toàn công bằng — về lý thuyết, nội dung lá bài không hề thiên lệch.\nTuyệt đối bảo mật. AI lặng lẽ lắng nghe tiếng lòng của bạn.",
+    privacyIntro: "",
+    nameLabel: "Tên của bạn (biệt danh cũng được)",
+    namePlaceholder: "vd: Aki",
+    questionLabel: "Một câu về điều bạn muốn hỏi (không bắt buộc)",
+    questionPlaceholder: "vd: Chuyện tình cảm tháng sau của tôi sẽ thế nào?",
+    questionPrivacy: "Nội dung bạn nhập không được lưu trên bất kỳ máy chủ nào. Nó chỉ ở lại trên điện thoại của bạn.",
+    startButton: "Bắt đầu xem bói",
+    limitReached: (n) => `Hôm nay bạn đã dùng hết ${n} lượt miễn phí`,
+    limitTomorrow: "Hẹn gặp lại vào ngày mai ✦",
+    limitRemaining: (n) => `Hôm nay bạn còn ${n} lượt xem`,
+    resetButton: "Làm lại",
+    pickMajorPrompt: "Hãy chọn một lá Ẩn Chính khiến lòng bạn rung động nhất.",
+    pickMajorSub: "Lá này sẽ là Lá Chủ Đề, được lật lên ở phần sau.",
+    pickMinorPrompt: (n) => `Hãy chọn 3 lá Ẩn Phụ thể hiện những chuyện gần đây của bạn (còn ${n}).`,
+    minorReadingLabel: "Luận giải Ẩn Phụ (về 3 lá bạn đã chọn)",
+    majorReadingLabel: "Luận giải Ẩn Chính (về lá đầu tiên, bao gồm cả chiều bạn đã chọn)",
+    finalJudgmentLabel: "Lời phán cho câu hỏi của bạn",
+    finalJudgmentLoading: "Đang chiêm nghiệm lời phán (xin đợi khoảng 30 giây)",
+    finalJudgmentFailed: "Hiện chưa thể đưa ra lời phán. Xin thử lại sau ít phút.",
+    resumeSessionTitle: "✦ Lần xem trước còn dang dở ✦",
+    resumeSessionBody: "Các lá Ẩn Phụ đã được rút rồi. Bạn có thể tiếp tục để xem trọn kết quả.",
+    resumeSessionButton: "Tiếp tục từ lần trước",
+    discardSessionButton: "Xóa ghi chép này và bắt đầu lượt mới",
+    lastResultButton: "Xem kết quả lần trước",
+    closeLastResultButton: "Đóng",
+    confirmMajorPrompt: "Bạn đã chắc với lá này chưa?",
+    confirmMinorPrompt: "Bạn đã chắc với ba lá này chưa?",
+    confirmYes: "Vâng, chính là nó",
+    confirmNo: "Chọn lại",
+    reshuffleButton: "Xáo lại bài",
+    reshuffleCooldown: "Bài sẽ nhàu mất, ta dừng ở đây thôi nhé. Hãy tin vào trực giác và chọn lá bài định mệnh của bạn.",
+    deepDiveEntryButton: "Hỏi sâu hơn nữa",
+    deepDiveGateNote: "Từ đây là phần trò chuyện đặc biệt. Xin nhập mã mở khóa.",
+    deepDiveGatePlaceholder: "Nhập mã...",
+    deepDiveTitle: "Cuộc trò chuyện đặc biệt",
+    deepDiveQuestionLoading: "Đang nghĩ câu hỏi",
+    deepDiveAskMore: "Hỏi thêm nữa",
+    deepDiveFinish: "Luận giải dựa trên cuộc trò chuyện này",
+    deepDiveRoundCapNote: "Cuộc trò chuyện lần này ta tạm dừng ở đây. Xin mời sang phần lời phán.",
+    mementoButton: "Để lại Thần Chú Hồi Sinh",
+    mementoIntro: "Để một ngày nào đó bạn có thể nhớ lại phần tiếp theo của câu chuyện này.",
+    mementoCodeLabel: "Thần chú (lần sau có thể nhập ở màn hình đầu)",
+    mementoPoetryLabel: "Cho ký ức của ngày hôm nay",
+    reachTitle: (type, luck) => {
+      const name = type === "triple" ? "bộ ba" : type === "flush" ? "đồng chất" : "dãy liên tiếp";
+      if (luck === "misfortune") return `Sắp thành ${name} — có điềm chẳng lành`;
+      if (luck === "neutral") return `Sắp thành ${name}`;
+      return `Sắp thành ${name} — có điềm lành`;
+    },
+    reachNote: "Lá thứ ba đã được chọn và đang úp xuống.",
+    outcomeTitle: (o) => {
+      if (o.kind === "miss") return o.missLuck === "misfortune" ? "Bạn đã thoát nạn" : o.missLuck === "fortune" ? "Suýt nữa thì" : "Không có gì xảy ra";
+      return o.roles.map((r) =>
+        r.kind === "triple" ? "Thành bộ ba"
+        : r.kind === "flush" ? (
+            r.luck === "misfortune"
+              ? (r.variant === "void" ? "Đồng chất suy sụp toàn diện" : "Đồng chất điềm dữ")
+              : (r.variant === "holo" ? "Đồng chất đỉnh cao" : "Đồng chất điềm lành"))
+        : r.dir === "up" ? "Thành dãy đi lên" : r.dir === "down" ? "Thành dãy đi xuống" : "Thành dãy liên tiếp"
+      ).join(" + ");
+    },
+    outcomeDetail: (o) => {
+      if (o.kind === "miss") return o.missLuck === "misfortune" ? "Điềm dữ đã không thành hình" : o.missLuck === "fortune" ? "Lần này không kết thành bộ nào" : "Không có bộ đặc biệt nào thành hình";
+      return o.roles.map((r) =>
+        r.kind === "triple" ? `Mọi lĩnh vực trở thành ★${r.value}`
+        : r.kind === "flush" ? (r.blocked ? "Sự dẫn dắt của Lá Chủ Đề được ưu tiên" : `${r.fields.join(" và ")} trở thành ★${r.value}`)
+        : r.dir === "up" ? "May mắn đang đến gần. Thêm một ★6"
+        : r.dir === "down" ? "Điều xấu đang rời đi. Thêm một ★6"
+        : "Thêm một ★6"
+      ).join(" / ");
+    },
+    reachRevealBtn: "Lật lá thứ ba",
+    ttsPlay: "Đọc to",
+    ttsStop: "Dừng đọc",
+    ttsNoticeTitle: "Sẽ có âm thanh phát ra",
+    ttsNoticeBody: "Lời luận giải sẽ được đọc to. Ở nơi người khác có thể nghe thấy, bạn nên dùng tai nghe. Câu hỏi bạn nhập sẽ không bao giờ được đọc lên.",
+    ttsNoticeConfirm: "Phát",
+    ttsNoticeCancel: "Để lúc khác",
+    personalizeLabel: "Kế thừa ghi chép những lần xem bói trước của bạn",
+    personalizeNote: (n) => `Ghi chép ${n} lần xem gần nhất sẽ làm tư liệu tham khảo cho lần này.\nKhi tắt, nội dung quá khứ hoàn toàn không được tham chiếu.`,
+    resurrectionPlaceholder: "Nhập Thần Chú Hồi Sinh...",
+    resurrectionButton: "Niệm thần chú",
+    resurrectionError: "Thần chú có vẻ không đúng. Xin kiểm tra lại một lần nữa.",
+    orientationPrompt: "Theo bạn, chiều của lá bài vừa rút đã đúng chưa?",
+    orientationYes: "Tôi thấy đúng rồi",
+    orientationNo: "Tôi thấy bị ngược",
+    shareButton: "Chia sẻ kết quả này",
+    shareDone: "Đã sao chép (hãy dán vào ứng dụng hoặc mạng xã hội)",
+    copyButton: "Sao chép kết quả (để luận giải thêm bằng AI khác)",
+    copyDone: "Đã sao chép",
+    redrawButton: (n) => `Rút lại Ẩn Phụ (còn ${n} lần)`,
+    redrawUsed: "Lần này đã hết lượt rút lại ✦ Xin thử lại vào ngày mai",
+    drawAgainButton: (n) => `Xem thêm một lần nữa (hôm nay còn ${n} lượt)`,
+    endOfPrivacyResult: "✦ Kết quả này chỉ được lưu trên thiết bị của bạn ✦",
+    themeThemeLabel: "Chủ Đề và Luận Giải",
+    fortuneGlanceTitle: "Vận thế lần này (nhìn thoáng qua)",
+    intuitionMiss: "◈ Bạn đã chỉnh lại chiều trước khi lật lá bài",
+    intuitionHit: "✦ Bạn đã đón nhận số phận của lá bài như nó vốn có",
+    questionBannerPrefix: "Điều bạn muốn hỏi",
+    heldChipMessage: "Một Lá Chủ Đề đang úp xuống chờ đợi — sẽ được lật ở phần sau",
+    statsShortTitle: (n) => `Ngắn hạn (${n} lần gần nhất)`,
+    statsGood: "Đang lên",
+    statsBad: "Đang chùng xuống",
+    statsAvgSuffix: (v) => `(trung bình ${v})`,
+    statsMidTitle: (n) => `Xu hướng trung hạn (so với ${n} lần gần nhất)`,
+    trendUp: "Đang đi lên",
+    trendDown: "Đang đi xuống",
+    trendStable: "Ổn định",
+    statsLongTitle: (n) => `Dài hạn (tổng ${n} lần)`,
+    statsTopCard: "Lá bài xuất hiện nhiều nhất",
+    statsTimesSuffix: (n) => `(${n} lần)`,
+    statsUprightReversed: (up, rev) => `Xuôi ${up} lần / Ngược ${rev} lần`,
+    statsAvgAllTime: "Điểm trung bình từng lĩnh vực (toàn thời gian)",
+    historyPrivacyNote: "✦ Ghi chép này chỉ tồn tại trên thiết bị của bạn ✦",
+    historyOrientation: (rev) => (rev ? "Ngược" : "Xuôi"),
+    historyRemaining: (n) => `${n} ghi chép khác đã được tính vào thống kê`,
+    aiStatusLabel: "Luận giải AI",
+    aiStatusOn: "Đang bật",
+    aiStatusOff: "Đang tắt (chế độ văn bản mẫu)",
+    couponPlaceholder: "Nhập mã...",
+    confirmButton: "Xác nhận",
+    historyButtonLabel: (n) => `Lịch sử (${n})`,
+    statsButtonLabel: "Thống kê",
+    couponButtonLabel: "Mã ưu đãi",
+  },
   id: {
     appTitle: "Ramalan Tarot",
     tagline: "",
@@ -4305,7 +4698,7 @@ export default function TarotDraw() {
   const [question, setQuestion] = useState("");
   const [lang, setLang] = useState(loadLang());
   const t = T[lang];
-  const needsUprightText = lang === "en" || lang === "tl" || lang === "th" || lang === "id"; // CJK以外は逆位置でも文字を読める向きに補正する
+  const needsUprightText = lang === "en" || lang === "tl" || lang === "th" || lang === "id" || lang === "vi"; // CJK以外は逆位置でも文字を読める向きに補正する
   const handleLangChange = (newLang) => {
     setLang(newLang);
     saveLang(newLang);
