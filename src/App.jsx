@@ -8,6 +8,30 @@ const MAJOR_NAME = [
 ];
 // 大アルカナ名の多言語対応
 const MAJOR_NAME_I18N = {
+  ko: [
+    "바보",
+    "마법사",
+    "여사제",
+    "여황제",
+    "황제",
+    "교황",
+    "연인",
+    "전차",
+    "힘",
+    "은둔자",
+    "운명의 수레바퀴",
+    "정의",
+    "매달린 남자",
+    "죽음",
+    "절제",
+    "악마",
+    "탑",
+    "별",
+    "달",
+    "태양",
+    "심판",
+    "세계",
+  ],
   vi: [
     "Gã Khờ",
     "Nhà Ảo Thuật",
@@ -119,6 +143,30 @@ const MAJOR_REV = [
 
 // 大アルカナ キーワードの多言語対応（順序はMAJOR_UP/REVと同一・22枚）
 const MAJOR_UP_I18N = {
+  ko: [
+    "모험심・가능성・순수한 시작・자유로운 영혼",
+    "지성・시작・의지력・창조의 재능",
+    "예리한 통찰・직관・감춰진 지혜・고요한 신비",
+    "모성・풍요・무르익은 결실・감각의 기쁨",
+    "리더십・자존감・질서・굳건한 위엄",
+    "원만한 처세・성실함・전통・영적인 인도",
+    "마음이 통함・평온함・선택・조화로운 인연",
+    "야망・장애의 극복・의지의 승리・자기 통제",
+    "확신・인내・부드러운 용기・내면의 힘",
+    "성찰・사색의 깊이・고요한 탐구・길잡이의 빛",
+    "좋은 변화・기회의 도래・전환점・운명의 흐름",
+    "진실・균형・공정한 판단・책임",
+    "인내・헌신・새로운 시각・기다림의 각오",
+    "방향 전환・운명・필요한 끝맺음・재생",
+    "평온・조화・절제・알맞은 어우러짐",
+    "강렬한 이끌림・욕망・세속의 인연・솔직한 본능",
+    "급격한 변혁・해방・거짓의 붕괴・충격",
+    "희망・치유・이상・먼 곳의 빛",
+    "상상력・예민함・무의식의 세계・아련한 매혹",
+    "성공・생명력・밝은 기쁨・인정받음",
+    "각성・부름・재평가・용서",
+    "완성・온전함・성취・우주의 조화",
+  ],
   vi: [
     "Tinh thần phiêu lưu・khả năng mới・khởi đầu hồn nhiên・tâm hồn tự do",
     "Trí tuệ・sự khởi đầu・ý chí・tài năng sáng tạo",
@@ -266,6 +314,30 @@ const MAJOR_UP_I18N = {
 };
 
 const MAJOR_REV_I18N = {
+  ko: [
+    "헛된 노력・나태・부주의・막연한 계획",
+    "망설임・무계획・재능의 낭비・속임수",
+    "흔들리는 내면・편견・마음의 소리를 외면함・혼란",
+    "불화・결핍・정체・지나친 탐닉",
+    "뜻을 밀어붙임・헛수고・경직된 권위・고집",
+    "불성실・배려의 부재・공허한 규범・빗나간 조언",
+    "어색함・변덕・잘못된 선택・금 간 인연",
+    "빗나간 노력・이기심・방향 상실・공격성",
+    "의욕 상실・의존・자신감 상실・좌절",
+    "맹목・단절・고독・도움의 거부",
+    "상황에 휘둘림・나쁜 시기・놓친 기회・후퇴",
+    "불공정・대립・편향・책임의 회피",
+    "속박감・잘못된 시각・헛된 희생・막다른 길",
+    "놓지 못함・제자리걸음・변화의 거부・정체",
+    "불균형・과잉・어긋남・바닥난 인내",
+    "얽매임・중독・유혹・구속하는 관계",
+    "붕괴・혼란・갑작스러운 상실・예기치 못한 타격",
+    "희망 상실・실망・빛바랜 이상・자기 의심",
+    "불안・혼미・기만・감춰진 진실",
+    "미뤄진 성공・소진・교만・사그라든 열정",
+    "과거에 대한 후회・부름의 거부・그릇된 판단・주저함",
+    "미완성・공허함・뒤처짐・닫히지 않은 원",
+  ],
   vi: [
     "Nỗ lực vô ích・lười biếng・bất cẩn・kế hoạch mơ hồ",
     "Do dự・thiếu kế hoạch・tài năng bị lãng phí・mưu mẹo",
@@ -429,6 +501,7 @@ const RANK_LABEL_I18N = {
   th: ["เอซ", "2", "3", "4", "5", "6", "7", "8", "9", "10", "เพจ", "อัศวิน", "ราชินี", "ราชา"],
   id: ["As", "2", "3", "4", "5", "6", "7", "8", "9", "10", "Pelayan", "Ksatria", "Ratu", "Raja"],
   vi: ["Át", "2", "3", "4", "5", "6", "7", "8", "9", "10", "Tiểu Đồng", "Hiệp Sĩ", "Nữ Hoàng", "Vua"],
+  ko: ["에이스", "2", "3", "4", "5", "6", "7", "8", "9", "10", "시종", "기사", "여왕", "왕"],
 };
 function rankLabel(index, lang) {
   return (RANK_LABEL_I18N[lang] && RANK_LABEL_I18N[lang][index]) || RANK_LABEL[index];
@@ -443,6 +516,7 @@ const SUIT_LABEL_I18N = {
   th: { wands: "ไม้เท้า", cups: "ถ้วย", swords: "ดาบ", pentacles: "เหรียญ" },
   id: { wands: "Tongkat", cups: "Piala", swords: "Pedang", pentacles: "Koin" },
   vi: { wands: "Gậy", cups: "Cốc", swords: "Kiếm", pentacles: "Tiền" },
+  ko: { wands: "지팡이", cups: "성배", swords: "검", pentacles: "금화" },
 };
 function suitLabel(key, lang) {
   return (SUIT_LABEL_I18N[lang] && SUIT_LABEL_I18N[lang][key]) || SUIT_LABEL_I18N.ja[key];
@@ -457,6 +531,7 @@ const ELEMENT_I18N = {
   th: { 火: "ไฟ", 水: "น้ำ", 風: "ลม", 地: "ดิน" },
   id: { 火: "Api", 水: "Air", 風: "Udara", 地: "Tanah" },
   vi: { 火: "Lửa", 水: "Nước", 風: "Khí", 地: "Đất" },
+  ko: { 火: "불", 水: "물", 風: "바람", 地: "흙" },
 };
 function elementLabel(el, lang) {
   return (ELEMENT_I18N[lang] && ELEMENT_I18N[lang][el]) || el;
@@ -465,7 +540,7 @@ function elementLabel(el, lang) {
 // カード名（小アルカナ）を組み立てる: 「棒のエース」→「Ace of Wands」等
 // キーワードの区切り文字。CJK圏は中黒、ラテン文字圏は中点スペース区切りにする
 // （「・」はラテン文字の間に置くと詰まって見え、日本語の混入としても目立つ）
-const KEYWORD_SEPARATOR = { ja: "・", "zh-TW": "・", th: "・", en: " · ", tl: " · ", id: " · ", vi: " · " };
+const KEYWORD_SEPARATOR = { ja: "・", "zh-TW": "・", th: "・", en: " · ", tl: " · ", id: " · ", vi: " · ", ko: "·" };
 function localizeKeywords(text, lang) {
   const sep = KEYWORD_SEPARATOR[lang];
   if (!sep || sep === "・") return text;
@@ -478,6 +553,7 @@ function minorCardName(suitKey, rankIndex, lang) {
   if (lang === "en" || lang === "tl") return `${rank} of ${suit}`;
   if (lang === "id") return `${rank} ${suit}`;
   if (lang === "vi") return `${rank} ${suit}`; // 例: Át Cốc / Vua Kiếm // 例: As Piala / Raja Pedang（インドネシア語は修飾語が後ろ）
+  if (lang === "ko") return `${suit}의 ${rank}`;
   if (lang === "zh-TW") return `${suit}${rank}`;
   if (lang === "th") return `${suit}${rank}`;
   return `${suit}の${rank}`; // ja
@@ -550,6 +626,22 @@ const PENT_REV = [
 // 小アルカナ キーワードの多言語対応（各スート14枚・正逆）
 const MINOR_UP_I18N = {
   wands: {
+    ko: [
+      "새로운 도전・싹트는 열정・영감",
+      "계획과 선택・앞을 내다봄・장악력",
+      "확장・전진・협력의 성과",
+      "안정된 기쁨・축제・소속감",
+      "경쟁・의견의 충돌・선의의 겨룸",
+      "승리・인정받음・되찾은 자신감",
+      "방어・우위를 지킴・끈기",
+      "빠른 진전・속도・좋은 소식",
+      "끈질김・마지막 버티기・회복력",
+      "무거운 책임・완수의 중압・부담",
+      "탐구심・새로운 소식・순수한 첫걸음",
+      "대담한 행동・여정・기세 있는 전진",
+      "매력・따뜻함・사람을 끄는 확신",
+      "리더십・비전・앞장서는 용기",
+    ],
     vi: [
       "Thử thách mới・đam mê chớm nở・cảm hứng",
       "Hoạch định và lựa chọn・tầm nhìn xa・quyền kiểm soát",
@@ -648,6 +740,22 @@ const MINOR_UP_I18N = {
     ],
   },
   cups: {
+    ko: [
+      "감정의 시작・넘치는 사랑・열린 마음",
+      "맺어짐・서로의 이해・둘만의 약속",
+      "함께하는 기쁨・우정・작은 축하",
+      "성찰・권태・아직 못 알아본 제안",
+      "상실의 수용・솔직한 슬픔・아직 남은 것",
+      "추억・진심 어린 호의・오래된 재회",
+      "많은 선택지・몽상・상상력",
+      "옛것을 떠남・의미의 탐색・내면의 여정",
+      "만족・소원의 성취・충분하다는 느낌",
+      "온전한 행복・가족・가득 찬 평온",
+      "섬세함・부드러운 소식・순수한 호기심",
+      "진심・이상의 추구・마음에서 나온 제안",
+      "애정・받아들임・감정의 깊이",
+      "성숙한 마음・너그러움・고요한 인도",
+    ],
     vi: [
       "Khởi đầu của cảm xúc・tình yêu tràn đầy・trái tim rộng mở",
       "Sự gắn kết・thấu hiểu lẫn nhau・lời hẹn ước đôi lứa",
@@ -746,6 +854,22 @@ const MINOR_UP_I18N = {
     ],
   },
   swords: {
+    ko: [
+      "사고의 돌파・진실・예리한 명료함",
+      "미뤄진 결정・균형・생각할 여백",
+      "솔직한 슬픔・드러난 상처・쓰라린 현실",
+      "휴식・회복・필요한 고요",
+      "값비싼 승리・갈등・우위의 대가",
+      "이동・어려움을 떠남・평온으로 향하는 길",
+      "책략・신중함・영리한 수",
+      "갇힌 느낌・제약・생각의 족쇄",
+      "불안・긴 밤・머릿속의 두려움",
+      "말끔한 끝맺음・바닥・기다리는 새 시작",
+      "경계・관찰・날카로운 호기심",
+      "빠른 행동・용기・정면 돌파",
+      "단호함・명료함・에두르지 않는 솔직함",
+      "이성에 근거한 결단・공정・올곧은 권위",
+    ],
     vi: [
       "Đột phá tư duy・sự thật・sự sáng rõ sắc bén",
       "Quyết định bị hoãn・cân bằng・khoảng lặng để nghĩ",
@@ -844,6 +968,22 @@ const MINOR_UP_I18N = {
     ],
   },
   pentacles: {
+    ko: [
+      "실체 있는 기회・번영의 씨앗・단단한 시작",
+      "균형・유연함・두 가지를 동시에 다룸",
+      "숙련・협업・꾸준함의 결실",
+      "안정・절약・안전한 확보",
+      "일시적인 곤란・서로 의지함・가까운 곳의 도움",
+      "나눔・너그러움・주고받음",
+      "결과를 기다림・인내・다시 살펴봄",
+      "성실함・단련・조금씩의 진전",
+      "자립・노력의 열매・스스로 얻은 여유",
+      "상속・가문의 번영・장기적인 토대",
+      "배움・성실한 호기심・부지런한 첫걸음",
+      "꼼꼼함・신뢰・확실한 전진",
+      "비옥함・보살핌・땅에 발 붙인 풍요",
+      "안정된 기반・믿음직함・오래가는 성공",
+    ],
     vi: [
       "Cơ hội hữu hình・mầm thịnh vượng・khởi đầu vững chắc",
       "Cân bằng・linh hoạt・xoay xở hai việc cùng lúc",
@@ -945,6 +1085,22 @@ const MINOR_UP_I18N = {
 
 const MINOR_REV_I18N = {
   wands: {
+    ko: [
+      "사그라든 열정・미뤄진 시작・막힌 영감",
+      "결단의 망설임・멈춘 계획・좁은 시야",
+      "빗나간 계획・금 간 협력・헛된 기다림",
+      "균열・잃어버린 자리・공허한 축제",
+      "헛된 다툼・마찰・지치는 경쟁",
+      "교만・오지 않는 인정・공허한 승리",
+      "몰림・발판의 상실・무너진 방어",
+      "성급함・혼란・늦어진 소식",
+      "지침・과도한 경계・막판의 포기",
+      "감당 못 함・너무 많이 떠안음・소진",
+      "나쁜 소식・미숙함・빗나간 호기심",
+      "조급함・미뤄진 여정・방향 없는 행동",
+      "고집・질투・따뜻함이 뜨거움으로 변함",
+      "독단・무리한 강행・흔들리는 리더십",
+    ],
     vi: [
       "Nhiệt huyết lụi tàn・khởi đầu bị hoãn・cảm hứng bế tắc",
       "Do dự quyết định・kế hoạch đình trệ・tầm nhìn hạn hẹp",
@@ -1043,6 +1199,22 @@ const MINOR_REV_I18N = {
     ],
   },
   cups: {
+    ko: [
+      "닫힌 감정・억눌린 사랑・차가워진 마음",
+      "오해・느슨해진 인연・흔들리는 약속",
+      "과함・뒷말・얄팍한 즐거움",
+      "불만・외면・놓친 기회",
+      "상실에 매임・후회・일어서기를 거부함",
+      "과거에 묶임・짐이 된 추억・가두는 향수",
+      "헛된 몽상・혼란・현실로부터의 도피",
+      "내딛기를 주저함・중도에 돌아섬・망설임",
+      "탐욕・공허한 만족・끝없는 욕심",
+      "가족의 균열・금 간 행복・벌어진 거리",
+      "불안정한 감정・실망스러운 소식・미성숙",
+      "빈 약속・흐릿한 이상・가식",
+      "지나친 몰입・의존・옭아매는 애정",
+      "감정의 조종・불안정・거짓된 다정함",
+    ],
     vi: [
       "Cảm xúc khép kín・tình yêu kìm nén・trái tim nguội lạnh",
       "Hiểu lầm・gắn kết lỏng lẻo・lời hứa lung lay",
@@ -1141,6 +1313,22 @@ const MINOR_REV_I18N = {
     ],
   },
   swords: {
+    ko: [
+      "어지러운 사고・뒤틀린 진실・혼란",
+      "교착・결정의 회피・거짓된 균형",
+      "감춘 상처・더딘 회복・삼킨 슬픔",
+      "초조함・미뤄진 휴식・쌓이는 피로",
+      "패배・남은 앙금・무의미한 승리",
+      "멈춤・끌고 온 어려움・미뤄진 여정",
+      "드러난 책략・부정직・실패한 계획",
+      "풀리기 시작함・선택을 자각함・느슨해진 족쇄",
+      "부풀어 오른 불안・악몽・맴도는 생각",
+      "끝내지 못함・길어지는 고통・쓴맛",
+      "상처 주는 말・염탐・경솔한 발언",
+      "조급함・방향 없는 공격성・무모한 행동",
+      "경직・냉담・아픈 비판",
+      "권력의 남용・가혹한 규범・모진 판단",
+    ],
     vi: [
       "Tư duy rối loạn・sự thật bị bóp méo・hoang mang",
       "Bế tắc・né tránh quyết định・cân bằng giả tạo",
@@ -1239,6 +1427,22 @@ const MINOR_REV_I18N = {
     ],
   },
   pentacles: {
+    ko: [
+      "놓친 기회・흔들리는 계획・미뤄진 시작",
+      "무너진 균형・과부하・서툰 관리",
+      "떨어진 완성도・금 간 협업・인정받지 못한 노력",
+      "인색함・지나치게 움켜쥠・잃을까 하는 두려움",
+      "길어지는 곤란・고립・보이지 않는 도움",
+      "치우친 베풂・빚진 마음・조건 붙은 너그러움",
+      "바닥난 인내・실망스러운 결과・빗나간 투자",
+      "의미 없는 노동・무뎌지는 반복・흥미의 상실",
+      "의존・위태로운 여유・허울뿐인 자립",
+      "상속 다툼・금 간 토대・가족이라는 짐",
+      "배움의 소홀・게으름・사그라든 호기심",
+      "정체・경직・너무 더딘 진전",
+      "낭비・방종・허비되는 풍요",
+      "탐욕・경직・교만으로 굳어진 성공",
+    ],
     vi: [
       "Cơ hội vuột mất・kế hoạch lung lay・khởi đầu bị hoãn",
       "Mất cân bằng・quá tải・sắp xếp kém",
@@ -1367,10 +1571,10 @@ function getCardName(card, lang) {
 
 // カードのサブラベル（「大アルカナ」「小アルカナ・棒（火）」等）を言語別に返す
 const MAJOR_ARCANA_LABEL_I18N = {
-  ja: "大アルカナ", "zh-TW": "大阿爾克那", en: "Major Arcana", tl: "Major Arcana", th: "ไพ่ชุดใหญ่ (Major Arcana)", id: "Major Arcana", vi: "Ẩn Chính",
+  ja: "大アルカナ", "zh-TW": "大阿爾克那", en: "Major Arcana", tl: "Major Arcana", th: "ไพ่ชุดใหญ่ (Major Arcana)", id: "Major Arcana", vi: "Ẩn Chính", ko: "메이저 아르카나",
 };
 const MINOR_ARCANA_PREFIX_I18N = {
-  ja: "小アルカナ・", "zh-TW": "小阿爾克那・", en: "Minor Arcana · ", tl: "Minor Arcana · ", th: "ไพ่ชุดเล็ก · ", id: "Minor Arcana · ", vi: "Ẩn Phụ · ",
+  ja: "小アルカナ・", "zh-TW": "小阿爾克那・", en: "Minor Arcana · ", tl: "Minor Arcana · ", th: "ไพ่ชุดเล็ก · ", id: "Minor Arcana · ", vi: "Ẩn Phụ · ", ko: "마이너 아르카나 · ",
 };
 function getCardSub(card, lang) {
   if (!card || !card.id) return card ? card.sub : "";
@@ -1539,6 +1743,11 @@ const PHASE_ORDER = ["idle", "major-spread", "major-confirm", "major-resolving",
 
 // フォールバック文の文型（カード名・キーワードは呼び出し側で埋め込む）
 const FALLBACK_TEMPLATES = {
+  ko: {
+    minorLine: (pos, name, o, kw) => `${pos}는 "${name}"(${o}).\n${kw}${koJosa(kw, "이라는", "라는")} 흐름이 보입니다.`,
+    minorClosing: "그럼 테마 카드를 열어, 더 깊이 읽어 나가볼까요.",
+    majorLine: (name, o, kw) => `엎어져 있던 테마 카드는 "${name}"(${o})이었습니다.\n키워드는 "${kw}".\n이 말들에, 짚이는 데가 있지 않나요?`,
+  },
   vi: {
     minorLine: (pos, name, o, kw) => `${pos} của bạn là "${name}" (${o}).\nCó vẻ như dòng chảy ${kw} đang trôi ở đây.`,
     minorClosing: "Giờ thì, hãy lật Lá Chủ Đề lên và đọc sâu hơn nữa.",
@@ -1675,6 +1884,23 @@ function buildMajorPrompt(major, results, reading1, question) {
 }
 
 // 相談内容がある場合のみ、全体を踏まえた最終的な占断を1〜2文で出す
+/**
+ * 韓国語の助詞は、直前の語にパッチム（終声）があるかで形が変わる。
+ * 「(이)라는」のような逃げの表記は不自然に見えるので、実際に判定して選ぶ。
+ * ハングル音節は U+AC00 から28個ずつ終声が循環するので、剰余が0でなければパッチムあり。
+ * ハングル以外（数字・ラテン文字など）で終わる場合は、パッチムなし扱いにしておく。
+ */
+function koHasBatchim(word) {
+  if (!word) return false;
+  const c = String(word).trim().charCodeAt(String(word).trim().length - 1);
+  if (c < 0xac00 || c > 0xd7a3) return false;
+  return (c - 0xac00) % 28 !== 0;
+}
+// 例: koJosa("감정", "이", "가") → "이"
+function koJosa(word, withBatchim, withoutBatchim) {
+  return koHasBatchim(word) ? withBatchim : withoutBatchim;
+}
+
 // スートと四大元素の対応。★の8分野も element を持っているので、同じ土俵で語れる。
 const SUIT_ELEMENT = { wands: "火", cups: "水", swords: "風", pentacles: "地" };
 
@@ -1956,6 +2182,7 @@ const TTS_LANG_TAGS = {
   th: ["th-TH", "th"],
   id: ["id-ID", "id"],
   vi: ["vi-VN", "vi"],
+  ko: ["ko-KR", "ko"],
 };
 
 function ttsSupported() {
@@ -2049,6 +2276,7 @@ const SHARE_TEXT_I18N = {
   th: (cardName, o) => `ไพ่ธีมของฉันวันนี้คือ "${cardName}" (${o})\nลองดูดวงไพ่ทาโรต์ที่เก็บเป็นความลับอย่างสมบูรณ์นี้ดูไหม?`,
   id: (cardName, o) => `Kartu temaku hari ini adalah "${cardName}" (${o}).\nMau coba ramalan tarot yang sepenuhnya rahasia ini juga?`,
   vi: (cardName, o) => `Lá Chủ Đề của tôi hôm nay là "${cardName}" (${o}).\nBạn có muốn thử bói tarot hoàn toàn bảo mật này không?`,
+  ko: (cardName, o) => `오늘 나의 테마 카드는 "${cardName}"(${o}).\n비밀이 완벽히 지켜지는 이 타로, 당신도 해볼래요?`,
 };
 function buildShareText(majorCard, lang, appUrl) {
   const cardName = getCardName(majorCard.card, lang);
@@ -2262,6 +2490,7 @@ const STAT_LABELS = {
   th: { people: "ความสัมพันธ์", money: "การเงิน", emotion: "อารมณ์", energy: "พลังงาน", work: "การงาน", change: "การเปลี่ยนแปลง", action: "การกระทำ", blessing: "พร" },
   id: { people: "Relasi", money: "Rezeki", emotion: "Perasaan", energy: "Semangat", work: "Pekerjaan", change: "Perubahan", action: "Tindakan", blessing: "Perlindungan" },
   vi: { people: "Nhân duyên", money: "Tài lộc", emotion: "Cảm xúc", energy: "Sinh khí", work: "Công việc", change: "Biến chuyển", action: "Hành động", blessing: "Phúc trợ" },
+  ko: { people: "인복", money: "재물운", emotion: "감정", energy: "기력", work: "일", change: "변화", action: "행동", blessing: "가호" },
 };
 function statLabel(key, lang) {
   return (STAT_LABELS[lang] && STAT_LABELS[lang][key]) || STAT_LABELS.ja[key];
@@ -2276,6 +2505,7 @@ const POSITION_LABELS_I18N = {
   th: ["อดีต", "ปัจจุบัน", "อนาคต"],
   id: ["Masa Lalu", "Masa Kini", "Masa Depan"],
   vi: ["Quá Khứ", "Hiện Tại", "Tương Lai"],
+  ko: ["과거", "현재", "미래"],
 };
 
 // 正位置・逆位置ラベルの多言語対応
@@ -2287,6 +2517,7 @@ const ORIENTATION_LABELS = {
   th: { up: "ตั้งตรง", rev: "กลับหัว" },
   id: { up: "Tegak", rev: "Terbalik" },
   vi: { up: "Xuôi", rev: "Ngược" },
+  ko: { up: "정방향", rev: "역방향" },
 };
 function orientationLabel(reversed, lang) {
   const d = ORIENTATION_LABELS[lang] || ORIENTATION_LABELS.ja;
@@ -3279,6 +3510,30 @@ function HistoryPanel({ history, lang }) {
 // 順序はMAJOR_NAMEと同一。上=正位置、下=逆位置
 // 「開発者の一言」：大アルカナ22枚×正逆44通り、渾身の寄り添う言葉（多言語対応）
 const DEVELOPER_NOTE_UP_I18N = {
+  ko: [
+    "새로운 한 걸음을 내딛는 당신을, 아무도 비웃지 않습니다. 두려움도 함께 안고 걸어가도 괜찮아요.",
+    "당신 안에 있는 힘은, 이미 쓸 수 있는 상태로 기다리고 있습니다.",
+    "말이 되지 못한 그 예감을, 부디 믿어주세요.",
+    "당신이 키워온 것은, 반드시 결실을 맺어갑니다.",
+    "쌓아온 질서가, 지금 당신을 지키는 방패가 되어 있습니다.",
+    "누군가에게 기대도 괜찮습니다. 그건 약함이 아니에요.",
+    "마음이 통하는 순간은, 생각보다 가까이에 있습니다.",
+    "앞으로 나아갈 힘은, 이미 당신 안에 있습니다.",
+    "다정함은 약함이 아니라, 강함의 증거입니다.",
+    "혼자인 시간이, 당신을 버려두고 있는 건 아닙니다.",
+    "찾아온 흐름에, 살며시 몸을 맡겨보세요.",
+    "당신의 성실함은, 분명 누군가에게 닿아 있습니다.",
+    "멈춰 서 있는 시간도, 의미가 있는 시간입니다.",
+    "무언가가 끝나는 것은, 다음이 시작된다는 신호입니다.",
+    "딱 알맞은 정도를, 당신은 이미 알고 있습니다.",
+    "얽매여 있다고 느끼는 것에서, 조금씩 멀어져도 괜찮습니다.",
+    "무너진 것 아래에는, 새로운 풍경이 기다리고 있습니다.",
+    "당신이 바라는 일에는, 분명한 의미가 있습니다.",
+    "불안한 마음은, 당신이 섬세하다는 증거입니다.",
+    "당신이 내는 밝음은, 분명 누군가에게 닿아 있습니다.",
+    "과거를 돌아보는 용기는, 앞으로 나아갈 힘이 됩니다.",
+    "당신은 이미, 여기까지 충분히 잘 해왔습니다.",
+  ],
   vi: [
     "Không ai cười bước đi mới của bạn đâu. Cứ mang theo cả nỗi sợ, rồi bắt đầu bước.",
     "Sức mạnh bên trong bạn đã sẵn sàng, nó chỉ đang chờ được dùng đến.",
@@ -3449,6 +3704,30 @@ const DEVELOPER_NOTE_UP_I18N = {
   ],
 };
 const DEVELOPER_NOTE_REV_I18N = {
+  ko: [
+    "움직이지 못하는 자신을 탓하지 않아도 됩니다. 아직 준비하고 있는 중일 뿐이에요.",
+    "헛돌았더라도, 그건 도전했다는 증거입니다. 자신감을 잃지 마세요.",
+    "감정이 물결치는 밤에는, 억지로 정리하지 않아도 됩니다.",
+    "누군가에게 너무 많이 주어 지쳤다면, 오늘은 자신을 아껴줘도 됩니다.",
+    "강해 보이지 않아도 되는 순간도, 분명히 있어도 괜찮습니다.",
+    "틀에 맞지 않는 자신을, 부정하지 않아도 됩니다.",
+    "고르지 못해 헤매는 밤도, 당신이 진심이기 때문입니다.",
+    "숨이 찬 날에는, 억지로 앞으로 나아가지 않아도 됩니다.",
+    "힘낼 수 없는 날이 있어도, 당신의 가치는 변하지 않습니다.",
+    "움츠러드는 날도, 그걸로 괜찮습니다.",
+    "때가 나쁘게 느껴져도, 그건 당신 탓이 아닙니다.",
+    "딱 잘라 정리되지 않는 마음을, 억지로 납득시키지 않아도 됩니다.",
+    "참는 날들이 이어질 때, 지쳐도 괜찮습니다.",
+    "변하는 것이 두려워도, 그건 자연스러운 일입니다.",
+    "뜻대로 되지 않는 날에도, 자신을 너무 탓하지 마세요.",
+    "빠져나오고 싶다는 마음을 알아챘다면, 이미 절반은 빠져나온 것입니다.",
+    "아직 흔들림이 가라앉지 않은 날에는, 억지로 일어서지 않아도 됩니다.",
+    "희망이 잘 보이지 않는 밤에도, 사라져버린 것은 아닙니다.",
+    "안개가 걷히는 순간은, 생각보다 가까이에 있습니다.",
+    "빛나지 못하는 날이 있어도, 당신의 빛은 꺼지지 않았습니다.",
+    "아직 결단하지 못했더라도, 그건 생각하고 있다는 증거입니다.",
+    "다 완성하지 못한 날들도, 분명히 쌓여가고 있습니다.",
+  ],
   vi: [
     "Đừng tự trách vì chưa thể bước đi. Bạn chỉ đang chuẩn bị thôi.",
     "Dù nỗ lực có vẻ vô ích, đó vẫn là bằng chứng bạn đã thử. Đừng mất tự tin.",
@@ -3753,9 +4032,9 @@ function CouponPanel({ couponInput, setCouponInput, handleCoupon, aiEnabled, lan
 
 // ---- 多言語対応（土台） ----
 const LS_LANG_KEY = "tarot_lang";
-const SUPPORTED_LANGS = ["ja", "zh-TW", "en", "tl", "th", "id", "vi"]; // 日本語・繁体字中国語(台湾)・英語・タガログ語(フィリピン)・タイ語・インドネシア語。今後 vi を追加予定
+const SUPPORTED_LANGS = ["ja", "ko", "zh-TW", "en", "tl", "th", "id", "vi"]; // 日本語・繁体字中国語(台湾)・英語・タガログ語(フィリピン)・タイ語・インドネシア語。今後 vi を追加予定
 
-const LANG_LABELS = { ja: "日本語", "zh-TW": "繁體中文", en: "English", tl: "Tagalog", th: "ภาษาไทย", id: "Bahasa Indonesia", vi: "Tiếng Việt" };
+const LANG_LABELS = { ja: "日本語", "zh-TW": "繁體中文", en: "English", tl: "Tagalog", th: "ภาษาไทย", id: "Bahasa Indonesia", vi: "Tiếng Việt", ko: "한국어" };
 
 // AIへの出力言語指示（プロンプトに注入する）
 const AI_LANG_INSTRUCTION = {
@@ -3766,9 +4045,143 @@ const AI_LANG_INSTRUCTION = {
   th: "กรุณาตอบเป็นภาษาไทย",
   id: "Mohon jawab dalam Bahasa Indonesia.",
   vi: "Vui lòng trả lời bằng tiếng Việt.",
+  ko: "한국어로 답변해 주세요.",
 };
 
 const T = {
+  ko: {
+    appTitle: "타로 점",
+    tagline: "",
+    eyebrow: "ARCANA DRAW",
+    intro: "신께 맹세코 조작은 절대 없습니다.\n이론상 카드의 내용에 어떤 편향도 없는 완전 공정 설계.\n비밀 엄수. AI가 당신의 마음의 소리에 조용히 다가갑니다.",
+    privacyIntro: "",
+    nameLabel: "이름 (닉네임도 괜찮아요)",
+    namePlaceholder: "예: 아키",
+    questionLabel: "묻고 싶은 것을 한 문장으로 (선택)",
+    questionPlaceholder: "예: 다음 달 연애운이 궁금해요",
+    questionPrivacy: "입력한 내용은 어떤 서버에도 저장되지 않습니다. 당신의 휴대폰에만 남습니다.",
+    startButton: "점을 시작하기",
+    limitReached: (n) => `오늘은 무료 ${n}회를 모두 사용했습니다`,
+    limitTomorrow: "내일 또 만나요 ✦",
+    limitRemaining: (n) => `오늘은 앞으로 ${n}회 볼 수 있습니다`,
+    resetButton: "다시 하기",
+    pickMajorPrompt: "가장 마음이 끌리는 메이저 아르카나를 한 장 골라주세요.",
+    pickMajorSub: "이 카드가 나중에 열리는 테마 카드가 됩니다.",
+    pickMinorPrompt: (n) => `요즘의 일들을 나타내는 마이너 아르카나를 3장 골라주세요 (남은 ${n}장).`,
+    minorReadingLabel: "마이너 아르카나 해석 (고른 3장에 대하여)",
+    majorReadingLabel: "메이저 아르카나 해석 (처음 고른 한 장, 방향 선택 포함)",
+    finalJudgmentLabel: "당신의 물음에 대한 점단",
+    finalJudgmentLoading: "점단을 헤아리는 중입니다 (30초 정도 기다려 주세요)",
+    finalJudgmentFailed: "지금은 점단을 내릴 수 없습니다. 잠시 후 다시 시도해 주세요.",
+    resumeSessionTitle: "✦ 지난번 점이 도중에 멈춰 있습니다 ✦",
+    resumeSessionBody: "마이너 아르카나는 이미 뽑혀 있습니다. 이어서 결과까지 볼 수 있어요.",
+    resumeSessionButton: "지난번부터 이어하기",
+    discardSessionButton: "이 기록을 지우고 새로 시작하기",
+    lastResultButton: "지난 결과 보기",
+    closeLastResultButton: "닫기",
+    confirmMajorPrompt: "이 카드로 정하시겠어요?",
+    confirmMinorPrompt: "이 세 장으로 정하시겠어요?",
+    confirmYes: "네, 이걸로 할게요",
+    confirmNo: "다시 고르기",
+    reshuffleButton: "다시 섞기",
+    reshuffleCooldown: "카드가 상할 것 같으니 이쯤에서 그만할까요. 직감을 믿고, 운명의 카드를 골라주세요.",
+    deepDiveEntryButton: "더 깊이 물어보기",
+    deepDiveGateNote: "여기부터는 특별한 대화 시간입니다. 해제 코드를 입력해 주세요.",
+    deepDiveGatePlaceholder: "코드 입력...",
+    deepDiveTitle: "특별한 대화",
+    deepDiveQuestionLoading: "질문을 고르는 중입니다",
+    deepDiveAskMore: "더 물어보기",
+    deepDiveFinish: "이 대화를 바탕으로 점을 봐줘",
+    deepDiveRoundCapNote: "이번 대화는 여기까지 하기로 해요. 점단으로 넘어가 주세요.",
+    mementoButton: "부활의 주문을 남기기",
+    mementoIntro: "언젠가 이 이야기의 뒷이야기를 떠올릴 수 있도록.",
+    mementoCodeLabel: "주문 (다음에 첫 화면에서 입력할 수 있어요)",
+    mementoPoetryLabel: "이 날의 기억에",
+    reachTitle: (type, luck) => {
+      const name = type === "triple" ? "같은 숫자" : type === "flush" ? "같은 무늬" : "연속 숫자";
+      if (luck === "misfortune") return `${name} 리치 — 흉조의 기색`;
+      if (luck === "neutral") return `${name} 리치`;
+      return `${name} 리치 — 길조의 기색`;
+    },
+    reachNote: "세 번째 카드는 이미 골라져 엎어져 있습니다.",
+    outcomeTitle: (o) => {
+      if (o.kind === "miss") return o.missLuck === "misfortune" ? "화를 면했습니다" : o.missLuck === "fortune" ? "아쉽네요" : "아무 일도 없었습니다";
+      return o.roles.map((r) =>
+        r.kind === "triple" ? "같은 숫자 성립"
+        : r.kind === "flush" ? (
+            r.luck === "misfortune"
+              ? (r.variant === "void" ? "전면 침체의 플러시" : "흉조의 플러시")
+              : (r.variant === "holo" ? "최고조의 플러시" : "길조의 플러시"))
+        : r.dir === "up" ? "오름 계단 성립" : r.dir === "down" ? "내림 계단 성립" : "계단 성립"
+      ).join(" + ");
+    },
+    outcomeDetail: (o) => {
+      if (o.kind === "miss") return o.missLuck === "misfortune" ? "흉조는 맺어지지 않았습니다" : o.missLuck === "fortune" ? "이번에는 족보가 맺어지지 않았습니다" : "특별한 족보는 성립하지 않았습니다";
+      return o.roles.map((r) =>
+        r.kind === "triple" ? `모든 분야가 ★${r.value}이 됩니다`
+        : r.kind === "flush" ? (r.blocked ? "테마 카드의 인도가 우선되었습니다" : (() => {
+            const joined = r.fields.reduce((acc, f, i) => i === 0 ? f : `${acc}${koJosa(acc, "과", "와")} ${f}`, "");
+            return `${joined}${koJosa(joined, "이", "가")} ★${r.value}이 됩니다`;
+          })())
+        : r.dir === "up" ? "행운이 다가오고 있습니다. ★6이 하나 더해집니다"
+        : r.dir === "down" ? "나쁜 것이 떠나가고 있습니다. ★6이 하나 더해집니다"
+        : "★6이 하나 더해집니다"
+      ).join(" / ");
+    },
+    reachRevealBtn: "세 번째 카드 열기",
+    ttsPlay: "읽어주기",
+    ttsStop: "읽기 멈추기",
+    ttsNoticeTitle: "소리가 재생됩니다",
+    ttsNoticeBody: "점단을 소리 내어 읽어드립니다. 주위에 소리가 들리는 곳에서는 이어폰 사용을 권합니다. 당신이 입력한 고민 내용은 읽지 않습니다.",
+    ttsNoticeConfirm: "재생하기",
+    ttsNoticeCancel: "나중에",
+    personalizeLabel: "당신이 과거에 본 점의 기록을 이어받기",
+    personalizeNote: (n) => `최근 ${n}회의 기록을 이번 점단의 참고로 삼습니다.\n꺼두면 과거의 내용은 일절 참조되지 않습니다.`,
+    resurrectionPlaceholder: "부활의 주문을 입력...",
+    resurrectionButton: "주문을 외우기",
+    resurrectionError: "주문이 맞지 않는 것 같습니다. 다시 한번 확인해 주세요.",
+    orientationPrompt: "뽑은 카드의 방향, 이대로 맞을까요?",
+    orientationYes: "맞는 것 같아요",
+    orientationNo: "거꾸로인 것 같아요",
+    shareButton: "이 결과를 공유하기",
+    shareDone: "복사했습니다 (앱이나 SNS에 붙여넣어 주세요)",
+    copyButton: "결과 복사 (다른 AI로 더 점쳐보기)",
+    copyDone: "복사했습니다",
+    redrawButton: (n) => `마이너 아르카나 다시 뽑기 (남은 ${n}회)`,
+    redrawUsed: "이번에는 다시 뽑기를 모두 사용했습니다 ✦ 내일 다시 시도해 주세요",
+    drawAgainButton: (n) => `한 번 더 점보기 (오늘 남은 ${n}회)`,
+    endOfPrivacyResult: "✦ 이 결과는 당신의 기기에만 저장됩니다 ✦",
+    themeThemeLabel: "테마와 해석",
+    fortuneGlanceTitle: "이번 운세 (한눈에)",
+    intuitionMiss: "◈ 방향을 바로잡고 카드를 열었습니다",
+    intuitionHit: "✦ 카드의 운명을 그대로 받아들였습니다",
+    questionBannerPrefix: "묻고 싶은 것",
+    heldChipMessage: "테마 카드 한 장이 엎어진 채 보류 중 — 나중에 열립니다",
+    statsShortTitle: (n) => `단기 (최근 ${n}회)`,
+    statsGood: "좋은 흐름",
+    statsBad: "가라앉은 흐름",
+    statsAvgSuffix: (v) => `(평균 ${v})`,
+    statsMidTitle: (n) => `중기 추세 (최근 ${n}회 대비)`,
+    trendUp: "오름세",
+    trendDown: "내림세",
+    trendStable: "안정",
+    statsLongTitle: (n) => `장기 (총 ${n}회)`,
+    statsTopCard: "가장 많이 나온 카드",
+    statsTimesSuffix: (n) => `(${n}회)`,
+    statsUprightReversed: (up, rev) => `정방향 ${up}회 / 역방향 ${rev}회`,
+    statsAvgAllTime: "분야별 평균 점수 (전체 기간)",
+    historyPrivacyNote: "✦ 이 기록은 당신의 기기에만 있습니다 ✦",
+    historyOrientation: (rev) => (rev ? "역방향" : "정방향"),
+    historyRemaining: (n) => `다른 ${n}건의 기록도 통계에 반영되어 있습니다`,
+    aiStatusLabel: "AI 점단",
+    aiStatusOn: "켜짐",
+    aiStatusOff: "꺼짐 (정형문 모드)",
+    couponPlaceholder: "코드 입력...",
+    confirmButton: "확인",
+    historyButtonLabel: (n) => `기록 (${n})`,
+    statsButtonLabel: "통계",
+    couponButtonLabel: "쿠폰 코드",
+  },
   vi: {
     appTitle: "Bói Bài Tarot",
     tagline: "",
