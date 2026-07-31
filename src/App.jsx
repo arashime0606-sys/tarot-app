@@ -1958,7 +1958,6 @@ function getCardSub(card, lang) {
 function buildMajorList() {
   return MAJOR_NAME.map((name, i) => ({
     id: `major-${i}`,
-    ms: `major-${i}`,
     name,
     corner: MAJOR_ROMAN[i],
     sub: "大アルカナ",
@@ -1973,7 +1972,6 @@ function buildMinorList() {
     RANK_LABEL.forEach((rank, i) => {
       list.push({
         id: `${suit.key}-${i}`,
-        ms: `${suit.key}-${i}`,
         name: `${suit.label}の${rank}`,
         corner: RANK_CORNER[i],
         sub: `小アルカナ・${suit.label}（${suit.element}）`,
@@ -2558,7 +2556,6 @@ function buildRecapPrompt(question, major, reading3, deepDiveQA, langInstruction
 const TTS_LANG_TAGS = {
   ja: ["ja-JP", "ja"],
   "zh-TW": ["zh-TW", "zh-HK", "zh"],
-  "zh-CN": ["zh-TW", "zh-HK", "zh"],
   en: ["en-US", "en-GB", "en"],
   tl: ["fil-PH", "tl-PH", "tl", "fil"],
   th: ["th-TH", "th"],
@@ -3732,6 +3729,631 @@ function updateHistoryEntry(id, patch) {
  * 履歴・要約の保存先はこの端末のlocalStorageのみで、サーバーには残らない。
  * ============================================================
  */
+/**
+ * ============================================================
+ * 【称号】履歴から自動的に付与される実績
+ * ============================================================
+ * ランキングの代替として設計した。
+ *
+ * ランキングはサーバー（Vercel KV等）の新設が必要なうえ、
+ * 日次アクティブが数十人を超えるまでは過疎が可視化されて逆効果になる。
+ * 称号なら他人と比較せずに誇れるので、ユーザーが少ない段階でも成立し、
+ * バックエンドも要らない（履歴はすべて端末内にある）。
+ *
+ * 判定はすべて保存済みの履歴から機械的に行う。AI呼び出しゼロ、コストゼロ。
+ * 将来ランキングを実装しても、称号は独立して機能し続ける。
+ * ============================================================
+ */
+/**
+ * ============================================================
+ * 【キャラクター育成】占うほど育つ伴走者
+ * ============================================================
+ * 設計上の原則：
+ *
+ * ① 金はカードにも鑑定にも触れない
+ *    経験値に会員プランの倍率をかけるのは構わないが、それは体験の外側の指標に
+ *    とどめる。課金で運勢が良くなる（ように見える）実装に一歩でも踏み込むと、
+ *    「理論上カードの内容に一切の偏りがない完全公平設計」という宣言が崩れる。
+ *    レベルは鑑定結果に一切影響を与えないこと。
+ *
+ * ② 積み上げは減らさない
+ *    育成は「今日やらないと損」という義務感を生みやすい。
+ *    不安を抱えた人が来るアプリなので、連続を切らしたときに
+ *    レベルや経験値を失う設計にはしない。増える方向にだけ動かす。
+ *
+ * ③ 個性は統計から導く
+ *    ジョブはユーザー自身の履歴（どの分野が強く出てきたか）から決まる。
+ *    与えられた設定ではなく、その人の軌跡の反映であること。これが鏡の思想と噛み合う。
+ *
+ * 保存領域は増やさない。すべて履歴から毎回計算する。
+ * ============================================================
+ */
+const JOB_NAMES = {
+  ja: { weaver: "縁を結ぶ者", keeper: "財を守る者", reader: "心を読む者", bearer: "灯をかかげる者", builder: "礎を築く者", watcher: "転機を見張る者", runner: "先を駆ける者", vessel: "加護を宿す者" },
+  ko: { weaver: "인연을 맺는 자", keeper: "재물을 지키는 자", reader: "마음을 읽는 자", bearer: "등불을 드는 자", builder: "주춧돌을 쌓는 자", watcher: "전환점을 지켜보는 자", runner: "앞서 달리는 자", vessel: "가호를 품는 자" },
+  "zh-TW": { weaver: "結緣之人", keeper: "守財之人", reader: "讀心之人", bearer: "舉燈之人", builder: "築基之人", watcher: "守望轉機之人", runner: "率先奔馳之人", vessel: "承載庇佑之人" },
+  "zh-CN": { weaver: "结缘之人", keeper: "守财之人", reader: "读心之人", bearer: "举灯之人", builder: "筑基之人", watcher: "守望转机之人", runner: "率先奔驰之人", vessel: "承载庇佑之人" },
+  en: { weaver: "Weaver of Bonds", keeper: "Keeper of Coin", reader: "Reader of Hearts", bearer: "Bearer of the Flame", builder: "Builder of Foundations", watcher: "Watcher of Turnings", runner: "Runner at the Front", vessel: "Vessel of Grace" },
+  tl: { weaver: "Manghahabi ng Ugnayan", keeper: "Tagapag-ingat ng Yaman", reader: "Mambabasa ng Puso", bearer: "May-dala ng Apoy", builder: "Tagapagtayo ng Saligan", watcher: "Tagamasid ng Pagbabago", runner: "Mananakbo sa Unahan", vessel: "Sisidlan ng Biyaya" },
+  th: { weaver: "ผู้ถักทอสายสัมพันธ์", keeper: "ผู้พิทักษ์ทรัพย์", reader: "ผู้อ่านใจ", bearer: "ผู้ชูดวงไฟ", builder: "ผู้วางรากฐาน", watcher: "ผู้เฝ้ามองจุดเปลี่ยน", runner: "ผู้วิ่งนำหน้า", vessel: "ภาชนะแห่งพร" },
+  id: { weaver: "Perajut Ikatan", keeper: "Penjaga Harta", reader: "Pembaca Hati", bearer: "Pembawa Nyala", builder: "Pembangun Fondasi", watcher: "Pengamat Peralihan", runner: "Pelari di Barisan Depan", vessel: "Wadah Perlindungan" },
+  ms: { weaver: "Perajut Ikatan", keeper: "Penjaga Harta", reader: "Pembaca Hati", bearer: "Pembawa Nyala", builder: "Pembina Asas", watcher: "Pemerhati Peralihan", runner: "Pelari di Barisan Hadapan", vessel: "Bekas Perlindungan" },
+  vi: { weaver: "Kẻ Dệt Nhân Duyên", keeper: "Kẻ Giữ Của Cải", reader: "Kẻ Đọc Lòng Người", bearer: "Kẻ Nâng Ngọn Lửa", builder: "Kẻ Dựng Nền Móng", watcher: "Kẻ Canh Bước Ngoặt", runner: "Kẻ Chạy Trước Tiên", vessel: "Chiếc Bình Của Phúc Lành" },
+};
+function jobName(key, lang) {
+  if (!key) return "";
+  return (JOB_NAMES[lang] && JOB_NAMES[lang][key]) || JOB_NAMES.ja[key] || key;
+}
+
+const XP_PER_DRAW = 10;       // 1回占うごと
+const XP_WITH_QUESTION = 5;   // 問いを書いていた回
+const XP_WITH_DEEPDIVE = 10;  // 対話ループまで進んだ回
+const XP_PER_STREAK_DAY = 3;  // 連続日数のボーナス（切らしても減らさない）
+
+// 会員プランごとの経験値倍率。
+// 留保：現状は全プラン1.0で開始する。履歴には「その回に加入していたプラン」が
+// 記録されていないため、遡って倍率をかけると過去分まで書き換わってしまう。
+// 差別化する場合は、履歴エントリにプランを保存する実装を先に入れること。
+function resolveXpMultiplier(membership) {
+  const RATES = { free: 1.0, light: 1.0, standard: 1.0, supporter: 1.0 };
+  return RATES[membership] != null ? RATES[membership] : 1.0;
+}
+
+// レベルに必要な累計経験値。序盤は軽く、後半は緩やかに伸びる
+function xpForLevel(level) {
+  if (level <= 1) return 0;
+  return Math.round(40 * Math.pow(level - 1, 1.6));
+}
+function levelFromXp(xp) {
+  let lv = 1;
+  while (lv < 99 && xp >= xpForLevel(lv + 1)) lv++;
+  return lv;
+}
+
+// 8分野に対応するジョブ。最も強く出てきた分野が、その人の性質になる
+const JOB_BY_STAT = {
+  people: "weaver", money: "keeper", emotion: "reader", energy: "bearer",
+  work: "builder", change: "watcher", action: "runner", blessing: "vessel",
+};
+
+/**
+ * ジョブごとの成長率。1回の占いで各ステータスに加算される値。
+ *
+ * どのジョブも合計は10で揃えてある。得意分野の違いはあっても、
+ * 総量で有利不利が出ないようにするため。占い自体が公平である以上、
+ * その反映であるキャラも「ジョブ引きの当たり外れ」を作るべきではない。
+ */
+const STAT_RPG_NAMES = {
+  ja: { str: "ちから", def: "ぼうぎょ", agi: "すばやさ", vit: "たいりょく", dex: "きようさ", int: "ちりょく", spr: "せいしん", luk: "うん" },
+  ko: { str: "힘", def: "방어", agi: "민첩", vit: "체력", dex: "손재주", int: "지력", spr: "정신", luk: "운" },
+  "zh-TW": { str: "力量", def: "防禦", agi: "敏捷", vit: "體力", dex: "靈巧", int: "智力", spr: "精神", luk: "幸運" },
+  "zh-CN": { str: "力量", def: "防御", agi: "敏捷", vit: "体力", dex: "灵巧", int: "智力", spr: "精神", luk: "幸运" },
+  en: { str: "Strength", def: "Defense", agi: "Agility", vit: "Vitality", dex: "Dexterity", int: "Intellect", spr: "Spirit", luk: "Luck" },
+  tl: { str: "Lakas", def: "Depensa", agi: "Bilis", vit: "Tatag", dex: "Liksi", int: "Talino", spr: "Diwa", luk: "Suwerte" },
+  th: { str: "พลัง", def: "ป้องกัน", agi: "ความว่องไว", vit: "ความอึด", dex: "ความคล่อง", int: "สติปัญญา", spr: "จิตใจ", luk: "โชค" },
+  id: { str: "Tenaga", def: "Pertahanan", agi: "Kelincahan", vit: "Daya Tahan", dex: "Ketangkasan", int: "Kecerdasan", spr: "Jiwa", luk: "Keberuntungan" },
+  ms: { str: "Tenaga", def: "Pertahanan", agi: "Kelincahan", vit: "Daya Tahan", dex: "Ketangkasan", int: "Kecerdasan", spr: "Jiwa", luk: "Tuah" },
+  vi: { str: "Sức Mạnh", def: "Phòng Thủ", agi: "Nhanh Nhẹn", vit: "Thể Lực", dex: "Khéo Léo", int: "Trí Lực", spr: "Tinh Thần", luk: "May Mắn" },
+};
+const STAT_ABBR = { str: "STR", def: "DEF", agi: "AGI", vit: "VIT", dex: "DEX", int: "INT", spr: "SPR", luk: "LUK" };
+function rpgStatName(key, lang) {
+  return (STAT_RPG_NAMES[lang] && STAT_RPG_NAMES[lang][key]) || STAT_RPG_NAMES.ja[key] || key;
+}
+
+/**
+ * ジョブごとの成長率。1回の占いで各ステータスに加算される値。
+ *
+ * どのジョブも合計は16で揃えてある（全ステータスに1ずつ＋得意分野に8を配分）。
+ * 得意の違いはあっても総量で有利不利が出ないようにするため。
+ * 占い自体が公平である以上、その反映であるキャラに
+ * 「ジョブ引きの当たり外れ」を作るべきではない。
+ *
+ * 8分野と8ステータスは一対一で対応する：
+ *   行動→STR 仕事→INT 変化→AGI 気力→VIT 人運→DEX 感情→DEF 加護→SPR 金運→LUK
+ *
+ * 感情がDEFなのは、心の揺れに耐える力＝防御という読み。
+ * 仕事がINTなのは、職能を知の蓄積として捉える読み。
+ */
+const JOB_GROWTH = {
+  runner:  { str: 5, def: 1, agi: 3, vit: 3, dex: 1, int: 1, spr: 1, luk: 1 }, // 行動・先を駆ける者
+  builder: { str: 1, def: 1, agi: 1, vit: 3, dex: 3, int: 5, spr: 1, luk: 1 }, // 仕事・礎を築く者
+  watcher: { str: 1, def: 1, agi: 5, vit: 1, dex: 3, int: 3, spr: 1, luk: 1 }, // 変化・転機を見張る者
+  bearer:  { str: 3, def: 1, agi: 1, vit: 5, dex: 1, int: 1, spr: 3, luk: 1 }, // 気力・灯をかかげる者
+  weaver:  { str: 1, def: 3, agi: 1, vit: 1, dex: 5, int: 1, spr: 3, luk: 1 }, // 人運・縁を結ぶ者
+  reader:  { str: 1, def: 5, agi: 1, vit: 1, dex: 1, int: 3, spr: 3, luk: 1 }, // 感情・心を読む者
+  vessel:  { str: 1, def: 3, agi: 1, vit: 3, dex: 1, int: 1, spr: 5, luk: 1 }, // 加護・加護を宿す者
+  keeper:  { str: 1, def: 3, agi: 1, vit: 1, dex: 3, int: 1, spr: 1, luk: 5 }, // 金運・財を守る者
+};
+const STAT_ORDER = ["str", "def", "agi", "vit", "dex", "int", "spr", "luk"];
+
+/**
+ * ジョブ判定のパラメータ。
+ *
+ * 【期待値の正規化が必須である理由】
+ * 8分野の期待値は揃っていない（実測：金運3.800 / 人運3.795 / 変化3.752 …
+ * 行動3.566 / 加護3.569 / 仕事3.597）。最大と最小で0.234の開きがある。
+ * 素の平均で比較すると、続けた人ほど金運か人運に収束し、
+ * 8ジョブのうち6種類しか現れず、最多ジョブが45%を占める状態になる。
+ * 各分野の期待値を引いてから比較することで、8種類が均等に出るようになる。
+ *
+ * 【短期を混ぜる理由】
+ * 累積平均だけで判定すると、回数を重ねるほど分母が大きくなって順位が動かなくなり、
+ * 300回時点でジョブがほぼ固定される。序盤に何を引いたかで一生が決まってしまう。
+ * 直近の窓を一定割合で混ぜると、後半でもジョブが移り続ける。
+ *
+ * 【23.6%という値】
+ * 「1回の占いで最も長く滞在するジョブの占有率」が 1/e（36.8%）になる点。
+ * 主軸はあるが単一ではない、という配分になる。
+ * この付近では、互いに見分けのつく固有の配合が生まれ、
+ * かつ8種の純粋なジョブ型に張り付く人はほぼ現れない（実測0.4%未満）。
+ */
+const JOB_SHORT_WEIGHT = 0.236;
+const JOB_SHORT_WINDOW = 10;
+const FIELD_BASELINE = [3.795, 3.800, 3.684, 3.665, 3.597, 3.752, 3.566, 3.569];
+
+/**
+ * ステータスを履歴から積み上げる。
+ *
+ * 【重要】ジョブが変わっても、既に積んだステータスは絶対に変わらない。
+ * 変わるのは「これから何が伸びるか」だけである。
+ *
+ * そのため、現在のジョブで全履歴を再計算してはならない。
+ * 履歴を古い順に走査し、各時点での運の比率からその回のジョブを決め、
+ * そのジョブの成長率を加算していく。
+ * この方式なら、後から比率が変わって現在のジョブが移っても、
+ * 過去に加算した分は一切動かない（計算は決定的なので保存も不要）。
+ */
+function calcCharacterStats(history) {
+  const stats = {};
+  STAT_ORDER.forEach((k) => { stats[k] = 0; });
+  if (!history || history.length === 0) return { stats, currentJob: null, growth: null };
+
+  const chrono = [...history].reverse(); // historyは新しい順なので、古い順に直す
+  const n = STAT_CATEGORIES.length;
+  const running = new Array(n).fill(0);
+  const window = [];
+  let currentJob = null;
+  let count = 0;
+
+  chrono.forEach((h) => {
+    const sc = Array.isArray(h.scores) && h.scores.length === n ? h.scores : new Array(n).fill(3.5);
+    sc.forEach((v, i) => { running[i] += typeof v === "number" ? v : 3.5; });
+    count++;
+    window.push(sc);
+    if (window.length > JOB_SHORT_WINDOW) window.shift();
+
+    const shortAvg = new Array(n).fill(0);
+    window.forEach((w) => w.forEach((v, i) => { shortAvg[i] += (typeof v === "number" ? v : 3.5) / window.length; }));
+
+    let best = 0;
+    let bestScore = -Infinity;
+    for (let i = 0; i < n; i++) {
+      const longAvg = running[i] / count;
+      const score = JOB_SHORT_WEIGHT * shortAvg[i] + (1 - JOB_SHORT_WEIGHT) * longAvg - FIELD_BASELINE[i];
+      if (score > bestScore) { bestScore = score; best = i; }
+    }
+    currentJob = JOB_BY_STAT[STAT_CATEGORIES[best].key];
+    const g = JOB_GROWTH[currentJob];
+    if (g) STAT_ORDER.forEach((k) => { stats[k] += g[k]; });
+  });
+
+  return { stats, currentJob, growth: JOB_GROWTH[currentJob] || null };
+}
+
+function calcCharacter(history, membership) {
+  const st = collectTitleStats(history);
+  let baseXp = 0;
+  history.forEach((h) => {
+    baseXp += XP_PER_DRAW;
+    if (h.question && h.question.trim()) baseXp += XP_WITH_QUESTION;
+    if (Array.isArray(h.deepDiveQA) && h.deepDiveQA.length > 0) baseXp += XP_WITH_DEEPDIVE;
+  });
+  baseXp += st.maxStreak * XP_PER_STREAK_DAY;
+  const xp = Math.round(baseXp * resolveXpMultiplier(membership));
+
+  const level = levelFromXp(xp);
+  const cur = xpForLevel(level);
+  const next = xpForLevel(level + 1);
+
+  const sres = calcCharacterStats(history);
+  // ジョブは積み上げと同じ判定を使う（別々に出すと表示と中身がずれる）
+  const job = sres.currentJob;
+  const avgScores = history.length > 0 ? calcAvgScores(history) : null;
+
+  return {
+    xp, level, job,
+    stats: sres.stats,
+    growth: sres.growth,
+    xpIntoLevel: xp - cur,
+    xpNeeded: Math.max(1, next - cur),
+    progress: Math.min(1, (xp - cur) / Math.max(1, next - cur)),
+    totalDraws: history.length,
+    maxStreak: st.maxStreak,
+    avgScores,
+  };
+}
+
+/**
+ * ============================================================
+ * 【実績】解除された記録（歴史）
+ * ============================================================
+ * 称号との違い：
+ *   称号 … 着脱できる衣服。ユーザーが1つ選んで身につける。将来ランキングに表示する
+ *   実績 … 歴史。解除された事実と日付が積み上がり、外すことはできない
+ *
+ * 称号を得た時点で対応する実績も解除されるが、実績には称号にならないものも含める
+ * （初めて質問を書いた、対話ループを使った、じゅもんを残した等）。
+ * 解除日は初回検出時にlocalStorageへ書き込み、以後変えない。これが「歴史」の意味。
+ * ============================================================
+ */
+const LS_ACHIEVEMENTS_KEY = "tarot_achievements"; // { key: "YYYY-MM-DD" }
+const LS_EQUIPPED_TITLE_KEY = "tarot_equipped_title";
+
+// 称号にならない実績（履歴から導ける行動の記録）
+const EXTRA_ACHIEVEMENTS = [
+  { key: "wrote_question", test: (st, h) => h.some((x) => x.question && x.question.trim()) },
+  { key: "used_deepdive",  test: (st, h) => h.some((x) => Array.isArray(x.deepDiveQA) && x.deepDiveQA.length > 0) },
+  { key: "left_memento",   test: () => { try { return Object.keys(localStorage).some((k) => k.startsWith("tarot_memento_")); } catch { return false; } } },
+  { key: "kept_records",   test: (st, h) => h.some((x) => x.recap) },
+];
+
+function allAchievementDefs() {
+  return [...TITLE_DEFS, ...EXTRA_ACHIEVEMENTS];
+}
+
+function loadAchievements() {
+  try { return JSON.parse(localStorage.getItem(LS_ACHIEVEMENTS_KEY) || "{}"); } catch { return {}; }
+}
+
+/**
+ * 履歴を見て、新たに解除された実績に日付を刻む。
+ * 既に記録済みのものは絶対に上書きしない（歴史は書き換えない）。
+ * 戻り値は { key: 解除日 } の全記録。
+ */
+function syncAchievements(history) {
+  const stored = loadAchievements();
+  const st = collectTitleStats(history);
+  const today = new Date().toISOString().slice(0, 10);
+  let changed = false;
+  allAchievementDefs().forEach((d) => {
+    if (stored[d.key]) return;
+    let ok = false;
+    try { ok = d.test(st, history); } catch { ok = false; }
+    if (ok) { stored[d.key] = today; changed = true; }
+  });
+  if (changed) {
+    try { localStorage.setItem(LS_ACHIEVEMENTS_KEY, JSON.stringify(stored)); } catch {}
+  }
+  return stored;
+}
+
+function loadEquippedTitle() {
+  try { return localStorage.getItem(LS_EQUIPPED_TITLE_KEY) || ""; } catch { return ""; }
+}
+function saveEquippedTitle(key) {
+  try {
+    if (key) localStorage.setItem(LS_EQUIPPED_TITLE_KEY, key);
+    else localStorage.removeItem(LS_EQUIPPED_TITLE_KEY);
+  } catch {}
+}
+
+const TITLE_NAMES = {
+  ja: {
+    wrote_question: "初めての問いかけ",
+    used_deepdive: "深く尋ねた者",
+    left_memento: "記憶を託した者",
+    kept_records: "歩みを継ぐ者",
+    first_step: "最初の一歩",
+    ten_draws: "十度の問い",
+    fifty_draws: "五十度の問い",
+    hundred_draws: "百度の問い",
+    streak3: "三日の巡礼者",
+    streak7: "七日の巡礼者",
+    streak30: "三十日の巡礼者",
+    holo: "黄金の遭遇者",
+    void: "奈落を見た者",
+    jackpot: "極点に触れた者",
+    allsix: "満点の日を知る者",
+    moon_lover: "月に愛された者",
+    death_seen: "死神と向き合った者",
+    tower_walker: "塔を歩いた者",
+    world_reached: "世界に至った者",
+    upright_soul: "正位置の魂",
+    reversed_soul: "逆位置の魂",
+    all_major: "二十二枚すべてに出会った者",
+  },
+  ko: {
+    wrote_question: "첫 물음",
+    used_deepdive: "깊이 물은 자",
+    left_memento: "기억을 맡긴 자",
+    kept_records: "발자취를 잇는 자",
+    first_step: "첫 걸음",
+    ten_draws: "열 번의 물음",
+    fifty_draws: "쉰 번의 물음",
+    hundred_draws: "백 번의 물음",
+    streak3: "사흘의 순례자",
+    streak7: "이레의 순례자",
+    streak30: "서른 날의 순례자",
+    holo: "황금과 마주한 자",
+    void: "나락을 본 자",
+    jackpot: "극점에 닿은 자",
+    allsix: "만점의 날을 아는 자",
+    moon_lover: "달에게 사랑받은 자",
+    death_seen: "죽음과 마주한 자",
+    tower_walker: "탑을 걸은 자",
+    world_reached: "세계에 이른 자",
+    upright_soul: "정방향의 영혼",
+    reversed_soul: "역방향의 영혼",
+    all_major: "스물두 장 모두를 만난 자",
+  },
+  "zh-TW": {
+    wrote_question: "初次的提問",
+    used_deepdive: "深入詢問之人",
+    left_memento: "託付記憶之人",
+    kept_records: "承接足跡之人",
+    first_step: "最初的一步",
+    ten_draws: "十次的提問",
+    fifty_draws: "五十次的提問",
+    hundred_draws: "百次的提問",
+    streak3: "三日的巡禮者",
+    streak7: "七日的巡禮者",
+    streak30: "三十日的巡禮者",
+    holo: "黃金的相遇者",
+    void: "見過深淵之人",
+    jackpot: "觸及極點之人",
+    allsix: "知曉滿分之日者",
+    moon_lover: "被月所愛之人",
+    death_seen: "直視死神之人",
+    tower_walker: "走過高塔之人",
+    world_reached: "抵達世界之人",
+    upright_soul: "正位的靈魂",
+    reversed_soul: "逆位的靈魂",
+    all_major: "與二十二張全數相遇者",
+  },
+  "zh-CN": {
+    wrote_question: "初次的提问",
+    used_deepdive: "深入询问之人",
+    left_memento: "托付记忆之人",
+    kept_records: "承接足迹之人",
+    first_step: "最初的一步",
+    ten_draws: "十次的提问",
+    fifty_draws: "五十次的提问",
+    hundred_draws: "百次的提问",
+    streak3: "三日的巡礼者",
+    streak7: "七日的巡礼者",
+    streak30: "三十日的巡礼者",
+    holo: "黄金的相遇者",
+    void: "见过深渊之人",
+    jackpot: "触及极点之人",
+    allsix: "知晓满分之日者",
+    moon_lover: "被月所爱之人",
+    death_seen: "直视死神之人",
+    tower_walker: "走过高塔之人",
+    world_reached: "抵达世界之人",
+    upright_soul: "正位的灵魂",
+    reversed_soul: "逆位的灵魂",
+    all_major: "与二十二张全数相遇者",
+  },
+  en: {
+    wrote_question: "The First Question",
+    used_deepdive: "One Who Asked Deeper",
+    left_memento: "One Who Entrusted a Memory",
+    kept_records: "One Who Carries the Path",
+    first_step: "First Step",
+    ten_draws: "Ten Questions",
+    fifty_draws: "Fifty Questions",
+    hundred_draws: "A Hundred Questions",
+    streak3: "Pilgrim of Three Days",
+    streak7: "Pilgrim of Seven Days",
+    streak30: "Pilgrim of Thirty Days",
+    holo: "One Who Met the Gold",
+    void: "One Who Saw the Abyss",
+    jackpot: "One Who Touched the Extreme",
+    allsix: "Keeper of a Perfect Day",
+    moon_lover: "Beloved of the Moon",
+    death_seen: "One Who Faced Death",
+    tower_walker: "One Who Walked the Tower",
+    world_reached: "One Who Reached the World",
+    upright_soul: "Soul of the Upright",
+    reversed_soul: "Soul of the Reversed",
+    all_major: "One Who Met All Twenty-Two",
+  },
+  tl: {
+    wrote_question: "Ang Unang Tanong",
+    used_deepdive: "Nagtanong nang Mas Malalim",
+    left_memento: "Nagkatiwala ng Alaala",
+    kept_records: "Nagpapatuloy ng Landas",
+    first_step: "Unang Hakbang",
+    ten_draws: "Sampung Tanong",
+    fifty_draws: "Limampung Tanong",
+    hundred_draws: "Sandaang Tanong",
+    streak3: "Peregrino ng Tatlong Araw",
+    streak7: "Peregrino ng Pitong Araw",
+    streak30: "Peregrino ng Tatlumpung Araw",
+    holo: "Nakasalubong ng Ginto",
+    void: "Nakakita ng Kailaliman",
+    jackpot: "Nakahipo sa Sukdulan",
+    allsix: "May Alam sa Ganap na Araw",
+    moon_lover: "Minamahal ng Buwan",
+    death_seen: "Humarap sa Kamatayan",
+    tower_walker: "Naglakad sa Tore",
+    world_reached: "Nakarating sa Mundo",
+    upright_soul: "Kaluluwa ng Tuwid",
+    reversed_soul: "Kaluluwa ng Baligtad",
+    all_major: "Nakasalubong ng Lahat ng Dalawampu't Dalawa",
+  },
+  th: {
+    wrote_question: "คำถามแรก",
+    used_deepdive: "ผู้ถามลึกลงไป",
+    left_memento: "ผู้ฝากความทรงจำ",
+    kept_records: "ผู้สืบทอดรอยทาง",
+    first_step: "ก้าวแรก",
+    ten_draws: "คำถามสิบครั้ง",
+    fifty_draws: "คำถามห้าสิบครั้ง",
+    hundred_draws: "คำถามร้อยครั้ง",
+    streak3: "ผู้จาริกสามวัน",
+    streak7: "ผู้จาริกเจ็ดวัน",
+    streak30: "ผู้จาริกสามสิบวัน",
+    holo: "ผู้พบเจอทองคำ",
+    void: "ผู้เห็นเหวลึก",
+    jackpot: "ผู้สัมผัสจุดสูงสุด",
+    allsix: "ผู้รู้จักวันที่สมบูรณ์",
+    moon_lover: "ผู้เป็นที่รักของดวงจันทร์",
+    death_seen: "ผู้เผชิญหน้ากับความตาย",
+    tower_walker: "ผู้เดินผ่านหอคอย",
+    world_reached: "ผู้ไปถึงโลก",
+    upright_soul: "วิญญาณแห่งไพ่ตั้งตรง",
+    reversed_soul: "วิญญาณแห่งไพ่กลับหัว",
+    all_major: "ผู้พบไพ่ครบทั้งยี่สิบสองใบ",
+  },
+  id: {
+    wrote_question: "Pertanyaan Pertama",
+    used_deepdive: "Yang Bertanya Lebih Dalam",
+    left_memento: "Yang Menitipkan Kenangan",
+    kept_records: "Yang Melanjutkan Jejak",
+    first_step: "Langkah Pertama",
+    ten_draws: "Sepuluh Pertanyaan",
+    fifty_draws: "Lima Puluh Pertanyaan",
+    hundred_draws: "Seratus Pertanyaan",
+    streak3: "Peziarah Tiga Hari",
+    streak7: "Peziarah Tujuh Hari",
+    streak30: "Peziarah Tiga Puluh Hari",
+    holo: "Yang Berjumpa Emas",
+    void: "Yang Melihat Jurang",
+    jackpot: "Yang Menyentuh Titik Ekstrem",
+    allsix: "Yang Mengenal Hari Sempurna",
+    moon_lover: "Yang Dicintai Bulan",
+    death_seen: "Yang Menghadapi Kematian",
+    tower_walker: "Yang Melewati Menara",
+    world_reached: "Yang Sampai ke Dunia",
+    upright_soul: "Jiwa Tegak",
+    reversed_soul: "Jiwa Terbalik",
+    all_major: "Yang Menjumpai Semua Dua Puluh Dua",
+  },
+  ms: {
+    wrote_question: "Soalan Pertama",
+    used_deepdive: "Yang Bertanya Lebih Dalam",
+    left_memento: "Yang Menitipkan Kenangan",
+    kept_records: "Yang Meneruskan Jejak",
+    first_step: "Langkah Pertama",
+    ten_draws: "Sepuluh Soalan",
+    fifty_draws: "Lima Puluh Soalan",
+    hundred_draws: "Seratus Soalan",
+    streak3: "Pengembara Tiga Hari",
+    streak7: "Pengembara Tujuh Hari",
+    streak30: "Pengembara Tiga Puluh Hari",
+    holo: "Yang Bertemu Emas",
+    void: "Yang Melihat Jurang",
+    jackpot: "Yang Menyentuh Titik Melampau",
+    allsix: "Yang Mengenal Hari Sempurna",
+    moon_lover: "Yang Dikasihi Bulan",
+    death_seen: "Yang Menghadapi Kematian",
+    tower_walker: "Yang Melalui Menara",
+    world_reached: "Yang Sampai ke Dunia",
+    upright_soul: "Jiwa Tegak",
+    reversed_soul: "Jiwa Terbalik",
+    all_major: "Yang Menemui Kesemua Dua Puluh Dua",
+  },
+  vi: {
+    wrote_question: "Câu Hỏi Đầu Tiên",
+    used_deepdive: "Kẻ Hỏi Sâu Hơn",
+    left_memento: "Kẻ Gửi Gắm Ký Ức",
+    kept_records: "Kẻ Nối Tiếp Dấu Chân",
+    first_step: "Bước Đầu Tiên",
+    ten_draws: "Mười Câu Hỏi",
+    fifty_draws: "Năm Mươi Câu Hỏi",
+    hundred_draws: "Một Trăm Câu Hỏi",
+    streak3: "Kẻ Hành Hương Ba Ngày",
+    streak7: "Kẻ Hành Hương Bảy Ngày",
+    streak30: "Kẻ Hành Hương Ba Mươi Ngày",
+    holo: "Kẻ Gặp Được Sắc Vàng",
+    void: "Kẻ Đã Thấy Vực Thẳm",
+    jackpot: "Kẻ Chạm Tới Cực Điểm",
+    allsix: "Kẻ Biết Ngày Trọn Vẹn",
+    moon_lover: "Kẻ Được Mặt Trăng Yêu",
+    death_seen: "Kẻ Đối Diện Cái Chết",
+    tower_walker: "Kẻ Đi Qua Tòa Tháp",
+    world_reached: "Kẻ Đã Tới Thế Giới",
+    upright_soul: "Linh Hồn Thuận Chiều",
+    reversed_soul: "Linh Hồn Ngược Chiều",
+    all_major: "Kẻ Gặp Đủ Hai Mươi Hai Lá",
+  },
+};
+function titleName(key, lang) {
+  return (TITLE_NAMES[lang] && TITLE_NAMES[lang][key]) || TITLE_NAMES.ja[key] || key;
+}
+
+const TITLE_DEFS = [
+  // --- 継続 ---
+  { key: "first_step",   test: (st) => st.total >= 1 },
+  { key: "ten_draws",    test: (st) => st.total >= 10 },
+  { key: "fifty_draws",  test: (st) => st.total >= 50 },
+  { key: "hundred_draws",test: (st) => st.total >= 100 },
+  { key: "streak3",      test: (st) => st.maxStreak >= 3 },
+  { key: "streak7",      test: (st) => st.maxStreak >= 7 },
+  { key: "streak30",     test: (st) => st.maxStreak >= 30 },
+  // --- 稀少な盤面 ---
+  { key: "holo",         test: (st) => st.holoCount >= 1 },
+  { key: "void",         test: (st) => st.voidCount >= 1 },
+  { key: "jackpot",      test: (st) => st.jackpotCount >= 1 },
+  { key: "allsix",       test: (st) => st.allSixCount >= 1 },
+  // --- カードとの縁 ---
+  { key: "moon_lover",   test: (st) => (st.cardCount["major-18"] || 0) >= 5 },
+  { key: "death_seen",   test: (st) => (st.cardCount["major-13"] || 0) >= 3 },
+  { key: "tower_walker", test: (st) => (st.cardCount["major-16"] || 0) >= 3 },
+  { key: "world_reached",test: (st) => (st.cardCount["major-21"] || 0) >= 3 },
+  // --- 傾向 ---
+  { key: "upright_soul", test: (st) => st.total >= 20 && st.uprightRatio >= 0.7 },
+  { key: "reversed_soul",test: (st) => st.total >= 20 && st.uprightRatio <= 0.3 },
+  { key: "all_major",    test: (st) => st.uniqueMajors >= 22 },
+];
+
+// 履歴を1回だけ走査して、称号判定に必要な統計をまとめて作る
+function collectTitleStats(history) {
+  const st = {
+    total: history.length, maxStreak: 0, holoCount: 0, voidCount: 0,
+    jackpotCount: 0, allSixCount: 0, cardCount: {}, uniqueMajors: 0,
+    uprightRatio: 0,
+  };
+  if (history.length === 0) return st;
+
+  let upright = 0;
+  const majors = new Set();
+  history.forEach((h) => {
+    const mid = h.majorCard?.id;
+    if (mid) { st.cardCount[mid] = (st.cardCount[mid] || 0) + 1; majors.add(mid); }
+    if (h.majorCard && !h.majorCard.reversed) upright++;
+    const sc = Array.isArray(h.scores) ? h.scores : [];
+    if (sc.length && sc.every((v) => v === 6)) st.allSixCount++;
+    if (sc.length && sc.every((v) => v <= 1)) st.jackpotCount++;
+    // 小アルカナ3枚が同スートかどうかで、ホロ／黒を判定する
+    const suits = (h.minorResults || []).map((m) => String(m.id).split("-")[0]);
+    if (suits.length === 3 && suits[0] === suits[1] && suits[1] === suits[2]) {
+      const revs = (h.minorResults || []).filter((m) => m.reversed).length;
+      if (revs === 0) st.holoCount++;
+      if (revs === 3) st.voidCount++;
+    }
+  });
+  st.uprightRatio = upright / history.length;
+  st.uniqueMajors = majors.size;
+
+  // 連続日数（履歴は新しい順に積まれている）
+  const days = [...new Set(history.map((h) => h.date))].sort().reverse();
+  let run = 1, best = 1;
+  for (let i = 1; i < days.length; i++) {
+    const a = new Date(days[i - 1]), b = new Date(days[i]);
+    const gap = Math.round((a - b) / 86400000);
+    if (gap === 1) { run++; best = Math.max(best, run); } else { run = 1; }
+  }
+  st.maxStreak = days.length ? best : 0;
+  return st;
+}
+
+function earnedTitles(history) {
+  const st = collectTitleStats(history);
+  return TITLE_DEFS.filter((d) => d.test(st)).map((d) => d.key);
+}
+
 const LS_TTS_NOTICE_KEY = "tarot_tts_notice"; // 読み上げの注意書きを既読にしたか
 function isTtsNoticeAcked() {
   try { return localStorage.getItem(LS_TTS_NOTICE_KEY) === "1"; } catch { return false; }
@@ -3818,6 +4440,206 @@ function trendOf(shortAvg, midAvg, t) {
   if (diff >= 0.5) return { symbol: "↑", label: t.trendUp, color: "var(--star-max)" };
   if (diff <= -0.5) return { symbol: "↓", label: t.trendDown, color: "var(--rose)" };
   return { symbol: "→", label: t.trendStable, color: "var(--muted)" };
+}
+
+/**
+ * 【称号パネル】着脱できる衣服。1つだけ身につけられる。
+ * 将来ランキングを実装したとき、ここで選んだ称号が名前の横に表示される想定。
+ */
+/**
+ * 【育成パネル】占うほど育つ伴走者。
+ * レベルは鑑定結果に一切影響しない。あくまで歩んだ距離を映すだけの指標。
+ */
+function CharacterPanel({ history, lang, membership, equippedTitle }) {
+  const t = T[lang] || T.ja;
+  const c = calcCharacter(history, membership);
+
+  return (
+    <div style={{ width: "100%", maxWidth: "400px", marginTop: "12px", display: "flex", flexDirection: "column", gap: "12px" }}>
+      <div style={{ background: "rgba(36,28,77,0.7)", border: "1px solid rgba(201,162,75,0.25)", borderRadius: "10px", padding: "16px" }}>
+        <div style={{ fontFamily: "Cinzel, serif", fontSize: "10px", letterSpacing: "0.14em", color: "var(--gold)", marginBottom: "12px" }}>
+          {t.characterLabel}
+        </div>
+
+        {history.length === 0 ? (
+          <p style={{ fontSize: "11.5px", color: "var(--muted)", margin: 0 }}>{t.characterEmpty}</p>
+        ) : (
+          <>
+            <div style={{ textAlign: "center", marginBottom: "14px" }}>
+              <div style={{ fontSize: "12px", color: "var(--gold-soft)", fontFamily: "'Shippori Mincho', serif", marginBottom: "2px" }}>
+                {jobName(c.job, lang)}
+              </div>
+              {equippedTitle && (
+                <div style={{ fontSize: "10.5px", color: "var(--muted)", marginBottom: "4px" }}>
+                  {titleName(equippedTitle, lang)}
+                </div>
+              )}
+              <div style={{ fontFamily: "Cinzel, serif", fontSize: "30px", color: "var(--gold)", lineHeight: 1.1 }}>
+                {t.characterLevel(c.level)}
+              </div>
+            </div>
+
+            {/* 経験値バー */}
+            <div style={{ height: "8px", borderRadius: "999px", background: "rgba(255,255,255,0.07)", overflow: "hidden", marginBottom: "6px" }}>
+              <div style={{ width: `${Math.round(c.progress * 100)}%`, height: "100%", background: "linear-gradient(90deg, var(--gold-dim), var(--gold))", transition: "width .6s ease" }} />
+            </div>
+            <p style={{ fontSize: "10px", color: "var(--muted)", margin: "0 0 14px", textAlign: "right" }}>
+              {c.xpIntoLevel} / {c.xpNeeded}
+            </p>
+
+            {/* ステータス。積み上げた値は、ジョブが変わっても減らない */}
+            <div style={{ display: "flex", flexDirection: "column", gap: "7px", marginBottom: "14px" }}>
+              {STAT_ORDER.map((k) => {
+                const v = c.stats[k];
+                const rate = c.growth ? c.growth[k] : 0;
+                const maxV = Math.max(1, ...STAT_ORDER.map((x) => c.stats[x]));
+                return (
+                  <div key={k} style={{ display: "flex", alignItems: "center", gap: "8px" }}>
+                    <span style={{ fontSize: "9px", width: "26px", flexShrink: 0, fontFamily: "Cinzel, serif", color: "var(--gold-dim)", letterSpacing: ".04em" }}>
+                      {STAT_ABBR[k]}
+                    </span>
+                    <span style={{ fontSize: "11px", width: "62px", flexShrink: 0, fontFamily: "'Shippori Mincho', serif", color: "var(--parchment)" }}>
+                      {rpgStatName(k, lang)}
+                    </span>
+                    <div style={{ flex: 1, height: "6px", borderRadius: "999px", background: "rgba(255,255,255,0.07)", overflow: "hidden" }}>
+                      <div style={{ width: `${Math.round((v / maxV) * 100)}%`, height: "100%", background: "linear-gradient(90deg, var(--gold-dim), var(--gold))" }} />
+                    </div>
+                    <span style={{ fontSize: "12px", color: "var(--gold-soft)", width: "34px", textAlign: "right", fontFamily: "Cinzel, serif" }}>{v}</span>
+                    <span style={{ fontSize: "9.5px", color: rate >= 3 ? "var(--star-max)" : "var(--muted)", width: "26px", textAlign: "right" }}>
+                      +{rate}
+                    </span>
+                  </div>
+                );
+              })}
+            </div>
+            <p style={{ fontSize: "9.5px", color: "var(--muted)", margin: "-6px 0 14px", textAlign: "right", opacity: 0.8 }}>
+              {t.characterGrowthNote}
+            </p>
+
+            <div style={{ display: "flex", flexDirection: "column", gap: "6px", fontSize: "11.5px", color: "var(--parchment)" }}>
+              <div style={{ display: "flex", justifyContent: "space-between" }}>
+                <span>{t.characterDraws}</span><span style={{ color: "var(--gold-soft)" }}>{c.totalDraws}</span>
+              </div>
+              <div style={{ display: "flex", justifyContent: "space-between" }}>
+                <span>{t.characterStreak}</span><span style={{ color: "var(--gold-soft)" }}>{c.maxStreak}</span>
+              </div>
+              <div style={{ display: "flex", justifyContent: "space-between" }}>
+                <span>{t.characterXp}</span><span style={{ color: "var(--gold-soft)" }}>{c.xp}</span>
+              </div>
+            </div>
+
+            <p style={{ fontSize: "10px", color: "var(--muted)", margin: "14px 0 0", lineHeight: 1.7, opacity: 0.85 }}>
+              {t.characterStatsNote}
+              <br />
+              {t.characterNote}
+            </p>
+          </>
+        )}
+      </div>
+    </div>
+  );
+}
+
+function TitlesPanel({ history, lang, equipped, onEquip }) {
+  const t = T[lang] || T.ja;
+  const earned = earnedTitles(history);
+  const locked = TITLE_DEFS.length - earned.length;
+
+  return (
+    <div style={{ width: "100%", maxWidth: "400px", marginTop: "12px", display: "flex", flexDirection: "column", gap: "12px" }}>
+      <div style={{ background: "rgba(36,28,77,0.7)", border: "1px solid rgba(201,162,75,0.25)", borderRadius: "10px", padding: "14px 16px" }}>
+        <div style={{ fontFamily: "Cinzel, serif", fontSize: "10px", letterSpacing: "0.14em", color: "var(--gold)", marginBottom: "8px" }}>
+          {t.titlesLabel(earned.length, TITLE_DEFS.length)}
+        </div>
+        <p style={{ fontSize: "10.5px", color: "var(--muted)", margin: "0 0 12px", lineHeight: 1.7 }}>
+          {t.titlesIntro}
+        </p>
+
+        {earned.length === 0 ? (
+          <p style={{ fontSize: "11.5px", color: "var(--muted)", margin: 0 }}>{t.titlesEmpty}</p>
+        ) : (
+          <div style={{ display: "flex", flexWrap: "wrap", gap: "6px" }}>
+            {earned.map((k) => {
+              const on = equipped === k;
+              return (
+                <button
+                  key={k}
+                  onClick={() => onEquip(on ? "" : k)}
+                  style={{
+                    fontSize: "11px", padding: "5px 12px", borderRadius: "999px", cursor: "pointer",
+                    border: `1px solid ${on ? "var(--gold)" : "var(--gold-dim)"}`,
+                    color: on ? "var(--gold)" : "var(--gold-soft)",
+                    background: on ? "rgba(201,162,75,0.18)" : "rgba(201,162,75,0.05)",
+                    fontFamily: "'Shippori Mincho', serif",
+                  }}
+                >
+                  {on ? "\u2726 " : ""}{titleName(k, lang)}
+                </button>
+              );
+            })}
+          </div>
+        )}
+
+        {locked > 0 && (
+          <p style={{ fontSize: "10px", color: "var(--muted)", margin: "12px 0 0", opacity: 0.8 }}>
+            {t.titlesLocked(locked)}
+          </p>
+        )}
+      </div>
+    </div>
+  );
+}
+
+/**
+ * 【実績パネル】歴史。解除された事実と日付が並ぶ。外すことはできない。
+ * 未解除のものは名前を伏せて数だけ示す（全部見せると狙いに行かれて興が削がれる）。
+ */
+function AchievementsPanel({ history, lang }) {
+  const t = T[lang] || T.ja;
+  const unlocked = syncAchievements(history);
+  const defs = allAchievementDefs();
+  const rows = defs
+    .filter((d) => unlocked[d.key])
+    .map((d) => ({ key: d.key, date: unlocked[d.key] }))
+    .sort((a, b) => (a.date < b.date ? 1 : a.date > b.date ? -1 : 0));
+  const locked = defs.length - rows.length;
+
+  return (
+    <div style={{ width: "100%", maxWidth: "400px", marginTop: "12px", display: "flex", flexDirection: "column", gap: "12px" }}>
+      <div style={{ background: "rgba(36,28,77,0.7)", border: "1px solid rgba(201,162,75,0.25)", borderRadius: "10px", padding: "14px 16px" }}>
+        <div style={{ fontFamily: "Cinzel, serif", fontSize: "10px", letterSpacing: "0.14em", color: "var(--gold)", marginBottom: "8px" }}>
+          {t.achievementsLabel(rows.length, defs.length)}
+        </div>
+        <p style={{ fontSize: "10.5px", color: "var(--muted)", margin: "0 0 12px", lineHeight: 1.7 }}>
+          {t.achievementsIntro}
+        </p>
+
+        {rows.length === 0 ? (
+          <p style={{ fontSize: "11.5px", color: "var(--muted)", margin: 0 }}>{t.achievementsEmpty}</p>
+        ) : (
+          <div style={{ display: "flex", flexDirection: "column", gap: "7px" }}>
+            {rows.map((r) => (
+              <div key={r.key} style={{ display: "flex", alignItems: "baseline", justifyContent: "space-between", gap: "10px", borderBottom: "1px solid rgba(201,162,75,0.12)", paddingBottom: "6px" }}>
+                <span style={{ fontSize: "12px", color: "var(--parchment)", fontFamily: "'Shippori Mincho', serif" }}>
+                  {titleName(r.key, lang)}
+                </span>
+                <span style={{ fontSize: "10px", color: "var(--muted)", flexShrink: 0 }}>{r.date}</span>
+              </div>
+            ))}
+          </div>
+        )}
+
+        {locked > 0 && (
+          <p style={{ fontSize: "10px", color: "var(--muted)", margin: "12px 0 0", opacity: 0.8 }}>
+            {t.achievementsLocked(locked)}
+          </p>
+        )}
+        <p style={{ fontSize: "10px", color: "var(--muted)", margin: "8px 0 0", opacity: 0.7 }}>
+          {t.historyPrivacyNote}
+        </p>
+      </div>
+    </div>
+  );
 }
 
 function StatsPanel({ history, lang }) {
@@ -4546,7 +5368,7 @@ function LastResultPanel({ entry, lang, onClose }) {
   );
 }
 
-function CouponPanel({ couponInput, setCouponInput, handleCoupon, aiEnabled, lang }) {
+function CouponPanel({ couponInput, setCouponInput, handleCoupon, aiEnabled, lang, codeError }) {
   const t = T[lang] || T.ja;
   return (
     <div style={{ width: "100%", maxWidth: "360px", marginTop: "12px", display: "flex", flexDirection: "column", gap: "8px", background: "rgba(36,28,77,0.8)", border: "1px solid rgba(201,162,75,0.3)", borderRadius: "10px", padding: "12px 14px" }}>
@@ -4554,9 +5376,12 @@ function CouponPanel({ couponInput, setCouponInput, handleCoupon, aiEnabled, lan
         <span style={{ width: "7px", height: "7px", borderRadius: "50%", background: aiEnabled ? "var(--star-max)" : "var(--rose)", display: "inline-block" }} />
         {t.aiStatusLabel}：{aiEnabled ? t.aiStatusOn : t.aiStatusOff}
       </div>
+      <p style={{ fontSize: "10px", color: "var(--muted)", margin: 0, textAlign: "center", lineHeight: 1.6, opacity: 0.85 }}>
+        {t.couponNote}
+      </p>
       <input
         type="text"
-        maxLength={20}
+        maxLength={64}
         value={couponInput}
         onChange={(e) => setCouponInput(e.target.value)}
         onKeyDown={(e) => { if (e.key === "Enter") handleCoupon(); }}
@@ -4574,6 +5399,9 @@ function CouponPanel({ couponInput, setCouponInput, handleCoupon, aiEnabled, lan
       <button className="draw-btn" onClick={handleCoupon} style={{ fontSize: "12px", padding: "8px 16px" }}>
         {t.confirmButton}
       </button>
+      {codeError && (
+        <p style={{ fontSize: "10.5px", color: "var(--rose)", margin: 0, textAlign: "center" }}>{t.resurrectionError}</p>
+      )}
     </div>
   );
 }
@@ -4689,8 +5517,6 @@ const T = {
     ttsNoticeCancel: "나중에",
     personalizeLabel: "당신이 과거에 본 점의 기록을 이어받기",
     personalizeNote: (n) => `최근 ${n}회의 기록을 이번 점단의 참고로 삼습니다.\n꺼두면 과거의 내용은 일절 참조되지 않습니다.`,
-    resurrectionPlaceholder: "부활의 주문을 입력...",
-    resurrectionButton: "주문을 외우기",
     resurrectionError: "주문이 맞지 않는 것 같습니다. 다시 한번 확인해 주세요.",
     orientationPrompt: "뽑은 카드의 방향, 이대로 맞을까요?",
     orientationYes: "맞는 것 같아요",
@@ -4728,11 +5554,32 @@ const T = {
     aiStatusLabel: "AI 점단",
     aiStatusOn: "켜짐",
     aiStatusOff: "꺼짐 (정형문 모드)",
-    couponPlaceholder: "코드 입력...",
+    couponNote: "쿠폰 코드와 부활의 주문, 둘 다 입력할 수 있습니다.",
+    couponPlaceholder: "코드를 입력...",
     confirmButton: "확인",
     historyButtonLabel: (n) => `기록 (${n})`,
+    characterButtonLabel: "육성",
+    characterLabel: "동행자",
+    characterLevel: (n) => `Lv. ${n}`,
+    characterDraws: "점을 본 횟수",
+    characterStreak: "최장 연속 일수",
+    characterXp: "누적 경험치",
+    characterEmpty: "아직 걸음이 시작되지 않았습니다.",
+    characterGrowthNote: "오른쪽 수치는 현재 직업에서 1회당 성장치입니다.",
+    characterStatsNote: "직업이 바뀌어도 쌓아 올린 수치는 줄지 않습니다. 바뀌는 것은 성장 방식뿐입니다.",
+    characterNote: "레벨은 걸어온 거리를 비출 뿐인 지표입니다. 점괘의 결과에는 전혀 영향을 주지 않습니다.",
+    titlesButtonLabel: "칭호",
+    achievementsButtonLabel: "업적",
+    titlesIntro: "몸에 걸칠 칭호를 하나 고를 수 있습니다. 앞으로 만들 랭킹에서 이름과 함께 표시됩니다.",
+    titlesEmpty: "아직 얻은 칭호가 없습니다.",
+    achievementsIntro: "해제한 기록과 그 날짜입니다. 한번 새겨진 역사는 사라지지 않습니다.",
+    achievementsEmpty: "아직 해제한 업적이 없습니다.",
+    achievementsLabel: (n, total) => `업적 ${n} / ${total}`,
+    achievementsLocked: (n) => `미해제 ${n}건`,
+    titlesLabel: (n, total) => `칭호 ${n} / ${total}`,
+    titlesLocked: (n) => `아직 만나지 못한 칭호가 ${n}종 남아 있습니다`,
     statsButtonLabel: "통계",
-    couponButtonLabel: "쿠폰 코드",
+    couponButtonLabel: "코드 입력",
   },
   vi: {
     appTitle: "Bói Bài Tarot",
@@ -4821,8 +5668,6 @@ const T = {
     ttsNoticeCancel: "Để lúc khác",
     personalizeLabel: "Kế thừa ghi chép những lần xem bói trước của bạn",
     personalizeNote: (n) => `Ghi chép ${n} lần xem gần nhất sẽ làm tư liệu tham khảo cho lần này.\nKhi tắt, nội dung quá khứ hoàn toàn không được tham chiếu.`,
-    resurrectionPlaceholder: "Nhập Thần Chú Hồi Sinh...",
-    resurrectionButton: "Niệm thần chú",
     resurrectionError: "Thần chú có vẻ không đúng. Xin kiểm tra lại một lần nữa.",
     orientationPrompt: "Theo bạn, chiều của lá bài vừa rút đã đúng chưa?",
     orientationYes: "Tôi thấy đúng rồi",
@@ -4860,11 +5705,32 @@ const T = {
     aiStatusLabel: "Luận giải AI",
     aiStatusOn: "Đang bật",
     aiStatusOff: "Đang tắt (chế độ văn bản mẫu)",
+    couponNote: "Chấp nhận cả mã ưu đãi lẫn Thần Chú Hồi Sinh.",
     couponPlaceholder: "Nhập mã...",
     confirmButton: "Xác nhận",
     historyButtonLabel: (n) => `Lịch sử (${n})`,
+    characterButtonLabel: "Trưởng thành",
+    characterLabel: "Người đồng hành",
+    characterLevel: (n) => `Lv. ${n}`,
+    characterDraws: "Số lần xem",
+    characterStreak: "Chuỗi ngày dài nhất",
+    characterXp: "Tổng kinh nghiệm",
+    characterEmpty: "Hành trình của bạn chưa bắt đầu.",
+    characterGrowthNote: "Con số bên phải là mức tăng mỗi lần xem với vai trò hiện tại.",
+    characterStatsNote: "Chỉ số đã tích lũy không bao giờ giảm khi vai trò đổi. Chỉ cách bạn lớn lên là thay đổi.",
+    characterNote: "Cấp độ chỉ phản chiếu quãng đường bạn đã đi. Nó không bao giờ ảnh hưởng đến lời phán.",
+    titlesButtonLabel: "Danh hiệu",
+    achievementsButtonLabel: "Thành tựu",
+    titlesIntro: "Chọn một danh hiệu để mang theo. Nó sẽ hiện bên cạnh tên bạn trong bảng xếp hạng sắp tới.",
+    titlesEmpty: "Chưa có danh hiệu nào.",
+    achievementsIntro: "Những gì bạn đã mở khóa, cùng ngày tháng. Lịch sử đã khắc thì không phai.",
+    achievementsEmpty: "Chưa mở khóa thành tựu nào.",
+    achievementsLabel: (n, total) => `Thành tựu ${n} / ${total}`,
+    achievementsLocked: (n) => `Còn ${n} chưa mở`,
+    titlesLabel: (n, total) => `Danh hiệu ${n} / ${total}`,
+    titlesLocked: (n) => `Vẫn còn ${n} danh hiệu chưa được khám phá`,
     statsButtonLabel: "Thống kê",
-    couponButtonLabel: "Mã ưu đãi",
+    couponButtonLabel: "Nhập mã",
   },
   id: {
     appTitle: "Ramalan Tarot",
@@ -4953,8 +5819,6 @@ const T = {
     ttsNoticeCancel: "Nanti saja",
     personalizeLabel: "Wariskan catatan ramalan yang pernah kamu lakukan",
     personalizeNote: (n) => `Catatan ${n} ramalan terakhir akan menjadi acuan untuk ramalan kali ini.\nSaat dimatikan, isi masa lalu sama sekali tidak dirujuk.`,
-    resurrectionPlaceholder: "Masukkan Mantra Kebangkitan...",
-    resurrectionButton: "Rapalkan mantra",
     resurrectionError: "Mantranya sepertinya keliru. Mohon periksa sekali lagi.",
     orientationPrompt: "Menurutmu, arah kartu yang kamu tarik sudah benar?",
     orientationYes: "Menurutku benar",
@@ -4992,11 +5856,32 @@ const T = {
     aiStatusLabel: "Ramalan AI",
     aiStatusOn: "Aktif",
     aiStatusOff: "Nonaktif (mode teks baku)",
+    couponNote: "Menerima kode kupon maupun Mantra Kebangkitan.",
     couponPlaceholder: "Masukkan kode...",
     confirmButton: "Konfirmasi",
     historyButtonLabel: (n) => `Riwayat (${n})`,
+    characterButtonLabel: "Pertumbuhan",
+    characterLabel: "Pendamping",
+    characterLevel: (n) => `Lv. ${n}`,
+    characterDraws: "Jumlah tilikan",
+    characterStreak: "Rentetan terpanjang",
+    characterXp: "Total pengalaman",
+    characterEmpty: "Perjalananmu belum dimulai.",
+    characterGrowthNote: "Angka di kanan adalah pertambahan per tilikan pada peran saat ini.",
+    characterStatsNote: "Nilai yang sudah terkumpul tidak pernah berkurang saat peranmu berubah. Yang berubah hanya cara kamu bertumbuh.",
+    characterNote: "Level hanya mencerminkan sejauh mana kamu melangkah. Ia tidak pernah memengaruhi hasil ramalan.",
+    titlesButtonLabel: "Gelar",
+    achievementsButtonLabel: "Pencapaian",
+    titlesIntro: "Pilih satu gelar untuk dikenakan. Gelar ini akan tampil di samping namamu pada peringkat yang akan datang.",
+    titlesEmpty: "Belum ada gelar yang diperoleh.",
+    achievementsIntro: "Catatan yang telah terbuka beserta tanggalnya. Sejarah yang sudah terukir tidak akan hilang.",
+    achievementsEmpty: "Belum ada pencapaian yang terbuka.",
+    achievementsLabel: (n, total) => `Pencapaian ${n} / ${total}`,
+    achievementsLocked: (n) => `${n} belum terbuka`,
+    titlesLabel: (n, total) => `Gelar ${n} / ${total}`,
+    titlesLocked: (n) => `Masih ada ${n} gelar yang belum ditemukan`,
     statsButtonLabel: "Statistik",
-    couponButtonLabel: "Kode kupon",
+    couponButtonLabel: "Kode",
   },
   ms: {
     appTitle: "Tilikan Tarot",
@@ -5085,8 +5970,6 @@ const T = {
     ttsNoticeCancel: "Nanti sahaja",
     personalizeLabel: "Wariskan catatan tilikan yang pernah anda lakukan",
     personalizeNote: (n) => `Catatan ${n} tilikan terakhir akan menjadi acuan untuk tilikan kali ini.\nSaat dimatikan, isi masa lalu sama sekali tidak dirujuk.`,
-    resurrectionPlaceholder: "Masukkan Mantra Kebangkitan...",
-    resurrectionButton: "Rapalkan mantra",
     resurrectionError: "Mantranya sepertinya keliru. Mohon periksa sekali lagi.",
     orientationPrompt: "Menurut anda, arah kad yang anda tarik sudah benar?",
     orientationYes: "Menurut saya benar",
@@ -5124,11 +6007,32 @@ const T = {
     aiStatusLabel: "Tilikan AI",
     aiStatusOn: "Aktif",
     aiStatusOff: "Nonaktif (mode teks baku)",
-    couponPlaceholder: "Masukkan kode...",
+    couponNote: "Menerima kod kupon mahupun Mantra Kebangkitan.",
+    couponPlaceholder: "Masukkan kod...",
     confirmButton: "Konfirmasi",
     historyButtonLabel: (n) => `Riwayat (${n})`,
+    characterButtonLabel: "Pertumbuhan",
+    characterLabel: "Pendamping",
+    characterLevel: (n) => `Lv. ${n}`,
+    characterDraws: "Jumlah tilikan",
+    characterStreak: "Rentetan terpanjang",
+    characterXp: "Jumlah pengalaman",
+    characterEmpty: "Perjalanan anda belum bermula.",
+    characterGrowthNote: "Angka di kanan ialah pertambahan setiap tilikan bagi peranan semasa.",
+    characterStatsNote: "Nilai yang telah terkumpul tidak pernah berkurang apabila peranan anda berubah. Yang berubah hanyalah cara anda bertumbuh.",
+    characterNote: "Tahap hanya mencerminkan sejauh mana anda melangkah. Ia tidak pernah mempengaruhi hasil tilikan.",
+    titlesButtonLabel: "Gelaran",
+    achievementsButtonLabel: "Pencapaian",
+    titlesIntro: "Pilih satu gelaran untuk dipakai. Gelaran ini akan terpapar di sebelah nama anda pada kedudukan yang akan datang.",
+    titlesEmpty: "Belum ada gelaran yang diperoleh.",
+    achievementsIntro: "Catatan yang telah dibuka berserta tarikhnya. Sejarah yang sudah terukir tidak akan hilang.",
+    achievementsEmpty: "Belum ada pencapaian yang dibuka.",
+    achievementsLabel: (n, total) => `Pencapaian ${n} / ${total}`,
+    achievementsLocked: (n) => `${n} belum dibuka`,
+    titlesLabel: (n, total) => `Gelaran ${n} / ${total}`,
+    titlesLocked: (n) => `Masih ada ${n} gelaran yang belum ditemui`,
     statsButtonLabel: "Statistik",
-    couponButtonLabel: "Kode kupon",
+    couponButtonLabel: "Kod",
   },
   ja: {
     appTitle: "タロット占い",
@@ -5217,8 +6121,6 @@ const T = {
     ttsNoticeCancel: "やめておく",
     personalizeLabel: "貴方が過去に行った占いの記録を継承する",
     personalizeNote: (n) => `直近${n}回分の記録を、今回の占断の参考にします。\nオフのときは、過去の内容は一切参照されません。`,
-    resurrectionPlaceholder: "ふっかつのじゅもんを入力...",
-    resurrectionButton: "じゅもんを唱える",
     resurrectionError: "じゅもんが正しくないようです。もう一度お確かめください。",
     orientationPrompt: "あなたの引いたカードの向きは、正しいと思いますか？",
     orientationYes: "正しいと思う",
@@ -5257,11 +6159,32 @@ const T = {
     aiStatusLabel: "AI鑑定",
     aiStatusOn: "オン",
     aiStatusOff: "オフ（定型文モード）",
+    couponNote: "クーポンコードと、ふっかつのじゅもんの両方を受け付けます。",
     couponPlaceholder: "コードを入力...",
     confirmButton: "確定",
     historyButtonLabel: (n) => `履歴（${n}件）`,
+    characterButtonLabel: "育成",
+    characterLabel: "伴走者",
+    characterLevel: (n) => `Lv. ${n}`,
+    characterDraws: "占った回数",
+    characterStreak: "最長の連続日数",
+    characterXp: "累計の経験値",
+    characterEmpty: "まだ歩みが始まっていません。",
+    characterGrowthNote: "右の数値は、今のジョブでの1回あたりの伸びしろです。",
+    characterStatsNote: "ジョブが変わっても、積み上げた数値は減りません。変わるのは伸び方だけです。",
+    characterNote: "レベルは歩んだ距離を映すだけの指標です。鑑定の結果には一切影響しません。",
+    titlesButtonLabel: "称号",
+    achievementsButtonLabel: "実績",
+    titlesIntro: "身につけたい称号をひとつ選べます。将来のランキングで、あなたの名前とともに表示されます。",
+    titlesEmpty: "まだ称号を得ていません。",
+    achievementsIntro: "解除した記録と、その日付です。一度刻まれた歴史は消えません。",
+    achievementsEmpty: "まだ解除した実績はありません。",
+    achievementsLabel: (n, total) => `実績 ${n} / ${total}`,
+    achievementsLocked: (n) => `未解除 ${n}件`,
+    titlesLabel: (n, total) => `称号 ${n} / ${total}`,
+    titlesLocked: (n) => `あと${n}種類、まだ見ぬ称号があります`,
     statsButtonLabel: "統計",
-    couponButtonLabel: "クーポンコード",
+    couponButtonLabel: "コード入力",
   },
   "zh-TW": {
     appTitle: "塔羅占卜",
@@ -5350,8 +6273,6 @@ const T = {
     ttsNoticeCancel: "先不要",
     personalizeLabel: "延續過去的記錄",
     personalizeNote: (n) => `將最近${n}次的記錄作為本次占卜的參考。\n關閉時，完全不會參照過去的內容。`,
-    resurrectionPlaceholder: "輸入復活咒語...",
-    resurrectionButton: "唸出咒語",
     resurrectionError: "咒語似乎不正確，請再次確認。",
     orientationPrompt: "你認為抽到的這張牌，方向是正的嗎？",
     orientationYes: "我認為是正位",
@@ -5389,11 +6310,32 @@ const T = {
     aiStatusLabel: "AI占卜",
     aiStatusOn: "開啟",
     aiStatusOff: "關閉（固定文字模式）",
+    couponNote: "優惠代碼與復活咒語，兩者皆可輸入。",
     couponPlaceholder: "輸入代碼...",
     confirmButton: "確認",
     historyButtonLabel: (n) => `歷史紀錄（${n}筆）`,
+    characterButtonLabel: "養成",
+    characterLabel: "同行者",
+    characterLevel: (n) => `Lv. ${n}`,
+    characterDraws: "占卜次數",
+    characterStreak: "最長連續天數",
+    characterXp: "累計經驗值",
+    characterEmpty: "旅程尚未開始。",
+    characterGrowthNote: "右側數值是目前職業每次的成長量。",
+    characterStatsNote: "即使職業改變，已累積的數值也不會減少，改變的只有成長方式。",
+    characterNote: "等級只是映照走過距離的指標，對占卜結果毫無影響。",
+    titlesButtonLabel: "稱號",
+    achievementsButtonLabel: "成就",
+    titlesIntro: "可以選擇一個要配戴的稱號。未來的排行榜上，將與你的名字一同顯示。",
+    titlesEmpty: "尚未取得任何稱號。",
+    achievementsIntro: "已解鎖的紀錄與日期。一旦刻下的歷史不會消失。",
+    achievementsEmpty: "尚未解鎖任何成就。",
+    achievementsLabel: (n, total) => `成就 ${n} / ${total}`,
+    achievementsLocked: (n) => `未解鎖 ${n} 項`,
+    titlesLabel: (n, total) => `稱號 ${n} / ${total}`,
+    titlesLocked: (n) => `還有 ${n} 種尚未取得的稱號`,
     statsButtonLabel: "統計",
-    couponButtonLabel: "優惠代碼",
+    couponButtonLabel: "代碼輸入",
   },
   "zh-CN": {
     appTitle: "塔罗占卜",
@@ -5482,8 +6424,6 @@ const T = {
     ttsNoticeCancel: "先不要",
     personalizeLabel: "延续过去的记录",
     personalizeNote: (n) => `将最近${n}次的记录作为本次占卜的参考。\n关闭时，完全不会参照过去的内容。`,
-    resurrectionPlaceholder: "输入复活咒语...",
-    resurrectionButton: "念出咒语",
     resurrectionError: "咒语似乎不正确，请再次确认。",
     orientationPrompt: "你认为抽到的这张牌，方向是正的吗？",
     orientationYes: "我认为是正位",
@@ -5521,11 +6461,32 @@ const T = {
     aiStatusLabel: "AI占卜",
     aiStatusOn: "打开",
     aiStatusOff: "关闭（固定文本模式）",
+    couponNote: "优惠代码与复活咒语，两者皆可输入。",
     couponPlaceholder: "输入代码...",
     confirmButton: "确认",
     historyButtonLabel: (n) => `历史纪录（${n}笔）`,
+    characterButtonLabel: "养成",
+    characterLabel: "同行者",
+    characterLevel: (n) => `Lv. ${n}`,
+    characterDraws: "占卜次数",
+    characterStreak: "最长连续天数",
+    characterXp: "累计经验值",
+    characterEmpty: "旅程尚未开始。",
+    characterGrowthNote: "右侧数值是当前职业每次的成长量。",
+    characterStatsNote: "即使职业改变，已累积的数值也不会减少，改变的只有成长方式。",
+    characterNote: "等级只是映照走过距离的指标，对占卜结果毫无影响。",
+    titlesButtonLabel: "称号",
+    achievementsButtonLabel: "成就",
+    titlesIntro: "可以选择一个要佩戴的称号。未来的排行榜上，将与你的名字一同显示。",
+    titlesEmpty: "尚未取得任何称号。",
+    achievementsIntro: "已解锁的记录与日期。一旦刻下的历史不会消失。",
+    achievementsEmpty: "尚未解锁任何成就。",
+    achievementsLabel: (n, total) => `成就 ${n} / ${total}`,
+    achievementsLocked: (n) => `未解锁 ${n} 项`,
+    titlesLabel: (n, total) => `称号 ${n} / ${total}`,
+    titlesLocked: (n) => `还有 ${n} 种尚未取得的称号`,
     statsButtonLabel: "统计",
-    couponButtonLabel: "优惠代码",
+    couponButtonLabel: "代码输入",
   },
   en: {
     appTitle: "Tarot Reading",
@@ -5614,8 +6575,6 @@ const T = {
     ttsNoticeCancel: "Not now",
     personalizeLabel: "Carry over past readings",
     personalizeNote: (n) => `Your last ${n} readings will inform today's answer.\nWhen off, nothing from your past is referenced.`,
-    resurrectionPlaceholder: "Enter your resurrection spell...",
-    resurrectionButton: "Cast the Spell",
     resurrectionError: "That spell doesn't seem right. Please check it again.",
     orientationPrompt: "Do you think the card you drew is upright?",
     orientationYes: "I think it's upright",
@@ -5653,11 +6612,32 @@ const T = {
     aiStatusLabel: "AI Reading",
     aiStatusOn: "On",
     aiStatusOff: "Off (template mode)",
-    couponPlaceholder: "Enter code...",
+    couponNote: "Accepts both coupon codes and resurrection spells.",
+    couponPlaceholder: "Enter a code...",
     confirmButton: "Confirm",
     historyButtonLabel: (n) => `History (${n})`,
+    characterButtonLabel: "Growth",
+    characterLabel: "Companion",
+    characterLevel: (n) => `Lv. ${n}`,
+    characterDraws: "Readings drawn",
+    characterStreak: "Longest streak",
+    characterXp: "Total experience",
+    characterEmpty: "Your journey has not begun yet.",
+    characterGrowthNote: "The figure on the right is the gain per reading in your current calling.",
+    characterStatsNote: "Your accumulated stats never fall when your calling changes. Only the way you grow does.",
+    characterNote: "Level only reflects how far you have walked. It never affects a reading.",
+    titlesButtonLabel: "Titles",
+    achievementsButtonLabel: "Achievements",
+    titlesIntro: "Choose one title to wear. It will appear beside your name in the rankings to come.",
+    titlesEmpty: "No titles earned yet.",
+    achievementsIntro: "What you have unlocked, and when. Once carved, this history does not fade.",
+    achievementsEmpty: "No achievements unlocked yet.",
+    achievementsLabel: (n, total) => `Achievements ${n} / ${total}`,
+    achievementsLocked: (n) => `${n} still locked`,
+    titlesLabel: (n, total) => `Titles ${n} / ${total}`,
+    titlesLocked: (n) => `${n} more titles remain undiscovered`,
     statsButtonLabel: "Stats",
-    couponButtonLabel: "Coupon Code",
+    couponButtonLabel: "Enter code",
   },
   tl: {
     appTitle: "Tarot Reading",
@@ -5746,8 +6726,6 @@ const T = {
     ttsNoticeCancel: "Sa susunod na lang",
     personalizeLabel: "Isama ang mga nakaraang reading",
     personalizeNote: (n) => `Gagabayan ng huling ${n} reading mo ang sagot ngayon.\nKapag naka-off, walang sinasangguni mula sa nakaraan.`,
-    resurrectionPlaceholder: "Ilagay ang resurrection spell mo...",
-    resurrectionButton: "Bigkasin ang Spell",
     resurrectionError: "Mukhang mali ang spell. Paki-check ulit.",
     orientationPrompt: "Sa tingin mo, upright ba ang card na hinugot mo?",
     orientationYes: "Sa tingin ko upright",
@@ -5785,11 +6763,32 @@ const T = {
     aiStatusLabel: "AI Reading",
     aiStatusOn: "Naka-on",
     aiStatusOff: "Naka-off (template mode)",
-    couponPlaceholder: "Ilagay ang code...",
+    couponNote: "Tumatanggap ng coupon code at resurrection spell.",
+    couponPlaceholder: "Maglagay ng code...",
     confirmButton: "Kumpirmahin",
     historyButtonLabel: (n) => `Kasaysayan (${n})`,
+    characterButtonLabel: "Paglago",
+    characterLabel: "Kasama",
+    characterLevel: (n) => `Lv. ${n}`,
+    characterDraws: "Bilang ng reading",
+    characterStreak: "Pinakamahabang streak",
+    characterXp: "Kabuuang karanasan",
+    characterEmpty: "Hindi pa nagsisimula ang paglalakbay mo.",
+    characterGrowthNote: "Ang bilang sa kanan ay ang tubo bawat reading sa kasalukuyang tungkulin mo.",
+    characterStatsNote: "Hindi bumababa ang naipon mong stats kapag nagbago ang tungkulin. Ang paraan lang ng paglago ang nagbabago.",
+    characterNote: "Sinasalamin lang ng level kung gaano ka na kalayo. Hindi nito naaapektuhan ang reading.",
+    titlesButtonLabel: "Mga Titulo",
+    achievementsButtonLabel: "Mga Tagumpay",
+    titlesIntro: "Pumili ng isang titulong isusuot. Lalabas ito katabi ng pangalan mo sa darating na ranking.",
+    titlesEmpty: "Wala pang natamong titulo.",
+    achievementsIntro: "Ang mga na-unlock mo, at kung kailan. Hindi nabubura ang kasaysayang naitala na.",
+    achievementsEmpty: "Wala pang na-unlock na tagumpay.",
+    achievementsLabel: (n, total) => `Mga Tagumpay ${n} / ${total}`,
+    achievementsLocked: (n) => `${n} pa ang naka-lock`,
+    titlesLabel: (n, total) => `Mga Titulo ${n} / ${total}`,
+    titlesLocked: (n) => `May ${n} pang titulong hindi pa natutuklasan`,
     statsButtonLabel: "Stats",
-    couponButtonLabel: "Coupon Code",
+    couponButtonLabel: "Code",
   },
   th: {
     appTitle: "ไพ่ทาโรต์",
@@ -5878,8 +6877,6 @@ const T = {
     ttsNoticeCancel: "ไว้ก่อน",
     personalizeLabel: "สืบทอดบันทึกที่ผ่านมา",
     personalizeNote: (n) => `จะใช้บันทึก ${n} ครั้งล่าสุดเป็นข้อมูลอ้างอิงในการทำนายครั้งนี้\nหากปิดอยู่ จะไม่มีการอ้างอิงข้อมูลในอดีตใดๆ`,
-    resurrectionPlaceholder: "ป้อนคาถาฟื้นคืนชีพของคุณ...",
-    resurrectionButton: "ร่ายคาถา",
     resurrectionError: "คาถาดูเหมือนจะไม่ถูกต้อง กรุณาตรวจสอบอีกครั้ง",
     orientationPrompt: "คุณคิดว่าไพ่ที่จับได้นั้นตั้งตรงหรือไม่?",
     orientationYes: "ฉันคิดว่าตั้งตรง",
@@ -5917,11 +6914,32 @@ const T = {
     aiStatusLabel: "การทำนายด้วย AI",
     aiStatusOn: "เปิด",
     aiStatusOff: "ปิด (โหมดข้อความสำเร็จรูป)",
-    couponPlaceholder: "ป้อนรหัส...",
+    couponNote: "รับได้ทั้งรหัสคูปองและมนตร์คืนชีพ",
+    couponPlaceholder: "ใส่รหัส...",
     confirmButton: "ยืนยัน",
     historyButtonLabel: (n) => `ประวัติ (${n})`,
+    characterButtonLabel: "การเติบโต",
+    characterLabel: "ผู้ร่วมทาง",
+    characterLevel: (n) => `Lv. ${n}`,
+    characterDraws: "จำนวนครั้งที่ดูดวง",
+    characterStreak: "สถิติต่อเนื่องสูงสุด",
+    characterXp: "ค่าประสบการณ์สะสม",
+    characterEmpty: "การเดินทางยังไม่เริ่มต้น",
+    characterGrowthNote: "ตัวเลขทางขวาคือค่าที่เพิ่มต่อการดูดวงหนึ่งครั้งในบทบาทปัจจุบัน",
+    characterStatsNote: "ค่าที่สะสมไว้จะไม่ลดลงแม้บทบาทจะเปลี่ยน สิ่งที่เปลี่ยนคือวิธีเติบโตเท่านั้น",
+    characterNote: "เลเวลเป็นเพียงภาพสะท้อนระยะทางที่เดินมา ไม่มีผลต่อคำทำนายใดๆ",
+    titlesButtonLabel: "ฉายา",
+    achievementsButtonLabel: "ความสำเร็จ",
+    titlesIntro: "เลือกฉายาหนึ่งอันเพื่อสวมใส่ ฉายานี้จะปรากฏข้างชื่อของคุณในอันดับที่จะมีในอนาคต",
+    titlesEmpty: "ยังไม่ได้รับฉายาใดๆ",
+    achievementsIntro: "บันทึกที่ปลดล็อกแล้วพร้อมวันที่ ประวัติที่จารึกไว้แล้วจะไม่หายไป",
+    achievementsEmpty: "ยังไม่ได้ปลดล็อกความสำเร็จใดๆ",
+    achievementsLabel: (n, total) => `ความสำเร็จ ${n} / ${total}`,
+    achievementsLocked: (n) => `ยังไม่ปลดล็อก ${n} รายการ`,
+    titlesLabel: (n, total) => `ฉายา ${n} / ${total}`,
+    titlesLocked: (n) => `ยังมีฉายาที่ยังไม่ได้รับอีก ${n} แบบ`,
     statsButtonLabel: "สถิติ",
-    couponButtonLabel: "รหัสคูปอง",
+    couponButtonLabel: "ใส่รหัส",
   },
 };
 
@@ -5970,6 +6988,10 @@ export default function TarotDraw() {
   const [showCoupon, setShowCoupon] = useState(false);
   const [showHistory, setShowHistory] = useState(false);
   const [showStats, setShowStats] = useState(false);
+  const [showTitles, setShowTitles] = useState(false);
+  const [showAchievements, setShowAchievements] = useState(false);
+  const [showCharacter, setShowCharacter] = useState(false);
+  const [equippedTitle, setEquippedTitle] = useState(loadEquippedTitle());
   const [showLastResult, setShowLastResult] = useState(false);
   const [aiEnabled, setAiEnabled] = useState(isAiEnabled());
   const [couponInput, setCouponInput] = useState("");
@@ -6002,7 +7024,6 @@ export default function TarotDraw() {
   const [mementoCode, setMementoCode] = useState(""); // ①客観的な呪文コード
   const [mementoPoetry, setMementoPoetry] = useState(""); // ②主観的な詩的一言
   const [mementoLoading, setMementoLoading] = useState(false);
-  const [resurrectionInput, setResurrectionInput] = useState(""); // タイトル画面での呪文入力欄
   const [resurrectionError, setResurrectionError] = useState(false);
   const [deepDiveReadingLoading, setDeepDiveReadingLoading] = useState(false);
   const [showDeepDiveGate, setShowDeepDiveGate] = useState(false); // 課金ゲートUIの表示切替
@@ -6035,14 +7056,12 @@ export default function TarotDraw() {
       const { scores } = calcStats(majorCard, minorResults);
       const entry = {
         id: Date.now(),
-        ms: Date.now(),
         date: new Date().toLocaleDateString("ja-JP"),
         time: new Date().toLocaleTimeString("ja-JP", { hour: "2-digit", minute: "2-digit" }),
         userName: userName.trim(),
         question,
         majorCard: {
           id: majorCard.card.id,
-          ms: majorCard.card.id,
           name: majorCard.card.name,
           reversed: majorCard.reversed,
           kw: majorCard.reversed ? majorCard.card.rev : majorCard.card.up,
@@ -6201,7 +7220,16 @@ export default function TarotDraw() {
   };
 
   const handleCoupon = () => {
-    const code = couponInput.trim().toLowerCase();
+    const raw = couponInput.trim();
+    // まず「ふっかつのじゅもん」として解釈を試みる。
+    // じゅもんは大文字とハイフンを含む固有の形なので、クーポンコードと衝突しない。
+    if (raw && resumeFromResurrectionCode(raw)) {
+      setCouponInput("");
+      setShowCoupon(false);
+      return;
+    }
+    setResurrectionError(false);
+    const code = raw.toLowerCase();
     if (code === "doroumi") {
       localStorage.clear();
       setTodayCount(0);
@@ -6263,8 +7291,9 @@ export default function TarotDraw() {
       setShowCoupon(false);
       alert("✓ 次の1回の占いで、星がすべてお菓子になります（スコア自体は変わりません）");
     } else {
-      alert("❌ 無効なコード");
-      setCouponInput("");
+      // クーポンにも、ふっかつのじゅもんにも該当しない。
+      // alertで断ずるとじゅもんの打ち間違いに冷たいので、パネル内に静かに出す。
+      setResurrectionError(true);
     }
   };
 
@@ -6710,12 +7739,19 @@ export default function TarotDraw() {
   };
 
   // タイトル画面で「ふっかつのじゅもん」を入力し、前回の対話ループ状態をまるごと復元する
-  const resumeFromResurrectionCode = () => {
-    const parsed = parseResurrectionCode(resurrectionInput);
-    if (!parsed) { setResurrectionError(true); return; }
+  /**
+   * 「ふっかつのじゅもん」から前回の状態を丸ごと復元する。
+   *
+   * 入力欄はクーポンコード欄に統合した。
+   * 以前はタイトル画面に専用の入力欄を別に置いていたが、コードを受け取った側が
+   * 「どちらの欄に入れるのか」を判断できず、実際に混乱が起きた。
+   * どちらも「コードを入れる」という同じ行為なので、窓口をひとつにする。
+   */
+  const resumeFromResurrectionCode = (rawCode) => {
+    const parsed = parseResurrectionCode(rawCode);
+    if (!parsed) return false;
 
     setResurrectionError(false);
-    setResurrectionInput("");
     setUserName(parsed.userName || "");
     setQuestion(parsed.question || "");
     setMajorCard(parsed.majorCard);
@@ -6728,6 +7764,7 @@ export default function TarotDraw() {
     setRevealStage(3);
     setReachInfo(null);
     setPhase("major-revealed"); // 保存されたデータには鑑定文が全部含まれているため、最終結果までそのまま復元できる
+    return true;
   };
 
   const openMajor = (flip) => {
@@ -7214,46 +8251,45 @@ export default function TarotDraw() {
               </p>
             )}
 
-            <div style={{ marginTop: "14px", display: "flex", flexDirection: "column", alignItems: "center", gap: "6px" }}>
-              <input
-                type="text"
-                value={resurrectionInput}
-                onChange={(e) => { setResurrectionInput(e.target.value); setResurrectionError(false); }}
-                onKeyDown={(e) => { if (e.key === "Enter") resumeFromResurrectionCode(); }}
-                placeholder={t.resurrectionPlaceholder}
-                style={{ fontFamily: "monospace", fontSize: "12px", padding: "8px 10px", borderRadius: "6px", border: "1px solid rgba(201,162,75,0.3)", background: "rgba(255,255,255,0.03)", color: "#f1ead8", width: "80%", maxWidth: "280px", textAlign: "center" }}
-              />
-              {resurrectionInput && (
-                <button className="reset-btn" onClick={resumeFromResurrectionCode} style={{ fontSize: "11px" }}>
-                  {t.resurrectionButton}
-                </button>
-              )}
-              {resurrectionError && (
-                <p style={{ fontSize: "10.5px", color: "var(--rose)", margin: 0 }}>{t.resurrectionError}</p>
-              )}
-            </div>
-
             {history.length > 0 && (
               <div style={{ display: "flex", gap: "8px", marginTop: "8px", flexWrap: "wrap", justifyContent: "center" }}>
                 <button
                   className="reset-btn"
-                  onClick={() => { setShowHistory(!showHistory); setShowStats(false); setShowLastResult(false); }}
+                  onClick={() => { setShowHistory(!showHistory); setShowStats(false); setShowLastResult(false); setShowTitles(false); setShowAchievements(false); setShowCharacter(false); }}
                 >
                   <RotateCcw size={14} />
                   {t.historyButtonLabel(history.length)}
                 </button>
                 <button
                   className="reset-btn"
-                  onClick={() => { setShowStats(!showStats); setShowHistory(false); setShowLastResult(false); }}
+                  onClick={() => { setShowStats(!showStats); setShowHistory(false); setShowLastResult(false); setShowTitles(false); setShowAchievements(false); setShowCharacter(false); }}
                 >
                   {t.statsButtonLabel}
                 </button>
                 <button
                   className="reset-btn"
-                  onClick={() => { setShowLastResult(!showLastResult); setShowHistory(false); setShowStats(false); }}
+                  onClick={() => { setShowLastResult(!showLastResult); setShowHistory(false); setShowStats(false); setShowTitles(false); setShowAchievements(false); setShowCharacter(false); }}
                 >
                   <Sparkles size={14} />
                   {t.lastResultButton}
+                </button>
+                <button
+                  className="reset-btn"
+                  onClick={() => { setShowTitles(!showTitles); setShowHistory(false); setShowStats(false); setShowLastResult(false); setShowAchievements(false); setShowCharacter(false); }}
+                >
+                  {t.titlesButtonLabel}
+                </button>
+                <button
+                  className="reset-btn"
+                  onClick={() => { setShowAchievements(!showAchievements); setShowHistory(false); setShowStats(false); setShowLastResult(false); setShowTitles(false); setShowCharacter(false); }}
+                >
+                  {t.achievementsButtonLabel}
+                </button>
+                <button
+                  className="reset-btn"
+                  onClick={() => { setShowCharacter(!showCharacter); setShowHistory(false); setShowStats(false); setShowLastResult(false); setShowTitles(false); setShowAchievements(false); }}
+                >
+                  {t.characterButtonLabel}
                 </button>
               </div>
             )}
@@ -7263,11 +8299,21 @@ export default function TarotDraw() {
             </button>
 
             {showCoupon ? (
-              <CouponPanel couponInput={couponInput} setCouponInput={setCouponInput} handleCoupon={handleCoupon} aiEnabled={aiEnabled} lang={lang} />
+              <CouponPanel couponInput={couponInput} setCouponInput={setCouponInput} handleCoupon={handleCoupon} aiEnabled={aiEnabled} lang={lang} codeError={resurrectionError} />
             ) : null}
 
             {showHistory ? <HistoryPanel history={history} lang={lang} /> : null}
             {showStats ? <StatsPanel history={history} lang={lang} /> : null}
+            {showTitles ? (
+              <TitlesPanel
+                history={history}
+                lang={lang}
+                equipped={equippedTitle}
+                onEquip={(k) => { setEquippedTitle(k); saveEquippedTitle(k); }}
+              />
+            ) : null}
+            {showAchievements ? <AchievementsPanel history={history} lang={lang} /> : null}
+            {showCharacter ? <CharacterPanel history={history} lang={lang} membership={membership} equippedTitle={equippedTitle} /> : null}
             {showLastResult ? (
               <LastResultPanel entry={history[0]} lang={lang} onClose={() => setShowLastResult(false)} />
             ) : null}
