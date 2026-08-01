@@ -4676,6 +4676,66 @@ function legalDoc(lang) {
  * 予告する意味がある。閉店中の空白ではなく「次はここが動く」という予告にする。
  */
 /**
+ * 【ボトムナビ】画面下に固定されるタブバー。
+ *
+ * スマホで「アプリらしさ」を決める要素のうち、最も効くのがこれ。
+ * 本文中に埋もれたボタン列では、いくら機能があってもページにしか見えない。
+ *
+ * 占いの進行中（idle以外）は表示しない。
+ * カードを引いている最中にナビが出ていると儀式が途切れるため、
+ * 没入を優先してタイトル画面でのみ出す。
+ */
+function BottomNav({ current, onChange, lang, hasHistory }) {
+  const t = T[lang] || T.ja;
+  const items = [
+    { key: "draw", label: t.navDraw, icon: Shuffle },
+    { key: "records", label: t.navRecords, icon: RotateCcw, needsHistory: true },
+    { key: "growth", label: t.navGrowth, icon: Star, needsHistory: true },
+    { key: "adventure", label: t.navAdventure, icon: Swords },
+    { key: "more", label: t.navMore, icon: Sparkles },
+  ].filter((it) => !it.needsHistory || hasHistory);
+
+  return (
+    <nav
+      style={{
+        position: "fixed", left: 0, right: 0, bottom: 0, zIndex: 60,
+        display: "flex", justifyContent: "space-around", alignItems: "stretch",
+        background: "rgba(14,12,24,0.94)",
+        backdropFilter: "blur(12px)",
+        borderTop: "1px solid rgba(201,162,75,0.22)",
+        // iPhoneのホームインジケータに重ならないようにする
+        paddingBottom: "env(safe-area-inset-bottom, 0px)",
+      }}
+    >
+      {items.map((it) => {
+        const on = current === it.key;
+        const Icon = it.icon;
+        return (
+          <button
+            key={it.key}
+            onClick={() => onChange(it.key)}
+            aria-current={on ? "page" : undefined}
+            style={{
+              flex: 1, background: "none", border: "none", cursor: "pointer",
+              padding: "9px 2px 8px", display: "flex", flexDirection: "column",
+              alignItems: "center", gap: "3px", fontFamily: "inherit",
+              color: on ? "var(--gold)" : "var(--muted)",
+              opacity: on ? 1 : 0.65,
+              borderTop: `2px solid ${on ? "var(--gold)" : "transparent"}`,
+              marginTop: "-1px",
+              transition: "color .2s, opacity .2s",
+            }}
+          >
+            <Icon size={17} />
+            <span style={{ fontSize: "9.5px", letterSpacing: ".02em", whiteSpace: "nowrap" }}>{it.label}</span>
+          </button>
+        );
+      })}
+    </nav>
+  );
+}
+
+/**
  * 【規約パネル】利用規約とプライバシーポリシーを表示する。
  * 番号付きの条項は連番を自前で振る（見出しごとにリセットする）。
  */
@@ -5888,6 +5948,11 @@ const T = {
     titlesLabel: (n, total) => `칭호 ${n} / ${total}`,
     titlesLocked: (n) => `아직 만나지 못한 칭호가 ${n}종 남아 있습니다`,
     statsButtonLabel: "통계",
+    navDraw: "점보기",
+    navRecords: "기록",
+    navGrowth: "육성",
+    navAdventure: "모험",
+    navMore: "기타",
     legalButtonLabel: "이용약관 · 개인정보처리방침",
     legalClose: "닫기",
     couponButtonLabel: "코드 입력",
@@ -6044,6 +6109,11 @@ const T = {
     titlesLabel: (n, total) => `Danh hiệu ${n} / ${total}`,
     titlesLocked: (n) => `Vẫn còn ${n} danh hiệu chưa được khám phá`,
     statsButtonLabel: "Thống kê",
+    navDraw: "Xem",
+    navRecords: "Ghi chép",
+    navGrowth: "Nuôi",
+    navAdventure: "Phiêu lưu",
+    navMore: "Khác",
     legalButtonLabel: "Điều khoản & Chính sách bảo mật",
     legalClose: "Đóng",
     couponButtonLabel: "Nhập mã",
@@ -6200,6 +6270,11 @@ const T = {
     titlesLabel: (n, total) => `Gelar ${n} / ${total}`,
     titlesLocked: (n) => `Masih ada ${n} gelar yang belum ditemukan`,
     statsButtonLabel: "Statistik",
+    navDraw: "Tilik",
+    navRecords: "Catatan",
+    navGrowth: "Tumbuh",
+    navAdventure: "Petualangan",
+    navMore: "Lainnya",
     legalButtonLabel: "Ketentuan Layanan & Kebijakan Privasi",
     legalClose: "Tutup",
     couponButtonLabel: "Kode",
@@ -6356,6 +6431,11 @@ const T = {
     titlesLabel: (n, total) => `Gelaran ${n} / ${total}`,
     titlesLocked: (n) => `Masih ada ${n} gelaran yang belum ditemui`,
     statsButtonLabel: "Statistik",
+    navDraw: "Tilik",
+    navRecords: "Rekod",
+    navGrowth: "Tumbuh",
+    navAdventure: "Kembara",
+    navMore: "Lain-lain",
     legalButtonLabel: "Terma Perkhidmatan & Dasar Privasi",
     legalClose: "Tutup",
     couponButtonLabel: "Kod",
@@ -6513,6 +6593,11 @@ const T = {
     titlesLabel: (n, total) => `称号 ${n} / ${total}`,
     titlesLocked: (n) => `あと${n}種類、まだ見ぬ称号があります`,
     statsButtonLabel: "統計",
+    navDraw: "占う",
+    navRecords: "記録",
+    navGrowth: "育成",
+    navAdventure: "冒険",
+    navMore: "その他",
     legalButtonLabel: "利用規約・プライバシーポリシー",
     legalClose: "閉じる",
     couponButtonLabel: "コード入力",
@@ -6669,6 +6754,11 @@ const T = {
     titlesLabel: (n, total) => `稱號 ${n} / ${total}`,
     titlesLocked: (n) => `還有 ${n} 種尚未取得的稱號`,
     statsButtonLabel: "統計",
+    navDraw: "占卜",
+    navRecords: "記錄",
+    navGrowth: "養成",
+    navAdventure: "冒險",
+    navMore: "其他",
     legalButtonLabel: "使用條款 · 隱私權政策",
     legalClose: "關閉",
     couponButtonLabel: "代碼輸入",
@@ -6825,6 +6915,11 @@ const T = {
     titlesLabel: (n, total) => `称号 ${n} / ${total}`,
     titlesLocked: (n) => `还有 ${n} 种尚未取得的称号`,
     statsButtonLabel: "统计",
+    navDraw: "占卜",
+    navRecords: "记录",
+    navGrowth: "养成",
+    navAdventure: "冒险",
+    navMore: "其他",
     legalButtonLabel: "使用条款 · 隐私政策",
     legalClose: "关闭",
     couponButtonLabel: "代码输入",
@@ -6981,6 +7076,11 @@ const T = {
     titlesLabel: (n, total) => `Titles ${n} / ${total}`,
     titlesLocked: (n) => `${n} more titles remain undiscovered`,
     statsButtonLabel: "Stats",
+    navDraw: "Draw",
+    navRecords: "Records",
+    navGrowth: "Growth",
+    navAdventure: "Adventure",
+    navMore: "More",
     legalButtonLabel: "Terms & Privacy Policy",
     legalClose: "Close",
     couponButtonLabel: "Enter code",
@@ -7137,6 +7237,11 @@ const T = {
     titlesLabel: (n, total) => `Mga Titulo ${n} / ${total}`,
     titlesLocked: (n) => `May ${n} pang titulong hindi pa natutuklasan`,
     statsButtonLabel: "Stats",
+    navDraw: "Bunot",
+    navRecords: "Tala",
+    navGrowth: "Paglago",
+    navAdventure: "Adventure",
+    navMore: "Iba pa",
     legalButtonLabel: "Mga Tuntunin at Patakaran sa Privacy",
     legalClose: "Isara",
     couponButtonLabel: "Code",
@@ -7293,6 +7398,11 @@ const T = {
     titlesLabel: (n, total) => `ฉายา ${n} / ${total}`,
     titlesLocked: (n) => `ยังมีฉายาที่ยังไม่ได้รับอีก ${n} แบบ`,
     statsButtonLabel: "สถิติ",
+    navDraw: "ดูดวง",
+    navRecords: "บันทึก",
+    navGrowth: "เติบโต",
+    navAdventure: "ผจญภัย",
+    navMore: "อื่นๆ",
     legalButtonLabel: "ข้อกำหนดการใช้งาน · นโยบายความเป็นส่วนตัว",
     legalClose: "ปิด",
     couponButtonLabel: "ใส่รหัส",
@@ -7349,6 +7459,7 @@ export default function TarotDraw() {
   const [showCharacter, setShowCharacter] = useState(false);
   const [showAdventure, setShowAdventure] = useState(false);
   const [showLegal, setShowLegal] = useState(false);
+  const [navTab, setNavTab] = useState("draw"); // ボトムナビで選択中の画面
   const [equippedTitle, setEquippedTitle] = useState(loadEquippedTitle());
   const [showLastResult, setShowLastResult] = useState(false);
   const [aiEnabled, setAiEnabled] = useState(isAiEnabled());
@@ -8239,7 +8350,7 @@ export default function TarotDraw() {
   const showHeldChip = atLeast("minor-spread") && phase !== "major-revealed" && majorCard;
 
   return (
-    <div className="tarot-root">
+    <div className={`tarot-root${phase === "idle" && mode === "normal" ? " has-bottom-nav" : ""}`}>
       <style>{`
         @import url('https://fonts.googleapis.com/css2?family=Shippori+Mincho:wght@400;500;600;700;800&family=Noto+Sans+JP:wght@300;400;500;700&family=Cinzel:wght@500;600&display=swap');
 
@@ -8267,6 +8378,14 @@ export default function TarotDraw() {
           border-radius: 24px;
           overflow: hidden;
           box-shadow: 0 0 0 1px rgba(201,162,75,0.15) inset;
+        }
+        /*
+          ボトムナビの分だけ下に余白を作る。
+          これが無いと、画面最下部の要素が固定ナビの裏に隠れて操作できない。
+          safe-area-inset-bottom は iPhone のホームインジケータ領域。
+        */
+        .tarot-root.has-bottom-nav {
+          padding-bottom: calc(78px + env(safe-area-inset-bottom, 0px));
         }
         .tarot-bg {
           position: absolute; inset: 0; pointer-events: none; opacity: 0.85;
@@ -8545,6 +8664,7 @@ export default function TarotDraw() {
           </div>
         ) : phase === "idle" && mode === "normal" ? (
           <div className="question-field">
+            {navTab === "draw" && (<>
             <label htmlFor="tarot-name">{t.nameLabel}</label>
             <input
               id="tarot-name"
@@ -8608,94 +8728,74 @@ export default function TarotDraw() {
                 {t.limitRemaining(currentLimit - todayCount)}
               </p>
             )}
+            </>)}
 
-            {history.length > 0 && (
-              <div style={{ display: "flex", gap: "8px", marginTop: "8px", flexWrap: "wrap", justifyContent: "center" }}>
-                <button
-                  className="reset-btn"
-                  onClick={() => { setShowHistory(!showHistory); setShowStats(false); setShowLastResult(false); setShowTitles(false); setShowAchievements(false); setShowCharacter(false); setShowAdventure(false); }}
-                >
-                  <RotateCcw size={14} />
-                  {t.historyButtonLabel(history.length)}
-                </button>
-                <button
-                  className="reset-btn"
-                  onClick={() => { setShowStats(!showStats); setShowHistory(false); setShowLastResult(false); setShowTitles(false); setShowAchievements(false); setShowCharacter(false); setShowAdventure(false); }}
-                >
-                  {t.statsButtonLabel}
-                </button>
-                <button
-                  className="reset-btn"
-                  onClick={() => { setShowLastResult(!showLastResult); setShowHistory(false); setShowStats(false); setShowTitles(false); setShowAchievements(false); setShowCharacter(false); setShowAdventure(false); }}
-                >
-                  <Sparkles size={14} />
-                  {t.lastResultButton}
-                </button>
-                <button
-                  className="reset-btn"
-                  onClick={() => { setShowTitles(!showTitles); setShowHistory(false); setShowStats(false); setShowLastResult(false); setShowAchievements(false); setShowCharacter(false); setShowAdventure(false); }}
-                >
-                  {t.titlesButtonLabel}
-                </button>
-                <button
-                  className="reset-btn"
-                  onClick={() => { setShowAchievements(!showAchievements); setShowHistory(false); setShowStats(false); setShowLastResult(false); setShowTitles(false); setShowCharacter(false); setShowAdventure(false); }}
-                >
-                  {t.achievementsButtonLabel}
-                </button>
-                <button
-                  className="reset-btn"
-                  onClick={() => { setShowCharacter(!showCharacter); setShowHistory(false); setShowStats(false); setShowLastResult(false); setShowTitles(false); setShowAchievements(false); setShowAdventure(false); }}
-                >
-                  {t.characterButtonLabel}
-                </button>
-                <button
-                  className="reset-btn"
-                  onClick={() => { setShowAdventure(!showAdventure); setShowHistory(false); setShowStats(false); setShowLastResult(false); setShowTitles(false); setShowAchievements(false); setShowCharacter(false); }}
-                >
-                  {t.adventureButtonLabel}
-                </button>
+            {/*
+              ボトムナビで選ばれた画面を表示する。
+              以前は7つのタブが本文中のボタンとして並び、押すと下にインライン展開していた。
+              それはアコーディオンであってウェブページの挙動であり、
+              「画面」という概念が無いためアプリらしく見えなかった。
+              関連するものを束ねて画面にし、切り替えは下部固定のナビが担う。
+            */}
+            {navTab === "records" && (
+              <div style={{ width: "100%", display: "flex", flexDirection: "column", alignItems: "center" }}>
+                {history.length > 0 && history[0] && (
+                  <button
+                    className="reset-btn"
+                    onClick={() => setShowLastResult(!showLastResult)}
+                    style={{ marginBottom: "4px" }}
+                  >
+                    <Sparkles size={14} />
+                    {showLastResult ? t.closeLastResultButton : t.lastResultButton}
+                  </button>
+                )}
+                {showLastResult && history[0] ? (
+                  <LastResultPanel entry={history[0]} lang={lang} onClose={() => setShowLastResult(false)} />
+                ) : (
+                  <>
+                    <StatsPanel history={history} lang={lang} />
+                    <HistoryPanel history={history} lang={lang} />
+                  </>
+                )}
               </div>
             )}
 
-            <button className="reset-btn" onClick={() => setShowCoupon(!showCoupon)} style={{ marginTop: "8px", fontSize: "10px", opacity: 0.7 }}>
-              {t.couponButtonLabel}
-            </button>
+            {navTab === "growth" && (
+              <div style={{ width: "100%", display: "flex", flexDirection: "column", alignItems: "center" }}>
+                <CharacterPanel history={history} lang={lang} membership={membership} equippedTitle={equippedTitle} />
+                <TitlesPanel
+                  history={history}
+                  lang={lang}
+                  equipped={equippedTitle}
+                  onEquip={(k) => { setEquippedTitle(k); saveEquippedTitle(k); }}
+                />
+                <AchievementsPanel history={history} lang={lang} />
+              </div>
+            )}
 
-            {/* 規約への導線。占いを始めたい人の視線を邪魔しないよう、最も控えめに置く */}
-            <button
-              onClick={() => setShowLegal(!showLegal)}
-              style={{
-                marginTop: "10px", background: "none", border: "none", cursor: "pointer",
-                fontFamily: "inherit", fontSize: "10px", color: "var(--muted)",
-                opacity: 0.6, textDecoration: "underline", textUnderlineOffset: "3px", padding: "4px",
-              }}
-            >
-              {showLegal ? t.legalClose : t.legalButtonLabel}
-            </button>
+            {navTab === "adventure" && <AdventurePanel lang={lang} />}
 
-            {showLegal ? <LegalPanel lang={lang} /> : null}
-
-            {showCoupon ? (
-              <CouponPanel couponInput={couponInput} setCouponInput={setCouponInput} handleCoupon={handleCoupon} aiEnabled={aiEnabled} lang={lang} codeError={resurrectionError} />
-            ) : null}
-
-            {showHistory ? <HistoryPanel history={history} lang={lang} /> : null}
-            {showStats ? <StatsPanel history={history} lang={lang} /> : null}
-            {showTitles ? (
-              <TitlesPanel
-                history={history}
-                lang={lang}
-                equipped={equippedTitle}
-                onEquip={(k) => { setEquippedTitle(k); saveEquippedTitle(k); }}
-              />
-            ) : null}
-            {showAchievements ? <AchievementsPanel history={history} lang={lang} /> : null}
-            {showCharacter ? <CharacterPanel history={history} lang={lang} membership={membership} equippedTitle={equippedTitle} /> : null}
-            {showAdventure ? <AdventurePanel lang={lang} /> : null}
-            {showLastResult ? (
-              <LastResultPanel entry={history[0]} lang={lang} onClose={() => setShowLastResult(false)} />
-            ) : null}
+            {navTab === "more" && (
+              <div style={{ width: "100%", display: "flex", flexDirection: "column", alignItems: "center", gap: "4px" }}>
+                <button className="reset-btn" onClick={() => setShowCoupon(!showCoupon)} style={{ fontSize: "11px" }}>
+                  {t.couponButtonLabel}
+                </button>
+                {showCoupon ? (
+                  <CouponPanel couponInput={couponInput} setCouponInput={setCouponInput} handleCoupon={handleCoupon} aiEnabled={aiEnabled} lang={lang} codeError={resurrectionError} />
+                ) : null}
+                <button
+                  onClick={() => setShowLegal(!showLegal)}
+                  style={{
+                    marginTop: "6px", background: "none", border: "none", cursor: "pointer",
+                    fontFamily: "inherit", fontSize: "11px", color: "var(--muted)",
+                    textDecoration: "underline", textUnderlineOffset: "3px", padding: "4px",
+                  }}
+                >
+                  {showLegal ? t.legalClose : t.legalButtonLabel}
+                </button>
+                {showLegal ? <LegalPanel lang={lang} /> : null}
+              </div>
+            )}
           </div>
         ) : (
           <button className="reset-btn" onClick={reset}>
@@ -9294,6 +9394,23 @@ export default function TarotDraw() {
             </p>
           )}
         </div>
+      )}
+
+      {/* 占いの進行中は出さない。カードを引いている最中にナビがあると儀式が途切れる */}
+      {phase === "idle" && mode === "normal" && (
+        <BottomNav
+          current={navTab}
+          onChange={(k) => {
+            setNavTab(k);
+            // 画面を切り替えたら、その画面の中の開閉状態は初期化する
+            setShowLastResult(false);
+            setShowCoupon(false);
+            setShowLegal(false);
+            window.scrollTo({ top: 0, behavior: "smooth" });
+          }}
+          lang={lang}
+          hasHistory={history.length > 0}
+        />
       )}
     </div>
   );
