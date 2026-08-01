@@ -4739,10 +4739,10 @@ function BottomNav({ current, onChange, lang, hasHistory }) {
         // .tarot-root の左右パディング(20px)を打ち消して、端まで届かせる
         margin: "16px -20px calc(-56px - env(safe-area-inset-bottom, 0px))",
         display: "flex", justifyContent: "space-around", alignItems: "stretch",
-        background: "rgba(14,12,24,0.94)",
+        background: "rgba(30,24,56,0.96)",
         backdropFilter: "blur(12px)",
-        borderTop: "1px solid rgba(201,162,75,0.22)",
-        boxShadow: "0 -6px 20px rgba(0,0,0,0.35)",
+        borderTop: "1px solid rgba(201,162,75,0.32)",
+        boxShadow: "0 -6px 20px rgba(0,0,0,0.45)",
         // iPhoneのホームインジケータに重ならないようにする
         paddingBottom: "env(safe-area-inset-bottom, 0px)",
       }}
@@ -4756,18 +4756,27 @@ function BottomNav({ current, onChange, lang, hasHistory }) {
             onClick={() => onChange(it.key)}
             aria-current={on ? "page" : undefined}
             style={{
-              flex: 1, background: "none", border: "none", cursor: "pointer",
+              /*
+                非選択タブは薄紫(--muted)にしていたが、これは本文の補助テキストと同じ色で、
+                押せる要素だと分からず「説明文」に見えていた。
+                色をパーチメント寄りに上げ、不透明度も上げて、
+                選択中との差は「金色＋背景＋上線」で付ける。
+              */
+              flex: 1, cursor: "pointer",
+              background: on ? "rgba(201,162,75,0.10)" : "transparent",
+              border: "none",
               padding: "9px 2px 8px", display: "flex", flexDirection: "column",
-              alignItems: "center", gap: "3px", fontFamily: "inherit",
-              color: on ? "var(--gold)" : "var(--muted)",
-              opacity: on ? 1 : 0.65,
+              alignItems: "center", gap: "4px", fontFamily: "inherit",
+              color: on ? "var(--gold)" : "var(--parchment)",
+              opacity: on ? 1 : 0.82,
               borderTop: `2px solid ${on ? "var(--gold)" : "transparent"}`,
               marginTop: "-1px",
-              transition: "color .2s, opacity .2s",
+              WebkitTapHighlightColor: "rgba(201,162,75,0.20)",
+              transition: "color .2s, opacity .2s, background .2s",
             }}
           >
-            <Icon size={17} />
-            <span style={{ fontSize: "9.5px", letterSpacing: ".02em", whiteSpace: "nowrap" }}>{it.label}</span>
+            <Icon size={18} strokeWidth={1.6} />
+            <span style={{ fontSize: "10px", letterSpacing: "0.12em", textIndent: "0.12em", whiteSpace: "nowrap", fontWeight: 400 }}>{it.label}</span>
           </button>
         );
       })}
@@ -4785,8 +4794,8 @@ function LegalPanel({ lang }) {
   return (
     <div style={{ width: "100%", maxWidth: "440px", marginTop: "12px" }}>
       <div style={{
-        background: "rgba(26,22,44,0.85)", border: "1px solid rgba(201,162,75,0.22)",
-        borderRadius: "10px", padding: "18px 18px 22px",
+        background: "rgba(26,22,44,0.85)", border: "1px solid rgba(201,162,75,0.20)",
+        borderRadius: "12px", padding: "18px 18px 22px",
         maxHeight: "60vh", overflowY: "auto", textAlign: "left",
       }}>
         {doc.map(([kind, text], i) => {
@@ -4817,7 +4826,7 @@ function LegalPanel({ lang }) {
                 <span style={{ color: "var(--gold-dim)", fontSize: "11px", flexShrink: 0, lineHeight: 1.85 }}>
                   {counter}.
                 </span>
-                <span style={{ fontSize: "11.5px", color: "var(--parchment)", lineHeight: 1.85, opacity: 0.9 }}>
+                <span style={{ fontSize: "12px", color: "var(--parchment)", lineHeight: 1.85, opacity: 0.9 }}>
                   {text}
                 </span>
               </div>
@@ -4826,7 +4835,7 @@ function LegalPanel({ lang }) {
           counter = 0;
           return (
             <p key={i} style={{
-              fontSize: "11.5px", color: "var(--parchment)", lineHeight: 1.85,
+              fontSize: "12px", color: "var(--parchment)", lineHeight: 1.85,
               margin: "0 0 9px", opacity: 0.9, wordBreak: "break-word",
             }}>{text}</p>
           );
@@ -4840,12 +4849,12 @@ function AdventurePanel({ lang }) {
   const t = T[lang] || T.ja;
   return (
     <div style={{ width: "100%", maxWidth: "400px", marginTop: "12px", display: "flex", flexDirection: "column", gap: "12px" }}>
-      <div style={{ background: "rgba(36,28,77,0.7)", border: "1px solid rgba(201,162,75,0.25)", borderRadius: "10px", padding: "28px 16px", textAlign: "center" }}>
+      <div style={{ background: "rgba(36,28,77,0.7)", border: "1px solid rgba(201,162,75,0.20)", borderRadius: "12px", padding: "28px 16px", textAlign: "center" }}>
         <div style={{ fontFamily: "Cinzel, serif", fontSize: "10px", letterSpacing: "0.14em", color: "var(--gold)", marginBottom: "14px" }}>
           {t.adventureButtonLabel}
         </div>
         <Sparkles size={22} style={{ color: "var(--gold-dim)", opacity: 0.7, marginBottom: "10px" }} />
-        <p style={{ fontFamily: "Cinzel, serif", fontSize: "16px", letterSpacing: "0.08em", color: "var(--gold-soft)", margin: "0 0 8px" }}>
+        <p style={{ fontFamily: "Cinzel, serif", fontSize: "16px", letterSpacing: "0.1em", color: "var(--gold-soft)", margin: "0 0 8px" }}>
           {t.adventureComingSoon}
         </p>
         <p style={{ fontSize: "11px", color: "var(--muted)", margin: 0, lineHeight: 1.7 }}>
@@ -4861,14 +4870,14 @@ function CharacterPanel({ history, lang, membership, equippedTitle }) {
   const c = calcCharacter(history, membership);
 
   return (
-    <div style={{ width: "100%", maxWidth: "400px", marginTop: "12px", display: "flex", flexDirection: "column", gap: "12px" }}>
-      <div style={{ background: "rgba(36,28,77,0.7)", border: "1px solid rgba(201,162,75,0.25)", borderRadius: "10px", padding: "16px" }}>
+    <div style={{ width: "100%", maxWidth: "400px", marginTop: "14px", display: "flex", flexDirection: "column", gap: "16px" }}>
+      <div style={{ background: "rgba(36,28,77,0.7)", border: "1px solid rgba(201,162,75,0.20)", borderRadius: "12px", padding: "16px" }}>
         <div style={{ fontFamily: "Cinzel, serif", fontSize: "10px", letterSpacing: "0.14em", color: "var(--gold)", marginBottom: "12px" }}>
           {t.characterLabel}
         </div>
 
         {history.length === 0 ? (
-          <p style={{ fontSize: "11.5px", color: "var(--muted)", margin: 0 }}>{t.characterEmpty}</p>
+          <p style={{ fontSize: "12px", color: "var(--muted)", margin: 0 }}>{t.characterEmpty}</p>
         ) : (
           <>
             <div style={{ textAlign: "center", marginBottom: "14px" }}>
@@ -4876,7 +4885,7 @@ function CharacterPanel({ history, lang, membership, equippedTitle }) {
                 {jobName(c.job, lang)}
               </div>
               {equippedTitle && (
-                <div style={{ fontSize: "10.5px", color: "var(--muted)", marginBottom: "4px" }}>
+                <div style={{ fontSize: "11px", color: "var(--muted)", marginBottom: "4px" }}>
                   {titleName(equippedTitle, lang)}
                 </div>
               )}
@@ -4901,7 +4910,7 @@ function CharacterPanel({ history, lang, membership, equippedTitle }) {
                 const maxV = Math.max(1, ...STAT_ORDER.map((x) => c.stats[x]));
                 return (
                   <div key={k} style={{ display: "flex", alignItems: "center", gap: "8px" }}>
-                    <span style={{ fontSize: "9px", width: "26px", flexShrink: 0, fontFamily: "Cinzel, serif", color: STAT_COLORS[k].bright, letterSpacing: ".04em" }}>
+                    <span style={{ fontSize: "10px", width: "26px", flexShrink: 0, fontFamily: "Cinzel, serif", color: STAT_COLORS[k].bright, letterSpacing: "0.04em" }}>
                       {STAT_ABBR[k]}
                     </span>
                     <span style={{ fontSize: "11px", width: "62px", flexShrink: 0, fontFamily: "'Shippori Mincho', serif", color: "var(--parchment)" }}>
@@ -4911,18 +4920,18 @@ function CharacterPanel({ history, lang, membership, equippedTitle }) {
                       <div style={{ width: `${Math.round((v / maxV) * 100)}%`, height: "100%", background: `linear-gradient(90deg, ${STAT_COLORS[k].dim}, ${STAT_COLORS[k].bright})` }} />
                     </div>
                     <span style={{ fontSize: "12px", color: STAT_COLORS[k].bright, width: "34px", textAlign: "right", fontFamily: "Cinzel, serif" }}>{v}</span>
-                    <span style={{ fontSize: "9.5px", color: rate >= 3 ? "var(--star-max)" : "var(--muted)", width: "26px", textAlign: "right" }}>
+                    <span style={{ fontSize: "10px", color: rate >= 3 ? "var(--star-max)" : "var(--muted)", width: "26px", textAlign: "right" }}>
                       +{rate}
                     </span>
                   </div>
                 );
               })}
             </div>
-            <p style={{ fontSize: "9.5px", color: "var(--muted)", margin: "-6px 0 14px", textAlign: "right", opacity: 0.8 }}>
+            <p style={{ fontSize: "10px", color: "var(--muted)", margin: "-6px 0 14px", textAlign: "right", opacity: 0.8 }}>
               {t.characterGrowthNote}
             </p>
 
-            <div style={{ display: "flex", flexDirection: "column", gap: "6px", fontSize: "11.5px", color: "var(--parchment)" }}>
+            <div style={{ display: "flex", flexDirection: "column", gap: "6px", fontSize: "12px", color: "var(--parchment)" }}>
               <div style={{ display: "flex", justifyContent: "space-between" }}>
                 <span>{t.characterDraws}</span><span style={{ color: "var(--gold-soft)" }}>{c.totalDraws}</span>
               </div>
@@ -4952,17 +4961,17 @@ function TitlesPanel({ history, lang, equipped, onEquip }) {
   const locked = TITLE_DEFS.length - earned.length;
 
   return (
-    <div style={{ width: "100%", maxWidth: "400px", marginTop: "12px", display: "flex", flexDirection: "column", gap: "12px" }}>
-      <div style={{ background: "rgba(36,28,77,0.7)", border: "1px solid rgba(201,162,75,0.25)", borderRadius: "10px", padding: "14px 16px" }}>
+    <div style={{ width: "100%", maxWidth: "400px", marginTop: "14px", display: "flex", flexDirection: "column", gap: "16px" }}>
+      <div style={{ background: "rgba(36,28,77,0.7)", border: "1px solid rgba(201,162,75,0.20)", borderRadius: "12px", padding: "18px 18px" }}>
         <div style={{ fontFamily: "Cinzel, serif", fontSize: "10px", letterSpacing: "0.14em", color: "var(--gold)", marginBottom: "8px" }}>
           {t.titlesLabel(earned.length, TITLE_DEFS.length)}
         </div>
-        <p style={{ fontSize: "10.5px", color: "var(--muted)", margin: "0 0 12px", lineHeight: 1.7 }}>
+        <p style={{ fontSize: "11px", color: "var(--muted)", margin: "0 0 12px", lineHeight: 1.7 }}>
           {t.titlesIntro}
         </p>
 
         {earned.length === 0 ? (
-          <p style={{ fontSize: "11.5px", color: "var(--muted)", margin: 0 }}>{t.titlesEmpty}</p>
+          <p style={{ fontSize: "12px", color: "var(--muted)", margin: 0 }}>{t.titlesEmpty}</p>
         ) : (
           <div style={{ display: "flex", flexWrap: "wrap", gap: "6px" }}>
             {earned.map((k) => {
@@ -5011,21 +5020,21 @@ function AchievementsPanel({ history, lang }) {
   const locked = defs.length - rows.length;
 
   return (
-    <div style={{ width: "100%", maxWidth: "400px", marginTop: "12px", display: "flex", flexDirection: "column", gap: "12px" }}>
-      <div style={{ background: "rgba(36,28,77,0.7)", border: "1px solid rgba(201,162,75,0.25)", borderRadius: "10px", padding: "14px 16px" }}>
+    <div style={{ width: "100%", maxWidth: "400px", marginTop: "14px", display: "flex", flexDirection: "column", gap: "16px" }}>
+      <div style={{ background: "rgba(36,28,77,0.7)", border: "1px solid rgba(201,162,75,0.20)", borderRadius: "12px", padding: "18px 18px" }}>
         <div style={{ fontFamily: "Cinzel, serif", fontSize: "10px", letterSpacing: "0.14em", color: "var(--gold)", marginBottom: "8px" }}>
           {t.achievementsLabel(rows.length, defs.length)}
         </div>
-        <p style={{ fontSize: "10.5px", color: "var(--muted)", margin: "0 0 12px", lineHeight: 1.7 }}>
+        <p style={{ fontSize: "11px", color: "var(--muted)", margin: "0 0 12px", lineHeight: 1.7 }}>
           {t.achievementsIntro}
         </p>
 
         {rows.length === 0 ? (
-          <p style={{ fontSize: "11.5px", color: "var(--muted)", margin: 0 }}>{t.achievementsEmpty}</p>
+          <p style={{ fontSize: "12px", color: "var(--muted)", margin: 0 }}>{t.achievementsEmpty}</p>
         ) : (
           <div style={{ display: "flex", flexDirection: "column", gap: "7px" }}>
             {rows.map((r) => (
-              <div key={r.key} style={{ display: "flex", alignItems: "baseline", justifyContent: "space-between", gap: "10px", borderBottom: "1px solid rgba(201,162,75,0.12)", paddingBottom: "6px" }}>
+              <div key={r.key} style={{ display: "flex", alignItems: "baseline", justifyContent: "space-between", gap: "10px", borderBottom: "1px solid rgba(201,162,75,0.10)", paddingBottom: "6px" }}>
                 <span style={{ fontSize: "12px", color: "var(--parchment)", fontFamily: "'Shippori Mincho', serif" }}>
                   {titleName(r.key, lang)}
                 </span>
@@ -5083,9 +5092,9 @@ function StatsPanel({ history, lang }) {
   const hasMidData = history.length > 10;
 
   return (
-    <div style={{ width: "100%", maxWidth: "400px", marginTop: "12px", display: "flex", flexDirection: "column", gap: "12px" }}>
+    <div style={{ width: "100%", maxWidth: "400px", marginTop: "14px", display: "flex", flexDirection: "column", gap: "16px" }}>
 
-      <div style={{ background: "rgba(36,28,77,0.7)", border: "1px solid rgba(201,162,75,0.25)", borderRadius: "10px", padding: "14px 16px" }}>
+      <div style={{ background: "rgba(36,28,77,0.7)", border: "1px solid rgba(201,162,75,0.20)", borderRadius: "12px", padding: "18px 18px" }}>
         <div style={{ fontFamily: "Cinzel, serif", fontSize: "10px", letterSpacing: "0.14em", color: "var(--gold)", marginBottom: "10px" }}>
           {t.statsShortTitle(shortTerm.length)}
         </div>
@@ -5100,7 +5109,7 @@ function StatsPanel({ history, lang }) {
       </div>
 
       {hasMidData && (
-        <div style={{ background: "rgba(36,28,77,0.7)", border: "1px solid rgba(201,162,75,0.25)", borderRadius: "10px", padding: "14px 16px" }}>
+        <div style={{ background: "rgba(36,28,77,0.7)", border: "1px solid rgba(201,162,75,0.20)", borderRadius: "12px", padding: "18px 18px" }}>
           <div style={{ fontFamily: "Cinzel, serif", fontSize: "10px", letterSpacing: "0.14em", color: "var(--gold)", marginBottom: "10px" }}>
             {t.statsMidTitle(midTerm.length)}
           </div>
@@ -5118,7 +5127,7 @@ function StatsPanel({ history, lang }) {
         </div>
       )}
 
-      <div style={{ background: "rgba(36,28,77,0.7)", border: "1px solid rgba(201,162,75,0.25)", borderRadius: "10px", padding: "14px 16px" }}>
+      <div style={{ background: "rgba(36,28,77,0.7)", border: "1px solid rgba(201,162,75,0.20)", borderRadius: "12px", padding: "18px 18px" }}>
         <div style={{ fontFamily: "Cinzel, serif", fontSize: "10px", letterSpacing: "0.14em", color: "var(--gold)", marginBottom: "10px" }}>
           {t.statsLongTitle(longTerm.length)}
         </div>
@@ -5148,11 +5157,11 @@ function HistoryPanel({ history, lang }) {
   const displayed = history.slice(0, HISTORY_DISPLAY_LIMIT);
   return (
     <div style={{ width: "100%", maxWidth: "400px", marginTop: "12px", display: "flex", flexDirection: "column", gap: "10px" }}>
-      <p style={{ fontSize: "10.5px", color: "var(--gold-soft)", opacity: 0.85, textAlign: "center", margin: "0 0 2px" }}>
+      <p style={{ fontSize: "11px", color: "var(--gold-soft)", opacity: 0.85, textAlign: "center", margin: "0 0 2px" }}>
         {t.historyPrivacyNote}
       </p>
       {displayed.map((h) => (
-        <div key={h.id} style={{ background: "rgba(36,28,77,0.7)", border: "1px solid rgba(201,162,75,0.25)", borderRadius: "10px", padding: "12px 14px" }}>
+        <div key={h.id} style={{ background: "rgba(36,28,77,0.7)", border: "1px solid rgba(201,162,75,0.20)", borderRadius: "12px", padding: "12px 14px" }}>
           <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "6px" }}>
             <span style={{ fontSize: "11px", color: "var(--muted)" }}>{h.date} {h.time}</span>
             {h.userName ? <span style={{ fontSize: "11px", color: "var(--gold-soft)" }}>{h.userName}</span> : null}
@@ -5699,7 +5708,7 @@ function LastResultPanel({ entry, lang, onClose }) {
       </div>
 
       {entry.question && (
-        <p style={{ fontSize: "12.5px", color: "var(--gold-soft)", margin: 0, textAlign: "center" }}>
+        <p style={{ fontSize: "13px", color: "var(--gold-soft)", margin: 0, textAlign: "center" }}>
           「{entry.question}」
         </p>
       )}
@@ -5710,7 +5719,7 @@ function LastResultPanel({ entry, lang, onClose }) {
           if (!r) return null;
           const name = r.id ? getCardName({ id: r.id, name: r.name }, lang) : r.name;
           return (
-            <span key={i} style={{ fontSize: "10.5px", color: "var(--muted)", background: "rgba(201,162,75,0.08)", padding: "3px 9px", borderRadius: "999px" }}>
+            <span key={i} style={{ fontSize: "11px", color: "var(--muted)", background: "rgba(201,162,75,0.08)", padding: "3px 9px", borderRadius: "999px" }}>
               {pos}: {name}（{t.historyOrientation(r.reversed)}）
             </span>
           );
@@ -5724,7 +5733,7 @@ function LastResultPanel({ entry, lang, onClose }) {
         <p style={{ fontSize: "12px", color: "var(--muted)", margin: 0 }}>{entry.majorCard.kw}</p>
       </div>
 
-      <div style={{ background: "rgba(36,28,77,0.6)", border: "1px solid rgba(201,162,75,0.2)", borderRadius: "10px", padding: "12px 14px" }}>
+      <div style={{ background: "rgba(36,28,77,0.6)", border: "1px solid rgba(201,162,75,0.2)", borderRadius: "12px", padding: "12px 14px" }}>
         <div style={{ fontFamily: "Cinzel, serif", fontSize: "10px", letterSpacing: "0.1em", color: "var(--gold)", marginBottom: "8px" }}>
           {t.statsAvgAllTime}
         </div>
@@ -5763,7 +5772,7 @@ function LastResultPanel({ entry, lang, onClose }) {
         </div>
       )}
 
-      <p className="privacy-note" style={{ fontSize: "10.5px", textAlign: "center" }}>
+      <p className="privacy-note" style={{ fontSize: "11px", textAlign: "center" }}>
         {t.endOfPrivacyResult}
       </p>
 
@@ -5777,7 +5786,7 @@ function LastResultPanel({ entry, lang, onClose }) {
 function CouponPanel({ couponInput, setCouponInput, handleCoupon, aiEnabled, lang, codeError }) {
   const t = T[lang] || T.ja;
   return (
-    <div style={{ width: "100%", maxWidth: "360px", marginTop: "12px", display: "flex", flexDirection: "column", gap: "8px", background: "rgba(36,28,77,0.8)", border: "1px solid rgba(201,162,75,0.3)", borderRadius: "10px", padding: "12px 14px" }}>
+    <div style={{ width: "100%", maxWidth: "360px", marginTop: "12px", display: "flex", flexDirection: "column", gap: "8px", background: "rgba(36,28,77,0.8)", border: "1px solid rgba(201,162,75,0.3)", borderRadius: "12px", padding: "12px 14px" }}>
       <div style={{ display: "flex", alignItems: "center", justifyContent: "center", gap: "6px", fontSize: "11px", color: aiEnabled ? "var(--star-max)" : "var(--muted)" }}>
         <span style={{ width: "7px", height: "7px", borderRadius: "50%", background: aiEnabled ? "var(--star-max)" : "var(--rose)", display: "inline-block" }} />
         {t.aiStatusLabel}：{aiEnabled ? t.aiStatusOn : t.aiStatusOff}
@@ -5796,7 +5805,7 @@ function CouponPanel({ couponInput, setCouponInput, handleCoupon, aiEnabled, lan
           fontFamily: "inherit",
           fontSize: "13px",
           padding: "8px 10px",
-          borderRadius: "6px",
+          borderRadius: "8px",
           border: "1px solid rgba(201,162,75,0.4)",
           background: "rgba(255,255,255,0.04)",
           color: "#f1ead8",
@@ -5806,7 +5815,7 @@ function CouponPanel({ couponInput, setCouponInput, handleCoupon, aiEnabled, lan
         {t.confirmButton}
       </button>
       {codeError && (
-        <p style={{ fontSize: "10.5px", color: "var(--rose)", margin: 0, textAlign: "center" }}>{t.resurrectionError}</p>
+        <p style={{ fontSize: "11px", color: "var(--rose)", margin: 0, textAlign: "center" }}>{t.resurrectionError}</p>
       )}
     </div>
   );
@@ -5993,6 +6002,11 @@ const T = {
     a2hsBodyIos: "하단 공유 버튼 → 「홈 화면에 추가」",
     a2hsInstall: "추가",
     a2hsDismiss: "닫기",
+    subLast: "지난번",
+    subHistory: "기록",
+    subStats: "통계",
+    subEmpty: "아직 기록이 없습니다",
+    backToTitle: "처음 화면으로",
     navDraw: "점보기",
     navRecords: "기록",
     navGrowth: "육성",
@@ -6159,6 +6173,11 @@ const T = {
     a2hsBodyIos: "Chạm nút Chia sẻ bên dưới, rồi chọn Thêm vào MH chính",
     a2hsInstall: "Thêm",
     a2hsDismiss: "Đóng",
+    subLast: "Lần trước",
+    subHistory: "Lịch sử",
+    subStats: "Thống kê",
+    subEmpty: "Chưa có ghi chép",
+    backToTitle: "Về màn hình đầu",
     navDraw: "Xem",
     navRecords: "Ghi chép",
     navGrowth: "Nuôi",
@@ -6325,6 +6344,11 @@ const T = {
     a2hsBodyIos: "Ketuk tombol Bagikan di bawah, lalu Tambahkan ke Layar Utama",
     a2hsInstall: "Tambahkan",
     a2hsDismiss: "Tutup",
+    subLast: "Terakhir",
+    subHistory: "Riwayat",
+    subStats: "Statistik",
+    subEmpty: "Belum ada catatan",
+    backToTitle: "Kembali ke awal",
     navDraw: "Tilik",
     navRecords: "Catatan",
     navGrowth: "Tumbuh",
@@ -6491,6 +6515,11 @@ const T = {
     a2hsBodyIos: "Ketik butang Kongsi di bawah, kemudian Tambah ke Skrin Utama",
     a2hsInstall: "Tambah",
     a2hsDismiss: "Tutup",
+    subLast: "Terakhir",
+    subHistory: "Sejarah",
+    subStats: "Statistik",
+    subEmpty: "Belum ada rekod",
+    backToTitle: "Kembali ke awal",
     navDraw: "Tilik",
     navRecords: "Rekod",
     navGrowth: "Tumbuh",
@@ -6658,6 +6687,11 @@ const T = {
     a2hsBodyIos: "下の共有ボタン → 「ホーム画面に追加」",
     a2hsInstall: "追加",
     a2hsDismiss: "閉じる",
+    subLast: "前回",
+    subHistory: "履歴",
+    subStats: "統計",
+    subEmpty: "まだ記録がありません",
+    backToTitle: "タイトルに戻る",
     navDraw: "占う",
     navRecords: "記録",
     navGrowth: "育成",
@@ -6824,6 +6858,11 @@ const T = {
     a2hsBodyIos: "下方分享按鈕 →「加入主畫面」",
     a2hsInstall: "加入",
     a2hsDismiss: "關閉",
+    subLast: "上次",
+    subHistory: "歷史",
+    subStats: "統計",
+    subEmpty: "尚無紀錄",
+    backToTitle: "回到首頁",
     navDraw: "占卜",
     navRecords: "記錄",
     navGrowth: "養成",
@@ -6990,6 +7029,11 @@ const T = {
     a2hsBodyIos: "下方分享按钮 →「添加到主屏幕」",
     a2hsInstall: "添加",
     a2hsDismiss: "关闭",
+    subLast: "上次",
+    subHistory: "历史",
+    subStats: "统计",
+    subEmpty: "尚无记录",
+    backToTitle: "回到首页",
     navDraw: "占卜",
     navRecords: "记录",
     navGrowth: "养成",
@@ -7156,6 +7200,11 @@ const T = {
     a2hsBodyIos: "Tap Share below, then Add to Home Screen",
     a2hsInstall: "Add",
     a2hsDismiss: "Close",
+    subLast: "Last",
+    subHistory: "History",
+    subStats: "Stats",
+    subEmpty: "No records yet",
+    backToTitle: "Back to title",
     navDraw: "Draw",
     navRecords: "Records",
     navGrowth: "Growth",
@@ -7322,6 +7371,11 @@ const T = {
     a2hsBodyIos: "I-tap ang Share sa ibaba, tapos Add to Home Screen",
     a2hsInstall: "Idagdag",
     a2hsDismiss: "Isara",
+    subLast: "Huli",
+    subHistory: "Kasaysayan",
+    subStats: "Estadistika",
+    subEmpty: "Wala pang tala",
+    backToTitle: "Bumalik sa simula",
     navDraw: "Bunot",
     navRecords: "Tala",
     navGrowth: "Paglago",
@@ -7488,6 +7542,11 @@ const T = {
     a2hsBodyIos: "แตะปุ่มแชร์ด้านล่าง แล้วเลือก เพิ่มลงในหน้าจอโฮม",
     a2hsInstall: "เพิ่ม",
     a2hsDismiss: "ปิด",
+    subLast: "ครั้งล่าสุด",
+    subHistory: "ประวัติ",
+    subStats: "สถิติ",
+    subEmpty: "ยังไม่มีบันทึก",
+    backToTitle: "กลับหน้าแรก",
     navDraw: "ดูดวง",
     navRecords: "บันทึก",
     navGrowth: "เติบโต",
@@ -7550,6 +7609,7 @@ export default function TarotDraw() {
   const [showAdventure, setShowAdventure] = useState(false);
   const [showLegal, setShowLegal] = useState(false);
   const [navTab, setNavTab] = useState("draw"); // ボトムナビで選択中の画面
+  const [recordsTab, setRecordsTab] = useState("last"); // 記録タブ内のサブタブ
   const [showA2HS, setShowA2HS] = useState(false);       // ホーム画面追加の案内を出すか
   const [installPrompt, setInstallPrompt] = useState(null); // Android/Chrome のインストールイベント
   const [equippedTitle, setEquippedTitle] = useState(loadEquippedTitle());
@@ -8508,7 +8568,15 @@ export default function TarotDraw() {
           --star-min: #6b6b7a;
           position: relative;
           min-height: 600px;
-          background: radial-gradient(circle at 18% -10%, #2c2368 0%, var(--bg-deep) 55%), var(--bg-deep);
+          /*
+            背景。単色の放射グラデーションは平板に見えるため、
+            光源をやや弱め、下方向にも沈む階調を重ねて奥行きを作る。
+            高級感は彩度の高さではなく、階調の細やかさから出る。
+          */
+          background:
+            radial-gradient(ellipse 120% 80% at 20% -12%, rgba(64,52,132,0.55) 0%, transparent 60%),
+            radial-gradient(ellipse 100% 60% at 80% 110%, rgba(38,30,82,0.5) 0%, transparent 65%),
+            linear-gradient(180deg, #171232 0%, var(--bg-deep) 60%, #0e0b1c 100%);
           color: var(--parchment);
           font-family: 'Noto Sans JP', sans-serif;
           padding: 40px 20px 56px;
@@ -8519,7 +8587,7 @@ export default function TarotDraw() {
             clip に置き換える。clip はスクロールコンテナを作らないため sticky が生きる。
           */
           overflow: clip;
-          box-shadow: 0 0 0 1px rgba(201,162,75,0.15) inset;
+          box-shadow: 0 0 0 1px rgba(201,162,75,0.12) inset, 0 0 80px rgba(0,0,0,0.35) inset;
         }
         /*
           ボトムナビの分だけ下に余白を作る。
@@ -8541,15 +8609,15 @@ export default function TarotDraw() {
             radial-gradient(1.6px 1.6px at 92% 58%, rgba(241,234,216,0.25) 0, transparent 50%),
             radial-gradient(1.3px 1.3px at 45% 30%, rgba(241,234,216,0.2) 0, transparent 50%);
         }
-        .tarot-header { text-align: center; position: relative; z-index: 1; margin-bottom: 22px; }
-        .eyebrow { display: inline-flex; align-items: center; gap: 6px; font-family: 'Cinzel', serif; font-size: 11px; letter-spacing: 0.18em; color: var(--gold); margin-bottom: 10px; }
+        .tarot-header { text-align: center; position: relative; z-index: 1; margin-bottom: 30px; }
+        .eyebrow { display: inline-flex; align-items: center; gap: 7px; font-family: 'Cinzel', serif; font-size: 10px; letter-spacing: 0.32em; text-indent: 0.32em; color: var(--gold); margin-bottom: 14px; opacity: 0.9; }
         .privacy-note { font-size: 11px; color: var(--gold-soft); opacity: 0.8; margin-top: 10px; letter-spacing: 0.02em; }
-        .tarot-header h1 { font-family: 'Shippori Mincho', serif; font-size: 30px; font-weight: 700; margin: 0 0 10px; letter-spacing: 0.04em; color: var(--parchment); animation: titleGlow 3.2s ease-in-out infinite; }
+        .tarot-header h1 { font-family: 'Shippori Mincho', serif; font-size: 30px; font-weight: 400; margin: 0 0 14px; letter-spacing: 0.18em; text-indent: 0.18em; color: var(--parchment); animation: titleGlow 3.2s ease-in-out infinite; }
         @keyframes titleGlow {
           0%, 100% { text-shadow: 0 0 0px rgba(201,162,75,0); }
           50%      { text-shadow: 0 0 14px rgba(201,162,75,0.45); }
         }
-        .tarot-header p { font-size: 12.5px; color: var(--muted); margin: 0 auto; line-height: 1.75; max-width: 460px; white-space: pre-line; }
+        .tarot-header p { font-size: 12px; color: var(--muted); margin: 0 auto; line-height: 2.0; max-width: 420px; white-space: pre-line; letter-spacing: 0.02em; }
         .app-tagline { font-family: 'Cinzel', serif; font-size: 12px; color: var(--gold-soft); letter-spacing: 0.06em; margin: 0 0 12px; opacity: 0.9; }
 
         .controls { position: relative; z-index: 1; display: flex; justify-content: center; margin-bottom: 18px; }
@@ -8573,12 +8641,18 @@ export default function TarotDraw() {
 
         .question-banner { position: relative; z-index: 1; text-align: center; font-family: 'Shippori Mincho', serif; font-size: 12.5px; color: var(--gold-soft); margin: 0 0 20px; }
         .draw-btn {
-          display: inline-flex; align-items: center; gap: 8px; font-family: 'Shippori Mincho', serif; font-size: 15px;
-          padding: 12px 28px; border-radius: 999px; border: 1px solid var(--gold);
-          background: linear-gradient(180deg, rgba(201,162,75,0.22), rgba(201,162,75,0.06));
-          color: var(--gold-soft); cursor: pointer; transition: transform .2s ease, box-shadow .2s ease;
+          /*
+            主要ボタン。字間を広げ、余白を厚くする。
+            高級感は装飾を足すのではなく、文字を少なくして周囲の空間を増やすことで出る。
+          */
+          display: inline-flex; align-items: center; gap: 10px; font-family: 'Shippori Mincho', serif; font-size: 15px;
+          padding: 14px 34px; border-radius: 999px; border: 1px solid rgba(201,162,75,0.75);
+          letter-spacing: 0.12em; text-indent: 0.12em;
+          background: linear-gradient(180deg, rgba(201,162,75,0.18), rgba(201,162,75,0.04));
+          color: var(--gold-soft); cursor: pointer;
+          transition: transform .25s cubic-bezier(.2,.7,.3,1), box-shadow .25s ease, border-color .25s ease;
         }
-        .draw-btn:hover:not(:disabled) { transform: translateY(-1px); box-shadow: 0 8px 24px rgba(201,162,75,0.18); }
+        .draw-btn:hover:not(:disabled) { transform: translateY(-1px); border-color: var(--gold); box-shadow: 0 10px 30px rgba(201,162,75,0.18); }
         .draw-btn:focus-visible { outline: 2px solid var(--gold); outline-offset: 2px; }
         .draw-btn:disabled { opacity: 0.45; cursor: default; }
         .climax-btn { animation: glowPulse 2.2s ease-in-out infinite; }
@@ -8593,19 +8667,19 @@ export default function TarotDraw() {
         .copy-btn { font-size: 13px; padding: 11px 22px; }
         .copy-btn:disabled { opacity: 0.4; cursor: default; animation: none; }
 
-        .reset-btn { display: inline-flex; align-items: center; gap: 6px; font-size: 12px; color: var(--muted); background: none; border: 1px solid rgba(169,155,201,0.3); padding: 8px 18px; border-radius: 999px; cursor: pointer; }
-        .reset-btn:hover { color: var(--gold-soft); border-color: var(--gold); }
+        .reset-btn { display: inline-flex; align-items: center; gap: 7px; font-size: 12px; color: var(--gold-soft); background: none; border: 1px solid rgba(201,162,75,0.28); padding: 9px 20px; border-radius: 999px; cursor: pointer; letter-spacing: 0.06em; opacity: 0.85; transition: opacity .2s ease, border-color .2s ease, color .2s ease; }
+        .reset-btn:hover { color: var(--gold); border-color: rgba(201,162,75,0.6); opacity: 1; }
         .reset-btn:focus-visible { outline: 2px solid var(--gold); outline-offset: 2px; }
 
         .round-label { position: relative; z-index: 1; text-align: center; font-family: 'Shippori Mincho', serif; font-size: 13.5px; color: var(--gold-soft); margin: 0 0 16px; line-height: 1.7; }
 
         .held-chip { position: relative; z-index: 1; display: flex; align-items: center; gap: 10px; justify-content: center; margin: 0 auto 24px; padding: 8px 16px; border: 1px dashed rgba(201,162,75,0.5); border-radius: 999px; width: fit-content; color: var(--gold-soft); font-size: 11.5px; background: rgba(201,162,75,0.06); animation: glowPulse 2.4s ease-in-out infinite; }
         .held-chip .mini-back { width: 26px; height: 38px; border-radius: 4px; border: 1px solid var(--gold); background: linear-gradient(160deg, var(--surface), var(--bg-mid)); display: flex; align-items: center; justify-content: center; font-family: 'Cinzel', serif; font-size: 11px; color: var(--gold); flex-shrink: 0; }
-        @keyframes glowPulse { 0%, 100% { box-shadow: 0 0 0 0 rgba(201,162,75,0); } 50% { box-shadow: 0 0 16px 2px rgba(201,162,75,0.22); } }
+        @keyframes glowPulse { 0%, 100% { box-shadow: 0 0 0 0 rgba(201,162,75,0); } 50% { box-shadow: 0 0 16px 2px rgba(201,162,75,0.20); } }
 
         .spread-grid { position: relative; z-index: 1; display: flex; flex-wrap: wrap; gap: 6px; justify-content: center; max-width: 760px; margin: 0 auto 28px; }
         .mini-card { position: relative; width: 40px; height: 60px; border-radius: 6px; border: 1px solid rgba(201,162,75,0.45); background: linear-gradient(160deg, var(--surface), var(--bg-mid)); display: flex; align-items: center; justify-content: center; cursor: pointer; padding: 0; font: inherit; transform: rotate(var(--rot, 0deg)); transition: transform .18s ease, box-shadow .18s ease, border-color .18s ease; }
-        .mini-card:hover:not(:disabled) { transform: rotate(var(--rot, 0deg)) translateY(-4px) scale(1.08); box-shadow: 0 6px 16px rgba(201,162,75,0.25); border-color: var(--gold); }
+        .mini-card:hover:not(:disabled) { transform: rotate(var(--rot, 0deg)) translateY(-4px) scale(1.08); box-shadow: 0 6px 16px rgba(201,162,75,0.20); border-color: var(--gold); }
         .mini-card:focus-visible { outline: 2px solid var(--gold); outline-offset: 2px; }
         .mini-card:disabled { cursor: default; }
         .mini-card.chosen { transform: scale(1.18) translateY(-6px); box-shadow: 0 0 0 2px var(--gold), 0 0 18px rgba(201,162,75,0.5); border-color: var(--gold); z-index: 2; }
@@ -8642,7 +8716,7 @@ export default function TarotDraw() {
         .orientation.up { background: rgba(201,162,75,0.15); color: var(--gold-soft); border: 1px solid rgba(201,162,75,0.4); }
         .orientation.rev { background: rgba(201,122,146,0.15); color: var(--rose); border: 1px solid rgba(201,122,146,0.4); }
 
-        .ai-reading { width: 100%; max-width: 480px; margin: 4px auto 0; padding: 18px 22px; border-radius: 14px; border: 1px solid rgba(201,162,75,0.35); background: linear-gradient(160deg, rgba(36,28,77,0.65), rgba(18,15,36,0.65)); box-sizing: border-box; }
+        .ai-reading { width: 100%; max-width: 480px; margin: 4px auto 0; padding: 18px 22px; border-radius: 14px; border: 1px solid rgba(201,162,75,0.32); background: linear-gradient(160deg, rgba(36,28,77,0.65), rgba(18,15,36,0.65)); box-sizing: border-box; }
         .ai-reading.final-judgment { border-color: rgba(231, 207, 153, 0.55); background: linear-gradient(160deg, rgba(60,45,110,0.7), rgba(24,18,48,0.7)); }
         .ai-label { display: flex; align-items: center; gap: 6px; font-family: 'Cinzel', serif; font-size: 10px; letter-spacing: 0.14em; color: var(--gold); margin-bottom: 10px; min-height: 34px; }
         .ai-label > span { flex: 1 1 auto; line-height: 1.5; }
@@ -8662,11 +8736,11 @@ export default function TarotDraw() {
         .stats-panel { width: 100%; max-width: 360px; margin: 6px auto 0; padding: 14px 20px; border-radius: 14px; border: 1px solid rgba(201,162,75,0.3); background: rgba(36,28,77,0.4); box-sizing: border-box; }
         .stats-title { display: flex; align-items: center; gap: 6px; justify-content: center; font-family: 'Cinzel', serif; font-size: 10px; letter-spacing: 0.14em; color: var(--gold); margin-bottom: 10px; }
         .stats-row { display: flex; align-items: center; justify-content: space-between; gap: 10px; padding: 7px 0; }
-        .stats-row + .stats-row { border-top: 1px solid rgba(201,162,75,0.12); }
+        .stats-row + .stats-row { border-top: 1px solid rgba(201,162,75,0.10); }
         .stats-label { font-family: 'Shippori Mincho', serif; font-size: 13px; color: var(--parchment); width: 44px; flex-shrink: 0; }
         .stats-stars { display: flex; gap: 2px; }
         .star-wrap { position: relative; width: 15px; height: 15px; display: inline-block; flex-shrink: 0; }
-        .star-bg { position: absolute; top: 0; left: 0; color: rgba(201,162,75,0.22); }
+        .star-bg { position: absolute; top: 0; left: 0; color: rgba(201,162,75,0.20); }
         .star-fill { position: absolute; top: 0; left: 0; overflow: hidden; color: var(--gold); display: block; height: 15px; }
         .stats-value { font-family: 'Cinzel', serif; font-size: 10.5px; color: var(--muted); width: 26px; text-align: right; flex-shrink: 0; }
 
@@ -8795,7 +8869,7 @@ export default function TarotDraw() {
             <p style={{ fontSize: "13px", color: "var(--gold-soft)", textAlign: "center", margin: "0 0 6px", fontFamily: "'Shippori Mincho',serif" }}>
               {t.resumeSessionTitle}
             </p>
-            <p style={{ fontSize: "11.5px", color: "var(--muted)", textAlign: "center", margin: "0 0 16px", maxWidth: "300px" }}>
+            <p style={{ fontSize: "12px", color: "var(--muted)", textAlign: "center", margin: "0 0 16px", maxWidth: "300px" }}>
               {t.resumeSessionBody}
             </p>
             <button className="draw-btn" onClick={resumePendingSession}>
@@ -8827,7 +8901,7 @@ export default function TarotDraw() {
               onChange={(e) => setQuestion(e.target.value)}
               placeholder={t.questionPlaceholder}
             />
-            <p style={{ fontSize: "10.5px", color: "var(--muted)", margin: "-4px 0 4px", textAlign: "center", opacity: 0.85 }}>
+            <p style={{ fontSize: "11px", color: "var(--muted)", margin: "-4px 0 4px", textAlign: "center", opacity: 0.85 }}>
               {t.questionPrivacy}
             </p>
 
@@ -8847,7 +8921,7 @@ export default function TarotDraw() {
                   />
                   {t.personalizeLabel}
                 </label>
-                <p style={{ fontSize: "10.5px", color: "var(--muted)", margin: 0, textAlign: "center", opacity: 0.85, lineHeight: 1.6, whiteSpace: "pre-line" }}>
+                <p style={{ fontSize: "11px", color: "var(--muted)", margin: 0, textAlign: "center", opacity: 0.85, lineHeight: 1.6, whiteSpace: "pre-line" }}>
                   {t.personalizeNote(resolveRecallCount(membership, null))}
                 </p>
               </div>
@@ -8883,24 +8957,46 @@ export default function TarotDraw() {
             */}
             {navTab === "records" && (
               <div style={{ width: "100%", display: "flex", flexDirection: "column", alignItems: "center" }}>
-                {history.length > 0 && history[0] && (
-                  <button
-                    className="reset-btn"
-                    onClick={() => setShowLastResult(!showLastResult)}
-                    style={{ marginBottom: "4px" }}
-                  >
-                    <Sparkles size={14} />
-                    {showLastResult ? t.closeLastResultButton : t.lastResultButton}
-                  </button>
+                {/*
+                  記録タブは、統計カード4枚と履歴10件を縦に全部並べていたため情報が密すぎた。
+                  「前回」「履歴」「統計」は見たい場面が別なので、サブタブで切り分ける。
+                  一度に見せる量を減らすことが、そのまま読みやすさになる。
+                */}
+                <div style={{
+                  display: "flex", gap: "4px", marginBottom: "4px",
+                  background: "rgba(255,255,255,0.04)", borderRadius: "999px", padding: "3px",
+                }}>
+                  {[
+                    { key: "last", label: t.subLast },
+                    { key: "history", label: t.subHistory },
+                    { key: "stats", label: t.subStats },
+                  ].map((it) => {
+                    const on = recordsTab === it.key;
+                    return (
+                      <button
+                        key={it.key}
+                        onClick={() => setRecordsTab(it.key)}
+                        style={{
+                          background: on ? "rgba(201,162,75,0.16)" : "transparent",
+                          border: "none", borderRadius: "999px", cursor: "pointer",
+                          padding: "7px 16px", fontFamily: "inherit", fontSize: "11px",
+                          letterSpacing: "0.04em",
+                          color: on ? "var(--gold)" : "var(--parchment)",
+                          opacity: on ? 1 : 0.7,
+                          transition: "background .2s, color .2s, opacity .2s",
+                        }}
+                      >{it.label}</button>
+                    );
+                  })}
+                </div>
+
+                {recordsTab === "last" && (
+                  history[0]
+                    ? <LastResultPanel entry={history[0]} lang={lang} onClose={() => setRecordsTab("history")} />
+                    : <p style={{ fontSize: "12px", color: "var(--muted)", marginTop: "20px" }}>{t.subEmpty}</p>
                 )}
-                {showLastResult && history[0] ? (
-                  <LastResultPanel entry={history[0]} lang={lang} onClose={() => setShowLastResult(false)} />
-                ) : (
-                  <>
-                    <StatsPanel history={history} lang={lang} />
-                    <HistoryPanel history={history} lang={lang} />
-                  </>
-                )}
+                {recordsTab === "history" && <HistoryPanel history={history} lang={lang} />}
+                {recordsTab === "stats" && <StatsPanel history={history} lang={lang} />}
               </div>
             )}
 
@@ -8970,7 +9066,7 @@ export default function TarotDraw() {
                 {majorShuffleCount > 0 && ` (${MAX_RESHUFFLE - majorShuffleCount})`}
               </button>
               {majorShuffleCount >= MAX_RESHUFFLE && (
-                <p style={{ fontSize: "10.5px", color: "var(--rose)", margin: 0, textAlign: "center" }}>
+                <p style={{ fontSize: "11px", color: "var(--rose)", margin: 0, textAlign: "center" }}>
                   {t.reshuffleCooldown}
                 </p>
               )}
@@ -9036,7 +9132,7 @@ export default function TarotDraw() {
                 {minorShuffleCount > 0 && ` (${MAX_RESHUFFLE - minorShuffleCount})`}
               </button>
               {minorShuffleCount >= MAX_RESHUFFLE && (
-                <p style={{ fontSize: "10.5px", color: "var(--rose)", margin: 0, textAlign: "center" }}>
+                <p style={{ fontSize: "11px", color: "var(--rose)", margin: 0, textAlign: "center" }}>
                   {t.reshuffleCooldown}
                 </p>
               )}
@@ -9091,7 +9187,7 @@ export default function TarotDraw() {
                     style={{
                       display: "flex", alignItems: "center", justifyContent: "center",
                       background: "linear-gradient(150deg, #1d1730, #120e1e)",
-                      border: "1px solid var(--gold-dim)", borderRadius: "10px",
+                      border: "1px solid var(--gold-dim)", borderRadius: "12px",
                       minHeight: "132px",
                       animation: reachInfo ? "reachPulse 1.15s ease-in-out infinite" : "none",
                     }}
@@ -9130,10 +9226,10 @@ export default function TarotDraw() {
                 animation: "reachPulse 1.15s ease-in-out infinite",
               }}
             >
-              <p style={{ margin: "0 0 4px", fontSize: "13px", letterSpacing: ".14em", color: reachInfo.luck === "misfortune" ? "#c9a8d8" : "var(--gold)" }}>
+              <p style={{ margin: "0 0 4px", fontSize: "13px", letterSpacing: "0.14em", color: reachInfo.luck === "misfortune" ? "#c9a8d8" : "var(--gold)" }}>
                 {t.reachTitle(reachInfo.type, reachInfo.luck)}
               </p>
-              <p style={{ margin: 0, fontSize: "11.5px", color: "var(--muted)", lineHeight: 1.6 }}>
+              <p style={{ margin: 0, fontSize: "12px", color: "var(--muted)", lineHeight: 1.6 }}>
                 {t.reachNote}
               </p>
               <button
@@ -9169,7 +9265,7 @@ export default function TarotDraw() {
               }}
             >
               <p style={{
-                margin: "0 0 5px", fontSize: "15px", fontWeight: 600, letterSpacing: ".1em",
+                margin: "0 0 5px", fontSize: "16px", fontWeight: 600, letterSpacing: "0.1em",
                 color: outcomeInfo.tone === "bad" ? "#d8b4e8"
                   : outcomeInfo.tone === "good" ? "var(--gold)"
                   : outcomeInfo.tone === "relief" ? "var(--gold-soft)"
@@ -9177,7 +9273,7 @@ export default function TarotDraw() {
               }}>
                 {t.outcomeTitle(outcomeInfo)}
               </p>
-              <p style={{ margin: 0, fontSize: "11.5px", color: "var(--gold-soft)", lineHeight: 1.6, opacity: 0.9 }}>
+              <p style={{ margin: 0, fontSize: "12px", color: "var(--gold-soft)", lineHeight: 1.6, opacity: 0.9 }}>
                 {t.outcomeDetail(outcomeInfo)}
               </p>
             </div>
@@ -9242,7 +9338,7 @@ export default function TarotDraw() {
             onClick={(e) => e.stopPropagation()}
             style={{
               maxWidth: "360px", width: "100%", padding: "22px 20px",
-              borderRadius: "14px", textAlign: "center",
+              borderRadius: "12px", textAlign: "center",
               background: "linear-gradient(160deg, #1d1730, #12101c)",
               border: "1px solid var(--gold-dim)",
             }}
@@ -9250,10 +9346,10 @@ export default function TarotDraw() {
             <div style={{ color: "var(--gold)", marginBottom: "10px" }}>
               <Volume2 size={26} />
             </div>
-            <p style={{ margin: "0 0 8px", fontSize: "13.5px", color: "var(--gold-soft)", lineHeight: 1.7 }}>
+            <p style={{ margin: "0 0 8px", fontSize: "14px", color: "var(--gold-soft)", lineHeight: 1.7 }}>
               {t.ttsNoticeTitle}
             </p>
-            <p style={{ margin: "0 0 18px", fontSize: "11.5px", color: "var(--muted)", lineHeight: 1.7 }}>
+            <p style={{ margin: "0 0 18px", fontSize: "12px", color: "var(--muted)", lineHeight: 1.7 }}>
               {t.ttsNoticeBody}
             </p>
             <div style={{ display: "flex", gap: "10px" }}>
@@ -9391,7 +9487,7 @@ export default function TarotDraw() {
               )}
 
               {showDeepDiveGate && !deepDiveUnlocked && (
-                <div style={{ background: "rgba(36,28,77,0.8)", border: "1px solid rgba(201,162,75,0.3)", borderRadius: "10px", padding: "14px 16px", display: "flex", flexDirection: "column", gap: "8px" }}>
+                <div style={{ background: "rgba(36,28,77,0.8)", border: "1px solid rgba(201,162,75,0.3)", borderRadius: "12px", padding: "18px 18px", display: "flex", flexDirection: "column", gap: "8px" }}>
                   <p style={{ fontSize: "12px", color: "var(--gold-soft)", margin: 0, textAlign: "center" }}>
                     {t.deepDiveGateNote}
                   </p>
@@ -9401,7 +9497,7 @@ export default function TarotDraw() {
                     onChange={(e) => setDeepDiveGateCode(e.target.value)}
                     onKeyDown={(e) => { if (e.key === "Enter") handleDeepDiveGate(); }}
                     placeholder={t.deepDiveGatePlaceholder}
-                    style={{ fontFamily: "inherit", fontSize: "13px", padding: "8px 10px", borderRadius: "6px", border: "1px solid rgba(201,162,75,0.4)", background: "rgba(255,255,255,0.04)", color: "#f1ead8" }}
+                    style={{ fontFamily: "inherit", fontSize: "13px", padding: "8px 10px", borderRadius: "8px", border: "1px solid rgba(201,162,75,0.4)", background: "rgba(255,255,255,0.04)", color: "#f1ead8" }}
                   />
                   <button className="draw-btn" onClick={handleDeepDiveGate} style={{ fontSize: "12px", padding: "8px 16px" }}>
                     {t.confirmYes}
@@ -9410,7 +9506,7 @@ export default function TarotDraw() {
               )}
 
               {deepDiveUnlocked && (
-                <div style={{ background: "rgba(36,28,77,0.65)", border: "1px solid rgba(201,162,75,0.25)", borderRadius: "12px", padding: "16px 18px", display: "flex", flexDirection: "column", gap: "12px" }}>
+                <div style={{ background: "rgba(36,28,77,0.65)", border: "1px solid rgba(201,162,75,0.20)", borderRadius: "12px", padding: "16px 18px", display: "flex", flexDirection: "column", gap: "12px" }}>
                   <div className="ai-label"><Sparkles size={12} /> {t.deepDiveTitle}</div>
 
                   {/* これまでの問診履歴 */}
@@ -9456,7 +9552,7 @@ export default function TarotDraw() {
                         </button>
                       </div>
                       {deepDiveQA.length >= deepDiveRoundLimit && (
-                        <p style={{ fontSize: "10.5px", color: "var(--muted)", margin: 0, textAlign: "center" }}>
+                        <p style={{ fontSize: "11px", color: "var(--muted)", margin: 0, textAlign: "center" }}>
                           {t.deepDiveRoundCapNote}
                         </p>
                       )}
@@ -9481,11 +9577,11 @@ export default function TarotDraw() {
                         </button>
                       )}
                       {showMementoPanel && (
-                        <div style={{ marginTop: "12px", background: "rgba(20,15,45,0.6)", border: "1px solid rgba(201,162,75,0.3)", borderRadius: "10px", padding: "14px 16px", display: "flex", flexDirection: "column", gap: "10px" }}>
+                        <div style={{ marginTop: "12px", background: "rgba(20,15,45,0.6)", border: "1px solid rgba(201,162,75,0.3)", borderRadius: "12px", padding: "18px 18px", display: "flex", flexDirection: "column", gap: "10px" }}>
                           <p style={{ fontSize: "11px", color: "var(--gold-soft)", margin: 0 }}>{t.mementoIntro}</p>
                           <div>
                             <p style={{ fontSize: "10px", color: "var(--muted)", margin: "0 0 4px" }}>{t.mementoCodeLabel}</p>
-                            <p style={{ fontSize: "14px", fontFamily: "monospace", letterSpacing: "0.05em", color: "var(--parchment)", margin: 0, wordBreak: "break-all", background: "rgba(255,255,255,0.05)", padding: "8px 10px", borderRadius: "6px" }}>
+                            <p style={{ fontSize: "14px", fontFamily: "monospace", letterSpacing: "0.04em", color: "var(--parchment)", margin: 0, wordBreak: "break-all", background: "rgba(255,255,255,0.05)", padding: "8px 10px", borderRadius: "8px" }}>
                               {mementoCode}
                             </p>
                           </div>
@@ -9509,7 +9605,7 @@ export default function TarotDraw() {
           )}
 
           {!reading2Loading && !reading3Loading && (
-            <p className="privacy-note" style={{ marginTop: "-4px", fontSize: "10.5px" }}>
+            <p className="privacy-note" style={{ marginTop: "-4px", fontSize: "11px" }}>
               {t.endOfPrivacyResult}
             </p>
           )}
@@ -9529,6 +9625,23 @@ export default function TarotDraw() {
             <button className="reset-btn" onClick={reset}>
               <RotateCcw size={14} />
               {t.drawAgainButton(Math.max(0, currentLimit - todayCount))}
+            </button>
+            {/*
+              機能としては reset() と同じだが、気持ちの向きが違う。
+              「もう一度占う」は前のめりの選択、「タイトルに戻る」は一度離れる選択。
+              いったん戻ってから、また引きたくなることがあるので、
+              その動線を塞がないよう別のボタンとして置く。
+            */}
+            <button
+              onClick={() => { reset(); setNavTab("draw"); }}
+              style={{
+                background: "none", border: "none", cursor: "pointer",
+                fontFamily: "inherit", fontSize: "11px", color: "var(--muted)",
+                letterSpacing: "0.06em", padding: "6px 10px", opacity: 0.75,
+                transition: "opacity .2s ease, color .2s ease",
+              }}
+            >
+              {t.backToTitle}
             </button>
           </div>
 
@@ -9550,14 +9663,14 @@ export default function TarotDraw() {
           position: "sticky", bottom: "58px", zIndex: 55,
           margin: "12px -8px -4px",
           background: "linear-gradient(160deg, rgba(46,36,92,0.97), rgba(24,20,44,0.97))",
-          border: "1px solid rgba(201,162,75,0.35)", borderRadius: "12px",
+          border: "1px solid rgba(201,162,75,0.32)", borderRadius: "12px",
           padding: "12px 14px", boxShadow: "0 6px 24px rgba(0,0,0,0.45)",
           display: "flex", alignItems: "center", gap: "10px",
         }}>
           <img src="/icon-192.png" alt="" width="34" height="34"
             style={{ borderRadius: "8px", flexShrink: 0 }} />
           <div style={{ flex: 1, minWidth: 0 }}>
-            <p style={{ margin: "0 0 2px", fontSize: "11.5px", color: "var(--gold-soft)", lineHeight: 1.5 }}>
+            <p style={{ margin: "0 0 2px", fontSize: "12px", color: "var(--gold-soft)", lineHeight: 1.5 }}>
               {t.a2hsTitle}
             </p>
             <p style={{ margin: 0, fontSize: "10px", color: "var(--muted)", lineHeight: 1.6 }}>
@@ -9588,6 +9701,7 @@ export default function TarotDraw() {
             setShowLastResult(false);
             setShowCoupon(false);
             setShowLegal(false);
+            setRecordsTab("last");
             window.scrollTo({ top: 0, behavior: "smooth" });
           }}
           lang={lang}
