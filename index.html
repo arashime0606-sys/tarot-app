@@ -42,6 +42,14 @@
     <meta name="twitter:description" content="No sign-up. Nothing stored on any server. Completely fair by design. 10 languages." />
     <meta name="twitter:image" content="https://tarot-app-jade-theta.vercel.app/ogp.png" />
 
+    <!--
+      PWAマニフェスト。これがあると Android/Chrome で「ホーム画面に追加」が案内され、
+      追加後はURLバーの無い全画面で起動する。同じコードのまま、
+      ブラウザで開けばウェブ版、ホーム画面から開けばアプリ版として振る舞う。
+      将来 Capacitor でストア配信する場合も、この作業は無駄にならない。
+    -->
+    <link rel="manifest" href="/manifest.json" />
+
     <!-- アイコン。ホーム画面に追加されたときの見え方を決める -->
     <link rel="icon" type="image/svg+xml" href="/favicon.svg" />
     <link rel="apple-touch-icon" href="/apple-touch-icon.png" />
