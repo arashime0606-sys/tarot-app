@@ -8963,27 +8963,39 @@ export default function TarotDraw() {
                   一度に見せる量を減らすことが、そのまま読みやすさになる。
                 */}
                 <div style={{
-                  display: "flex", gap: "4px", marginBottom: "4px",
-                  background: "rgba(255,255,255,0.04)", borderRadius: "999px", padding: "3px",
+                  /*
+                    非選択タブに背景も枠も無いと、押せる要素だと分からない。
+                    容器の輪郭を出し、区切り線を入れて「3つに分かれている」ことを形で示す。
+                  */
+                  display: "flex", marginBottom: "4px",
+                  background: "rgba(255,255,255,0.05)",
+                  border: "1px solid rgba(201,162,75,0.20)",
+                  borderRadius: "999px", padding: "3px",
                 }}>
                   {[
                     { key: "last", label: t.subLast },
                     { key: "history", label: t.subHistory },
                     { key: "stats", label: t.subStats },
-                  ].map((it) => {
+                  ].map((it, i) => {
                     const on = recordsTab === it.key;
                     return (
                       <button
                         key={it.key}
                         onClick={() => setRecordsTab(it.key)}
+                        aria-pressed={on}
                         style={{
-                          background: on ? "rgba(201,162,75,0.16)" : "transparent",
-                          border: "none", borderRadius: "999px", cursor: "pointer",
-                          padding: "7px 16px", fontFamily: "inherit", fontSize: "11px",
-                          letterSpacing: "0.04em",
+                          position: "relative",
+                          background: on ? "rgba(201,162,75,0.20)" : "transparent",
+                          border: on ? "1px solid rgba(201,162,75,0.45)" : "1px solid transparent",
+                          borderRadius: "999px", cursor: "pointer",
+                          padding: "8px 18px", fontFamily: "inherit", fontSize: "11px",
+                          letterSpacing: "0.06em",
                           color: on ? "var(--gold)" : "var(--parchment)",
-                          opacity: on ? 1 : 0.7,
-                          transition: "background .2s, color .2s, opacity .2s",
+                          opacity: on ? 1 : 0.85,
+                          WebkitTapHighlightColor: "rgba(201,162,75,0.25)",
+                          // 非選択タブの間に細い区切りを入れて、独立した押し場所であることを示す
+                          boxShadow: !on && i > 0 ? "inset 1px 0 0 rgba(201,162,75,0.14)" : "none",
+                          transition: "background .2s, color .2s, opacity .2s, border-color .2s",
                         }}
                       >{it.label}</button>
                     );
