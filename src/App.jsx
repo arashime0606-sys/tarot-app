@@ -3857,6 +3857,23 @@ const STAT_RPG_NAMES = {
   vi: { str: "Sức Mạnh", def: "Phòng Thủ", agi: "Nhanh Nhẹn", vit: "Thể Lực", dex: "Khéo Léo", int: "Trí Lực", spr: "Tinh Thần", luk: "May Mắn" },
 };
 const STAT_ABBR = { str: "STR", def: "DEF", agi: "AGI", vit: "VIT", dex: "DEX", int: "INT", spr: "SPR", luk: "LUK" };
+
+/**
+ * ステータスごとの固有色。
+ * 全部が同じ金色グラデーションだと、バーの長さでしか比較できず、
+ * 「今どの分野を見ているか」を色から即座に判別できない。
+ * 8色を割り当てて、比率の可視化を色でも支える。
+ */
+const STAT_COLORS = {
+  str: { dim: "#8a3d2a", bright: "#e0684a" }, // 火・行動
+  def: { dim: "#2a4a6b", bright: "#5b9bd6" }, // 水・感情
+  agi: { dim: "#1f6b63", bright: "#4fd6c4" }, // 風・変化
+  vit: { dim: "#5a6b1f", bright: "#a9d64f" }, // 火・気力
+  dex: { dim: "#6b2a52", bright: "#d67ab1" }, // 風・人運
+  int: { dim: "#2a3d6b", bright: "#7a8fe0" }, // 地・仕事
+  spr: { dim: "#4a2a6b", bright: "#a97ad6" }, // 水・加護
+  luk: { dim: "#6b5a1f", bright: "#e0c04f" }, // 地・金運
+};
 function rpgStatName(key, lang) {
   return (STAT_RPG_NAMES[lang] && STAT_RPG_NAMES[lang][key]) || STAT_RPG_NAMES.ja[key] || key;
 }
@@ -4471,6 +4488,274 @@ function trendOf(shortAvg, midAvg, t) {
  * 【育成パネル】占うほど育つ伴走者。
  * レベルは鑑定結果に一切影響しない。あくまで歩んだ距離を映すだけの指標。
  */
+/**
+ * 【利用規約・プライバシーポリシー】
+ *
+ * 別ページではなくアプリ内のパネルとして持つ。
+ * 外部リンクだとアプリから出てしまい、占いを始めようとしていた人の流れが切れる。
+ * パネルなら開いて読んで閉じるで完結し、利用者の手間が増えない。
+ *
+ * 起動時の同意モーダルは出さない。規約側に「利用した時点で同意とみなす」と
+ * 定めてあるため、無料・登録不要の本アプリでは追加の操作を求める必要がない。
+ * 将来決済を導入する際は、その決済フローの中で明示的な同意を取ること。
+ *
+ * 本文は日本語と英語の2本のみ。表示言語が日本語なら日本語版、それ以外は英語版。
+ * 規約はカードのキーワードと違い、未翻訳でも英語版で法的な機能を果たすため、
+ * 10言語化を待たずに全言語で成立する。
+ */
+const LEGAL_JA = [
+  ["h1", "利用規約"],
+  ["p", "最終更新日：2026年8月1日"],
+  ["p", "本規約は、本サービス（以下「本アプリ」といいます）の利用条件を定めるものです。本アプリをご利用いただいた時点で、本規約に同意いただいたものとみなします。"],
+  ["h2", "第1条（本アプリの性質）"],
+  ["li", "本アプリは、タロットカードをモチーフとした娯楽および内省のためのサービスです。"],
+  ["li", "本アプリが提供する占断・鑑定文・その他一切の出力は、娯楽を目的とするものであり、事実の予測、専門的助言、または保証ではありません。"],
+  ["li", "本アプリの出力は、医療、法律、税務、投資、その他いかなる分野の専門的助言にも代わるものではありません。健康、法的紛争、財産、その他重要な事項については、必ず有資格の専門家にご相談ください。"],
+  ["h2", "第2条（利用資格）"],
+  ["li", "本アプリは、どなたでもご利用いただけます。ただし、未成年者が利用する場合は、保護者の方の同意を得たうえでご利用ください。"],
+  ["li", "本アプリの利用にあたり、アカウント登録は不要です。"],
+  ["h2", "第3条（禁止事項）"],
+  ["p", "利用者は、本アプリの利用にあたり、以下の行為を行ってはなりません。"],
+  ["li", "法令または公序良俗に違反する行為"],
+  ["li", "本アプリのサーバー、ネットワーク、その他の設備に対して、通常の利用の範囲を著しく超える負荷をかける行為"],
+  ["li", "自動化されたプログラム等を用いて、機械的に本アプリへアクセスする行為"],
+  ["li", "本アプリの回数制限その他の制限を、不正な手段により回避する行為"],
+  ["li", "本アプリの出力を、あたかも専門的な助言または事実の予測であるかのように第三者へ提示する行為"],
+  ["li", "その他、運営者が不適切と判断する行為"],
+  ["h2", "第4条（サービスの変更・中断・終了）"],
+  ["li", "運営者は、利用者への事前の通知なく、本アプリの内容を変更し、または提供を中断・終了することができます。"],
+  ["li", "本アプリは、外部のAIサービスを利用しています。当該サービスの提供状況、費用、その他の事情により、AIによる鑑定機能が予告なく停止し、定型文による表示に切り替わる場合があります。"],
+  ["h2", "第5条（有料プラン）"],
+  ["li", "本アプリには、将来的に有料プランが導入される場合があります。"],
+  ["li", "有料プランの内容、価格、決済方法、返金条件については、導入時に別途定めるものとします。"],
+  ["li", "現時点において、有料プランは提供されていません。"],
+  ["h2", "第6条（免責事項）"],
+  ["li", "運営者は、本アプリの出力の正確性、完全性、有用性、特定の目的への適合性について、いかなる保証も行いません。"],
+  ["li", "利用者が本アプリの出力に基づいて行った判断および行動、ならびにそれによって生じた一切の結果について、運営者は責任を負いません。"],
+  ["li", "運営者は、本アプリの利用により利用者に生じた損害について、運営者に故意または重過失がある場合を除き、責任を負いません。"],
+  ["li", "本アプリの記録は利用者の端末内にのみ保存されるため、端末の紛失、故障、ブラウザのデータ消去等により記録が失われた場合、運営者はこれを復元することができません。"],
+  ["h2", "第7条（知的財産権）"],
+  ["p", "本アプリに関する著作権その他の知的財産権は、運営者または正当な権利者に帰属します。"],
+  ["h2", "第8条（準拠法および管轄）"],
+  ["li", "本規約は、日本法に準拠して解釈されます。"],
+  ["li", "本アプリに関して紛争が生じた場合、運営者の所在地を管轄する日本の裁判所を第一審の専属的合意管轄裁判所とします。"],
+  ["h2", "第9条（本規約の変更）"],
+  ["p", "運営者は、本規約を随時変更することができます。変更後の規約は、本アプリ上に掲示した時点から効力を生じるものとします。"],
+  ["hr", ""],
+  ["h1", "プライバシーポリシー"],
+  ["p", "最終更新日：2026年8月1日"],
+  ["p", "本アプリは、利用者のプライバシーを最も重要な価値のひとつと考えています。本ポリシーでは、本アプリがどのような情報をどのように扱うかを、正確に記載します。"],
+  ["h2", "1. アカウント登録を求めません"],
+  ["p", "本アプリの利用にあたり、メールアドレス、電話番号、その他の連絡先の登録は一切不要です。運営者は、利用者を個人として識別する情報を保有していません。"],
+  ["h2", "2. 端末内にのみ保存される情報"],
+  ["p", "以下の情報は、利用者の端末内（ブラウザのローカルストレージ）にのみ保存され、運営者のサーバーへは送信も保存もされません。"],
+  ["li", "入力されたお名前（ニックネーム）"],
+  ["li", "鑑定の履歴（引いたカード、相談内容、鑑定文、日時）※最大365件"],
+  ["li", "選択中の表示言語"],
+  ["li", "1日の利用回数の記録"],
+  ["li", "称号・実績・育成に関する記録"],
+  ["li", "「ふっかつのじゅもん」として保存されたセッションの記録"],
+  ["li", "各種設定（読み上げの案内既読、記録の継承の有無など）"],
+  ["p", "これらの情報は、運営者が閲覧することはできません。ブラウザのデータを消去すると、これらの記録はすべて失われ、運営者による復元はできません。"],
+  ["h2", "3. 外部のAIサービスへ送信される情報"],
+  ["p", "本アプリは、鑑定文を生成するために、Google LLC が提供する生成AIサービス（Gemini API）を利用しています。"],
+  ["p", "鑑定文の生成のつど、以下の情報が当該サービスへ送信されます。"],
+  ["li", "入力されたお名前（ニックネーム）"],
+  ["li", "入力された相談内容"],
+  ["li", "引いたカードの情報および鑑定に必要な数値"],
+  ["li", "「記録の継承」を有効にしている場合、過去5回分の鑑定記録の要約"],
+  ["p", "この送信は、鑑定文を生成するという目的のためにのみ行われます。運営者は、送信した内容をサーバーに保存しません。"],
+  ["p", "送信先における情報の取扱いについては、Google のプライバシーポリシーが適用されます。"],
+  ["p", "https://policies.google.com/privacy"],
+  ["p", "「記録の継承」は、いつでも設定画面からオフにできます。 オフにした場合、過去の記録が送信されることはありません。"],
+  ["h2", "4. 読み上げ機能について"],
+  ["p", "読み上げ機能は、利用者の端末に内蔵された音声合成機能を使用します。外部への通信は発生しません。読み上げの対象は鑑定文のみであり、利用者が入力した相談内容が読み上げられることはありません。"],
+  ["h2", "5. サーバー側で記録される情報"],
+  ["p", "本アプリはVercel Inc. のホスティングサービス上で提供されています。同社のサーバーにおいて、アクセス日時、IPアドレス等の一般的なアクセスログが記録される場合があります。"],
+  ["p", "また、運営者は、不正な大量アクセスを防ぐ目的で、一時的にIPアドレスを利用して、一定時間あたりのアクセス回数を数えています。この記録はサーバーのメモリ上に一時的に保持されるのみで、永続的に保存されることはなく、個人の特定にも利用されません。"],
+  ["h2", "6. Cookie および解析ツール"],
+  ["p", "本アプリは、Cookie を利用していません。また、アクセス解析ツールおよび広告配信サービスも利用していません。"],
+  ["h2", "7. 第三者への提供"],
+  ["p", "運営者は、法令に基づき開示が求められる場合を除き、利用者の情報を第三者へ提供することはありません。"],
+  ["h2", "8. 本ポリシーの変更"],
+  ["p", "本ポリシーは、本アプリの機能の変更に応じて改定されることがあります。重要な変更を行う場合は、本アプリ上でお知らせします。"],
+  ["h2", "9. お問い合わせ"],
+  ["p", "本ポリシーに関するお問い合わせは、下記までご連絡ください。"],
+  ["p", "（連絡先：未設定）"],
+];
+
+const LEGAL_EN = [
+  ["h1", "Terms of Service"],
+  ["p", "Last updated: August 1, 2026"],
+  ["p", "These Terms govern your use of this service (the \"App\"). By using the App, you agree to these Terms."],
+  ["h2", "1. Nature of the App"],
+  ["li", "The App is a service for entertainment and personal reflection, built around the motif of tarot cards."],
+  ["li", "All readings, interpretations, and other output produced by the App are provided for entertainment purposes only. They are not predictions of fact, professional advice, or guarantees of any kind."],
+  ["li", "The output of the App is not a substitute for professional advice in medicine, law, taxation, investment, or any other field. For matters concerning your health, legal disputes, finances, or other significant decisions, please consult a qualified professional."],
+  ["h2", "2. Eligibility"],
+  ["li", "Anyone may use the App. If you are a minor, please obtain the consent of a parent or guardian before using it."],
+  ["li", "No account registration is required."],
+  ["h2", "3. Prohibited Conduct"],
+  ["p", "You must not:"],
+  ["li", "Violate any applicable law or public order and morals;"],
+  ["li", "Place a load on the App's servers, networks, or other infrastructure that significantly exceeds ordinary use;"],
+  ["li", "Access the App by automated means, including scripts or bots;"],
+  ["li", "Circumvent the App's usage limits or other restrictions by improper means;"],
+  ["li", "Present the App's output to third parties as though it were professional advice or a factual prediction;"],
+  ["li", "Engage in any other conduct the operator deems inappropriate."],
+  ["h2", "4. Changes, Suspension, and Termination"],
+  ["li", "The operator may change, suspend, or discontinue the App at any time without prior notice."],
+  ["li", "The App relies on an external AI service. Depending on the availability, cost, or other circumstances of that service, AI-generated readings may be suspended without notice, in which case the App will fall back to pre-written text."],
+  ["h2", "5. Paid Plans"],
+  ["li", "Paid plans may be introduced in the future."],
+  ["li", "The contents, pricing, payment methods, and refund conditions of any paid plan will be set out separately at the time of introduction."],
+  ["li", "No paid plan is currently offered."],
+  ["h2", "6. Disclaimer"],
+  ["li", "The operator makes no warranty as to the accuracy, completeness, usefulness, or fitness for any particular purpose of the App's output."],
+  ["li", "The operator is not responsible for any decisions or actions you take based on the App's output, or for any consequences arising from them."],
+  ["li", "Except in cases of the operator's willful misconduct or gross negligence, the operator is not liable for any damages arising from your use of the App."],
+  ["li", "Because your records are stored only on your own device, if they are lost through device loss, device failure, clearing your browser data, or similar causes, the operator cannot recover them."],
+  ["h2", "7. Intellectual Property"],
+  ["p", "Copyright and other intellectual property rights in the App belong to the operator or the respective rights holders."],
+  ["h2", "8. Governing Law and Jurisdiction"],
+  ["li", "These Terms are governed by and construed in accordance with the laws of Japan."],
+  ["li", "Any dispute arising in connection with the App shall be subject to the exclusive jurisdiction of the Japanese court having jurisdiction over the operator's location, as the court of first instance."],
+  ["h2", "9. Amendments"],
+  ["p", "The operator may revise these Terms at any time. Revised Terms take effect when posted within the App."],
+  ["hr", ""],
+  ["h1", "Privacy Policy"],
+  ["p", "Last updated: August 1, 2026"],
+  ["p", "Your privacy is one of the core values of this App. This policy describes, accurately, what information the App handles and how."],
+  ["h2", "1. No account required"],
+  ["p", "You do not need to provide an email address, phone number, or any other contact information to use the App. The operator holds no information that identifies you as an individual."],
+  ["h2", "2. Information stored only on your device"],
+  ["p", "The following is stored only in your browser's local storage. It is never transmitted to, or stored on, the operator's servers."],
+  ["li", "The name or nickname you enter"],
+  ["li", "Your reading history: the cards drawn, your question, the reading text, and timestamps (up to 365 entries)"],
+  ["li", "Your selected display language"],
+  ["li", "A record of how many readings you have done today"],
+  ["li", "Records relating to titles, achievements, and character growth"],
+  ["li", "Sessions saved via the \"resurrection spell\" feature"],
+  ["li", "Settings, such as whether you have seen the read-aloud notice and whether carrying over past records is enabled"],
+  ["p", "The operator cannot view any of this. If you clear your browser data, all of these records are lost permanently, and the operator cannot restore them."],
+  ["h2", "3. Information sent to an external AI service"],
+  ["p", "To generate readings, the App uses a generative AI service provided by Google LLC (the Gemini API)."],
+  ["p", "Each time a reading is generated, the following is sent to that service:"],
+  ["li", "The name or nickname you entered"],
+  ["li", "The question you entered"],
+  ["li", "The cards drawn and the values needed for the reading"],
+  ["li", "If \"carry over past readings\" is enabled, a summary of your last five readings"],
+  ["p", "This transmission occurs solely for the purpose of generating the reading. The operator does not store the transmitted content on any server."],
+  ["p", "Google's privacy policy applies to the handling of information at its end:"],
+  ["p", "https://policies.google.com/privacy"],
+  ["p", "You can turn off \"carry over past readings\" at any time. When it is off, none of your past records are sent."],
+  ["h2", "4. Read-aloud feature"],
+  ["p", "The read-aloud feature uses the speech synthesis built into your own device. No external communication takes place. Only the reading itself is read aloud; the question you entered is never read aloud."],
+  ["h2", "5. Information recorded on the server side"],
+  ["p", "The App is hosted on Vercel Inc. Standard access logs, which may include access times and IP addresses, may be recorded on its servers."],
+  ["p", "In addition, to prevent abusive high-volume access, the operator temporarily uses IP addresses to count the number of requests within a given time window. This is held only in server memory, is not stored persistently, and is not used to identify individuals."],
+  ["h2", "6. Cookies and analytics"],
+  ["p", "The App does not use cookies. It also does not use any analytics or advertising services."],
+  ["h2", "7. Disclosure to third parties"],
+  ["p", "The operator will not provide your information to third parties, except where disclosure is required by law."],
+  ["h2", "8. Changes to this policy"],
+  ["p", "This policy may be revised as the App's features change. If a significant change is made, notice will be given within the App."],
+  ["h2", "9. Contact"],
+  ["p", "For inquiries regarding this policy, please contact us at:"],
+  ["p", "(Contact: not yet set)"],
+];
+
+function legalDoc(lang) {
+  return lang === "ja" ? LEGAL_JA : LEGAL_EN;
+}
+
+/**
+ * 【冒険モード】タブだけ先に用意し、中身は「Coming Soon」で止めておく。
+ *
+ * ステータス・称号・実績が揃った今、次にこれらを消費する先として冒険モードを
+ * 予告する意味がある。閉店中の空白ではなく「次はここが動く」という予告にする。
+ */
+/**
+ * 【規約パネル】利用規約とプライバシーポリシーを表示する。
+ * 番号付きの条項は連番を自前で振る（見出しごとにリセットする）。
+ */
+function LegalPanel({ lang }) {
+  const doc = legalDoc(lang);
+  let counter = 0;
+  return (
+    <div style={{ width: "100%", maxWidth: "440px", marginTop: "12px" }}>
+      <div style={{
+        background: "rgba(26,22,44,0.85)", border: "1px solid rgba(201,162,75,0.22)",
+        borderRadius: "10px", padding: "18px 18px 22px",
+        maxHeight: "60vh", overflowY: "auto", textAlign: "left",
+      }}>
+        {doc.map(([kind, text], i) => {
+          if (kind === "h1") {
+            counter = 0;
+            return (
+              <h2 key={i} style={{
+                fontFamily: "Cinzel, serif", fontSize: "14px", letterSpacing: "0.1em",
+                color: "var(--gold)", margin: i === 0 ? "0 0 12px" : "26px 0 12px",
+                paddingBottom: "8px", borderBottom: "1px solid rgba(201,162,75,0.2)",
+              }}>{text}</h2>
+            );
+          }
+          if (kind === "h2") {
+            counter = 0;
+            return (
+              <h3 key={i} style={{
+                fontSize: "12px", color: "var(--gold-soft)", fontWeight: 600,
+                margin: "18px 0 7px", lineHeight: 1.5,
+              }}>{text}</h3>
+            );
+          }
+          if (kind === "hr") return <div key={i} style={{ height: "10px" }} />;
+          if (kind === "li") {
+            counter += 1;
+            return (
+              <div key={i} style={{ display: "flex", gap: "7px", margin: "0 0 5px" }}>
+                <span style={{ color: "var(--gold-dim)", fontSize: "11px", flexShrink: 0, lineHeight: 1.85 }}>
+                  {counter}.
+                </span>
+                <span style={{ fontSize: "11.5px", color: "var(--parchment)", lineHeight: 1.85, opacity: 0.9 }}>
+                  {text}
+                </span>
+              </div>
+            );
+          }
+          counter = 0;
+          return (
+            <p key={i} style={{
+              fontSize: "11.5px", color: "var(--parchment)", lineHeight: 1.85,
+              margin: "0 0 9px", opacity: 0.9, wordBreak: "break-word",
+            }}>{text}</p>
+          );
+        })}
+      </div>
+    </div>
+  );
+}
+
+function AdventurePanel({ lang }) {
+  const t = T[lang] || T.ja;
+  return (
+    <div style={{ width: "100%", maxWidth: "400px", marginTop: "12px", display: "flex", flexDirection: "column", gap: "12px" }}>
+      <div style={{ background: "rgba(36,28,77,0.7)", border: "1px solid rgba(201,162,75,0.25)", borderRadius: "10px", padding: "28px 16px", textAlign: "center" }}>
+        <div style={{ fontFamily: "Cinzel, serif", fontSize: "10px", letterSpacing: "0.14em", color: "var(--gold)", marginBottom: "14px" }}>
+          {t.adventureButtonLabel}
+        </div>
+        <Sparkles size={22} style={{ color: "var(--gold-dim)", opacity: 0.7, marginBottom: "10px" }} />
+        <p style={{ fontFamily: "Cinzel, serif", fontSize: "16px", letterSpacing: "0.08em", color: "var(--gold-soft)", margin: "0 0 8px" }}>
+          {t.adventureComingSoon}
+        </p>
+        <p style={{ fontSize: "11px", color: "var(--muted)", margin: 0, lineHeight: 1.7 }}>
+          {t.adventureNote}
+        </p>
+      </div>
+    </div>
+  );
+}
+
 function CharacterPanel({ history, lang, membership, equippedTitle }) {
   const t = T[lang] || T.ja;
   const c = calcCharacter(history, membership);
@@ -4516,16 +4801,16 @@ function CharacterPanel({ history, lang, membership, equippedTitle }) {
                 const maxV = Math.max(1, ...STAT_ORDER.map((x) => c.stats[x]));
                 return (
                   <div key={k} style={{ display: "flex", alignItems: "center", gap: "8px" }}>
-                    <span style={{ fontSize: "9px", width: "26px", flexShrink: 0, fontFamily: "Cinzel, serif", color: "var(--gold-dim)", letterSpacing: ".04em" }}>
+                    <span style={{ fontSize: "9px", width: "26px", flexShrink: 0, fontFamily: "Cinzel, serif", color: STAT_COLORS[k].bright, letterSpacing: ".04em" }}>
                       {STAT_ABBR[k]}
                     </span>
                     <span style={{ fontSize: "11px", width: "62px", flexShrink: 0, fontFamily: "'Shippori Mincho', serif", color: "var(--parchment)" }}>
                       {rpgStatName(k, lang)}
                     </span>
                     <div style={{ flex: 1, height: "6px", borderRadius: "999px", background: "rgba(255,255,255,0.07)", overflow: "hidden" }}>
-                      <div style={{ width: `${Math.round((v / maxV) * 100)}%`, height: "100%", background: "linear-gradient(90deg, var(--gold-dim), var(--gold))" }} />
+                      <div style={{ width: `${Math.round((v / maxV) * 100)}%`, height: "100%", background: `linear-gradient(90deg, ${STAT_COLORS[k].dim}, ${STAT_COLORS[k].bright})` }} />
                     </div>
-                    <span style={{ fontSize: "12px", color: "var(--gold-soft)", width: "34px", textAlign: "right", fontFamily: "Cinzel, serif" }}>{v}</span>
+                    <span style={{ fontSize: "12px", color: STAT_COLORS[k].bright, width: "34px", textAlign: "right", fontFamily: "Cinzel, serif" }}>{v}</span>
                     <span style={{ fontSize: "9.5px", color: rate >= 3 ? "var(--star-max)" : "var(--muted)", width: "26px", textAlign: "right" }}>
                       +{rate}
                     </span>
@@ -5579,6 +5864,9 @@ const T = {
     couponPlaceholder: "코드를 입력...",
     confirmButton: "확인",
     historyButtonLabel: (n) => `기록 (${n})`,
+    adventureButtonLabel: "모험",
+    adventureComingSoon: "곧 공개됩니다",
+    adventureNote: "통계·칭호·업적이 이곳에서의 모험을 뒷받침할 준비를 하고 있습니다. 조금만 기다려 주세요.",
     characterButtonLabel: "육성",
     characterLabel: "동행자",
     characterLevel: (n) => `Lv. ${n}`,
@@ -5600,6 +5888,8 @@ const T = {
     titlesLabel: (n, total) => `칭호 ${n} / ${total}`,
     titlesLocked: (n) => `아직 만나지 못한 칭호가 ${n}종 남아 있습니다`,
     statsButtonLabel: "통계",
+    legalButtonLabel: "이용약관 · 개인정보처리방침",
+    legalClose: "닫기",
     couponButtonLabel: "코드 입력",
   },
   vi: {
@@ -5730,6 +6020,9 @@ const T = {
     couponPlaceholder: "Nhập mã...",
     confirmButton: "Xác nhận",
     historyButtonLabel: (n) => `Lịch sử (${n})`,
+    adventureButtonLabel: "Cuộc Phiêu Lưu",
+    adventureComingSoon: "Sắp Ra Mắt",
+    adventureNote: "Chỉ số, danh hiệu và thành tựu của bạn đang âm thầm chuẩn bị cho cuộc phiêu lưu sắp tới. Xin hãy chờ thêm một chút.",
     characterButtonLabel: "Trưởng thành",
     characterLabel: "Người đồng hành",
     characterLevel: (n) => `Lv. ${n}`,
@@ -5751,6 +6044,8 @@ const T = {
     titlesLabel: (n, total) => `Danh hiệu ${n} / ${total}`,
     titlesLocked: (n) => `Vẫn còn ${n} danh hiệu chưa được khám phá`,
     statsButtonLabel: "Thống kê",
+    legalButtonLabel: "Điều khoản & Chính sách bảo mật",
+    legalClose: "Đóng",
     couponButtonLabel: "Nhập mã",
   },
   id: {
@@ -5881,6 +6176,9 @@ const T = {
     couponPlaceholder: "Masukkan kode...",
     confirmButton: "Konfirmasi",
     historyButtonLabel: (n) => `Riwayat (${n})`,
+    adventureButtonLabel: "Petualangan",
+    adventureComingSoon: "Segera Hadir",
+    adventureNote: "Statistik, gelar, dan pencapaianmu sedang diam-diam bersiap untuk petualangan yang akan datang. Mohon tunggu sebentar lagi.",
     characterButtonLabel: "Pertumbuhan",
     characterLabel: "Pendamping",
     characterLevel: (n) => `Lv. ${n}`,
@@ -5902,6 +6200,8 @@ const T = {
     titlesLabel: (n, total) => `Gelar ${n} / ${total}`,
     titlesLocked: (n) => `Masih ada ${n} gelar yang belum ditemukan`,
     statsButtonLabel: "Statistik",
+    legalButtonLabel: "Ketentuan Layanan & Kebijakan Privasi",
+    legalClose: "Tutup",
     couponButtonLabel: "Kode",
   },
   ms: {
@@ -6032,6 +6332,9 @@ const T = {
     couponPlaceholder: "Masukkan kod...",
     confirmButton: "Konfirmasi",
     historyButtonLabel: (n) => `Riwayat (${n})`,
+    adventureButtonLabel: "Pengembaraan",
+    adventureComingSoon: "Akan Datang Tidak Lama Lagi",
+    adventureNote: "Statistik, gelaran, dan pencapaian anda sedang bersedia untuk pengembaraan yang akan datang. Sila tunggu sebentar lagi.",
     characterButtonLabel: "Pertumbuhan",
     characterLabel: "Pendamping",
     characterLevel: (n) => `Lv. ${n}`,
@@ -6053,6 +6356,8 @@ const T = {
     titlesLabel: (n, total) => `Gelaran ${n} / ${total}`,
     titlesLocked: (n) => `Masih ada ${n} gelaran yang belum ditemui`,
     statsButtonLabel: "Statistik",
+    legalButtonLabel: "Terma Perkhidmatan & Dasar Privasi",
+    legalClose: "Tutup",
     couponButtonLabel: "Kod",
   },
   ja: {
@@ -6184,6 +6489,9 @@ const T = {
     couponPlaceholder: "コードを入力...",
     confirmButton: "確定",
     historyButtonLabel: (n) => `履歴（${n}件）`,
+    adventureButtonLabel: "冒険",
+    adventureComingSoon: "近日公開",
+    adventureNote: "統計・称号・実績が、ここでの冒険を支える準備を進めています。もうしばらくお待ちください。",
     characterButtonLabel: "育成",
     characterLabel: "伴走者",
     characterLevel: (n) => `Lv. ${n}`,
@@ -6205,6 +6513,8 @@ const T = {
     titlesLabel: (n, total) => `称号 ${n} / ${total}`,
     titlesLocked: (n) => `あと${n}種類、まだ見ぬ称号があります`,
     statsButtonLabel: "統計",
+    legalButtonLabel: "利用規約・プライバシーポリシー",
+    legalClose: "閉じる",
     couponButtonLabel: "コード入力",
   },
   "zh-TW": {
@@ -6335,6 +6645,9 @@ const T = {
     couponPlaceholder: "輸入代碼...",
     confirmButton: "確認",
     historyButtonLabel: (n) => `歷史紀錄（${n}筆）`,
+    adventureButtonLabel: "冒險",
+    adventureComingSoon: "敬請期待",
+    adventureNote: "統計、稱號與成就正在為這裡的冒險做準備。請再稍候片刻。",
     characterButtonLabel: "養成",
     characterLabel: "同行者",
     characterLevel: (n) => `Lv. ${n}`,
@@ -6356,6 +6669,8 @@ const T = {
     titlesLabel: (n, total) => `稱號 ${n} / ${total}`,
     titlesLocked: (n) => `還有 ${n} 種尚未取得的稱號`,
     statsButtonLabel: "統計",
+    legalButtonLabel: "使用條款 · 隱私權政策",
+    legalClose: "關閉",
     couponButtonLabel: "代碼輸入",
   },
   "zh-CN": {
@@ -6486,6 +6801,9 @@ const T = {
     couponPlaceholder: "输入代码...",
     confirmButton: "确认",
     historyButtonLabel: (n) => `历史纪录（${n}笔）`,
+    adventureButtonLabel: "冒险",
+    adventureComingSoon: "敬请期待",
+    adventureNote: "统计、称号与成就正在为这里的冒险做准备。请再稍候片刻。",
     characterButtonLabel: "养成",
     characterLabel: "同行者",
     characterLevel: (n) => `Lv. ${n}`,
@@ -6507,6 +6825,8 @@ const T = {
     titlesLabel: (n, total) => `称号 ${n} / ${total}`,
     titlesLocked: (n) => `还有 ${n} 种尚未取得的称号`,
     statsButtonLabel: "统计",
+    legalButtonLabel: "使用条款 · 隐私政策",
+    legalClose: "关闭",
     couponButtonLabel: "代码输入",
   },
   en: {
@@ -6637,6 +6957,9 @@ const T = {
     couponPlaceholder: "Enter a code...",
     confirmButton: "Confirm",
     historyButtonLabel: (n) => `History (${n})`,
+    adventureButtonLabel: "Adventure",
+    adventureComingSoon: "Coming Soon",
+    adventureNote: "Your stats, titles, and achievements are quietly preparing for the adventure ahead. Please check back soon.",
     characterButtonLabel: "Growth",
     characterLabel: "Companion",
     characterLevel: (n) => `Lv. ${n}`,
@@ -6658,6 +6981,8 @@ const T = {
     titlesLabel: (n, total) => `Titles ${n} / ${total}`,
     titlesLocked: (n) => `${n} more titles remain undiscovered`,
     statsButtonLabel: "Stats",
+    legalButtonLabel: "Terms & Privacy Policy",
+    legalClose: "Close",
     couponButtonLabel: "Enter code",
   },
   tl: {
@@ -6788,6 +7113,9 @@ const T = {
     couponPlaceholder: "Maglagay ng code...",
     confirmButton: "Kumpirmahin",
     historyButtonLabel: (n) => `Kasaysayan (${n})`,
+    adventureButtonLabel: "Pakikipagsapalaran",
+    adventureComingSoon: "Malapit Nang Dumating",
+    adventureNote: "Ang iyong stats, titulo, at tagumpay ay tahimik na naghahanda para sa pakikipagsapalarang darating. Maghintay lang.",
     characterButtonLabel: "Paglago",
     characterLabel: "Kasama",
     characterLevel: (n) => `Lv. ${n}`,
@@ -6809,6 +7137,8 @@ const T = {
     titlesLabel: (n, total) => `Mga Titulo ${n} / ${total}`,
     titlesLocked: (n) => `May ${n} pang titulong hindi pa natutuklasan`,
     statsButtonLabel: "Stats",
+    legalButtonLabel: "Mga Tuntunin at Patakaran sa Privacy",
+    legalClose: "Isara",
     couponButtonLabel: "Code",
   },
   th: {
@@ -6939,6 +7269,9 @@ const T = {
     couponPlaceholder: "ใส่รหัส...",
     confirmButton: "ยืนยัน",
     historyButtonLabel: (n) => `ประวัติ (${n})`,
+    adventureButtonLabel: "การผจญภัย",
+    adventureComingSoon: "เร็วๆ นี้",
+    adventureNote: "สถิติ ฉายา และความสำเร็จของคุณกำลังเตรียมพร้อมสำหรับการผจญภัยที่จะมาถึง โปรดรออีกสักครู่",
     characterButtonLabel: "การเติบโต",
     characterLabel: "ผู้ร่วมทาง",
     characterLevel: (n) => `Lv. ${n}`,
@@ -6960,6 +7293,8 @@ const T = {
     titlesLabel: (n, total) => `ฉายา ${n} / ${total}`,
     titlesLocked: (n) => `ยังมีฉายาที่ยังไม่ได้รับอีก ${n} แบบ`,
     statsButtonLabel: "สถิติ",
+    legalButtonLabel: "ข้อกำหนดการใช้งาน · นโยบายความเป็นส่วนตัว",
+    legalClose: "ปิด",
     couponButtonLabel: "ใส่รหัส",
   },
 };
@@ -7012,6 +7347,8 @@ export default function TarotDraw() {
   const [showTitles, setShowTitles] = useState(false);
   const [showAchievements, setShowAchievements] = useState(false);
   const [showCharacter, setShowCharacter] = useState(false);
+  const [showAdventure, setShowAdventure] = useState(false);
+  const [showLegal, setShowLegal] = useState(false);
   const [equippedTitle, setEquippedTitle] = useState(loadEquippedTitle());
   const [showLastResult, setShowLastResult] = useState(false);
   const [aiEnabled, setAiEnabled] = useState(isAiEnabled());
@@ -8276,41 +8613,47 @@ export default function TarotDraw() {
               <div style={{ display: "flex", gap: "8px", marginTop: "8px", flexWrap: "wrap", justifyContent: "center" }}>
                 <button
                   className="reset-btn"
-                  onClick={() => { setShowHistory(!showHistory); setShowStats(false); setShowLastResult(false); setShowTitles(false); setShowAchievements(false); setShowCharacter(false); }}
+                  onClick={() => { setShowHistory(!showHistory); setShowStats(false); setShowLastResult(false); setShowTitles(false); setShowAchievements(false); setShowCharacter(false); setShowAdventure(false); }}
                 >
                   <RotateCcw size={14} />
                   {t.historyButtonLabel(history.length)}
                 </button>
                 <button
                   className="reset-btn"
-                  onClick={() => { setShowStats(!showStats); setShowHistory(false); setShowLastResult(false); setShowTitles(false); setShowAchievements(false); setShowCharacter(false); }}
+                  onClick={() => { setShowStats(!showStats); setShowHistory(false); setShowLastResult(false); setShowTitles(false); setShowAchievements(false); setShowCharacter(false); setShowAdventure(false); }}
                 >
                   {t.statsButtonLabel}
                 </button>
                 <button
                   className="reset-btn"
-                  onClick={() => { setShowLastResult(!showLastResult); setShowHistory(false); setShowStats(false); setShowTitles(false); setShowAchievements(false); setShowCharacter(false); }}
+                  onClick={() => { setShowLastResult(!showLastResult); setShowHistory(false); setShowStats(false); setShowTitles(false); setShowAchievements(false); setShowCharacter(false); setShowAdventure(false); }}
                 >
                   <Sparkles size={14} />
                   {t.lastResultButton}
                 </button>
                 <button
                   className="reset-btn"
-                  onClick={() => { setShowTitles(!showTitles); setShowHistory(false); setShowStats(false); setShowLastResult(false); setShowAchievements(false); setShowCharacter(false); }}
+                  onClick={() => { setShowTitles(!showTitles); setShowHistory(false); setShowStats(false); setShowLastResult(false); setShowAchievements(false); setShowCharacter(false); setShowAdventure(false); }}
                 >
                   {t.titlesButtonLabel}
                 </button>
                 <button
                   className="reset-btn"
-                  onClick={() => { setShowAchievements(!showAchievements); setShowHistory(false); setShowStats(false); setShowLastResult(false); setShowTitles(false); setShowCharacter(false); }}
+                  onClick={() => { setShowAchievements(!showAchievements); setShowHistory(false); setShowStats(false); setShowLastResult(false); setShowTitles(false); setShowCharacter(false); setShowAdventure(false); }}
                 >
                   {t.achievementsButtonLabel}
                 </button>
                 <button
                   className="reset-btn"
-                  onClick={() => { setShowCharacter(!showCharacter); setShowHistory(false); setShowStats(false); setShowLastResult(false); setShowTitles(false); setShowAchievements(false); }}
+                  onClick={() => { setShowCharacter(!showCharacter); setShowHistory(false); setShowStats(false); setShowLastResult(false); setShowTitles(false); setShowAchievements(false); setShowAdventure(false); }}
                 >
                   {t.characterButtonLabel}
+                </button>
+                <button
+                  className="reset-btn"
+                  onClick={() => { setShowAdventure(!showAdventure); setShowHistory(false); setShowStats(false); setShowLastResult(false); setShowTitles(false); setShowAchievements(false); setShowCharacter(false); }}
+                >
+                  {t.adventureButtonLabel}
                 </button>
               </div>
             )}
@@ -8318,6 +8661,20 @@ export default function TarotDraw() {
             <button className="reset-btn" onClick={() => setShowCoupon(!showCoupon)} style={{ marginTop: "8px", fontSize: "10px", opacity: 0.7 }}>
               {t.couponButtonLabel}
             </button>
+
+            {/* 規約への導線。占いを始めたい人の視線を邪魔しないよう、最も控えめに置く */}
+            <button
+              onClick={() => setShowLegal(!showLegal)}
+              style={{
+                marginTop: "10px", background: "none", border: "none", cursor: "pointer",
+                fontFamily: "inherit", fontSize: "10px", color: "var(--muted)",
+                opacity: 0.6, textDecoration: "underline", textUnderlineOffset: "3px", padding: "4px",
+              }}
+            >
+              {showLegal ? t.legalClose : t.legalButtonLabel}
+            </button>
+
+            {showLegal ? <LegalPanel lang={lang} /> : null}
 
             {showCoupon ? (
               <CouponPanel couponInput={couponInput} setCouponInput={setCouponInput} handleCoupon={handleCoupon} aiEnabled={aiEnabled} lang={lang} codeError={resurrectionError} />
@@ -8335,6 +8692,7 @@ export default function TarotDraw() {
             ) : null}
             {showAchievements ? <AchievementsPanel history={history} lang={lang} /> : null}
             {showCharacter ? <CharacterPanel history={history} lang={lang} membership={membership} equippedTitle={equippedTitle} /> : null}
+            {showAdventure ? <AdventurePanel lang={lang} /> : null}
             {showLastResult ? (
               <LastResultPanel entry={history[0]} lang={lang} onClose={() => setShowLastResult(false)} />
             ) : null}
