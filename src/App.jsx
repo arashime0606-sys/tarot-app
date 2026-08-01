@@ -4698,11 +4698,21 @@ function BottomNav({ current, onChange, lang, hasHistory }) {
   return (
     <nav
       style={{
-        position: "fixed", left: 0, right: 0, bottom: 0, zIndex: 60,
+        /*
+          position:fixed ではなく sticky を使う。
+          .tarot-root はビューポート全体ではなく「アプリのカード」なので、
+          fixed にするとカードの外へ飛び出し、PCでは黒背景の上に浮いてしまう。
+          sticky なら、カード内をスクロールしても常に最下部に貼り付いたまま、
+          カードの幅と枠の内側に収まる。
+        */
+        position: "sticky", bottom: 0, zIndex: 60,
+        // .tarot-root の左右パディング(20px)を打ち消して、端まで届かせる
+        margin: "16px -20px calc(-56px - env(safe-area-inset-bottom, 0px))",
         display: "flex", justifyContent: "space-around", alignItems: "stretch",
         background: "rgba(14,12,24,0.94)",
         backdropFilter: "blur(12px)",
         borderTop: "1px solid rgba(201,162,75,0.22)",
+        boxShadow: "0 -6px 20px rgba(0,0,0,0.35)",
         // iPhoneのホームインジケータに重ならないようにする
         paddingBottom: "env(safe-area-inset-bottom, 0px)",
       }}
@@ -8376,7 +8386,12 @@ export default function TarotDraw() {
           font-family: 'Noto Sans JP', sans-serif;
           padding: 40px 20px 56px;
           border-radius: 24px;
-          overflow: hidden;
+          /*
+            overflow:hidden は position:sticky を無効化する（祖先に hidden があると
+            貼り付きが効かない）。角丸からの背景のはみ出しを抑える目的だったので、
+            clip に置き換える。clip はスクロールコンテナを作らないため sticky が生きる。
+          */
+          overflow: clip;
           box-shadow: 0 0 0 1px rgba(201,162,75,0.15) inset;
         }
         /*
@@ -8385,7 +8400,9 @@ export default function TarotDraw() {
           safe-area-inset-bottom は iPhone のホームインジケータ領域。
         */
         .tarot-root.has-bottom-nav {
-          padding-bottom: calc(78px + env(safe-area-inset-bottom, 0px));
+          /* stickyのナビはコンテンツの一部として積まれるため、追加の余白は要らない。
+             ただしコンテンツが短いとカードが間延びするので、最小高さを詰める */
+          min-height: 0;
         }
         .tarot-bg {
           position: absolute; inset: 0; pointer-events: none; opacity: 0.85;
