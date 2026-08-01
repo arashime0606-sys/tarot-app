@@ -4392,6 +4392,36 @@ function earnedTitles(history) {
   return TITLE_DEFS.filter((d) => d.test(st)).map((d) => d.key);
 }
 
+/**
+ * 【ホーム画面への追加案内】
+ *
+ * Android/Chrome はインストールを自動で案内するが、iOS/Safari は何も出さない。
+ * 共有ボタン → スクロール → 「ホーム画面に追加」という手順を自力で見つけられる人は
+ * ごく少数なので、案内が無ければPWA対応は事実上iOSユーザーに届かない。
+ * そこで、iOSのSafariで開かれていて、かつまだホーム画面から起動していない場合にのみ
+ * 手順を示すバナーを出す。閉じたら二度と出さない。
+ */
+const LS_A2HS_DISMISSED_KEY = "tarot_a2hs_dismissed";
+
+function isIosSafari() {
+  if (typeof navigator === "undefined") return false;
+  const ua = navigator.userAgent || "";
+  const isIos = /iPad|iPhone|iPod/.test(ua) ||
+    // iPadOS 13以降はMacintoshを名乗るため、タッチの有無で判別する
+    (ua.includes("Macintosh") && typeof document !== "undefined" && "ontouchend" in document);
+  if (!isIos) return false;
+  // Chrome(CriOS)やFirefox(FxiOS)はiOSでもホーム画面追加の導線が異なるため対象外
+  return !/CriOS|FxiOS|EdgiOS|OPiOS/.test(ua);
+}
+
+/** ホーム画面から起動している（＝既に追加済み）かどうか */
+function isStandalone() {
+  if (typeof window === "undefined") return false;
+  if (window.navigator && window.navigator.standalone) return true;
+  return typeof window.matchMedia === "function" &&
+    window.matchMedia("(display-mode: standalone)").matches;
+}
+
 const LS_TTS_NOTICE_KEY = "tarot_tts_notice"; // 読み上げの注意書きを既読にしたか
 function isTtsNoticeAcked() {
   try { return localStorage.getItem(LS_TTS_NOTICE_KEY) === "1"; } catch { return false; }
@@ -5958,6 +5988,11 @@ const T = {
     titlesLabel: (n, total) => `칭호 ${n} / ${total}`,
     titlesLocked: (n) => `아직 만나지 못한 칭호가 ${n}종 남아 있습니다`,
     statsButtonLabel: "통계",
+    a2hsTitle: "홈 화면에 추가할 수 있습니다",
+    a2hsBodyAndroid: "한 번의 탭으로 앱처럼 사용할 수 있습니다",
+    a2hsBodyIos: "하단 공유 버튼 → 「홈 화면에 추가」",
+    a2hsInstall: "추가",
+    a2hsDismiss: "닫기",
     navDraw: "점보기",
     navRecords: "기록",
     navGrowth: "육성",
@@ -6119,6 +6154,11 @@ const T = {
     titlesLabel: (n, total) => `Danh hiệu ${n} / ${total}`,
     titlesLocked: (n) => `Vẫn còn ${n} danh hiệu chưa được khám phá`,
     statsButtonLabel: "Thống kê",
+    a2hsTitle: "Thêm vào màn hình chính",
+    a2hsBodyAndroid: "Một chạm là dùng như ứng dụng",
+    a2hsBodyIos: "Chạm nút Chia sẻ bên dưới, rồi chọn Thêm vào MH chính",
+    a2hsInstall: "Thêm",
+    a2hsDismiss: "Đóng",
     navDraw: "Xem",
     navRecords: "Ghi chép",
     navGrowth: "Nuôi",
@@ -6280,6 +6320,11 @@ const T = {
     titlesLabel: (n, total) => `Gelar ${n} / ${total}`,
     titlesLocked: (n) => `Masih ada ${n} gelar yang belum ditemukan`,
     statsButtonLabel: "Statistik",
+    a2hsTitle: "Tambahkan ke layar utama",
+    a2hsBodyAndroid: "Sekali ketuk, terasa seperti aplikasi",
+    a2hsBodyIos: "Ketuk tombol Bagikan di bawah, lalu Tambahkan ke Layar Utama",
+    a2hsInstall: "Tambahkan",
+    a2hsDismiss: "Tutup",
     navDraw: "Tilik",
     navRecords: "Catatan",
     navGrowth: "Tumbuh",
@@ -6441,6 +6486,11 @@ const T = {
     titlesLabel: (n, total) => `Gelaran ${n} / ${total}`,
     titlesLocked: (n) => `Masih ada ${n} gelaran yang belum ditemui`,
     statsButtonLabel: "Statistik",
+    a2hsTitle: "Tambah ke skrin utama",
+    a2hsBodyAndroid: "Satu ketikan, terasa seperti aplikasi",
+    a2hsBodyIos: "Ketik butang Kongsi di bawah, kemudian Tambah ke Skrin Utama",
+    a2hsInstall: "Tambah",
+    a2hsDismiss: "Tutup",
     navDraw: "Tilik",
     navRecords: "Rekod",
     navGrowth: "Tumbuh",
@@ -6603,6 +6653,11 @@ const T = {
     titlesLabel: (n, total) => `称号 ${n} / ${total}`,
     titlesLocked: (n) => `あと${n}種類、まだ見ぬ称号があります`,
     statsButtonLabel: "統計",
+    a2hsTitle: "ホーム画面に追加できます",
+    a2hsBodyAndroid: "1タップでアプリのように使えます",
+    a2hsBodyIos: "下の共有ボタン → 「ホーム画面に追加」",
+    a2hsInstall: "追加",
+    a2hsDismiss: "閉じる",
     navDraw: "占う",
     navRecords: "記録",
     navGrowth: "育成",
@@ -6764,6 +6819,11 @@ const T = {
     titlesLabel: (n, total) => `稱號 ${n} / ${total}`,
     titlesLocked: (n) => `還有 ${n} 種尚未取得的稱號`,
     statsButtonLabel: "統計",
+    a2hsTitle: "可以加入主畫面",
+    a2hsBodyAndroid: "一鍵即可像 App 一樣使用",
+    a2hsBodyIos: "下方分享按鈕 →「加入主畫面」",
+    a2hsInstall: "加入",
+    a2hsDismiss: "關閉",
     navDraw: "占卜",
     navRecords: "記錄",
     navGrowth: "養成",
@@ -6925,6 +6985,11 @@ const T = {
     titlesLabel: (n, total) => `称号 ${n} / ${total}`,
     titlesLocked: (n) => `还有 ${n} 种尚未取得的称号`,
     statsButtonLabel: "统计",
+    a2hsTitle: "可以添加到主屏幕",
+    a2hsBodyAndroid: "一键即可像 App 一样使用",
+    a2hsBodyIos: "下方分享按钮 →「添加到主屏幕」",
+    a2hsInstall: "添加",
+    a2hsDismiss: "关闭",
     navDraw: "占卜",
     navRecords: "记录",
     navGrowth: "养成",
@@ -7086,6 +7151,11 @@ const T = {
     titlesLabel: (n, total) => `Titles ${n} / ${total}`,
     titlesLocked: (n) => `${n} more titles remain undiscovered`,
     statsButtonLabel: "Stats",
+    a2hsTitle: "Add to your home screen",
+    a2hsBodyAndroid: "One tap to use it like an app",
+    a2hsBodyIos: "Tap Share below, then Add to Home Screen",
+    a2hsInstall: "Add",
+    a2hsDismiss: "Close",
     navDraw: "Draw",
     navRecords: "Records",
     navGrowth: "Growth",
@@ -7247,6 +7317,11 @@ const T = {
     titlesLabel: (n, total) => `Mga Titulo ${n} / ${total}`,
     titlesLocked: (n) => `May ${n} pang titulong hindi pa natutuklasan`,
     statsButtonLabel: "Stats",
+    a2hsTitle: "Idagdag sa home screen",
+    a2hsBodyAndroid: "Isang tap lang, parang app na",
+    a2hsBodyIos: "I-tap ang Share sa ibaba, tapos Add to Home Screen",
+    a2hsInstall: "Idagdag",
+    a2hsDismiss: "Isara",
     navDraw: "Bunot",
     navRecords: "Tala",
     navGrowth: "Paglago",
@@ -7408,6 +7483,11 @@ const T = {
     titlesLabel: (n, total) => `ฉายา ${n} / ${total}`,
     titlesLocked: (n) => `ยังมีฉายาที่ยังไม่ได้รับอีก ${n} แบบ`,
     statsButtonLabel: "สถิติ",
+    a2hsTitle: "เพิ่มลงหน้าจอหลักได้",
+    a2hsBodyAndroid: "แตะครั้งเดียวก็ใช้ได้เหมือนแอป",
+    a2hsBodyIos: "แตะปุ่มแชร์ด้านล่าง แล้วเลือก เพิ่มลงในหน้าจอโฮม",
+    a2hsInstall: "เพิ่ม",
+    a2hsDismiss: "ปิด",
     navDraw: "ดูดวง",
     navRecords: "บันทึก",
     navGrowth: "เติบโต",
@@ -7470,6 +7550,8 @@ export default function TarotDraw() {
   const [showAdventure, setShowAdventure] = useState(false);
   const [showLegal, setShowLegal] = useState(false);
   const [navTab, setNavTab] = useState("draw"); // ボトムナビで選択中の画面
+  const [showA2HS, setShowA2HS] = useState(false);       // ホーム画面追加の案内を出すか
+  const [installPrompt, setInstallPrompt] = useState(null); // Android/Chrome のインストールイベント
   const [equippedTitle, setEquippedTitle] = useState(loadEquippedTitle());
   const [showLastResult, setShowLastResult] = useState(false);
   const [aiEnabled, setAiEnabled] = useState(isAiEnabled());
@@ -7565,6 +7647,51 @@ export default function TarotDraw() {
       generateRecapInBackground(entry.id, entry);
     }
   }, [reading2, reading2Loading, reading3, reading3Loading, majorCard, minorResults, phase, userName, question, reading1]);
+
+  /**
+   * ホーム画面への追加を案内するかを決める。
+   *
+   * Android/Chrome は beforeinstallprompt が飛んでくるので、それを捕まえて
+   * 自前のボタンから呼び出す（ブラウザ標準のバナーより見逃されにくい）。
+   * iOS/Safari はイベントが無いので、手順を文章で示すしかない。
+   */
+  useEffect(() => {
+    if (isStandalone()) return; // すでにホーム画面から起動している
+    try {
+      if (localStorage.getItem(LS_A2HS_DISMISSED_KEY) === "1") return;
+    } catch {}
+
+    const onPrompt = (e) => {
+      e.preventDefault();
+      setInstallPrompt(e);
+      setShowA2HS(true);
+    };
+    window.addEventListener("beforeinstallprompt", onPrompt);
+
+    // iOSはイベントが無いので、少し待ってから案内を出す。
+    // 開いた直後に出すと邪魔なので、占いを始める前の落ち着いた頃合いを狙う。
+    let timer = null;
+    if (isIosSafari()) {
+      timer = setTimeout(() => setShowA2HS(true), 4000);
+    }
+    return () => {
+      window.removeEventListener("beforeinstallprompt", onPrompt);
+      if (timer) clearTimeout(timer);
+    };
+  }, []);
+
+  const dismissA2HS = () => {
+    setShowA2HS(false);
+    try { localStorage.setItem(LS_A2HS_DISMISSED_KEY, "1"); } catch {}
+  };
+
+  const runInstall = async () => {
+    if (!installPrompt) return;
+    installPrompt.prompt();
+    try { await installPrompt.userChoice; } catch {}
+    setInstallPrompt(null);
+    dismissA2HS();
+  };
 
   // 端末に該当言語の音声があるか調べる。voiceschangedを待たないと空配列が返るブラウザがある
   useEffect(() => {
@@ -9410,6 +9537,44 @@ export default function TarotDraw() {
               {developerNote(majorCard, lang)}
             </p>
           )}
+        </div>
+      )}
+
+      {/*
+        ホーム画面への追加案内。タイトル画面でのみ、ナビの上に控えめに出す。
+        Androidは1タップでインストールできるのでボタンを出し、
+        iOSは手順を文章で示す（共有ボタンからの追加は自力では見つけられないため）。
+      */}
+      {showA2HS && phase === "idle" && mode === "normal" && (
+        <div style={{
+          position: "sticky", bottom: "58px", zIndex: 55,
+          margin: "12px -8px -4px",
+          background: "linear-gradient(160deg, rgba(46,36,92,0.97), rgba(24,20,44,0.97))",
+          border: "1px solid rgba(201,162,75,0.35)", borderRadius: "12px",
+          padding: "12px 14px", boxShadow: "0 6px 24px rgba(0,0,0,0.45)",
+          display: "flex", alignItems: "center", gap: "10px",
+        }}>
+          <img src="/icon-192.png" alt="" width="34" height="34"
+            style={{ borderRadius: "8px", flexShrink: 0 }} />
+          <div style={{ flex: 1, minWidth: 0 }}>
+            <p style={{ margin: "0 0 2px", fontSize: "11.5px", color: "var(--gold-soft)", lineHeight: 1.5 }}>
+              {t.a2hsTitle}
+            </p>
+            <p style={{ margin: 0, fontSize: "10px", color: "var(--muted)", lineHeight: 1.6 }}>
+              {installPrompt ? t.a2hsBodyAndroid : t.a2hsBodyIos}
+            </p>
+          </div>
+          {installPrompt ? (
+            <button onClick={runInstall} style={{
+              flexShrink: 0, background: "var(--gold)", border: "none", borderRadius: "999px",
+              color: "#1a1530", fontSize: "11px", fontWeight: 600, padding: "7px 14px",
+              cursor: "pointer", fontFamily: "inherit",
+            }}>{t.a2hsInstall}</button>
+          ) : null}
+          <button onClick={dismissA2HS} aria-label={t.a2hsDismiss} style={{
+            flexShrink: 0, background: "none", border: "none", cursor: "pointer",
+            color: "var(--muted)", fontSize: "16px", lineHeight: 1, padding: "4px 2px",
+          }}>×</button>
         </div>
       )}
 
