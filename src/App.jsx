@@ -1944,6 +1944,60 @@ const MAJOR_ARCANA_LABEL_I18N = {
 const MINOR_ARCANA_PREFIX_I18N = {
   ja: "小アルカナ・", "zh-TW": "小阿爾克那・", en: "Minor Arcana · ", tl: "Minor Arcana · ", th: "ไพ่ชุดเล็ก · ", id: "Minor Arcana · ", ms: "Minor Arcana · ", vi: "Ẩn Phụ · ", ko: "마이너 아르카나 · ",
 };
+/**
+ * 逆位置でカード全体を180度回したとき、文字だけ読める向きに戻すか。
+ * CJKは縦横どちらでも判読しにくさが変わらないが、
+ * ラテン文字やタイ文字は上下逆だと読めなくなるため補正する。
+ */
+/**
+ * 向きラベルの配色クラスを返す。
+ *
+ * 通常は 正位置=金 / 逆位置=薔薇色 だが、月（major-18）だけ反転させる。
+ *
+ * 月は本アプリで唯一「逆位置の方が良い」カードとして設計されている。
+ * 正位置は感情★6・行動★1（警戒心が強すぎて動けない）、
+ * 逆位置はその行動デバフが消える（霧が晴れる）という読み。
+ * 配色が常に正位置=良い色では、この設計と見た目が食い違う。
+ *
+ * 色だけを入れ替え、ラベルの文字（正位置／逆位置）は事実のまま変えない。
+ */
+const ORIENTATION_INVERTED_CARDS = new Set(["major-18"]); // 月
+
+function orientationToneClass(card, reversed) {
+  const id = card && (card.id || (card.card && card.card.id));
+  const inverted = ORIENTATION_INVERTED_CARDS.has(String(id));
+  const good = inverted ? reversed : !reversed;
+  return good ? "up" : "rev";
+}
+
+/**
+ * 【カーソル追従の傾き】
+ * ポインタ位置に応じてカードを数度だけ傾ける。
+ *
+ * 大きく傾けると玩具に見えるので、最大6度に抑える。
+ * タッチ環境では発火しないため、スマホでは何も起きない
+ * （そこは粒子と光沢が担うので、無理に対応させない）。
+ */
+function useTilt(maxDeg = 6) {
+  const [tilt, setTilt] = useState({ x: 0, y: 0, active: false });
+  const onMove = (e) => {
+    const r = e.currentTarget.getBoundingClientRect();
+    const px = (e.clientX - r.left) / r.width - 0.5;   // -0.5 〜 0.5
+    const py = (e.clientY - r.top) / r.height - 0.5;
+    setTilt({ x: -py * maxDeg * 2, y: px * maxDeg * 2, active: true });
+  };
+  const onLeave = () => setTilt({ x: 0, y: 0, active: false });
+  const style = {
+    transform: `perspective(700px) rotateX(${tilt.x.toFixed(2)}deg) rotateY(${tilt.y.toFixed(2)}deg)`,
+    transition: tilt.active ? "transform .08s linear" : "transform .5s cubic-bezier(.16,1,.3,1)",
+  };
+  return { style, onMouseMove: onMove, onMouseLeave: onLeave };
+}
+
+function needsUprightTextFor(lang) {
+  return lang === "en" || lang === "tl" || lang === "th" || lang === "id" || lang === "ms" || lang === "vi";
+}
+
 function getCardSub(card, lang) {
   if (!card || !card.id) return card ? card.sub : "";
   if (lang === "ja" || !lang) return card.sub;
@@ -2105,6 +2159,369 @@ function buildPool(list) {
     reversed: Math.random() < 0.5,
   }));
 }
+
+/**
+ * ============================================================
+ * 【スプレッド】占いのモードそのもののバリエーション
+ * ============================================================
+ * 目的は「飽きさせない・萎えさせない・幻滅させない」こと。
+ * 深さ（同じことの質を上げる）でも幅（別の層に届く）でもなく、
+ * 同じ問いに対する複数の見方を用意する「奥行き」にあたる。
+ *
+ * とくに恋愛を読むスプレッド（ヘキサグラム等）が無い状態は、
+ * 機能不足ではなく要素欠損として評価されうる。
+ *
+ * 【設計】
+ * どのスプレッドも「N枚を、それぞれ固有の意味を持つ位置に配置して読む」
+ * という同じ構造で表せる。共通部分を基盤にまとめ、
+ * 各スプレッドは定義データを足すだけで増やせるようにする。
+ *
+ * layout の座標は 0〜100 の相対値。実際の描画時に容器のサイズへ換算する。
+ * これにより、十字・六芒星・円形といった配置の違いを
+ * データだけで表現でき、スプレッドごとにJSXを書かずに済む。
+ *
+ * deck:
+ *   "major" … 大アルカナ22枚のみ（象徴が強く出るため、少ない枚数の占いに向く）
+ *   "full"  … 78枚すべて
+ *
+ * 【既存の占いとの関係】
+ * 現行の「大アルカナ1枚＋小アルカナ3枚」は独自形式で、演出も専用に作り込んである。
+ * そのため置き換えず、別モードとして併存させる。
+ */
+const SPREADS = {
+  // ① 1枚。最も軽く、日課に向く。基盤の検証用でもある
+  oneOracle: {
+    key: "oneOracle",
+    deck: "major",
+    count: 1,
+    layout: [{ x: 50, y: 50 }],
+  },
+  // ② 3枚。時間の流れを読む古典
+  three: {
+    key: "three",
+    deck: "full",
+    count: 3,
+    layout: [{ x: 20, y: 50 }, { x: 50, y: 50 }, { x: 80, y: 50 }],
+  },
+  // ③ 7枚。六芒星＋中央。恋愛相談の定番で、欠損を埋める中心
+  hexagram: {
+    key: "hexagram",
+    deck: "full",
+    count: 7,
+    layout: [
+      { x: 50, y: 78 }, { x: 22, y: 63 }, { x: 22, y: 32 },
+      { x: 50, y: 17 }, { x: 78, y: 32 }, { x: 78, y: 63 },
+      { x: 50, y: 48 },
+    ],
+  },
+  // ④ 7枚。位置が「側面」ではなく「日付」になる唯一のスプレッド
+  weekly: {
+    key: "weekly",
+    deck: "major",
+    count: 7,
+    isTimeline: true,
+    layout: [
+      { x: 12, y: 35 }, { x: 30, y: 35 }, { x: 48, y: 35 }, { x: 66, y: 35 },
+      { x: 84, y: 35 }, { x: 30, y: 72 }, { x: 66, y: 72 },
+    ],
+  },
+  // ⑤ 二者択一。決断のための比較
+  choice: {
+    key: "choice",
+    deck: "full",
+    count: 5,
+    layout: [
+      { x: 50, y: 15 },
+      { x: 22, y: 48 }, { x: 22, y: 80 },
+      { x: 78, y: 48 }, { x: 78, y: 80 },
+    ],
+  },
+  // ⑥ 10枚。タロットで最も有名。本格派の象徴
+  celticCross: {
+    key: "celticCross",
+    deck: "full",
+    count: 10,
+    layout: [
+      { x: 34, y: 50 }, { x: 34, y: 50, cross: true }, { x: 34, y: 18 },
+      { x: 34, y: 82 }, { x: 14, y: 50 }, { x: 54, y: 50 },
+      { x: 82, y: 88 }, { x: 82, y: 65 }, { x: 82, y: 42 }, { x: 82, y: 19 },
+    ],
+  },
+  // ⑦ 11枚。2人の関係を読む
+  relationship: {
+    key: "relationship",
+    deck: "full",
+    count: 11,
+    layout: [
+      { x: 22, y: 20 }, { x: 78, y: 20 },
+      { x: 22, y: 44 }, { x: 78, y: 44 },
+      { x: 22, y: 68 }, { x: 78, y: 68 },
+      { x: 50, y: 32 }, { x: 50, y: 56 },
+      { x: 50, y: 80 }, { x: 30, y: 90 }, { x: 70, y: 90 },
+    ],
+  },
+  // ⑧ 12枚。12ハウスに対応。西洋占星術の知識がそのまま活きる
+  horoscope: {
+    key: "horoscope",
+    deck: "full",
+    count: 12,
+    layout: (() => {
+      // 円形配置。第1ハウスを左（東）に置き、反時計回りに巡る占星術の慣習に従う
+      const pts = [];
+      for (let i = 0; i < 12; i++) {
+        const a = Math.PI - (Math.PI * 2 * i) / 12;
+        pts.push({ x: 50 + Math.cos(a) * 38, y: 50 - Math.sin(a) * 38 });
+      }
+      return pts;
+    })(),
+  },
+};
+/**
+ * スプレッドの名称・説明・各位置の意味。
+ * 位置ラベルの数は SPREADS の count と必ず一致させること
+ * （ずれると配置とラベルが対応しなくなる）。
+ */
+const SPREAD_I18N = {
+  ja: {
+    oneOracle: { name: "ワンオラクル", desc: "一枚に絞って答えを受け取る、最も簡素な形。", pos: ["今日"] },
+    three: { name: "スリーカード", desc: "時の流れを読む、最も基本の形。", pos: ["過去", "現在", "未来"] },
+    hexagram: { name: "ヘキサグラム", desc: "相手の心まで読む、恋愛相談の定番。", pos: ["過去", "現在", "未来", "対策", "周囲の状況", "相手の気持ち", "最終結果"] },
+    weekly: { name: "週の物語", desc: "これから七日間を、一日ずつ辿る。", pos: ["1日目", "2日目", "3日目", "4日目", "5日目", "6日目", "7日目"] },
+    choice: { name: "二者択一", desc: "二つの道を並べて、比べて選ぶ。", pos: ["現在の状況", "Aを選んだ場合", "Aの結果", "Bを選んだ場合", "Bの結果"] },
+    celticCross: { name: "ケルト十字", desc: "十枚で読み解く、タロットの王道。", pos: ["現在の状況", "障害となるもの", "顕在意識", "潜在意識", "過去", "近い未来", "あなた自身", "周囲の環境", "希望と不安", "最終結果"] },
+    relationship: { name: "関係の杯", desc: "二人の関係を、両側から読む。", pos: ["あなたの状況", "相手の状況", "あなたの願い", "相手の願い", "あなたの不安", "相手の不安", "二人の現在", "障害", "可能性", "あなたの取るべき道", "二人の行く先"] },
+    horoscope: { name: "ホロスコープ", desc: "十二の領域で、一年の全体を見渡す。", pos: ["自分自身", "財と価値", "学びと交流", "家庭と基盤", "恋愛と創造", "日々の務め", "相手と契約", "変容と継承", "遠方と探求", "天職と地位", "仲間と願い", "秘密と癒し"] },
+  },
+  en: {
+    oneOracle: { name: "One Oracle", desc: "The simplest form: one card, one answer.", pos: ["Today"] },
+    three: { name: "Three Cards", desc: "The most fundamental form: reading the flow of time.", pos: ["Past", "Present", "Future"] },
+    hexagram: { name: "Hexagram", desc: "Reads even the other person's heart. A staple for matters of love.", pos: ["Past", "Present", "Future", "What to do", "Surroundings", "Their feelings", "Outcome"] },
+    weekly: { name: "Story of the Week", desc: "Tracing the next seven days, one by one.", pos: ["Day 1", "Day 2", "Day 3", "Day 4", "Day 5", "Day 6", "Day 7"] },
+    choice: { name: "Two Paths", desc: "Set two roads side by side, and choose.", pos: ["Where you stand", "If you choose A", "Result of A", "If you choose B", "Result of B"] },
+    celticCross: { name: "Celtic Cross", desc: "Ten cards. The classic of tarot.", pos: ["The situation", "What crosses it", "Conscious mind", "Unconscious mind", "The past", "The near future", "Yourself", "Your surroundings", "Hopes and fears", "The outcome"] },
+    relationship: { name: "Cup of Relationship", desc: "Reading a bond from both sides.", pos: ["Your situation", "Their situation", "Your wish", "Their wish", "Your fear", "Their fear", "Where you are now", "The obstacle", "What is possible", "Your path", "Where you are heading"] },
+    horoscope: { name: "Horoscope Spread", desc: "Twelve houses. A whole year at a glance.", pos: ["Self", "Wealth and value", "Learning and exchange", "Home and roots", "Love and creation", "Daily work", "Partners and pacts", "Transformation", "Distance and inquiry", "Vocation and standing", "Allies and wishes", "Secrets and healing"] },
+  },
+  ko: {
+    oneOracle: { name: "원 오라클", desc: "한 장으로 답을 좁혀 받는, 가장 간결한 방식.", pos: ["오늘"] },
+    three: { name: "쓰리 카드", desc: "시간의 흐름을 읽는 가장 기본적인 형태.", pos: ["과거", "현재", "미래"] },
+    hexagram: { name: "헥사그램", desc: "상대의 마음까지 읽는, 연애 상담의 정석.", pos: ["과거", "현재", "미래", "대책", "주변 상황", "상대의 마음", "최종 결과"] },
+    weekly: { name: "한 주의 이야기", desc: "앞으로의 이레를 하루씩 따라간다.", pos: ["1일째", "2일째", "3일째", "4일째", "5일째", "6일째", "7일째"] },
+    choice: { name: "양자택일", desc: "두 갈래 길을 나란히 놓고 고른다.", pos: ["현재 상황", "A를 택한다면", "A의 결과", "B를 택한다면", "B의 결과"] },
+    celticCross: { name: "켈틱 크로스", desc: "열 장으로 읽는 타로의 왕도.", pos: ["현재 상황", "가로막는 것", "표면 의식", "잠재 의식", "과거", "가까운 미래", "당신 자신", "주변 환경", "희망과 불안", "최종 결과"] },
+    relationship: { name: "관계의 잔", desc: "두 사람의 관계를 양쪽에서 읽는다.", pos: ["당신의 상황", "상대의 상황", "당신의 바람", "상대의 바람", "당신의 불안", "상대의 불안", "두 사람의 현재", "장애", "가능성", "당신이 나아갈 길", "두 사람의 앞날"] },
+    horoscope: { name: "호로스코프", desc: "열두 영역으로 한 해 전체를 조망한다.", pos: ["자기 자신", "재물과 가치", "배움과 교류", "가정과 기반", "연애와 창조", "일상의 의무", "상대와 계약", "변용과 계승", "먼 곳과 탐구", "천직과 지위", "동료와 소망", "비밀과 치유"] },
+  },
+  "zh-TW": {
+    oneOracle: { name: "單張神諭", desc: "凝聚於一張牌的最簡形式。", pos: ["今日"] },
+    three: { name: "三張牌", desc: "解讀時間流動的最基本形式。", pos: ["過去", "現在", "未來"] },
+    hexagram: { name: "六芒星", desc: "連對方的心也能讀，戀愛諮詢的經典。", pos: ["過去", "現在", "未來", "對策", "周遭狀況", "對方的心意", "最終結果"] },
+    weekly: { name: "一週的故事", desc: "逐日追溯接下來的七天。", pos: ["第1天", "第2天", "第3天", "第4天", "第5天", "第6天", "第7天"] },
+    choice: { name: "二擇一", desc: "將兩條路並列，比較後選擇。", pos: ["目前的狀況", "若選擇A", "A的結果", "若選擇B", "B的結果"] },
+    celticCross: { name: "凱爾特十字", desc: "以十張牌解讀，塔羅的王道。", pos: ["目前的狀況", "阻礙之物", "顯意識", "潛意識", "過去", "不久的未來", "你自己", "周遭環境", "希望與不安", "最終結果"] },
+    relationship: { name: "關係之杯", desc: "從兩側解讀兩人的關係。", pos: ["你的狀況", "對方的狀況", "你的願望", "對方的願望", "你的不安", "對方的不安", "兩人的現在", "障礙", "可能性", "你該走的路", "兩人的去向"] },
+    horoscope: { name: "占星盤", desc: "以十二個領域綜觀一整年。", pos: ["自我", "財富與價值", "學習與交流", "家庭與根基", "戀愛與創造", "日常的職責", "伴侶與契約", "變容與繼承", "遠方與探求", "天職與地位", "夥伴與願望", "秘密與療癒"] },
+  },
+  "zh-CN": {
+    oneOracle: { name: "单张神谕", desc: "凝聚于一张牌的最简形式。", pos: ["今日"] },
+    three: { name: "三张牌", desc: "解读时间流动的最基本形式。", pos: ["过去", "现在", "未来"] },
+    hexagram: { name: "六芒星", desc: "连对方的心也能读，恋爱咨询的经典。", pos: ["过去", "现在", "未来", "对策", "周遭状况", "对方的心意", "最终结果"] },
+    weekly: { name: "一周的故事", desc: "逐日追溯接下来的七天。", pos: ["第1天", "第2天", "第3天", "第4天", "第5天", "第6天", "第7天"] },
+    choice: { name: "二择一", desc: "将两条路并列，比较后选择。", pos: ["目前的状况", "若选择A", "A的结果", "若选择B", "B的结果"] },
+    celticCross: { name: "凯尔特十字", desc: "以十张牌解读，塔罗的王道。", pos: ["目前的状况", "阻碍之物", "显意识", "潜意识", "过去", "不久的未来", "你自己", "周遭环境", "希望与不安", "最终结果"] },
+    relationship: { name: "关系之杯", desc: "从两侧解读两人的关系。", pos: ["你的状况", "对方的状况", "你的愿望", "对方的愿望", "你的不安", "对方的不安", "两人的现在", "障碍", "可能性", "你该走的路", "两人的去向"] },
+    horoscope: { name: "占星盘", desc: "以十二个领域综观一整年。", pos: ["自我", "财富与价值", "学习与交流", "家庭与根基", "恋爱与创造", "日常的职责", "伴侣与契约", "变容与继承", "远方与探求", "天职与地位", "伙伴与愿望", "秘密与疗愈"] },
+  },
+  th: {
+    oneOracle: { name: "ไพ่ใบเดียว", desc: "รูปแบบเรียบง่ายที่สุด ไพ่ใบเดียว คำตอบเดียว", pos: ["วันนี้"] },
+    three: { name: "สามใบ", desc: "รูปแบบพื้นฐานที่สุด อ่านกระแสของเวลา", pos: ["อดีต", "ปัจจุบัน", "อนาคต"] },
+    hexagram: { name: "เฮกซะแกรม", desc: "อ่านได้ถึงใจของอีกฝ่าย คลาสสิกสำหรับเรื่องความรัก", pos: ["อดีต", "ปัจจุบัน", "อนาคต", "สิ่งที่ควรทำ", "สภาพแวดล้อม", "ใจของอีกฝ่าย", "ผลลัพธ์"] },
+    weekly: { name: "เรื่องราวหนึ่งสัปดาห์", desc: "ไล่ดูเจ็ดวันข้างหน้าทีละวัน", pos: ["วันที่ 1", "วันที่ 2", "วันที่ 3", "วันที่ 4", "วันที่ 5", "วันที่ 6", "วันที่ 7"] },
+    choice: { name: "สองทางเลือก", desc: "วางสองเส้นทางเคียงกันแล้วเลือก", pos: ["สถานการณ์ปัจจุบัน", "ถ้าเลือก A", "ผลของ A", "ถ้าเลือก B", "ผลของ B"] },
+    celticCross: { name: "เซลติกครอส", desc: "สิบใบ ตำราหลักของไพ่ทาโรต์", pos: ["สถานการณ์", "สิ่งที่ขวางกั้น", "จิตสำนึก", "จิตใต้สำนึก", "อดีต", "อนาคตอันใกล้", "ตัวคุณเอง", "สภาพแวดล้อม", "ความหวังและความกลัว", "ผลลัพธ์"] },
+    relationship: { name: "ถ้วยแห่งความสัมพันธ์", desc: "อ่านความสัมพันธ์จากทั้งสองฝ่าย", pos: ["สถานการณ์ของคุณ", "สถานการณ์ของเขา", "ความปรารถนาของคุณ", "ความปรารถนาของเขา", "ความกังวลของคุณ", "ความกังวลของเขา", "ปัจจุบันของทั้งสอง", "อุปสรรค", "ความเป็นไปได้", "ทางที่คุณควรไป", "ปลายทางของทั้งสอง"] },
+    horoscope: { name: "ดวงชะตาสิบสองเรือน", desc: "มองภาพรวมทั้งปีผ่านสิบสองด้าน", pos: ["ตัวตน", "ทรัพย์และคุณค่า", "การเรียนรู้และการสื่อสาร", "บ้านและรากฐาน", "ความรักและการสร้างสรรค์", "หน้าที่ประจำวัน", "คู่และข้อตกลง", "การแปรเปลี่ยน", "ระยะไกลและการแสวงหา", "อาชีพและสถานะ", "มิตรและความปรารถนา", "ความลับและการเยียวยา"] },
+  },
+  tl: {
+    oneOracle: { name: "Isang Orakulo", desc: "Ang pinakasimple: isang baraha, isang sagot.", pos: ["Ngayon"] },
+    three: { name: "Tatlong Baraha", desc: "Ang pinakapayak na anyo: pagbasa sa agos ng panahon.", pos: ["Nakaraan", "Kasalukuyan", "Hinaharap"] },
+    hexagram: { name: "Heksagram", desc: "Binabasa pati ang puso ng iba. Klasiko sa usaping pag-ibig.", pos: ["Nakaraan", "Kasalukuyan", "Hinaharap", "Dapat gawin", "Kapaligiran", "Damdamin niya", "Kalalabasan"] },
+    weekly: { name: "Kuwento ng Linggo", desc: "Sinusundan ang pitong araw, isa-isa.", pos: ["Araw 1", "Araw 2", "Araw 3", "Araw 4", "Araw 5", "Araw 6", "Araw 7"] },
+    choice: { name: "Dalawang Landas", desc: "Ipantay ang dalawang daan, at pumili.", pos: ["Kasalukuyang lagay", "Kung pipiliin ang A", "Bunga ng A", "Kung pipiliin ang B", "Bunga ng B"] },
+    celticCross: { name: "Celtic Cross", desc: "Sampung baraha. Ang klasiko ng tarot.", pos: ["Ang sitwasyon", "Ang humahadlang", "Malay na isip", "Di-malay na isip", "Nakaraan", "Malapit na hinaharap", "Ikaw mismo", "Ang paligid", "Pag-asa at takot", "Kalalabasan"] },
+    relationship: { name: "Kopa ng Ugnayan", desc: "Binabasa ang ugnayan mula sa magkabilang panig.", pos: ["Lagay mo", "Lagay niya", "Hangad mo", "Hangad niya", "Takot mo", "Takot niya", "Kayo ngayon", "Ang balakid", "Ang posible", "Landas mo", "Patutunguhan ninyo"] },
+    horoscope: { name: "Horoscope Spread", desc: "Labindalawang larangan. Buong taon sa isang sulyap.", pos: ["Sarili", "Yaman at halaga", "Pag-aaral at palitan", "Tahanan at ugat", "Pag-ibig at paglikha", "Gawaing araw-araw", "Kapareha at kasunduan", "Pagbabago", "Malayo at paghahanap", "Bokasyon at katayuan", "Kaalyado at hangarin", "Lihim at paggaling"] },
+  },
+  id: {
+    oneOracle: { name: "Satu Kartu", desc: "Bentuk paling sederhana: satu kartu, satu jawaban.", pos: ["Hari ini"] },
+    three: { name: "Tiga Kartu", desc: "Bentuk paling dasar: membaca aliran waktu.", pos: ["Masa lalu", "Masa kini", "Masa depan"] },
+    hexagram: { name: "Heksagram", desc: "Membaca sampai ke hati orang lain. Klasik untuk urusan cinta.", pos: ["Masa lalu", "Masa kini", "Masa depan", "Yang harus dilakukan", "Keadaan sekitar", "Perasaannya", "Hasil akhir"] },
+    weekly: { name: "Kisah Sepekan", desc: "Menyusuri tujuh hari ke depan, satu per satu.", pos: ["Hari 1", "Hari 2", "Hari 3", "Hari 4", "Hari 5", "Hari 6", "Hari 7"] },
+    choice: { name: "Dua Jalan", desc: "Menjajarkan dua jalan, lalu memilih.", pos: ["Keadaan sekarang", "Jika memilih A", "Hasil A", "Jika memilih B", "Hasil B"] },
+    celticCross: { name: "Salib Celtic", desc: "Sepuluh kartu. Klasik dalam tarot.", pos: ["Keadaan", "Yang menghalangi", "Kesadaran", "Bawah sadar", "Masa lalu", "Masa depan dekat", "Dirimu sendiri", "Lingkungan", "Harapan dan ketakutan", "Hasil akhir"] },
+    relationship: { name: "Cawan Hubungan", desc: "Membaca hubungan dari kedua sisi.", pos: ["Keadaanmu", "Keadaannya", "Harapanmu", "Harapannya", "Ketakutanmu", "Ketakutannya", "Kalian saat ini", "Rintangan", "Kemungkinan", "Jalan yang kamu tempuh", "Ke mana kalian menuju"] },
+    horoscope: { name: "Horoskop", desc: "Dua belas bidang. Setahun penuh dalam satu pandangan.", pos: ["Diri sendiri", "Harta dan nilai", "Belajar dan bertukar", "Rumah dan akar", "Cinta dan cipta", "Tugas sehari-hari", "Pasangan dan perjanjian", "Perubahan", "Jauh dan pencarian", "Panggilan dan kedudukan", "Sekutu dan harapan", "Rahasia dan penyembuhan"] },
+  },
+  ms: {
+    oneOracle: { name: "Satu Kad", desc: "Bentuk paling ringkas: satu kad, satu jawapan.", pos: ["Hari ini"] },
+    three: { name: "Tiga Kad", desc: "Bentuk paling asas: membaca aliran masa.", pos: ["Masa lalu", "Masa kini", "Masa depan"] },
+    hexagram: { name: "Heksagram", desc: "Membaca sehingga ke hati orang lain. Klasik untuk hal percintaan.", pos: ["Masa lalu", "Masa kini", "Masa depan", "Yang perlu dilakukan", "Keadaan sekeliling", "Perasaannya", "Hasil akhir"] },
+    weekly: { name: "Kisah Seminggu", desc: "Menyusuri tujuh hari mendatang, satu persatu.", pos: ["Hari 1", "Hari 2", "Hari 3", "Hari 4", "Hari 5", "Hari 6", "Hari 7"] },
+    choice: { name: "Dua Jalan", desc: "Menjajarkan dua jalan, kemudian memilih.", pos: ["Keadaan sekarang", "Jika memilih A", "Hasil A", "Jika memilih B", "Hasil B"] },
+    celticCross: { name: "Salib Celtic", desc: "Sepuluh kad. Klasik dalam tarot.", pos: ["Keadaan", "Yang menghalang", "Kesedaran", "Bawah sedar", "Masa lalu", "Masa depan terdekat", "Diri anda sendiri", "Persekitaran", "Harapan dan ketakutan", "Hasil akhir"] },
+    relationship: { name: "Cawan Hubungan", desc: "Membaca hubungan dari kedua-dua belah pihak.", pos: ["Keadaan anda", "Keadaannya", "Harapan anda", "Harapannya", "Ketakutan anda", "Ketakutannya", "Kalian kini", "Halangan", "Kemungkinan", "Jalan yang anda tempuh", "Ke mana kalian menuju"] },
+    horoscope: { name: "Horoskop", desc: "Dua belas bidang. Setahun penuh dalam satu pandangan.", pos: ["Diri sendiri", "Harta dan nilai", "Pembelajaran dan pertukaran", "Rumah dan akar", "Cinta dan ciptaan", "Tugas harian", "Pasangan dan perjanjian", "Perubahan", "Jauh dan pencarian", "Panggilan dan kedudukan", "Sekutu dan harapan", "Rahsia dan penyembuhan"] },
+  },
+  vi: {
+    oneOracle: { name: "Một Lá", desc: "Hình thức đơn giản nhất: một lá, một câu trả lời.", pos: ["Hôm nay"] },
+    three: { name: "Ba Lá", desc: "Hình thức căn bản nhất: đọc dòng chảy thời gian.", pos: ["Quá khứ", "Hiện tại", "Tương lai"] },
+    hexagram: { name: "Lục Giác", desc: "Đọc được cả lòng người kia. Kinh điển cho chuyện tình cảm.", pos: ["Quá khứ", "Hiện tại", "Tương lai", "Điều nên làm", "Hoàn cảnh xung quanh", "Lòng người ấy", "Kết quả"] },
+    weekly: { name: "Câu Chuyện Một Tuần", desc: "Lần theo bảy ngày sắp tới, từng ngày một.", pos: ["Ngày 1", "Ngày 2", "Ngày 3", "Ngày 4", "Ngày 5", "Ngày 6", "Ngày 7"] },
+    choice: { name: "Hai Ngả Đường", desc: "Đặt hai con đường cạnh nhau rồi chọn.", pos: ["Hoàn cảnh hiện tại", "Nếu chọn A", "Kết quả của A", "Nếu chọn B", "Kết quả của B"] },
+    celticCross: { name: "Thập Tự Celt", desc: "Mười lá bài. Kinh điển của tarot.", pos: ["Hoàn cảnh", "Điều cản trở", "Ý thức", "Vô thức", "Quá khứ", "Tương lai gần", "Chính bạn", "Môi trường xung quanh", "Hy vọng và lo sợ", "Kết quả"] },
+    relationship: { name: "Chiếc Cốc Quan Hệ", desc: "Đọc mối quan hệ từ cả hai phía.", pos: ["Hoàn cảnh của bạn", "Hoàn cảnh của người ấy", "Mong muốn của bạn", "Mong muốn của người ấy", "Nỗi lo của bạn", "Nỗi lo của người ấy", "Hai người lúc này", "Trở ngại", "Khả năng", "Con đường của bạn", "Nơi hai người hướng tới"] },
+    horoscope: { name: "Vòng Hoàng Đạo", desc: "Mười hai lĩnh vực. Trọn một năm trong một cái nhìn.", pos: ["Bản thân", "Của cải và giá trị", "Học hỏi và giao tiếp", "Gia đình và cội rễ", "Tình yêu và sáng tạo", "Việc thường ngày", "Bạn đời và giao ước", "Biến chuyển", "Phương xa và tìm kiếm", "Thiên chức và địa vị", "Đồng minh và ước nguyện", "Bí mật và chữa lành"] },
+  },
+};
+
+/**
+ * 【ワンオラクル】1枚だけを読む、最も軽いモード。
+ *
+ * AIを使わない。理由は3つある。
+ *   ① 1枚の解釈は定型文で十分に成立する（カードの象徴がそのまま答えになる）
+ *   ② APIコストがゼロなので、回数制限の対象外にできる
+ *   ③ 待ち時間がゼロ。ロードが長い機能は客が離れる
+ *
+ * 日課として何度でも引ける「入口」を担い、
+ * 深く知りたい問いは枚数の多いスプレッドへ、という導線を作る。
+ */
+const ONE_ORACLE_TEMPLATES = {
+  ja: (name, o, kw) => `今日引かれたのは「${name}」（${o}）。\n\nこのカードが告げているのは、${kw}。\n\nいま目の前にあることを、この言葉に照らして眺めてみてください。`,
+  ko: (name, o, kw) => `오늘 뽑힌 카드는 "${name}"(${o}).\n\n이 카드가 전하는 것은 ${kw}.\n\n지금 눈앞에 있는 일을, 이 말에 비추어 바라보세요.`,
+  "zh-TW": (name, o, kw) => `今日抽到的是「${name}」（${o}）。\n\n這張牌所傳達的是${kw}。\n\n請試著以這些話語，重新看待眼前的事。`,
+  "zh-CN": (name, o, kw) => `今日抽到的是「${name}」（${o}）。\n\n这张牌所传达的是${kw}。\n\n请试着以这些话语，重新看待眼前的事。`,
+  en: (name, o, kw) => `Today's card is "${name}" (${o}).\n\nWhat it speaks of is this: ${kw}.\n\nTry looking at what lies before you in the light of these words.`,
+  tl: (name, o, kw) => `Ang nabunot ngayon ay "${name}" (${o}).\n\nAng sinasabi nito ay: ${kw}.\n\nSubukang tingnan ang nasa harap mo sa liwanag ng mga salitang ito.`,
+  th: (name, o, kw) => `ไพ่ที่จั่วได้วันนี้คือ "${name}" (${o})\n\nสิ่งที่ไพ่ใบนี้บอกคือ ${kw}\n\nลองมองสิ่งที่อยู่ตรงหน้าผ่านถ้อยคำเหล่านี้ดู`,
+  id: (name, o, kw) => `Kartu hari ini adalah "${name}" (${o}).\n\nYang disampaikannya: ${kw}.\n\nCobalah memandang apa yang ada di hadapanmu melalui kata-kata ini.`,
+  ms: (name, o, kw) => `Kad hari ini ialah "${name}" (${o}).\n\nYang disampaikannya: ${kw}.\n\nCubalah memandang apa yang ada di hadapan anda melalui kata-kata ini.`,
+  vi: (name, o, kw) => `Lá bài hôm nay là "${name}" (${o}).\n\nĐiều nó nói đến là: ${kw}.\n\nHãy thử nhìn điều đang ở trước mắt bạn qua những lời này.`,
+};
+
+/**
+ * ワンオラクルのホロ発現判定。
+ *
+ * 正位置を引いたときのみ、216分の1（6の3乗）で虹色に輝く。
+ * 逆位置を除外しているのは、この演出が祝福として働くべきだから。
+ * 逆位置で虹色に光ると、意味と見た目が食い違う。
+ *
+ * 216 という数は、既存のポーカー役（★6の3乗）と同じ分母にしてある。
+ * ワンオラクルは1枚しか引かないぶん、他のスプレッドのような
+ * 役の成立による当たりが存在しない。その代わりに置く仕掛けとして、
+ * 同じ確率帯の希少さを持たせた。
+ */
+const ONE_ORACLE_HOLO_ODDS = 216; // 6の3乗
+
+/**
+ * ホロ時にカードの周囲を巡る星屑。
+ * 楕円に沿って配置し、粒ごとに色・大きさ・明滅のずれを持たせる。
+ * 均等に並べると機械的に見えるので、角度に揺らぎを入れる。
+ */
+const HOLO_SPARK_COLORS = ["#ff3ca6", "#ffd23c", "#6cff8d", "#3cd2ff", "#a86cff", "#ffffff"];
+
+/**
+ * カードの周囲を巡る粒子を生成する。
+ *
+ * 楕円に沿わせるのは、カードが 130×194 の縦長で、
+ * 真円だと上下の粒がカードに重なってしまうため。
+ * 均等に並べると機械的に見えるので、角度と距離に揺らぎを入れる。
+ */
+function buildSparks({ count, colors, rx, ry, sizeBase, sizeStep }) {
+  return Array.from({ length: count }, (_, i) => {
+    const angle = (360 / count) * i + (i % 3) * 7 - 7;
+    const rad = (angle * Math.PI) / 180;
+    const wobble = (i % 4) * 8;
+    const denom = Math.sqrt((Math.cos(rad) / rx) ** 2 + (Math.sin(rad) / ry) ** 2);
+    return {
+      angle,
+      r: Math.round(1 / denom + wobble),
+      color: colors[i % colors.length],
+      size: sizeBase + (i % 3) * sizeStep,
+      delay: (i % 6) * 0.25,
+    };
+  });
+}
+
+/** ホロ時：原色・多い・大きい */
+const HOLO_SPARKS = buildSparks({
+  count: 18, colors: HOLO_SPARK_COLORS, rx: 95, ry: 132, sizeBase: 4, sizeStep: 2,
+});
+
+/**
+ * 常時：白と淡い金だけの半透明な粒。
+ *
+ * ホロと同じ密度で出すと特別さが失われるので、
+ * 数を半分以下に、色は無彩色寄りに、粒も小さくする。
+ * 見えるか見えないかの境目に置くのが狙いで、
+ * 「気づくと漂っている」程度に留める。
+ */
+const SHEEN_SPARK_COLORS = ["#ffffff", "#e7cf99", "#ffffff", "#cfd8f0"];
+const SHEEN_SPARKS = buildSparks({
+  count: 12, colors: SHEEN_SPARK_COLORS, rx: 97, ry: 134, sizeBase: 3, sizeStep: 1,
+});
+
+function rollOneOracleHolo(drawn) {
+  if (!drawn) return false;
+  // デバッグ用の強制発現。向きを問わず出るようにしておかないと、
+  // 引き直すたびに条件の合う向きを待つことになり確認しづらい
+  if (isForcedOneOracleHolo()) return true;
+
+  /*
+    ホロは祝福として働くべきなので、そのカードの「良い方の向き」でのみ発現させる。
+    通常は正位置だが、月だけは逆位置が良い向きとして設計されている
+    （正位置は感情★6・行動★1で警戒心が強すぎて動けない、
+      逆位置はその行動デバフが消えて霧が晴れる）。
+    向きラベルの配色を反転させているのと同じ規則をここでも使う。
+  */
+  const inverted = ORIENTATION_INVERTED_CARDS.has(String(drawn.id));
+  const isGoodSide = inverted ? drawn.reversed : !drawn.reversed;
+  if (!isGoodSide) return false;
+
+  return Math.floor(Math.random() * ONE_ORACLE_HOLO_ODDS) === 0;
+}
+
+/**
+ * ワンオラクルの鑑定文を、AIを使わずに組み立てる。
+ *
+ * 引数は buildPool() が返す形（カード自体を展開し、reversed を持つ）。
+ * majorCard のような { card, reversed } の入れ子ではないので注意。
+ */
+function buildOneOracleReading(drawn, lang) {
+  const idx = parseInt(String(drawn.id).split("-")[1]);
+  const name = getCardName(drawn, lang);
+  const o = orientationLabel(drawn.reversed, lang);
+  const kw = majorKeyword(idx, drawn.reversed, lang);
+  const fn = ONE_ORACLE_TEMPLATES[lang] || ONE_ORACLE_TEMPLATES.ja;
+  return fn(name, o, kw);
+}
+
+function spreadInfo(key, lang) {
+  const tbl = SPREAD_I18N[lang] || SPREAD_I18N.ja;
+  return tbl[key] || SPREAD_I18N.ja[key];
+}
+
+const SPREAD_ORDER = ["oneOracle", "three", "hexagram", "weekly", "choice", "celticCross", "relationship", "horoscope"];
+
+/**
+ * 実装済みのスプレッド。
+ * 未実装のものも選択画面には並べるが、選べない状態で見せる。
+ * 隠してしまうと「これしかない」と受け取られるが、
+ * 見えていれば「まだ増える」と伝わる。萎えさせないための配慮。
+ */
+const SPREAD_READY = { oneOracle: true, three: true };
+
+/** そのスプレッドがAIを使うか。使わないものは回数を消費しない */
+const SPREAD_USES_AI = { oneOracle: false, three: true, hexagram: true, weekly: true, choice: true, celticCross: true, relationship: true, horoscope: true };
 
 const POSITION_LABELS = ["過去", "現在", "未来"];
 const PHASE_ORDER = ["idle", "major-spread", "major-confirm", "major-resolving", "minor-spread", "minor-confirm", "minor-resolving", "minor-revealed", "major-revealed"];
@@ -4033,6 +4450,13 @@ const EXTRA_ACHIEVEMENTS = [
   { key: "used_deepdive",  test: (st, h) => h.some((x) => Array.isArray(x.deepDiveQA) && x.deepDiveQA.length > 0) },
   { key: "left_memento",   test: () => { try { return Object.keys(localStorage).some((k) => k.startsWith("tarot_memento_")); } catch { return false; } } },
   { key: "kept_records",   test: (st, h) => h.some((x) => x.recap) },
+  /*
+    ワンオラクルの虹。称号（着脱できる衣服）ではなく実績（歴史）にのみ置く。
+    3枚同スート全正位置の「黄金の遭遇者」が役の成立であるのに対し、
+    こちらは1枚引いた抽選が当たっただけで、積み上げも技術も要らない。
+    格が違うものを同じ棚に並べないための切り分け。
+  */
+  { key: "holo_seen",      test: () => hasSeenHolo() },
 ];
 
 function allAchievementDefs() {
@@ -4077,6 +4501,29 @@ function saveEquippedTitle(key) {
 
 const TITLE_NAMES = {
   ja: {
+    holo_major_0: "虹を纏う旅人",
+    holo_major_1: "虹を呼ぶ手",
+    holo_major_2: "虹を宿す静寂",
+    holo_major_3: "虹咲く豊穣",
+    holo_major_4: "虹を統べる者",
+    holo_major_5: "虹を継ぐ導き",
+    holo_major_6: "虹に結ばれた縁",
+    holo_major_7: "虹を駆る戦車",
+    holo_major_8: "虹を手懐けた力",
+    holo_major_9: "虹を灯す隠者",
+    holo_major_10: "虹めぐる輪",
+    holo_major_11: "虹を量る秤",
+    holo_major_12: "虹に吊られし者",
+    holo_major_13: "虹の向こうの終焉",
+    holo_major_14: "虹を調える器",
+    holo_major_15: "虹に惑う影",
+    holo_major_16: "虹に砕かれた塔",
+    holo_major_17: "虹をまとう星",
+    holo_major_18: "虹に霞む月",
+    holo_major_19: "虹を戴く太陽",
+    holo_major_20: "虹の告げる審判",
+    holo_major_21: "虹に満ちた世界",
+    holo_seen: "虹を見た日",
     wrote_question: "初めての問いかけ",
     used_deepdive: "深く尋ねた者",
     left_memento: "記憶を託した者",
@@ -4101,6 +4548,29 @@ const TITLE_NAMES = {
     all_major: "二十二枚すべてに出会った者",
   },
   ko: {
+    holo_major_0: "무지개를 두른 나그네",
+    holo_major_1: "무지개를 부르는 손",
+    holo_major_2: "무지개를 품은 고요",
+    holo_major_3: "무지개 피는 풍요",
+    holo_major_4: "무지개를 다스리는 자",
+    holo_major_5: "무지개를 잇는 인도",
+    holo_major_6: "무지개로 맺어진 인연",
+    holo_major_7: "무지개를 모는 전차",
+    holo_major_8: "무지개를 길들인 힘",
+    holo_major_9: "무지개를 밝히는 은둔자",
+    holo_major_10: "무지개 도는 바퀴",
+    holo_major_11: "무지개를 재는 저울",
+    holo_major_12: "무지개에 매달린 자",
+    holo_major_13: "무지개 너머의 끝",
+    holo_major_14: "무지개를 고르는 그릇",
+    holo_major_15: "무지개에 홀린 그림자",
+    holo_major_16: "무지개에 부서진 탑",
+    holo_major_17: "무지개를 두른 별",
+    holo_major_18: "무지개에 흐려진 달",
+    holo_major_19: "무지개를 인 태양",
+    holo_major_20: "무지개가 알리는 심판",
+    holo_major_21: "무지개로 가득 찬 세계",
+    holo_seen: "무지개를 본 날",
     wrote_question: "첫 물음",
     used_deepdive: "깊이 물은 자",
     left_memento: "기억을 맡긴 자",
@@ -4125,6 +4595,29 @@ const TITLE_NAMES = {
     all_major: "스물두 장 모두를 만난 자",
   },
   "zh-TW": {
+    holo_major_0: "披虹的旅人",
+    holo_major_1: "喚虹之手",
+    holo_major_2: "蘊虹的靜寂",
+    holo_major_3: "虹綻的豐饒",
+    holo_major_4: "統御虹光者",
+    holo_major_5: "承虹的引導",
+    holo_major_6: "以虹相繫之緣",
+    holo_major_7: "駕虹的戰車",
+    holo_major_8: "馴虹之力",
+    holo_major_9: "點虹的隱者",
+    holo_major_10: "流轉之虹輪",
+    holo_major_11: "衡虹之秤",
+    holo_major_12: "懸於虹上者",
+    holo_major_13: "虹外的終結",
+    holo_major_14: "調和虹光之器",
+    holo_major_15: "惑於虹中的影",
+    holo_major_16: "被虹擊碎的塔",
+    holo_major_17: "披虹之星",
+    holo_major_18: "隱於虹中的月",
+    holo_major_19: "戴虹的太陽",
+    holo_major_20: "虹所宣告的審判",
+    holo_major_21: "盈滿虹光的世界",
+    holo_seen: "見過彩虹的日子",
     wrote_question: "初次的提問",
     used_deepdive: "深入詢問之人",
     left_memento: "託付記憶之人",
@@ -4149,6 +4642,29 @@ const TITLE_NAMES = {
     all_major: "與二十二張全數相遇者",
   },
   "zh-CN": {
+    holo_major_0: "披虹的旅人",
+    holo_major_1: "唤虹之手",
+    holo_major_2: "蕴虹的静寂",
+    holo_major_3: "虹绽的丰饶",
+    holo_major_4: "统御虹光者",
+    holo_major_5: "承虹的引导",
+    holo_major_6: "以虹相系之缘",
+    holo_major_7: "驾虹的战车",
+    holo_major_8: "驯虹之力",
+    holo_major_9: "点虹的隐者",
+    holo_major_10: "流转之虹轮",
+    holo_major_11: "衡虹之秤",
+    holo_major_12: "悬于虹上者",
+    holo_major_13: "虹外的终结",
+    holo_major_14: "调和虹光之器",
+    holo_major_15: "惑于虹中的影",
+    holo_major_16: "被虹击碎的塔",
+    holo_major_17: "披虹之星",
+    holo_major_18: "隐于虹中的月",
+    holo_major_19: "戴虹的太阳",
+    holo_major_20: "虹所声明的审判",
+    holo_major_21: "盈满虹光的世界",
+    holo_seen: "见过彩虹的日子",
     wrote_question: "初次的提问",
     used_deepdive: "深入询问之人",
     left_memento: "托付记忆之人",
@@ -4173,6 +4689,29 @@ const TITLE_NAMES = {
     all_major: "与二十二张全数相遇者",
   },
   en: {
+    holo_major_0: "Rainbow-Clad Wanderer",
+    holo_major_1: "Hand That Calls the Rainbow",
+    holo_major_2: "Stillness Holding a Rainbow",
+    holo_major_3: "Rainbow in Bloom",
+    holo_major_4: "Sovereign of Rainbows",
+    holo_major_5: "Rainbow-Bearing Guide",
+    holo_major_6: "Bond Tied by Rainbow",
+    holo_major_7: "Chariot of Rainbows",
+    holo_major_8: "Strength That Tamed a Rainbow",
+    holo_major_9: "Hermit's Rainbow Lantern",
+    holo_major_10: "Rainbow Turning Wheel",
+    holo_major_11: "Scales Weighing a Rainbow",
+    holo_major_12: "One Hung Upon a Rainbow",
+    holo_major_13: "End Beyond the Rainbow",
+    holo_major_14: "Vessel That Tempers Rainbows",
+    holo_major_15: "Shadow Lost in Rainbows",
+    holo_major_16: "Tower Shattered by Rainbow",
+    holo_major_17: "Star Wearing a Rainbow",
+    holo_major_18: "Moon Veiled in Rainbow",
+    holo_major_19: "Sun Crowned with Rainbow",
+    holo_major_20: "Judgment Told by Rainbow",
+    holo_major_21: "World Filled with Rainbow",
+    holo_seen: "The Day You Saw the Rainbow",
     wrote_question: "The First Question",
     used_deepdive: "One Who Asked Deeper",
     left_memento: "One Who Entrusted a Memory",
@@ -4197,6 +4736,29 @@ const TITLE_NAMES = {
     all_major: "One Who Met All Twenty-Two",
   },
   tl: {
+    holo_major_0: "Manlalakbay na Balot ng Bahaghari",
+    holo_major_1: "Kamay na Tumatawag ng Bahaghari",
+    holo_major_2: "Katahimikang May Bahaghari",
+    holo_major_3: "Kasaganaang Namumulaklak ng Bahaghari",
+    holo_major_4: "Hari ng mga Bahaghari",
+    holo_major_5: "Gabay na Nagdadala ng Bahaghari",
+    holo_major_6: "Ugnayang Itinali ng Bahaghari",
+    holo_major_7: "Karwahe ng Bahaghari",
+    holo_major_8: "Lakas na Nagpaamo sa Bahaghari",
+    holo_major_9: "Ermitanyong Nagsindi ng Bahaghari",
+    holo_major_10: "Gulong na Umiikot ng Bahaghari",
+    holo_major_11: "Timbangang Sumusukat ng Bahaghari",
+    holo_major_12: "Nakabitin sa Bahaghari",
+    holo_major_13: "Wakas sa Kabila ng Bahaghari",
+    holo_major_14: "Sisidlang Naghahalo ng Bahaghari",
+    holo_major_15: "Anino na Naligaw sa Bahaghari",
+    holo_major_16: "Toreng Winasak ng Bahaghari",
+    holo_major_17: "Bituing Nakabalot ng Bahaghari",
+    holo_major_18: "Buwang Nalambungan ng Bahaghari",
+    holo_major_19: "Araw na May Korona ng Bahaghari",
+    holo_major_20: "Paghuhukom na Ibinalita ng Bahaghari",
+    holo_major_21: "Mundong Puno ng Bahaghari",
+    holo_seen: "Ang Araw na Nakita Mo ang Bahaghari",
     wrote_question: "Ang Unang Tanong",
     used_deepdive: "Nagtanong nang Mas Malalim",
     left_memento: "Nagkatiwala ng Alaala",
@@ -4221,6 +4783,29 @@ const TITLE_NAMES = {
     all_major: "Nakasalubong ng Lahat ng Dalawampu't Dalawa",
   },
   th: {
+    holo_major_0: "นักเดินทางห่มสายรุ้ง",
+    holo_major_1: "มือที่เรียกสายรุ้ง",
+    holo_major_2: "ความเงียบที่โอบสายรุ้ง",
+    holo_major_3: "ความอุดมที่สายรุ้งเบ่งบาน",
+    holo_major_4: "ผู้ปกครองสายรุ้ง",
+    holo_major_5: "ผู้นำทางสืบสายรุ้ง",
+    holo_major_6: "สายสัมพันธ์ที่สายรุ้งผูกไว้",
+    holo_major_7: "รถศึกแห่งสายรุ้ง",
+    holo_major_8: "พลังที่ทำให้สายรุ้งเชื่อง",
+    holo_major_9: "ฤๅษีผู้จุดสายรุ้ง",
+    holo_major_10: "วงล้อที่สายรุ้งหมุนวน",
+    holo_major_11: "ตราชั่งที่ชั่งสายรุ้ง",
+    holo_major_12: "ผู้ถูกแขวนบนสายรุ้ง",
+    holo_major_13: "จุดจบพ้นสายรุ้ง",
+    holo_major_14: "ภาชนะที่ปรุงสายรุ้ง",
+    holo_major_15: "เงาที่หลงในสายรุ้ง",
+    holo_major_16: "หอคอยที่สายรุ้งทลาย",
+    holo_major_17: "ดาวที่ห่มสายรุ้ง",
+    holo_major_18: "จันทร์ที่พร่าในสายรุ้ง",
+    holo_major_19: "ตะวันที่สวมสายรุ้ง",
+    holo_major_20: "คำพิพากษาที่สายรุ้งบอก",
+    holo_major_21: "โลกที่เปี่ยมด้วยสายรุ้ง",
+    holo_seen: "วันที่ได้เห็นสายรุ้ง",
     wrote_question: "คำถามแรก",
     used_deepdive: "ผู้ถามลึกลงไป",
     left_memento: "ผู้ฝากความทรงจำ",
@@ -4245,6 +4830,29 @@ const TITLE_NAMES = {
     all_major: "ผู้พบไพ่ครบทั้งยี่สิบสองใบ",
   },
   id: {
+    holo_major_0: "Pengembara Berselimut Pelangi",
+    holo_major_1: "Tangan Pemanggil Pelangi",
+    holo_major_2: "Keheningan Berpelangi",
+    holo_major_3: "Kesuburan Mekar Pelangi",
+    holo_major_4: "Penguasa Pelangi",
+    holo_major_5: "Pemandu Pembawa Pelangi",
+    holo_major_6: "Ikatan Terjalin Pelangi",
+    holo_major_7: "Kereta Pelangi",
+    holo_major_8: "Kekuatan Penjinak Pelangi",
+    holo_major_9: "Pertapa Penyala Pelangi",
+    holo_major_10: "Roda Berputar Pelangi",
+    holo_major_11: "Timbangan Penakar Pelangi",
+    holo_major_12: "Yang Tergantung di Pelangi",
+    holo_major_13: "Akhir di Balik Pelangi",
+    holo_major_14: "Wadah Peramu Pelangi",
+    holo_major_15: "Bayang Tersesat di Pelangi",
+    holo_major_16: "Menara Runtuh oleh Pelangi",
+    holo_major_17: "Bintang Berselimut Pelangi",
+    holo_major_18: "Bulan Berkabut Pelangi",
+    holo_major_19: "Matahari Bermahkota Pelangi",
+    holo_major_20: "Penghakiman Dikabarkan Pelangi",
+    holo_major_21: "Dunia Penuh Pelangi",
+    holo_seen: "Hari Kamu Melihat Pelangi",
     wrote_question: "Pertanyaan Pertama",
     used_deepdive: "Yang Bertanya Lebih Dalam",
     left_memento: "Yang Menitipkan Kenangan",
@@ -4269,6 +4877,29 @@ const TITLE_NAMES = {
     all_major: "Yang Menjumpai Semua Dua Puluh Dua",
   },
   ms: {
+    holo_major_0: "Pengembara Berselimut Pelangi",
+    holo_major_1: "Tangan Pemanggil Pelangi",
+    holo_major_2: "Keheningan Berpelangi",
+    holo_major_3: "Kesuburan Mekar Pelangi",
+    holo_major_4: "Penguasa Pelangi",
+    holo_major_5: "Pemandu Pembawa Pelangi",
+    holo_major_6: "Ikatan Terjalin Pelangi",
+    holo_major_7: "Kereta Pelangi",
+    holo_major_8: "Kekuatan Penjinak Pelangi",
+    holo_major_9: "Pertapa Penyala Pelangi",
+    holo_major_10: "Roda Berputar Pelangi",
+    holo_major_11: "Timbangan Penakar Pelangi",
+    holo_major_12: "Yang Tergantung di Pelangi",
+    holo_major_13: "Akhir di Balik Pelangi",
+    holo_major_14: "Wadah Peramu Pelangi",
+    holo_major_15: "Bayang Tersesat di Pelangi",
+    holo_major_16: "Menara Runtuh oleh Pelangi",
+    holo_major_17: "Bintang Berselimut Pelangi",
+    holo_major_18: "Bulan Berkabut Pelangi",
+    holo_major_19: "Matahari Bermahkota Pelangi",
+    holo_major_20: "Penghakiman Dikabarkan Pelangi",
+    holo_major_21: "Dunia Penuh Pelangi",
+    holo_seen: "Hari Anda Melihat Pelangi",
     wrote_question: "Soalan Pertama",
     used_deepdive: "Yang Bertanya Lebih Dalam",
     left_memento: "Yang Menitipkan Kenangan",
@@ -4293,6 +4924,29 @@ const TITLE_NAMES = {
     all_major: "Yang Menemui Kesemua Dua Puluh Dua",
   },
   vi: {
+    holo_major_0: "Lữ Khách Khoác Cầu Vồng",
+    holo_major_1: "Bàn Tay Gọi Cầu Vồng",
+    holo_major_2: "Tĩnh Lặng Ôm Cầu Vồng",
+    holo_major_3: "Phồn Thịnh Nở Cầu Vồng",
+    holo_major_4: "Kẻ Ngự Trị Cầu Vồng",
+    holo_major_5: "Dẫn Lối Nối Cầu Vồng",
+    holo_major_6: "Duyên Buộc Bởi Cầu Vồng",
+    holo_major_7: "Cỗ Xe Cầu Vồng",
+    holo_major_8: "Sức Mạnh Thuần Cầu Vồng",
+    holo_major_9: "Ẩn Sĩ Thắp Cầu Vồng",
+    holo_major_10: "Bánh Xe Xoay Cầu Vồng",
+    holo_major_11: "Cán Cân Đo Cầu Vồng",
+    holo_major_12: "Kẻ Treo Trên Cầu Vồng",
+    holo_major_13: "Kết Thúc Bên Kia Cầu Vồng",
+    holo_major_14: "Chiếc Bình Điều Hòa Cầu Vồng",
+    holo_major_15: "Bóng Lạc Trong Cầu Vồng",
+    holo_major_16: "Tháp Vỡ Bởi Cầu Vồng",
+    holo_major_17: "Ngôi Sao Khoác Cầu Vồng",
+    holo_major_18: "Mặt Trăng Mờ Trong Cầu Vồng",
+    holo_major_19: "Mặt Trời Đội Cầu Vồng",
+    holo_major_20: "Phán Xét Do Cầu Vồng Báo",
+    holo_major_21: "Thế Giới Đầy Cầu Vồng",
+    holo_seen: "Ngày Bạn Thấy Cầu Vồng",
     wrote_question: "Câu Hỏi Đầu Tiên",
     used_deepdive: "Kẻ Hỏi Sâu Hơn",
     left_memento: "Kẻ Gửi Gắm Ký Ức",
@@ -4344,6 +4998,15 @@ const TITLE_DEFS = [
   { key: "upright_soul", test: (st) => st.total >= 20 && st.uprightRatio >= 0.7 },
   { key: "reversed_soul",test: (st) => st.total >= 20 && st.uprightRatio <= 0.3 },
   { key: "all_major",    test: (st) => st.uniqueMajors >= 22 },
+  /*
+    ワンオラクル限定の虹称号22種。大アルカナ1枚ごとに用意する。
+    1/216 を22枚ぶん集めることになるので、全種の到達は現実的にはほぼ起きない。
+    それでよい。届かない場所があること自体が、続ける理由になる。
+  */
+  ...Array.from({ length: 22 }, (_, i) => ({
+    key: `holo_major_${i}`,
+    test: () => hasHoloCard(`major-${i}`),
+  })),
 ];
 
 // 履歴を1回だけ走査して、称号判定に必要な統計をまとめて作る
@@ -4402,6 +5065,57 @@ function earnedTitles(history) {
  * 手順を示すバナーを出す。閉じたら二度と出さない。
  */
 const LS_A2HS_DISMISSED_KEY = "tarot_a2hs_dismissed";
+
+/**
+ * デバッグ用：ワンオラクルのホロ演出を強制的に発現させる。
+ * 216分の1でしか出ないため、そのままでは実機で確認できない。
+ * クーポンコード "holo" で有効化し、一度発現したら自動的に解除する。
+ */
+const LS_FORCE_ONE_ORACLE_HOLO = "tarot_force_oo_holo";
+
+/**
+ * ワンオラクルで虹に出会ったことを記録する。
+ * 履歴には残らない占いなので、これだけ別に保存する。
+ */
+const LS_HOLO_SEEN_KEY = "tarot_holo_seen";
+function hasSeenHolo() {
+  try { return localStorage.getItem(LS_HOLO_SEEN_KEY) === "1"; } catch { return false; }
+}
+
+/**
+ * どの大アルカナを虹で引いたかを記録する。
+ *
+ * ワンオラクル限定の称号22種の判定に使う。
+ * 1/216 を22枚ぶん集めることになるので、全種は現実的にはほぼ到達しない。
+ * それでいい。届かない場所があること自体が、続ける理由になる。
+ */
+const LS_HOLO_CARDS_KEY = "tarot_holo_cards"; // 引いたカードIDの配列
+function loadHoloCards() {
+  try { return JSON.parse(localStorage.getItem(LS_HOLO_CARDS_KEY) || "[]"); } catch { return []; }
+}
+function recordHoloSeen(cardId) {
+  try {
+    localStorage.setItem(LS_HOLO_SEEN_KEY, "1");
+    if (!cardId) return;
+    const list = loadHoloCards();
+    if (!list.includes(cardId)) {
+      list.push(cardId);
+      localStorage.setItem(LS_HOLO_CARDS_KEY, JSON.stringify(list));
+    }
+  } catch {}
+}
+function hasHoloCard(cardId) {
+  return loadHoloCards().includes(cardId);
+}
+function isForcedOneOracleHolo() {
+  try { return localStorage.getItem(LS_FORCE_ONE_ORACLE_HOLO) === "1"; } catch { return false; }
+}
+function setForcedOneOracleHolo(on) {
+  try {
+    if (on) localStorage.setItem(LS_FORCE_ONE_ORACLE_HOLO, "1");
+    else localStorage.removeItem(LS_FORCE_ONE_ORACLE_HOLO);
+  } catch {}
+}
 
 function isIosSafari() {
   if (typeof navigator === "undefined") return false;
@@ -4705,6 +5419,281 @@ function legalDoc(lang) {
  * ステータス・称号・実績が揃った今、次にこれらを消費する先として冒険モードを
  * 予告する意味がある。閉店中の空白ではなく「次はここが動く」という予告にする。
  */
+/**
+ * 【スプレッド選択画面】占いのモードを選ぶ、占いタブの入口。
+ *
+ * これまではスリーカード（独自形式）だけが直接表示され、
+ * 他のスプレッドは付属物のように見えていた。
+ * 8つを対等に並べることで、選択肢の存在が初見で伝わる。
+ *
+ * 未実装のものも並べる。隠すと「これしかない」と受け取られるが、
+ * 見えていれば「まだ増える」と伝わり、萎えさせずに済む。
+ */
+function SpreadSelect({ lang, onSelect }) {
+  const t = T[lang] || T.ja;
+  return (
+    <div style={{ width: "100%", maxWidth: "460px", margin: "0 auto" }}>
+      <p style={{ fontSize: "11px", color: "var(--muted)", textAlign: "center", margin: "0 0 16px", lineHeight: 1.8 }}>
+        {t.spreadSelectHint}
+      </p>
+      <div className="stagger" style={{ display: "flex", flexDirection: "column", gap: "9px" }}>
+        {SPREAD_ORDER.map((key) => {
+          const info = spreadInfo(key, lang);
+          const ready = !!SPREAD_READY[key];
+          const usesAi = SPREAD_USES_AI[key];
+          const count = SPREADS[key].count;
+          return (
+            <button
+              key={key}
+              onClick={() => ready && onSelect(key)}
+              disabled={!ready}
+              style={{
+                width: "100%", textAlign: "left", cursor: ready ? "pointer" : "default",
+                background: ready
+                  ? "linear-gradient(150deg, rgba(46,36,92,0.55), rgba(26,21,48,0.55))"
+                  : "rgba(255,255,255,0.025)",
+                border: `1px solid ${ready ? "rgba(201,162,75,0.30)" : "rgba(201,162,75,0.10)"}`,
+                borderRadius: "12px", padding: "14px 16px",
+                fontFamily: "inherit", opacity: ready ? 1 : 0.45,
+                WebkitTapHighlightColor: "rgba(201,162,75,0.25)",
+                transition: "border-color .2s, transform .2s cubic-bezier(.16,1,.3,1)",
+                display: "flex", alignItems: "center", gap: "13px",
+              }}
+            >
+              {/* 枚数を数字で見せる。何枚使う占いかが一目で分かる */}
+              <div style={{
+                flexShrink: 0, width: "38px", height: "38px", borderRadius: "999px",
+                border: `1px solid ${ready ? "rgba(201,162,75,0.45)" : "rgba(201,162,75,0.15)"}`,
+                display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center",
+                color: ready ? "var(--gold)" : "var(--muted)",
+              }}>
+                <span style={{ fontFamily: "Cinzel, serif", fontSize: "14px", lineHeight: 1 }}>{count}</span>
+                <span style={{ fontSize: "10px", lineHeight: 1.2, opacity: 0.7 }}>{t.spreadCardUnit}</span>
+              </div>
+
+              <div style={{ flex: 1, minWidth: 0 }}>
+                <div style={{ display: "flex", alignItems: "center", gap: "7px", marginBottom: "3px", flexWrap: "wrap" }}>
+                  <span style={{
+                    fontFamily: "'Shippori Mincho', serif", fontSize: "13px",
+                    color: ready ? "var(--gold-soft)" : "var(--muted)", letterSpacing: "0.06em",
+                  }}>{info.name}</span>
+                  {ready && !usesAi && (
+                    <span style={{
+                      fontSize: "10px", color: "var(--gold)", border: "1px solid rgba(201,162,75,0.35)",
+                      borderRadius: "999px", padding: "1px 8px", opacity: 0.9,
+                    }}>{t.spreadNoCost}</span>
+                  )}
+                  {!ready && (
+                    <span style={{
+                      fontSize: "10px", color: "var(--muted)", border: "1px solid rgba(201,162,75,0.18)",
+                      borderRadius: "999px", padding: "1px 8px",
+                    }}>{t.spreadComingSoon}</span>
+                  )}
+                </div>
+                <p style={{ fontSize: "11px", color: "var(--muted)", margin: 0, lineHeight: 1.65 }}>
+                  {info.desc}
+                </p>
+              </div>
+            </button>
+          );
+        })}
+      </div>
+    </div>
+  );
+}
+
+/**
+ * 【ワンオラクル画面】1枚だけを引く軽量モード。
+ *
+ * AIを呼ばないので、引いた瞬間に結果が出る。
+ * カードを選ぶ工程も省き、山札に触れたら即めくる形にした。
+ * 「日課として何度でも」を成立させるには、手数を減らすことが最優先になる。
+ */
+function OneOraclePanel({ lang, onBack, onHoloConsumed }) {
+  const t = T[lang] || T.ja;
+  const info = spreadInfo("oneOracle", lang);
+  const [card, setCard] = useState(null);
+  const [flipping, setFlipping] = useState(false);
+  const [holo, setHolo] = useState(false);
+  const needsUprightText = needsUprightTextFor(lang);
+  const tilt = useTilt(6);
+
+  const draw = () => {
+    if (flipping) return;
+    setFlipping(true);
+    const pool = buildPool(MAJOR_LIST);
+    const picked = pool[Math.floor(Math.random() * pool.length)];
+    const isHolo = rollOneOracleHolo(picked);
+    if (isHolo) {
+      setForcedOneOracleHolo(false); // 強制フラグは一度使ったら解除する
+      recordHoloSeen(picked.id);
+      // 星側の予約も一緒に解除する（片方だけ残ると後の占いで不意に発動する）
+      if (onHoloConsumed) onHoloConsumed();
+    }
+    /*
+      めくるまでの間。
+      0.5秒では連打できてしまい、1回ごとの重みが失われる。
+      AIを呼ばないぶん待ち時間の制約が無いので、
+      ここは「速さ」ではなく「めくる所作」として時間を使う。
+    */
+    setTimeout(() => { setCard(picked); setHolo(isHolo); setFlipping(false); }, 1200);
+  };
+
+  return (
+    <div className="stagger" style={{ width: "100%", maxWidth: "440px", margin: "0 auto", display: "flex", flexDirection: "column", alignItems: "center", gap: "16px" }}>
+      <div style={{ textAlign: "center" }}>
+        <p style={{ fontFamily: "'Shippori Mincho', serif", fontSize: "16px", color: "var(--gold-soft)", margin: "0 0 6px", letterSpacing: "0.1em" }}>
+          {info.name}
+        </p>
+        <p style={{ fontSize: "11px", color: "var(--muted)", margin: 0, lineHeight: 1.8 }}>{info.desc}</p>
+      </div>
+
+      {!card ? (
+        <button
+          onClick={draw}
+          disabled={flipping}
+          style={{
+            width: "130px", height: "205px", borderRadius: "12px", cursor: flipping ? "default" : "pointer",
+            background: "linear-gradient(155deg, #2a2150, #16122c)",
+            border: "1px solid rgba(201,162,75,0.45)",
+            display: "flex", alignItems: "center", justifyContent: "center",
+            boxShadow: "0 8px 28px rgba(0,0,0,0.4)",
+            /*
+              めくる所作。遅延1200msに対して回転が0.3秒だと、
+              残りの0.9秒が無反応になって「固まった」ように見える。
+              溜め・回転・沈み込みを1200msかけて見せる。
+            */
+            transition: "none",
+            animation: flipping ? "cardFlipAway 1.2s cubic-bezier(.16,1,.3,1) forwards" : "none",
+            transformStyle: "preserve-3d",
+          }}
+        >
+          <Sparkles size={30} style={{ color: "var(--gold-dim)", opacity: 0.8 }} />
+        </button>
+      ) : (
+        <>
+          {/* 大当たりの告知。カードより先に目に入る位置に置く */}
+          {holo && (
+            <p style={{
+              margin: "0 0 2px", fontFamily: "'Shippori Mincho', serif",
+              fontSize: "13px", letterSpacing: "0.18em", textIndent: "0.18em",
+              animation: "holoRevealText 1.4s cubic-bezier(.16,1,.3,1)",
+            }} className="holo-text">
+              {t.oneOracleHoloTitle}
+            </p>
+          )}
+
+          {/* 星屑の基準となる枠。カードと同じ大きさを明示しないと、
+              inset や left:50% の基準が定まらず粒が正しい位置に出ない */}
+          <div style={{ position: "relative", width: "130px", height: "194px" }}>
+            {/*
+              外周を巡る粒子。カードの外側に出すため、切られない親の中に置く。
+              ホロ時は原色で18粒、通常時は半透明の白と金で8粒。
+            */}
+            {!holo && (
+              <div className="sheen-orbit" aria-hidden="true">
+                {SHEEN_SPARKS.map((sp, i) => (
+                  <span key={i} className="holo-arm" style={{ transform: `rotate(${sp.angle}deg)` }}>
+                    <i style={{
+                      left: `${sp.r}px`, top: `${-sp.size / 2}px`,
+                      width: `${sp.size}px`, height: `${sp.size}px`,
+                      background: sp.color,
+                      boxShadow: `0 0 ${sp.size * 3}px ${sp.color}`,
+                      animationDelay: `${sp.delay}s`,
+                    }} />
+                  </span>
+                ))}
+              </div>
+            )}
+            {holo && (
+              <div className="holo-orbit" aria-hidden="true">
+                {HOLO_SPARKS.map((sp, i) => (
+                  <span key={i} className="holo-arm" style={{ transform: `rotate(${sp.angle}deg)` }}>
+                    <i style={{
+                      left: `${sp.r}px`, top: `${-sp.size / 2}px`,
+                      width: `${sp.size}px`, height: `${sp.size}px`,
+                      background: sp.color,
+                      boxShadow: `0 0 ${sp.size * 2.5}px ${sp.color}, 0 0 ${sp.size}px #fff`,
+                      animationDelay: `${sp.delay}s`,
+                    }} />
+                  </span>
+                ))}
+              </div>
+            )}
+          {/*
+            傾きと出現アニメーションは同じ transform を取り合うため、層を分ける。
+            外側が傾きを担い、内側が出現の拡大と光を担う。
+          */}
+          <div
+            onMouseMove={tilt.onMouseMove}
+            onMouseLeave={tilt.onMouseLeave}
+            style={{ ...tilt.style, willChange: "transform" }}
+          >
+          <div
+            className={`static-card ${holo ? "holo-card" : "sheen-card"}`}
+            style={{
+              width: "130px",
+              ...(holo ? { animation: "holoReveal 1.1s cubic-bezier(.16,1,.3,1)" } : null),
+            }}
+          >
+            <div className="card-depth" aria-hidden="true" />
+            <div className="card-shine-layer" aria-hidden="true" />
+            {/*
+              既存のカード表示と同じ構造にする。
+              .card-face.reversed が全体を180度回し、
+              .keep-readable がラテン文字圏でだけ文字を読める向きに戻す。
+              独自のクラス名で書くと、この回転が効かず逆位置が見た目に反映されない。
+            */}
+            <div
+              className={`card-face ${card.reversed ? "reversed" : ""}`}
+              style={{ "--accent": card.accent || "var(--gold)" }}
+            >
+              <div className="card-corner">{card.corner}</div>
+              <div className="card-icon">{card.Icon ? <card.Icon size={24} /> : <Sparkles size={24} />}</div>
+              <div className={`card-text-wrap${needsUprightText ? " keep-readable" : ""}`}>
+                <div className="card-name">{getCardName(card, lang)}</div>
+                <div className="card-sub">{getCardSub(card, lang)}</div>
+              </div>
+            </div>
+          </div>
+          </div>
+          </div>
+          <span className={`orientation ${orientationToneClass(card, card.reversed)}`}>
+            {orientationLabel(card.reversed, lang)}
+          </span>
+
+          <div className="ai-reading" style={{ marginTop: "2px" }}>
+            <div className="ai-label">
+              <Sparkles size={12} /> <span className={holo ? "holo-text" : "sheen-text"}>{info.pos[0]}</span>
+            </div>
+            <p className={holo ? "holo-text" : "sheen-text"}>{buildOneOracleReading(card, lang)}</p>
+          </div>
+
+          {developerNote({ card, reversed: card.reversed }, lang) && (
+            <p className="developer-note" style={{ marginTop: "-4px" }}>
+              {developerNote({ card, reversed: card.reversed }, lang)}
+            </p>
+          )}
+
+          <div style={{ display: "flex", flexDirection: "column", alignItems: "center", gap: "10px" }}>
+            <button className="reset-btn" onClick={() => { setCard(null); setHolo(false); }}>
+              <RotateCcw size={14} />
+              {t.oneOracleAgain}
+            </button>
+            <button
+              onClick={onBack}
+              style={{
+                background: "none", border: "none", cursor: "pointer", fontFamily: "inherit",
+                fontSize: "11px", color: "var(--muted)", letterSpacing: "0.06em", padding: "6px 10px", opacity: 0.75,
+              }}
+            >{t.backToTitle}</button>
+          </div>
+        </>
+      )}
+    </div>
+  );
+}
+
 /**
  * 【ボトムナビ】画面下に固定されるタブバー。
  *
@@ -5172,7 +6161,7 @@ function HistoryPanel({ history, lang }) {
           </p>
           <div style={{ display: "flex", gap: "6px", flexWrap: "wrap", marginBottom: "6px" }}>
             {(POSITION_LABELS_I18N[lang] || POSITION_LABELS).map((pos, i) => (
-              <span key={i} style={{ fontSize: "10px", color: "var(--muted)", background: "rgba(201,162,75,0.08)", padding: "2px 7px", borderRadius: "999px" }}>
+              <span key={i} style={{ fontSize: "10px", color: "var(--muted)", background: "rgba(201,162,75,0.10)", padding: "2px 7px", borderRadius: "999px" }}>
                 {pos}:{h.minorResults[i] ? (h.minorResults[i].id ? getCardName({ id: h.minorResults[i].id, name: h.minorResults[i].name }, lang) : h.minorResults[i].name) : ""}
               </span>
             ))}
@@ -5719,7 +6708,7 @@ function LastResultPanel({ entry, lang, onClose }) {
           if (!r) return null;
           const name = r.id ? getCardName({ id: r.id, name: r.name }, lang) : r.name;
           return (
-            <span key={i} style={{ fontSize: "11px", color: "var(--muted)", background: "rgba(201,162,75,0.08)", padding: "3px 9px", borderRadius: "999px" }}>
+            <span key={i} style={{ fontSize: "11px", color: "var(--muted)", background: "rgba(201,162,75,0.10)", padding: "3px 9px", borderRadius: "999px" }}>
               {pos}: {name}（{t.historyOrientation(r.reversed)}）
             </span>
           );
@@ -5756,19 +6745,19 @@ function LastResultPanel({ entry, lang, onClose }) {
       {entry.reading1 && (
         <div className="ai-reading">
           <div className="ai-label"><Sparkles size={12} /> {t.minorReadingLabel}</div>
-          <p>{entry.reading1}</p>
+          <p className="sheen-text">{entry.reading1}</p>
         </div>
       )}
       {entry.reading2 && (
         <div className="ai-reading">
           <div className="ai-label"><Sparkles size={12} /> {t.majorReadingLabel}</div>
-          <p>{entry.reading2}</p>
+          <p className="sheen-text">{entry.reading2}</p>
         </div>
       )}
       {entry.reading3 && (
         <div className="ai-reading final-judgment">
           <div className="ai-label"><Sparkles size={12} /> {t.finalJudgmentLabel}</div>
-          <p>{entry.reading3}</p>
+          <p className="sheen-text">{entry.reading3}</p>
         </div>
       )}
 
@@ -6007,6 +6996,13 @@ const T = {
     subStats: "통계",
     subEmpty: "아직 기록이 없습니다",
     backToTitle: "처음 화면으로",
+    oneOracleHoloTitle: "✦ 무지개가 걸렸습니다 ✦",
+    oneOracleAgain: "한 장 더 뽑기",
+    oneOracleFree: "횟수를 쓰지 않고 몇 번이든 뽑을 수 있습니다",
+    spreadSelectHint: "어떤 방식으로 읽을까요.",
+    spreadCardUnit: "장",
+    spreadNoCost: "횟수 불요",
+    spreadComingSoon: "준비 중",
     navDraw: "점보기",
     navRecords: "기록",
     navGrowth: "육성",
@@ -6178,6 +7174,13 @@ const T = {
     subStats: "Thống kê",
     subEmpty: "Chưa có ghi chép",
     backToTitle: "Về màn hình đầu",
+    oneOracleHoloTitle: "✦ Cầu Vồng Đã Hiện Ra ✦",
+    oneOracleAgain: "Rút lá nữa",
+    oneOracleFree: "Không tốn lượt. Rút bao nhiêu tùy bạn",
+    spreadSelectHint: "Bạn muốn đọc theo cách nào?",
+    spreadCardUnit: "lá",
+    spreadNoCost: "không tốn lượt",
+    spreadComingSoon: "sắp có",
     navDraw: "Xem",
     navRecords: "Ghi chép",
     navGrowth: "Nuôi",
@@ -6349,6 +7352,13 @@ const T = {
     subStats: "Statistik",
     subEmpty: "Belum ada catatan",
     backToTitle: "Kembali ke awal",
+    oneOracleHoloTitle: "✦ Pelangi Telah Muncul ✦",
+    oneOracleAgain: "Ambil lagi",
+    oneOracleFree: "Tidak memakai jatah harian. Ambil sesering yang kamu mau",
+    spreadSelectHint: "Ingin dibaca dengan cara apa?",
+    spreadCardUnit: "kartu",
+    spreadNoCost: "tanpa kuota",
+    spreadComingSoon: "segera",
     navDraw: "Tilik",
     navRecords: "Catatan",
     navGrowth: "Tumbuh",
@@ -6520,6 +7530,13 @@ const T = {
     subStats: "Statistik",
     subEmpty: "Belum ada rekod",
     backToTitle: "Kembali ke awal",
+    oneOracleHoloTitle: "✦ Pelangi Telah Muncul ✦",
+    oneOracleAgain: "Ambil lagi",
+    oneOracleFree: "Tidak menggunakan kuota harian. Ambil seberapa kerap anda mahu",
+    spreadSelectHint: "Mahu dibaca dengan cara apa?",
+    spreadCardUnit: "kad",
+    spreadNoCost: "tanpa kuota",
+    spreadComingSoon: "akan datang",
     navDraw: "Tilik",
     navRecords: "Rekod",
     navGrowth: "Tumbuh",
@@ -6692,6 +7709,13 @@ const T = {
     subStats: "統計",
     subEmpty: "まだ記録がありません",
     backToTitle: "タイトルに戻る",
+    oneOracleHoloTitle: "✦ 虹がかかりました ✦",
+    oneOracleAgain: "もう一枚引く",
+    oneOracleFree: "回数を使わず、何度でも引けます",
+    spreadSelectHint: "どの占い方で読みますか。",
+    spreadCardUnit: "枚",
+    spreadNoCost: "回数不要",
+    spreadComingSoon: "準備中",
     navDraw: "占う",
     navRecords: "記録",
     navGrowth: "育成",
@@ -6863,6 +7887,13 @@ const T = {
     subStats: "統計",
     subEmpty: "尚無紀錄",
     backToTitle: "回到首頁",
+    oneOracleHoloTitle: "✦ 彩虹降臨了 ✦",
+    oneOracleAgain: "再抽一張",
+    oneOracleFree: "不消耗次數，可無限次抽取",
+    spreadSelectHint: "要以哪種方式解讀呢。",
+    spreadCardUnit: "張",
+    spreadNoCost: "不計次數",
+    spreadComingSoon: "準備中",
     navDraw: "占卜",
     navRecords: "記錄",
     navGrowth: "養成",
@@ -7034,6 +8065,13 @@ const T = {
     subStats: "统计",
     subEmpty: "尚无记录",
     backToTitle: "回到首页",
+    oneOracleHoloTitle: "✦ 彩虹降临了 ✦",
+    oneOracleAgain: "再抽一张",
+    oneOracleFree: "不消耗次数，可无限次抽取",
+    spreadSelectHint: "要以哪种方式解读呢。",
+    spreadCardUnit: "张",
+    spreadNoCost: "不计次数",
+    spreadComingSoon: "准备中",
     navDraw: "占卜",
     navRecords: "记录",
     navGrowth: "养成",
@@ -7205,6 +8243,13 @@ const T = {
     subStats: "Stats",
     subEmpty: "No records yet",
     backToTitle: "Back to title",
+    oneOracleHoloTitle: "✦ A Rainbow Has Appeared ✦",
+    oneOracleAgain: "Draw another",
+    oneOracleFree: "Doesn't use your daily count. Draw as often as you like",
+    spreadSelectHint: "How would you like to read?",
+    spreadCardUnit: "cards",
+    spreadNoCost: "free",
+    spreadComingSoon: "soon",
     navDraw: "Draw",
     navRecords: "Records",
     navGrowth: "Growth",
@@ -7376,6 +8421,13 @@ const T = {
     subStats: "Estadistika",
     subEmpty: "Wala pang tala",
     backToTitle: "Bumalik sa simula",
+    oneOracleHoloTitle: "✦ Lumitaw ang Bahaghari ✦",
+    oneOracleAgain: "Bumunot muli",
+    oneOracleFree: "Hindi ginagamit ang bilang mo. Bumunot nang paulit-ulit",
+    spreadSelectHint: "Paano mo gustong basahin?",
+    spreadCardUnit: "baraha",
+    spreadNoCost: "libre",
+    spreadComingSoon: "malapit na",
     navDraw: "Bunot",
     navRecords: "Tala",
     navGrowth: "Paglago",
@@ -7547,6 +8599,13 @@ const T = {
     subStats: "สถิติ",
     subEmpty: "ยังไม่มีบันทึก",
     backToTitle: "กลับหน้าแรก",
+    oneOracleHoloTitle: "✦ สายรุ้งปรากฏขึ้นแล้ว ✦",
+    oneOracleAgain: "จั่วอีกใบ",
+    oneOracleFree: "ไม่นับจำนวนครั้ง จั่วได้ไม่จำกัด",
+    spreadSelectHint: "จะอ่านด้วยวิธีใดดี",
+    spreadCardUnit: "ใบ",
+    spreadNoCost: "ไม่นับครั้ง",
+    spreadComingSoon: "เร็วๆ นี้",
     navDraw: "ดูดวง",
     navRecords: "บันทึก",
     navGrowth: "เติบโต",
@@ -7574,7 +8633,7 @@ export default function TarotDraw() {
   const [question, setQuestion] = useState("");
   const [lang, setLang] = useState(loadLang());
   const t = T[lang];
-  const needsUprightText = lang === "en" || lang === "tl" || lang === "th" || lang === "id" || lang === "ms" || lang === "vi"; // CJK以外は逆位置でも文字を読める向きに補正する
+  const needsUprightText = needsUprightTextFor(lang);
   const handleLangChange = (newLang) => {
     setLang(newLang);
     saveLang(newLang);
@@ -7610,6 +8669,7 @@ export default function TarotDraw() {
   const [showLegal, setShowLegal] = useState(false);
   const [navTab, setNavTab] = useState("draw"); // ボトムナビで選択中の画面
   const [recordsTab, setRecordsTab] = useState("last"); // 記録タブ内のサブタブ
+  const [drawMode, setDrawMode] = useState("select"); // "select" | "oneOracle" | "three"
   const [showA2HS, setShowA2HS] = useState(false);       // ホーム画面追加の案内を出すか
   const [installPrompt, setInstallPrompt] = useState(null); // Android/Chrome のインストールイベント
   const [equippedTitle, setEquippedTitle] = useState(loadEquippedTitle());
@@ -7832,7 +8892,7 @@ export default function TarotDraw() {
         title={label}
         style={{
           flexShrink: 0,
-          background: strong ? "rgba(201,162,75,0.16)" : "transparent",
+          background: strong ? "rgba(201,162,75,0.20)" : "transparent",
           border: `1px solid ${strong ? "var(--gold)" : "var(--gold-dim)"}`,
           borderRadius: "999px", cursor: "pointer",
           width: "34px", height: "34px",
@@ -7938,9 +8998,10 @@ export default function TarotDraw() {
       alert(`✓ 今日の占い回数が${newLimit}回になりました`);
     } else if (code === "holo") {
       setForceStarVariant("holo");
+      setForcedOneOracleHolo(true); // ワンオラクル側のホロも強制する
       setCouponInput("");
       setShowCoupon(false);
-      alert("✓ 次の1回の占いで、星がすべてホロ演出になります（スコア自体は変わりません）");
+      alert("✓ 次の1回の占いで、星がすべてホロ演出になります（スコア自体は変わりません）\n✓ ワンオラクルも次の1枚がホロになります");
     } else if (code === "kuro") {
       setForceStarVariant("kuro");
       setCouponInput("");
@@ -7975,8 +9036,14 @@ export default function TarotDraw() {
     // 名前を保存
     if (userName.trim()) saveUserName(userName.trim());
     setRedrawCount(0);
-    // 予約されたテスト用星演出を、今回の占いにだけ適用して消費する
+    /*
+      予約されたテスト用星演出を、今回の占いにだけ適用して消費する。
+      holo はワンオラクル側にもフラグを立てているため、ここで一緒に解除する。
+      別々に管理すると「ワンオラクルで虹が出た＝使い切った」と思った後に、
+      スリーカードの星まで意図せずホロになる。
+    */
     setActiveStarVariant(forceStarVariant);
+    if (forceStarVariant === "holo") setForcedOneOracleHolo(false);
     setForceStarVariant(null);
     setMajorPool(buildPool(MAJOR_LIST));
     setMajorSelectedId(null);
@@ -8650,7 +9717,7 @@ export default function TarotDraw() {
           letter-spacing: 0.12em; text-indent: 0.12em;
           background: linear-gradient(180deg, rgba(201,162,75,0.18), rgba(201,162,75,0.04));
           color: var(--gold-soft); cursor: pointer;
-          transition: transform .25s cubic-bezier(.2,.7,.3,1), box-shadow .25s ease, border-color .25s ease;
+          transition: transform .25s cubic-bezier(.16,1,.3,1), box-shadow .25s cubic-bezier(.16,1,.3,1), border-color .25s ease;
         }
         .draw-btn:hover:not(:disabled) { transform: translateY(-1px); border-color: var(--gold); box-shadow: 0 10px 30px rgba(201,162,75,0.18); }
         .draw-btn:focus-visible { outline: 2px solid var(--gold); outline-offset: 2px; }
@@ -8667,7 +9734,7 @@ export default function TarotDraw() {
         .copy-btn { font-size: 13px; padding: 11px 22px; }
         .copy-btn:disabled { opacity: 0.4; cursor: default; animation: none; }
 
-        .reset-btn { display: inline-flex; align-items: center; gap: 7px; font-size: 12px; color: var(--gold-soft); background: none; border: 1px solid rgba(201,162,75,0.28); padding: 9px 20px; border-radius: 999px; cursor: pointer; letter-spacing: 0.06em; opacity: 0.85; transition: opacity .2s ease, border-color .2s ease, color .2s ease; }
+        .reset-btn { display: inline-flex; align-items: center; gap: 7px; font-size: 12px; color: var(--gold-soft); background: none; border: 1px solid rgba(201,162,75,0.28); padding: 9px 20px; border-radius: 999px; cursor: pointer; letter-spacing: 0.06em; opacity: 0.85; transition: opacity .2s cubic-bezier(.16,1,.3,1), border-color .2s ease, color .2s ease; }
         .reset-btn:hover { color: var(--gold); border-color: rgba(201,162,75,0.6); opacity: 1; }
         .reset-btn:focus-visible { outline: 2px solid var(--gold); outline-offset: 2px; }
 
@@ -8678,7 +9745,7 @@ export default function TarotDraw() {
         @keyframes glowPulse { 0%, 100% { box-shadow: 0 0 0 0 rgba(201,162,75,0); } 50% { box-shadow: 0 0 16px 2px rgba(201,162,75,0.20); } }
 
         .spread-grid { position: relative; z-index: 1; display: flex; flex-wrap: wrap; gap: 6px; justify-content: center; max-width: 760px; margin: 0 auto 28px; }
-        .mini-card { position: relative; width: 40px; height: 60px; border-radius: 6px; border: 1px solid rgba(201,162,75,0.45); background: linear-gradient(160deg, var(--surface), var(--bg-mid)); display: flex; align-items: center; justify-content: center; cursor: pointer; padding: 0; font: inherit; transform: rotate(var(--rot, 0deg)); transition: transform .18s ease, box-shadow .18s ease, border-color .18s ease; }
+        .mini-card { position: relative; width: 40px; height: 60px; border-radius: 6px; border: 1px solid rgba(201,162,75,0.45); background: linear-gradient(160deg, var(--surface), var(--bg-mid)); display: flex; align-items: center; justify-content: center; cursor: pointer; padding: 0; font: inherit; transform: rotate(var(--rot, 0deg)); transition: transform .18s cubic-bezier(.16,1,.3,1), box-shadow .18s ease, border-color .18s ease; }
         .mini-card:hover:not(:disabled) { transform: rotate(var(--rot, 0deg)) translateY(-4px) scale(1.08); box-shadow: 0 6px 16px rgba(201,162,75,0.20); border-color: var(--gold); }
         .mini-card:focus-visible { outline: 2px solid var(--gold); outline-offset: 2px; }
         .mini-card:disabled { cursor: default; }
@@ -8697,7 +9764,7 @@ export default function TarotDraw() {
         .mini-emblem { font-family: 'Cinzel', serif; font-size: 12px; color: var(--gold); opacity: 0.65; }
         .mini-badge { position: absolute; top: -7px; right: -7px; width: 17px; height: 17px; border-radius: 50%; background: var(--gold); color: var(--bg-deep); font-size: 9.5px; font-weight: 700; display: flex; align-items: center; justify-content: center; font-family: 'Cinzel', serif; }
 
-        .result-area { position: relative; z-index: 1; display: flex; flex-direction: column; align-items: center; gap: 22px; animation: popIn .5s ease; margin-bottom: 10px; }
+        .result-area { position: relative; z-index: 1; display: flex; flex-direction: column; align-items: center; gap: 22px; animation: popIn .5s cubic-bezier(.16,1,.3,1); margin-bottom: 10px; }
         .cards-row { display: flex; gap: 18px; flex-wrap: wrap; justify-content: center; }
         .card-slot { display: flex; flex-direction: column; align-items: center; gap: 10px; width: 140px; }
         .position-label { font-family: 'Cinzel', serif; font-size: 11px; letter-spacing: 0.15em; color: var(--gold); }
@@ -8727,7 +9794,7 @@ export default function TarotDraw() {
         .loading-dots span:nth-child(3) { animation-delay: .3s; }
         @keyframes dotPulse { 0%, 80%, 100% { opacity: .25; transform: scale(.8); } 40% { opacity: 1; transform: scale(1); } }
 
-        .major-stage { position: relative; z-index: 1; display: flex; flex-direction: column; align-items: center; gap: 14px; margin-top: 8px; padding-top: 28px; border-top: 1px solid rgba(201,162,75,0.2); animation: popIn .55s ease; }
+        .major-stage { position: relative; z-index: 1; display: flex; flex-direction: column; align-items: center; gap: 14px; margin-top: 8px; padding-top: 28px; border-top: 1px solid rgba(201,162,75,0.2); animation: popIn .55s cubic-bezier(.16,1,.3,1); }
         .major-keywords { font-size: 12.5px; color: var(--muted); text-align: center; max-width: 320px; margin: 0; }
         .intuition-msg { font-family: 'Shippori Mincho', serif; font-size: 12px; text-align: center; margin: 2px 0 0; letter-spacing: 0.04em; }
         .intuition-msg.hit  { color: var(--star-max); }
@@ -8744,7 +9811,7 @@ export default function TarotDraw() {
         .star-fill { position: absolute; top: 0; left: 0; overflow: hidden; color: var(--gold); display: block; height: 15px; }
         .stats-value { font-family: 'Cinzel', serif; font-size: 10.5px; color: var(--muted); width: 26px; text-align: right; flex-shrink: 0; }
 
-        .stars-max .star-wrap { animation: starPop 0.55s cubic-bezier(.2,1.6,.4,1) both; }
+        .stars-max .star-wrap { animation: starPop 0.55s cubic-bezier(.2,1.5,.4,1) both; }
         .stars-max .star-fill { animation: starShimmer 2.4s ease-in-out 0.6s infinite; }
         .stats-row.row-max { background: rgba(255,233,77,0.05); border-radius: 8px; }
         .stats-row.row-min { opacity: 0.65; }
@@ -8765,8 +9832,8 @@ export default function TarotDraw() {
         .star-dull .star-wrap { animation: none !important; }
 
         /* クーポン「same」：星を鮫の絵文字に差し替える演出 */
-        .shark-emoji { font-size: 14px; line-height: 1; display: inline-block; transition: opacity 0.2s ease; }
-        .candy-emoji { font-size: 14px; line-height: 1; display: inline-block; transition: opacity 0.2s ease; }
+        .shark-emoji { font-size: 14px; line-height: 1; display: inline-block; transition: opacity 0.2s cubic-bezier(.16,1,.3,1); }
+        .candy-emoji { font-size: 14px; line-height: 1; display: inline-block; transition: opacity 0.2s cubic-bezier(.16,1,.3,1); }
 
         /* 開発者の一言：控えめだが温かみのある表示 */
         .developer-note {
@@ -8791,6 +9858,288 @@ export default function TarotDraw() {
         @keyframes holoHueRotate {
           0%   { filter: hue-rotate(0deg) saturate(2.2) brightness(1.3) drop-shadow(0 0 4px rgba(255,255,255,0.5)); }
           100% { filter: hue-rotate(360deg) saturate(2.2) brightness(1.3) drop-shadow(0 0 4px rgba(255,255,255,0.5)); }
+        }
+
+        /*
+          【常時の質感】カードと文字にうっすら虹の膜をかける。
+          もともとホロ演出として作ったが、単体では控えめで上品なので、
+          特別扱いをやめて既定の見た目に降格させた。
+          高級感を出すのは装飾の派手さではなく、静かな階調の動きによる。
+        */
+        .sheen-card {
+          position: relative;
+          animation: sheenGlow 4.5s ease-in-out infinite;
+        }
+        /* 装飾レイヤーの上にカードの中身を出す。この2つの中でだけ効かせ、
+           他のカード表示（星の一覧など）には一切影響させない */
+        .sheen-card > .card-face,
+        .holo-card > .card-face { position: relative; z-index: 1; }
+        .sheen-card::after {
+          content: "";
+          position: absolute; inset: 0; border-radius: 12px; pointer-events: none;
+          background: linear-gradient(115deg,
+            transparent 18%, rgba(255,120,200,0.34) 32%, rgba(120,220,255,0.34) 44%,
+            rgba(180,255,160,0.34) 56%, rgba(255,220,120,0.34) 68%, transparent 82%);
+          background-size: 260% 260%;
+          mix-blend-mode: screen;
+          animation: sheenSweep 4s linear infinite;
+        }
+        @keyframes sheenGlow {
+          0%, 100% { box-shadow: 0 0 16px rgba(201,162,75,0.40), 0 0 38px rgba(160,120,255,0.22); }
+          50%      { box-shadow: 0 0 26px rgba(255,255,255,0.48), 0 0 58px rgba(120,220,255,0.34); }
+        }
+        @keyframes sheenSweep {
+          0%   { background-position: 0% 50%; }
+          100% { background-position: 260% 50%; }
+        }
+        .sheen-text {
+          background: linear-gradient(100deg,
+            #e7cf99 0%, #ffb3dd 18%, #9fd6f5 38%, #b8f0c0 58%, #ffd98a 78%, #e7cf99 100%);
+          background-size: 300% 100%;
+          -webkit-background-clip: text; background-clip: text;
+          -webkit-text-fill-color: transparent; color: transparent;
+          animation: sheenTextFlow 7s linear infinite;
+        }
+        @keyframes sheenTextFlow {
+          0%   { background-position: 0% 50%; }
+          100% { background-position: 300% 50%; }
+        }
+
+        /*
+          【ホロ】216分の1でのみ発現する、本物の虹。
+          常時演出と同じ見え方では特別さが伝わらないので、
+          彩度・速度・光量のすべてを一段引き上げ、
+          外周に回転する虹の輪を重ねて別物にする。
+        */
+        .holo-card {
+          position: relative;
+          animation: holoCardGlow 1.6s ease-in-out infinite;
+        }
+        /* 虹の膜。常時版より濃く、速い */
+        .holo-card::after {
+          content: "";
+          position: absolute; inset: 0; border-radius: 12px; pointer-events: none;
+          background: linear-gradient(115deg,
+            transparent 8%, rgba(255,60,180,0.75) 24%, rgba(60,200,255,0.75) 38%,
+            rgba(120,255,140,0.75) 52%, rgba(255,220,60,0.75) 66%, rgba(255,60,180,0.6) 80%, transparent 94%);
+          background-size: 320% 320%;
+          mix-blend-mode: screen;
+          animation: holoSweep 1.5s linear infinite;
+        }
+        /* 外周を回る虹の輪。これが常時版との決定的な差になる */
+        /*
+          外周の虹の輪。
+          .static-card は overflow:hidden なので、カードの外へはみ出す装飾は切られる。
+          そこで内側ぎりぎりに置き、強いぼかしで外へにじませることで輪に見せる。
+        */
+        .holo-card::before {
+          content: "";
+          position: absolute; inset: 0; border-radius: 12px; pointer-events: none;
+          background: conic-gradient(from 0deg,
+            #ff3ca6, #ffd23c, #6cff8d, #3cd2ff, #a86cff, #ff3ca6);
+          filter: blur(12px) saturate(1.8);
+          opacity: 0.55;
+          animation: holoRing 2.2s linear infinite;
+        }
+        @keyframes holoCardGlow {
+          0%, 100% { box-shadow: 0 0 20px rgba(255,255,255,0.55), 0 0 46px rgba(255,60,180,0.45); }
+          50%      { box-shadow: 0 0 34px rgba(255,255,255,0.85), 0 0 78px rgba(60,200,255,0.65); }
+        }
+        @keyframes holoSweep {
+          0%   { background-position: 0% 50%; }
+          100% { background-position: 320% 50%; }
+        }
+        @keyframes holoRing {
+          0%   { transform: rotate(0deg); }
+          100% { transform: rotate(360deg); }
+        }
+        /* 文字も原色寄りにして、光量を上げる */
+        .holo-text {
+          background: linear-gradient(100deg,
+            #ff3ca6 0%, #ffd23c 16%, #6cff8d 32%, #3cd2ff 48%, #a86cff 64%, #ff3ca6 80%, #ffd23c 100%);
+          background-size: 400% 100%;
+          -webkit-background-clip: text; background-clip: text;
+          -webkit-text-fill-color: transparent; color: transparent;
+          animation: holoTextFlow 2.4s linear infinite;
+          filter: saturate(1.5) drop-shadow(0 0 8px rgba(255,255,255,0.45));
+        }
+        @keyframes holoTextFlow {
+          0%   { background-position: 0% 50%; }
+          100% { background-position: 400% 50%; }
+        }
+        /*
+          ホロ時のカード文字。
+          虹の帯が濃いぶん、そのままでは文字が背景に沈んで読めない。
+          文字を白く起こし、暗い縁取りと影を付けて浮かせる。
+        */
+        .holo-card .card-name,
+        .holo-card .card-sub,
+        .holo-card .card-corner {
+          color: #fff !important;
+          text-shadow:
+            0 0 2px rgba(0,0,0,0.95), 0 0 5px rgba(0,0,0,0.85),
+            0 1px 2px rgba(0,0,0,0.9), 0 0 14px rgba(255,255,255,0.55);
+          font-weight: 600;
+        }
+        .holo-card .card-icon { filter: drop-shadow(0 0 4px rgba(0,0,0,0.9)) drop-shadow(0 0 8px rgba(255,255,255,0.7)); }
+        /* 文字の背後だけ暗い膜を敷き、虹の帯から切り離す */
+        .holo-card .card-text-wrap {
+          position: relative; z-index: 2;
+          background: rgba(12,8,26,0.42);
+          border-radius: 8px; padding: 4px 8px;
+          backdrop-filter: blur(2px);
+        }
+
+        /*
+          大当たりの外周装飾。
+          カードの周りを星屑が巡る。conic-gradient の輪だけでは
+          「光っている」で終わるが、粒が回ると祝祭の感触が出る。
+        */
+        /*
+          外周を巡る星屑。
+          親を回し、子の transform で位置を決めると同じプロパティが競合して動かない。
+          そこで「中心から伸びる腕」を各粒ごとに置き、
+          腕の回転（角度）と粒の位置（腕の先端）を別の要素に分ける。
+        */
+        .holo-orbit {
+          position: absolute; left: 50%; top: 50%;
+          width: 0; height: 0; pointer-events: none; z-index: 3;
+          animation: holoOrbitSpin 7s linear infinite;
+        }
+        .holo-arm {
+          position: absolute; left: 0; top: 0;
+          width: 0; height: 0;
+        }
+        .holo-arm > i {
+          position: absolute; display: block;
+          border-radius: 50%;
+          animation: holoSparkTwinkle 1.5s ease-in-out infinite;
+        }
+
+        /*
+          常時の粒子。ホロと同じ仕組みだが、
+          回転を3倍遅く、明滅の振れ幅を小さく、全体の不透明度も落とす。
+          気づくと漂っている、という程度に留める。
+        */
+        .sheen-orbit {
+          position: absolute; left: 50%; top: 50%;
+          width: 0; height: 0; pointer-events: none; z-index: 3;
+          opacity: 0.8;
+          animation: holoOrbitSpin 14s linear infinite;
+        }
+        .sheen-orbit .holo-arm > i {
+          animation: sheenSparkTwinkle 4s ease-in-out infinite;
+        }
+        @keyframes sheenSparkTwinkle {
+          0%, 100% { opacity: 0.3; transform: scale(0.8); }
+          50%      { opacity: 1;   transform: scale(1.3); }
+        }
+        @keyframes holoOrbitSpin {
+          0%   { transform: rotate(0deg); }
+          100% { transform: rotate(360deg); }
+        }
+        @keyframes holoSparkTwinkle {
+          0%, 100% { opacity: 0.25; transform: scale(0.7); }
+          50%      { opacity: 1;    transform: scale(1.5); }
+        }
+
+        @keyframes holoRevealText {
+          0%   { opacity: 0; transform: translateY(6px) scale(0.9); letter-spacing: 0.5em; }
+          60%  { opacity: 1; }
+          100% { opacity: 1; transform: translateY(0) scale(1); letter-spacing: 0.18em; }
+        }
+        /*
+          発現時に一度だけ強く光る。
+          回転を含めると、内側の .card-face.reversed（180度回転）と
+          親子で変換が干渉し、逆位置のカードが正位置に戻って見える。
+          拡大と明るさだけで演出する。
+        */
+        @keyframes holoReveal {
+          0%   { opacity: 0; transform: scale(0.9); filter: brightness(3.2) saturate(2); }
+          40%  { opacity: 1; transform: scale(1.06); filter: brightness(2) saturate(1.8); }
+          100% { opacity: 1; transform: scale(1); filter: brightness(1) saturate(1); }
+        }
+
+        /*
+          【順次表示】要素を上から順に少しずつ遅らせて現す。
+          一斉に出ると情報が塊で押し寄せるが、80msずつずらすと
+          視線が上から下へ導かれ、落ち着いて読める。
+          追加の装飾を足さずに格が上がる、最も効率のよい手法。
+        */
+        .stagger > * {
+          opacity: 0;
+          animation: staggerIn 0.62s cubic-bezier(.16,1,.3,1) forwards;
+        }
+        .stagger > *:nth-child(1) { animation-delay: 0.00s; }
+        .stagger > *:nth-child(2) { animation-delay: 0.08s; }
+        .stagger > *:nth-child(3) { animation-delay: 0.16s; }
+        .stagger > *:nth-child(4) { animation-delay: 0.24s; }
+        .stagger > *:nth-child(5) { animation-delay: 0.32s; }
+        .stagger > *:nth-child(6) { animation-delay: 0.40s; }
+        .stagger > *:nth-child(7) { animation-delay: 0.48s; }
+        .stagger > *:nth-child(n+8) { animation-delay: 0.56s; }
+        @keyframes staggerIn {
+          from { opacity: 0; transform: translateY(9px); }
+          to   { opacity: 1; transform: translateY(0); }
+        }
+        /* 動きを減らす設定の人には出さない */
+        @media (prefers-reduced-motion: reduce) {
+          .stagger > * { opacity: 1; animation: none; }
+        }
+
+        /*
+          【立体感】カード表面に、上が明るく下が暗い薄い光沢を重ねる。
+          平面のままだと印刷物に見えるが、わずかな階調で厚みが出る。
+          光沢は装飾ではなく、面が存在することの手がかりになる。
+        */
+        /*
+          立体感の光沢。
+          ::before は .holo-card の虹の輪が使っているため、
+          ここで奪うとホロの外周が消える。専用の要素に分ける。
+        */
+        .card-depth {
+          position: absolute; inset: 0; border-radius: 12px; pointer-events: none; z-index: 2;
+          background:
+            linear-gradient(180deg, rgba(255,255,255,0.10) 0%, rgba(255,255,255,0.02) 22%,
+                            transparent 55%, rgba(0,0,0,0.16) 100%);
+        }
+        .static-card { position: relative; }
+
+        /*
+          【一度だけ走る光】開いた瞬間に、斜めの光が表面を横切る。
+          高級時計やカードの箔押しに見られる反射を模したもの。
+          繰り返すとうるさいので、出現時の一度きりに限る。
+        */
+        /*
+          走る光。
+          ::after は .sheen-card / .holo-card の虹の帯が使っているため、
+          同じ要素に両方のクラスが付くと片方が消える。専用の層に分ける。
+        */
+        .card-shine-layer {
+          position: absolute; inset: 0; border-radius: 12px; pointer-events: none; z-index: 3;
+          background: linear-gradient(105deg,
+            transparent 38%, rgba(255,255,255,0.42) 48%, rgba(255,255,255,0.62) 51%,
+            rgba(255,255,255,0.42) 54%, transparent 64%);
+          background-size: 260% 100%;
+          background-position: -60% 0;
+          animation: cardShine 1.15s cubic-bezier(.16,1,.3,1) 0.18s 1 both;
+        }
+        @keyframes cardShine {
+          from { background-position: -60% 0; opacity: 0; }
+          20%  { opacity: 1; }
+          to   { background-position: 160% 0; opacity: 0; }
+        }
+
+        /*
+          めくる動作。前半で息を溜め、後半で一気に回して消える。
+          等速で回すと事務的なので、ためらってから翻る形にする。
+        */
+        @keyframes cardFlipAway {
+          0%   { transform: rotateY(0deg) scale(1); opacity: 1; }
+          22%  { transform: rotateY(-8deg) scale(1.03); opacity: 1; }
+          45%  { transform: rotateY(18deg) scale(1.01); opacity: 1; }
+          75%  { transform: rotateY(76deg) scale(0.94); opacity: 0.85; }
+          100% { transform: rotateY(96deg) scale(0.9); opacity: 0; }
         }
 
         @keyframes starPop {
@@ -8882,7 +10231,30 @@ export default function TarotDraw() {
           </div>
         ) : phase === "idle" && mode === "normal" ? (
           <div className="question-field">
-            {navTab === "draw" && (<>
+            {navTab === "draw" && drawMode === "select" && (
+              <SpreadSelect lang={lang} onSelect={(k) => setDrawMode(k)} />
+            )}
+
+            {navTab === "draw" && drawMode === "oneOracle" && (
+              <OneOraclePanel
+                lang={lang}
+                onBack={() => setDrawMode("select")}
+                onHoloConsumed={() => { if (forceStarVariant === "holo") setForceStarVariant(null); }}
+              />
+            )}
+
+            {navTab === "draw" && drawMode === "three" && (<>
+            {/* 選択画面へ戻る導線。スプレッドを選び直せることを常に示す */}
+            <button
+              onClick={() => setDrawMode("select")}
+              style={{
+                alignSelf: "flex-start", background: "none", border: "none", cursor: "pointer",
+                fontFamily: "inherit", fontSize: "11px", color: "var(--muted)",
+                padding: "2px 4px 8px", opacity: 0.75, letterSpacing: "0.04em",
+              }}
+            >
+              ← {spreadInfo("three", lang).name}
+            </button>
             <label htmlFor="tarot-name">{t.nameLabel}</label>
             <input
               id="tarot-name"
@@ -8946,6 +10318,7 @@ export default function TarotDraw() {
                 {t.limitRemaining(currentLimit - todayCount)}
               </p>
             )}
+
             </>)}
 
             {/*
@@ -9207,7 +10580,9 @@ export default function TarotDraw() {
                     <Sparkles size={22} style={{ color: "var(--gold-dim)", opacity: 0.65 }} />
                   </div>
                 ) : (
-                <div className="static-card">
+                <div className="static-card sheen-card">
+                  <div className="card-depth" aria-hidden="true" />
+                  <div className="card-shine-layer" aria-hidden="true" />
                   <div className={`card-face ${d.reversed ? "reversed" : ""}`} style={{ "--accent": d.card.accent || "var(--gold)" }}>
                     <div className="card-corner">{d.card.corner}</div>
                     <div className="card-icon">{d.card.Icon ? <d.card.Icon size={24} /> : <Sparkles size={24} />}</div>
@@ -9219,7 +10594,7 @@ export default function TarotDraw() {
                 </div>
                 )}
                 {i < revealStage && (
-                  <span className={`orientation ${d.reversed ? "rev" : "up"}`}>{orientationLabel(d.reversed, lang)}</span>
+                  <span className={`orientation ${orientationToneClass(d.card, d.reversed)}`}>{orientationLabel(d.reversed, lang)}</span>
                 )}
               </div>
             ))}
@@ -9273,7 +10648,7 @@ export default function TarotDraw() {
                     : outcomeInfo.tone === "relief"
                     ? "linear-gradient(160deg, rgba(44,36,20,.85), rgba(22,18,12,.85))"
                     : "rgba(24,20,32,.8)",
-                animation: "outcomeIn .38s ease-out",
+                animation: "outcomeIn .38s cubic-bezier(.16,1,.3,1)",
               }}
             >
               <p style={{
@@ -9305,7 +10680,8 @@ export default function TarotDraw() {
                 </span>
               </p>
             ) : (
-              <p>{reading1}</p>
+              // 高級演出。読み込み中の点滅表示には掛けず、本文が出てからだけ効かせる
+              <p className="sheen-text">{reading1}</p>
             )}
           </div>
           )}
@@ -9390,7 +10766,9 @@ export default function TarotDraw() {
       {phase === "major-revealed" && majorCard && (
         <div className="major-stage">
           <span className="position-label">{t.themeThemeLabel}</span>
-          <div className="static-card big">
+          <div className="static-card big sheen-card">
+            <div className="card-depth" aria-hidden="true" />
+            <div className="card-shine-layer" aria-hidden="true" />
             <div className={`card-face ${majorCard.reversed ? "reversed" : ""}`} style={{ "--accent": "var(--gold)" }}>
               <div className="card-corner">{majorCard.card.corner}</div>
               <div className="card-icon">
@@ -9402,8 +10780,8 @@ export default function TarotDraw() {
               </div>
             </div>
           </div>
-          <span className={`orientation ${majorCard.reversed ? "rev" : "up"}`}>{orientationLabel(majorCard.reversed, lang)}</span>
-          <p className="major-keywords">{majorKeyword(parseInt(majorCard.card.id.split("-")[1], 10), majorCard.reversed, lang)}</p>
+          <span className={`orientation ${orientationToneClass(majorCard.card, majorCard.reversed)}`}>{orientationLabel(majorCard.reversed, lang)}</span>
+          <p className="major-keywords sheen-text">{majorKeyword(parseInt(majorCard.card.id.split("-")[1], 10), majorCard.reversed, lang)}</p>
 
           {userOrientationChoice !== null && (
             <p className={`intuition-msg ${userOrientationChoice ? "miss" : "hit"}`}>
@@ -9459,7 +10837,7 @@ export default function TarotDraw() {
                 </span>
               </p>
             ) : (
-              <p>{reading2}</p>
+              <p className="sheen-text">{reading2}</p>
             )}
           </div>
 
@@ -9480,7 +10858,7 @@ export default function TarotDraw() {
                   </span>
                 </p>
               ) : reading3 ? (
-                <p>{reading3}</p>
+                <p className="sheen-text">{reading3}</p>
               ) : null}
 
             </div>
@@ -9645,7 +11023,7 @@ export default function TarotDraw() {
               その動線を塞がないよう別のボタンとして置く。
             */}
             <button
-              onClick={() => { reset(); setNavTab("draw"); }}
+              onClick={() => { reset(); setNavTab("draw"); setDrawMode("select"); }}
               style={{
                 background: "none", border: "none", cursor: "pointer",
                 fontFamily: "inherit", fontSize: "11px", color: "var(--muted)",
@@ -9714,6 +11092,7 @@ export default function TarotDraw() {
             setShowCoupon(false);
             setShowLegal(false);
             setRecordsTab("last");
+            setDrawMode("select");
             window.scrollTo({ top: 0, behavior: "smooth" });
           }}
           lang={lang}
