@@ -3147,13 +3147,26 @@ function hexagramAffinity(drawnList) {
  */
 function fallbackHexagramReading(results, lang) {
   const info = spreadInfo("hexagram", lang);
+  const t2 = T[lang] || T.ja;
   return results.map((r, i) => {
     const [suit, rankStr] = String(r.card.id).split("-");
     const idx = parseInt(rankStr);
     const kw = suit === "major"
       ? majorKeyword(idx, r.reversed, lang)
       : minorKeyword(suit, idx, r.reversed, lang, r.card.up, r.card.rev);
-    return `${info.pos[i]}　${getCardName(r.card, lang)}（${orientationLabel(r.reversed, lang)}）\n${kw}`;
+    /*
+      位置名とカードを一行に詰めると、どこまでが見出しでどこからが札か読み取れない。
+      「過去に対応するカード」を見出しの行として独立させ、札と語句を次の行に置く。
+      先頭の \u0001 は見出しであるという目印。表示側がこれを見て、
+      光る演出の対象から外す（見出しまで光ると本文との段差が消える）。
+      AIが書いた鑑定文にこの文字は現れないので、有料版の表示は従来どおり。
+    */
+    /*
+      札の名前と語句を一行に並べると、どこまでが札でどこからが意味か切れ目が無い。
+      札は枠で囲んで独立させ、語句は次の行に置く。
+      \u0002 は「枠で囲む札の行」の目印。
+    */
+    return `\u0001${t2.hexPosHeading(info.pos[i])}\n\u0002${getCardName(r.card, lang)}（${orientationLabel(r.reversed, lang)}）\n${kw}`;
   }).join("\n\n");
 }
 
@@ -6012,16 +6025,16 @@ function SpreadSelect({ lang, onSelect }) {
                     fontFamily: "'Shippori Mincho', serif", fontSize: "13px",
                     letterSpacing: "0.06em", textIndent: "0.06em",
                   }}>{info.name}</span>
-                  {ready && SPREAD_USES_AI[base] && (
-                    <span className={`plan-badge${isFree ? " free" : " ai"}`}>
-                      {isFree ? t.planFree : t.planAi}
+                  {/*
+                    札は「無料」か「AI鑑定」のどちらか一つだけ付ける。
+                    以前は無料版に「無料」と「回数不要」の2枚が並んでいた。
+                    同じことを別の言葉で二度言っているうえ、「回数不要」は
+                    何の回数なのかが読み手には分からない。
+                  */}
+                  {ready && (
+                    <span className={`plan-badge${usesAi ? " ai" : " free"}`}>
+                      {usesAi ? t.planAi : t.planFree}
                     </span>
-                  )}
-                  {ready && !usesAi && (
-                    <span style={{
-                      fontSize: "10px", color: "var(--gold)", border: "1px solid rgba(201,162,75,0.35)",
-                      borderRadius: "999px", padding: "1px 8px", opacity: 0.9,
-                    }}>{t.spreadNoCost}</span>
                   )}
                   {!ready && (
                     <span style={{
@@ -6098,7 +6111,50 @@ function AffinityGauge({ value, label }) {
  * 六芒星の形をJSXに直接書かず、データから起こすことで、
  * 他のスプレッドを足すときに同じ仕組みを使い回せる。
  */
-function HexagramPanel({ lang, onBack, question, userName, onUserNameChange, canDraw, onConsume, aiEnabled }) {
+/*
+  注記を句点で改行して表示する。
+  小さい字の注記は、文が続いていると1つの塊に見えて読み飛ばされる。
+  文ごとに行を分けると、目が1文ずつ拾える。
+
+  正規表現の後読み（lookbehind）は使わない。Safari 15以前が対応しておらず、
+  対応していない環境では構文解析の時点で失敗し、アプリ全体が起動しなくなる。
+  対象市場は端末が古い側に厚いので、ここは避ける。
+*/
+/*
+  鑑定文の本文。
+  \u0001 で始まる行は見出しとして、光る演出をかけずに出す。
+  それ以外の行は従来どおり光らせる。
+*/
+function ReadingBody({ text }) {
+  const lines = String(text || "").split("\n");
+  return lines.map((line, i) => {
+    if (line.startsWith("\u0001")) {
+      return <span key={i} className="reading-head">{line.slice(1)}</span>;
+    }
+    if (line.startsWith("\u0002")) {
+      return (
+        <span key={i} className="reading-card-row">
+          <span className="reading-card">{line.slice(1)}</span>
+        </span>
+      );
+    }
+    if (!line.trim()) return <span key={i} className="reading-gap" />;
+    return <span key={i} className="sheen-text reading-line">{line}</span>;
+  });
+}
+
+function NoteLines({ text }) {
+  const lines = String(text || "")
+    .replace(/([。！？])/g, "$1\n")
+    .split("\n")
+    .map((x) => x.trim())
+    .filter(Boolean);
+  return lines.map((line, i) => (
+    <span key={i} style={{ display: "block" }}>{line}</span>
+  ));
+}
+
+function HexagramPanel({ lang, onBack, question, userName, canDraw, onConsume, aiEnabled }) {
   const t = T[lang] || T.ja;
   const info = spreadInfo("hexagram", lang);
   const spread = SPREADS.hexagram;
@@ -6183,9 +6239,26 @@ function HexagramPanel({ lang, onBack, question, userName, onUserNameChange, can
   useEffect(() => {
     if (picked.length !== spread.count) return;
     const el = confirmRef.current;
-    if (el && typeof el.scrollIntoView === "function") {
-      el.scrollIntoView({ behavior: "smooth", block: "center" });
+    if (!el || typeof el.scrollIntoView !== "function") return;
+
+    /*
+      既に見えているなら動かさない。
+      滑らかスクロールの最中にタップすると、指を置いた瞬間と click が確定する
+      瞬間で、その座標にある要素が変わる。狙っていない要素が押される。
+      動かす必要がないときに動かさないのが、この競合を減らす一番確実な方法。
+    */
+    if (typeof el.getBoundingClientRect === "function" && typeof window !== "undefined") {
+      const r = el.getBoundingClientRect();
+      const h = window.innerHeight || 0;
+      if (r.top >= 0 && r.bottom <= h) return;
     }
+
+    /*
+      動かす場合も滑らかにはしない。
+      ここは「選び終えた」という区切りなので、一息で移動したほうが
+      区切りとしても明確になる。
+    */
+    el.scrollIntoView({ behavior: "auto", block: "center" });
   }, [picked.length]);
 
   /*
@@ -6231,8 +6304,17 @@ function HexagramPanel({ lang, onBack, question, userName, onUserNameChange, can
         const relationLine = relation.trim()
           ? `相談者から見た相手の関係は「${relation.trim()}」です。この関係性を踏まえた言葉づかいで書いてください。\n\n`
           : "";
+        /*
+          相談者が選んだ視点。カードの解釈そのものは変えず、
+          どの側面に重心を置いて言葉にするかだけを指示する。
+          引いた札の意味を選択に合わせて曲げると、公平性の宣言と衝突する。
+        */
+        const picked = T.ja.viewpoints.filter((_, i) => viewpoints[i]);
+        const viewpointLine = picked.length
+          ? `相談者は「${picked.join("」「")}」という視点で見たいと選んでいます。カードの意味そのものは変えず、どの側面に重心を置いて言葉にするかだけをこの視点に合わせてください。\n\n`
+          : "";
         const txt = await callClaude(
-          buildHexagramPrompt(drawn.map((d) => ({ card: d, reversed: d.reversed })), question, AI_LANG_INSTRUCTION[lang], relationLine),
+          buildHexagramPrompt(drawn.map((d) => ({ card: d, reversed: d.reversed })), question, AI_LANG_INSTRUCTION[lang], relationLine + viewpointLine),
           2000
         );
         if (alive) setReading(normalizeReadingText(txt));
@@ -6267,15 +6349,10 @@ function HexagramPanel({ lang, onBack, question, userName, onUserNameChange, can
             入力させておいて使わない状態にはならない。
           */}
           <div className="hex-fields">
-            <label htmlFor="hex-name">{t.nameLabel}</label>
-            <input
-              id="hex-name"
-              type="text"
-              maxLength={20}
-              value={userName}
-              onChange={(e) => onUserNameChange && onUserNameChange(e.target.value)}
-              placeholder={t.namePlaceholder}
-            />
+            {/*
+              名前の欄は置かない。ヘキサグラムでは結果の表示にしか使われず、
+              「占いを始める」までの距離を伸ばすだけになる。
+            */}
             <label htmlFor="hex-relation">{t.relationLabel}</label>
             <input
               id="hex-relation"
@@ -6285,7 +6362,7 @@ function HexagramPanel({ lang, onBack, question, userName, onUserNameChange, can
               onChange={(e) => setRelation(e.target.value)}
               placeholder={t.relationPlaceholder}
             />
-            <p className="hex-fields-note">{t.relationNote}</p>
+            <p className="hex-fields-note"><NoteLines text={t.relationNote} /></p>
 
             <div className="hex-viewpoints">
               <p className="hex-viewpoint-title">{t.viewpointLabel}</p>
@@ -6305,7 +6382,12 @@ function HexagramPanel({ lang, onBack, question, userName, onUserNameChange, can
                 「一切の偏りがない完全公平設計」を掲げている以上、
                 機能しない操作を機能するように見せない。
               */}
-              <p className="hex-fields-note">{t.viewpointNote}</p>
+              {/*
+                有料版は実際に鑑定へ渡すので、そう書く。
+                無料版は渡さないので、変わらないと書く。
+                どちらも事実と一致させる。
+              */}
+              <p className="hex-fields-note"><NoteLines text={aiEnabled ? t.viewpointNoteAi : t.viewpointNote} /></p>
             </div>
           </div>
           <button className="draw-btn" onClick={start} disabled={!canDraw}>
@@ -6362,7 +6444,13 @@ function HexagramPanel({ lang, onBack, question, userName, onUserNameChange, can
                     未選択の札には出さない。裏面が意匠を持つようになったため、
                     プレースホルダの ✦ は役目を終えている。
                   */}
-                  {at >= 0 && <span className="mini-emblem">{at + 1}</span>}
+                  {/*
+                    番号の出し方はスリーカードに揃える。
+                    中央に縁取りの数字を置く方式は、裏面の意匠と重なって読みにくかった。
+                    札の隅に不透明の丸を置くほうが、意匠を隠す面積が小さく、
+                    かつ数字が確実に読める。
+                  */}
+                  {at >= 0 && <span className="mini-badge">{at + 1}</span>}
                 </button>
               );
             })}
@@ -6547,22 +6635,20 @@ function HexagramPanel({ lang, onBack, question, userName, onUserNameChange, can
                   <span className="loading-dots"><span /><span /><span /></span>
                 </p>
               ) : (
-                <p className="sheen-text">{reading}</p>
+                <p className="reading-body"><ReadingBody text={reading} /></p>
               )}
             </div>
           )}
 
-          <div style={{ display: "flex", flexDirection: "column", alignItems: "center", gap: "10px" }}>
-            <button
-              onClick={onBack}
-              style={{
-                background: "none", border: "none", cursor: "pointer", fontFamily: "inherit",
-                fontSize: "11px", color: "var(--muted)", letterSpacing: "0.06em", padding: "6px 10px", opacity: 0.75,
-              }}
-            >{t.backToTitle}</button>
-          </div>
         </>
       )}
+      {/*
+        どの画面でも、一番下は必ずここへ戻れる。
+        以前は結果画面にしか無く、引く前の画面や、枠を使い切って
+        「明日またお越しください」だけが出ている画面は行き止まりだった。
+        画面ごとに有無が変わる出口は、出口として数えられない。
+      */}
+      <button className="back-to-title" onClick={onBack}>{t.backToTitle}</button>
     </div>
   );
 
@@ -6783,17 +6869,22 @@ function OneOraclePanel({ lang, onBack, onHoloConsumed }) {
               <p style={{ fontSize: "10px", color: "var(--muted)", margin: 0, opacity: 0.65 }}>
                 {t.oneOracleDragHint}
               </p>
-              {/* 残り枚数。点で示すと、数字より直感的に残量が伝わる */}
-              <div style={{ display: "flex", gap: "6px", alignItems: "center" }}>
-                {Array.from({ length: ONE_ORACLE_MAX }, (_, i) => (
-                  <span key={i} style={{
-                    width: "7px", height: "7px", borderRadius: "50%",
-                    background: i < uses.remaining ? "var(--gold)" : "transparent",
-                    border: `1px solid ${i < uses.remaining ? "var(--gold)" : "rgba(201,162,75,0.3)"}`,
-                    transition: "background .3s",
-                  }} />
-                ))}
-              </div>
+              {/*
+                残り枚数の点。制限が休止中は全部点いたまま動かないので出さない。
+                動かない計器は、壊れているように見えるか、嘘に見えるかのどちらかになる。
+              */}
+              {ONE_ORACLE_LIMIT_ENABLED && (
+                <div style={{ display: "flex", gap: "6px", alignItems: "center" }}>
+                  {Array.from({ length: ONE_ORACLE_MAX }, (_, i) => (
+                    <span key={i} style={{
+                      width: "7px", height: "7px", borderRadius: "50%",
+                      background: i < uses.remaining ? "var(--gold)" : "transparent",
+                      border: `1px solid ${i < uses.remaining ? "var(--gold)" : "rgba(201,162,75,0.3)"}`,
+                      transition: "background .3s",
+                    }} />
+                  ))}
+                </div>
+              )}
             </>
           ) : (
             <p style={{ fontSize: "10.5px", color: "var(--muted)", margin: 0, textAlign: "center", lineHeight: 1.7 }}>
@@ -6891,6 +6982,25 @@ function OneOraclePanel({ lang, onBack, onHoloConsumed }) {
           </div>
           </div>
           </div>
+          {/*
+            大当たりの一言。正位置・逆位置の表示のすぐ上に置く。
+            虹の告知はカードの上、こちらはカードの下と、役割で位置を分けている。
+
+            .holo-text は使わない。あれは100度の斜めグラデーションを文字に載せるので、
+            「！」のような縦長で細い字だと色帯が斜めに横切り、字そのものが
+            傾いて見える。単色にすれば起きない。
+          */}
+          {holo && (
+            <span style={{
+              fontFamily: "'Shippori Mincho', serif", fontSize: "15px", fontWeight: 800,
+              letterSpacing: "0.10em", textIndent: "0.10em",
+              color: "#FFE9A3",
+              textShadow: "0 0 10px rgba(255,214,110,0.85), 0 0 22px rgba(255,160,60,0.55)",
+              animation: "holoRevealText 1.4s cubic-bezier(.16,1,.3,1)",
+            }}>
+              {t.oneOracleJackpot}
+            </span>
+          )}
           <span className={`orientation ${orientationToneClass(card, card.reversed)}`}>
             {orientationLabel(card.reversed, lang)}
           </span>
@@ -6912,23 +7022,28 @@ function OneOraclePanel({ lang, onBack, onHoloConsumed }) {
             {uses.remaining > 0 ? (
               <button className="reset-btn" onClick={() => { setCard(null); setHolo(false); }}>
                 <RotateCcw size={14} />
-                {t.oneOracleAgain}（{uses.remaining}）
+                {/*
+                  残数は制限が生きているときだけ添える。
+                  休止中は常に満タンが返るため、括弧の数字が動かない。
+                  減らない残数は、押すたびに減ると誤解させるぶん、無いより悪い。
+                */}
+                {ONE_ORACLE_LIMIT_ENABLED ? `${t.oneOracleAgain}（${uses.remaining}）` : t.oneOracleAgain}
               </button>
             ) : (
               <p style={{ fontSize: "10.5px", color: "var(--muted)", margin: 0, textAlign: "center", lineHeight: 1.7 }}>
                 {t.oneOracleRefill(formatWait(uses.waitMs))}
               </p>
             )}
-            <button
-              onClick={onBack}
-              style={{
-                background: "none", border: "none", cursor: "pointer", fontFamily: "inherit",
-                fontSize: "11px", color: "var(--muted)", letterSpacing: "0.06em", padding: "6px 10px", opacity: 0.75,
-              }}
-            >{t.backToTitle}</button>
           </div>
         </>
       )}
+      {/*
+        どの画面でも、一番下は必ずここへ戻れる。
+        以前は結果画面にしか無く、引く前の画面や、枠を使い切って
+        「明日またお越しください」だけが出ている画面は行き止まりだった。
+        画面ごとに有無が変わる出口は、出口として数えられない。
+      */}
+      <button className="back-to-title" onClick={onBack}>{t.backToTitle}</button>
     </div>
   );
 }
@@ -8165,7 +8280,9 @@ const T = {
     orientationNo: "거꾸로인 것 같아요",
     shareButton: "이 결과를 공유하기",
     shareDone: "복사했습니다 (앱이나 SNS에 붙여넣어 주세요)",
-    copyButton: "결과 복사 (다른 AI로 더 점쳐보기)",
+    copyButton: "결과 복사",
+    copyHint: "붙여넣기만 하면 다른 AI에서 더 깊이 볼 수 있는 형태로 정리해 두었습니다.",
+    hexPosHeading: (pos) => `${pos}에 해당하는 카드`,
     copyDone: "복사했습니다",
     redrawButton: (n) => `마이너 아르카나 다시 뽑기 (남은 ${n}회)`,
     redrawUsed: "이번에는 다시 뽑기를 모두 사용했습니다 ✦ 내일 다시 시도해 주세요",
@@ -8242,6 +8359,8 @@ const T = {
     spreadSelectHint: "어떤 방식으로 읽을까요.",
     spreadCardUnit: "장",
     spreadNoCost: "횟수 불요",
+    drawAgainFree: "다시 점 보기",
+    oneOracleJackpot: "대박!!!",
     spreadComingSoon: "준비 중",
     affinityLabel: "AFFINITY　현재의 궁합",
     hexStageTitle: {"self": "당신의 발자취", "other": "상대의 마음", "around": "주변의 상황", "choice": "앞으로의 선택"},
@@ -8256,7 +8375,8 @@ const T = {
     tapToFlip: "탭해서 뒤집기",
     viewpointLabel: "무엇을 보고 싶으신가요 (선택)",
     viewpoints: ["연애에 대해", "인간적인 궁합에 대해", "일이나 이해관계의 상대로서"],
-    viewpointNote: "선택해도 점괘 내용은 달라지지 않습니다. 마음을 정리하기 위한 칸입니다.",
+    viewpointNote: "무료판에서는 선택해도 점괘 내용이 달라지지 않습니다. 마음을 정리하기 위한 칸입니다.",
+    viewpointNoteAi: "선택한 시점은 해석의 무게중심에 반영됩니다. 카드의 의미 자체는 바뀌지 않습니다.",
     relationLabel: "상대와의 관계 (선택)",
     relationPlaceholder: "예: 직장 선배 / 3년 전에 헤어진 사람",
     relationNote: "상대의 이름은 묻지 않습니다. 관계만으로 충분합니다.",
@@ -8364,7 +8484,9 @@ const T = {
     orientationNo: "Tôi thấy bị ngược",
     shareButton: "Chia sẻ kết quả này",
     shareDone: "Đã sao chép (hãy dán vào ứng dụng hoặc mạng xã hội)",
-    copyButton: "Sao chép kết quả (để luận giải thêm bằng AI khác)",
+    copyButton: "Sao chép kết quả",
+    copyHint: "Chỉ cần dán vào là có thể nhờ một AI khác luận giải sâu hơn.",
+    hexPosHeading: (pos) => `Lá bài cho ${pos}`,
     copyDone: "Đã sao chép",
     redrawButton: (n) => `Rút lại Ẩn Phụ (còn ${n} lần)`,
     redrawUsed: "Lần này đã hết lượt rút lại ✦ Xin thử lại vào ngày mai",
@@ -8441,6 +8563,8 @@ const T = {
     spreadSelectHint: "Bạn muốn đọc theo cách nào?",
     spreadCardUnit: "lá",
     spreadNoCost: "không tốn lượt",
+    drawAgainFree: "Xem lại lần nữa",
+    oneOracleJackpot: "TRÚNG LỚN!!!",
     spreadComingSoon: "sắp có",
     affinityLabel: "AFFINITY　Hợp duyên hiện tại",
     hexStageTitle: {"self": "Dấu Chân Của Bạn", "other": "Lòng Người Ấy", "around": "Hoàn Cảnh Xung Quanh", "choice": "Lựa Chọn Phía Trước"},
@@ -8455,7 +8579,8 @@ const T = {
     tapToFlip: "Chạm để lật",
     viewpointLabel: "Bạn muốn nhìn vào điều gì (không bắt buộc)",
     viewpoints: ["Về chuyện tình cảm", "Về sự hợp nhau giữa con người", "Với tư cách đối tác công việc hay lợi ích"],
-    viewpointNote: "Chọn hay không, nội dung luận giải vẫn như nhau. Ô này để bạn sắp xếp lại lòng mình.",
+    viewpointNote: "Ở bản miễn phí, chọn hay không thì nội dung luận giải vẫn như nhau. Ô này để bạn sắp xếp lại lòng mình.",
+    viewpointNoteAi: "Góc nhìn bạn chọn sẽ định hướng trọng tâm của lời luận giải. Ý nghĩa lá bài không đổi.",
     relationLabel: "Mối quan hệ với người đó (không bắt buộc)",
     relationPlaceholder: "vd: đàn anh ở công ty / người chia tay ba năm trước",
     relationNote: "Chúng tôi không hỏi tên người đó. Chỉ cần mối quan hệ là đủ.",
@@ -8563,7 +8688,9 @@ const T = {
     orientationNo: "Menurutku terbalik",
     shareButton: "Bagikan hasil ini",
     shareDone: "Sudah disalin (tempelkan ke aplikasi atau media sosial)",
-    copyButton: "Salin hasil (untuk diramal lebih lanjut dengan AI lain)",
+    copyButton: "Salin hasil",
+    copyHint: "Sudah dirapikan agar bisa kamu tempel ke AI lain untuk pembacaan lebih dalam.",
+    hexPosHeading: (pos) => `Kartu untuk ${pos}`,
     copyDone: "Sudah disalin",
     redrawButton: (n) => `Tarik ulang Minor Arcana (sisa ${n} kali)`,
     redrawUsed: "Penarikan ulang sudah habis kali ini ✦ Silakan coba lagi besok",
@@ -8654,13 +8781,16 @@ const T = {
     tapToFlip: "Ketuk untuk membuka",
     viewpointLabel: "Apa yang ingin kamu lihat (opsional)",
     viewpoints: ["Tentang asmara", "Tentang kecocokan sebagai manusia", "Sebagai rekan kerja atau kepentingan"],
-    viewpointNote: "Dicentang atau tidak, isi ramalan tetap sama. Ini untuk menata perasaanmu sendiri.",
+    viewpointNote: "Di versi gratis, dicentang atau tidak, isi ramalan tetap sama. Ini untuk menata perasaanmu sendiri.",
+    viewpointNoteAi: "Sudut pandang yang kamu pilih menentukan titik berat pembacaan. Makna kartunya tidak berubah.",
     relationLabel: "Hubunganmu dengan dia (opsional)",
     relationPlaceholder: "mis. senior di kantor / mantan tiga tahun lalu",
     relationNote: "Kami tidak menanyakan namanya. Hubungannya saja sudah cukup.",
     freeXpRemaining: (n) => `Hari ini tersisa ${n} kali untuk mendapat pengalaman.`,
     freeXpDone: "Pengalaman hari ini sudah maksimal. Kamu tetap bisa meramal sebanyak apa pun.",
     planFree: "Gratis",
+    drawAgainFree: "Ramal lagi",
+    oneOracleJackpot: "JACKPOT!!!",
     planAi: "Bacaan AI",
     navGrowth: "Tumbuh",
     navAdventure: "Petualangan",
@@ -8762,7 +8892,9 @@ const T = {
     orientationNo: "Menurut saya terbalik",
     shareButton: "Bagikan hasil ini",
     shareDone: "Sudah disalin (tempelkan ke aplikasi atau media sosial)",
-    copyButton: "Salin hasil (untuk diramal lebih lanjut dengan AI lain)",
+    copyButton: "Salin hasil",
+    copyHint: "Sudah dikemas supaya boleh anda tampal ke AI lain untuk tilikan lebih mendalam.",
+    hexPosHeading: (pos) => `Kad untuk ${pos}`,
     copyDone: "Sudah disalin",
     redrawButton: (n) => `Tarik semula Minor Arcana (sisa ${n} kali)`,
     redrawUsed: "Penarikan semula sudah habis kali ini ✦ Sila cuba lagi esok",
@@ -8853,13 +8985,16 @@ const T = {
     tapToFlip: "Ketik untuk buka",
     viewpointLabel: "Apa yang ingin anda lihat (pilihan)",
     viewpoints: ["Tentang asmara", "Tentang keserasian sebagai manusia", "Sebagai rakan kerja atau kepentingan"],
-    viewpointNote: "Ditanda atau tidak, isi tilikan tetap sama. Ruang ini untuk menyusun perasaan anda.",
+    viewpointNote: "Dalam versi percuma, ditanda atau tidak, isi tilikan tetap sama. Ruang ini untuk menyusun perasaan anda.",
+    viewpointNoteAi: "Sudut pandang pilihan anda menentukan tumpuan tilikan. Makna kad itu sendiri tidak berubah.",
     relationLabel: "Hubungan anda dengan dia (pilihan)",
     relationPlaceholder: "cth. senior di pejabat / bekas kekasih tiga tahun lalu",
     relationNote: "Kami tidak bertanya namanya. Hubungan sahaja sudah memadai.",
     freeXpRemaining: (n) => `Hari ini tinggal ${n} kali untuk mendapat pengalaman.`,
     freeXpDone: "Pengalaman hari ini sudah maksimum. Anda masih boleh menilik tanpa had.",
     planFree: "Percuma",
+    drawAgainFree: "Tilik lagi",
+    oneOracleJackpot: "JACKPOT!!!",
     planAi: "Bacaan AI",
     navGrowth: "Tumbuh",
     navAdventure: "Kembara",
@@ -8961,7 +9096,9 @@ const T = {
     orientationNo: "逆だと思う",
     shareButton: "この結果をシェアする",
     shareDone: "コピーしました（アプリやSNSに貼り付けてください）",
-    copyButton: "結果をコピーする（外部AIで詳しく占う用）",
+    copyButton: "結果をコピーする",
+    copyHint: "貼り付ければ、外部のAIで詳しく占える形に整えてあります。",
+    hexPosHeading: (pos) => `${pos}に対応するカード`,
     copyDone: "コピーしました",
     redrawButton: (n) => `小アルカナを引き直す（あと${n}回）`,
     redrawUsed: "引き直しは今回使い切りました ✦ 明日また挑戦できます",
@@ -9053,13 +9190,16 @@ const T = {
     tapToFlip: "タップしてめくる",
     viewpointLabel: "何を見たいですか（任意）",
     viewpoints: ["恋愛について", "人間的な相性について", "仕事や利害の相手として"],
-    viewpointNote: "選んでも鑑定内容は変わりません。ご自身の気持ちを整理するための欄です。",
+    viewpointNote: "無料版では選んでも鑑定内容は変わりません。ご自身のお気持ちを整理するための欄です。",
+    viewpointNoteAi: "選んだ視点は、鑑定文の重心に反映されます。カードの意味そのものは変わりません。",
     relationLabel: "相手との関係（任意）",
     relationPlaceholder: "例：職場の先輩／三年前に別れた人",
     relationNote: "相手の名前は伺いません。関係だけで十分です。",
     freeXpRemaining: (n) => `本日、経験値が入るのはあと${n}回です。`,
     freeXpDone: "本日の経験値は上限に達しました。占いは何回でもできます。",
     planFree: "無料",
+    drawAgainFree: "もう一度占う",
+    oneOracleJackpot: "大当たり！！！",
     planAi: "AI鑑定",
     navGrowth: "育成",
     navAdventure: "冒険",
@@ -9161,7 +9301,9 @@ const T = {
     orientationNo: "我認為是逆位",
     shareButton: "分享這個結果",
     shareDone: "已複製（請貼到應用程式或社群媒體）",
-    copyButton: "複製占卜結果（供其他AI進一步解讀）",
+    copyButton: "複製占卜結果",
+    copyHint: "已整理成貼上就能讓其他AI進一步解讀的格式。",
+    hexPosHeading: (pos) => `對應「${pos}」的牌`,
     copyDone: "已複製",
     redrawButton: (n) => `重新選擇小阿爾克那（還可以${n}次）`,
     redrawUsed: "本次重抽機會已用完 ✦ 明天可以再挑戰",
@@ -9252,13 +9394,16 @@ const T = {
     tapToFlip: "點一下翻牌",
     viewpointLabel: "你想看的是什麼（選填）",
     viewpoints: ["關於戀愛", "關於人與人的契合", "作為工作或利害關係的對象"],
-    viewpointNote: "勾選與否，解讀內容都不會改變。這是為了整理自己心情的欄位。",
+    viewpointNote: "免費版中，勾選與否，解讀內容都不會改變。這是為了整理自己心情的欄位。",
+    viewpointNoteAi: "所選的視角會反映在解讀的重心上。牌本身的意義不會改變。",
     relationLabel: "與對方的關係（選填）",
     relationPlaceholder: "例：職場前輩／三年前分手的人",
     relationNote: "我們不會詢問對方的姓名。只要關係就足夠了。",
     freeXpRemaining: (n) => `今天還有 ${n} 次可以獲得經驗值。`,
     freeXpDone: "今天的經驗值已達上限。占卜仍可無限次進行。",
     planFree: "免費",
+    drawAgainFree: "再占一次",
+    oneOracleJackpot: "大獎！！！",
     planAi: "AI解讀",
     navGrowth: "養成",
     navAdventure: "冒險",
@@ -9360,7 +9505,9 @@ const T = {
     orientationNo: "我认为是逆位",
     shareButton: "分享这个结果",
     shareDone: "已拷贝（请贴到应用程序或社群媒体）",
-    copyButton: "拷贝占卜结果（供其他AI进一步解读）",
+    copyButton: "拷贝占卜结果",
+    copyHint: "已整理成粘贴后就能让其他AI进一步解读的格式。",
+    hexPosHeading: (pos) => `对应「${pos}」的牌`,
     copyDone: "已拷贝",
     redrawButton: (n) => `重新选择小阿尔克那（还可以${n}次）`,
     redrawUsed: "本次重抽机会已用完 ✦ 明天可以再挑战",
@@ -9451,13 +9598,16 @@ const T = {
     tapToFlip: "点击翻牌",
     viewpointLabel: "你想看的是什么（选填）",
     viewpoints: ["关于恋爱", "关于人与人的契合", "作为工作或利害关系的对象"],
-    viewpointNote: "勾选与否，解读内容都不会改变。这是为了整理自己心情的栏位。",
+    viewpointNote: "免费版中，勾选与否，解读内容都不会改变。这是为了整理自己心情的栏位。",
+    viewpointNoteAi: "所选的视角会反映在解读的重心上。牌本身的意义不会改变。",
     relationLabel: "与对方的关系（选填）",
     relationPlaceholder: "例：职场前辈／三年前分手的人",
     relationNote: "我们不会询问对方的姓名。只要关系就足够了。",
     freeXpRemaining: (n) => `今天还有 ${n} 次可以获得经验值。`,
     freeXpDone: "今天的经验值已达上限。占卜仍可无限次进行。",
     planFree: "免费",
+    drawAgainFree: "再占一次",
+    oneOracleJackpot: "大奖！！！",
     planAi: "AI解读",
     navGrowth: "养成",
     navAdventure: "冒险",
@@ -9559,7 +9709,9 @@ const T = {
     orientationNo: "I think it's reversed",
     shareButton: "Share This Result",
     shareDone: "Copied (paste it into any app or social media)",
-    copyButton: "Copy Result (for deeper reading with another AI)",
+    copyButton: "Copy Result",
+    copyHint: "Formatted so you can paste it into another AI for a deeper reading.",
+    hexPosHeading: (pos) => `The card for ${pos}`,
     copyDone: "Copied",
     redrawButton: (n) => `Redraw Minor Arcana (${n} left)`,
     redrawUsed: "You've used your redraw for this reading ✦ Try again tomorrow",
@@ -9650,13 +9802,16 @@ const T = {
     tapToFlip: "Tap to flip",
     viewpointLabel: "What are you looking at? (optional)",
     viewpoints: ["About romance", "About compatibility as people", "As someone I work or deal with"],
-    viewpointNote: "Ticking these does not change the reading. They are here to help you name what you want.",
+    viewpointNote: "On the free version, ticking these does not change the reading. They are here to help you name what you want.",
+    viewpointNoteAi: "What you tick shapes where the reading puts its weight. The cards themselves do not change.",
     relationLabel: "Your relationship to them (optional)",
     relationPlaceholder: "e.g. a senior at work / someone I left three years ago",
     relationNote: "We never ask for their name. The relationship is enough.",
     freeXpRemaining: (n) => `${n} more reading(s) will earn XP today.`,
     freeXpDone: "Today's XP is capped. You can still draw as often as you like.",
     planFree: "Free",
+    drawAgainFree: "Draw again",
+    oneOracleJackpot: "JACKPOT!!!",
     planAi: "AI reading",
     navGrowth: "Growth",
     navAdventure: "Adventure",
@@ -9758,7 +9913,9 @@ const T = {
     orientationNo: "Sa tingin ko reversed",
     shareButton: "I-share ang Resultang Ito",
     shareDone: "Na-copy na (i-paste sa app o social media)",
-    copyButton: "I-copy ang Resulta (para sa mas malalim na reading gamit ang ibang AI)",
+    copyButton: "I-copy ang Resulta",
+    copyHint: "Nakaayos na para i-paste sa ibang AI para sa mas malalim na pagbasa.",
+    hexPosHeading: (pos) => `Ang baraha para sa ${pos}`,
     copyDone: "Na-copy na",
     redrawButton: (n) => `Muling Pumili ng Minor Arcana (${n} na lang)`,
     redrawUsed: "Nagamit mo na ang redraw mo ✦ Subukan ulit bukas",
@@ -9849,13 +10006,16 @@ const T = {
     tapToFlip: "I-tap para buksan",
     viewpointLabel: "Ano ang gusto mong tingnan? (opsyonal)",
     viewpoints: ["Tungkol sa pag-ibig", "Tungkol sa pagkakasundo bilang tao", "Bilang katrabaho o kasosyo"],
-    viewpointNote: "Hindi nagbabago ang pagbasa kahit tikan mo ito. Para ito sa sarili mong paglilinaw.",
+    viewpointNote: "Sa libreng bersyon, hindi nagbabago ang pagbasa kahit tikan mo ito. Para ito sa sarili mong paglilinaw.",
+    viewpointNoteAi: "Ang piniling anggulo ang nagtatakda kung saan bibigat ang pagbasa. Hindi nagbabago ang kahulugan ng baraha.",
     relationLabel: "Relasyon mo sa kanya (opsyonal)",
     relationPlaceholder: "hal. senior sa trabaho / nakahiwalay tatlong taon na",
     relationNote: "Hindi namin hinihingi ang pangalan niya. Sapat na ang relasyon.",
     freeXpRemaining: (n) => `${n} pang pagbasa ang magbibigay ng XP ngayon.`,
     freeXpDone: "Puno na ang XP ngayong araw. Puwede ka pa ring magbasa nang walang limitasyon.",
     planFree: "Libre",
+    drawAgainFree: "Magbasa ulit",
+    oneOracleJackpot: "JACKPOT!!!",
     planAi: "AI reading",
     navGrowth: "Paglago",
     navAdventure: "Adventure",
@@ -9957,7 +10117,9 @@ const T = {
     orientationNo: "ฉันคิดว่ากลับหัว",
     shareButton: "แชร์ผลลัพธ์นี้",
     shareDone: "คัดลอกแล้ว (วางลงในแอปหรือโซเชียลมีเดีย)",
-    copyButton: "คัดลอกผลลัพธ์ (สำหรับการอ่านเชิงลึกด้วย AI อื่น)",
+    copyButton: "คัดลอกผลลัพธ์",
+    copyHint: "จัดรูปแบบไว้แล้ว วางลงใน AI อื่นเพื่ออ่านเชิงลึกได้ทันที",
+    hexPosHeading: (pos) => `ไพ่สำหรับ ${pos}`,
     copyDone: "คัดลอกแล้ว",
     redrawButton: (n) => `เลือกไพ่ Minor Arcana ใหม่ (เหลืออีก ${n} ครั้ง)`,
     redrawUsed: "คุณใช้สิทธิ์เลือกใหม่ของครั้งนี้หมดแล้ว ✦ ลองอีกครั้งพรุ่งนี้",
@@ -10048,13 +10210,16 @@ const T = {
     tapToFlip: "แตะเพื่อเปิดไพ่",
     viewpointLabel: "คุณอยากมองเรื่องใด (ไม่บังคับ)",
     viewpoints: ["เรื่องความรัก", "เรื่องความเข้ากันในฐานะคน", "ในฐานะคู่งานหรือผลประโยชน์"],
-    viewpointNote: "เลือกหรือไม่เลือก คำทำนายก็ไม่เปลี่ยน ช่องนี้มีไว้เพื่อจัดระเบียบความรู้สึกของคุณเอง",
+    viewpointNote: "ในเวอร์ชันฟรี เลือกหรือไม่เลือก คำทำนายก็ไม่เปลี่ยน ช่องนี้มีไว้เพื่อจัดระเบียบความรู้สึกของคุณเอง",
+    viewpointNoteAi: "มุมมองที่เลือกจะกำหนดจุดเน้นของคำทำนาย ความหมายของไพ่เองไม่เปลี่ยนแปลง",
     relationLabel: "ความสัมพันธ์กับอีกฝ่าย (ไม่บังคับ)",
     relationPlaceholder: "เช่น รุ่นพี่ที่ทำงาน / คนที่เลิกกันเมื่อสามปีก่อน",
     relationNote: "เราไม่ถามชื่อของอีกฝ่าย เพียงความสัมพันธ์ก็เพียงพอแล้ว",
     freeXpRemaining: (n) => `วันนี้เหลืออีก ${n} ครั้งที่จะได้รับค่าประสบการณ์`,
     freeXpDone: "ค่าประสบการณ์วันนี้เต็มแล้ว แต่ยังเปิดไพ่ได้ไม่จำกัด",
     planFree: "ฟรี",
+    drawAgainFree: "เปิดไพ่อีกครั้ง",
+    oneOracleJackpot: "แจ็กพอต!!!",
     planAi: "อ่านด้วย AI",
     navGrowth: "เติบโต",
     navAdventure: "ผจญภัย",
@@ -11110,7 +11275,7 @@ export default function TarotDraw() {
   const showHeldChip = atLeast("minor-spread") && phase !== "major-revealed" && majorCard;
 
   return (
-    <div className={`tarot-root${phase === "idle" && mode === "normal" ? " has-bottom-nav" : ""}`}>
+    <div className={`tarot-root${phase === "idle" && mode === "normal" && drawMode === "select" ? " has-bottom-nav" : ""}`}>
       {/* 裏面の意匠。ここで1回だけ定義し、各カードは <use> で参照する */}
       <TarotCardBackDefs />
       <style>{`
@@ -11269,6 +11434,71 @@ export default function TarotDraw() {
         .hex-viewpoint input { accent-color: var(--gold); width: 14px; height: 14px; cursor: pointer; flex-shrink: 0; }
         @media (hover: hover) { .hex-viewpoint:hover { opacity: 1; color: var(--gold-soft); } }
 
+        /*
+          コピーの用途説明。
+          高さを0から広げると、ボタンの位置が動いて押しにくくなる。
+          場所は最初から確保しておき、見えるかどうかだけを切り替える。
+        */
+        .copy-wrap { width: 100%; max-width: 340px; display: flex; flex-direction: column; align-items: center; }
+        .copy-hint {
+          font-size: 10.5px; color: var(--muted); line-height: 1.6;
+          margin: 5px 0 0; text-align: center; max-width: 300px;
+          opacity: 0; transition: opacity .22s ease;
+        }
+        @media (hover: hover) { .copy-wrap:hover .copy-hint { opacity: 0.9; } }
+        .copy-wrap:focus-within .copy-hint { opacity: 0.9; }
+        .copy-wrap.copied .copy-hint { opacity: 0.9; }
+        @media (prefers-reduced-motion: reduce) { .copy-hint { transition: none; } }
+
+        /* 見出しは光らせない。光ると本文との段差が消えて、見出しの役目を果たさない */
+        .reading-body { margin: 0; }
+        /*
+          見出し・枠・札名が全部おなじ金系だと、三段に分けた意味が消える。
+          役割の順に色を離す。
+          見出しは案内なので無彩色寄りに沈め、札名は主役なので明るい生成りにする。
+          金は枠だけが持つ。
+        */
+        /*
+          --muted (#a99bc9) を 0.75 で敷くと、背景に対するコントラスト比が約4.2しかない。
+          10.5px の細い字には足りない。明度を上げ、不透明度は落とさない。
+          色相は寒色のまま保つ。札名（暖色の生成り）との役割の差は、
+          色相・大きさ・太さで付いているので、明るくしても階層は崩れない。
+        */
+        .reading-head {
+          display: block; font-size: 11px; letter-spacing: 0.12em;
+          color: #C3BAD8; margin: 15px 0 4px;
+        }
+        .reading-head:first-child { margin-top: 0; }
+        .reading-line { display: block; }
+        /*
+          札は枠で囲んで独立させる。中の字は光らせない。
+          枠の中で文字が流れると枠と中身が別々に動いて落ち着かない。
+          光るのは語句の行だけにして、見出し・札・語句の三段に差を付ける。
+        */
+        .reading-card-row { display: block; margin: 0 0 4px; }
+        .reading-card {
+          display: inline-block; padding: 3px 11px; border-radius: 8px;
+          border: 1px solid rgba(201,162,75,0.55);
+          background: rgba(201,162,75,0.10);
+          color: var(--parchment); font-size: 14px; font-weight: 600;
+          letter-spacing: 0.05em; font-family: 'Shippori Mincho', serif;
+        }
+        .reading-gap { display: block; height: 6px; }
+
+        /*
+          どの画面でも一番下に置く出口。
+          位置と見た目を揃えることで、探さなくても「下にある」と分かる。
+          上に余白を取るのは、直前の操作ボタンと隣り合って誤って押されないため。
+        */
+        .back-to-title {
+          margin-top: 18px; background: none; border: none; cursor: pointer;
+          font-family: inherit; font-size: 11px; color: var(--muted);
+          letter-spacing: 0.06em; padding: 8px 14px; opacity: 0.75;
+          transition: opacity .2s ease, color .2s ease;
+        }
+        @media (hover: hover) { .back-to-title:hover { opacity: 1; color: var(--gold-soft); } }
+        .back-to-title:focus-visible { outline: 2px solid var(--gold); outline-offset: 2px; border-radius: 6px; }
+
         .plan-badge {
           font-size: 9px; letter-spacing: 0.08em; padding: 2px 7px;
           border-radius: 999px; line-height: 1.5; white-space: nowrap;
@@ -11396,13 +11626,6 @@ export default function TarotDraw() {
         /* 番号は中央に置かない。中央は裏面の四弁花の位置で、下地の円を敷くと花が消える。
            札の下端へ逃がし、下地も花より小さく保つ。 */
         /*
-          絶対配置で下端に寄せると、.mini-card の overflow:hidden に切られる。
-          従前どおり中央に流し込みで置き、下地の円は敷かない（敷くと裏面の花が隠れる）。
-          可読性は面ではなく文字の縁取りで確保する。
-          縁取りなら意匠を隠さずに、どの地色の上でも輪郭が立つ。
-        */
-        .mini-emblem { position: relative; z-index: 1; font-family: 'Cinzel', serif; font-size: 12px; font-weight: 700; color: #EDF1F6; opacity: 1; line-height: 1; text-shadow: 0 0 2px rgba(10,6,22,1), 0 0 4px rgba(10,6,22,0.95), 0 1px 2px rgba(10,6,22,0.9), 0 -1px 2px rgba(10,6,22,0.9); }
-        /*
           札の外（top/right が負）に置くと、.mini-card の overflow:hidden に切られる。
           内側へ入れる。色は金をやめて銀白にする。選択枠が金なので、
           金の丸を重ねると枠と丸の境界が溶けて番号が読めない。
@@ -11430,6 +11653,12 @@ export default function TarotDraw() {
         .tc-face { position: absolute; inset: 0; border-radius: 12px; overflow: hidden; backface-visibility: hidden; -webkit-backface-visibility: hidden; }
         .tc-front { border: 1px solid var(--gold-dim); box-shadow: 0 1px 2px rgba(0,0,0,0.75), 0 10px 30px rgba(0,0,0,0.5); }
         .tc-back { transform: rotateY(180deg); }
+        /*
+          このアプリは box-sizing を全体には指定していない。
+          .static-card は 130x194 だが枠線1pxが外側に足されて 132x196 になり、
+          130x194 の面から2pxはみ出して切られていた。
+        */
+        .tc-face .static-card { box-sizing: border-box; width: 100%; height: 100%; }
         .position-label { font-family: 'Cinzel', serif; font-size: 11px; letter-spacing: 0.15em; color: var(--gold); }
         /* 位置ラベルと同寸。明滅は薄い側に振り、消えきらせない（点滅は目に障る） */
         .tap-hint { font-size: 11px; letter-spacing: 0.12em; color: var(--gold-soft); animation: tapHintBlink 2s ease-in-out infinite; }
@@ -12134,7 +12363,6 @@ export default function TarotDraw() {
                 onBack={() => setDrawMode("select")}
                 question={question}
                 userName={userName}
-                onUserNameChange={handleNameChange}
                 canDraw={canDraw}
                 aiEnabled={aiEnabled}
                 onConsume={() => {
@@ -12246,6 +12474,9 @@ export default function TarotDraw() {
                 {freeXpLeftToday > 0 ? t.freeXpRemaining(freeXpLeftToday) : t.freeXpDone}
               </p>
             )}
+
+            {/* 他のスプレッドと同じく、一番下は必ずここへ戻れる */}
+            <button className="back-to-title" onClick={() => setDrawMode("select")}>{t.backToTitle}</button>
 
             </>)}
 
@@ -12958,16 +13189,28 @@ export default function TarotDraw() {
             {shared ? t.shareDone : t.shareButton}
           </button>
 
-          <button className="draw-btn copy-btn" onClick={handleCopy} disabled={reading2Loading}>
-            {copied ? <Check size={16} /> : <Copy size={16} />}
-            {copied ? t.copyDone : t.copyButton}
-          </button>
+          {/*
+            用途の説明はボタンから外に出す。
+            括弧書きで用途を抱えたボタンは、押す前に読ませる文が長くなり、
+            何のボタンなのかが遠くなる。名前は短く、説明は触れたときに。
+
+            指で触る環境ではホバーが効かないので、コピー後に同じ文を出す。
+            触れて読む機会が無くても、押した直後に「何に使えるのか」が分かる。
+          */}
+          <div className={`copy-wrap${copied ? " copied" : ""}`}>
+            <button className="draw-btn copy-btn" onClick={handleCopy} disabled={reading2Loading}>
+              {copied ? <Check size={16} /> : <Copy size={16} />}
+              {copied ? t.copyDone : t.copyButton}
+            </button>
+            <p className="copy-hint">{t.copyHint}</p>
+          </div>
 
           <div style={{ display: "flex", flexDirection: "column", alignItems: "center", gap: "10px", marginTop: "8px" }}>
             {/* 小アルカナ引き直し機能は休眠中（将来の課金導線として復活予定、ロジックは維持） */}
             <button className="reset-btn" onClick={reset}>
               <RotateCcw size={14} />
-              {t.drawAgainButton(Math.max(0, currentLimit - todayCount))}
+              {/* 無料版は枠を消費しないので、残数を書くと嘘になる */}
+              {isFreeDraw ? t.drawAgainFree : t.drawAgainButton(Math.max(0, currentLimit - todayCount))}
             </button>
             {/*
               機能としては reset() と同じだが、気持ちの向きが違う。
@@ -13034,8 +13277,17 @@ export default function TarotDraw() {
         </div>
       )}
 
-      {/* 占いの進行中は出さない。カードを引いている最中にナビがあると儀式が途切れる */}
-      {phase === "idle" && mode === "normal" && (
+      {/*
+        占いの進行中は出さない。カードを引いている最中にナビがあると儀式が途切れる。
+
+        以前は phase だけを見ていた。phase はスリーカードの進行状態であり、
+        ヘキサグラムとワンオラクルは phase を変えないため、
+        7枚選んでいる間もナビが出たままだった。
+        しかもナビはどのタブを押しても setDrawMode("select") を走らせるので、
+        誤って触れるとメニューへ戻る。実際にその事故が起きていた。
+        スプレッドに入っているかどうか（drawMode）も条件に加える。
+      */}
+      {phase === "idle" && mode === "normal" && drawMode === "select" && (
         <BottomNav
           current={navTab}
           onChange={(k) => {
