@@ -1,6 +1,153 @@
 import { useState, useEffect, useRef } from "react";
 import { Sparkles, Flame, Droplet, Swords, Coins, RotateCcw, Shuffle, Copy, Check, Star, Share2, Volume2, VolumeX, Pause, Play, Square } from "lucide-react";
 
+/* ============================================================
+   カード裏面（全スプレッド共通）
+   藍紫地・藤色の四弁花・緑のつた・金銀の対の翼（二重）
+
+   - 上下左右対称。めくる前に向きが読めないこと（公平性の要請）。
+   - 定義は <symbol> に1つだけ置き、各カードは <use> で参照する。
+     ヘキサグラムは78枚の伏せ札を同時に並べうるため、素朴に埋め込むと
+     DOM要素が2,000を超える。
+   - 疑似要素を使わない実要素なので、::before / ::after を取り合う
+     .card-depth / .card-shine-layer と衝突しない。
+   - アニメーションを含まない。opacity は一切操作しない
+     （順次表示で実機が空白になった件と同じ轍を踏まない）。
+   ============================================================ */
+
+const CARD_BACK_ID = "tarot-card-back-wings";
+
+/* 色。ここだけ触れば全体の色調が変わる */
+const CARD_BACK_COLORS = {
+  bg: "#241640",        // 地。藍寄りの紫。凶の紫（役の演出）とは別色に保つこと
+  frame: "#B79A5E",     // 外枠の金
+  hairline: "#453173",  // 内側の細い罫
+
+  goldDark: "#5A4A2E",  // 翼 外側の面
+  goldMid: "#6B5836",   // 翼 内側の面（重ねの2枚目）
+  goldEdge: "#8A7444",
+  goldEdge2: "#9C8449",
+  goldBarb: "#9C864F",  // 風切線
+  goldBead: "#C6AC72",  // 翼の根元の玉。回転中に軸の位置を示す
+  goldDot: "#C8B27A",   // つたの実・中心の芯
+
+  silverDark: "#464F5A",
+  silverMid: "#525C68",
+  silverEdge: "#7E8B96",
+  silverEdge2: "#8C98A3",
+  silverBarb: "#8F9BA6",
+  silverBead: "#B4BEC6",
+
+  vine: "#74B06B",
+  leaf: "#35603A",
+
+  petal: "#BE7E9E",     // 藤寄りのピンク。地に対して約5.5:1
+  petalEdge: "#DFA9C2",
+};
+
+/* 第1象限ぶんの意匠。これを4方向にミラーして1枚になる */
+const CARD_BACK_QUADRANT = (
+  <g fill="none" strokeLinecap="round">
+    {/* 金の翼（上下） */}
+    <path
+      d="M2 100 C20 99 40 105 54 116 C40 116 20 114 2 110 Z"
+      fill={CARD_BACK_COLORS.goldDark} stroke={CARD_BACK_COLORS.goldEdge} strokeWidth="0.5"
+    />
+    <path
+      d="M4 103 C18 103 32 107 43 114 C30 114 16 112 4 109 Z"
+      fill={CARD_BACK_COLORS.goldMid} stroke={CARD_BACK_COLORS.goldEdge2} strokeWidth="0.5"
+    />
+    <g stroke={CARD_BACK_COLORS.goldBarb} strokeWidth="0.5">
+      <path d="M5 101 C20 102 36 107 48 114" />
+      <path d="M6 106 C18 107 30 110 39 113" />
+    </g>
+    <circle cx="0" cy="104" r="2.6" fill={CARD_BACK_COLORS.goldBead} />
+
+    {/* 銀の翼（左右） */}
+    <path
+      d="M70 2 C75 16 74 32 66 46 C60 34 62 14 64 3 Z"
+      fill={CARD_BACK_COLORS.silverDark} stroke={CARD_BACK_COLORS.silverEdge} strokeWidth="0.5"
+    />
+    <path
+      d="M68 4 C72 17 71 31 65 43 C61 32 63 15 65 4 Z"
+      fill={CARD_BACK_COLORS.silverMid} stroke={CARD_BACK_COLORS.silverEdge2} strokeWidth="0.5"
+    />
+    <g stroke={CARD_BACK_COLORS.silverBarb} strokeWidth="0.5">
+      <path d="M69 5 C73 18 72 31 67 43" />
+      <path d="M66 6 C69 17 68 28 65 37" />
+    </g>
+    <circle cx="70" cy="0" r="2.2" fill={CARD_BACK_COLORS.silverBead} />
+
+    {/* つた */}
+    <g stroke={CARD_BACK_COLORS.vine} strokeWidth="1.5">
+      <path d="M8 10 C 26 24 40 44 42 66" />
+      <path d="M42 66 C42 78 50 84 56 80 C60 76 57 70 52 72" />
+      <path d="M20 20 C34 12 46 20 44 34 C30 40 22 34 20 20Z" fill={CARD_BACK_COLORS.leaf} strokeWidth="1" />
+      <path d="M36 48 C50 42 60 50 58 62 C46 67 38 60 36 48Z" fill={CARD_BACK_COLORS.leaf} strokeWidth="1" />
+    </g>
+    <circle cx="16" cy="76" r="2.2" fill={CARD_BACK_COLORS.goldDot} />
+
+    {/* 中央の花びら。4方向のミラーで四弁になる */}
+    <path
+      d="M0 0 C 17 1 23 13 15 26 C 5 22 0 12 0 0 Z"
+      fill={CARD_BACK_COLORS.petal} stroke={CARD_BACK_COLORS.petalEdge} strokeWidth="1"
+    />
+  </g>
+);
+
+/*
+  裏面の定義。アプリのルートに1回だけ置く。
+  それ自体は描画されないので、置き場所は .tarot-root 直下ならどこでもよい。
+*/
+function TarotCardBackDefs() {
+  return (
+    <svg
+      width="0"
+      height="0"
+      aria-hidden="true"
+      focusable="false"
+      style={{ position: "absolute", width: 0, height: 0, overflow: "hidden" }}
+    >
+      <symbol id={CARD_BACK_ID} viewBox="0 0 180 270">
+        <rect width="180" height="270" rx="8" fill={CARD_BACK_COLORS.bg} />
+        <rect x="7" y="7" width="166" height="256" rx="5" fill="none" stroke={CARD_BACK_COLORS.frame} strokeWidth="1" />
+        <rect x="11" y="11" width="158" height="248" rx="4" fill="none" stroke={CARD_BACK_COLORS.hairline} strokeWidth="0.5" />
+        <g transform="translate(90,135)">
+          <g>{CARD_BACK_QUADRANT}</g>
+          <g transform="scale(-1,1)">{CARD_BACK_QUADRANT}</g>
+          <g transform="scale(1,-1)">{CARD_BACK_QUADRANT}</g>
+          <g transform="scale(-1,-1)">{CARD_BACK_QUADRANT}</g>
+          <circle cx="0" cy="0" r="3.6" fill={CARD_BACK_COLORS.goldDot} />
+        </g>
+      </symbol>
+    </svg>
+  );
+}
+
+/*
+  各カードの背面に置く。親要素いっぱいに広がる。
+  TarotCardBackDefs が同じページに存在しないと何も描かれない。
+*/
+function TarotCardBack({ className, style }) {
+  return (
+    <svg
+      className={className}
+      viewBox="0 0 180 270"
+      preserveAspectRatio="xMidYMid slice"
+      aria-hidden="true"
+      focusable="false"
+      style={{ display: "block", width: "100%", height: "100%", borderRadius: "inherit", ...style }}
+    >
+      {/*
+        xlinkHref は Safari 15以前および古いAndroid WebView 向けの保険。
+        対象市場（フィリピン・インドネシア・ベトナム等）は端末が古い側に厚い。
+        対応環境では href が優先されるので、両方書いても害はない。
+      */}
+      <use href={`#${CARD_BACK_ID}`} xlinkHref={`#${CARD_BACK_ID}`} width="180" height="270" />
+    </svg>
+  );
+}
+
 /* ---------- 大アルカナ（22枚） ---------- */
 const MAJOR_NAME = [
   "愚者", "魔術師", "女教皇", "女帝", "皇帝", "教皇", "恋人たち", "戦車", "力", "隠者",
@@ -6110,7 +6257,7 @@ function HexagramPanel({ lang, onBack, question, userName, canDraw, onConsume, a
                         transitionDelay: `${shown ? withinStage * 0.16 : 0}s`,
                       }}
                     >
-                      <div className="hex-face hex-back-face" aria-hidden="true" />
+                      <div className="hex-face hex-back-face" aria-hidden="true"><TarotCardBack /></div>
                       <div className={`hex-face hex-front-face${isMajorCard ? " hex-major" : ""}${isFresh ? " sheen-card" : ""}`}>
                         <div className="card-depth" aria-hidden="true" />
                         {/*
@@ -6407,30 +6554,30 @@ function OneOraclePanel({ lang, onBack, onHoloConsumed }) {
                 transform: `rotateY(${dragDeg}deg)`,
               }}
             >
-              {/* 表面（こちらを向いている側） */}
+              {/*
+                表面（こちらを向いている側）。
+                display:flex は入れない。SVGが中央寄せされて縮む。
+                overflow:hidden は角丸から意匠がはみ出さないための保険。
+              */}
               <span style={{
-                position: "absolute", inset: 0, borderRadius: "12px",
-                display: "flex", alignItems: "center", justifyContent: "center",
-                background: "linear-gradient(155deg, #2a2150, #16122c)",
+                position: "absolute", inset: 0, borderRadius: "12px", overflow: "hidden",
                 border: "1px solid rgba(201,162,75,0.45)",
                 boxShadow: "0 8px 28px rgba(0,0,0,0.4)",
                 backfaceVisibility: "hidden",
                 WebkitBackfaceVisibility: "hidden",
               }}>
-                <Sparkles size={30} style={{ color: "var(--gold-dim)", opacity: 0.8 }} />
+                <TarotCardBack />
               </span>
               {/* 裏面。180度回した位置に置くことで、回転時に自然に現れる */}
               <span style={{
-                position: "absolute", inset: 0, borderRadius: "12px",
-                display: "flex", alignItems: "center", justifyContent: "center",
-                background: "linear-gradient(155deg, #241c48, #120f26)",
+                position: "absolute", inset: 0, borderRadius: "12px", overflow: "hidden",
                 border: "1px solid rgba(201,162,75,0.35)",
                 boxShadow: "0 8px 28px rgba(0,0,0,0.4)",
                 backfaceVisibility: "hidden",
                 WebkitBackfaceVisibility: "hidden",
                 transform: "rotateY(180deg)",
               }}>
-                <Sparkles size={30} style={{ color: "var(--gold-dim)", opacity: 0.55 }} />
+                <TarotCardBack />
               </span>
             </button>
           </div>
@@ -10610,6 +10757,8 @@ export default function TarotDraw() {
 
   return (
     <div className={`tarot-root${phase === "idle" && mode === "normal" ? " has-bottom-nav" : ""}`}>
+      {/* 裏面の意匠。ここで1回だけ定義し、各カードは <use> で参照する */}
+      <TarotCardBackDefs />
       <style>{`
         @import url('https://fonts.googleapis.com/css2?family=Shippori+Mincho:wght@400;500;600;700;800&family=Noto+Sans+JP:wght@300;400;500;700&family=Cinzel:wght@500;600&display=swap');
 
@@ -11197,7 +11346,7 @@ export default function TarotDraw() {
           backface-visibility: hidden; -webkit-backface-visibility: hidden;
         }
         .hex-back-face {
-          background: linear-gradient(155deg, #241c48, #120f26);
+          /* 地色は TarotCardBack が持つ。ここで background を敷くと二重になる */
           border: 1px solid rgba(201,162,75,0.30);
           box-shadow: 0 3px 12px rgba(0,0,0,0.35);
         }
@@ -11232,10 +11381,6 @@ export default function TarotDraw() {
         .hex-card .card-corner,
         .hex-front-face .card-corner { font-size: 8px; letter-spacing: 0.06em; }
         .hex-name { font-size: 9px !important; line-height: 1.25 !important; font-weight: 500; }
-        .hex-back {
-          width: 100%; height: 100%; border-radius: 7px;
-          background: linear-gradient(155deg, #241c48, #120f26);
-        }
         /* カードの下端に敷く帯。上下のカードと重ならない */
         .hex-pos {
           position: absolute; left: 0; right: 0; bottom: 0; z-index: 4;
