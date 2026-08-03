@@ -15,6 +15,40 @@ import { Sparkles, Flame, Droplet, Swords, Coins, RotateCcw, Shuffle, Copy, Chec
      （順次表示で実機が空白になった件と同じ轍を踏まない）。
    ============================================================ */
 
+/*
+  背景の星空。
+
+  唐草は太くすると胴体に見え、羽は散らすと植物に見えた。どちらも
+  「輪郭を持つ形を薄く敷くと、別のものとして読まれる」という同じ失敗だった。
+  点には輪郭が無いので、この誤読が起きない。
+
+  ただし演出との住み分けだけは守る。
+  ホロや役で出る星は形（四方に伸びる光条）と動きを持っているので、
+  背景は輪郭のない丸い点だけにして、瞬きもさせない。
+  背景が瞬くと、特別なときの瞬きが埋もれる。
+
+  座標は固定。乱数で毎回散らすと、同じ画面が二度と再現できず
+  「なんとなく落ち着かない配置」になったときに直せない。
+  濃さは .tarot-bg の opacity 一箇所で調整する。
+*/
+const BACKDROP_STARS = [[690.5,291.5,1.03,0.41],[523.5,812.9,1.42,0.53],[149.6,175.1,1.29,0.48],[704.9,1182.2,2.26,0.76],[90.1,509.7,0.96,0.33],[501.1,91.0,2.3,0.68],[430.2,795.5,0.88,0.3],[52.6,686.6,1.45,0.4],[62.4,168.7,0.76,0.34],[310.0,656.8,1.39,0.58],[733.7,94.8,0.77,0.18],[60.4,576.0,1.27,0.35],[63.7,431.1,0.96,0.32],[720.2,796.3,0.97,0.23],[86.9,1046.3,1.28,0.46],[265.8,712.1,0.83,0.27],[156.8,1019.8,1.26,0.42],[357.9,999.4,0.84,0.37],[731.7,574.2,0.62,0.38],[401.9,594.9,0.79,0.27],[362.0,145.0,1.12,0.49],[389.0,704.1,0.98,0.36],[167.7,776.5,2.01,0.63],[278.1,879.8,1.3,0.52],[689.9,966.8,1.17,0.35],[615.4,863.3,1.24,0.41],[787.9,834.7,0.87,0.29],[262.6,1148.8,1.96,0.59],[434.1,265.0,2.04,0.73],[592.0,74.9,0.69,0.37],[693.3,626.0,0.64,0.32],[538.6,508.4,1.42,0.44],[63.8,1182.2,0.97,0.33],[791.4,897.1,0.96,0.29],[203.0,1169.3,1.17,0.49],[78.5,835.0,1.71,0.56],[764.9,280.4,0.64,0.31],[422.1,566.4,1.49,0.52],[628.6,796.6,0.85,0.22],[98.1,298.0,1.2,0.46],[614.3,585.5,2.28,0.68],[313.3,316.0,0.83,0.25],[525.4,1163.8,0.88,0.24],[490.7,897.7,0.69,0.32],[413.9,162.0,0.91,0.19],[682.8,445.1,2.28,0.76],[4.5,503.4,0.72,0.36],[36.1,299.1,1.49,0.4],[318.2,967.0,0.71,0.22],[538.3,1054.1,1.44,0.49],[536.9,993.9,0.74,0.21],[332.8,484.2,2.3,0.65],[355.8,89.8,0.99,0.24],[681.1,59.5,2.06,0.61],[298.3,449.1,1.01,0.5],[31.1,818.8,0.86,0.2],[738.0,1010.7,0.76,0.31],[436.6,673.9,0.64,0.23],[194.9,263.0,0.69,0.36],[505.4,780.4,2.15,0.62],[306.0,260.9,1.01,0.44],[339.9,752.4,1.02,0.49],[461.2,555.3,0.77,0.21],[728.6,951.7,1.38,0.53],[598.0,289.0,1.27,0.55],[10.5,1054.8,1.29,0.37],[384.0,265.8,0.93,0.25],[664.9,508.6,0.61,0.2],[41.7,522.5,1.3,0.47],[253.7,5.7,1.13,0.53],[763.9,231.7,0.76,0.23],[585.5,211.4,0.77,0.32],[372.6,654.0,1.18,0.46],[776.4,644.7,0.84,0.23],[577.5,633.6,0.75,0.25],[553.7,418.6,1.11,0.4],[331.5,1189.8,0.87,0.23],[245.0,915.3,0.67,0.23],[221.3,1103.0,0.83,0.31],[776.6,396.3,0.64,0.2],[344.1,446.1,0.69,0.22],[640.4,59.3,1.36,0.51],[238.3,787.7,0.89,0.25],[200.0,748.2,1.25,0.53],[169.8,1134.9,0.94,0.32],[635.3,614.3,0.66,0.3],[455.2,184.9,0.87,0.35],[28.3,199.2,1.76,0.84],[158.7,293.9,0.99,0.37],[666.2,836.1,0.63,0.36],[407.2,1098.2,0.96,0.29],[483.7,985.6,0.91,0.19],[21.2,886.4,0.65,0.32],[323.7,116.0,0.64,0.29],[102.8,598.5,1.05,0.57],[572.3,541.7,0.87,0.3]];
+
+function TarotBackdrop() {
+  return (
+    <svg
+      className="tarot-bg"
+      viewBox="0 0 800 1200"
+      preserveAspectRatio="xMidYMid slice"
+      aria-hidden="true"
+      focusable="false"
+    >
+      {BACKDROP_STARS.map(([x, y, r, o], i) => (
+        <circle key={i} cx={x} cy={y} r={r} fill="#F1EAD8" opacity={o} />
+      ))}
+    </svg>
+  );
+}
+
 const CARD_BACK_ID = "tarot-card-back-wings";
 
 /* 色。ここだけ触れば全体の色調が変わる */
@@ -2749,7 +2783,18 @@ function spreadInfo(key, lang) {
   return tbl[key] || SPREAD_I18N.ja[key];
 }
 
-const SPREAD_ORDER = ["oneOracle", "three", "hexagram", "weekly", "choice", "celticCross", "relationship", "horoscope"];
+/*
+  無料版は有料版のすぐ下に置く。離して並べると別物に見え、
+  「同じ占いの、鑑定文の出どころが違う版」だと伝わらない。
+*/
+const SPREAD_ORDER = ["oneOracle", "three", "threeFree", "hexagram", "hexagramFree", "weekly", "choice", "celticCross", "relationship", "horoscope"];
+
+/** 末尾が Free の項目は、同じスプレッドのAI無し版。定義は元の鍵を共有する */
+const spreadBaseKey = (key) => key.replace(/Free$/, "");
+const isFreeSpreadKey = (key) => /Free$/.test(key);
+
+/** 無料版で経験値が入る1日あたりの回数 */
+const FREE_XP_PER_DAY = 3;
 
 /**
  * 実装済みのスプレッド。
@@ -2757,10 +2802,10 @@ const SPREAD_ORDER = ["oneOracle", "three", "hexagram", "weekly", "choice", "cel
  * 隠してしまうと「これしかない」と受け取られるが、
  * 見えていれば「まだ増える」と伝わる。萎えさせないための配慮。
  */
-const SPREAD_READY = { oneOracle: true, three: true, hexagram: true };
+const SPREAD_READY = { oneOracle: true, three: true, threeFree: true, hexagram: true, hexagramFree: true };
 
 /** そのスプレッドがAIを使うか。使わないものは回数を消費しない */
-const SPREAD_USES_AI = { oneOracle: false, three: true, hexagram: true, weekly: true, choice: true, celticCross: true, relationship: true, horoscope: true };
+const SPREAD_USES_AI = { oneOracle: false, three: true, threeFree: false, hexagram: true, hexagramFree: false, weekly: true, choice: true, celticCross: true, relationship: true, horoscope: true };
 
 const POSITION_LABELS = ["過去", "現在", "未来"];
 const PHASE_ORDER = ["idle", "major-spread", "major-confirm", "major-resolving", "minor-spread", "minor-confirm", "minor-resolving", "minor-revealed", "major-revealed"];
@@ -4798,8 +4843,27 @@ function calcCharacterStats(history) {
 
 function calcCharacter(history, membership) {
   const st = collectTitleStats(history);
+
+  /*
+    無料版で経験値が入るのは1日 FREE_XP_PER_DAY 回まで。
+    どの回を有効にするかは、その日の古いほうから数える。新しいほうから数えると、
+    引くたびに過去の回の扱いが変わって、合計経験値が下がることがある。
+    有料版に上限は無い。
+  */
+  const freeCountByDate = {};
+  const xpEligible = new Set();
+  [...history]
+    .sort((a, b) => (a.id || 0) - (b.id || 0))
+    .forEach((h) => {
+      if (!h.free) { xpEligible.add(h.id); return; }
+      const d = h.date || "";
+      freeCountByDate[d] = (freeCountByDate[d] || 0) + 1;
+      if (freeCountByDate[d] <= FREE_XP_PER_DAY) xpEligible.add(h.id);
+    });
+
   let baseXp = 0;
   history.forEach((h) => {
+    if (!xpEligible.has(h.id)) return;
     baseXp += XP_PER_DRAW;
     if (h.question && h.question.trim()) baseXp += XP_WITH_QUESTION;
     if (Array.isArray(h.deepDiveQA) && h.deepDiveQA.length > 0) baseXp += XP_WITH_DEEPDIVE;
@@ -5912,34 +5976,31 @@ function SpreadSelect({ lang, onSelect }) {
       </p>
       <div className="stagger" style={{ display: "flex", flexDirection: "column", gap: "9px" }}>
         {SPREAD_ORDER.map((key) => {
-          const info = spreadInfo(key, lang);
+          // 無料版はスプレッドの定義を有料版と共有する（名前も枚数も同じ占いなので）
+          const base = spreadBaseKey(key);
+          const info = spreadInfo(base, lang);
           const ready = !!SPREAD_READY[key];
           const usesAi = SPREAD_USES_AI[key];
-          const count = SPREADS[key].count;
+          const count = SPREADS[base].count;
+          const isFree = isFreeSpreadKey(key);
           return (
             <button
               key={key}
+              className={`spread-item${ready ? "" : " disabled"}`}
               onClick={() => ready && onSelect(key)}
               disabled={!ready}
               style={{
                 width: "100%", textAlign: "left", cursor: ready ? "pointer" : "default",
-                background: ready
-                  ? "linear-gradient(150deg, rgba(46,36,92,0.55), rgba(26,21,48,0.55))"
-                  : "rgba(255,255,255,0.025)",
-                border: `1px solid ${ready ? "rgba(201,162,75,0.30)" : "rgba(201,162,75,0.10)"}`,
                 borderRadius: "12px", padding: "14px 16px",
                 fontFamily: "inherit", opacity: ready ? 1 : 0.45,
                 WebkitTapHighlightColor: "rgba(201,162,75,0.25)",
-                transition: "border-color .2s, transform .2s cubic-bezier(.16,1,.3,1)",
                 display: "flex", alignItems: "center", gap: "13px",
               }}
             >
               {/* 枚数を数字で見せる。何枚使う占いかが一目で分かる */}
-              <div style={{
+              <div className="spread-count" style={{
                 flexShrink: 0, width: "38px", height: "38px", borderRadius: "999px",
-                border: `1px solid ${ready ? "rgba(201,162,75,0.45)" : "rgba(201,162,75,0.15)"}`,
                 display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center",
-                color: ready ? "var(--gold)" : "var(--muted)",
               }}>
                 <span style={{ fontFamily: "Cinzel, serif", fontSize: "14px", lineHeight: 1 }}>{count}</span>
                 <span style={{ fontSize: "10px", lineHeight: 1.2, opacity: 0.7 }}>{t.spreadCardUnit}</span>
@@ -5947,10 +6008,15 @@ function SpreadSelect({ lang, onSelect }) {
 
               <div style={{ flex: 1, minWidth: 0 }}>
                 <div style={{ display: "flex", alignItems: "center", gap: "7px", marginBottom: "3px", flexWrap: "wrap" }}>
-                  <span style={{
+                  <span className="spread-name" style={{
                     fontFamily: "'Shippori Mincho', serif", fontSize: "13px",
-                    color: ready ? "var(--gold-soft)" : "var(--muted)", letterSpacing: "0.06em",
+                    letterSpacing: "0.06em", textIndent: "0.06em",
                   }}>{info.name}</span>
+                  {ready && SPREAD_USES_AI[base] && (
+                    <span className={`plan-badge${isFree ? " free" : " ai"}`}>
+                      {isFree ? t.planFree : t.planAi}
+                    </span>
+                  )}
                   {ready && !usesAi && (
                     <span style={{
                       fontSize: "10px", color: "var(--gold)", border: "1px solid rgba(201,162,75,0.35)",
@@ -6032,7 +6098,7 @@ function AffinityGauge({ value, label }) {
  * 六芒星の形をJSXに直接書かず、データから起こすことで、
  * 他のスプレッドを足すときに同じ仕組みを使い回せる。
  */
-function HexagramPanel({ lang, onBack, question, userName, canDraw, onConsume, aiEnabled }) {
+function HexagramPanel({ lang, onBack, question, userName, onUserNameChange, canDraw, onConsume, aiEnabled }) {
   const t = T[lang] || T.ja;
   const info = spreadInfo("hexagram", lang);
   const spread = SPREADS.hexagram;
@@ -6056,6 +6122,22 @@ function HexagramPanel({ lang, onBack, question, userName, canDraw, onConsume, a
   };
   const [reading, setReading] = useState("");
   const [loading, setLoading] = useState(false);
+  /*
+    相手との関係。相手の名前は取らない。
+    名前は個人情報だが、関係性は文脈であり、入力の重さがまるで違う。
+    しかも「職場の先輩」「三年前に別れた人」のような語は、
+    占いの言葉としてそのまま機能する。
+  */
+  const [relation, setRelation] = useState("");
+  /*
+    視点のチェック。鑑定内容には影響しない。
+    目的は2つ。相談者自身が「何を見たいのか」を言葉にすること。
+    そして、ヘキサグラムが恋愛専用ではないと、選択肢の構成そのもので示すこと。
+    恋愛・人間性という情の軸に対し、3つ目を利の軸に振ってある。
+  */
+  const [viewpoints, setViewpoints] = useState([false, false, false]);
+  const toggleViewpoint = (i) =>
+    setViewpoints((v) => v.map((x, j) => (j === i ? !x : x)));
   const needsUprightText = needsUprightTextFor(lang);
   const MAX_RESHUFFLE = 4;
 
@@ -6133,10 +6215,24 @@ function HexagramPanel({ lang, onBack, question, userName, canDraw, onConsume, a
     let alive = true;
     (async () => {
       setLoading(true);
+      /*
+        無料版はAIを呼ばない。ここで aiEnabled を見ていなかったため、
+        無料版からもAPIが飛んでいた。枠の消費も同じ条件に揃える。
+      */
+      if (!aiEnabled) {
+        if (alive) {
+          setReading(fallbackHexagramReading(drawn.map((d) => ({ card: d, reversed: d.reversed })), lang));
+          setLoading(false);
+        }
+        return;
+      }
       onConsume && onConsume(); // 回数はここで消費する（カードを見た時点ではなく、鑑定を読む時点）
       try {
+        const relationLine = relation.trim()
+          ? `相談者から見た相手の関係は「${relation.trim()}」です。この関係性を踏まえた言葉づかいで書いてください。\n\n`
+          : "";
         const txt = await callClaude(
-          buildHexagramPrompt(drawn.map((d) => ({ card: d, reversed: d.reversed })), question, AI_LANG_INSTRUCTION[lang], ""),
+          buildHexagramPrompt(drawn.map((d) => ({ card: d, reversed: d.reversed })), question, AI_LANG_INSTRUCTION[lang], relationLine),
           2000
         );
         if (alive) setReading(normalizeReadingText(txt));
@@ -6164,6 +6260,54 @@ function HexagramPanel({ lang, onBack, question, userName, canDraw, onConsume, a
 
       {!pool ? (
         <>
+          {/*
+            名前と関係。無料版でも出す。
+            無料版はAIが読まないが、この2つは結果側で読み手に返す
+            （「◯◯との、今現在の相性」として表示する）ので、
+            入力させておいて使わない状態にはならない。
+          */}
+          <div className="hex-fields">
+            <label htmlFor="hex-name">{t.nameLabel}</label>
+            <input
+              id="hex-name"
+              type="text"
+              maxLength={20}
+              value={userName}
+              onChange={(e) => onUserNameChange && onUserNameChange(e.target.value)}
+              placeholder={t.namePlaceholder}
+            />
+            <label htmlFor="hex-relation">{t.relationLabel}</label>
+            <input
+              id="hex-relation"
+              type="text"
+              maxLength={30}
+              value={relation}
+              onChange={(e) => setRelation(e.target.value)}
+              placeholder={t.relationPlaceholder}
+            />
+            <p className="hex-fields-note">{t.relationNote}</p>
+
+            <div className="hex-viewpoints">
+              <p className="hex-viewpoint-title">{t.viewpointLabel}</p>
+              {t.viewpoints.map((label, i) => (
+                <label key={i} className="hex-viewpoint">
+                  <input
+                    type="checkbox"
+                    checked={viewpoints[i]}
+                    onChange={() => toggleViewpoint(i)}
+                  />
+                  {label}
+                </label>
+              ))}
+              {/*
+                鑑定が変わらないことは明記する。変わると思って選んだ人が
+                一般的な鑑定文を読むと、裏切られたと受け取る。
+                「一切の偏りがない完全公平設計」を掲げている以上、
+                機能しない操作を機能するように見せない。
+              */}
+              <p className="hex-fields-note">{t.viewpointNote}</p>
+            </div>
+          </div>
           <button className="draw-btn" onClick={start} disabled={!canDraw}>
             <Shuffle size={16} />
             {t.startButton}
@@ -6254,7 +6398,7 @@ function HexagramPanel({ lang, onBack, question, userName, canDraw, onConsume, a
 
           {/* 六芒星の盤面。開いた段階のカードだけが姿を現す */}
           <div style={{ position: "relative", width: "100%", maxWidth: "340px", aspectRatio: "1 / 1.15" }}>
-            {/* 盤面全体を巡る粒子。カードの背面を漂う */}
+            {/* 盤面全体を巡る粒子。カードの手前を横切る */}
             <div className="hex-orbit" aria-hidden="true">
               {HEX_ORBIT_SPARKS.map((sp, k) => (
                 <i
@@ -6286,7 +6430,7 @@ function HexagramPanel({ lang, onBack, question, userName, canDraw, onConsume, a
                     position: "absolute",
                     left: `${pt.x}%`, top: `${pt.y}%`,
                     width: "23%",
-                    zIndex: 1, // 粒子はこの奥（zIndex 0）を通す
+                    zIndex: 1, // 粒子はこの手前（zIndex 2）を通す
                     // 配置の移動と、めくる回転は別の要素が担う（同じtransformを取り合わない）
                     transform: "translate(-50%, -50%)",
                   }}
@@ -6384,7 +6528,13 @@ function HexagramPanel({ lang, onBack, question, userName, canDraw, onConsume, a
           )}
 
           {/* 相性度。鑑定文より先に見せることで、文章が頭に入りやすくなる */}
-          {isLast && <AffinityGauge value={hexagramAffinity(drawn)} label={t.affinityLabel} />}
+          {isLast && (
+            <AffinityGauge
+              value={hexagramAffinity(drawn)}
+              /* 入力された関係を見出しに返す。無料版でも入力が働く場所になる */
+              label={relation.trim() ? `${t.affinityLabel}｜${relation.trim()}` : t.affinityLabel}
+            />
+          )}
 
           {isLast && (
             <div className="ai-reading" style={{ marginTop: "4px" }}>
@@ -6836,6 +6986,7 @@ function BottomNav({ current, onChange, lang, hasHistory }) {
         return (
           <button
             key={it.key}
+            className={`nav-tab${on ? " on" : ""}`}
             onClick={() => onChange(it.key)}
             aria-current={on ? "page" : undefined}
             style={{
@@ -6845,20 +6996,13 @@ function BottomNav({ current, onChange, lang, hasHistory }) {
                 色をパーチメント寄りに上げ、不透明度も上げて、
                 選択中との差は「金色＋背景＋上線」で付ける。
               */
-              flex: 1, cursor: "pointer",
-              background: on ? "rgba(201,162,75,0.10)" : "transparent",
-              border: "none",
               padding: "9px 2px 8px", display: "flex", flexDirection: "column",
               alignItems: "center", gap: "4px", fontFamily: "inherit",
-              color: on ? "var(--gold)" : "var(--parchment)",
-              opacity: on ? 1 : 0.82,
-              borderTop: `2px solid ${on ? "var(--gold)" : "transparent"}`,
               marginTop: "-1px",
               WebkitTapHighlightColor: "rgba(201,162,75,0.20)",
-              transition: "color .2s, opacity .2s, background .2s",
             }}
           >
-            <Icon size={18} strokeWidth={1.6} />
+            <span className="nav-tab-icon"><Icon size={18} strokeWidth={1.6} /></span>
             <span style={{ fontSize: "10px", letterSpacing: "0.12em", textIndent: "0.12em", whiteSpace: "nowrap", fontWeight: 400 }}>{it.label}</span>
           </button>
         );
@@ -8099,7 +8243,7 @@ const T = {
     spreadCardUnit: "장",
     spreadNoCost: "횟수 불요",
     spreadComingSoon: "준비 중",
-    affinityLabel: "AFFINITY　궁합",
+    affinityLabel: "AFFINITY　현재의 궁합",
     hexStageTitle: {"self": "당신의 발자취", "other": "상대의 마음", "around": "주변의 상황", "choice": "앞으로의 선택"},
     hexNext: {"other": "이제 상대의 마음을 봅시다", "around": "이제 주변의 상황을 봅시다", "choice": "이제 앞으로의 선택을 봅시다"},
     hexPickPrompt: (n, pos) => `「${pos}」의 카드를 골라주세요 (남은 ${n}장)`,
@@ -8110,6 +8254,16 @@ const T = {
     navDraw: "점보기",
     navRecords: "기록",
     tapToFlip: "탭해서 뒤집기",
+    viewpointLabel: "무엇을 보고 싶으신가요 (선택)",
+    viewpoints: ["연애에 대해", "인간적인 궁합에 대해", "일이나 이해관계의 상대로서"],
+    viewpointNote: "선택해도 점괘 내용은 달라지지 않습니다. 마음을 정리하기 위한 칸입니다.",
+    relationLabel: "상대와의 관계 (선택)",
+    relationPlaceholder: "예: 직장 선배 / 3년 전에 헤어진 사람",
+    relationNote: "상대의 이름은 묻지 않습니다. 관계만으로 충분합니다.",
+    freeXpRemaining: (n) => `오늘 경험치가 쌓이는 것은 앞으로 ${n}회입니다.`,
+    freeXpDone: "오늘의 경험치는 상한에 도달했습니다. 점은 몇 번이든 볼 수 있습니다.",
+    planFree: "무료",
+    planAi: "AI 해석",
     navGrowth: "육성",
     navAdventure: "모험",
     navMore: "기타",
@@ -8288,7 +8442,7 @@ const T = {
     spreadCardUnit: "lá",
     spreadNoCost: "không tốn lượt",
     spreadComingSoon: "sắp có",
-    affinityLabel: "AFFINITY　Hợp Duyên",
+    affinityLabel: "AFFINITY　Hợp duyên hiện tại",
     hexStageTitle: {"self": "Dấu Chân Của Bạn", "other": "Lòng Người Ấy", "around": "Hoàn Cảnh Xung Quanh", "choice": "Lựa Chọn Phía Trước"},
     hexNext: {"other": "Giờ, hãy xem lòng người ấy", "around": "Giờ, hãy xem hoàn cảnh xung quanh", "choice": "Giờ, hãy xem lựa chọn phía trước"},
     hexPickPrompt: (n, pos) => `Chọn lá bài cho "${pos}" (còn ${n} lá)`,
@@ -8299,6 +8453,16 @@ const T = {
     navDraw: "Xem",
     navRecords: "Ghi chép",
     tapToFlip: "Chạm để lật",
+    viewpointLabel: "Bạn muốn nhìn vào điều gì (không bắt buộc)",
+    viewpoints: ["Về chuyện tình cảm", "Về sự hợp nhau giữa con người", "Với tư cách đối tác công việc hay lợi ích"],
+    viewpointNote: "Chọn hay không, nội dung luận giải vẫn như nhau. Ô này để bạn sắp xếp lại lòng mình.",
+    relationLabel: "Mối quan hệ với người đó (không bắt buộc)",
+    relationPlaceholder: "vd: đàn anh ở công ty / người chia tay ba năm trước",
+    relationNote: "Chúng tôi không hỏi tên người đó. Chỉ cần mối quan hệ là đủ.",
+    freeXpRemaining: (n) => `Hôm nay còn ${n} lần được cộng kinh nghiệm.`,
+    freeXpDone: "Kinh nghiệm hôm nay đã đạt giới hạn. Bạn vẫn xem bói được bao nhiêu lần tùy ý.",
+    planFree: "Miễn phí",
+    planAi: "Luận giải AI",
     navGrowth: "Nuôi",
     navAdventure: "Phiêu lưu",
     navMore: "Khác",
@@ -8477,7 +8641,7 @@ const T = {
     spreadCardUnit: "kartu",
     spreadNoCost: "tanpa kuota",
     spreadComingSoon: "segera",
-    affinityLabel: "AFFINITY　Kecocokan",
+    affinityLabel: "AFFINITY　Kecocokan saat ini",
     hexStageTitle: {"self": "Jejakmu", "other": "Hatinya", "around": "Keadaan Sekitar", "choice": "Pilihan ke Depan"},
     hexNext: {"other": "Sekarang, mari lihat hatinya", "around": "Sekarang, mari lihat keadaan sekitar", "choice": "Sekarang, mari lihat pilihan ke depan"},
     hexPickPrompt: (n, pos) => `Pilih kartu untuk "${pos}" (sisa ${n})`,
@@ -8488,6 +8652,16 @@ const T = {
     navDraw: "Tilik",
     navRecords: "Catatan",
     tapToFlip: "Ketuk untuk membuka",
+    viewpointLabel: "Apa yang ingin kamu lihat (opsional)",
+    viewpoints: ["Tentang asmara", "Tentang kecocokan sebagai manusia", "Sebagai rekan kerja atau kepentingan"],
+    viewpointNote: "Dicentang atau tidak, isi ramalan tetap sama. Ini untuk menata perasaanmu sendiri.",
+    relationLabel: "Hubunganmu dengan dia (opsional)",
+    relationPlaceholder: "mis. senior di kantor / mantan tiga tahun lalu",
+    relationNote: "Kami tidak menanyakan namanya. Hubungannya saja sudah cukup.",
+    freeXpRemaining: (n) => `Hari ini tersisa ${n} kali untuk mendapat pengalaman.`,
+    freeXpDone: "Pengalaman hari ini sudah maksimal. Kamu tetap bisa meramal sebanyak apa pun.",
+    planFree: "Gratis",
+    planAi: "Bacaan AI",
     navGrowth: "Tumbuh",
     navAdventure: "Petualangan",
     navMore: "Lainnya",
@@ -8666,7 +8840,7 @@ const T = {
     spreadCardUnit: "kad",
     spreadNoCost: "tanpa kuota",
     spreadComingSoon: "akan datang",
-    affinityLabel: "AFFINITY　Keserasian",
+    affinityLabel: "AFFINITY　Keserasian kini",
     hexStageTitle: {"self": "Jejak Anda", "other": "Hatinya", "around": "Keadaan Sekeliling", "choice": "Pilihan ke Hadapan"},
     hexNext: {"other": "Sekarang, mari lihat hatinya", "around": "Sekarang, mari lihat keadaan sekeliling", "choice": "Sekarang, mari lihat pilihan ke hadapan"},
     hexPickPrompt: (n, pos) => `Pilih kad untuk "${pos}" (tinggal ${n})`,
@@ -8677,6 +8851,16 @@ const T = {
     navDraw: "Tilik",
     navRecords: "Rekod",
     tapToFlip: "Ketik untuk buka",
+    viewpointLabel: "Apa yang ingin anda lihat (pilihan)",
+    viewpoints: ["Tentang asmara", "Tentang keserasian sebagai manusia", "Sebagai rakan kerja atau kepentingan"],
+    viewpointNote: "Ditanda atau tidak, isi tilikan tetap sama. Ruang ini untuk menyusun perasaan anda.",
+    relationLabel: "Hubungan anda dengan dia (pilihan)",
+    relationPlaceholder: "cth. senior di pejabat / bekas kekasih tiga tahun lalu",
+    relationNote: "Kami tidak bertanya namanya. Hubungan sahaja sudah memadai.",
+    freeXpRemaining: (n) => `Hari ini tinggal ${n} kali untuk mendapat pengalaman.`,
+    freeXpDone: "Pengalaman hari ini sudah maksimum. Anda masih boleh menilik tanpa had.",
+    planFree: "Percuma",
+    planAi: "Bacaan AI",
     navGrowth: "Tumbuh",
     navAdventure: "Kembara",
     navMore: "Lain-lain",
@@ -8856,7 +9040,7 @@ const T = {
     spreadCardUnit: "枚",
     spreadNoCost: "回数不要",
     spreadComingSoon: "準備中",
-    affinityLabel: "AFFINITY　相性",
+    affinityLabel: "AFFINITY　今現在の相性",
     hexStageTitle: {"self": "あなたの軌跡", "other": "相手の心", "around": "周囲の状況", "choice": "これからの選択"},
     hexNext: {"other": "では、相手の心を見ましょう", "around": "では、周囲の状況を見ましょう", "choice": "では、これからの選択を見ましょう"},
     hexPickPrompt: (n, pos) => `「${pos}」のカードを選んでください（残り${n}枚）`,
@@ -8867,6 +9051,16 @@ const T = {
     navDraw: "占う",
     navRecords: "記録",
     tapToFlip: "タップしてめくる",
+    viewpointLabel: "何を見たいですか（任意）",
+    viewpoints: ["恋愛について", "人間的な相性について", "仕事や利害の相手として"],
+    viewpointNote: "選んでも鑑定内容は変わりません。ご自身の気持ちを整理するための欄です。",
+    relationLabel: "相手との関係（任意）",
+    relationPlaceholder: "例：職場の先輩／三年前に別れた人",
+    relationNote: "相手の名前は伺いません。関係だけで十分です。",
+    freeXpRemaining: (n) => `本日、経験値が入るのはあと${n}回です。`,
+    freeXpDone: "本日の経験値は上限に達しました。占いは何回でもできます。",
+    planFree: "無料",
+    planAi: "AI鑑定",
     navGrowth: "育成",
     navAdventure: "冒険",
     navMore: "その他",
@@ -9045,7 +9239,7 @@ const T = {
     spreadCardUnit: "張",
     spreadNoCost: "不計次數",
     spreadComingSoon: "準備中",
-    affinityLabel: "AFFINITY　契合度",
+    affinityLabel: "AFFINITY　目前的契合度",
     hexStageTitle: {"self": "你的軌跡", "other": "對方的心", "around": "周遭的狀況", "choice": "接下來的選擇"},
     hexNext: {"other": "接著，來看對方的心", "around": "接著，來看周遭的狀況", "choice": "接著，來看接下來的選擇"},
     hexPickPrompt: (n, pos) => `請選出「${pos}」的牌（還剩 ${n} 張）`,
@@ -9056,6 +9250,16 @@ const T = {
     navDraw: "占卜",
     navRecords: "記錄",
     tapToFlip: "點一下翻牌",
+    viewpointLabel: "你想看的是什麼（選填）",
+    viewpoints: ["關於戀愛", "關於人與人的契合", "作為工作或利害關係的對象"],
+    viewpointNote: "勾選與否，解讀內容都不會改變。這是為了整理自己心情的欄位。",
+    relationLabel: "與對方的關係（選填）",
+    relationPlaceholder: "例：職場前輩／三年前分手的人",
+    relationNote: "我們不會詢問對方的姓名。只要關係就足夠了。",
+    freeXpRemaining: (n) => `今天還有 ${n} 次可以獲得經驗值。`,
+    freeXpDone: "今天的經驗值已達上限。占卜仍可無限次進行。",
+    planFree: "免費",
+    planAi: "AI解讀",
     navGrowth: "養成",
     navAdventure: "冒險",
     navMore: "其他",
@@ -9234,7 +9438,7 @@ const T = {
     spreadCardUnit: "张",
     spreadNoCost: "不计次数",
     spreadComingSoon: "准备中",
-    affinityLabel: "AFFINITY　契合度",
+    affinityLabel: "AFFINITY　当前的契合度",
     hexStageTitle: {"self": "你的轨迹", "other": "对方的心", "around": "周遭的状况", "choice": "接下来的选择"},
     hexNext: {"other": "接着，来看对方的心", "around": "接着，来看周遭的状况", "choice": "接着，来看接下来的选择"},
     hexPickPrompt: (n, pos) => `请选出「${pos}」的牌（还剩 ${n} 张）`,
@@ -9245,6 +9449,16 @@ const T = {
     navDraw: "占卜",
     navRecords: "记录",
     tapToFlip: "点击翻牌",
+    viewpointLabel: "你想看的是什么（选填）",
+    viewpoints: ["关于恋爱", "关于人与人的契合", "作为工作或利害关系的对象"],
+    viewpointNote: "勾选与否，解读内容都不会改变。这是为了整理自己心情的栏位。",
+    relationLabel: "与对方的关系（选填）",
+    relationPlaceholder: "例：职场前辈／三年前分手的人",
+    relationNote: "我们不会询问对方的姓名。只要关系就足够了。",
+    freeXpRemaining: (n) => `今天还有 ${n} 次可以获得经验值。`,
+    freeXpDone: "今天的经验值已达上限。占卜仍可无限次进行。",
+    planFree: "免费",
+    planAi: "AI解读",
     navGrowth: "养成",
     navAdventure: "冒险",
     navMore: "其他",
@@ -9423,7 +9637,7 @@ const T = {
     spreadCardUnit: "cards",
     spreadNoCost: "free",
     spreadComingSoon: "soon",
-    affinityLabel: "AFFINITY",
+    affinityLabel: "AFFINITY　Right now",
     hexStageTitle: {"self": "Your Path", "other": "Their Heart", "around": "The Surroundings", "choice": "The Choice Ahead"},
     hexNext: {"other": "Now, let us see their heart", "around": "Now, let us see the surroundings", "choice": "Now, let us see the choice ahead"},
     hexPickPrompt: (n, pos) => `Choose the card for "${pos}" (${n} left)`,
@@ -9434,6 +9648,16 @@ const T = {
     navDraw: "Draw",
     navRecords: "Records",
     tapToFlip: "Tap to flip",
+    viewpointLabel: "What are you looking at? (optional)",
+    viewpoints: ["About romance", "About compatibility as people", "As someone I work or deal with"],
+    viewpointNote: "Ticking these does not change the reading. They are here to help you name what you want.",
+    relationLabel: "Your relationship to them (optional)",
+    relationPlaceholder: "e.g. a senior at work / someone I left three years ago",
+    relationNote: "We never ask for their name. The relationship is enough.",
+    freeXpRemaining: (n) => `${n} more reading(s) will earn XP today.`,
+    freeXpDone: "Today's XP is capped. You can still draw as often as you like.",
+    planFree: "Free",
+    planAi: "AI reading",
     navGrowth: "Growth",
     navAdventure: "Adventure",
     navMore: "More",
@@ -9612,7 +9836,7 @@ const T = {
     spreadCardUnit: "baraha",
     spreadNoCost: "libre",
     spreadComingSoon: "malapit na",
-    affinityLabel: "AFFINITY",
+    affinityLabel: "AFFINITY　Sa ngayon",
     hexStageTitle: {"self": "Ang Iyong Landas", "other": "Ang Puso Niya", "around": "Ang Paligid", "choice": "Ang Pagpipilian"},
     hexNext: {"other": "Ngayon, tingnan natin ang puso niya", "around": "Ngayon, tingnan natin ang paligid", "choice": "Ngayon, tingnan natin ang pagpipilian"},
     hexPickPrompt: (n, pos) => `Piliin ang baraha para sa "${pos}" (${n} pa)`,
@@ -9623,6 +9847,16 @@ const T = {
     navDraw: "Bunot",
     navRecords: "Tala",
     tapToFlip: "I-tap para buksan",
+    viewpointLabel: "Ano ang gusto mong tingnan? (opsyonal)",
+    viewpoints: ["Tungkol sa pag-ibig", "Tungkol sa pagkakasundo bilang tao", "Bilang katrabaho o kasosyo"],
+    viewpointNote: "Hindi nagbabago ang pagbasa kahit tikan mo ito. Para ito sa sarili mong paglilinaw.",
+    relationLabel: "Relasyon mo sa kanya (opsyonal)",
+    relationPlaceholder: "hal. senior sa trabaho / nakahiwalay tatlong taon na",
+    relationNote: "Hindi namin hinihingi ang pangalan niya. Sapat na ang relasyon.",
+    freeXpRemaining: (n) => `${n} pang pagbasa ang magbibigay ng XP ngayon.`,
+    freeXpDone: "Puno na ang XP ngayong araw. Puwede ka pa ring magbasa nang walang limitasyon.",
+    planFree: "Libre",
+    planAi: "AI reading",
     navGrowth: "Paglago",
     navAdventure: "Adventure",
     navMore: "Iba pa",
@@ -9801,7 +10035,7 @@ const T = {
     spreadCardUnit: "ใบ",
     spreadNoCost: "ไม่นับครั้ง",
     spreadComingSoon: "เร็วๆ นี้",
-    affinityLabel: "AFFINITY　ความเข้ากัน",
+    affinityLabel: "AFFINITY　ความเข้ากันในตอนนี้",
     hexStageTitle: {"self": "เส้นทางของคุณ", "other": "ใจของอีกฝ่าย", "around": "สภาพแวดล้อม", "choice": "ทางเลือกข้างหน้า"},
     hexNext: {"other": "ต่อไป มาดูใจของอีกฝ่ายกัน", "around": "ต่อไป มาดูสภาพแวดล้อมกัน", "choice": "ต่อไป มาดูทางเลือกข้างหน้ากัน"},
     hexPickPrompt: (n, pos) => `เลือกไพ่สำหรับ "${pos}" (เหลืออีก ${n} ใบ)`,
@@ -9812,6 +10046,16 @@ const T = {
     navDraw: "ดูดวง",
     navRecords: "บันทึก",
     tapToFlip: "แตะเพื่อเปิดไพ่",
+    viewpointLabel: "คุณอยากมองเรื่องใด (ไม่บังคับ)",
+    viewpoints: ["เรื่องความรัก", "เรื่องความเข้ากันในฐานะคน", "ในฐานะคู่งานหรือผลประโยชน์"],
+    viewpointNote: "เลือกหรือไม่เลือก คำทำนายก็ไม่เปลี่ยน ช่องนี้มีไว้เพื่อจัดระเบียบความรู้สึกของคุณเอง",
+    relationLabel: "ความสัมพันธ์กับอีกฝ่าย (ไม่บังคับ)",
+    relationPlaceholder: "เช่น รุ่นพี่ที่ทำงาน / คนที่เลิกกันเมื่อสามปีก่อน",
+    relationNote: "เราไม่ถามชื่อของอีกฝ่าย เพียงความสัมพันธ์ก็เพียงพอแล้ว",
+    freeXpRemaining: (n) => `วันนี้เหลืออีก ${n} ครั้งที่จะได้รับค่าประสบการณ์`,
+    freeXpDone: "ค่าประสบการณ์วันนี้เต็มแล้ว แต่ยังเปิดไพ่ได้ไม่จำกัด",
+    planFree: "ฟรี",
+    planAi: "อ่านด้วย AI",
     navGrowth: "เติบโต",
     navAdventure: "ผจญภัย",
     navMore: "อื่นๆ",
@@ -9883,7 +10127,7 @@ export default function TarotDraw() {
   const [installPrompt, setInstallPrompt] = useState(null); // Android/Chrome のインストールイベント
   const [equippedTitle, setEquippedTitle] = useState(loadEquippedTitle());
   const [showLastResult, setShowLastResult] = useState(false);
-  const [aiEnabled, setAiEnabled] = useState(isAiEnabled());
+  const [aiEnabledPlan, setAiEnabled] = useState(isAiEnabled());
   const [couponInput, setCouponInput] = useState("");
 
   const [majorPool, setMajorPool] = useState([]);
@@ -9950,6 +10194,7 @@ export default function TarotDraw() {
         time: new Date().toLocaleTimeString("ja-JP", { hour: "2-digit", minute: "2-digit" }),
         userName: userName.trim(),
         question,
+        free: isFreeDraw, // 無料版の記録。経験値の上限判定に使う
         majorCard: {
           id: majorCard.card.id,
           name: majorCard.card.name,
@@ -10234,7 +10479,30 @@ export default function TarotDraw() {
   };
 
   const currentLimit = limitExpanded || FREE_DRAWS_PER_DAY;
-  const canDraw = todayCount < currentLimit;
+  /*
+    無料版はAIを呼ばないので、枠も消費しないし残数にも縛られない。
+    aiEnabled をここで落とすことで、鑑定文の生成からパーソナライズまで
+    下流の全部が自動的にフォールバック側へ倒れる。個別に条件を足すと
+    どこかを取りこぼす。
+  */
+  const isFreeDraw = isFreeSpreadKey(drawMode);
+  /*
+    無料版では問いを入力させないので、前の版で書いた文字列が残っていても使わない。
+    残したまま履歴に保存すると、AIが読んでいない問いが「その回の問い」として
+    記録に残り、後から見て嘘になる。
+  */
+  useEffect(() => { if (isFreeDraw) setQuestion(""); }, [isFreeDraw]);
+  /*
+    無料版で今日あと何回、経験値が入るか。
+    判定は calcCharacter と同じく、その日の無料版の履歴件数で数える。
+  */
+  const freeXpLeftToday = (() => {
+    const today = new Date().toLocaleDateString("ja-JP");
+    const used = history.filter((h) => h.free && h.date === today).length;
+    return Math.max(0, FREE_XP_PER_DAY - used);
+  })();
+  const aiEnabled = aiEnabledPlan && !isFreeDraw;
+  const canDraw = isFreeDraw ? true : todayCount < currentLimit;
 
   const handleNameChange = (value) => {
     setUserName(value);
@@ -10490,7 +10758,7 @@ export default function TarotDraw() {
     setMinorResults(results);
     // 小アルカナ3枚が確定した瞬間＝結果の中身が決まる瞬間なので、ここで回数を消費する
     // （テーマカードを開く前にリロードして引き直す、というリセマラ抜け道を防ぐ）
-    setTodayCount(incrementTodayCount());
+    if (!isFreeDraw) setTodayCount(incrementTodayCount());
     // 進行中セッションを保存（不意のリロード・離脱からの復帰用。課金導線実装後の信頼性に直結する）
     savePendingSession({
       majorCardId: majorCard.card.id,
@@ -10896,15 +11164,14 @@ export default function TarotDraw() {
              ただしコンテンツが短いとカードが間延びするので、最小高さを詰める */
           min-height: 0;
         }
+        /*
+          背景の星。濃さの調整はこの opacity 一箇所で行う。
+          演出側の星と混ざらないよう、背景は丸い点のみ・無アニメーションに保つ。
+        */
         .tarot-bg {
-          position: absolute; inset: 0; pointer-events: none; opacity: 0.85;
-          background-image:
-            radial-gradient(1.6px 1.6px at 10% 18%, rgba(241,234,216,0.35) 0, transparent 50%),
-            radial-gradient(1.6px 1.6px at 82% 12%, rgba(241,234,216,0.28) 0, transparent 50%),
-            radial-gradient(1.3px 1.3px at 62% 72%, rgba(241,234,216,0.3) 0, transparent 50%),
-            radial-gradient(1.3px 1.3px at 28% 86%, rgba(241,234,216,0.22) 0, transparent 50%),
-            radial-gradient(1.6px 1.6px at 92% 58%, rgba(241,234,216,0.25) 0, transparent 50%),
-            radial-gradient(1.3px 1.3px at 45% 30%, rgba(241,234,216,0.2) 0, transparent 50%);
+          position: absolute; inset: 0; pointer-events: none;
+          width: 100%; height: 100%; display: block;
+          opacity: 0.85;
         }
         .tarot-header { text-align: center; position: relative; z-index: 1; margin-bottom: 30px; }
         .eyebrow { display: inline-flex; align-items: center; gap: 7px; font-family: 'Cinzel', serif; font-size: 10px; letter-spacing: 0.32em; text-indent: 0.32em; color: var(--gold); margin-bottom: 14px; opacity: 0.9; }
@@ -10974,6 +11241,139 @@ export default function TarotDraw() {
         .held-chip .mini-back { width: 26px; height: 38px; border-radius: 4px; border: 1px solid var(--gold); background: linear-gradient(160deg, var(--surface), var(--bg-mid)); display: flex; align-items: center; justify-content: center; font-family: 'Cinzel', serif; font-size: 11px; color: var(--gold); flex-shrink: 0; }
         @keyframes glowPulse { 0%, 100% { box-shadow: 0 0 0 0 rgba(201,162,75,0); } 50% { box-shadow: 0 0 16px 2px rgba(201,162,75,0.20); } }
 
+        /*
+          スプレッド選択。
+          持ち上げは2px、拡大は1.5%に留める。大きく動かすと安っぽくなるうえ、
+          縦に並んだ項目では隣とぶつかって見える。
+          変化を「浮く・枠が締まる・金が濃くなる」の3つに分け、
+          どれも小さく同時に起こすことで、量ではなく質で反応を伝える。
+        */
+        /*
+          版の表示。金は有料側にだけ使う。
+          無料側にも金を使うと、金＝AI鑑定という区別が消える。
+        */
+        /* ヘキサグラムの入力欄。既存の .question-field と同じ見え方に揃える */
+        .hex-fields { width: 100%; max-width: 340px; display: flex; flex-direction: column; gap: 5px; margin: 0 0 4px; }
+        .hex-fields label { font-size: 11px; color: var(--gold-soft); letter-spacing: 0.04em; }
+        .hex-fields input {
+          width: 100%; padding: 9px 11px; border-radius: 8px;
+          border: 1px solid rgba(201,162,75,0.28);
+          background: rgba(255,255,255,0.03); color: var(--parchment);
+          font-family: inherit; font-size: 13px;
+        }
+        .hex-fields input:focus { outline: none; border-color: rgba(201,162,75,0.7); }
+        .hex-fields-note { font-size: 10.5px; color: var(--muted); margin: 2px 0 0; line-height: 1.7; text-align: center; opacity: 0.85; }
+        .hex-viewpoints { display: flex; flex-direction: column; gap: 6px; margin: 10px 0 0; padding: 10px 12px; border-radius: 10px; background: rgba(255,255,255,0.025); border: 1px solid rgba(201,162,75,0.14); }
+        .hex-viewpoint-title { font-size: 11px; color: var(--gold-soft); margin: 0 0 2px; letter-spacing: 0.04em; }
+        .hex-viewpoint { display: flex; align-items: center; gap: 8px; font-size: 12px; color: var(--parchment); cursor: pointer; line-height: 1.5; opacity: 0.9; }
+        .hex-viewpoint input { accent-color: var(--gold); width: 14px; height: 14px; cursor: pointer; flex-shrink: 0; }
+        @media (hover: hover) { .hex-viewpoint:hover { opacity: 1; color: var(--gold-soft); } }
+
+        .plan-badge {
+          font-size: 9px; letter-spacing: 0.08em; padding: 2px 7px;
+          border-radius: 999px; line-height: 1.5; white-space: nowrap;
+          font-family: 'Cinzel', serif; font-weight: 700;
+        }
+        .plan-badge.ai { color: #17102E; background: #C9A24B; }
+        .plan-badge.free { color: #B9B2D4; background: rgba(169,155,201,0.16); border: 1px solid rgba(169,155,201,0.34); }
+
+        .spread-item {
+          background: linear-gradient(150deg, rgba(46,36,92,0.55), rgba(26,21,48,0.55));
+          border: 1px solid rgba(201,162,75,0.30);
+          transition: transform .22s cubic-bezier(.16,1,.3,1), border-color .22s ease,
+                      background .22s ease, box-shadow .22s ease;
+        }
+        .spread-item.disabled {
+          background: rgba(255,255,255,0.025);
+          border-color: rgba(201,162,75,0.10);
+        }
+        .spread-count {
+          border: 1px solid rgba(201,162,75,0.45);
+          color: var(--gold);
+          transition: border-color .22s ease, box-shadow .22s ease;
+        }
+        .spread-item.disabled .spread-count { border-color: rgba(201,162,75,0.15); color: var(--muted); }
+        .spread-name { color: var(--gold-soft); transition: color .22s ease; }
+        .spread-item.disabled .spread-name { color: var(--muted); }
+        /*
+          hover は指では「押した後もかかったまま」になるので、
+          マウスを持つ環境にだけ適用する。
+        */
+        @media (hover: hover) {
+          .spread-item:not(.disabled):hover {
+            transform: translateY(-2px) scale(1.015);
+            background: linear-gradient(150deg, rgba(64,50,122,0.72), rgba(34,27,64,0.72));
+            border-color: rgba(201,162,75,0.72);
+            box-shadow: 0 8px 22px rgba(0,0,0,0.45), 0 0 18px rgba(201,162,75,0.10);
+          }
+          .spread-item:not(.disabled):hover .spread-count {
+            border-color: var(--gold);
+            box-shadow: inset 0 0 10px rgba(201,162,75,0.22);
+          }
+          .spread-item:not(.disabled):hover .spread-name { color: var(--gold); }
+        }
+        /* 押した瞬間に沈める。持ち上げたまま反応しないと、押せたか分からない */
+        .spread-item:not(.disabled):active { transform: translateY(0) scale(0.994); }
+        .spread-item:focus-visible { outline: 2px solid var(--gold); outline-offset: 3px; }
+
+        /*
+          言語切替。
+          10個が横に並ぶ小さな粒なので、浮かせずに枠と地の濃さだけで反応させる。
+          小さい要素を動かすと、列全体がざわついて読みにくくなる。
+        */
+        .lang-chip {
+          border: 1px solid rgba(169,155,201,0.3);
+          background: transparent;
+          color: var(--muted);
+          transition: color .18s ease, background .18s ease, border-color .18s ease;
+          -webkit-tap-highlight-color: rgba(201,162,75,0.20);
+        }
+        .lang-chip.on {
+          border-color: var(--gold);
+          background: rgba(201,162,75,0.15);
+          color: var(--gold-soft);
+        }
+        @media (hover: hover) {
+          .lang-chip:not(.on):hover {
+            border-color: rgba(201,162,75,0.6);
+            background: rgba(201,162,75,0.07);
+            color: var(--gold-soft);
+          }
+          .lang-chip.on:hover { background: rgba(201,162,75,0.24); color: var(--gold); }
+        }
+        .lang-chip:active { background: rgba(201,162,75,0.30); }
+        .lang-chip:focus-visible { outline: 2px solid var(--gold); outline-offset: 2px; }
+
+        /*
+          ボトムナビ。
+          タブ自体を拡大するとバーの高さが揺れるので、動かすのはアイコンだけにする。
+          選択中のタブにも反応を残す。押せないように見えると、
+          「今ここにいる」と「押せない」が混同される。
+        */
+        .nav-tab {
+          flex: 1; cursor: pointer; border: none; background: transparent;
+          border-top: 2px solid transparent;
+          color: var(--parchment); opacity: 0.82;
+          transition: color .2s ease, opacity .2s ease, background .2s ease, border-top-color .2s ease;
+        }
+        .nav-tab.on {
+          background: rgba(201,162,75,0.10);
+          color: var(--gold); opacity: 1;
+          border-top-color: var(--gold);
+        }
+        .nav-tab-icon { display: flex; transition: transform .22s cubic-bezier(.16,1,.3,1); }
+        @media (hover: hover) {
+          .nav-tab:not(.on):hover {
+            color: var(--gold-soft); opacity: 1;
+            background: rgba(201,162,75,0.06);
+            border-top-color: rgba(201,162,75,0.45);
+          }
+          .nav-tab.on:hover { background: rgba(201,162,75,0.17); }
+          .nav-tab:hover .nav-tab-icon { transform: translateY(-2px) scale(1.10); }
+        }
+        .nav-tab:active .nav-tab-icon { transform: translateY(0) scale(0.94); }
+        .nav-tab:focus-visible { outline: 2px solid var(--gold); outline-offset: -3px; }
+
         .spread-grid { position: relative; z-index: 1; display: flex; flex-wrap: wrap; gap: 6px; justify-content: center; max-width: 760px; margin: 0 auto 28px; }
         /* 地色は裏面SVG（TarotCardBack）が持つ。ここで background を敷くと二重になる。
            overflow:hidden は、傾いた札から意匠が角丸の外へ出ないための保険。 */
@@ -11035,7 +11435,23 @@ export default function TarotDraw() {
         .tap-hint { font-size: 11px; letter-spacing: 0.12em; color: var(--gold-soft); animation: tapHintBlink 2s ease-in-out infinite; }
         @keyframes tapHintBlink { 0%, 100% { opacity: 0.4; } 50% { opacity: 1; } }
 
-        .static-card { width: 130px; height: 194px; border-radius: 12px; border: 1px solid var(--gold); background: linear-gradient(160deg, #1a1440, var(--surface)); display: flex; align-items: center; justify-content: center; overflow: hidden; }
+        /*
+          表面の質感。裏面と同じ理屈で作る。
+          box-shadow の inset を2本重ね、左上に明るい縁・右下に暗い縁を置くと、
+          その2本の間が厚みの側面として読まれる。border 1本では紙に見える。
+          外側は接地影（近く硬い）と環境影（遠く柔らかい）の二段。
+        */
+        .static-card {
+          width: 130px; height: 194px; border-radius: 12px;
+          border: 1px solid var(--gold);
+          background: linear-gradient(152deg, #2A1F55, #1a1440 55%, #120E24);
+          display: flex; align-items: center; justify-content: center; overflow: hidden;
+          box-shadow:
+            inset 1.5px 1.5px 0 rgba(240,221,172,0.30),
+            inset -1.5px -1.5px 0 rgba(10,6,20,0.85),
+            0 1px 2px rgba(0,0,0,0.75),
+            0 10px 30px rgba(0,0,0,0.5);
+        }
         .static-card.big { width: 168px; height: 252px; }
         /*
           ワンオラクル用のカード。
@@ -11066,8 +11482,13 @@ export default function TarotDraw() {
         .card-face.reversed .card-text-wrap.keep-readable { transform: rotate(180deg); }
         .card-corner { font-family: 'Cinzel', serif; font-size: 13px; color: var(--accent, var(--gold)); letter-spacing: 0.1em; }
         .card-icon { color: var(--accent, var(--gold)); display: flex; }
-        .card-name { font-family: 'Shippori Mincho', serif; font-size: 15px; font-weight: 600; color: var(--parchment); line-height: 1.3; }
-        .card-sub { font-size: 9.5px; color: var(--muted); letter-spacing: 0.03em; }
+        /*
+          明朝は字間を少し開けると格が上がる。詰まっていると詰め込んだ印象になる。
+          letter-spacing は右端にも余白を足すため、中央揃えでは半字ぶん左に寄る。
+          text-indent で打ち消して、光学的な中心を保つ。
+        */
+        .card-name { font-family: 'Shippori Mincho', serif; font-size: 15px; font-weight: 600; color: var(--parchment); line-height: 1.34; letter-spacing: 0.07em; text-indent: 0.07em; }
+        .card-sub { font-size: 9.5px; color: var(--muted); letter-spacing: 0.08em; text-indent: 0.08em; }
 
         .orientation { display: inline-block; font-family: 'Cinzel', serif; font-size: 10px; letter-spacing: 0.12em; padding: 3px 10px; border-radius: 999px; }
         .orientation.up { background: rgba(201,162,75,0.15); color: var(--gold-soft); border: 1px solid rgba(201,162,75,0.4); }
@@ -11445,12 +11866,15 @@ export default function TarotDraw() {
           立体感の階調と、大アルカナの金枠だけを残す。
         */
         /*
-          盤面を巡る粒子の層。カードより奥（z-index 0）に置き、
-          札の背後を漂わせる。7枚それぞれに付けると散らかるので、
-          盤面全体を1枚の大きな札と見なして一つの軌道にまとめる。
+          盤面を巡る粒子の層。カード（z-index 1）より手前に置き、札の表を通す。
+          7枚それぞれに付けると散らかるので、盤面全体を1枚の大きな札と見なして
+          一つの軌道にまとめる。
+          手前を通る光は、札の上に貼り付いた点ではなく札を横切る光であるべきなので、
+          描画を加算（screen）にする。暗い地では光り、札の絵柄は透けたまま残る。
         */
         .hex-orbit {
-          position: absolute; inset: 0; z-index: 0; pointer-events: none;
+          position: absolute; inset: 0; z-index: 2; pointer-events: none;
+          mix-blend-mode: screen;
           animation: holoOrbitSpin 26s linear infinite;
         }
         .hex-orbit i {
@@ -11473,17 +11897,26 @@ export default function TarotDraw() {
           box-shadow: 0 3px 12px rgba(0,0,0,0.35);
         }
         .hex-front-face {
-          background: linear-gradient(160deg, #1a1440, var(--surface));
+          background: linear-gradient(152deg, #2A1F55, #1a1440 55%, #120E24);
           border: 1px solid rgba(201,162,75,0.45);
-          box-shadow: 0 3px 12px rgba(0,0,0,0.35);
+          /* 小さい札なので面取りは1px。1.5pxだと縁が絵柄を圧迫する */
+          box-shadow:
+            inset 1px 1px 0 rgba(240,221,172,0.26),
+            inset -1px -1px 0 rgba(10,6,20,0.8),
+            0 1px 2px rgba(0,0,0,0.7),
+            0 6px 18px rgba(0,0,0,0.4);
           transform: rotateY(180deg);
         }
         .hex-card {
           border-radius: 7px;
           border: 1px solid rgba(201,162,75,0.45);
-          background: linear-gradient(160deg, #1a1440, var(--surface));
+          background: linear-gradient(152deg, #2A1F55, #1a1440 55%, #120E24);
           overflow: hidden;
-          box-shadow: 0 3px 12px rgba(0,0,0,0.35);
+          box-shadow:
+            inset 1px 1px 0 rgba(240,221,172,0.26),
+            inset -1px -1px 0 rgba(10,6,20,0.8),
+            0 1px 2px rgba(0,0,0,0.7),
+            0 6px 18px rgba(0,0,0,0.4);
         }
         /*
           大アルカナは、相談者の意思を超えて働く力を示す札である。
@@ -11502,7 +11935,7 @@ export default function TarotDraw() {
         .hex-front-face .card-face { gap: 3px; padding: 5px 3px 14px; position: relative; z-index: 1; }
         .hex-card .card-corner,
         .hex-front-face .card-corner { font-size: 8px; letter-spacing: 0.06em; }
-        .hex-name { font-size: 9px !important; line-height: 1.25 !important; font-weight: 500; }
+        .hex-name { font-size: 9px !important; line-height: 1.3 !important; font-weight: 500; letter-spacing: 0.03em; text-indent: 0.03em; }
         /* カードの下端に敷く帯。上下のカードと重ならない */
         .hex-pos {
           position: absolute; left: 0; right: 0; bottom: 0; z-index: 4;
@@ -11609,6 +12042,11 @@ export default function TarotDraw() {
           .mini-card, .draw-btn, .climax-btn, .held-chip, .result-area, .major-stage, .mini-card.vanish, .tarot-header h1 { animation: none !important; transition: none !important; }
           .tc-flip { transition: none !important; }
           .tap-hint { animation: none !important; opacity: 1; }
+          .spread-item { transition: none !important; }
+          .spread-item:hover, .spread-item:active { transform: none !important; }
+          .nav-tab, .nav-tab-icon { transition: none !important; }
+          .nav-tab:hover .nav-tab-icon, .nav-tab:active .nav-tab-icon { transform: none !important; }
+          .lang-chip { transition: none !important; }
         }
         @media (max-width: 520px) {
           .tarot-header h1 { font-size: 24px; }
@@ -11620,21 +12058,21 @@ export default function TarotDraw() {
         }
       `}</style>
 
-      <div className="tarot-bg" />
+      <TarotBackdrop />
 
       <div style={{ display: "flex", justifyContent: "center", flexWrap: "wrap", gap: "6px", marginBottom: "6px" }}>
         {SUPPORTED_LANGS.map((l) => (
           <button
             key={l}
+            className={`lang-chip${l === lang ? " on" : ""}`}
             onClick={() => handleLangChange(l)}
+            aria-current={l === lang ? "true" : undefined}
             style={{
               fontSize: "11px",
               padding: "4px 12px",
               borderRadius: "999px",
-              border: l === lang ? "1px solid var(--gold)" : "1px solid rgba(169,155,201,0.3)",
-              background: l === lang ? "rgba(201,162,75,0.15)" : "transparent",
-              color: l === lang ? "var(--gold-soft)" : "var(--muted)",
               cursor: "pointer",
+              fontFamily: "inherit",
             }}
           >
             {LANG_LABELS[l]}
@@ -11690,18 +12128,19 @@ export default function TarotDraw() {
               <SpreadSelect lang={lang} onSelect={(k) => setDrawMode(k)} />
             )}
 
-            {navTab === "draw" && drawMode === "hexagram" && (
+            {navTab === "draw" && (drawMode === "hexagram" || drawMode === "hexagramFree") && (
               <HexagramPanel
                 lang={lang}
                 onBack={() => setDrawMode("select")}
                 question={question}
                 userName={userName}
+                onUserNameChange={handleNameChange}
                 canDraw={canDraw}
                 aiEnabled={aiEnabled}
                 onConsume={() => {
                   // スリーカードと同じ枠を消費する。
                   // AIを使う占いは同じ財布から出ているため、枠を分けない
-                  setTodayCount(incrementTodayCount());
+                  if (!isFreeDraw) setTodayCount(incrementTodayCount());
                 }}
               />
             )}
@@ -11714,7 +12153,7 @@ export default function TarotDraw() {
               />
             )}
 
-            {navTab === "draw" && drawMode === "three" && (<>
+            {navTab === "draw" && (drawMode === "three" || drawMode === "threeFree") && (<>
             {/* 選択画面へ戻る導線。スプレッドを選び直せることを常に示す */}
             <button
               onClick={() => setDrawMode("select")}
@@ -11735,6 +12174,12 @@ export default function TarotDraw() {
               onChange={(e) => handleNameChange(e.target.value)}
               placeholder={t.namePlaceholder}
             />
+            {/*
+              問いと記録の継承は、AIが読むから意味がある入力。
+              無料版はフォールバック文で完結し、どちらも参照しないので出さない。
+              使わない入力を求めるのは、入力させておいて使わないという振る舞いになる。
+            */}
+            {!isFreeDraw && (<>
             <label htmlFor="tarot-question">{t.questionLabel}</label>
             <input
               id="tarot-question"
@@ -11747,10 +12192,11 @@ export default function TarotDraw() {
             <p style={{ fontSize: "11px", color: "var(--muted)", margin: "-4px 0 4px", textAlign: "center", opacity: 0.85 }}>
               {t.questionPrivacy}
             </p>
+            </>)}
 
             {/* パーソナライズの切り替え。過去の記録が1件でもある場合にのみ出す（初回は引き継ぐものが無いため）。
                 既定はオンで、これはゲートではなくオプトアウト用のトグル。 */}
-            {history.length > 0 && (
+            {!isFreeDraw && history.length > 0 && (
               <div style={{ margin: "0 0 8px", display: "flex", flexDirection: "column", gap: "4px", alignItems: "center" }}>
                 <label style={{ display: "flex", alignItems: "center", gap: "8px", fontSize: "12px", color: "var(--gold-soft)", cursor: "pointer", lineHeight: 1.5, textAlign: "left" }}>
                   <input
@@ -11784,9 +12230,20 @@ export default function TarotDraw() {
                 </p>
               </div>
             )}
-            {todayCount > 0 && canDraw && (
+            {/*
+              有料枠の残数は、枠を使う版でしか意味を持たない。
+              無料版は枠を消費しないので、代わりに経験値の残り回数を出す。
+              何も出さないと、3回目以降に経験値が入らなくなったことが黙って起きる。
+              黙って減るのが一番不信を招く。
+            */}
+            {!isFreeDraw && todayCount > 0 && canDraw && (
               <p style={{ fontSize: "11px", color: "var(--muted)", margin: 0 }}>
                 {t.limitRemaining(currentLimit - todayCount)}
+              </p>
+            )}
+            {isFreeDraw && (
+              <p style={{ fontSize: "11px", color: "var(--muted)", margin: 0 }}>
+                {freeXpLeftToday > 0 ? t.freeXpRemaining(freeXpLeftToday) : t.freeXpDone}
               </p>
             )}
 
