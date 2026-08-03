@@ -108,8 +108,25 @@ function TarotCardBackDefs() {
       focusable="false"
       style={{ position: "absolute", width: 0, height: 0, overflow: "hidden" }}
     >
+      <defs>
+        {/* 面取り。左上が明るく右下が暗い。この明暗差が厚みの側面になる */}
+        <linearGradient id="tarot-back-bevel" x1="0" y1="0" x2="1" y2="1">
+          <stop offset="0" stopColor="#F0DDAC" />
+          <stop offset="0.35" stopColor="#B79A5E" />
+          <stop offset="0.7" stopColor="#7A6434" />
+          <stop offset="1" stopColor="#4A3B1B" />
+        </linearGradient>
+        {/* 地のわずかな傾斜光。完全な平坦は「印刷された絵」に見える */}
+        <linearGradient id="tarot-back-ground" x1="0" y1="0" x2="0.9" y2="1">
+          <stop offset="0" stopColor="#31215C" />
+          <stop offset="0.55" stopColor="#241640" />
+          <stop offset="1" stopColor="#180E2E" />
+        </linearGradient>
+      </defs>
       <symbol id={CARD_BACK_ID} viewBox="0 0 180 270">
-        <rect width="180" height="270" rx="8" fill={CARD_BACK_COLORS.bg} />
+        <rect width="180" height="270" rx="8" fill="url(#tarot-back-ground)" />
+        <rect x="1.4" y="1.4" width="177.2" height="267.2" rx="7" fill="none" stroke="url(#tarot-back-bevel)" strokeWidth="2.8" />
+        <rect x="4" y="4" width="172" height="262" rx="6" fill="none" stroke="#120B24" strokeWidth="1.4" />
         <rect x="7" y="7" width="166" height="256" rx="5" fill="none" stroke={CARD_BACK_COLORS.frame} strokeWidth="1" />
         <rect x="11" y="11" width="158" height="248" rx="4" fill="none" stroke={CARD_BACK_COLORS.hairline} strokeWidth="0.5" />
         <g transform="translate(90,135)">
@@ -5485,6 +5502,14 @@ const LS_FORCE_ONE_ORACLE_HOLO = "tarot_force_oo_holo";
  * 「今日はもう何もできない」という終わりを突きつけないため。
  * ============================================================
  */
+/*
+  回数制限の休止スイッチ。
+  false のあいだ、残数の計算は常に満タンを返す。消費の記録自体は続けるので、
+  再開したときに「休止中に引いた分」で即座に打ち止めになることはない
+  （起点の時刻も一緒に更新されるため）。
+*/
+const ONE_ORACLE_LIMIT_ENABLED = false;
+
 const ONE_ORACLE_MAX = 3;                 // 一度に引ける枚数
 const ONE_ORACLE_REFILL_MS = 60 * 60 * 1000; // 全回復までの時間
 const LS_ONE_ORACLE_USES = "tarot_oo_uses"; // { count, since }
@@ -5507,6 +5532,7 @@ function saveOneOracleUses(v) {
 
 /** 残り枚数と、次に回復するまでのミリ秒を返す */
 function oneOracleStatus() {
+  if (!ONE_ORACLE_LIMIT_ENABLED) return { remaining: ONE_ORACLE_MAX, waitMs: 0 };
   const u = loadOneOracleUses();
   const remaining = Math.max(0, ONE_ORACLE_MAX - u.count);
   const waitMs = remaining > 0 ? 0 : Math.max(0, ONE_ORACLE_REFILL_MS - (Date.now() - u.since));
@@ -6015,6 +6041,19 @@ function HexagramPanel({ lang, onBack, question, userName, canDraw, onConsume, a
   const [shuffleCount, setShuffleCount] = useState(0);
   const [drawn, setDrawn] = useState(null);
   const [stage, setStage] = useState(0);          // 今どの段階まで開いたか（0=未開示）
+  /*
+    開封中の錠。連打すると一段ずつの間が消えて、七枚が一息に流れてしまう。
+    回転(1.1s)が終わり、めくれた札を見る時間が少し残る長さで解除する。
+  */
+  const [revealLock, setRevealLock] = useState(false);
+  const revealTimer = useRef(null);
+  useEffect(() => () => { if (revealTimer.current) clearTimeout(revealTimer.current); }, []);
+  const advanceStage = () => {
+    if (revealLock) return;
+    setRevealLock(true);
+    setStage((n) => n + 1);
+    revealTimer.current = setTimeout(() => setRevealLock(false), 1450);
+  };
   const [reading, setReading] = useState("");
   const [loading, setLoading] = useState(false);
   const needsUprightText = needsUprightTextFor(lang);
@@ -6083,6 +6122,8 @@ function HexagramPanel({ lang, onBack, question, userName, canDraw, onConsume, a
       一拍おいてから開くことで、0度→540度という変化が生まれ、回転が見える。
     */
     setStage(0);
+    setRevealLock(false);
+    if (revealTimer.current) clearTimeout(revealTimer.current);
     setTimeout(() => setStage(1), 60);
   };
 
@@ -6171,8 +6212,13 @@ function HexagramPanel({ lang, onBack, question, userName, canDraw, onConsume, a
                   disabled={picked.length >= spread.count}
                   aria-label={t.pickAriaLabel}
                 >
-                  {/* 何番目に選んだかを出す。どの位置に入るかが選んだ時点で分かる */}
-                  <span className="mini-emblem">{at >= 0 ? at + 1 : "✦"}</span>
+                  <TarotCardBack style={{ position: "absolute", inset: 0, borderRadius: "inherit" }} />
+                  {/*
+                    何番目に選んだかを出す。どの位置に入るかが選んだ時点で分かる。
+                    未選択の札には出さない。裏面が意匠を持つようになったため、
+                    プレースホルダの ✦ は役目を終えている。
+                  */}
+                  {at >= 0 && <span className="mini-emblem">{at + 1}</span>}
                 </button>
               );
             })}
@@ -6295,7 +6341,7 @@ function HexagramPanel({ lang, onBack, question, userName, canDraw, onConsume, a
             盤面を見てそのまま進めるのが自然な流れになる。
           */}
           {!isLast && (
-            <button className="draw-btn" onClick={() => setStage((n) => n + 1)}>
+            <button className="draw-btn" onClick={advanceStage} disabled={revealLock}>
               <Sparkles size={15} />
               {t.hexNext[HEXAGRAM_STAGES[stage].key]}
             </button>
@@ -6562,7 +6608,8 @@ function OneOraclePanel({ lang, onBack, onHoloConsumed }) {
               <span style={{
                 position: "absolute", inset: 0, borderRadius: "12px", overflow: "hidden",
                 border: "1px solid rgba(201,162,75,0.45)",
-                boxShadow: "0 8px 28px rgba(0,0,0,0.4)",
+                // 接地影（近く硬い）と環境影（遠く柔らかい）の二段。一段だと浮いて見える
+                boxShadow: "0 1px 2px rgba(0,0,0,0.75), 0 10px 30px rgba(0,0,0,0.5)",
                 backfaceVisibility: "hidden",
                 WebkitBackfaceVisibility: "hidden",
               }}>
@@ -6572,7 +6619,7 @@ function OneOraclePanel({ lang, onBack, onHoloConsumed }) {
               <span style={{
                 position: "absolute", inset: 0, borderRadius: "12px", overflow: "hidden",
                 border: "1px solid rgba(201,162,75,0.35)",
-                boxShadow: "0 8px 28px rgba(0,0,0,0.4)",
+                boxShadow: "0 1px 2px rgba(0,0,0,0.75), 0 10px 30px rgba(0,0,0,0.5)",
                 backfaceVisibility: "hidden",
                 WebkitBackfaceVisibility: "hidden",
                 transform: "rotateY(180deg)",
@@ -6750,8 +6797,13 @@ function BottomNav({ current, onChange, lang, hasHistory }) {
   const t = T[lang] || T.ja;
   const items = [
     { key: "draw", label: t.navDraw, icon: Shuffle },
-    { key: "records", label: t.navRecords, icon: RotateCcw, needsHistory: true },
-    { key: "growth", label: t.navGrowth, icon: Star, needsHistory: true },
+    /*
+      以前は履歴0件のとき records / growth を隠していた。
+      しかし空のタブは「まだ無い」ではなく「これから貯まる」という予告になる。
+      隠すと、育成の存在自体が初回利用者に伝わらない。
+    */
+    { key: "records", label: t.navRecords, icon: RotateCcw },
+    { key: "growth", label: t.navGrowth, icon: Star },
     { key: "adventure", label: t.navAdventure, icon: Swords },
     { key: "more", label: t.navMore, icon: Sparkles },
   ].filter((it) => !it.needsHistory || hasHistory);
@@ -8057,6 +8109,7 @@ const T = {
     hexConfirmAsk: "이 일곱 장으로 하시겠어요?",
     navDraw: "점보기",
     navRecords: "기록",
+    tapToFlip: "탭해서 뒤집기",
     navGrowth: "육성",
     navAdventure: "모험",
     navMore: "기타",
@@ -8245,6 +8298,7 @@ const T = {
     hexConfirmAsk: "Bảy lá bài này đã chắc chưa?",
     navDraw: "Xem",
     navRecords: "Ghi chép",
+    tapToFlip: "Chạm để lật",
     navGrowth: "Nuôi",
     navAdventure: "Phiêu lưu",
     navMore: "Khác",
@@ -8433,6 +8487,7 @@ const T = {
     hexConfirmAsk: "Apakah ketujuh kartu ini sudah pasti?",
     navDraw: "Tilik",
     navRecords: "Catatan",
+    tapToFlip: "Ketuk untuk membuka",
     navGrowth: "Tumbuh",
     navAdventure: "Petualangan",
     navMore: "Lainnya",
@@ -8621,6 +8676,7 @@ const T = {
     hexConfirmAsk: "Adakah ketujuh-tujuh kad ini muktamad?",
     navDraw: "Tilik",
     navRecords: "Rekod",
+    tapToFlip: "Ketik untuk buka",
     navGrowth: "Tumbuh",
     navAdventure: "Kembara",
     navMore: "Lain-lain",
@@ -8810,6 +8866,7 @@ const T = {
     hexConfirmAsk: "この7枚でよろしいですか？",
     navDraw: "占う",
     navRecords: "記録",
+    tapToFlip: "タップしてめくる",
     navGrowth: "育成",
     navAdventure: "冒険",
     navMore: "その他",
@@ -8998,6 +9055,7 @@ const T = {
     hexConfirmAsk: "就用這七張牌嗎？",
     navDraw: "占卜",
     navRecords: "記錄",
+    tapToFlip: "點一下翻牌",
     navGrowth: "養成",
     navAdventure: "冒險",
     navMore: "其他",
@@ -9186,6 +9244,7 @@ const T = {
     hexConfirmAsk: "就用这七张牌吗？",
     navDraw: "占卜",
     navRecords: "记录",
+    tapToFlip: "点击翻牌",
     navGrowth: "养成",
     navAdventure: "冒险",
     navMore: "其他",
@@ -9374,6 +9433,7 @@ const T = {
     hexConfirmAsk: "Are these seven cards final?",
     navDraw: "Draw",
     navRecords: "Records",
+    tapToFlip: "Tap to flip",
     navGrowth: "Growth",
     navAdventure: "Adventure",
     navMore: "More",
@@ -9562,6 +9622,7 @@ const T = {
     hexConfirmAsk: "Ito na ba ang pitong baraha?",
     navDraw: "Bunot",
     navRecords: "Tala",
+    tapToFlip: "I-tap para buksan",
     navGrowth: "Paglago",
     navAdventure: "Adventure",
     navMore: "Iba pa",
@@ -9750,6 +9811,7 @@ const T = {
     hexConfirmAsk: "ใช้ไพ่เจ็ดใบนี้ใช่ไหม",
     navDraw: "ดูดวง",
     navRecords: "บันทึก",
+    tapToFlip: "แตะเพื่อเปิดไพ่",
     navGrowth: "เติบโต",
     navAdventure: "ผจญภัย",
     navMore: "อื่นๆ",
@@ -9794,6 +9856,11 @@ export default function TarotDraw() {
   const [currentEntryId, setCurrentEntryId] = useState(null); // 今回の履歴エントリのid（要約・対話の後追い書き込み用）
   const savedEntryRef = useRef(null); // 同一セッションの二重保存・二重要約を防ぐ目印
   const [revealStage, setRevealStage] = useState(3); // 小アルカナを何枚まで開示したか（2 = 3枚目を伏せている）
+  /*
+    大アルカナの開封。伏せた状態で置いてから開く。
+    最初から開いた状態で出現させると、CSSの遷移が走らずに回転が省略される。
+  */
+  const [majorFlipOpen, setMajorFlipOpen] = useState(false);
   const [reachInfo, setReachInfo] = useState(null);  // リーチ判定の結果（3枚目を開く前だけ表示する）
   const [outcomeInfo, setOutcomeInfo] = useState(null); // 3枚目を開いた直後に一瞬だけ出す結果表示
   const [speakingKey, setSpeakingKey] = useState(null); // 今読み上げている本文のキー（同時に1つだけ鳴らす）
@@ -10439,16 +10506,28 @@ export default function TarotDraw() {
       // 3枚目は伏せたまま、まず2枚だけ開く。3枚目は既に確定しているので引き直せない。
       const reach = detectReach(results.slice(0, 2));
       setReachInfo(reach);
-      setRevealStage(2);
-      if (!reach) {
-        // 何も起きない回は間延びさせない。少しだけ溜めて自動で3枚目へ。
-        setTimeout(() => {
-          setRevealStage(3);
-          fetchReading1(results);
-        }, 850);
-      }
-      // リーチがある回は、ユーザーが自分で3枚目を開く（溜めを体験させる）
+      /*
+        0から刻む。いきなり2にすると1枚目と2枚目が「開いた状態で出現」してしまい、
+        回転の遷移が走らない（CSSの遷移は値が変わったときにしか動かない）。
+        伏せた状態で置いてから開くことで、3枚とも回る。
+      */
+      // 3枚とも伏せたまま置く。ここから先は相談者が自分の手でめくる。
+      setRevealStage(0);
     }, 480);
+  };
+
+  /*
+    小アルカナを1枚めくる。左から順にしか開けない。
+    どこからでも開けるようにすると、リーチという概念そのものが壊れる
+    （3枚目を先に見てしまえる）。
+  */
+  const advanceMinorReveal = (i) => {
+    if (i !== revealStage || revealStage >= 3) return;
+    if (revealStage < 2) { setRevealStage(revealStage + 1); return; }
+    // 3枚目。リーチがある回は既存の演出付き処理へ、無い回はそのまま開く
+    if (reachInfo) { revealThirdMinor(); return; }
+    setRevealStage(3);
+    fetchReading1(minorResults);
   };
 
   // 3枚目を開く（リーチが出ている場合のみ、ユーザー操作で進む）
@@ -10753,6 +10832,13 @@ export default function TarotDraw() {
 
   const showMajorGrid = phase === "major-spread" || phase === "major-confirm" || phase === "major-resolving";
   const showMinorGrid = phase === "minor-spread" || phase === "minor-confirm" || phase === "minor-resolving";
+  useEffect(() => {
+    if (phase !== "major-revealed" || !majorCard) { setMajorFlipOpen(false); return; }
+    setMajorFlipOpen(false);
+    const id = setTimeout(() => setMajorFlipOpen(true), 80);
+    return () => clearTimeout(id);
+  }, [phase, majorCard]);
+
   const showHeldChip = atLeast("minor-spread") && phase !== "major-revealed" && majorCard;
 
   return (
@@ -10889,11 +10975,13 @@ export default function TarotDraw() {
         @keyframes glowPulse { 0%, 100% { box-shadow: 0 0 0 0 rgba(201,162,75,0); } 50% { box-shadow: 0 0 16px 2px rgba(201,162,75,0.20); } }
 
         .spread-grid { position: relative; z-index: 1; display: flex; flex-wrap: wrap; gap: 6px; justify-content: center; max-width: 760px; margin: 0 auto 28px; }
-        .mini-card { position: relative; width: 40px; height: 60px; border-radius: 6px; border: 1px solid rgba(201,162,75,0.45); background: linear-gradient(160deg, var(--surface), var(--bg-mid)); display: flex; align-items: center; justify-content: center; cursor: pointer; padding: 0; font: inherit; transform: rotate(var(--rot, 0deg)); transition: transform .18s cubic-bezier(.16,1,.3,1), box-shadow .18s ease, border-color .18s ease; }
-        .mini-card:hover:not(:disabled) { transform: rotate(var(--rot, 0deg)) translateY(-4px) scale(1.08); box-shadow: 0 6px 16px rgba(201,162,75,0.20); border-color: var(--gold); }
+        /* 地色は裏面SVG（TarotCardBack）が持つ。ここで background を敷くと二重になる。
+           overflow:hidden は、傾いた札から意匠が角丸の外へ出ないための保険。 */
+        .mini-card { position: relative; width: 40px; height: 60px; border-radius: 6px; overflow: hidden; border: 1px solid rgba(201,162,75,0.45); background: none; box-shadow: inset 1px 1px 0 rgba(240,221,172,0.5), inset -1px -1px 0 rgba(18,11,36,0.85), 0 1px 2px rgba(0,0,0,0.7); display: flex; align-items: center; justify-content: center; cursor: pointer; padding: 0; font: inherit; transform: rotate(var(--rot, 0deg)); transition: transform .18s cubic-bezier(.16,1,.3,1), box-shadow .18s ease, border-color .18s ease; }
+        .mini-card:hover:not(:disabled) { transform: rotate(var(--rot, 0deg)) translateY(-4px) scale(1.08); box-shadow: inset 1px 1px 0 rgba(240,221,172,0.5), inset -1px -1px 0 rgba(18,11,36,0.85), 0 6px 16px rgba(201,162,75,0.20); border-color: var(--gold); }
         .mini-card:focus-visible { outline: 2px solid var(--gold); outline-offset: 2px; }
         .mini-card:disabled { cursor: default; }
-        .mini-card.chosen { transform: scale(1.18) translateY(-6px); box-shadow: 0 0 0 2px var(--gold), 0 0 18px rgba(201,162,75,0.5); border-color: var(--gold); z-index: 2; }
+        .mini-card.chosen { transform: scale(1.18) translateY(-6px); box-shadow: inset 1px 1px 0 rgba(240,221,172,0.5), inset -1px -1px 0 rgba(18,11,36,0.85), 0 0 0 2px var(--gold), 0 0 18px rgba(201,162,75,0.5); border-color: var(--gold); z-index: 2; }
         .mini-card.vanish { animation: vanishCard .45s ease forwards; }
         @keyframes vanishCard { to { opacity: 0; transform: scale(0.35) translateY(10px); } }
         @keyframes outcomeIn {
@@ -10905,13 +10993,47 @@ export default function TarotDraw() {
           0%, 100% { box-shadow: 0 0 0 0 rgba(201,162,75,0.0); filter: brightness(1); }
           50%      { box-shadow: 0 0 20px 3px rgba(201,162,75,0.42); filter: brightness(1.14); }
         }
-        .mini-emblem { font-family: 'Cinzel', serif; font-size: 12px; color: var(--gold); opacity: 0.65; }
-        .mini-badge { position: absolute; top: -7px; right: -7px; width: 17px; height: 17px; border-radius: 50%; background: var(--gold); color: var(--bg-deep); font-size: 9.5px; font-weight: 700; display: flex; align-items: center; justify-content: center; font-family: 'Cinzel', serif; }
+        /* 番号は中央に置かない。中央は裏面の四弁花の位置で、下地の円を敷くと花が消える。
+           札の下端へ逃がし、下地も花より小さく保つ。 */
+        /*
+          絶対配置で下端に寄せると、.mini-card の overflow:hidden に切られる。
+          従前どおり中央に流し込みで置き、下地の円は敷かない（敷くと裏面の花が隠れる）。
+          可読性は面ではなく文字の縁取りで確保する。
+          縁取りなら意匠を隠さずに、どの地色の上でも輪郭が立つ。
+        */
+        .mini-emblem { position: relative; z-index: 1; font-family: 'Cinzel', serif; font-size: 12px; font-weight: 700; color: #EDF1F6; opacity: 1; line-height: 1; text-shadow: 0 0 2px rgba(10,6,22,1), 0 0 4px rgba(10,6,22,0.95), 0 1px 2px rgba(10,6,22,0.9), 0 -1px 2px rgba(10,6,22,0.9); }
+        /*
+          札の外（top/right が負）に置くと、.mini-card の overflow:hidden に切られる。
+          内側へ入れる。色は金をやめて銀白にする。選択枠が金なので、
+          金の丸を重ねると枠と丸の境界が溶けて番号が読めない。
+          銀は裏面の翼に既にある色なので、意匠から浮かない。
+        */
+        .mini-badge { position: absolute; top: 3px; right: 3px; z-index: 2; width: 16px; height: 16px; border-radius: 50%; background: #E6EBF1; color: #17102E; font-size: 10px; font-weight: 700; display: flex; align-items: center; justify-content: center; font-family: 'Cinzel', serif; line-height: 1; box-shadow: 0 0 0 1px rgba(20,12,40,0.85), 0 1px 3px rgba(0,0,0,0.55); }
 
         .result-area { position: relative; z-index: 1; display: flex; flex-direction: column; align-items: center; gap: 22px; animation: popIn .5s cubic-bezier(.16,1,.3,1); margin-bottom: 10px; }
         .cards-row { display: flex; gap: 18px; flex-wrap: wrap; justify-content: center; }
         .card-slot { display: flex; flex-direction: column; align-items: center; gap: 10px; width: 140px; }
+        /*
+          スリーカードの開封回転。ワンオラクルと同じ考え方で、外枠が遠近を、
+          内側の回転体が preserve-3d を持ち、2面をそれぞれ背面非表示にする。
+          540度回すのは、1回転半にすると「めくった」より「回した」に見えるため。
+        */
+        .tc-flip-outer { position: relative; width: 130px; height: 194px; perspective: 900px; }
+        /* 次にめくれる1枚だけを光らせる。押せる場所が分からないと札の前で止まる */
+        .tc-flip-outer.tappable { cursor: pointer; }
+        .tc-flip-outer.tappable .tc-front { animation: glowPulse 2.4s ease-in-out infinite; }
+        .tc-flip-outer.tappable:focus-visible { outline: 2px solid var(--gold); outline-offset: 4px; }
+        /* 大アルカナは開いた後のカード（.static-card.big）と同じ大きさ */
+        .tc-flip-outer.tc-big { width: 168px; height: 252px; }
+        .tc-flip { position: absolute; inset: 0; transform-style: preserve-3d; transition: transform 1.1s cubic-bezier(.45,.05,.25,1); }
+        .tc-flip-outer.open .tc-flip { transform: rotateY(540deg); }
+        .tc-face { position: absolute; inset: 0; border-radius: 12px; overflow: hidden; backface-visibility: hidden; -webkit-backface-visibility: hidden; }
+        .tc-front { border: 1px solid var(--gold-dim); box-shadow: 0 1px 2px rgba(0,0,0,0.75), 0 10px 30px rgba(0,0,0,0.5); }
+        .tc-back { transform: rotateY(180deg); }
         .position-label { font-family: 'Cinzel', serif; font-size: 11px; letter-spacing: 0.15em; color: var(--gold); }
+        /* 位置ラベルと同寸。明滅は薄い側に振り、消えきらせない（点滅は目に障る） */
+        .tap-hint { font-size: 11px; letter-spacing: 0.12em; color: var(--gold-soft); animation: tapHintBlink 2s ease-in-out infinite; }
+        @keyframes tapHintBlink { 0%, 100% { opacity: 0.4; } 50% { opacity: 1; } }
 
         .static-card { width: 130px; height: 194px; border-radius: 12px; border: 1px solid var(--gold); background: linear-gradient(160deg, #1a1440, var(--surface)); display: flex; align-items: center; justify-content: center; overflow: hidden; }
         .static-card.big { width: 168px; height: 252px; }
@@ -11485,11 +11607,14 @@ export default function TarotDraw() {
 
         @media (prefers-reduced-motion: reduce) {
           .mini-card, .draw-btn, .climax-btn, .held-chip, .result-area, .major-stage, .mini-card.vanish, .tarot-header h1 { animation: none !important; transition: none !important; }
+          .tc-flip { transition: none !important; }
+          .tap-hint { animation: none !important; opacity: 1; }
         }
         @media (max-width: 520px) {
           .tarot-header h1 { font-size: 24px; }
           .mini-card { width: 32px; height: 48px; }
           .static-card { width: 108px; height: 160px; }
+          .tc-flip-outer { width: 108px; height: 160px; }
           .static-card.big { width: 140px; height: 208px; }
           .card-slot { width: 116px; }
         }
@@ -11815,7 +11940,7 @@ export default function TarotDraw() {
                   disabled={phase === "major-confirm" || phase === "major-resolving"}
                   aria-label="カードを選ぶ"
                 >
-                  <span className="mini-emblem">✦</span>
+                  <TarotCardBack style={{ position: "absolute", inset: 0, borderRadius: "inherit" }} />
                 </button>
               );
             })}
@@ -11882,7 +12007,7 @@ export default function TarotDraw() {
                   disabled={phase === "minor-confirm" || phase === "minor-resolving"}
                   aria-label="カードを選ぶ"
                 >
-                  <span className="mini-emblem">✦</span>
+                  <TarotCardBack style={{ position: "absolute", inset: 0, borderRadius: "inherit" }} />
                   {idx >= 0 && <span className="mini-badge">{idx + 1}</span>}
                 </button>
               );
@@ -11911,37 +12036,53 @@ export default function TarotDraw() {
             {minorResults.map((d, i) => (
               <div className="card-slot" key={d.card.id}>
                 <span className="position-label">{POSITION_LABELS_I18N[lang][i]}</span>
-                {i >= revealStage ? (
-                  // まだ開示していない札。既に確定済みで、引き直しても中身は変わらない。
-                  <div
-                    className="static-card"
-                    style={{
-                      display: "flex", alignItems: "center", justifyContent: "center",
-                      background: "linear-gradient(150deg, #1d1730, #120e1e)",
-                      border: "1px solid var(--gold-dim)", borderRadius: "12px",
-                      minHeight: "132px",
-                      animation: reachInfo ? "reachPulse 1.15s ease-in-out infinite" : "none",
-                    }}
-                  >
-                    <Sparkles size={22} style={{ color: "var(--gold-dim)", opacity: 0.65 }} />
-                  </div>
-                ) : (
-                <div className="static-card sheen-card">
-                  <div className="card-depth" aria-hidden="true" />
-                  <div className="card-shine-layer" aria-hidden="true" />
-                  <div className={`card-face ${d.reversed ? "reversed" : ""}`} style={{ "--accent": d.card.accent || "var(--gold)" }}>
-                    <div className="card-corner">{d.card.corner}</div>
-                    <div className="card-icon">{d.card.Icon ? <d.card.Icon size={24} /> : <Sparkles size={24} />}</div>
-                    <div className={`card-text-wrap${needsUprightText ? " keep-readable" : ""}`}>
-                      <div className="card-name">{getCardName(d.card, lang)}</div>
-                      <div className="card-sub">{getCardSub(d.card, lang)}</div>
+                {/*
+                  開封は回転で見せる。伏せ面と表を条件で差し替えると要素が
+                  付け外しになり、CSSの遷移が走らない（値が変わったときにしか動かない）。
+                  両面を常に置いたまま、外側のクラスだけを切り替える。
+                */}
+                <div
+                  className={`tc-flip-outer${i < revealStage ? " open" : ""}${i === revealStage ? " tappable" : ""}`}
+                  /*
+                    リーチの脈動は、2枚開いた後の3枚目にだけ出す。
+                    自動開示だった頃は一瞬で2枚目まで進んだので条件が緩くても問題なかったが、
+                    手でめくる今は、1枚も開く前から脈動すると役の成立が先に漏れる。
+                  */
+                  style={{ animation: (revealStage === 2 && i === 2 && reachInfo) ? "reachPulse 1.15s ease-in-out infinite" : "none" }}
+                  role={i === revealStage ? "button" : undefined}
+                  tabIndex={i === revealStage ? 0 : undefined}
+                  aria-label={i === revealStage ? t.pickAriaLabel : undefined}
+                  onClick={() => advanceMinorReveal(i)}
+                  onKeyDown={(e) => { if (e.key === "Enter" || e.key === " ") { e.preventDefault(); advanceMinorReveal(i); } }}
+                >
+                  <div className="tc-flip">
+                    <div className="tc-face tc-front">
+                      <TarotCardBack />
+                    </div>
+                    <div className="tc-face tc-back">
+                      <div className="static-card sheen-card">
+                        <div className="card-depth" aria-hidden="true" />
+                        <div className="card-shine-layer" aria-hidden="true" />
+                        <div className={`card-face ${d.reversed ? "reversed" : ""}`} style={{ "--accent": d.card.accent || "var(--gold)" }}>
+                          <div className="card-corner">{d.card.corner}</div>
+                          <div className="card-icon">{d.card.Icon ? <d.card.Icon size={24} /> : <Sparkles size={24} />}</div>
+                          <div className={`card-text-wrap${needsUprightText ? " keep-readable" : ""}`}>
+                            <div className="card-name">{getCardName(d.card, lang)}</div>
+                            <div className="card-sub">{getCardSub(d.card, lang)}</div>
+                          </div>
+                        </div>
+                      </div>
                     </div>
                   </div>
                 </div>
-                )}
                 {i < revealStage && (
                   <span className={`orientation ${orientationToneClass(d.card, d.reversed)}`}>{orientationLabel(d.reversed, lang)}</span>
                 )}
+                {/*
+                  めくれる1枚の下にだけ出す。位置ラベルと同じ大きさに揃えることで、
+                  新しい要素ではなく既にある表示の一種として読まれる。
+                */}
+                {i === revealStage && <span className="tap-hint">{t.tapToFlip}</span>}
               </div>
             ))}
           </div>
@@ -12112,17 +12253,26 @@ export default function TarotDraw() {
       {phase === "major-revealed" && majorCard && (
         <div className="major-stage">
           <span className="position-label">{t.themeThemeLabel}</span>
-          <div className="static-card big sheen-card">
-            <div className="card-depth" aria-hidden="true" />
-            <div className="card-shine-layer" aria-hidden="true" />
-            <div className={`card-face ${majorCard.reversed ? "reversed" : ""}`} style={{ "--accent": "var(--gold)" }}>
-              <div className="card-corner">{majorCard.card.corner}</div>
-              <div className="card-icon">
-                <Sparkles size={30} />
+          <div className={`tc-flip-outer tc-big${majorFlipOpen ? " open" : ""}`}>
+            <div className="tc-flip">
+              <div className="tc-face tc-front">
+                <TarotCardBack />
               </div>
-              <div className={`card-text-wrap${needsUprightText ? " keep-readable" : ""}`}>
-                <div className="card-name">{getCardName(majorCard.card, lang)}</div>
-                <div className="card-sub">{getCardSub(majorCard.card, lang)}</div>
+              <div className="tc-face tc-back">
+                <div className="static-card big sheen-card">
+                  <div className="card-depth" aria-hidden="true" />
+                  <div className="card-shine-layer" aria-hidden="true" />
+                  <div className={`card-face ${majorCard.reversed ? "reversed" : ""}`} style={{ "--accent": "var(--gold)" }}>
+                    <div className="card-corner">{majorCard.card.corner}</div>
+                    <div className="card-icon">
+                      <Sparkles size={30} />
+                    </div>
+                    <div className={`card-text-wrap${needsUprightText ? " keep-readable" : ""}`}>
+                      <div className="card-name">{getCardName(majorCard.card, lang)}</div>
+                      <div className="card-sub">{getCardSub(majorCard.card, lang)}</div>
+                    </div>
+                  </div>
+                </div>
               </div>
             </div>
           </div>
