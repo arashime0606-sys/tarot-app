@@ -4439,7 +4439,17 @@ function StarRating({ score, variant, jackpotVariant }) {
 }
 
 
-const FREE_DRAWS_PER_DAY = 3;
+/*
+  お披露目のあいだの暫定値。
+
+  第三者に触ってもらう場では、枠に当たって止まるのが一番もったいない。
+  触っている最中に「明日またお越しください」が出ると、そこで体験が終わる。
+  終わったあとは 3 に戻すこと。戻し忘れるとAPI費用がそのまま増える。
+
+  戻すときはこの行だけを 3 にすればよい。
+  クーポンによる拡張（5 / 8 / 21）はこの値と独立しているので影響しない。
+*/
+const FREE_DRAWS_PER_DAY = 30;
 const SMALL_DRAWS_PER_DAY = 5; // クーポンコード「asakusa」で解放される小拡張上限
 const MEDIUM_DRAWS_PER_DAY = 8; // クーポンコードで解放される中間拡張上限
 const EXPANDED_DRAWS_PER_DAY = 21; // クーポンコードで解放される拡張上限
@@ -6233,6 +6243,7 @@ function HexagramPanel({ lang, onBack, question, userName, canDraw, onConsume, o
     if (loading) return;
     setAiFailed(false);
     setReading("");
+    setRetryNonce((n) => n + 1);
   };
 
   const advanceStage = () => {
@@ -6256,6 +6267,13 @@ function HexagramPanel({ lang, onBack, question, userName, canDraw, onConsume, o
     実際には枠を返しているので、返したことも含めて伝える。
   */
   const [aiFailed, setAiFailed] = useState(false);
+  /*
+    再試行の合図。
+    取得処理の依存配列は [drawn, stage] なので、aiFailed や reading を
+    戻しただけでは処理が再実行されない。値は変わるのに何も起きない、という
+    形の不具合になる。押した回数を依存に含めて、確実に走らせる。
+  */
+  const [retryNonce, setRetryNonce] = useState(0);
   /*
     視点のチェック。鑑定内容には影響しない。
     目的は2つ。相談者自身が「何を見たいのか」を言葉にすること。
@@ -6428,7 +6446,7 @@ function HexagramPanel({ lang, onBack, question, userName, canDraw, onConsume, o
       }
     })();
     return () => { alive = false; };
-  }, [drawn, stage]);
+  }, [drawn, stage, retryNonce]);
 
   // その段階までに開いたカードの添字をすべて集める
   const openedIndices = HEXAGRAM_STAGES.slice(0, stage).flatMap((st) => st.indices);
@@ -7558,8 +7576,21 @@ function AchievementsPanel({ history, lang }) {
 }
 
 function StatsPanel({ history, lang }) {
-  if (history.length === 0) return null;
   const t = T[lang] || T.ja;
+  /*
+    履歴が無いときに null を返すと、統計のサブタブが白紙になる。
+    タブが押せるのに何も出ないのは、壊れているのと見分けが付かない。
+    育成パネルと同じ文言で、まだ何も無いことを伝える。
+  */
+  if (history.length === 0) {
+    return (
+      <div className="stats-panel">
+        <p style={{ fontSize: "12px", color: "var(--muted)", margin: 0, textAlign: "center" }}>
+          {t.characterEmpty}
+        </p>
+      </div>
+    );
+  }
 
   const shortTerm = history.slice(0, 10);   // 短期: 直近10件
   const midTerm = history.slice(0, 30);     // 中期: 直近30件
