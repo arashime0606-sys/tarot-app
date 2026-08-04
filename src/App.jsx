@@ -3166,7 +3166,12 @@ function fallbackHexagramReading(results, lang) {
       札は枠で囲んで独立させ、語句は次の行に置く。
       \u0002 は「枠で囲む札の行」の目印。
     */
-    return `\u0001${t2.hexPosHeading(info.pos[i])}\n\u0002${getCardName(r.card, lang)}（${orientationLabel(r.reversed, lang)}）\n${kw}`;
+    /*
+      枠の目印は向きで分ける。\u0002 が正位置、\u0003 が逆位置。
+      文字列でしか渡せない場所なので、表示側が色を決められるだけの情報を印に持たせる。
+    */
+    const mark = r.reversed ? "\u0003" : "\u0002";
+    return `\u0001${t2.hexPosHeading(info.pos[i])}\n${mark}${getCardName(r.card, lang)}（${orientationLabel(r.reversed, lang)}）\n${kw}`;
   }).join("\n\n");
 }
 
@@ -3564,23 +3569,46 @@ function normalizeReadingText(text) {
     .join("\n\n");
 }
 
+/*
+  再試行してよい失敗かどうか。
+  混雑・レート制限・一時的な通信断は、数秒後には通ることがほとんど。
+  400番台の多く（認証・不正なリクエスト）は何度投げても同じなので試さない。
+  試してはいけないものを試すと、ただ待ち時間が延びるだけになる。
+*/
+const RETRYABLE_STATUS = [408, 425, 429, 500, 502, 503, 504, 529];
+const CALL_RETRY_DELAYS = [700, 1800]; // 最大3回試す（初回＋2回）
+
 async function callClaude(prompt, maxTokens) {
   // AI鑑定がオフの場合は即座に失敗させ、フォールバック定型文に切り替える（API消費ゼロ）
   if (!isAiEnabled()) throw new Error("AI disabled by admin");
-  try {
-    const response = await fetch("/api/fortune", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ prompt, maxTokens }),
-    });
-    if (!response.ok) throw new Error(`API error: ${response.status}`);
-    const data = await response.json();
-    if (!data.text) throw new Error("empty response");
-    return data.text;
-  } catch (error) {
-    console.error("callClaude failed:", error);
-    throw error;
+
+  let lastError = null;
+  for (let attempt = 0; attempt <= CALL_RETRY_DELAYS.length; attempt++) {
+    try {
+      const response = await fetch("/api/fortune", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ prompt, maxTokens }),
+      });
+      if (!response.ok) {
+        const err = new Error(`API error: ${response.status}`);
+        err.status = response.status;
+        throw err;
+      }
+      const data = await response.json();
+      if (!data.text) throw new Error("empty response");
+      return data.text;
+    } catch (error) {
+      lastError = error;
+      // status が無い＝通信そのものが失敗した場合。これは再試行の価値がある
+      const retryable = !error.status || RETRYABLE_STATUS.includes(error.status);
+      if (!retryable || attempt === CALL_RETRY_DELAYS.length) break;
+      console.warn(`callClaude retry ${attempt + 1}:`, error.message);
+      await new Promise((r) => setTimeout(r, CALL_RETRY_DELAYS[attempt]));
+    }
   }
+  console.error("callClaude failed:", lastError);
+  throw lastError;
 }
 
 // SNSシェア用の短いテキストを生成する（外部AI向けの詳細コピーとは別に、
@@ -4538,6 +4566,21 @@ function loadTodayCount() {
     if (!raw) return 0;
     const log = JSON.parse(raw);
     return log.date === todayStr() ? (log.count || 0) : 0;
+  } catch { return 0; }
+}
+/*
+  消費した枠を返す。
+  AI鑑定が失敗してフォールバック文になった回は、枠を使っていないのと同じ。
+  返さないと「AIが出なかったのに残数だけ減る」という、最も納得しがたい形になる。
+  0未満にはしない。消費していない場合に呼ばれても減らない。
+*/
+function refundTodayCount() {
+  try {
+    const current = loadTodayCount();
+    if (current <= 0) return 0;
+    const next = { date: todayStr(), count: current - 1 };
+    localStorage.setItem(LS_COUNT_KEY, JSON.stringify(next));
+    return next.count;
   } catch { return 0; }
 }
 function incrementTodayCount() {
@@ -6131,10 +6174,11 @@ function ReadingBody({ text }) {
     if (line.startsWith("\u0001")) {
       return <span key={i} className="reading-head">{line.slice(1)}</span>;
     }
-    if (line.startsWith("\u0002")) {
+    if (line.startsWith("\u0002") || line.startsWith("\u0003")) {
+      const reversed = line.startsWith("\u0003");
       return (
         <span key={i} className="reading-card-row">
-          <span className="reading-card">{line.slice(1)}</span>
+          <span className={`reading-card${reversed ? " rev" : ""}`}>{line.slice(1)}</span>
         </span>
       );
     }
@@ -6154,7 +6198,7 @@ function NoteLines({ text }) {
   ));
 }
 
-function HexagramPanel({ lang, onBack, question, userName, canDraw, onConsume, aiEnabled }) {
+function HexagramPanel({ lang, onBack, question, userName, canDraw, onConsume, onRefund, aiEnabled }) {
   const t = T[lang] || T.ja;
   const info = spreadInfo("hexagram", lang);
   const spread = SPREADS.hexagram;
@@ -6169,7 +6213,28 @@ function HexagramPanel({ lang, onBack, question, userName, canDraw, onConsume, a
   */
   const [revealLock, setRevealLock] = useState(false);
   const revealTimer = useRef(null);
-  useEffect(() => () => { if (revealTimer.current) clearTimeout(revealTimer.current); }, []);
+  /*
+    盤面に何枚まで配られたか。
+    七枚が一斉に現れると、置かれたのではなく湧いて出たように見える。
+    一枚ずつ置いていく時間そのものが、読み始めるまでの間になる。
+    文言で「呼吸を置いてください」と書くより、置く時間を実際に作るほうが効く。
+  */
+  const [dealt, setDealt] = useState(0);
+  const dealTimer = useRef(null);
+  useEffect(() => () => {
+    if (revealTimer.current) clearTimeout(revealTimer.current);
+    if (dealTimer.current) clearInterval(dealTimer.current);
+  }, []);
+  /*
+    AI鑑定の再取得。
+    失敗したまま何もできない状態にしない。混雑や通信断は時間をおけば通る。
+  */
+  const retryReading = () => {
+    if (loading) return;
+    setAiFailed(false);
+    setReading("");
+  };
+
   const advanceStage = () => {
     if (revealLock) return;
     setRevealLock(true);
@@ -6185,6 +6250,12 @@ function HexagramPanel({ lang, onBack, question, userName, canDraw, onConsume, a
     占いの言葉としてそのまま機能する。
   */
   const [relation, setRelation] = useState("");
+  /*
+    AI鑑定に失敗して定型文に切り替わった回かどうか。
+    定型文だけ出すと、利用者からは「これがAI鑑定だ」と見える。
+    実際には枠を返しているので、返したことも含めて伝える。
+  */
+  const [aiFailed, setAiFailed] = useState(false);
   /*
     視点のチェック。鑑定内容には影響しない。
     目的は2つ。相談者自身が「何を見たいのか」を言葉にすること。
@@ -6276,29 +6347,51 @@ function HexagramPanel({ lang, onBack, question, userName, canDraw, onConsume, a
       起きるので、初期値がその値なら回らずに表が出てしまう。
       一拍おいてから開くことで、0度→540度という変化が生まれ、回転が見える。
     */
+    /*
+      ここで自動的に開かない。
+
+      以前は確定した直後に一段目（過去・現在・未来）が開いていた。
+      七枚を自分で選び終えた達成が、めくる操作を挟まずに結果へ流れてしまい、
+      選んだことと読むことの境目が無かった。
+      いったん全部を伏せたまま止めて、一呼吸置いてから自分の手で開かせる。
+
+      revealLock はその一呼吸のあいだボタンを止めるために使う。
+      すぐ押せてしまうと、間を置いた意味が無くなる。
+    */
     setStage(0);
-    setRevealLock(false);
     if (revealTimer.current) clearTimeout(revealTimer.current);
-    setTimeout(() => setStage(1), 60);
+    if (dealTimer.current) clearInterval(dealTimer.current);
+
+    /*
+      伏せたまま一枚ずつ配る。配り終えるまでボタンは押せない。
+      押せる状態で待たせても、押せるなら押される。間を作りたいなら
+      押せない時間を作る必要がある。
+    */
+    setDealt(0);
+    setRevealLock(true);
+    let n = 0;
+    dealTimer.current = setInterval(() => {
+      n += 1;
+      setDealt(n);
+      if (n >= spread.count) {
+        clearInterval(dealTimer.current);
+        dealTimer.current = null;
+        revealTimer.current = setTimeout(() => setRevealLock(false), 420);
+      }
+    }, 200);
   };
 
   // 最終段階に達したら鑑定を取りに行く
   useEffect(() => {
-    if (!drawn || stage < HEXAGRAM_STAGES.length || reading || loading) return;
+    if (!drawn || stage < HEXAGRAM_STAGES.length || reading || loading || aiFailed) return;
     let alive = true;
     (async () => {
-      setLoading(true);
       /*
-        無料版はAIを呼ばない。ここで aiEnabled を見ていなかったため、
-        無料版からもAPIが飛んでいた。枠の消費も同じ条件に揃える。
+        無料版はAIを呼ばない。形式的な結果はカードから直接組み立てるので、
+        ここでは何もしない。
       */
-      if (!aiEnabled) {
-        if (alive) {
-          setReading(fallbackHexagramReading(drawn.map((d) => ({ card: d, reversed: d.reversed })), lang));
-          setLoading(false);
-        }
-        return;
-      }
+      if (!aiEnabled) return;
+      setLoading(true);
       onConsume && onConsume(); // 回数はここで消費する（カードを見た時点ではなく、鑑定を読む時点）
       try {
         const relationLine = relation.trim()
@@ -6319,7 +6412,17 @@ function HexagramPanel({ lang, onBack, question, userName, canDraw, onConsume, a
         );
         if (alive) setReading(normalizeReadingText(txt));
       } catch {
-        if (alive) setReading(fallbackHexagramReading(drawn.map((d) => ({ card: d, reversed: d.reversed })), lang));
+        /*
+          AIが出せなかった回は枠を返す。消費したのは onConsume を通った回だけなので、
+          そこと対になる位置でだけ返す。
+        */
+        onRefund && onRefund();
+        /*
+          形式的な結果は既に別枠で出ているので、ここでは何も差し替えない。
+          以前は失敗するとAI鑑定の枠に定型文が入り、AIが書いたものと
+          区別が付かなくなっていた。
+        */
+        if (alive) setAiFailed(true);
       } finally {
         if (alive) setLoading(false);
       }
@@ -6518,12 +6621,23 @@ function HexagramPanel({ lang, onBack, question, userName, canDraw, onConsume, a
                     position: "absolute",
                     left: `${pt.x}%`, top: `${pt.y}%`,
                     width: "23%",
+                    // 配り終えていないカードは描かない（opacity 0 で待たせない）
+                    visibility: i < dealt ? "visible" : "hidden",
                     zIndex: 1, // 粒子はこの手前（zIndex 2）を通す
                     // 配置の移動と、めくる回転は別の要素が担う（同じtransformを取り合わない）
                     transform: "translate(-50%, -50%)",
                   }}
                 >
-                  <div style={{ perspective: "700px", width: "100%", aspectRatio: "130 / 194" }}>
+                  {/*
+                    出現の回転はこの内側の要素が担う。
+                    外側は transform で配置そのものを持っているので、そこに
+                    アニメーションの transform を当てると中央合わせごと消えて、
+                    左上から飛んでくる。配置・出現・めくりで要素を分ける。
+                  */}
+                  <div style={{
+                    perspective: "700px", width: "100%", aspectRatio: "130 / 194",
+                    animation: i < dealt ? "cardDealIn .5s cubic-bezier(.2,.85,.25,1)" : "none",
+                  }}>
                     {/*
                       めくる回転。540度＝1回転半で、必ず表を向いて止まる。
                       同じ段階の中でも少しずつ遅らせ、順にめくれていくように見せる。
@@ -6549,7 +6663,13 @@ function HexagramPanel({ lang, onBack, question, userName, canDraw, onConsume, a
                           （実測で未来・対策・周囲・最終結果の4箇所が10〜14px重なっていた）。
                           カード自身の下端に敷くことで、隣とぶつかりようがなくなる。
                         */}
-                        <span className={`hex-pos${i === spread.count - 1 ? " hex-pos-final" : ""}`}>
+                        {/*
+                          向きで色を分ける。
+                          orientationToneClass（そのカードにとって良い向きか）は使わない。
+                          あれはカードごとに正逆の意味が反転するので、
+                          向きそのものを示す色としては読めない。ここは字義どおりの正逆で分ける。
+                        */}
+                        <span className={`hex-pos${i === spread.count - 1 ? " hex-pos-final" : ""}${d.reversed ? " rev" : ""}`}>
                           {info.pos[i]}
                         </span>
                         <div className={`card-face ${d.reversed ? "reversed" : ""}`} style={{ "--accent": d.accent || "var(--gold)" }}>
@@ -6572,6 +6692,15 @@ function HexagramPanel({ lang, onBack, question, userName, canDraw, onConsume, a
             カードが多く縦に長いので、詳細の下に置くと押す場所を探すことになる。
             盤面を見てそのまま進めるのが自然な流れになる。
           */}
+          {/*
+            伏せ終えた直後だけ出す。読むための構えを作る一文。
+            段が進んでからも出し続けると、ただの説明文になって効かない。
+          */}
+          {/* 配り終えてから出す。配っている最中に出すと、まだ途中なのに終わったように見える */}
+          {stage === 0 && dealt >= spread.count && (
+            <p className="hex-ritual"><NoteLines text={t.hexRitual} /></p>
+          )}
+
           {!isLast && (
             <button className="draw-btn" onClick={advanceStage} disabled={revealLock}>
               <Sparkles size={15} />
@@ -6598,7 +6727,7 @@ function HexagramPanel({ lang, onBack, question, userName, canDraw, onConsume, a
                   <div key={idx} className="hex-stage-row">
                     <span className="hex-stage-pos">{info.pos[idx]}</span>
                     <div style={{ flex: 1, minWidth: 0 }}>
-                      <div className="hex-stage-card">
+                      <div className={`hex-stage-card${d.reversed ? " rev" : ""}`}>
                         {getCardName(d, lang)}
                         {suit === "major" && (
                           <span className="hex-major-tag">{t.majorTag}</span>
@@ -6624,16 +6753,45 @@ function HexagramPanel({ lang, onBack, question, userName, canDraw, onConsume, a
             />
           )}
 
+          {/*
+            形式的な結果。カードから機械的に組み立てたもので、AIは関係しない。
+            AIの成否にかかわらず必ず出る。
+          */}
           {isLast && (
             <div className="ai-reading" style={{ marginTop: "4px" }}>
               <div className="ai-label">
-                <Sparkles size={12} /> <span>{info.name}</span>
+                <Sparkles size={12} /> <span>{t.hexFormalLabel}</span>
+              </div>
+              <p className="reading-body">
+                <ReadingBody text={fallbackHexagramReading(drawn.map((d) => ({ card: d, reversed: d.reversed })), lang)} />
+              </p>
+            </div>
+          )}
+
+          {/*
+            AI鑑定。形式的な結果とは別の枠に置く。
+            同じ枠に入れると、失敗して定型文に切り替わったとき、
+            それがAIの書いたものかどうか読み手には区別が付かない。
+            有料版でのみ出す。
+          */}
+          {isLast && aiEnabled && (
+            <div className="ai-reading" style={{ marginTop: "4px" }}>
+              <div className="ai-label">
+                <Sparkles size={12} /> <span>{t.hexAiLabel}</span>
               </div>
               {loading ? (
                 <p style={{ color: "var(--muted)" }}>
                   {t.finalJudgmentLoading}
                   <span className="loading-dots"><span /><span /><span /></span>
                 </p>
+              ) : aiFailed ? (
+                <>
+                  <p className="ai-failed-note"><NoteLines text={t.hexAiFailed} /></p>
+                  <button className="draw-btn" onClick={retryReading}>
+                    <RotateCcw size={15} />
+                    {t.hexRetry}
+                  </button>
+                </>
               ) : (
                 <p className="reading-body"><ReadingBody text={reading} /></p>
               )}
@@ -8207,7 +8365,8 @@ const T = {
     majorReadingLabel: "메이저 아르카나 해석 (처음 고른 한 장, 방향 선택 포함)",
     finalJudgmentLabel: "당신의 물음에 대한 점단",
     finalJudgmentLoading: "점단을 헤아리는 중입니다 (30초 정도 기다려 주세요)",
-    finalJudgmentFailed: "지금은 점단을 내릴 수 없습니다. 잠시 후 다시 시도해 주세요.",
+    finalJudgmentFailed: "지금은 점단을 내릴 수 없습니다. 잠시 후 다시 시도해 주세요.\n이번 횟수는 차감되지 않았습니다.",
+    hexAiFailed: "지금은 AI 해석을 불러올 수 없어, 기본 해설을 표시하고 있습니다. 이번 횟수는 차감되지 않았습니다.",
     resumeSessionTitle: "✦ 지난번 점이 도중에 멈춰 있습니다 ✦",
     resumeSessionBody: "마이너 아르카나는 이미 뽑혀 있습니다. 이어서 결과까지 볼 수 있어요.",
     resumeSessionButton: "지난번부터 이어하기",
@@ -8364,7 +8523,11 @@ const T = {
     spreadComingSoon: "준비 중",
     affinityLabel: "AFFINITY　현재의 궁합",
     hexStageTitle: {"self": "당신의 발자취", "other": "상대의 마음", "around": "주변의 상황", "choice": "앞으로의 선택"},
-    hexNext: {"other": "이제 상대의 마음을 봅시다", "around": "이제 주변의 상황을 봅시다", "choice": "이제 앞으로의 선택을 봅시다"},
+    hexNext: {"self": "먼저, 당신의 발자취를 봅시다", "other": "다음으로, 상대의 마음을 봅시다", "around": "그럼, 주변의 상황을 봅시다", "choice": "마지막으로, 앞으로의 선택을 봅시다"},
+    hexRitual: "일곱 장의 카드가 놓였습니다。",
+    hexFormalLabel: "형식적 결과",
+    hexAiLabel: "AI 해석",
+    hexRetry: "다시 시도하기",
     hexPickPrompt: (n, pos) => `「${pos}」의 카드를 골라주세요 (남은 ${n}장)`,
     hexConfirmPrompt: "일곱 장 모두 골랐습니다",
     pickAriaLabel: "카드를 고르기",
@@ -8414,7 +8577,8 @@ const T = {
     majorReadingLabel: "Luận giải Ẩn Chính (về lá đầu tiên, bao gồm cả chiều bạn đã chọn)",
     finalJudgmentLabel: "Lời phán cho câu hỏi của bạn",
     finalJudgmentLoading: "Đang chiêm nghiệm lời phán (xin đợi khoảng 30 giây)",
-    finalJudgmentFailed: "Hiện chưa thể đưa ra lời phán. Xin thử lại sau ít phút.",
+    finalJudgmentFailed: "Hiện chưa thể đưa ra lời phán. Xin thử lại sau ít phút.\nLần này không bị trừ lượt.",
+    hexAiFailed: "Hiện chưa lấy được luận giải AI nên đang hiển thị phần diễn giải cơ bản. Lần này không bị trừ lượt.",
     resumeSessionTitle: "✦ Lần xem trước còn dang dở ✦",
     resumeSessionBody: "Các lá Ẩn Phụ đã được rút rồi. Bạn có thể tiếp tục để xem trọn kết quả.",
     resumeSessionButton: "Tiếp tục từ lần trước",
@@ -8568,7 +8732,11 @@ const T = {
     spreadComingSoon: "sắp có",
     affinityLabel: "AFFINITY　Hợp duyên hiện tại",
     hexStageTitle: {"self": "Dấu Chân Của Bạn", "other": "Lòng Người Ấy", "around": "Hoàn Cảnh Xung Quanh", "choice": "Lựa Chọn Phía Trước"},
-    hexNext: {"other": "Giờ, hãy xem lòng người ấy", "around": "Giờ, hãy xem hoàn cảnh xung quanh", "choice": "Giờ, hãy xem lựa chọn phía trước"},
+    hexNext: {"self": "Trước hết, hãy xem hành trình của bạn", "other": "Tiếp theo, hãy xem lòng người ấy", "around": "Giờ, hãy xem hoàn cảnh xung quanh", "choice": "Cuối cùng, hãy xem lựa chọn phía trước"},
+    hexRitual: "Bảy lá bài đã được úp xuống。",
+    hexFormalLabel: "Kết quả cơ bản",
+    hexAiLabel: "Luận giải AI",
+    hexRetry: "Thử lại",
     hexPickPrompt: (n, pos) => `Chọn lá bài cho "${pos}" (còn ${n} lá)`,
     hexConfirmPrompt: "Đã chọn đủ bảy lá bài",
     pickAriaLabel: "Chọn một lá bài",
@@ -8618,7 +8786,8 @@ const T = {
     majorReadingLabel: "Tafsir Major Arcana (tentang kartu pertama, termasuk arah yang kamu pilih)",
     finalJudgmentLabel: "Jawaban atas pertanyaanmu",
     finalJudgmentLoading: "Sedang menyusun jawaban (mohon tunggu sekitar 30 detik)",
-    finalJudgmentFailed: "Saat ini jawaban belum dapat disusun. Silakan coba lagi beberapa saat kemudian.",
+    finalJudgmentFailed: "Saat ini jawaban belum dapat disusun. Silakan coba lagi beberapa saat kemudian.\nKuota kali ini tidak terpakai.",
+    hexAiFailed: "Bacaan AI belum bisa diambil, jadi yang tampil adalah penjelasan dasar. Kuota kali ini tidak terpakai.",
     resumeSessionTitle: "✦ Ramalan sebelumnya berhenti di tengah jalan ✦",
     resumeSessionBody: "Kartu Minor Arcana sudah terlanjur ditarik. Kamu bisa melanjutkan dan melihat hasilnya sampai tuntas.",
     resumeSessionButton: "Lanjutkan dari sebelumnya",
@@ -8770,7 +8939,11 @@ const T = {
     spreadComingSoon: "segera",
     affinityLabel: "AFFINITY　Kecocokan saat ini",
     hexStageTitle: {"self": "Jejakmu", "other": "Hatinya", "around": "Keadaan Sekitar", "choice": "Pilihan ke Depan"},
-    hexNext: {"other": "Sekarang, mari lihat hatinya", "around": "Sekarang, mari lihat keadaan sekitar", "choice": "Sekarang, mari lihat pilihan ke depan"},
+    hexNext: {"self": "Pertama, mari lihat jejak langkahmu", "other": "Berikutnya, mari lihat isi hatinya", "around": "Sekarang, mari lihat keadaan sekitar", "choice": "Terakhir, mari lihat pilihan ke depan"},
+    hexRitual: "Tujuh kartu telah tertutup。",
+    hexFormalLabel: "Hasil dasar",
+    hexAiLabel: "Bacaan AI",
+    hexRetry: "Coba lagi",
     hexPickPrompt: (n, pos) => `Pilih kartu untuk "${pos}" (sisa ${n})`,
     hexConfirmPrompt: "Ketujuh kartu sudah dipilih",
     pickAriaLabel: "Pilih kartu",
@@ -8822,7 +8995,8 @@ const T = {
     majorReadingLabel: "Tafsir Major Arcana (tentang kad pertama, termasuk arah yang anda pilih)",
     finalJudgmentLabel: "Jawaban atas soalan anda",
     finalJudgmentLoading: "Sedang menyusun jawaban (mohon tunggu sekitar 30 detik)",
-    finalJudgmentFailed: "Saat ini jawaban belum dapat disusun. Sila cuba lagi beberapa saat kemudian.",
+    finalJudgmentFailed: "Saat ini jawaban belum dapat disusun. Sila cuba lagi beberapa saat kemudian.\nKuota kali ini tidak digunakan.",
+    hexAiFailed: "Tilikan AI belum dapat diambil, jadi yang dipaparkan ialah penerangan asas. Kuota kali ini tidak digunakan.",
     resumeSessionTitle: "✦ Tilikan sebelumnya berhenti di tengah jalan ✦",
     resumeSessionBody: "Kad Minor Arcana sudah terlanjur ditarik. Anda boleh melanjutkan dan melihat hasilnya sampai tuntas.",
     resumeSessionButton: "Lanjutkan dari sebelumnya",
@@ -8974,7 +9148,11 @@ const T = {
     spreadComingSoon: "akan datang",
     affinityLabel: "AFFINITY　Keserasian kini",
     hexStageTitle: {"self": "Jejak Anda", "other": "Hatinya", "around": "Keadaan Sekeliling", "choice": "Pilihan ke Hadapan"},
-    hexNext: {"other": "Sekarang, mari lihat hatinya", "around": "Sekarang, mari lihat keadaan sekeliling", "choice": "Sekarang, mari lihat pilihan ke hadapan"},
+    hexNext: {"self": "Pertama, mari lihat jejak langkah anda", "other": "Seterusnya, mari lihat isi hatinya", "around": "Kini, mari lihat keadaan sekeliling", "choice": "Akhir sekali, mari lihat pilihan mendatang"},
+    hexRitual: "Tujuh kad telah ditutup。",
+    hexFormalLabel: "Keputusan asas",
+    hexAiLabel: "Bacaan AI",
+    hexRetry: "Cuba lagi",
     hexPickPrompt: (n, pos) => `Pilih kad untuk "${pos}" (tinggal ${n})`,
     hexConfirmPrompt: "Ketujuh-tujuh kad sudah dipilih",
     pickAriaLabel: "Pilih kad",
@@ -9026,7 +9204,8 @@ const T = {
     majorReadingLabel: "大アルカナの解釈（向きまで選んだ最初の1枚のカードについて）",
     finalJudgmentLabel: "問いに対する占断",
     finalJudgmentLoading: "占断を導いています（30秒ほどお待ちください）",
-    finalJudgmentFailed: "只今、占断を導くことができませんでした。時間をおいてもう一度お試しください。",
+    finalJudgmentFailed: "只今、占断を導くことができませんでした。時間をおいてもう一度お試しください。\n今回の回数は消費されていません。",
+    hexAiFailed: "AI鑑定を取得できなかったため、基本の解説を表示しています。今回の回数は消費されていません。",
     resumeSessionTitle: "✦ 前回、占いの途中で終了しています ✦",
     resumeSessionBody: "小アルカナの結果はすでに引かれています。続きから、結果を最後まで見ることができます。",
     resumeSessionButton: "続きから再開する",
@@ -9179,7 +9358,11 @@ const T = {
     spreadComingSoon: "準備中",
     affinityLabel: "AFFINITY　今現在の相性",
     hexStageTitle: {"self": "あなたの軌跡", "other": "相手の心", "around": "周囲の状況", "choice": "これからの選択"},
-    hexNext: {"other": "では、相手の心を見ましょう", "around": "では、周囲の状況を見ましょう", "choice": "では、これからの選択を見ましょう"},
+    hexNext: {"self": "まず、あなたの軌跡を見ましょう", "other": "次に、相手の心を見ましょう", "around": "では、周囲の状況を見ましょう", "choice": "最後に、これからの選択を見ましょう"},
+    hexRitual: "七枚のカードが伏せられました。",
+    hexFormalLabel: "形式的な結果",
+    hexAiLabel: "AI鑑定",
+    hexRetry: "AI鑑定をもう一度試す",
     hexPickPrompt: (n, pos) => `「${pos}」のカードを選んでください（残り${n}枚）`,
     hexConfirmPrompt: "7枚すべて選び終えました",
     pickAriaLabel: "カードを選ぶ",
@@ -9231,7 +9414,8 @@ const T = {
     majorReadingLabel: "大阿爾克那的解讀（關於第一張選中的主題牌，含正逆位）",
     finalJudgmentLabel: "針對提問的占斷",
     finalJudgmentLoading: "正在導出占斷結果（請稍候約30秒）",
-    finalJudgmentFailed: "目前無法導出占斷結果，請稍後再試一次。",
+    finalJudgmentFailed: "目前無法導出占斷結果，請稍後再試一次。\n本次並未消耗次數。",
+    hexAiFailed: "無法取得AI解讀，因此顯示基本解說。本次並未消耗次數。",
     resumeSessionTitle: "✦ 上次的占卜尚未完成 ✦",
     resumeSessionBody: "小阿爾克那的結果已經抽出。您可以繼續查看完整的結果。",
     resumeSessionButton: "繼續上次的占卜",
@@ -9383,7 +9567,11 @@ const T = {
     spreadComingSoon: "準備中",
     affinityLabel: "AFFINITY　目前的契合度",
     hexStageTitle: {"self": "你的軌跡", "other": "對方的心", "around": "周遭的狀況", "choice": "接下來的選擇"},
-    hexNext: {"other": "接著，來看對方的心", "around": "接著，來看周遭的狀況", "choice": "接著，來看接下來的選擇"},
+    hexNext: {"self": "首先，來看你走過的路", "other": "接著，來看對方的心", "around": "那麼，來看周遭的狀況", "choice": "最後，來看接下來的選擇"},
+    hexRitual: "七張牌已經覆蓋。",
+    hexFormalLabel: "形式上的結果",
+    hexAiLabel: "AI解讀",
+    hexRetry: "再試一次",
     hexPickPrompt: (n, pos) => `請選出「${pos}」的牌（還剩 ${n} 張）`,
     hexConfirmPrompt: "七張牌都已選好",
     pickAriaLabel: "選一張牌",
@@ -9435,7 +9623,8 @@ const T = {
     majorReadingLabel: "大阿尔克那的解读（关于第一张选中的主题牌，含正逆位）",
     finalJudgmentLabel: "针对提问的占断",
     finalJudgmentLoading: "正在导出占断结果（请稍候约30秒）",
-    finalJudgmentFailed: "目前无法导出占断结果，请稍后再试一次。",
+    finalJudgmentFailed: "目前无法导出占断结果，请稍后再试一次。\n本次并未消耗次数。",
+    hexAiFailed: "无法获取AI解读，因此显示基本解说。本次并未消耗次数。",
     resumeSessionTitle: "✦ 上次的占卜尚未完成 ✦",
     resumeSessionBody: "小阿尔克那的结果已经抽出。您可以继续查看完整的结果。",
     resumeSessionButton: "继续上次的占卜",
@@ -9587,7 +9776,11 @@ const T = {
     spreadComingSoon: "准备中",
     affinityLabel: "AFFINITY　当前的契合度",
     hexStageTitle: {"self": "你的轨迹", "other": "对方的心", "around": "周遭的状况", "choice": "接下来的选择"},
-    hexNext: {"other": "接着，来看对方的心", "around": "接着，来看周遭的状况", "choice": "接着，来看接下来的选择"},
+    hexNext: {"self": "首先，来看你走过的路", "other": "接着，来看对方的心", "around": "那么，来看周遭的状况", "choice": "最后，来看接下来的选择"},
+    hexRitual: "七张牌已经覆盖。",
+    hexFormalLabel: "形式上的结果",
+    hexAiLabel: "AI解读",
+    hexRetry: "再试一次",
     hexPickPrompt: (n, pos) => `请选出「${pos}」的牌（还剩 ${n} 张）`,
     hexConfirmPrompt: "七张牌都已选好",
     pickAriaLabel: "选一张牌",
@@ -9639,7 +9832,8 @@ const T = {
     majorReadingLabel: "Major Arcana Reading (about your first chosen card, including orientation)",
     finalJudgmentLabel: "Judgment on Your Question",
     finalJudgmentLoading: "Drawing out your judgment (about 30 seconds)",
-    finalJudgmentFailed: "We couldn't draw out your judgment right now. Please try again in a moment.",
+    finalJudgmentFailed: "We couldn't draw out your judgment right now. Please try again in a moment.\nThis attempt was not counted against your daily limit.",
+    hexAiFailed: "We couldn't fetch the AI reading, so the basic interpretation is shown instead. This attempt was not counted against your daily limit.",
     resumeSessionTitle: "✦ Your last reading wasn't finished ✦",
     resumeSessionBody: "Your Minor Arcana cards have already been drawn. You can continue to see the full result.",
     resumeSessionButton: "Resume where you left off",
@@ -9791,7 +9985,11 @@ const T = {
     spreadComingSoon: "soon",
     affinityLabel: "AFFINITY　Right now",
     hexStageTitle: {"self": "Your Path", "other": "Their Heart", "around": "The Surroundings", "choice": "The Choice Ahead"},
-    hexNext: {"other": "Now, let us see their heart", "around": "Now, let us see the surroundings", "choice": "Now, let us see the choice ahead"},
+    hexNext: {"self": "First, let us see the path you walked", "other": "Next, let us see their heart", "around": "Now, let us see the surroundings", "choice": "Finally, let us see the choice ahead"},
+    hexRitual: "The seven cards lie face down。",
+    hexFormalLabel: "Formal result",
+    hexAiLabel: "AI reading",
+    hexRetry: "Try the AI reading again",
     hexPickPrompt: (n, pos) => `Choose the card for "${pos}" (${n} left)`,
     hexConfirmPrompt: "All seven cards have been chosen",
     pickAriaLabel: "Choose a card",
@@ -9843,7 +10041,8 @@ const T = {
     majorReadingLabel: "Major Arcana Reading (tungkol sa unang card mo, kasama ang orientation)",
     finalJudgmentLabel: "Hula Ukol sa Tanong Mo",
     finalJudgmentLoading: "Ginagawa ang huling hula (mga 30 segundo)",
-    finalJudgmentFailed: "Hindi namin nagawang ilabas ang hula ngayon. Subukan ulit mamaya.",
+    finalJudgmentFailed: "Hindi namin nagawang ilabas ang hula ngayon. Subukan ulit mamaya.\nHindi nabawasan ang bilang mo ngayon.",
+    hexAiFailed: "Hindi namin nakuha ang AI reading, kaya ang basic na paliwanag ang ipinapakita. Hindi nabawasan ang bilang mo ngayon.",
     resumeSessionTitle: "✦ Hindi natapos ang huling reading mo ✦",
     resumeSessionBody: "Nakuha mo na ang mga Minor Arcana card mo. Maaari mong ipagpatuloy para makita ang buong resulta.",
     resumeSessionButton: "Ituloy kung saan ka huminto",
@@ -9995,7 +10194,11 @@ const T = {
     spreadComingSoon: "malapit na",
     affinityLabel: "AFFINITY　Sa ngayon",
     hexStageTitle: {"self": "Ang Iyong Landas", "other": "Ang Puso Niya", "around": "Ang Paligid", "choice": "Ang Pagpipilian"},
-    hexNext: {"other": "Ngayon, tingnan natin ang puso niya", "around": "Ngayon, tingnan natin ang paligid", "choice": "Ngayon, tingnan natin ang pagpipilian"},
+    hexNext: {"self": "Una, tingnan natin ang landas mo", "other": "Sunod, tingnan natin ang puso niya", "around": "Ngayon, tingnan natin ang paligid", "choice": "Panghuli, tingnan natin ang piliing susunod"},
+    hexRitual: "Nakatihaya na ang pitong baraha。",
+    hexFormalLabel: "Pormal na resulta",
+    hexAiLabel: "AI reading",
+    hexRetry: "Subukan ulit",
     hexPickPrompt: (n, pos) => `Piliin ang baraha para sa "${pos}" (${n} pa)`,
     hexConfirmPrompt: "Napili na ang lahat ng pitong baraha",
     pickAriaLabel: "Pumili ng baraha",
@@ -10047,7 +10250,8 @@ const T = {
     majorReadingLabel: "การตีความ Major Arcana (เกี่ยวกับไพ่ใบแรกของคุณ รวมถึงทิศทาง)",
     finalJudgmentLabel: "คำพยากรณ์ต่อคำถามของคุณ",
     finalJudgmentLoading: "กำลังพยากรณ์ (ใช้เวลาประมาณ 30 วินาที)",
-    finalJudgmentFailed: "ขณะนี้ไม่สามารถพยากรณ์ได้ กรุณาลองใหม่อีกครั้งในภายหลัง",
+    finalJudgmentFailed: "ขณะนี้ไม่สามารถพยากรณ์ได้ กรุณาลองใหม่อีกครั้งในภายหลัง\nครั้งนี้ไม่ถูกหักจำนวนครั้ง",
+    hexAiFailed: "ไม่สามารถดึงคำทำนายจาก AI ได้ จึงแสดงคำอธิบายพื้นฐานแทน ครั้งนี้ไม่ถูกหักจำนวนครั้ง",
     resumeSessionTitle: "✦ การดูดวงครั้งก่อนยังไม่เสร็จสมบูรณ์ ✦",
     resumeSessionBody: "ไพ่ Minor Arcana ของคุณถูกจับไปแล้ว คุณสามารถดูผลลัพธ์ที่สมบูรณ์ต่อได้",
     resumeSessionButton: "ดำเนินการต่อจากที่ค้างไว้",
@@ -10199,7 +10403,11 @@ const T = {
     spreadComingSoon: "เร็วๆ นี้",
     affinityLabel: "AFFINITY　ความเข้ากันในตอนนี้",
     hexStageTitle: {"self": "เส้นทางของคุณ", "other": "ใจของอีกฝ่าย", "around": "สภาพแวดล้อม", "choice": "ทางเลือกข้างหน้า"},
-    hexNext: {"other": "ต่อไป มาดูใจของอีกฝ่ายกัน", "around": "ต่อไป มาดูสภาพแวดล้อมกัน", "choice": "ต่อไป มาดูทางเลือกข้างหน้ากัน"},
+    hexNext: {"self": "อันดับแรก มาดูเส้นทางของคุณกัน", "other": "ต่อไป มาดูใจของอีกฝ่ายกัน", "around": "ทีนี้ มาดูสภาพแวดล้อมกัน", "choice": "สุดท้าย มาดูทางเลือกข้างหน้ากัน"},
+    hexRitual: "ไพ่ทั้งเจ็ดถูกคว่ำไว้แล้ว。",
+    hexFormalLabel: "ผลลัพธ์พื้นฐาน",
+    hexAiLabel: "คำทำนายจาก AI",
+    hexRetry: "ลองอีกครั้ง",
     hexPickPrompt: (n, pos) => `เลือกไพ่สำหรับ "${pos}" (เหลืออีก ${n} ใบ)`,
     hexConfirmPrompt: "เลือกครบทั้งเจ็ดใบแล้ว",
     pickAriaLabel: "เลือกไพ่",
@@ -10288,6 +10496,21 @@ export default function TarotDraw() {
   const [navTab, setNavTab] = useState("draw"); // ボトムナビで選択中の画面
   const [recordsTab, setRecordsTab] = useState("last"); // 記録タブ内のサブタブ
   const [drawMode, setDrawMode] = useState("select"); // "select" | "oneOracle" | "three"
+  /*
+    枠の二段消費。
+
+    小アルカナが確定した時点で「暫定消費」する。ここで減らさないと、
+    札を見てから引き直す（リセマラ）が通ってしまう。
+
+    確定するのは「AIを使う機会が終わったとき」。文章が出れば確定、
+    問いを書かずにAIを使わない選択をした場合も確定、途中で離脱しても確定。
+    返すのはAIが失敗したときだけ。
+
+    ここを「AI文章が出たら確定」にすると穴が開く。
+    札を見る→悪い→問いを書かずに進める→未確定なので返却→引き直し、が通る。
+    確定条件は結果の有無ではなく、機会を使ったかどうかで決める。
+  */
+  const pendingConsumeRef = useRef(false);
   const [showA2HS, setShowA2HS] = useState(false);       // ホーム画面追加の案内を出すか
   const [installPrompt, setInstallPrompt] = useState(null); // Android/Chrome のインストールイベント
   const [equippedTitle, setEquippedTitle] = useState(loadEquippedTitle());
@@ -10713,6 +10936,11 @@ export default function TarotDraw() {
   };
 
   const reset = () => {
+    /*
+      前の回が暫定のまま残っていたら、ここで確定させる。
+      途中で離脱した回を返してしまうと、離脱そのものが引き直しの手段になる。
+    */
+    pendingConsumeRef.current = false;
     setQuestion("");
     setMajorPool([]);
     setMajorSelectedId(null);
@@ -10818,7 +11046,23 @@ export default function TarotDraw() {
     if (phase !== "major-confirm" || !majorSelectedId) return;
     const card = MAJOR_LIST.find((c) => c.id === majorSelectedId);
     if (!card) return;
-    setMajorCard({ card, reversed: card.reversed });
+    /*
+      向きは majorPool から取る。
+
+      ここで MAJOR_LIST を参照していたのが致命的な誤りだった。
+      MAJOR_LIST はシャッフル前の元データで reversed を持たない。
+      buildPool が正逆を決めるのは複製した側なので、元データの reversed は
+      常に undefined ―― つまり必ず正位置になっていた。
+      引いた札の向きが、選んだ瞬間に捨てられていたことになる。
+
+      小アルカナ側は minorPool から取っており正しい。誤っていたのは大アルカナだけ。
+    */
+    const picked = majorPool.find((c) => c.id === majorSelectedId);
+    if (!picked) {
+      // 本来起きない。ただし静かに正位置へ倒れるくらいなら、公平な二択に倒す
+      console.warn("majorPool entry missing; falling back to a fair coin flip");
+    }
+    setMajorCard({ card, reversed: picked ? !!picked.reversed : Math.random() < 0.5 });
     setPhase("major-resolving");
     setTimeout(() => {
       setMinorPool(buildPool(MINOR_LIST));
@@ -10923,7 +11167,11 @@ export default function TarotDraw() {
     setMinorResults(results);
     // 小アルカナ3枚が確定した瞬間＝結果の中身が決まる瞬間なので、ここで回数を消費する
     // （テーマカードを開く前にリロードして引き直す、というリセマラ抜け道を防ぐ）
-    if (!isFreeDraw) setTodayCount(incrementTodayCount());
+    // 暫定消費。ここで減らすことが、札を見てからの引き直しを止める
+    if (!isFreeDraw) {
+      setTodayCount(incrementTodayCount());
+      pendingConsumeRef.current = true;
+    }
     // 進行中セッションを保存（不意のリロード・離脱からの復帰用。課金導線実装後の信頼性に直結する）
     savePendingSession({
       majorCardId: majorCard.card.id,
@@ -11002,6 +11250,11 @@ export default function TarotDraw() {
     const willUseAi = isAiEnabled() && question && question.trim();
     let text3 = "";
 
+    if (!willUseAi) {
+      // AIを使わない選択をした回。機会は使ったので確定させる（返さない）
+      pendingConsumeRef.current = false;
+    }
+
     if (willUseAi) {
       setReading3Loading(true);
       try {
@@ -11016,7 +11269,17 @@ export default function TarotDraw() {
         const board = summarizeBoard(resolvedMajor, minorResults, lang);
         text3 = normalizeReadingText(await callClaude(buildFinalJudgmentPrompt(resolvedMajor, minorResults, reading1, text2, question, AI_LANG_INSTRUCTION[lang], recallBlock, board), 2000));
         setReading3(text3);
+        pendingConsumeRef.current = false; // 文章が出た。ここで確定
       } catch (e) {
+        /*
+          枠は小アルカナ確定時点で暫定消費済み。AIが出せなかったのだから返す。
+          二重に返さないよう、暫定のままの回だけを対象にする。
+          無料版はそもそも willUseAi が false なのでここには来ない。
+        */
+        if (pendingConsumeRef.current) {
+          setTodayCount(refundTodayCount());
+          pendingConsumeRef.current = false;
+        }
         text3 = t.finalJudgmentFailed; // 失敗時も無音にせず、分かりやすいメッセージを表示
         setReading3(text3);
       } finally {
@@ -11288,6 +11551,15 @@ export default function TarotDraw() {
           --gold: #c9a24b;
           --gold-soft: #e7cf99;
           --parchment: #f1ead8;
+          /*
+            向きの二色。彩度と明度を揃え、色相だけを離してある。
+            相対輝度はどちらも約0.48で、片方だけ読みにくくならない。
+            逆位置を暗くすると、色が「不吉」という意味まで運んでしまう。
+          */
+          --orient-up: #EAA6A6;
+          --orient-rev: #A6B6EA;
+          --orient-up-soft: #F0C6C6;
+          --orient-rev-soft: #BFCBF2;
           --muted: #a99bc9;
           --rose: #c97a92;
           --wand: #d97a3f;
@@ -11464,9 +11736,14 @@ export default function TarotDraw() {
           色相は寒色のまま保つ。札名（暖色の生成り）との役割の差は、
           色相・大きさ・太さで付いているので、明るくしても階層は崩れない。
         */
+        /*
+          見出しは金。正逆の赤と青から色相が離れているので、
+          三者が別々の役割として読める。
+          背景に対するコントラスト比は約8で、11pxでも問題なく読める。
+        */
         .reading-head {
           display: block; font-size: 11px; letter-spacing: 0.12em;
-          color: #C3BAD8; margin: 15px 0 4px;
+          color: #D8C89C; margin: 15px 0 4px;
         }
         .reading-head:first-child { margin-top: 0; }
         .reading-line { display: block; }
@@ -11476,11 +11753,24 @@ export default function TarotDraw() {
           光るのは語句の行だけにして、見出し・札・語句の三段に差を付ける。
         */
         .reading-card-row { display: block; margin: 0 0 4px; }
+        /*
+          正位置と逆位置の二色。
+          色相を離し、明度は揃える。明度で差を付けると、逆位置だけ沈んで
+          「読みにくい方」ができる。どちらも同じだけ読めた上で、別の色に見えるのが目標。
+        */
+        .hex-pos.rev { color: var(--orient-rev); }
+        .hex-stage-card.rev { color: var(--orient-rev); }
+        .reading-card.rev {
+          color: var(--orient-rev-soft);
+          border-color: rgba(140,160,225,0.55);
+          background: rgba(140,160,225,0.10);
+        }
+
         .reading-card {
           display: inline-block; padding: 3px 11px; border-radius: 8px;
-          border: 1px solid rgba(201,162,75,0.55);
-          background: rgba(201,162,75,0.10);
-          color: var(--parchment); font-size: 14px; font-weight: 600;
+          border: 1px solid rgba(228,150,150,0.55);
+          background: rgba(228,150,150,0.10);
+          color: var(--orient-up-soft); font-size: 14px; font-weight: 600;
           letter-spacing: 0.05em; font-family: 'Shippori Mincho', serif;
         }
         .reading-gap { display: block; height: 6px; }
@@ -11490,6 +11780,41 @@ export default function TarotDraw() {
           位置と見た目を揃えることで、探さなくても「下にある」と分かる。
           上に余白を取るのは、直前の操作ボタンと隣り合って誤って押されないため。
         */
+        /* 失敗の告知。本文と混ざらないよう、枠で囲って上に置く */
+        /* 一呼吸の文。中央に置き、行間と字間を広げて読む速度を落とす */
+        /*
+          置かれるときの回転。
+          transform を持たない要素にだけ当てること。配置を transform で
+          行っている要素に当てると、配置が消えて画面の隅から飛んでくる。
+        */
+        @keyframes cardDealIn {
+          from { opacity: 0; transform: rotate(-170deg) scale(0.55); }
+          to   { opacity: 1; transform: none; }
+        }
+        /*
+          奥行きの回転で置く。
+          面内で回すと平らな紙が回っているように見えるが、縦軸で回すと
+          札に厚みがあって手前へ開いてくるように見える。
+          perspective() を transform の中に書くのは、この要素自身に遠近を
+          効かせるため。perspective プロパティは子にしか効かない。
+        */
+        @keyframes cardDealInDepth {
+          from { opacity: 0; transform: perspective(900px) rotateY(-88deg) scale(0.94); }
+          to   { opacity: 1; transform: perspective(900px) rotateY(0deg) scale(1); }
+        }
+        .hex-ritual {
+          margin: 2px 0; text-align: center;
+          font-family: 'Shippori Mincho', serif; font-size: 12.5px;
+          line-height: 2.1; letter-spacing: 0.10em;
+          color: var(--gold-soft); opacity: 0.9;
+        }
+
+        .ai-failed-note {
+          width: 100%; margin: 0 0 12px; padding: 9px 12px; border-radius: 9px;
+          border: 1px solid rgba(224,138,138,0.34); background: rgba(224,138,138,0.07);
+          font-size: 11.5px; line-height: 1.8; color: var(--rose); text-align: center;
+        }
+
         .back-to-title {
           margin-top: 18px; background: none; border: none; cursor: pointer;
           font-family: inherit; font-size: 11px; color: var(--muted);
@@ -12169,7 +12494,7 @@ export default function TarotDraw() {
         .hex-pos {
           position: absolute; left: 0; right: 0; bottom: 0; z-index: 4;
           text-align: center; padding: 2px 2px 3px;
-          font-size: 8px; color: var(--gold-soft); letter-spacing: 0.04em;
+          font-size: 8px; color: var(--orient-up); letter-spacing: 0.04em;
           line-height: 1.25;
           background: linear-gradient(180deg, rgba(10,7,22,0) 0%, rgba(10,7,22,0.88) 45%);
           border-radius: 0 0 7px 7px;
@@ -12177,7 +12502,8 @@ export default function TarotDraw() {
         }
         /* 中央の最終結果だけは、他の6枚を束ねる位置なので際立たせる */
         .hex-pos-final {
-          color: var(--gold); font-weight: 600; letter-spacing: 0.06em;
+          /* 最終結果だけは太字と字間で強調する。色は他と同じく向きが担う */
+          font-weight: 600; letter-spacing: 0.06em;
           background: linear-gradient(180deg, rgba(10,7,22,0) 0%, rgba(40,28,10,0.92) 45%);
         }
 
@@ -12243,7 +12569,7 @@ export default function TarotDraw() {
         }
         .hex-stage-card {
           font-family: 'Shippori Mincho', serif; font-size: 13px;
-          color: var(--parchment); line-height: 1.6;
+          color: var(--orient-up); line-height: 1.6;
         }
         .hex-major-tag {
           margin-left: 7px; font-size: 9px; letter-spacing: 0.06em;
@@ -12270,6 +12596,8 @@ export default function TarotDraw() {
         @media (prefers-reduced-motion: reduce) {
           .mini-card, .draw-btn, .climax-btn, .held-chip, .result-area, .major-stage, .mini-card.vanish, .tarot-header h1 { animation: none !important; transition: none !important; }
           .tc-flip { transition: none !important; }
+          /* 出現の回転も止める。both を外さないと、開始前の状態で固まる */
+          .tc-flip-outer { animation: none !important; }
           .tap-hint { animation: none !important; opacity: 1; }
           .spread-item { transition: none !important; }
           .spread-item:hover, .spread-item:active { transform: none !important; }
@@ -12369,6 +12697,10 @@ export default function TarotDraw() {
                   // スリーカードと同じ枠を消費する。
                   // AIを使う占いは同じ財布から出ているため、枠を分けない
                   if (!isFreeDraw) setTodayCount(incrementTodayCount());
+                }}
+                onRefund={() => {
+                  // 消費していない回（無料版）では呼ばれても何もしない
+                  if (!isFreeDraw) setTodayCount(refundTodayCount());
                 }}
               />
             )}
@@ -12730,13 +13062,27 @@ export default function TarotDraw() {
                   両面を常に置いたまま、外側のクラスだけを切り替える。
                 */}
                 <div
+                  /*
+                    置かれるときの回転。ヘキサグラムと同じ動きを共有する。
+                    tc-flip-outer は perspective を持つだけで transform は持たないので、
+                    ここに当てても配置は壊れない。
+                    1枚ずつずらして、順に置かれていくように見せる。
+                  */
                   className={`tc-flip-outer${i < revealStage ? " open" : ""}${i === revealStage ? " tappable" : ""}`}
                   /*
+                    animation は1つの style にまとめる。
+                    style を二度書くと後の方だけが残り、先に書いた出現の回転が消える。
+
                     リーチの脈動は、2枚開いた後の3枚目にだけ出す。
                     自動開示だった頃は一瞬で2枚目まで進んだので条件が緩くても問題なかったが、
                     手でめくる今は、1枚も開く前から脈動すると役の成立が先に漏れる。
                   */
-                  style={{ animation: (revealStage === 2 && i === 2 && reachInfo) ? "reachPulse 1.15s ease-in-out infinite" : "none" }}
+                  style={{
+                    animation: [
+                      `cardDealInDepth .55s cubic-bezier(.22,.8,.25,1) ${i * 0.16}s both`,
+                      (revealStage === 2 && i === 2 && reachInfo) ? "reachPulse 1.15s ease-in-out infinite" : null,
+                    ].filter(Boolean).join(", "),
+                  }}
                   role={i === revealStage ? "button" : undefined}
                   tabIndex={i === revealStage ? 0 : undefined}
                   aria-label={i === revealStage ? t.pickAriaLabel : undefined}
