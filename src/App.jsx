@@ -294,7 +294,9 @@ const MAJOR_NAME_I18N = {
   ],
 };
 function majorName(index, lang) {
-  return (MAJOR_NAME_I18N[lang] && MAJOR_NAME_I18N[lang][index]) || MAJOR_NAME[index];
+  return (MAJOR_NAME_I18N[lang] && MAJOR_NAME_I18N[lang][index])
+    || (MAJOR_NAME_I18N.en && MAJOR_NAME_I18N.en[index])
+    || MAJOR_NAME[index];
 }
 const MAJOR_ROMAN = [
   "0", "I", "II", "III", "IV", "V", "VI", "VII", "VIII", "IX",
@@ -790,6 +792,15 @@ const MAJOR_REV_I18N = {
 function majorKeyword(index, reversed, lang) {
   const table = reversed ? MAJOR_REV_I18N[lang] : MAJOR_UP_I18N[lang];
   if (table && table[index]) return localizeKeywords(table[index], lang);
+  /*
+    未訳の言語は英語へ。元データ（MAJOR_UP / MAJOR_REV）は日本語なので、
+    そのまま落とすと他言語の鑑定文に日本語のキーワードだけが混ざる。
+    日本語のときだけは、元データが正しい表記なので直接使う。
+  */
+  if (lang !== "ja") {
+    const en = reversed ? MAJOR_REV_I18N.en : MAJOR_UP_I18N.en;
+    if (en && en[index]) return localizeKeywords(en[index], "en");
+  }
   return reversed ? MAJOR_REV[index] : MAJOR_UP[index];
 }
 
@@ -810,7 +821,9 @@ const RANK_LABEL_I18N = {
   ko: ["에이스", "2", "3", "4", "5", "6", "7", "8", "9", "10", "시종", "기사", "여왕", "왕"],
 };
 function rankLabel(index, lang) {
-  return (RANK_LABEL_I18N[lang] && RANK_LABEL_I18N[lang][index]) || RANK_LABEL[index];
+  return (RANK_LABEL_I18N[lang] && RANK_LABEL_I18N[lang][index])
+    || (RANK_LABEL_I18N.en && RANK_LABEL_I18N.en[index])
+    || RANK_LABEL[index];
 }
 
 // スート名の多言語対応（key経由）
@@ -827,7 +840,7 @@ const SUIT_LABEL_I18N = {
   ko: { wands: "지팡이", cups: "성배", swords: "검", pentacles: "금화" },
 };
 function suitLabel(key, lang) {
-  return (SUIT_LABEL_I18N[lang] && SUIT_LABEL_I18N[lang][key]) || SUIT_LABEL_I18N.ja[key];
+  return (SUIT_LABEL_I18N[lang] && SUIT_LABEL_I18N[lang][key]) || (SUIT_LABEL_I18N.en && SUIT_LABEL_I18N.en[key]) || SUIT_LABEL_I18N.ja[key];
 }
 
 // 元素名の多言語対応
@@ -866,7 +879,14 @@ function minorCardName(suitKey, rankIndex, lang) {
   if (lang === "ko") return `${suit}의 ${rank}`;
   if (lang === "zh-TW" || lang === "zh-CN") return `${suit}${rank}`;
   if (lang === "th") return `${suit}${rank}`;
-  return `${suit}の${rank}`; // ja
+  if (lang === "ja") return `${suit}の${rank}`;
+  /*
+    未対応の言語は英語の並びで組む。
+    以前はここが日本語の並びだったため、スウェーデン語で
+    「SwordsのKnight」のような、語だけ英語で助詞が日本語の名前が出ていた。
+    書式そのものが言語を持っていることを見落としていた。
+  */
+  return `${rank} of ${suit}`;
 }
 
 /* ---------- 棒（火） ---------- */
@@ -2111,8 +2131,18 @@ const MINOR_REV_I18N = {
 function minorKeyword(suitKey, rankIndex, reversed, lang, fallbackUp, fallbackRev) {
   const table = reversed ? MINOR_REV_I18N[suitKey] : MINOR_UP_I18N[suitKey];
   if (table && table[lang] && table[lang][rankIndex]) return localizeKeywords(table[lang][rankIndex], lang);
-  // 未訳の言語は英語で出す。最後の手段としてだけ元データ（日本語）へ落とす
-  if (table && table.en && table.en[rankIndex]) return localizeKeywords(table.en[rankIndex], "en");
+  /*
+    未訳の言語は英語で出す。ただし日本語のときは通らせない。
+
+    小アルカナの日本語表は存在しない。日本語は元データ
+    （fallbackUp / fallbackRev）から直接出すのが元々の設計で、
+    表に無いことは欠落ではない。
+    ここで言語を見ずに英語へ落としたため、日本語の鑑定文の中に
+    英語のキーワードだけが混ざる状態になっていた。
+  */
+  if (lang !== "ja" && table && table.en && table.en[rankIndex]) {
+    return localizeKeywords(table.en[rankIndex], "en");
+  }
   return reversed ? fallbackRev : fallbackUp;
 }
 
@@ -2269,10 +2299,10 @@ function getCardSub(card, lang) {
   if (lang === "ja" || !lang) return card.sub;
   const parts = card.id.split("-");
   const suitKey = parts[0];
-  if (suitKey === "major") return MAJOR_ARCANA_LABEL_I18N[lang] || MAJOR_ARCANA_LABEL_I18N.ja;
+  if (suitKey === "major") return MAJOR_ARCANA_LABEL_I18N[lang] || MAJOR_ARCANA_LABEL_I18N.en || MAJOR_ARCANA_LABEL_I18N.ja;
   const suitObj = SUITS.find((s) => s.key === suitKey);
   const el = suitObj ? suitObj.element : "";
-  return `${MINOR_ARCANA_PREFIX_I18N[lang] || MINOR_ARCANA_PREFIX_I18N.ja}${suitLabel(suitKey, lang)}（${elementLabel(el, lang)}）`;
+  return `${MINOR_ARCANA_PREFIX_I18N[lang] || MINOR_ARCANA_PREFIX_I18N.en || MINOR_ARCANA_PREFIX_I18N.ja}${suitLabel(suitKey, lang)}（${elementLabel(el, lang)}）`;
 }
 
 function buildMajorList() {
@@ -2926,7 +2956,11 @@ const FALLBACK_TEMPLATES = {
 };
 
 function fallbackMinorReading(results, userName, lang) {
-  const tpl = FALLBACK_TEMPLATES[lang] || FALLBACK_TEMPLATES.ja;
+  /*
+    未訳の言語は英語へ。日本語へ落とすと、UIが他言語なのに
+    鑑定文だけ日本語になる（読めない言語が出るのが最悪の結果）。
+  */
+  const tpl = FALLBACK_TEMPLATES[lang] || FALLBACK_TEMPLATES.en || FALLBACK_TEMPLATES.ja;
   const parts = results
     .map((r, i) => {
       const o = orientationLabel(r.reversed, lang);
@@ -2935,14 +2969,18 @@ function fallbackMinorReading(results, userName, lang) {
       const rankIdx = parseInt(idParts[1], 10);
       const kw = minorKeyword(suitKey, rankIdx, r.reversed, lang, r.card.up, r.card.rev);
       const name = getCardName(r.card, lang);
-      const pos = POSITION_LABELS_I18N[lang] ? POSITION_LABELS_I18N[lang][i] : POSITION_LABELS[i];
+      const pos = (POSITION_LABELS_I18N[lang] || POSITION_LABELS_I18N.en || POSITION_LABELS)[i];
       return tpl.minorLine(pos, name, o, kw);
     })
     .join("\n"); // 過去・現在・未来を1行ずつ改行して表示（定型文の読みやすさ優先）
   return `${parts}\n${tpl.minorClosing}`;
 }
 function fallbackMajorReading(major, lang) {
-  const tpl = FALLBACK_TEMPLATES[lang] || FALLBACK_TEMPLATES.ja;
+  /*
+    未訳の言語は英語へ。日本語へ落とすと、UIが他言語なのに
+    鑑定文だけ日本語になる（読めない言語が出るのが最悪の結果）。
+  */
+  const tpl = FALLBACK_TEMPLATES[lang] || FALLBACK_TEMPLATES.en || FALLBACK_TEMPLATES.ja;
   const o = orientationLabel(major.reversed, lang);
   const majorIdx = parseInt(major.card.id.split("-")[1], 10);
   const kw = majorKeyword(majorIdx, major.reversed, lang);
@@ -3279,7 +3317,10 @@ function fallbackHexagramReading(results, lang, spreadKey = "hexagram") {
       文字列でしか渡せない経路なので、色も印として運ぶ。
     */
     const headColor = isWeekly ? `${WEEKDAY_COLORS[weekdayIndex(i)]}\t` : "";
-    return `\u0001${headColor}${t2.hexPosHeading(info.pos[i])}\n${mark}${getCardName(r.card, lang)}（${orientationLabel(r.reversed, lang)}）\n${kw}`;
+    // 括弧の形も言語が持つ。全角は日本語と中国語だけ
+    const wide = lang === "ja" || lang === "zh-TW" || lang === "zh-CN";
+    const ob = wide ? "（" : " (", cb = wide ? "）" : ")";
+    return `\u0001${headColor}${t2.hexPosHeading(info.pos[i])}\n${mark}${getCardName(r.card, lang)}${ob}${orientationLabel(r.reversed, lang)}${cb}\n${kw}`;
   }).join("\n\n");
 }
 
@@ -3736,7 +3777,7 @@ const SHARE_TEXT_I18N = {
 function buildShareText(majorCard, lang, appUrl) {
   const cardName = getCardName(majorCard.card, lang);
   const o = orientationLabel(majorCard.reversed, lang);
-  const builder = SHARE_TEXT_I18N[lang] || SHARE_TEXT_I18N.ja;
+  const builder = SHARE_TEXT_I18N[lang] || SHARE_TEXT_I18N.en || SHARE_TEXT_I18N.ja;
   return `${builder(cardName, o)}\n\n${appUrl}`;
 }
 
@@ -3836,7 +3877,7 @@ function generateResultImage(majorCard, scores, lang, appUrl) {
       ctx.textAlign = "center";
       ctx.fillStyle = goldSoft;
       ctx.font = "italic 28px serif";
-      const shareLine = (SHARE_TEXT_I18N[lang] || SHARE_TEXT_I18N.ja)(cardName, orientationText).split("\n")[1] || "";
+      const shareLine = (SHARE_TEXT_I18N[lang] || SHARE_TEXT_I18N.en || SHARE_TEXT_I18N.ja)(cardName, orientationText).split("\n")[1] || "";
       wrapText(ctx, shareLine, W / 2, H - 160, 900, 40);
 
       ctx.fillStyle = muted;
@@ -3981,7 +4022,8 @@ const ORIENTATION_LABELS = {
   ko: { up: "정방향", rev: "역방향" },
 };
 function orientationLabel(reversed, lang) {
-  const d = ORIENTATION_LABELS[lang] || ORIENTATION_LABELS.ja;
+  // 未訳は英語へ。日本語へ落とすと他言語の文中に「正位置」が混ざる
+  const d = ORIENTATION_LABELS[lang] || ORIENTATION_LABELS.en || ORIENTATION_LABELS.ja;
   return reversed ? d.rev : d.up;
 }
 
@@ -8386,7 +8428,7 @@ function HistoryPanel({ history, lang }) {
             ✦ {h.majorCard.id ? getCardName({ id: h.majorCard.id, name: h.majorCard.name }, lang) : h.majorCard.name}（{t.historyOrientation(h.majorCard.reversed)}）
           </p>
           <div style={{ display: "flex", gap: "6px", flexWrap: "wrap", marginBottom: "6px" }}>
-            {(POSITION_LABELS_I18N[lang] || POSITION_LABELS).map((pos, i) => (
+            {(POSITION_LABELS_I18N[lang] || POSITION_LABELS_I18N.en || POSITION_LABELS).map((pos, i) => (
               <span key={i} style={{ fontSize: "10px", color: "var(--muted)", background: "rgba(201,162,75,0.10)", padding: "2px 7px", borderRadius: "999px" }}>
                 {pos}:{h.minorResults[i] ? (h.minorResults[i].id ? getCardName({ id: h.minorResults[i].id, name: h.minorResults[i].name }, lang) : h.minorResults[i].name) : ""}
               </span>
@@ -8900,8 +8942,8 @@ const DEVELOPER_NOTE_REV_I18N = {
 function developerNote(majorCard, lang) {
   if (!majorCard || !majorCard.card || !majorCard.card.id) return "";
   const idx = parseInt(majorCard.card.id.split("-")[1], 10);
-  const upTable = DEVELOPER_NOTE_UP_I18N[lang] || DEVELOPER_NOTE_UP_I18N.ja;
-  const revTable = DEVELOPER_NOTE_REV_I18N[lang] || DEVELOPER_NOTE_REV_I18N.ja;
+  const upTable = DEVELOPER_NOTE_UP_I18N[lang] || DEVELOPER_NOTE_UP_I18N.en || DEVELOPER_NOTE_UP_I18N.ja;
+  const revTable = DEVELOPER_NOTE_REV_I18N[lang] || DEVELOPER_NOTE_REV_I18N.en || DEVELOPER_NOTE_REV_I18N.ja;
   const table = majorCard.reversed ? revTable : upTable;
   return table[idx] || "";
 }
@@ -8929,7 +8971,7 @@ function LastResultPanel({ entry, lang, onClose }) {
       )}
 
       <div style={{ display: "flex", gap: "6px", flexWrap: "wrap", justifyContent: "center" }}>
-        {(POSITION_LABELS_I18N[lang] || POSITION_LABELS).map((pos, i) => {
+        {(POSITION_LABELS_I18N[lang] || POSITION_LABELS_I18N.en || POSITION_LABELS).map((pos, i) => {
           const r = entry.minorResults[i];
           if (!r) return null;
           const name = r.id ? getCardName({ id: r.id, name: r.name }, lang) : r.name;
