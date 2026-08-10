@@ -2380,7 +2380,7 @@ function findCardById(id) {
   隠したところで立証の役には立たず、隠していたという印象だけが残る。
   金額の確定と二重返金の防止は、決済事業者側の取引記録が担う。
 */
-const APP_VERSION = "App_273";
+const APP_VERSION = "App_278";
 const LS_BILLING_LOG_KEY = "tarot_billing_log";
 const BILLING_LOG_MAX = 200; // 端末の容量を圧迫しない範囲で、数ヶ月ぶんは残る
 
@@ -2680,11 +2680,11 @@ const SPREAD_I18N = {
   ja: {
     oneOracle: { name: "ワンオラクル", desc: "大アルカナ１枚だけで占う最も簡素な占い方式", pos: ["示されたもの"] },
     oneOracleMinor: { name: "プチワンオラクル", desc: "小アルカナ１枚で本日の運勢情報を読み取る方式", pos: ["示されたもの"] },
-    three: { name: "スリーカード", desc: "時の流れを読む、最も基本の形。", pos: ["過去", "現在", "未来"] },
-    hexagram: { name: "ヘキサグラム", desc: "相手の心まで読む、恋愛相談の定番。", pos: ["過去", "現在", "未来", "対策", "周囲の状況", "相手の気持ち", "最終結果"] },
-    weekly: { name: "週の物語", desc: "これから七日間を、一日ずつ辿る。", pos: ["1日目", "2日目", "3日目", "4日目", "5日目", "6日目", "7日目"] },
+    three: { name: "スリーカード", desc: "過去から未来への流れを三枚で追う。はじめの一歩に。", pos: ["過去", "現在", "未来"] },
+    hexagram: { name: "ヘキサグラム", desc: "自分と相手の間にある距離を読む。人との相性や恋愛に。", pos: ["過去", "現在", "未来", "対策", "周囲の状況", "相手の気持ち", "最終結果"] },
+    weekly: { name: "週の物語", desc: "七日それぞれの調子を追う。心身の起伏を知りたいときに。", pos: ["1日目", "2日目", "3日目", "4日目", "5日目", "6日目", "7日目"] },
     choice: { name: "二者択一", desc: "二つの道を並べて、比べて選ぶ。", pos: ["現在の状況", "Aを選んだ場合", "Aの結果", "Bを選んだ場合", "Bの結果"] },
-    celticCross: { name: "ケルト十字", desc: "十枚で読み解く、タロットの王道。", pos: ["現在の意識の方向", "障害となるもの", "顕在意識", "潜在意識", "過去", "近い未来", "あなた自身", "周囲の環境", "希望と不安", "最終結果"] },
+    celticCross: { name: "ケルト十字", desc: "十枚で顕在意識と潜在意識の両方を照らす。深く掘りたいときに。", pos: ["現在の意識の方向", "障害となるもの", "顕在意識", "潜在意識", "過去", "近い未来", "あなた自身", "周囲の環境", "希望と不安", "最終結果"] },
     relationship: { name: "関係の杯", desc: "二人の関係を、両側から読む。", pos: ["あなたの状況", "相手の状況", "あなたの願い", "相手の願い", "あなたの不安", "相手の不安", "二人の現在", "障害", "可能性", "あなたの取るべき道", "二人の行く先"] },
     horoscope: { name: "ホロスコープ", desc: "十二の領域で、一年の全体を見渡す。", pos: ["自分自身", "財と価値", "学びと交流", "家庭と基盤", "恋愛と創造", "日々の務め", "相手と契約", "変容と継承", "遠方と探求", "天職と地位", "仲間と願い", "秘密と癒し"] },
   },
@@ -2692,10 +2692,10 @@ const SPREAD_I18N = {
     oneOracle: { name: "One Oracle", desc: "The simplest reading: a single Major Arcana card.", pos: ["What Is Shown"] },
     oneOracleMinor: { name: "Petit One Oracle", desc: "Read today's fortune from a single Minor Arcana card.", pos: ["What Is Shown"] },
     three: { name: "Three Cards", desc: "The most fundamental form: reading the flow of time.", pos: ["Past", "Present", "Future"] },
-    hexagram: { name: "Hexagram", desc: "Reads even the other person's heart. A staple for matters of love.", pos: ["Past", "Present", "Future", "What to do", "Surroundings", "Their feelings", "Outcome"] },
-    weekly: { name: "Story of the Week", desc: "Tracing the next seven days, one by one.", pos: ["Day 1", "Day 2", "Day 3", "Day 4", "Day 5", "Day 6", "Day 7"] },
+    hexagram: { name: "Hexagram", desc: "Reads the distance between you and another. For compatibility and love.", pos: ["Past", "Present", "Future", "What to do", "Surroundings", "Their feelings", "Outcome"] },
+    weekly: { name: "Story of the Week", desc: "Follows the tone of each of seven days. For reading your own rhythm.", pos: ["Day 1", "Day 2", "Day 3", "Day 4", "Day 5", "Day 6", "Day 7"] },
     choice: { name: "Two Paths", desc: "Set two roads side by side, and choose.", pos: ["Where you stand", "If you choose A", "Result of A", "If you choose B", "Result of B"] },
-    celticCross: { name: "Celtic Cross", desc: "Ten cards. The classic of tarot.", pos: ["Where your mind is turned", "What crosses it", "Conscious mind", "Unconscious mind", "The past", "The near future", "Yourself", "Your surroundings", "Hopes and fears", "The outcome"] },
+    celticCross: { name: "Celtic Cross", desc: "Ten cards lighting both the conscious and the unconscious. For digging deep.", pos: ["Where your mind is turned", "What crosses it", "Conscious mind", "Unconscious mind", "The past", "The near future", "Yourself", "Your surroundings", "Hopes and fears", "The outcome"] },
     relationship: { name: "Cup of Relationship", desc: "Reading a bond from both sides.", pos: ["Your situation", "Their situation", "Your wish", "Their wish", "Your fear", "Their fear", "Where you are now", "The obstacle", "What is possible", "Your path", "Where you are heading"] },
     horoscope: { name: "Horoscope Spread", desc: "Twelve houses. A whole year at a glance.", pos: ["Self", "Wealth and value", "Learning and exchange", "Home and roots", "Love and creation", "Daily work", "Partners and pacts", "Transformation", "Distance and inquiry", "Vocation and standing", "Allies and wishes", "Secrets and healing"] },
   },
@@ -2703,10 +2703,10 @@ const SPREAD_I18N = {
     oneOracle: { name: "원 오라클", desc: "메이저 아르카나 한 장만으로 보는 가장 간결한 방식", pos: ["드러난 것"] },
     oneOracleMinor: { name: "쁘띠 원 오라클", desc: "마이너 아르카나 한 장으로 오늘의 운세를 읽는 방식", pos: ["드러난 것"] },
     three: { name: "쓰리 카드", desc: "시간의 흐름을 읽는 가장 기본적인 형태.", pos: ["과거", "현재", "미래"] },
-    hexagram: { name: "헥사그램", desc: "상대의 마음까지 읽는, 연애 상담의 정석.", pos: ["과거", "현재", "미래", "대책", "주변 상황", "상대의 마음", "최종 결과"] },
-    weekly: { name: "한 주의 이야기", desc: "앞으로의 이레를 하루씩 따라간다.", pos: ["1일째", "2일째", "3일째", "4일째", "5일째", "6일째", "7일째"] },
+    hexagram: { name: "헥사그램", desc: "나와 상대 사이의 거리를 읽는다. 사람과의 궁합이나 연애에.", pos: ["과거", "현재", "미래", "대책", "주변 상황", "상대의 마음", "최종 결과"] },
+    weekly: { name: "한 주의 이야기", desc: "이레 각각의 흐름을 좇는다. 심신의 기복을 알고 싶을 때.", pos: ["1일째", "2일째", "3일째", "4일째", "5일째", "6일째", "7일째"] },
     choice: { name: "양자택일", desc: "두 갈래 길을 나란히 놓고 고른다.", pos: ["현재 상황", "A를 택한다면", "A의 결과", "B를 택한다면", "B의 결과"] },
-    celticCross: { name: "켈틱 크로스", desc: "열 장으로 읽는 타로의 왕도.", pos: ["현재 의식의 방향", "가로막는 것", "표면 의식", "잠재 의식", "과거", "가까운 미래", "당신 자신", "주변 환경", "희망과 불안", "최종 결과"] },
+    celticCross: { name: "켈틱 크로스", desc: "열 장으로 현재의식과 잠재의식을 함께 비춘다. 깊이 파고들 때.", pos: ["현재 의식의 방향", "가로막는 것", "표면 의식", "잠재 의식", "과거", "가까운 미래", "당신 자신", "주변 환경", "희망과 불안", "최종 결과"] },
     relationship: { name: "관계의 잔", desc: "두 사람의 관계를 양쪽에서 읽는다.", pos: ["당신의 상황", "상대의 상황", "당신의 바람", "상대의 바람", "당신의 불안", "상대의 불안", "두 사람의 현재", "장애", "가능성", "당신이 나아갈 길", "두 사람의 앞날"] },
     horoscope: { name: "호로스코프", desc: "열두 영역으로 한 해 전체를 조망한다.", pos: ["자기 자신", "재물과 가치", "배움과 교류", "가정과 기반", "연애와 창조", "일상의 의무", "상대와 계약", "변용과 계승", "먼 곳과 탐구", "천직과 지위", "동료와 소망", "비밀과 치유"] },
   },
@@ -2714,10 +2714,10 @@ const SPREAD_I18N = {
     oneOracle: { name: "單張神諭", desc: "只用一張大阿爾克那占卜的最簡形式", pos: ["所示之物"] },
     oneOracleMinor: { name: "小小單張占卜", desc: "以一張小阿爾克那讀取今日運勢", pos: ["所顯示的"] },
     three: { name: "三張牌", desc: "解讀時間流動的最基本形式。", pos: ["過去", "現在", "未來"] },
-    hexagram: { name: "六芒星", desc: "連對方的心也能讀，戀愛諮詢的經典。", pos: ["過去", "現在", "未來", "對策", "周遭狀況", "對方的心意", "最終結果"] },
-    weekly: { name: "一週的故事", desc: "逐日追溯接下來的七天。", pos: ["第1天", "第2天", "第3天", "第4天", "第5天", "第6天", "第7天"] },
+    hexagram: { name: "六芒星", desc: "讀取你與對方之間的距離。適合人際契合與戀愛。", pos: ["過去", "現在", "未來", "對策", "周遭狀況", "對方的心意", "最終結果"] },
+    weekly: { name: "一週的故事", desc: "追蹤七天各自的狀態。想了解身心起伏時。", pos: ["第1天", "第2天", "第3天", "第4天", "第5天", "第6天", "第7天"] },
     choice: { name: "二擇一", desc: "將兩條路並列，比較後選擇。", pos: ["目前的狀況", "若選擇A", "A的結果", "若選擇B", "B的結果"] },
-    celticCross: { name: "凱爾特十字", desc: "以十張牌解讀，塔羅的王道。", pos: ["當下意識的方向", "阻礙之物", "顯意識", "潛意識", "過去", "不久的未來", "你自己", "周遭環境", "希望與不安", "最終結果"] },
+    celticCross: { name: "凱爾特十字", desc: "以十張牌照亮顯意識與潛意識。想深入挖掘時。", pos: ["當下意識的方向", "阻礙之物", "顯意識", "潛意識", "過去", "不久的未來", "你自己", "周遭環境", "希望與不安", "最終結果"] },
     relationship: { name: "關係之杯", desc: "從兩側解讀兩人的關係。", pos: ["你的狀況", "對方的狀況", "你的願望", "對方的願望", "你的不安", "對方的不安", "兩人的現在", "障礙", "可能性", "你該走的路", "兩人的去向"] },
     horoscope: { name: "占星盤", desc: "以十二個領域綜觀一整年。", pos: ["自我", "財富與價值", "學習與交流", "家庭與根基", "戀愛與創造", "日常的職責", "伴侶與契約", "變容與繼承", "遠方與探求", "天職與地位", "夥伴與願望", "秘密與療癒"] },
   },
@@ -2725,10 +2725,10 @@ const SPREAD_I18N = {
     oneOracle: { name: "单张神谕", desc: "只用一张大阿尔克那占卜的最简形式", pos: ["所示之物"] },
     oneOracleMinor: { name: "小小单张占卜", desc: "以一张小阿尔克那读取今日运势", pos: ["所显示的"] },
     three: { name: "三张牌", desc: "解读时间流动的最基本形式。", pos: ["过去", "现在", "未来"] },
-    hexagram: { name: "六芒星", desc: "连对方的心也能读，恋爱咨询的经典。", pos: ["过去", "现在", "未来", "对策", "周遭状况", "对方的心意", "最终结果"] },
-    weekly: { name: "一周的故事", desc: "逐日追溯接下来的七天。", pos: ["第1天", "第2天", "第3天", "第4天", "第5天", "第6天", "第7天"] },
+    hexagram: { name: "六芒星", desc: "读取你与对方之间的距离。适合人际契合与恋爱。", pos: ["过去", "现在", "未来", "对策", "周遭状况", "对方的心意", "最终结果"] },
+    weekly: { name: "一周的故事", desc: "追踪七天各自的状态。想了解身心起伏时。", pos: ["第1天", "第2天", "第3天", "第4天", "第5天", "第6天", "第7天"] },
     choice: { name: "二择一", desc: "将两条路并列，比较后选择。", pos: ["目前的状况", "若选择A", "A的结果", "若选择B", "B的结果"] },
-    celticCross: { name: "凯尔特十字", desc: "以十张牌解读，塔罗的王道。", pos: ["当下意识的方向", "阻碍之物", "显意识", "潜意识", "过去", "不久的未来", "你自己", "周遭环境", "希望与不安", "最终结果"] },
+    celticCross: { name: "凯尔特十字", desc: "以十张牌照亮显意识与潜意识。想深入挖掘时。", pos: ["当下意识的方向", "阻碍之物", "显意识", "潜意识", "过去", "不久的未来", "你自己", "周遭环境", "希望与不安", "最终结果"] },
     relationship: { name: "关系之杯", desc: "从两侧解读两人的关系。", pos: ["你的状况", "对方的状况", "你的愿望", "对方的愿望", "你的不安", "对方的不安", "两人的现在", "障碍", "可能性", "你该走的路", "两人的去向"] },
     horoscope: { name: "占星盘", desc: "以十二个领域综观一整年。", pos: ["自我", "财富与价值", "学习与交流", "家庭与根基", "恋爱与创造", "日常的职责", "伴侣与契约", "变容与继承", "远方与探求", "天职与地位", "伙伴与愿望", "秘密与疗愈"] },
   },
@@ -2736,10 +2736,10 @@ const SPREAD_I18N = {
     oneOracle: { name: "ไพ่ใบเดียว", desc: "รูปแบบเรียบง่ายที่สุด ทำนายด้วยไพ่เมเจอร์อาร์คานาเพียงใบเดียว", pos: ["สิ่งที่ปรากฏ"] },
     oneOracleMinor: { name: "เปอตี วัน ออราเคิล", desc: "อ่านดวงประจำวันจากไพ่ไมเนอร์อาร์คานาหนึ่งใบ", pos: ["สิ่งที่ปรากฏ"] },
     three: { name: "สามใบ", desc: "รูปแบบพื้นฐานที่สุด อ่านกระแสของเวลา", pos: ["อดีต", "ปัจจุบัน", "อนาคต"] },
-    hexagram: { name: "เฮกซะแกรม", desc: "อ่านได้ถึงใจของอีกฝ่าย คลาสสิกสำหรับเรื่องความรัก", pos: ["อดีต", "ปัจจุบัน", "อนาคต", "สิ่งที่ควรทำ", "สภาพแวดล้อม", "ใจของอีกฝ่าย", "ผลลัพธ์"] },
-    weekly: { name: "เรื่องราวหนึ่งสัปดาห์", desc: "ไล่ดูเจ็ดวันข้างหน้าทีละวัน", pos: ["วันที่ 1", "วันที่ 2", "วันที่ 3", "วันที่ 4", "วันที่ 5", "วันที่ 6", "วันที่ 7"] },
+    hexagram: { name: "เฮกซะแกรม", desc: "อ่านระยะห่างระหว่างคุณกับอีกฝ่าย เหมาะกับความเข้ากันและความรัก", pos: ["อดีต", "ปัจจุบัน", "อนาคต", "สิ่งที่ควรทำ", "สภาพแวดล้อม", "ใจของอีกฝ่าย", "ผลลัพธ์"] },
+    weekly: { name: "เรื่องราวหนึ่งสัปดาห์", desc: "ติดตามจังหวะของแต่ละวันทั้งเจ็ด เมื่ออยากรู้ความขึ้นลงของกายใจ", pos: ["วันที่ 1", "วันที่ 2", "วันที่ 3", "วันที่ 4", "วันที่ 5", "วันที่ 6", "วันที่ 7"] },
     choice: { name: "สองทางเลือก", desc: "วางสองเส้นทางเคียงกันแล้วเลือก", pos: ["สถานการณ์ปัจจุบัน", "ถ้าเลือก A", "ผลของ A", "ถ้าเลือก B", "ผลของ B"] },
-    celticCross: { name: "เซลติกครอส", desc: "สิบใบ ตำราหลักของไพ่ทาโรต์", pos: ["ทิศทางของจิตสำนึกตอนนี้", "สิ่งที่ขวางกั้น", "จิตสำนึก", "จิตใต้สำนึก", "อดีต", "อนาคตอันใกล้", "ตัวคุณเอง", "สภาพแวดล้อม", "ความหวังและความกลัว", "ผลลัพธ์"] },
+    celticCross: { name: "เซลติกครอส", desc: "ไพ่สิบใบส่องทั้งจิตสำนึกและจิตใต้สำนึก เมื่ออยากขุดลึก", pos: ["ทิศทางของจิตสำนึกตอนนี้", "สิ่งที่ขวางกั้น", "จิตสำนึก", "จิตใต้สำนึก", "อดีต", "อนาคตอันใกล้", "ตัวคุณเอง", "สภาพแวดล้อม", "ความหวังและความกลัว", "ผลลัพธ์"] },
     relationship: { name: "ถ้วยแห่งความสัมพันธ์", desc: "อ่านความสัมพันธ์จากทั้งสองฝ่าย", pos: ["สถานการณ์ของคุณ", "สถานการณ์ของเขา", "ความปรารถนาของคุณ", "ความปรารถนาของเขา", "ความกังวลของคุณ", "ความกังวลของเขา", "ปัจจุบันของทั้งสอง", "อุปสรรค", "ความเป็นไปได้", "ทางที่คุณควรไป", "ปลายทางของทั้งสอง"] },
     horoscope: { name: "ดวงชะตาสิบสองเรือน", desc: "มองภาพรวมทั้งปีผ่านสิบสองด้าน", pos: ["ตัวตน", "ทรัพย์และคุณค่า", "การเรียนรู้และการสื่อสาร", "บ้านและรากฐาน", "ความรักและการสร้างสรรค์", "หน้าที่ประจำวัน", "คู่และข้อตกลง", "การแปรเปลี่ยน", "ระยะไกลและการแสวงหา", "อาชีพและสถานะ", "มิตรและความปรารถนา", "ความลับและการเยียวยา"] },
   },
@@ -2747,10 +2747,10 @@ const SPREAD_I18N = {
     oneOracle: { name: "Isang Orakulo", desc: "Ang pinakasimpleng pagbasa: iisang Major Arcana.", pos: ["Ang Ipinapakita"] },
     oneOracleMinor: { name: "Munting Orakulo", desc: "Basahin ang kapalaran ngayong araw sa isang Minor Arcana.", pos: ["Ang Ipinapakita"] },
     three: { name: "Tatlong Baraha", desc: "Ang pinakapayak na anyo: pagbasa sa agos ng panahon.", pos: ["Nakaraan", "Kasalukuyan", "Hinaharap"] },
-    hexagram: { name: "Heksagram", desc: "Binabasa pati ang puso ng iba. Klasiko sa usaping pag-ibig.", pos: ["Nakaraan", "Kasalukuyan", "Hinaharap", "Dapat gawin", "Kapaligiran", "Damdamin niya", "Kalalabasan"] },
-    weekly: { name: "Kuwento ng Linggo", desc: "Sinusundan ang pitong araw, isa-isa.", pos: ["Araw 1", "Araw 2", "Araw 3", "Araw 4", "Araw 5", "Araw 6", "Araw 7"] },
+    hexagram: { name: "Heksagram", desc: "Binabasa ang agwat sa pagitan ninyo. Para sa pagkakatugma at pag-ibig.", pos: ["Nakaraan", "Kasalukuyan", "Hinaharap", "Dapat gawin", "Kapaligiran", "Damdamin niya", "Kalalabasan"] },
+    weekly: { name: "Kuwento ng Linggo", desc: "Sinusundan ang tono ng bawat isa sa pitong araw. Para sa sariling ritmo.", pos: ["Araw 1", "Araw 2", "Araw 3", "Araw 4", "Araw 5", "Araw 6", "Araw 7"] },
     choice: { name: "Dalawang Landas", desc: "Ipantay ang dalawang daan, at pumili.", pos: ["Kasalukuyang lagay", "Kung pipiliin ang A", "Bunga ng A", "Kung pipiliin ang B", "Bunga ng B"] },
-    celticCross: { name: "Celtic Cross", desc: "Sampung baraha. Ang klasiko ng tarot.", pos: ["Kung saan nakatuon ang isip mo", "Ang humahadlang", "Malay na isip", "Di-malay na isip", "Nakaraan", "Malapit na hinaharap", "Ikaw mismo", "Ang paligid", "Pag-asa at takot", "Kalalabasan"] },
+    celticCross: { name: "Celtic Cross", desc: "Sampung baraha para tanglawan ang malay at di-malay. Para sa malalim na paghukay.", pos: ["Kung saan nakatuon ang isip mo", "Ang humahadlang", "Malay na isip", "Di-malay na isip", "Nakaraan", "Malapit na hinaharap", "Ikaw mismo", "Ang paligid", "Pag-asa at takot", "Kalalabasan"] },
     relationship: { name: "Kopa ng Ugnayan", desc: "Binabasa ang ugnayan mula sa magkabilang panig.", pos: ["Lagay mo", "Lagay niya", "Hangad mo", "Hangad niya", "Takot mo", "Takot niya", "Kayo ngayon", "Ang balakid", "Ang posible", "Landas mo", "Patutunguhan ninyo"] },
     horoscope: { name: "Horoscope Spread", desc: "Labindalawang larangan. Buong taon sa isang sulyap.", pos: ["Sarili", "Yaman at halaga", "Pag-aaral at palitan", "Tahanan at ugat", "Pag-ibig at paglikha", "Gawaing araw-araw", "Kapareha at kasunduan", "Pagbabago", "Malayo at paghahanap", "Bokasyon at katayuan", "Kaalyado at hangarin", "Lihim at paggaling"] },
   },
@@ -2758,10 +2758,10 @@ const SPREAD_I18N = {
     oneOracle: { name: "Satu Kartu", desc: "Cara paling sederhana: meramal dengan satu kartu Major Arcana.", pos: ["Yang Ditunjukkan"] },
     oneOracleMinor: { name: "Petit One Oracle", desc: "Membaca peruntungan hari ini dari satu kartu Minor Arcana.", pos: ["Yang Ditunjukkan"] },
     three: { name: "Tiga Kartu", desc: "Bentuk paling dasar: membaca aliran waktu.", pos: ["Masa lalu", "Masa kini", "Masa depan"] },
-    hexagram: { name: "Heksagram", desc: "Membaca sampai ke hati orang lain. Klasik untuk urusan cinta.", pos: ["Masa lalu", "Masa kini", "Masa depan", "Yang harus dilakukan", "Keadaan sekitar", "Perasaannya", "Hasil akhir"] },
-    weekly: { name: "Kisah Sepekan", desc: "Menyusuri tujuh hari ke depan, satu per satu.", pos: ["Hari 1", "Hari 2", "Hari 3", "Hari 4", "Hari 5", "Hari 6", "Hari 7"] },
+    hexagram: { name: "Heksagram", desc: "Membaca jarak antara kamu dan dia. Untuk kecocokan dan asmara.", pos: ["Masa lalu", "Masa kini", "Masa depan", "Yang harus dilakukan", "Keadaan sekitar", "Perasaannya", "Hasil akhir"] },
+    weekly: { name: "Kisah Sepekan", desc: "Mengikuti nada tiap hari dari tujuh hari. Untuk membaca iramamu sendiri.", pos: ["Hari 1", "Hari 2", "Hari 3", "Hari 4", "Hari 5", "Hari 6", "Hari 7"] },
     choice: { name: "Dua Jalan", desc: "Menjajarkan dua jalan, lalu memilih.", pos: ["Keadaan sekarang", "Jika memilih A", "Hasil A", "Jika memilih B", "Hasil B"] },
-    celticCross: { name: "Salib Celtic", desc: "Sepuluh kartu. Klasik dalam tarot.", pos: ["Arah kesadaranmu kini", "Yang menghalangi", "Kesadaran", "Bawah sadar", "Masa lalu", "Masa depan dekat", "Dirimu sendiri", "Lingkungan", "Harapan dan ketakutan", "Hasil akhir"] },
+    celticCross: { name: "Salib Celtic", desc: "Sepuluh kartu menerangi sadar dan bawah sadar. Untuk menggali dalam.", pos: ["Arah kesadaranmu kini", "Yang menghalangi", "Kesadaran", "Bawah sadar", "Masa lalu", "Masa depan dekat", "Dirimu sendiri", "Lingkungan", "Harapan dan ketakutan", "Hasil akhir"] },
     relationship: { name: "Cawan Hubungan", desc: "Membaca hubungan dari kedua sisi.", pos: ["Keadaanmu", "Keadaannya", "Harapanmu", "Harapannya", "Ketakutanmu", "Ketakutannya", "Kalian saat ini", "Rintangan", "Kemungkinan", "Jalan yang kamu tempuh", "Ke mana kalian menuju"] },
     horoscope: { name: "Horoskop", desc: "Dua belas bidang. Setahun penuh dalam satu pandangan.", pos: ["Diri sendiri", "Harta dan nilai", "Belajar dan bertukar", "Rumah dan akar", "Cinta dan cipta", "Tugas sehari-hari", "Pasangan dan perjanjian", "Perubahan", "Jauh dan pencarian", "Panggilan dan kedudukan", "Sekutu dan harapan", "Rahasia dan penyembuhan"] },
   },
@@ -2769,10 +2769,10 @@ const SPREAD_I18N = {
     oneOracle: { name: "Satu Kad", desc: "Cara paling ringkas: menilik dengan satu kad Major Arcana.", pos: ["Yang Ditunjukkan"] },
     oneOracleMinor: { name: "Petit One Oracle", desc: "Membaca nasib hari ini daripada satu kad Minor Arcana.", pos: ["Yang Ditunjukkan"] },
     three: { name: "Tiga Kad", desc: "Bentuk paling asas: membaca aliran masa.", pos: ["Masa lalu", "Masa kini", "Masa depan"] },
-    hexagram: { name: "Heksagram", desc: "Membaca sehingga ke hati orang lain. Klasik untuk hal percintaan.", pos: ["Masa lalu", "Masa kini", "Masa depan", "Yang perlu dilakukan", "Keadaan sekeliling", "Perasaannya", "Hasil akhir"] },
-    weekly: { name: "Kisah Seminggu", desc: "Menyusuri tujuh hari mendatang, satu persatu.", pos: ["Hari 1", "Hari 2", "Hari 3", "Hari 4", "Hari 5", "Hari 6", "Hari 7"] },
+    hexagram: { name: "Heksagram", desc: "Membaca jarak antara anda dan dia. Untuk keserasian dan asmara.", pos: ["Masa lalu", "Masa kini", "Masa depan", "Yang perlu dilakukan", "Keadaan sekeliling", "Perasaannya", "Hasil akhir"] },
+    weekly: { name: "Kisah Seminggu", desc: "Mengikuti nada setiap hari daripada tujuh hari. Untuk membaca irama anda.", pos: ["Hari 1", "Hari 2", "Hari 3", "Hari 4", "Hari 5", "Hari 6", "Hari 7"] },
     choice: { name: "Dua Jalan", desc: "Menjajarkan dua jalan, kemudian memilih.", pos: ["Keadaan sekarang", "Jika memilih A", "Hasil A", "Jika memilih B", "Hasil B"] },
-    celticCross: { name: "Salib Celtic", desc: "Sepuluh kad. Klasik dalam tarot.", pos: ["Arah kesedaran anda kini", "Yang menghalang", "Kesedaran", "Bawah sedar", "Masa lalu", "Masa depan terdekat", "Diri anda sendiri", "Persekitaran", "Harapan dan ketakutan", "Hasil akhir"] },
+    celticCross: { name: "Salib Celtic", desc: "Sepuluh kad menerangi sedar dan bawah sedar. Untuk menggali dalam.", pos: ["Arah kesedaran anda kini", "Yang menghalang", "Kesedaran", "Bawah sedar", "Masa lalu", "Masa depan terdekat", "Diri anda sendiri", "Persekitaran", "Harapan dan ketakutan", "Hasil akhir"] },
     relationship: { name: "Cawan Hubungan", desc: "Membaca hubungan dari kedua-dua belah pihak.", pos: ["Keadaan anda", "Keadaannya", "Harapan anda", "Harapannya", "Ketakutan anda", "Ketakutannya", "Kalian kini", "Halangan", "Kemungkinan", "Jalan yang anda tempuh", "Ke mana kalian menuju"] },
     horoscope: { name: "Horoskop", desc: "Dua belas bidang. Setahun penuh dalam satu pandangan.", pos: ["Diri sendiri", "Harta dan nilai", "Pembelajaran dan pertukaran", "Rumah dan akar", "Cinta dan ciptaan", "Tugas harian", "Pasangan dan perjanjian", "Perubahan", "Jauh dan pencarian", "Panggilan dan kedudukan", "Sekutu dan harapan", "Rahsia dan penyembuhan"] },
   },
@@ -2780,10 +2780,10 @@ const SPREAD_I18N = {
     oneOracle: { name: "Một Lá", desc: "Cách xem đơn giản nhất: chỉ một lá Ẩn Chính.", pos: ["Điều Được Chỉ Ra"] },
     oneOracleMinor: { name: "Petit One Oracle", desc: "Đọc vận hôm nay từ một lá Ẩn Phụ.", pos: ["Điều Được Chỉ Ra"] },
     three: { name: "Ba Lá", desc: "Hình thức căn bản nhất: đọc dòng chảy thời gian.", pos: ["Quá khứ", "Hiện tại", "Tương lai"] },
-    hexagram: { name: "Lục Giác", desc: "Đọc được cả lòng người kia. Kinh điển cho chuyện tình cảm.", pos: ["Quá khứ", "Hiện tại", "Tương lai", "Điều nên làm", "Hoàn cảnh xung quanh", "Lòng người ấy", "Kết quả"] },
-    weekly: { name: "Câu Chuyện Một Tuần", desc: "Lần theo bảy ngày sắp tới, từng ngày một.", pos: ["Ngày 1", "Ngày 2", "Ngày 3", "Ngày 4", "Ngày 5", "Ngày 6", "Ngày 7"] },
+    hexagram: { name: "Lục Giác", desc: "Đọc khoảng cách giữa bạn và người ấy. Cho sự hợp nhau và tình cảm.", pos: ["Quá khứ", "Hiện tại", "Tương lai", "Điều nên làm", "Hoàn cảnh xung quanh", "Lòng người ấy", "Kết quả"] },
+    weekly: { name: "Câu Chuyện Một Tuần", desc: "Theo dõi nhịp của từng ngày trong bảy ngày. Để đọc nhịp điệu của bạn.", pos: ["Ngày 1", "Ngày 2", "Ngày 3", "Ngày 4", "Ngày 5", "Ngày 6", "Ngày 7"] },
     choice: { name: "Hai Ngả Đường", desc: "Đặt hai con đường cạnh nhau rồi chọn.", pos: ["Hoàn cảnh hiện tại", "Nếu chọn A", "Kết quả của A", "Nếu chọn B", "Kết quả của B"] },
-    celticCross: { name: "Thập Tự Celt", desc: "Mười lá bài. Kinh điển của tarot.", pos: ["Hướng của ý thức hiện tại", "Điều cản trở", "Ý thức", "Vô thức", "Quá khứ", "Tương lai gần", "Chính bạn", "Môi trường xung quanh", "Hy vọng và lo sợ", "Kết quả"] },
+    celticCross: { name: "Thập Tự Celt", desc: "Mười lá soi cả ý thức lẫn vô thức. Khi muốn đào sâu.", pos: ["Hướng của ý thức hiện tại", "Điều cản trở", "Ý thức", "Vô thức", "Quá khứ", "Tương lai gần", "Chính bạn", "Môi trường xung quanh", "Hy vọng và lo sợ", "Kết quả"] },
     relationship: { name: "Chiếc Cốc Quan Hệ", desc: "Đọc mối quan hệ từ cả hai phía.", pos: ["Hoàn cảnh của bạn", "Hoàn cảnh của người ấy", "Mong muốn của bạn", "Mong muốn của người ấy", "Nỗi lo của bạn", "Nỗi lo của người ấy", "Hai người lúc này", "Trở ngại", "Khả năng", "Con đường của bạn", "Nơi hai người hướng tới"] },
     horoscope: { name: "Vòng Hoàng Đạo", desc: "Mười hai lĩnh vực. Trọn một năm trong một cái nhìn.", pos: ["Bản thân", "Của cải và giá trị", "Học hỏi và giao tiếp", "Gia đình và cội rễ", "Tình yêu và sáng tạo", "Việc thường ngày", "Bạn đời và giao ước", "Biến chuyển", "Phương xa và tìm kiếm", "Thiên chức và địa vị", "Đồng minh và ước nguyện", "Bí mật và chữa lành"] },
   },
@@ -6771,6 +6771,32 @@ function CelticPlane({ drawn, openedIndices, lang, isLast }) {
     zoneKey = `z${Math.floor(angE / 30)}`;
   }
 
+  /*
+    迷いと安定。
+
+    迷い … 各段で進む向きがどれだけ変わったかの平均。
+           180度に近い折り返しが続くほど高い。
+    安定 … 到達距離 ÷ 総移動距離。まっすぐ来れば1に近く、
+           行きつ戻りつすれば0に近い。
+  */
+  let turnSum = 0, turnCount = 0, walked = 0;
+  for (let k = 1; k < path.length; k++) {
+    const vx = path[k].x - path[k - 1].x, vy = path[k].y - path[k - 1].y;
+    walked += Math.hypot(vx, vy);
+    if (k >= 2) {
+      const ux = path[k - 1].x - path[k - 2].x, uy = path[k - 1].y - path[k - 2].y;
+      const nu = Math.hypot(ux, uy), nv = Math.hypot(vx, vy);
+      if (nu > 0.01 && nv > 0.01) {
+        const cos = Math.max(-1, Math.min(1, (ux * vx + uy * vy) / (nu * nv)));
+        turnSum += Math.acos(cos) / Math.PI; // 0〜1
+        turnCount++;
+      }
+    }
+  }
+  const wanderPct = turnCount ? Math.round((turnSum / turnCount) * 100) : 0;
+  const reached = Math.hypot(cur.x - originX, cur.y - originY);
+  const steadyPct = walked > 0.01 ? Math.round((reached / walked) * 100) : 0;
+
   const gid = useRef(`cp${Math.random().toString(36).slice(2, 8)}`).current;
 
   return (
@@ -6895,12 +6921,37 @@ function CelticPlane({ drawn, openedIndices, lang, isLast }) {
         「珍しいことが起きた」という合図として働かなくなる。
       */}
       {/*
+        軌跡の進み方をひとつの軸で示す。
+
+        以前は「迷い」と「安定」を別々のバーにしていたが、
+        この二つは同じ直線の両端であって、独立した量ではない。
+        別々に出すと足して100%にならず、読み手が二つの数を突き合わせる
+        羽目になる。針が左右どちらへ寄っているかだけを示す。
+
+        値は、到達距離 ÷ 総移動距離。
+        まっすぐ進めば右（安静）、行きつ戻りつすれば左（動揺）へ寄る。
+      */}
+      {isLast && path.length > 1 && (
+        <div className="celtic-axis-meter">
+          <div className="celtic-meter-ends">
+            <span>{t.celticWander}</span>
+            <span>{t.celticSteady}</span>
+          </div>
+          <div className="celtic-meter-track">
+            <span className="celtic-meter-mid" />
+            <span className="celtic-meter-needle" style={{ left: `${steadyPct}%` }} />
+          </div>
+          <p className="celtic-meter-read">{t.celticMeterRead(steadyPct)}</p>
+        </div>
+      )}
+
+      {/*
         軌跡の名。毎回いずれかが出る。
         週の物語の星と違い、ここは「珍しさ」ではなく「どこへ向かったか」を
         示すものなので、出ない回があるほうが不自然になる。
       */}
       {isLast && path.length > 1 && (
-        <div className={`celtic-verdict${zoneKey === "origin" || axisHit >= 0 ? " strong" : ""}`}>
+      <div className={`celtic-verdict${zoneKey === "origin" || axisHit >= 0 ? " strong" : ""}`}>
           <p className={`celtic-grade sheen-text${zoneKey === "origin" || axisHit >= 0 ? " strong" : ""}`}>
             {t.celticZone[zoneKey] || ""}
           </p>
@@ -7738,6 +7789,44 @@ function HexagramPanel({ lang, onBack, question, userName, canDraw, onConsume, o
     読み方が変わってしまう。最初に決めた読み方を最後まで通す。
   */
   const [bulkAsking, setBulkAsking] = useState(false);
+  const [hexCopied, setHexCopied] = useState(false);
+  const [hexShared, setHexShared] = useState(false);
+
+  /*
+    結果の書き出し。
+    札の位置と名前、向き、鑑定文を並べるだけにする。
+    軌跡の座標のような、この画面でしか意味を持たない値は入れない。
+  */
+  const buildHexText = () => {
+    if (!drawn) return "";
+    const lines = drawn.map((d, i) => {
+      const pos = info.pos[i] || `${i + 1}`;
+      return `${pos}: ${getCardName(d, lang)}（${orientationLabel(d.reversed, lang)}）`;
+    });
+    const body = reading ? `\n\n${reading.replace(/[\u0001\u0002\u0003]/g, "").replace(/\t/g, " ")}` : "";
+    return `${info.name}\n\n${lines.join("\n")}${body}`;
+  };
+
+  const handleHexCopy = async () => {
+    try {
+      await navigator.clipboard.writeText(buildHexText());
+      setHexCopied(true);
+      setTimeout(() => setHexCopied(false), 2000);
+    } catch { /* 端末が許さない場合は何もしない */ }
+  };
+
+  const handleHexShare = async () => {
+    const text = buildHexText();
+    try {
+      if (navigator.share) {
+        await navigator.share({ title: info.name, text });
+      } else {
+        await navigator.clipboard.writeText(text);
+      }
+      setHexShared(true);
+      setTimeout(() => setHexShared(false), 2000);
+    } catch { /* 利用者が取り消した場合も含め、何もしない */ }
+  };
 
   const autoPick = (mode) => {
     if (autoRunRef.current) return;
@@ -8518,15 +8607,30 @@ function HexagramPanel({ lang, onBack, question, userName, canDraw, onConsume, o
         タイトルへ戻って選び直すより、そのまま引き直せるほうが短い。
       */}
       {/*
-        全部開き終えてから出す。
-        drawn だけを条件にしていたため、開封の途中でも押せてしまい、
-        まだ読んでいない札があるのに引き直せる状態になっていた。
+        結果を読み終えた後の出口。スリーカードと同じ並びに揃える。
+        共有 → コピー → もう一度占う → タイトルへ。
+        占いごとに出口の構成が違うと、どこを押せばよいか毎回探すことになる。
       */}
       {drawn && stage >= STAGES.length && (
-        <button className="draw-btn" onClick={restart} style={{ marginTop: "10px" }}>
-          <Shuffle size={16} />
-          {t.startButton}
-        </button>
+        <>
+          <button className="draw-btn copy-btn" onClick={handleHexShare} style={{ marginTop: "12px", marginBottom: "8px" }}>
+            {hexShared ? <Check size={16} /> : <Share2 size={16} />}
+            {hexShared ? t.shareDone : t.shareButton}
+          </button>
+
+          <div className={`copy-wrap${hexCopied ? " copied" : ""}`}>
+            <button className="draw-btn copy-btn" onClick={handleHexCopy}>
+              {hexCopied ? <Check size={16} /> : <Copy size={16} />}
+              {hexCopied ? t.copyDone : t.copyButton}
+            </button>
+            <p className="copy-hint">{t.copyHint}</p>
+          </div>
+
+          <button className="reset-btn" onClick={restart} style={{ marginTop: "10px" }}>
+            <RotateCcw size={14} />
+            {t.drawAgainFree}
+          </button>
+        </>
       )}
       <button className="back-to-title" onClick={onBack}>{t.backToTitle}</button>
     </div>
@@ -10331,6 +10435,9 @@ const T = {
     bulkNo: "아니요",
     celticAxis: {"up": "의식", "down": "무의식", "left": "과거", "right": "가까운 미래"},
     celticPlaneNote: "옅은 점은 지난번까지의 무게중심입니다",
+    celticWander: "동요",
+    celticSteady: "안정",
+    celticMeterRead: (p) => p >= 66 ? `곧게 나아간 궤적입니다` : p >= 34 ? `나아가면서도 몇 번 방향을 바꾸었습니다` : `여러 번 되짚으며 나아간 궤적입니다`,
     celticZone: {"origin": "정지의 자리", "axisFuture": "미래로 곧게", "axisSurface": "각성으로 곧게", "axisPast": "과거로 곧게", "axisDeep": "심층으로 곧게", "z0": "내일을 향해", "z1": "떠오르는 내일", "z2": "맑아지는 의식", "z3": "돌아보는 의식", "z4": "기억을 비추다", "z5": "먼 날을 바라보다", "z6": "가라앉는 기억", "z7": "침전의 바닥", "z8": "잠든 과거", "z9": "안으로 잠기다", "z10": "조짐의 저류", "z11": "다가오는 예감"},
     celticZoneNote: {"origin": "어느 쪽으로도 기울지 않은 궤적입니다。정하지 못한 것이 아니라, 지금은 모든 방향이 똑같이 열려 있는지도 모릅니다。", "axisFuture": "망설임 없이 앞으로 향하는 궤적입니다。다만 아직 오지 않은 것에 크게 거는 마음일 때도 이 모양이 나타납니다。", "axisSurface": "분명히 자각하고 있는 것으로 향하는 궤적입니다。말이 되는 만큼, 말이 되지 않는 것이 뒤에 남기도 합니다。", "axisPast": "과거로 곧게 향하는 궤적입니다。끝났다고 여긴 일이 아직 동기의 밑바닥에서 작동하는 경우가 있습니다。", "axisDeep": "깊은 곳으로 가라앉는 궤적입니다。스스로도 설명되지 않는 충동이 지금의 선택을 움직이는지도 모릅니다。", "z0": "앞을 보고 있는 궤적입니다。눈앞의 상황보다 그 너머의 결과로 관심이 향해 있습니다。", "z1": "의식이 미래로 들어 올려지는 궤적입니다。계획이나 전망이 지금의 기분을 끌어올리고 있을 수 있습니다。", "z2": "생각이 맑아지는 궤적입니다。설명되지 않던 것에 설명이 붙기 시작한 시기인지도 모릅니다。", "z3": "자신을 돌아보는 궤적입니다。지난 일을 다시 말로 만들려는 움직임이 의식 쪽에서 일어나고 있습니다。", "z4": "기억에 빛을 비추는 궤적입니다。잊은 줄 알았던 일이 지금의 판단에 재료가 되는 경우가 있습니다。", "z5": "먼 날을 바라보는 궤적입니다。되돌릴 수 없는 것을 향한 마음이 동기의 안쪽에 잠들어 있기도 합니다。", "z6": "기억이 가라앉는 궤적입니다。돌아보는 일 자체를 그만두려는 시기인지도 모릅니다。", "z7": "가장 깊이 고인 곳의 궤적입니다。오래 움직이지 못한 것이 조용히 바닥에 쌓여 있습니다。", "z8": "잠든 과거로 향하는 궤적입니다。예전에 채워지지 않았던 바람을 지금 되찾으려는 것인지도 모릅니다。", "z9": "안쪽으로 잠기는 궤적입니다。바깥의 일보다 자신의 반응으로 관심이 옮겨가고 있습니다。", "z10": "아직 형태가 없는 예감의 궤적입니다。이유는 말할 수 없지만 무언가 움직이기 시작했다고 느낄 때 나타납니다。", "z11": "찾아올 것을 기다리는 궤적입니다。자각하지 못한 사이에 다음에 올 것에 대한 준비가 시작되었을 수 있습니다。"},
     weekPeak: (d) => `절정｜${d}`,
@@ -10572,6 +10679,9 @@ const T = {
     bulkNo: "Không",
     celticAxis: {"up": "Ý thức", "down": "Vô thức", "left": "Quá khứ", "right": "Tương lai gần"},
     celticPlaneNote: "Những chấm mờ là trọng tâm các lần trước",
+    celticWander: "Chao đảo",
+    celticSteady: "Tĩnh tại",
+    celticMeterRead: (p) => p >= 66 ? `Một đường đi thẳng hướng` : p >= 34 ? `Có tiến tới, nhưng đã đổi hướng vài lần` : `Một đường đi nhiều lần quay lại`,
     celticZone: {"origin": "Chỗ ngồi tĩnh lặng", "axisFuture": "Thẳng tới ngày mai", "axisSurface": "Thẳng tới tỉnh thức", "axisPast": "Thẳng tới quá khứ", "axisDeep": "Thẳng tới tầng sâu", "z0": "Hướng về ngày mai", "z1": "Ngày mai đang lên", "z2": "Tâm trí trong dần", "z3": "Tâm trí soi lại", "z4": "Rọi sáng ký ức", "z5": "Nhìn về ngày xa", "z6": "Ký ức đang chìm", "z7": "Đáy của sự lắng đọng", "z8": "Quá khứ đang ngủ", "z9": "Lặn vào bên trong", "z10": "Dòng ngầm của điềm báo", "z11": "Một linh cảm đang đến"},
     celticZoneNote: {"origin": "Đường đi không nghiêng về đâu。Có lẽ không phải do dự, mà là lúc mọi hướng đều mở ra như nhau。", "axisFuture": "Đường đi thẳng về phía trước。Hình này cũng xuất hiện khi người ta đặt nhiều vào điều chưa tới。", "axisSurface": "Đường đi hướng tới điều bạn đã tự biết。Chính vì nói ra được, điều không nói được có thể nằm phía sau。", "axisPast": "Đường đi thẳng về quá khứ。Điều bạn tưởng đã xong có thể vẫn đang vận hành dưới đáy động cơ。", "axisDeep": "Đường đi chìm xuống tầng sâu。Một thôi thúc chính bạn cũng không lý giải được có thể đang dẫn dắt lựa chọn。", "z0": "Đường đi hướng mắt về phía trước。Sự chú ý đặt ở kết cục hơn là ở hoàn cảnh trước mắt。", "z1": "Đường đi khi ý thức được nâng về ngày mai。Kế hoạch hay triển vọng có thể đang nâng tâm trạng hiện tại。", "z2": "Đường đi của suy nghĩ đang trong dần。Có lẽ đây là lúc điều chưa có lời giải bắt đầu có lời giải。", "z3": "Đường đi quay lại nhìn chính mình。Chuyển động đặt lại thành lời cho quá khứ đang diễn ra ở phía ý thức。", "z4": "Đường đi rọi sáng ký ức。Điều bạn tưởng đã quên có thể đang là chất liệu cho phán đoán hiện tại。", "z5": "Đường đi nhìn về ngày xa。Tình cảm dành cho điều không lấy lại được có thể đang ngủ dưới đáy động cơ。", "z6": "Đường đi khi ký ức chìm xuống。Có lẽ đây là lúc bạn muốn thôi ngoái nhìn。", "z7": "Đường đi ở tầng sâu tĩnh nhất。Điều lâu nay không dịch chuyển đang lắng xuống đáy trong lặng lẽ。", "z8": "Đường đi hướng về quá khứ đang ngủ。Bạn có thể đang muốn giành lại một ước nguyện từng không được thỏa。", "z9": "Đường đi lặn vào bên trong。Sự quan tâm chuyển từ việc bên ngoài sang cách bạn phản ứng。", "z10": "Đường đi của linh cảm chưa thành hình。Xuất hiện khi thấy điều gì đó bắt đầu chuyển động vì lý do không gọi tên được。", "z11": "Đường đi chờ điều sẽ đến。Sự chuẩn bị cho điều kế tiếp có thể đã bắt đầu mà bạn chưa hay。"},
     weekPeak: (d) => `Đỉnh｜${d}`,
@@ -10811,6 +10921,9 @@ const T = {
     bulkNo: "Tidak",
     celticAxis: {"up": "Sadar", "down": "Bawah sadar", "left": "Masa lalu", "right": "Masa depan dekat"},
     celticPlaneNote: "Titik samar adalah titik berat sebelumnya",
+    celticWander: "Gejolak",
+    celticSteady: "Ketenangan",
+    celticMeterRead: (p) => p >= 66 ? `Jejak yang melaju lurus` : p >= 34 ? `Maju, namun beberapa kali berbelok` : `Jejak yang berulang kali berbalik`,
     celticZone: {"origin": "Tempat yang hening", "axisFuture": "Lurus ke esok", "axisSurface": "Lurus ke kesadaran", "axisPast": "Lurus ke masa lalu", "axisDeep": "Lurus ke kedalaman", "z0": "Menghadap esok", "z1": "Esok yang terbit", "z2": "Benak yang menjernih", "z3": "Benak yang merenung", "z4": "Menerangi ingatan", "z5": "Menatap hari yang jauh", "z6": "Ingatan yang tenggelam", "z7": "Dasar yang mengendap", "z8": "Masa lalu yang tertidur", "z9": "Menyelam ke dalam", "z10": "Arus bawah pertanda", "z11": "Firasat yang mendekat"},
     celticZoneNote: {"origin": "Jejak yang tidak condong ke mana pun。Mungkin bukan keraguan, melainkan saat setiap arah terbuka sama lebarnya。", "axisFuture": "Jejak yang lurus ke depan。Bentuk ini juga muncul ketika banyak dipertaruhkan pada yang belum tiba。", "axisSurface": "Jejak menuju apa yang sudah kamu sadari。Justru karena bisa dikatakan, yang tak terkatakan mungkin tertinggal di belakang。", "axisPast": "Jejak yang lurus ke belakang。Hal yang kamu kira selesai mungkin masih bekerja di dasar motifmu。", "axisDeep": "Jejak yang tenggelam ke kedalaman。Dorongan yang tak bisa kamu jelaskan mungkin sedang menggerakkan pilihanmu。", "z0": "Jejak dengan pandangan ke depan。Perhatian tertuju pada hasil, bukan pada keadaan saat ini。", "z1": "Jejak saat kesadaran terangkat ke esok。Rencana atau harapan mungkin sedang mengangkat suasana hatimu。", "z2": "Jejak pikiran yang menjernih。Mungkin ini masa ketika yang tak terjelaskan mulai menemukan penjelasan。", "z3": "Jejak yang berbalik pada diri。Gerak untuk kembali menuturkan masa lalu sedang terjadi di sisi sadar。", "z4": "Jejak yang menerangi ingatan。Hal yang kamu kira terlupa mungkin menjadi bahan pertimbanganmu kini。", "z5": "Jejak yang menatap hari yang jauh。Perasaan pada yang tak dapat ditarik kembali mungkin tidur di dasar motifmu。", "z6": "Jejak saat ingatan tenggelam。Mungkin ini masa ketika kamu berusaha berhenti menoleh sama sekali。", "z7": "Jejak di kedalaman yang paling diam。Sesuatu yang lama tak bergerak mengendap sunyi di dasar。", "z8": "Jejak menuju masa lalu yang tertidur。Kamu mungkin sedang berusaha menuntut kembali keinginan yang dulu tak terpenuhi。", "z9": "Jejak yang menyelam ke dalam。Perhatian berpindah dari kejadian luar ke caramu menanggapi。", "z10": "Jejak firasat yang belum berbentuk。Muncul ketika sesuatu terasa mulai bergerak tanpa alasan yang bisa disebut。", "z11": "Jejak yang menanti kedatangan。Persiapan untuk yang berikutnya mungkin sudah dimulai tanpa kamu sadari。"},
     weekPeak: (d) => `Puncak｜${d}`,
@@ -11052,6 +11165,9 @@ const T = {
     bulkNo: "Tidak",
     celticAxis: {"up": "Sedar", "down": "Bawah sedar", "left": "Lalu", "right": "Masa depan dekat"},
     celticPlaneNote: "Titik samar ialah pusat graviti sebelum ini",
+    celticWander: "Gelora",
+    celticSteady: "Ketenangan",
+    celticMeterRead: (p) => p >= 66 ? `Jejak yang melaju lurus` : p >= 34 ? `Maju, namun beberapa kali berpaling` : `Jejak yang berulang kali berpatah balik`,
     celticZone: {"origin": "Tempat yang hening", "axisFuture": "Lurus ke esok", "axisSurface": "Lurus ke kesedaran", "axisPast": "Lurus ke masa lalu", "axisDeep": "Lurus ke kedalaman", "z0": "Menghadap esok", "z1": "Esok yang terbit", "z2": "Fikiran yang menjernih", "z3": "Fikiran yang merenung", "z4": "Menerangi ingatan", "z5": "Menatap hari yang jauh", "z6": "Ingatan yang tenggelam", "z7": "Dasar yang mengendap", "z8": "Masa lalu yang tertidur", "z9": "Menyelam ke dalam", "z10": "Arus bawah petanda", "z11": "Firasat yang menghampiri"},
     celticZoneNote: {"origin": "Jejak yang tidak condong ke mana-mana。Mungkin bukan keraguan, tetapi saat setiap arah terbuka sama luas。", "axisFuture": "Jejak yang lurus ke hadapan。Bentuk ini juga muncul apabila banyak dipertaruhkan pada yang belum tiba。", "axisSurface": "Jejak menuju apa yang anda sudah sedari。Justeru kerana ia dapat dikatakan, yang tidak terkata mungkin tertinggal di belakang。", "axisPast": "Jejak yang lurus ke belakang。Perkara yang anda sangka selesai mungkin masih bekerja di dasar motif anda。", "axisDeep": "Jejak yang tenggelam ke kedalaman。Dorongan yang anda sendiri tidak dapat jelaskan mungkin sedang menggerakkan pilihan。", "z0": "Jejak dengan pandangan ke hadapan。Perhatian tertumpu pada kesudahan, bukan keadaan sekarang。", "z1": "Jejak apabila kesedaran terangkat ke esok。Rancangan atau harapan mungkin sedang mengangkat perasaan anda。", "z2": "Jejak fikiran yang menjernih。Mungkin ini masa apabila yang tidak terjelaskan mula menemui penjelasan。", "z3": "Jejak yang berpaling kepada diri。Gerak untuk menuturkan semula masa lalu sedang berlaku di sisi sedar。", "z4": "Jejak yang menerangi ingatan。Perkara yang anda sangka terlupa mungkin menjadi bahan pertimbangan kini。", "z5": "Jejak yang menatap hari yang jauh。Perasaan terhadap yang tidak dapat ditarik balik mungkin tidur di dasar motif。", "z6": "Jejak apabila ingatan tenggelam。Mungkin ini masa anda cuba berhenti menoleh sama sekali。", "z7": "Jejak di kedalaman yang paling sunyi。Sesuatu yang lama tidak bergerak mengendap senyap di dasar。", "z8": "Jejak menuju masa lalu yang tertidur。Anda mungkin sedang cuba menuntut semula hasrat yang dahulu tidak terpenuhi。", "z9": "Jejak yang menyelam ke dalam。Perhatian berpindah daripada kejadian luar kepada cara anda bertindak balas。", "z10": "Jejak firasat yang belum berbentuk。Muncul apabila sesuatu terasa mula bergerak atas sebab yang tidak dapat dinamakan。", "z11": "Jejak yang menanti kedatangan。Persiapan untuk yang seterusnya mungkin sudah bermula tanpa anda sedari。"},
     weekPeak: (d) => `Puncak｜${d}`,
@@ -11294,6 +11410,9 @@ const T = {
     bulkNo: "いいえ",
     celticAxis: {"up": "顕在", "down": "潜在", "left": "過去", "right": "近い未来"},
     celticPlaneNote: "薄い点は、前回までの重心です",
+    celticWander: "動揺",
+    celticSteady: "安静",
+    celticMeterRead: (p) => p >= 66 ? `まっすぐに進んだ軌跡です` : p >= 34 ? `進みながらも、幾度か向きを変えました` : `何度も引き返しながら進んだ軌跡です`,
     celticZone: {"origin": "静止の座", "axisFuture": "未来への一途", "axisSurface": "覚醒への一途", "axisPast": "過去への一途", "axisDeep": "深層への一途", "z0": "明日を向く", "z1": "昇りゆく明日", "z2": "澄みゆく意識", "z3": "省みる意識", "z4": "記憶を照らす", "z5": "遠い日を望む", "z6": "沈みゆく記憶", "z7": "澱みの底", "z8": "眠れる過去", "z9": "内へ潜る", "z10": "兆しの底流", "z11": "訪れる予感"},
     celticZoneNote: {"origin": "どこにも傾かなかった軌跡です。決めきれないのではなく、いまはどの方向も等しく開いている状態かもしれません。", "axisFuture": "迷いなく先へ向かう軌跡です。ただし、まだ来ていないものに賭ける気持ちが強いときにも、この形は現れます。", "axisSurface": "はっきりと自覚している事柄へ向かう軌跡です。言葉にできている分、見落としが裏側に残ることもあります。", "axisPast": "過去へまっすぐ向かう軌跡です。終えたはずの出来事が、まだ動機の底で働いていることを示す場合があります。", "axisDeep": "深いところへ沈む軌跡です。自分でも説明のつかない衝動が、いま選択を動かしているのかもしれません。", "z0": "先を見ている軌跡です。目の前の状況より、その先にある結果のほうに関心が向いています。", "z1": "意識が未来へ持ち上がる軌跡です。計画や見通しが、いまの気分を引き上げている状態を示すことがあります。", "z2": "考えが澄んでいく軌跡です。分かっていなかったことに説明がつき始めた時期かもしれません。", "z3": "自分を省みる軌跡です。過ぎたことを言葉にし直そうとする動きが、意識の側で起きています。", "z4": "記憶に光を当てる軌跡です。忘れていたつもりの出来事が、いまの判断の材料になっている場合があります。", "z5": "遠い日を見ている軌跡です。取り戻せないものへの気持ちが、動機の奥に眠っていることがあります。", "z6": "記憶が沈んでいく軌跡です。振り返ること自体をやめようとしている時期かもしれません。", "z7": "最も深く淀んだところにある軌跡です。長く動かせずにいるものが、静かに底に溜まっています。", "z8": "眠ったままの過去へ向かう軌跡です。かつて満たされなかった願いを、いま取り戻そうとしているのかもしれません。", "z9": "内側へ潜っていく軌跡です。外の出来事より、自分の反応のほうに関心が移っています。", "z10": "まだ形にならない予感の軌跡です。理由は言えないが、何かが動き出していると感じているときに現れます。", "z11": "訪れるものを待つ軌跡です。自覚しないうちに、次に来るものへ準備が始まっている場合があります。"},
     weekPeak: (d) => `山｜${d}`,
@@ -11535,6 +11654,9 @@ const T = {
     bulkNo: "不要",
     celticAxis: {"up": "顯意識", "down": "潛意識", "left": "過去", "right": "近未來"},
     celticPlaneNote: "淡色的點是先前的重心",
+    celticWander: "動搖",
+    celticSteady: "安靜",
+    celticMeterRead: (p) => p >= 66 ? `一路筆直前行的軌跡` : p >= 34 ? `一面前進，一面數度轉向` : `幾度折返而行的軌跡`,
     celticZone: {"origin": "靜止之座", "axisFuture": "直往未來", "axisSurface": "直往覺醒", "axisPast": "直往過去", "axisDeep": "直往深層", "z0": "面向明日", "z1": "升起的明日", "z2": "澄澈的意識", "z3": "反省的意識", "z4": "照亮記憶", "z5": "遙望遠日", "z6": "下沉的記憶", "z7": "沉澱之底", "z8": "沉睡的過去", "z9": "向內潛入", "z10": "徵兆的暗流", "z11": "來臨的預感"},
     celticZoneNote: {"origin": "沒有偏向任何一方的軌跡。或許不是無法決定，而是此刻每個方向都同樣敞開著。", "axisFuture": "毫不猶豫向前的軌跡。不過，當人把許多期待押在尚未到來的事物上時，也會出現這個形狀。", "axisSurface": "朝向你已清楚自覺之事的軌跡。正因為說得出口，說不出口的部分可能留在背後。", "axisPast": "筆直往過去去的軌跡。以為已經結束的事，可能仍在動機的底層運作著。", "axisDeep": "沉入深處的軌跡。連自己也說不清的衝動，或許正在推動當下的選擇。", "z0": "望向前方的軌跡。比起眼前的處境，注意力更放在其後的結果上。", "z1": "意識被抬向未來的軌跡。計畫或前景可能正在提振此刻的心情。", "z2": "思緒逐漸澄清的軌跡。或許正處於原本無法解釋之事開始有了說法的時期。", "z3": "回頭審視自己的軌跡。想把過去重新化為語言的動作，正在意識這一側發生。", "z4": "照亮記憶的軌跡。以為已經遺忘的事，可能正成為當下判斷的材料。", "z5": "遙望遠日的軌跡。對於再也取不回之物的心情，或許沉睡在動機深處。", "z6": "記憶逐漸下沉的軌跡。或許正處於想停止回望本身的時期。", "z7": "位於最深沉澱處的軌跡。長久無法挪動的事物，正靜靜堆積在底部。", "z8": "朝向沉睡過去的軌跡。你或許正想取回當年未曾滿足的願望。", "z9": "向內潛入的軌跡。比起外在的事件，關注已轉向自己的反應。", "z10": "尚未成形的預感之軌跡。當人說不出理由卻感到有什麼開始動了，便會出現。", "z11": "等待來訪之物的軌跡。在未曾自覺之間，對下一件事的準備或許已經開始。"},
     weekPeak: (d) => `高峰｜${d}`,
@@ -11776,6 +11898,9 @@ const T = {
     bulkNo: "不要",
     celticAxis: {"up": "显意识", "down": "潜意识", "left": "过去", "right": "近未来"},
     celticPlaneNote: "淡色的点是先前的重心",
+    celticWander: "动摇",
+    celticSteady: "安静",
+    celticMeterRead: (p) => p >= 66 ? `一路笔直前行的轨迹` : p >= 34 ? `一面前进，一面数度转向` : `几度折返而行的轨迹`,
     celticZone: {"origin": "静止之座", "axisFuture": "直往未来", "axisSurface": "直往觉醒", "axisPast": "直往过去", "axisDeep": "直往深层", "z0": "面向明日", "z1": "升起的明日", "z2": "澄澈的意识", "z3": "反省的意识", "z4": "照亮记忆", "z5": "遥望远日", "z6": "下沉的记忆", "z7": "沉淀之底", "z8": "沉睡的过去", "z9": "向内潜入", "z10": "征兆的暗流", "z11": "来临的预感"},
     celticZoneNote: {"origin": "没有偏向任何一方的轨迹。或许不是无法决定，而是此刻每个方向都同样敞开着。", "axisFuture": "毫不犹豫向前的轨迹。不过，当人把许多期待押在尚未到来的事物上时，也会出现这个形状。", "axisSurface": "朝向你已清楚自觉之事的轨迹。正因为说得出口，说不出口的部分可能留在背后。", "axisPast": "笔直往过去去的轨迹。以为已经结束的事，可能仍在动机的底层运作着。", "axisDeep": "沉入深处的轨迹。连自己也说不清的冲动，或许正在推动当下的选择。", "z0": "望向前方的轨迹。比起眼前的处境，注意力更放在其后的结果上。", "z1": "意识被抬向未来的轨迹。计划或前景可能正在提振此刻的心情。", "z2": "思绪逐渐澄清的轨迹。或许正处于原本无法解释之事开始有了说法的时期。", "z3": "回头审视自己的轨迹。想把过去重新化为语言的动作，正在意识这一侧发生。", "z4": "照亮记忆的轨迹。以为已经遗忘的事，可能正成为当下判断的材料。", "z5": "遥望远日的轨迹。对于再也取不回之物的心情，或许沉睡在动机深处。", "z6": "记忆逐渐下沉的轨迹。或许正处于想停止回望本身的时期。", "z7": "位于最深沉淀处的轨迹。长久无法挪动的事物，正静静堆积在底部。", "z8": "朝向沉睡过去的轨迹。你或许正想取回当年未曾满足的愿望。", "z9": "向内潜入的轨迹。比起外在的事件，关注已转向自己的反应。", "z10": "尚未成形的预感之轨迹。当人说不出理由却感到有什么开始动了，便会出现。", "z11": "等待来访之物的轨迹。在未曾自觉之间，对下一件事的准备或许已经开始。"},
     weekPeak: (d) => `高峰｜${d}`,
@@ -12017,6 +12142,9 @@ const T = {
     bulkNo: "No",
     celticAxis: {"up": "Conscious", "down": "Unconscious", "left": "Past", "right": "Near future"},
     celticPlaneNote: "The faint dots are your earlier centres",
+    celticWander: "Agitation",
+    celticSteady: "Calm",
+    celticMeterRead: (p) => p >= 66 ? `A trail that ran straight` : p >= 34 ? `Moving on, yet turning more than once` : `A trail that doubled back again and again`,
     celticZone: {"origin": "The still seat", "axisFuture": "Straight to tomorrow", "axisSurface": "Straight to waking", "axisPast": "Straight to the past", "axisDeep": "Straight to the depths", "z0": "Facing tomorrow", "z1": "Tomorrow rising", "z2": "Clearing mind", "z3": "Reflecting mind", "z4": "Lighting memory", "z5": "Gazing at distant days", "z6": "Memory sinking", "z7": "The stagnant floor", "z8": "The sleeping past", "z9": "Diving inward", "z10": "The undercurrent of signs", "z11": "A coming sense"},
     celticZoneNote: {"origin": "A trail that leaned nowhere. Not indecision, perhaps, but a moment when every direction lies equally open.", "axisFuture": "A trail that runs straight ahead. This shape also appears when much is being staked on what has not yet arrived.", "axisSurface": "A trail toward what you already know you feel. Since it can be put into words, what escapes words may sit behind it.", "axisPast": "A trail running straight back. Something you thought was finished may still be working beneath your motives.", "axisDeep": "A trail sinking into the depths. An impulse you cannot account for may be moving your choices now.", "z0": "A trail with its eyes ahead. Attention rests on the outcome rather than on the situation at hand.", "z1": "A trail where awareness lifts toward tomorrow. Plans or prospects may be raising your present mood.", "z2": "A trail of clearing thought. This may be a time when what had no explanation begins to find one.", "z3": "A trail turned back on itself. A movement to put the past into words again is happening at the conscious level.", "z4": "A trail that lights up memory. Something you meant to forget may be feeding your present judgement.", "z5": "A trail gazing at distant days. A feeling toward what cannot be recovered may lie asleep beneath your motives.", "z6": "A trail where memory sinks. This may be a time of trying to stop looking back at all.", "z7": "A trail at the stillest depth. Something long unmoved has been settling quietly at the bottom.", "z8": "A trail toward a sleeping past. You may be trying to reclaim a wish that was never granted.", "z9": "A trail diving inward. Interest has shifted from what happens outside to how you respond.", "z10": "A trail of a sense not yet formed. It appears when something feels set in motion for reasons you cannot name.", "z11": "A trail that waits for arrival. Preparation for what comes next may already have begun without your noticing."},
     weekPeak: (d) => `Peak｜${d}`,
@@ -12258,6 +12386,9 @@ const T = {
     bulkNo: "Hindi",
     celticAxis: {"up": "Malay", "down": "Di-malay", "left": "Nakaraan", "right": "Malapit na hinaharap"},
     celticPlaneNote: "Ang malalabong tuldok ay mga naunang sentro",
+    celticWander: "Pagkabalisa",
+    celticSteady: "Katahimikan",
+    celticMeterRead: (p) => p >= 66 ? `Landas na tuwid ang takbo` : p >= 34 ? `Umuusad, ngunit paulit-ulit lumiliko` : `Landas na paulit-ulit bumabalik`,
     celticZone: {"origin": "Ang tahimik na luklukan", "axisFuture": "Tuwid sa bukas", "axisSurface": "Tuwid sa paggising", "axisPast": "Tuwid sa nakaraan", "axisDeep": "Tuwid sa kalaliman", "z0": "Nakaharap sa bukas", "z1": "Sumisikat na bukas", "z2": "Lumilinaw na isip", "z3": "Nagninilay na isip", "z4": "Tinatanglawan ang alaala", "z5": "Tanaw sa malayong araw", "z6": "Lumulubog na alaala", "z7": "Ang tigil na sahig", "z8": "Ang natutulog na nakaraan", "z9": "Sumisisid sa loob", "z10": "Agos sa ilalim ng palatandaan", "z11": "Isang paparating na pakiramdam"},
     celticZoneNote: {"origin": "Landas na hindi kumiling saanman。Marahil hindi kawalan ng pasya, kundi sandaling pantay ang bukas na bawat direksyon。", "axisFuture": "Landas na tuwid ang tungo。Lumilitaw din ang hugis na ito kapag marami ang itinataya sa hindi pa dumarating。", "axisSurface": "Landas patungo sa alam mo nang nararamdaman。Dahil nasasabi ito, maaaring nasa likod ang hindi masabi。", "axisPast": "Landas na tuwid pabalik。Ang inakala mong tapos ay maaaring gumagana pa rin sa ilalim ng iyong motibo。", "axisDeep": "Landas na lumulubog sa kalaliman。Isang udyok na hindi mo maipaliwanag ang maaaring gumagalaw sa iyong pagpili。", "z0": "Landas na nakatingin sa unahan。Nasa kalalabasan ang pansin, hindi sa kasalukuyang kalagayan。", "z1": "Landas kung saan umaangat ang kamalayan sa bukas。Ang mga plano o pag-asa ay maaaring nag-aangat sa iyong loob。", "z2": "Landas ng lumilinaw na isip。Maaaring panahon ito na nagsisimulang magkaroon ng paliwanag ang dating walang paliwanag。", "z3": "Landas na bumabalik sa sarili。Nagaganap sa malay na bahagi ang pagnanais na muling bigyang-salita ang nakaraan。", "z4": "Landas na tumatanglaw sa alaala。Ang inakala mong nalimot ay maaaring nagiging batayan ng iyong pasya。", "z5": "Landas na tumatanaw sa malayong araw。Ang damdamin sa hindi na maibabalik ay maaaring natutulog sa ilalim ng motibo。", "z6": "Landas kung saan lumulubog ang alaala。Maaaring panahon ito ng pagtigil sa paglingon mismo。", "z7": "Landas sa pinakatahimik na kalaliman。Ang matagal nang hindi natinag ay tahimik na naiipon sa ilalim。", "z8": "Landas patungo sa natutulog na nakaraan。Maaaring sinisikap mong bawiin ang hilig na hindi natupad noon。", "z9": "Landas na sumisisid paloob。Lumipat ang interes mula sa panlabas patungo sa sarili mong tugon。", "z10": "Landas ng pakiramdam na wala pang hugis。Lumilitaw kapag may tila gumagalaw sa dahilang hindi mo mapangalanan。", "z11": "Landas na naghihintay ng darating。Maaaring nagsimula na ang paghahanda sa susunod nang hindi mo namamalayan。"},
     weekPeak: (d) => `Rurok｜${d}`,
@@ -12499,6 +12630,9 @@ const T = {
     bulkNo: "ไม่",
     celticAxis: {"up": "จิตสำนึก", "down": "จิตใต้สำนึก", "left": "อดีต", "right": "อนาคตอันใกล้"},
     celticPlaneNote: "จุดจางคือจุดศูนย์ถ่วงของครั้งก่อน",
+    celticWander: "ความปั่นป่วน",
+    celticSteady: "ความสงบ",
+    celticMeterRead: (p) => p >= 66 ? `เส้นทางที่มุ่งตรงไป` : p >= 34 ? `เดินหน้าไป แต่เปลี่ยนทิศหลายครั้ง` : `เส้นทางที่ย้อนกลับครั้งแล้วครั้งเล่า`,
     celticZone: {"origin": "ที่นั่งอันนิ่งสงบ", "axisFuture": "ตรงสู่วันพรุ่ง", "axisSurface": "ตรงสู่การตื่นรู้", "axisPast": "ตรงสู่อดีต", "axisDeep": "ตรงสู่ห้วงลึก", "z0": "หันสู่วันพรุ่ง", "z1": "วันพรุ่งที่ทอแสง", "z2": "จิตที่กระจ่างขึ้น", "z3": "จิตที่ทบทวน", "z4": "ส่องความทรงจำ", "z5": "มองวันวานอันไกล", "z6": "ความทรงจำที่จมลง", "z7": "ก้นบึ้งอันนิ่งงัน", "z8": "อดีตที่หลับใหล", "z9": "ดำดิ่งสู่ภายใน", "z10": "กระแสใต้ของลางบอก", "z11": "ลางที่กำลังมาถึง"},
     celticZoneNote: {"origin": "เส้นทางที่ไม่เอนไปทางใด。อาจไม่ใช่การตัดสินใจไม่ได้ แต่เป็นช่วงที่ทุกทิศทางเปิดอยู่เท่ากัน。", "axisFuture": "เส้นทางที่มุ่งไปข้างหน้าโดยไม่ลังเล。ทว่ารูปนี้ก็ปรากฏเมื่อผู้คนฝากความหวังไว้มากกับสิ่งที่ยังมาไม่ถึง。", "axisSurface": "เส้นทางมุ่งสู่สิ่งที่คุณรู้ตัวชัดเจน。เพราะพูดออกมาได้ สิ่งที่พูดไม่ได้จึงอาจหลงเหลืออยู่ด้านหลัง。", "axisPast": "เส้นทางที่มุ่งตรงสู่อดีต。สิ่งที่คิดว่าจบไปแล้วอาจยังทำงานอยู่ใต้แรงจูงใจ。", "axisDeep": "เส้นทางที่จมสู่ห้วงลึก。แรงผลักที่ตัวเองก็อธิบายไม่ได้ อาจกำลังขับเคลื่อนการเลือกในตอนนี้。", "z0": "เส้นทางที่มองไปข้างหน้า。ความสนใจอยู่ที่ผลลัพธ์เบื้องหน้ามากกว่าสถานการณ์ตรงหน้า。", "z1": "เส้นทางที่จิตสำนึกถูกยกขึ้นสู่อนาคต。แผนการหรือความคาดหวังอาจกำลังยกระดับอารมณ์ปัจจุบัน。", "z2": "เส้นทางที่ความคิดกระจ่างขึ้น。อาจเป็นช่วงที่สิ่งซึ่งเคยอธิบายไม่ได้เริ่มมีคำอธิบาย。", "z3": "เส้นทางที่หันกลับมามองตนเอง。การพยายามให้ถ้อยคำแก่อดีตอีกครั้ง กำลังเกิดขึ้นในฝั่งจิตสำนึก。", "z4": "เส้นทางที่ส่องแสงให้ความทรงจำ。สิ่งที่คิดว่าลืมไปแล้วอาจกำลังเป็นวัตถุดิบของการตัดสินใจ。", "z5": "เส้นทางที่มองวันวานอันไกล。ความรู้สึกต่อสิ่งที่เรียกคืนไม่ได้ อาจหลับอยู่ใต้แรงจูงใจ。", "z6": "เส้นทางที่ความทรงจำจมลง。อาจเป็นช่วงที่พยายามหยุดหันกลับไปมองเสียเลย。", "z7": "เส้นทางที่อยู่ ณ ก้นบึ้งอันนิ่งที่สุด。สิ่งที่ขยับไม่ได้มานาน กำลังทับถมอยู่เงียบ ๆ。", "z8": "เส้นทางที่มุ่งสู่อดีตซึ่งหลับใหล。คุณอาจกำลังพยายามทวงคืนความปรารถนาที่ไม่เคยได้รับการเติมเต็ม。", "z9": "เส้นทางที่ดำดิ่งสู่ภายใน。ความสนใจย้ายจากเหตุการณ์ภายนอกมาสู่ปฏิกิริยาของตนเอง。", "z10": "เส้นทางของลางที่ยังไม่เป็นรูป。ปรากฏเมื่อรู้สึกว่ามีบางอย่างเริ่มเคลื่อน ด้วยเหตุผลที่บอกไม่ได้。", "z11": "เส้นทางที่รอสิ่งซึ่งจะมาถึง。การเตรียมตัวสำหรับสิ่งถัดไปอาจเริ่มขึ้นแล้วโดยไม่รู้ตัว。"},
     weekPeak: (d) => `จุดสูงสุด｜${d}`,
@@ -12741,6 +12875,9 @@ const T = {
     bulkNo: "Nej",
     celticAxis: {"up": "Medvetet", "down": "Omedvetet", "left": "Förflutet", "right": "Nära framtid"},
     celticPlaneNote: "De svaga punkterna är dina tidigare tyngdpunkter",
+    celticWander: "Oro",
+    celticSteady: "Stillhet",
+    celticMeterRead: (p) => p >= 66 ? `En bana som gick rakt fram` : p >= 34 ? `Framåt, men med flera vändningar` : `En bana som gång på gång vände tillbaka`,
     celticZone: {"origin": "Den stilla platsen", "axisFuture": "Rakt mot morgondagen", "axisSurface": "Rakt mot vakenhet", "axisPast": "Rakt mot det förflutna", "axisDeep": "Rakt mot djupet", "z0": "Vänd mot morgondagen", "z1": "Morgondagen stiger", "z2": "Ett klarnande sinne", "z3": "Ett begrundande sinne", "z4": "Minnet lyses upp", "z5": "Blicken mot fjärran dagar", "z6": "Minnet sjunker", "z7": "Bottnens stiltje", "z8": "Det sovande förflutna", "z9": "Dyk inåt", "z10": "Tecknens underström", "z11": "En annalkande aning"},
     celticZoneNote: {"origin": "En bana som inte lutade åt något håll。Kanske inte obeslutsamhet, utan ett läge där varje riktning står lika öppen。", "axisFuture": "En bana rakt framåt。Formen visar sig också när mycket sätts på det som ännu inte kommit。", "axisSurface": "En bana mot det du redan vet att du känner。Just för att det låter sig sägas kan det osagda ligga bakom。", "axisPast": "En bana rakt bakåt。Något du trodde var avslutat kan fortfarande verka under dina bevekelsegrunder。", "axisDeep": "En bana som sjunker mot djupet。En impuls du inte kan redogöra för kan styra dina val nu。", "z0": "En bana med blicken framåt。Uppmärksamheten vilar på utgången snarare än på läget just nu。", "z1": "En bana där medvetandet lyfts mot morgondagen。Planer eller utsikter kan höja ditt nuvarande sinnelag。", "z2": "En bana av klarnande tankar。Det kan vara en tid då det oförklarade börjar få sin förklaring。", "z3": "En bana vänd mot dig själv。En rörelse att åter sätta ord på det förflutna sker på det medvetna planet。", "z4": "En bana som lyser upp minnet。Något du menade att glömma kan mata ditt nuvarande omdöme。", "z5": "En bana med blicken mot fjärran dagar。En känsla för det oåterkalleliga kan sova under dina bevekelsegrunder。", "z6": "En bana där minnet sjunker。Det kan vara en tid då du försöker sluta se tillbaka alls。", "z7": "En bana på det stillaste djupet。Något länge orört har lagt sig tyst på botten。", "z8": "En bana mot ett sovande förflutet。Du kanske söker återta en önskan som aldrig uppfylldes。", "z9": "En bana som dyker inåt。Intresset har flyttat från vad som sker utanför till hur du svarar。", "z10": "En bana av en aning utan form。Den visar sig när något känns satt i rörelse av skäl du inte kan namnge。", "z11": "En bana som väntar på ankomst。Förberedelsen för det som kommer kan redan ha börjat utan att du märkt det。"},
     weekPeak: (d) => `Topp｜${d}`,
@@ -14218,9 +14355,17 @@ export default function TarotDraw() {
         /* 週の起伏。線は1本だけ描く。8本重ねると7点×8本で読めなくなる */
         /* ケルト十字の平面。開封のたびに重心が動く */
         .celtic-plane { width: 100%; max-width: 320px; margin: 8px auto 2px; }
-        .celtic-plane-title { font-size: 11px; letter-spacing: 0.12em; text-align: center; margin-bottom: 4px; }
+        /* 図の見出し。11pxでは他の小さな注記と区別が付かなかった */
+        .celtic-plane-title {
+          font-family: 'Shippori Mincho', serif; font-size: 15px; font-weight: 700;
+          letter-spacing: 0.14em; text-indent: 0.14em; text-align: center; margin-bottom: 8px;
+        }
         .celtic-plane-svg { display: block; width: 100%; height: auto; overflow: visible; }
-        .celtic-axis-label { font-size: 9px; fill: var(--muted); letter-spacing: 0.06em; }
+        /*
+          軸の名。--muted は地の紫に近く、円の下地に重なると沈む。
+          生成りまで上げ、字も一回り大きくする。
+        */
+        .celtic-axis-label { font-size: 10.5px; fill: #D6CDE8; letter-spacing: 0.06em; font-weight: 600; }
         /* 意味づけの手がかり。称号より小さく、読ませる速度を落とす */
         .celtic-zone-note {
           max-width: none; margin: 7px 0 0; padding: 0;
@@ -14256,6 +14401,39 @@ export default function TarotDraw() {
           並べて置くだけだと、どこまでが結果でどこからが図の注記か
           読み手が判断できない。枠が範囲を決める。
         */
+        /*
+          進み方の目盛り。両端が対になる一本の軸。
+          二本のバーに分けると、同じ軸の両端が独立した量に見えてしまう。
+        */
+        .celtic-axis-meter { width: 100%; max-width: 320px; margin: 10px auto 0; }
+        .celtic-meter-ends { display: flex; justify-content: space-between; font-size: 11px; margin-bottom: 5px; }
+        /* 端の語も軸と同じ色にして、どちらがどちらか一目で結びつける */
+        .celtic-meter-ends span:first-child { color: #E8837C; }
+        .celtic-meter-ends span:last-child { color: #6FC7C0; }
+        .celtic-meter-track {
+          position: relative; height: 6px; border-radius: 999px;
+          /*
+            動揺の側を暖色にする。
+            両端とも寒色だと、どちらが荒れている側か色から読めない。
+            赤へ寄るほど落ち着かず、青緑へ寄るほど静まる、という向きにする。
+          */
+          background: linear-gradient(90deg, #E0574F, #C9A24B 48%, #4FB5AE);
+          opacity: 1;
+        }
+        /* 中央の目印。どちらにも寄っていない位置が分かる */
+        .celtic-meter-mid {
+          position: absolute; left: 50%; top: -2px; width: 1px; height: 10px;
+          background: rgba(241,234,216,0.35);
+        }
+        .celtic-meter-needle {
+          position: absolute; top: 50%; width: 11px; height: 11px; border-radius: 50%;
+          transform: translate(-50%, -50%); background: #F0D98A;
+          border: 1.5px solid rgba(20,12,40,0.7);
+          box-shadow: 0 0 9px rgba(240,217,138,0.7);
+          transition: left .7s cubic-bezier(.3,.9,.3,1);
+        }
+        .celtic-meter-read { margin: 6px 0 0; font-size: 10.5px; line-height: 1.7; color: var(--muted); text-align: center; }
+
         .celtic-verdict {
           width: 100%; max-width: 320px; margin: 10px auto 0; padding: 11px 14px;
           border-radius: 12px; box-sizing: border-box;
