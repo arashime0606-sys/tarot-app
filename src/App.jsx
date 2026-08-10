@@ -42,9 +42,15 @@ function TarotBackdrop() {
       aria-hidden="true"
       focusable="false"
     >
-      {BACKDROP_STARS.map(([x, y, r, o], i) => (
-        <circle key={i} cx={x} cy={y} r={r} fill="#F1EAD8" opacity={o} />
-      ))}
+      {/*
+        星は描かない。
+
+        暗い地に小さな白い点が散っていると、画面の汚れと区別が付かない。
+        星として読ませたいのに、拭きたくなる形になっていた。
+        端末の埃や気泡と競合しない、無地の地に戻す。
+
+        奥行きは、下地の階調だけで作る。
+      */}
     </svg>
   );
 }
@@ -2359,6 +2365,72 @@ function findCardById(id) {
  * ============================================================
  */
 
+/*
+  課金診断の記録。
+
+  目的は不正の防止ではなく、問い合わせが来たときに状況を追えるようにすること。
+  「3回引いたのに鑑定が2回しか出なかった」という申告に対して、
+  こちらが何が起きたかを把握できる状態にしておく。
+
+  記録するのは枠を消費した回だけ。無料版や、消費しなかった回まで残すと、
+  確認する側が読む行数が増えるだけで、判断は何も速くならない。
+
+  暗号化はしない。全部この端末の中で動いていて鍵も同じ場所にあるので、
+  暗号化しても読みにくくなるだけで、改竄も復号も本人ができる。
+  隠したところで立証の役には立たず、隠していたという印象だけが残る。
+  金額の確定と二重返金の防止は、決済事業者側の取引記録が担う。
+*/
+const APP_VERSION = "App_273";
+const LS_BILLING_LOG_KEY = "tarot_billing_log";
+const BILLING_LOG_MAX = 200; // 端末の容量を圧迫しない範囲で、数ヶ月ぶんは残る
+
+function loadBillingLog() {
+  try {
+    const raw = localStorage.getItem(LS_BILLING_LOG_KEY);
+    const v = raw ? JSON.parse(raw) : [];
+    return Array.isArray(v) ? v : [];
+  } catch { return []; }
+}
+
+/**
+ * 枠を消費する事象を1件記録する。
+ * @param {string} event  "consume" 消費 / "refund" 返却 / "ai_ok" 鑑定成功 / "ai_fail" 鑑定失敗
+ * @param {object} extra  スプレッド名・失敗理由など、状況の再現に要る最小限
+ */
+function appendBillingLog(event, extra = {}) {
+  try {
+    const now = new Date();
+    const entry = {
+      // 秒の小数以下まで残す。同じ秒に消費と失敗が並ぶことがあり、順序が分からなくなる
+      t: now.toISOString(),
+      ms: now.getTime(),
+      event,
+      ...extra,
+    };
+    const next = [...loadBillingLog(), entry].slice(-BILLING_LOG_MAX);
+    localStorage.setItem(LS_BILLING_LOG_KEY, JSON.stringify(next));
+  } catch { /* 記録に失敗しても占いは止めない */ }
+}
+
+/** 問い合わせに貼り付けられる形へ整える */
+function formatBillingLog(lines) {
+  if (!lines.length) return "";
+  const head = [
+    `app: ${APP_VERSION}`,
+    `ua: ${typeof navigator !== "undefined" ? navigator.userAgent : "-"}`,
+    `tz: ${Intl.DateTimeFormat().resolvedOptions().timeZone}`,
+    `rows: ${lines.length}`,
+  ].join("\n");
+  const body = lines.map((r) => {
+    const rest = Object.keys(r)
+      .filter((k) => !["t", "ms", "event"].includes(k))
+      .map((k) => `${k}=${r[k]}`)
+      .join(" ");
+    return `${r.t}\t${r.event}\t${rest}`;
+  }).join("\n");
+  return `${head}\n---\n${body}`;
+}
+
 const LS_MEMENTO_PREFIX = "tarot_memento_"; // 要約データの保存キー接頭辞
 
 // 6文字の短い呪文ID（英大文字+数字）を生成する。見た目の「呪文らしさ」を保つための工夫。
@@ -2532,9 +2604,20 @@ const SPREADS = {
       5枚＋2枚だと下段が取り残されて見え、七日が一続きに読めない。
       下段を内側に寄せることで、右端から左下へ折り返す流れになる。
     */
+    /*
+      2枚・3枚・2枚の三段。
+
+      4枚＋3枚だと横に四つ並ぶ段があり、札が細くなって窮屈に見えた。
+      一段の最大を三つに抑えると、同じ盤面幅で札を一回り大きくできる。
+
+      しかも開示の三段（週の入り・半ば・終わり）と行がそのまま一致する。
+      段が進むごとに一行ずつ現れるので、どこまで開いたかが位置で分かる。
+      札の隙間は縦横とも10pxで揃えてある。
+    */
     layout: [
-      { x: 14, y: 30 }, { x: 38, y: 30 }, { x: 62, y: 30 }, { x: 86, y: 30 },
-      { x: 26, y: 74 }, { x: 50, y: 74 }, { x: 74, y: 74 },
+      { x: 35, y: 17 }, { x: 65, y: 17 },
+      { x: 20, y: 50 }, { x: 50, y: 50 }, { x: 80, y: 50 },
+      { x: 35, y: 83 }, { x: 65, y: 83 },
     ],
   },
   // ⑤ 二者択一。決断のための比較
@@ -2601,7 +2684,7 @@ const SPREAD_I18N = {
     hexagram: { name: "ヘキサグラム", desc: "相手の心まで読む、恋愛相談の定番。", pos: ["過去", "現在", "未来", "対策", "周囲の状況", "相手の気持ち", "最終結果"] },
     weekly: { name: "週の物語", desc: "これから七日間を、一日ずつ辿る。", pos: ["1日目", "2日目", "3日目", "4日目", "5日目", "6日目", "7日目"] },
     choice: { name: "二者択一", desc: "二つの道を並べて、比べて選ぶ。", pos: ["現在の状況", "Aを選んだ場合", "Aの結果", "Bを選んだ場合", "Bの結果"] },
-    celticCross: { name: "ケルト十字", desc: "十枚で読み解く、タロットの王道。", pos: ["現在の状況", "障害となるもの", "顕在意識", "潜在意識", "過去", "近い未来", "あなた自身", "周囲の環境", "希望と不安", "最終結果"] },
+    celticCross: { name: "ケルト十字", desc: "十枚で読み解く、タロットの王道。", pos: ["現在の意識の方向", "障害となるもの", "顕在意識", "潜在意識", "過去", "近い未来", "あなた自身", "周囲の環境", "希望と不安", "最終結果"] },
     relationship: { name: "関係の杯", desc: "二人の関係を、両側から読む。", pos: ["あなたの状況", "相手の状況", "あなたの願い", "相手の願い", "あなたの不安", "相手の不安", "二人の現在", "障害", "可能性", "あなたの取るべき道", "二人の行く先"] },
     horoscope: { name: "ホロスコープ", desc: "十二の領域で、一年の全体を見渡す。", pos: ["自分自身", "財と価値", "学びと交流", "家庭と基盤", "恋愛と創造", "日々の務め", "相手と契約", "変容と継承", "遠方と探求", "天職と地位", "仲間と願い", "秘密と癒し"] },
   },
@@ -2612,7 +2695,7 @@ const SPREAD_I18N = {
     hexagram: { name: "Hexagram", desc: "Reads even the other person's heart. A staple for matters of love.", pos: ["Past", "Present", "Future", "What to do", "Surroundings", "Their feelings", "Outcome"] },
     weekly: { name: "Story of the Week", desc: "Tracing the next seven days, one by one.", pos: ["Day 1", "Day 2", "Day 3", "Day 4", "Day 5", "Day 6", "Day 7"] },
     choice: { name: "Two Paths", desc: "Set two roads side by side, and choose.", pos: ["Where you stand", "If you choose A", "Result of A", "If you choose B", "Result of B"] },
-    celticCross: { name: "Celtic Cross", desc: "Ten cards. The classic of tarot.", pos: ["The situation", "What crosses it", "Conscious mind", "Unconscious mind", "The past", "The near future", "Yourself", "Your surroundings", "Hopes and fears", "The outcome"] },
+    celticCross: { name: "Celtic Cross", desc: "Ten cards. The classic of tarot.", pos: ["Where your mind is turned", "What crosses it", "Conscious mind", "Unconscious mind", "The past", "The near future", "Yourself", "Your surroundings", "Hopes and fears", "The outcome"] },
     relationship: { name: "Cup of Relationship", desc: "Reading a bond from both sides.", pos: ["Your situation", "Their situation", "Your wish", "Their wish", "Your fear", "Their fear", "Where you are now", "The obstacle", "What is possible", "Your path", "Where you are heading"] },
     horoscope: { name: "Horoscope Spread", desc: "Twelve houses. A whole year at a glance.", pos: ["Self", "Wealth and value", "Learning and exchange", "Home and roots", "Love and creation", "Daily work", "Partners and pacts", "Transformation", "Distance and inquiry", "Vocation and standing", "Allies and wishes", "Secrets and healing"] },
   },
@@ -2623,7 +2706,7 @@ const SPREAD_I18N = {
     hexagram: { name: "헥사그램", desc: "상대의 마음까지 읽는, 연애 상담의 정석.", pos: ["과거", "현재", "미래", "대책", "주변 상황", "상대의 마음", "최종 결과"] },
     weekly: { name: "한 주의 이야기", desc: "앞으로의 이레를 하루씩 따라간다.", pos: ["1일째", "2일째", "3일째", "4일째", "5일째", "6일째", "7일째"] },
     choice: { name: "양자택일", desc: "두 갈래 길을 나란히 놓고 고른다.", pos: ["현재 상황", "A를 택한다면", "A의 결과", "B를 택한다면", "B의 결과"] },
-    celticCross: { name: "켈틱 크로스", desc: "열 장으로 읽는 타로의 왕도.", pos: ["현재 상황", "가로막는 것", "표면 의식", "잠재 의식", "과거", "가까운 미래", "당신 자신", "주변 환경", "희망과 불안", "최종 결과"] },
+    celticCross: { name: "켈틱 크로스", desc: "열 장으로 읽는 타로의 왕도.", pos: ["현재 의식의 방향", "가로막는 것", "표면 의식", "잠재 의식", "과거", "가까운 미래", "당신 자신", "주변 환경", "희망과 불안", "최종 결과"] },
     relationship: { name: "관계의 잔", desc: "두 사람의 관계를 양쪽에서 읽는다.", pos: ["당신의 상황", "상대의 상황", "당신의 바람", "상대의 바람", "당신의 불안", "상대의 불안", "두 사람의 현재", "장애", "가능성", "당신이 나아갈 길", "두 사람의 앞날"] },
     horoscope: { name: "호로스코프", desc: "열두 영역으로 한 해 전체를 조망한다.", pos: ["자기 자신", "재물과 가치", "배움과 교류", "가정과 기반", "연애와 창조", "일상의 의무", "상대와 계약", "변용과 계승", "먼 곳과 탐구", "천직과 지위", "동료와 소망", "비밀과 치유"] },
   },
@@ -2634,7 +2717,7 @@ const SPREAD_I18N = {
     hexagram: { name: "六芒星", desc: "連對方的心也能讀，戀愛諮詢的經典。", pos: ["過去", "現在", "未來", "對策", "周遭狀況", "對方的心意", "最終結果"] },
     weekly: { name: "一週的故事", desc: "逐日追溯接下來的七天。", pos: ["第1天", "第2天", "第3天", "第4天", "第5天", "第6天", "第7天"] },
     choice: { name: "二擇一", desc: "將兩條路並列，比較後選擇。", pos: ["目前的狀況", "若選擇A", "A的結果", "若選擇B", "B的結果"] },
-    celticCross: { name: "凱爾特十字", desc: "以十張牌解讀，塔羅的王道。", pos: ["目前的狀況", "阻礙之物", "顯意識", "潛意識", "過去", "不久的未來", "你自己", "周遭環境", "希望與不安", "最終結果"] },
+    celticCross: { name: "凱爾特十字", desc: "以十張牌解讀，塔羅的王道。", pos: ["當下意識的方向", "阻礙之物", "顯意識", "潛意識", "過去", "不久的未來", "你自己", "周遭環境", "希望與不安", "最終結果"] },
     relationship: { name: "關係之杯", desc: "從兩側解讀兩人的關係。", pos: ["你的狀況", "對方的狀況", "你的願望", "對方的願望", "你的不安", "對方的不安", "兩人的現在", "障礙", "可能性", "你該走的路", "兩人的去向"] },
     horoscope: { name: "占星盤", desc: "以十二個領域綜觀一整年。", pos: ["自我", "財富與價值", "學習與交流", "家庭與根基", "戀愛與創造", "日常的職責", "伴侶與契約", "變容與繼承", "遠方與探求", "天職與地位", "夥伴與願望", "秘密與療癒"] },
   },
@@ -2645,7 +2728,7 @@ const SPREAD_I18N = {
     hexagram: { name: "六芒星", desc: "连对方的心也能读，恋爱咨询的经典。", pos: ["过去", "现在", "未来", "对策", "周遭状况", "对方的心意", "最终结果"] },
     weekly: { name: "一周的故事", desc: "逐日追溯接下来的七天。", pos: ["第1天", "第2天", "第3天", "第4天", "第5天", "第6天", "第7天"] },
     choice: { name: "二择一", desc: "将两条路并列，比较后选择。", pos: ["目前的状况", "若选择A", "A的结果", "若选择B", "B的结果"] },
-    celticCross: { name: "凯尔特十字", desc: "以十张牌解读，塔罗的王道。", pos: ["目前的状况", "阻碍之物", "显意识", "潜意识", "过去", "不久的未来", "你自己", "周遭环境", "希望与不安", "最终结果"] },
+    celticCross: { name: "凯尔特十字", desc: "以十张牌解读，塔罗的王道。", pos: ["当下意识的方向", "阻碍之物", "显意识", "潜意识", "过去", "不久的未来", "你自己", "周遭环境", "希望与不安", "最终结果"] },
     relationship: { name: "关系之杯", desc: "从两侧解读两人的关系。", pos: ["你的状况", "对方的状况", "你的愿望", "对方的愿望", "你的不安", "对方的不安", "两人的现在", "障碍", "可能性", "你该走的路", "两人的去向"] },
     horoscope: { name: "占星盘", desc: "以十二个领域综观一整年。", pos: ["自我", "财富与价值", "学习与交流", "家庭与根基", "恋爱与创造", "日常的职责", "伴侣与契约", "变容与继承", "远方与探求", "天职与地位", "伙伴与愿望", "秘密与疗愈"] },
   },
@@ -2656,18 +2739,18 @@ const SPREAD_I18N = {
     hexagram: { name: "เฮกซะแกรม", desc: "อ่านได้ถึงใจของอีกฝ่าย คลาสสิกสำหรับเรื่องความรัก", pos: ["อดีต", "ปัจจุบัน", "อนาคต", "สิ่งที่ควรทำ", "สภาพแวดล้อม", "ใจของอีกฝ่าย", "ผลลัพธ์"] },
     weekly: { name: "เรื่องราวหนึ่งสัปดาห์", desc: "ไล่ดูเจ็ดวันข้างหน้าทีละวัน", pos: ["วันที่ 1", "วันที่ 2", "วันที่ 3", "วันที่ 4", "วันที่ 5", "วันที่ 6", "วันที่ 7"] },
     choice: { name: "สองทางเลือก", desc: "วางสองเส้นทางเคียงกันแล้วเลือก", pos: ["สถานการณ์ปัจจุบัน", "ถ้าเลือก A", "ผลของ A", "ถ้าเลือก B", "ผลของ B"] },
-    celticCross: { name: "เซลติกครอส", desc: "สิบใบ ตำราหลักของไพ่ทาโรต์", pos: ["สถานการณ์", "สิ่งที่ขวางกั้น", "จิตสำนึก", "จิตใต้สำนึก", "อดีต", "อนาคตอันใกล้", "ตัวคุณเอง", "สภาพแวดล้อม", "ความหวังและความกลัว", "ผลลัพธ์"] },
+    celticCross: { name: "เซลติกครอส", desc: "สิบใบ ตำราหลักของไพ่ทาโรต์", pos: ["ทิศทางของจิตสำนึกตอนนี้", "สิ่งที่ขวางกั้น", "จิตสำนึก", "จิตใต้สำนึก", "อดีต", "อนาคตอันใกล้", "ตัวคุณเอง", "สภาพแวดล้อม", "ความหวังและความกลัว", "ผลลัพธ์"] },
     relationship: { name: "ถ้วยแห่งความสัมพันธ์", desc: "อ่านความสัมพันธ์จากทั้งสองฝ่าย", pos: ["สถานการณ์ของคุณ", "สถานการณ์ของเขา", "ความปรารถนาของคุณ", "ความปรารถนาของเขา", "ความกังวลของคุณ", "ความกังวลของเขา", "ปัจจุบันของทั้งสอง", "อุปสรรค", "ความเป็นไปได้", "ทางที่คุณควรไป", "ปลายทางของทั้งสอง"] },
     horoscope: { name: "ดวงชะตาสิบสองเรือน", desc: "มองภาพรวมทั้งปีผ่านสิบสองด้าน", pos: ["ตัวตน", "ทรัพย์และคุณค่า", "การเรียนรู้และการสื่อสาร", "บ้านและรากฐาน", "ความรักและการสร้างสรรค์", "หน้าที่ประจำวัน", "คู่และข้อตกลง", "การแปรเปลี่ยน", "ระยะไกลและการแสวงหา", "อาชีพและสถานะ", "มิตรและความปรารถนา", "ความลับและการเยียวยา"] },
   },
   tl: {
     oneOracle: { name: "Isang Orakulo", desc: "Ang pinakasimpleng pagbasa: iisang Major Arcana.", pos: ["Ang Ipinapakita"] },
-    oneOracleMinor: { name: "Petit One Oracle", desc: "Basahin ang kapalaran ngayong araw sa isang Minor Arcana.", pos: ["Ang Ipinapakita"] },
+    oneOracleMinor: { name: "Munting Orakulo", desc: "Basahin ang kapalaran ngayong araw sa isang Minor Arcana.", pos: ["Ang Ipinapakita"] },
     three: { name: "Tatlong Baraha", desc: "Ang pinakapayak na anyo: pagbasa sa agos ng panahon.", pos: ["Nakaraan", "Kasalukuyan", "Hinaharap"] },
     hexagram: { name: "Heksagram", desc: "Binabasa pati ang puso ng iba. Klasiko sa usaping pag-ibig.", pos: ["Nakaraan", "Kasalukuyan", "Hinaharap", "Dapat gawin", "Kapaligiran", "Damdamin niya", "Kalalabasan"] },
     weekly: { name: "Kuwento ng Linggo", desc: "Sinusundan ang pitong araw, isa-isa.", pos: ["Araw 1", "Araw 2", "Araw 3", "Araw 4", "Araw 5", "Araw 6", "Araw 7"] },
     choice: { name: "Dalawang Landas", desc: "Ipantay ang dalawang daan, at pumili.", pos: ["Kasalukuyang lagay", "Kung pipiliin ang A", "Bunga ng A", "Kung pipiliin ang B", "Bunga ng B"] },
-    celticCross: { name: "Celtic Cross", desc: "Sampung baraha. Ang klasiko ng tarot.", pos: ["Ang sitwasyon", "Ang humahadlang", "Malay na isip", "Di-malay na isip", "Nakaraan", "Malapit na hinaharap", "Ikaw mismo", "Ang paligid", "Pag-asa at takot", "Kalalabasan"] },
+    celticCross: { name: "Celtic Cross", desc: "Sampung baraha. Ang klasiko ng tarot.", pos: ["Kung saan nakatuon ang isip mo", "Ang humahadlang", "Malay na isip", "Di-malay na isip", "Nakaraan", "Malapit na hinaharap", "Ikaw mismo", "Ang paligid", "Pag-asa at takot", "Kalalabasan"] },
     relationship: { name: "Kopa ng Ugnayan", desc: "Binabasa ang ugnayan mula sa magkabilang panig.", pos: ["Lagay mo", "Lagay niya", "Hangad mo", "Hangad niya", "Takot mo", "Takot niya", "Kayo ngayon", "Ang balakid", "Ang posible", "Landas mo", "Patutunguhan ninyo"] },
     horoscope: { name: "Horoscope Spread", desc: "Labindalawang larangan. Buong taon sa isang sulyap.", pos: ["Sarili", "Yaman at halaga", "Pag-aaral at palitan", "Tahanan at ugat", "Pag-ibig at paglikha", "Gawaing araw-araw", "Kapareha at kasunduan", "Pagbabago", "Malayo at paghahanap", "Bokasyon at katayuan", "Kaalyado at hangarin", "Lihim at paggaling"] },
   },
@@ -2678,7 +2761,7 @@ const SPREAD_I18N = {
     hexagram: { name: "Heksagram", desc: "Membaca sampai ke hati orang lain. Klasik untuk urusan cinta.", pos: ["Masa lalu", "Masa kini", "Masa depan", "Yang harus dilakukan", "Keadaan sekitar", "Perasaannya", "Hasil akhir"] },
     weekly: { name: "Kisah Sepekan", desc: "Menyusuri tujuh hari ke depan, satu per satu.", pos: ["Hari 1", "Hari 2", "Hari 3", "Hari 4", "Hari 5", "Hari 6", "Hari 7"] },
     choice: { name: "Dua Jalan", desc: "Menjajarkan dua jalan, lalu memilih.", pos: ["Keadaan sekarang", "Jika memilih A", "Hasil A", "Jika memilih B", "Hasil B"] },
-    celticCross: { name: "Salib Celtic", desc: "Sepuluh kartu. Klasik dalam tarot.", pos: ["Keadaan", "Yang menghalangi", "Kesadaran", "Bawah sadar", "Masa lalu", "Masa depan dekat", "Dirimu sendiri", "Lingkungan", "Harapan dan ketakutan", "Hasil akhir"] },
+    celticCross: { name: "Salib Celtic", desc: "Sepuluh kartu. Klasik dalam tarot.", pos: ["Arah kesadaranmu kini", "Yang menghalangi", "Kesadaran", "Bawah sadar", "Masa lalu", "Masa depan dekat", "Dirimu sendiri", "Lingkungan", "Harapan dan ketakutan", "Hasil akhir"] },
     relationship: { name: "Cawan Hubungan", desc: "Membaca hubungan dari kedua sisi.", pos: ["Keadaanmu", "Keadaannya", "Harapanmu", "Harapannya", "Ketakutanmu", "Ketakutannya", "Kalian saat ini", "Rintangan", "Kemungkinan", "Jalan yang kamu tempuh", "Ke mana kalian menuju"] },
     horoscope: { name: "Horoskop", desc: "Dua belas bidang. Setahun penuh dalam satu pandangan.", pos: ["Diri sendiri", "Harta dan nilai", "Belajar dan bertukar", "Rumah dan akar", "Cinta dan cipta", "Tugas sehari-hari", "Pasangan dan perjanjian", "Perubahan", "Jauh dan pencarian", "Panggilan dan kedudukan", "Sekutu dan harapan", "Rahasia dan penyembuhan"] },
   },
@@ -2689,7 +2772,7 @@ const SPREAD_I18N = {
     hexagram: { name: "Heksagram", desc: "Membaca sehingga ke hati orang lain. Klasik untuk hal percintaan.", pos: ["Masa lalu", "Masa kini", "Masa depan", "Yang perlu dilakukan", "Keadaan sekeliling", "Perasaannya", "Hasil akhir"] },
     weekly: { name: "Kisah Seminggu", desc: "Menyusuri tujuh hari mendatang, satu persatu.", pos: ["Hari 1", "Hari 2", "Hari 3", "Hari 4", "Hari 5", "Hari 6", "Hari 7"] },
     choice: { name: "Dua Jalan", desc: "Menjajarkan dua jalan, kemudian memilih.", pos: ["Keadaan sekarang", "Jika memilih A", "Hasil A", "Jika memilih B", "Hasil B"] },
-    celticCross: { name: "Salib Celtic", desc: "Sepuluh kad. Klasik dalam tarot.", pos: ["Keadaan", "Yang menghalang", "Kesedaran", "Bawah sedar", "Masa lalu", "Masa depan terdekat", "Diri anda sendiri", "Persekitaran", "Harapan dan ketakutan", "Hasil akhir"] },
+    celticCross: { name: "Salib Celtic", desc: "Sepuluh kad. Klasik dalam tarot.", pos: ["Arah kesedaran anda kini", "Yang menghalang", "Kesedaran", "Bawah sedar", "Masa lalu", "Masa depan terdekat", "Diri anda sendiri", "Persekitaran", "Harapan dan ketakutan", "Hasil akhir"] },
     relationship: { name: "Cawan Hubungan", desc: "Membaca hubungan dari kedua-dua belah pihak.", pos: ["Keadaan anda", "Keadaannya", "Harapan anda", "Harapannya", "Ketakutan anda", "Ketakutannya", "Kalian kini", "Halangan", "Kemungkinan", "Jalan yang anda tempuh", "Ke mana kalian menuju"] },
     horoscope: { name: "Horoskop", desc: "Dua belas bidang. Setahun penuh dalam satu pandangan.", pos: ["Diri sendiri", "Harta dan nilai", "Pembelajaran dan pertukaran", "Rumah dan akar", "Cinta dan ciptaan", "Tugas harian", "Pasangan dan perjanjian", "Perubahan", "Jauh dan pencarian", "Panggilan dan kedudukan", "Sekutu dan harapan", "Rahsia dan penyembuhan"] },
   },
@@ -2700,7 +2783,7 @@ const SPREAD_I18N = {
     hexagram: { name: "Lục Giác", desc: "Đọc được cả lòng người kia. Kinh điển cho chuyện tình cảm.", pos: ["Quá khứ", "Hiện tại", "Tương lai", "Điều nên làm", "Hoàn cảnh xung quanh", "Lòng người ấy", "Kết quả"] },
     weekly: { name: "Câu Chuyện Một Tuần", desc: "Lần theo bảy ngày sắp tới, từng ngày một.", pos: ["Ngày 1", "Ngày 2", "Ngày 3", "Ngày 4", "Ngày 5", "Ngày 6", "Ngày 7"] },
     choice: { name: "Hai Ngả Đường", desc: "Đặt hai con đường cạnh nhau rồi chọn.", pos: ["Hoàn cảnh hiện tại", "Nếu chọn A", "Kết quả của A", "Nếu chọn B", "Kết quả của B"] },
-    celticCross: { name: "Thập Tự Celt", desc: "Mười lá bài. Kinh điển của tarot.", pos: ["Hoàn cảnh", "Điều cản trở", "Ý thức", "Vô thức", "Quá khứ", "Tương lai gần", "Chính bạn", "Môi trường xung quanh", "Hy vọng và lo sợ", "Kết quả"] },
+    celticCross: { name: "Thập Tự Celt", desc: "Mười lá bài. Kinh điển của tarot.", pos: ["Hướng của ý thức hiện tại", "Điều cản trở", "Ý thức", "Vô thức", "Quá khứ", "Tương lai gần", "Chính bạn", "Môi trường xung quanh", "Hy vọng và lo sợ", "Kết quả"] },
     relationship: { name: "Chiếc Cốc Quan Hệ", desc: "Đọc mối quan hệ từ cả hai phía.", pos: ["Hoàn cảnh của bạn", "Hoàn cảnh của người ấy", "Mong muốn của bạn", "Mong muốn của người ấy", "Nỗi lo của bạn", "Nỗi lo của người ấy", "Hai người lúc này", "Trở ngại", "Khả năng", "Con đường của bạn", "Nơi hai người hướng tới"] },
     horoscope: { name: "Vòng Hoàng Đạo", desc: "Mười hai lĩnh vực. Trọn một năm trong một cái nhìn.", pos: ["Bản thân", "Của cải và giá trị", "Học hỏi và giao tiếp", "Gia đình và cội rễ", "Tình yêu và sáng tạo", "Việc thường ngày", "Bạn đời và giao ước", "Biến chuyển", "Phương xa và tìm kiếm", "Thiên chức và địa vị", "Đồng minh và ước nguyện", "Bí mật và chữa lành"] },
   },
@@ -2857,7 +2940,7 @@ function buildOneOracleReading(drawn, lang) {
   const name = getCardName(drawn, lang);
   const o = orientationLabel(drawn.reversed, lang);
   const kw = noBreakAroundDot(majorKeyword(idx, drawn.reversed, lang));
-  const fn = ONE_ORACLE_TEMPLATES[lang] || ONE_ORACLE_TEMPLATES.ja;
+  const fn = ONE_ORACLE_TEMPLATES[lang] || ONE_ORACLE_TEMPLATES.en || ONE_ORACLE_TEMPLATES.ja;
   return fn(name, o, kw);
 }
 
@@ -2878,7 +2961,7 @@ function spreadInfo(key, lang) {
   無料版は有料版のすぐ下に置く。離して並べると別物に見え、
   「同じ占いの、鑑定文の出どころが違う版」だと伝わらない。
 */
-const SPREAD_ORDER = ["oneOracle", "oneOracleMinor", "three", "threeFree", "hexagram", "hexagramFree", "weekly", "weeklyFree", "choice", "celticCross", "relationship", "horoscope"];
+const SPREAD_ORDER = ["oneOracle", "oneOracleMinor", "three", "threeFree", "hexagram", "hexagramFree", "weekly", "weeklyFree", "celticCross", "celticCrossFree", "choice", "relationship", "horoscope"];
 
 /** 末尾が Free の項目は、同じスプレッドのAI無し版。定義は元の鍵を共有する */
 const spreadBaseKey = (key) => key.replace(/Free$/, "");
@@ -2893,10 +2976,10 @@ const FREE_XP_PER_DAY = 3;
  * 隠してしまうと「これしかない」と受け取られるが、
  * 見えていれば「まだ増える」と伝わる。萎えさせないための配慮。
  */
-const SPREAD_READY = { oneOracle: true, oneOracleMinor: true, three: true, threeFree: true, hexagram: true, hexagramFree: true, weekly: true, weeklyFree: true };
+const SPREAD_READY = { oneOracle: true, oneOracleMinor: true, three: true, threeFree: true, hexagram: true, hexagramFree: true, weekly: true, weeklyFree: true, celticCross: true, celticCrossFree: true };
 
 /** そのスプレッドがAIを使うか。使わないものは回数を消費しない */
-const SPREAD_USES_AI = { oneOracle: false, oneOracleMinor: false, three: true, threeFree: false, hexagram: true, hexagramFree: false, weekly: true, weeklyFree: false, choice: true, celticCross: true, relationship: true, horoscope: true };
+const SPREAD_USES_AI = { oneOracle: false, oneOracleMinor: false, three: true, threeFree: false, hexagram: true, hexagramFree: false, weekly: true, weeklyFree: false, choice: true, celticCross: true, celticCrossFree: false, relationship: true, horoscope: true };
 
 const POSITION_LABELS = ["過去", "現在", "未来"];
 const PHASE_ORDER = ["idle", "major-spread", "major-confirm", "major-resolving", "minor-spread", "minor-confirm", "minor-resolving", "minor-revealed", "major-revealed"];
@@ -3197,6 +3280,38 @@ ${board.lowFields.join("・")}が弱く出ていることがどこで足を引�
   今日が木曜なら、一枚目は木曜の札になる。
 */
 const WEEKDAY_COLORS = ["#E48AB4", "#9B7BE0", "#E39055", "#5B9BE0", "#5FB07A", "#E0C24E", "#4FB5AE"];
+
+/*
+  位置ごとの色。
+
+  札の下のラベルと、形式的結果の見出しに同じ色を使う。
+  盤面のどの札の話をしているのかが、色だけで結びつく。
+  同じ位置には必ず同じ色が付くので、二度読み比べる必要がなくなる。
+
+  隣り合う位置ほど色相を離してある。同系色が並ぶと、
+  どちらの見出しを読んでいるか分からなくなる。
+*/
+const POSITION_COLORS = {
+  hexagram: ["#E48AB4", "#9B7BE0", "#5B9BE0", "#5FB07A", "#E0C24E", "#E39055", "#4FB5AE"],
+  celticCross: [
+    "#E0C24E", // 現在の意識の方向
+    "#E36B6B", // 障害となるもの
+    "#7FC7F0", // 顕在意識
+    "#9B7BE0", // 潜在意識
+    "#A9A2B8", // 過去
+    "#5FB07A", // 近い未来
+    "#E39055", // あなた自身
+    "#4FB5AE", // 周囲の環境
+    "#E48AB4", // 希望と不安
+    "#F0D98A", // 最終結果
+  ],
+};
+
+/** その位置に割り当てられた色。無い配置では既定の色へ落とす */
+function positionColor(spreadKey, index, fallback) {
+  const table = POSITION_COLORS[spreadKey];
+  return (table && table[index]) || fallback;
+}
 //                       日           月           火           水           木           金           土
 
 /** 引いた日から i 日後の曜日番号（0=日曜） */
@@ -3209,20 +3324,41 @@ function weekdayIndex(i) {
  * 11言語ぶんの曜日名を自前で持たず、ブラウザ標準の Intl から取る。
  * 翻訳の抜けが構造的に起きず、暦の慣習（週の始まり・略記）も端末側に任せられる。
  */
-function weekdayLabel(i, lang) {
+function weekdayLabel(i, lang, style = "long") {
   const d = new Date();
   d.setDate(d.getDate() + i);
   try {
-    return new Intl.DateTimeFormat(lang, { weekday: "short" }).format(d);
+    return new Intl.DateTimeFormat(lang, { weekday: style }).format(d);
   } catch {
-    return new Intl.DateTimeFormat("en", { weekday: "short" }).format(d);
+    return new Intl.DateTimeFormat("en", { weekday: style }).format(d);
   }
 }
 
 const WEEKLY_STAGES = [
-  { key: "early",   indices: [0, 1, 2] }, // 週の入り
-  { key: "middle",  indices: [3, 4] },    // 週の半ば
-  { key: "weekend", indices: [5, 6] },    // 週の終わり
+  { key: "early",   indices: [0, 1] },       // 週の入り（上段）
+  { key: "middle",  indices: [2, 3, 4] },    // 週の半ば（中段）
+  { key: "weekend", indices: [5, 6] },       // 週の終わり（下段）
+];
+
+/*
+  ケルト十字の開示段階。
+
+  十枚を一枚ずつ開くと十段になって長い。この配置は元々
+  「十字」と「杖（右の縦列）」という二つの塊でできているので、
+  そこを手がかりに四段へ分ける。
+
+  中央の二枚（現状と障害）は対で意味を持つため、必ず同時に開く。
+  片方だけ見えている状態は、読み手に誤った解釈を与える。
+*/
+const CELTIC_STAGES = [
+  { key: "core",   indices: [0, 1] },
+  { key: "axis",   indices: [2, 3] },
+  { key: "time",   indices: [4, 5] },
+  /* 杖は一枚ずつ。下から積み上がる順序が、まとめて開くと失われる */
+  { key: "self",   indices: [6] },
+  { key: "around", indices: [7] },
+  { key: "hope",   indices: [8] },
+  { key: "final",  indices: [9] },
 ];
 
 const HEXAGRAM_STAGES = [
@@ -3316,7 +3452,13 @@ function fallbackHexagramReading(results, lang, spreadKey = "hexagram") {
       見出しに色を持たせる場合は \u0001 のあとに #RRGGBB と区切り文字を挟む。
       文字列でしか渡せない経路なので、色も印として運ぶ。
     */
-    const headColor = isWeekly ? `${WEEKDAY_COLORS[weekdayIndex(i)]}\t` : "";
+    /*
+      見出しの色。盤面のラベルと同じ色を渡すので、
+      どの札の話かが色で結びつく。
+    */
+    const headColor = isWeekly
+      ? `${WEEKDAY_COLORS[weekdayIndex(i)]}\t`
+      : (positionColor(spreadKey, i, null) ? `${positionColor(spreadKey, i, null)}\t` : "");
     // 括弧の形も言語が持つ。全角は日本語と中国語だけ
     const wide = lang === "ja" || lang === "zh-TW" || lang === "zh-CN";
     const ob = wide ? "（" : " (", cb = wide ? "）" : ")";
@@ -3991,7 +4133,10 @@ const STAT_LABELS = {
   ko: { people: "인복", money: "재물운", emotion: "감정", energy: "기력", work: "일", change: "변화", action: "행동", blessing: "가호" },
 };
 function statLabel(key, lang) {
-  return (STAT_LABELS[lang] && STAT_LABELS[lang][key]) || STAT_LABELS.ja[key];
+  // 未訳は英語へ。日本語へ落とすと他言語の見出しに「人運」が混ざる
+  return (STAT_LABELS[lang] && STAT_LABELS[lang][key])
+    || (STAT_LABELS.en && STAT_LABELS.en[key])
+    || STAT_LABELS.ja[key];
 }
 
 // 過去・現在・未来ラベルの多言語対応
@@ -4413,7 +4558,15 @@ function applyFlushBonus(raw, maxIndices, minIndices, minorResults) {
   };
 }
 
-function calcStats(majorCard, minorResults) {
+/**
+ * @param {boolean} fine  真なら0.5刻みへ丸めない。
+ *   星の表示は分野ごとの値を五段に分けるが、0.5刻みだと一分野の値が
+ *   七種類しか出ず、七日のうち大半が同じ段に落ちて灰色一色になる。
+ *   重み自体は0.1刻みで設計されているので、丸めを外すだけで
+ *   本来の解像度が戻る。記録や称号など既存の判定は丸めたままにする
+ *   （過去の履歴と地続きにするため）。
+ */
+function calcStats(majorCard, minorResults, fine = false) {
   const N = 8;
   const baseline = 3.5;
   const scores = Array(N).fill(baseline);
@@ -4430,7 +4583,10 @@ function calcStats(majorCard, minorResults) {
   addCard(majorCard.card, majorCard.reversed);
   minorResults.forEach((r) => addCard(r.card, r.reversed));
 
-  const raw = scores.map((s) => Math.min(6, Math.max(1, Math.round(s * 2) / 2)));
+  const raw = scores.map((s) => {
+    const clamped = Math.min(6, Math.max(1, s));
+    return fine ? clamped : Math.min(6, Math.max(1, Math.round(s * 2) / 2));
+  });
 
   // 最優先：ぞろ目（poker規範のスリーカード）。全分野を確定させて即返す
   const jackpot = detectJackpot(minorResults);
@@ -6407,8 +6563,366 @@ function weekHand(drawn) {
   return pick("mixed");
 }
 
+/*
+  ケルト十字の視覚補完。
+
+  最初は六枚の重心を打っていたが、平均は情報を潰す操作だった。
+  上下左右に置いた点を平均すれば互いに打ち消し合い、
+  何枚開いても点は中央付近から動かない。動かない図に緊張は生まれない。
+
+  そこで、開いた札が一枚ずつ点を押していく形にする。
+  押した分は戻らず積み上がるので、点は原点から離れていく。
+  次の一枚がどちらへ押すか分からないまま、七段のあいだ動き続ける。
+
+  通った跡は線で残す。
+  「最初は過去へ引かれたが、途中で未来へ折り返した」という経過が
+  そのまま画面に描かれるので、静止画としても読める。
+*/
+
+/*
+  各札が点を押す向き。[横, 縦]。
+  縦は意識の深さ（上=顕在 / 下=潜在）、横は時間（左=過去 / 右=未来）。
+  杖の四枚も方向を持たせて、最後まで点が動き続けるようにする。
+*/
+const CELTIC_PUSH = {
+  /*
+    中央の二枚も、他と同じだけの力で押す。
+    「原点らしく控えめに」と小さくしていたが、その結果
+    一段目でほとんど点が動かず、最初の手応えが無かった。
+    現状は前へ、障害はそれを斜めに押し返す形にして、
+    一段目から二枚の綱引きが目に見えるようにする。
+  */
+  0: [0.55, 0.6],     // 現在の状況。前へ、意識の側へ
+  1: [-0.7, -0.5],    // 障害。引き戻し、沈める
+  2: [0, 1],          // 顕在意識
+  3: [0, -1],         // 潜在意識
+  4: [-1, 0],         // 過去
+  5: [1, 0],          // 近い未来
+  6: [0, 0.45],       // あなた自身。意識の側へ
+  7: [-0.35, -0.35],  // 周囲の環境。外へ引く
+  8: [0.3, -0.55],    // 希望と不安。内へ沈める
+  9: [0.8, 0.5],      // 最終結果。前へ押し出す
+};
+
+const LS_CELTIC_TRACE_KEY = "tarot_celtic_trace";
+const CELTIC_TRACE_MAX = 5;
+
+function loadCelticTrace() {
+  try {
+    const raw = localStorage.getItem(LS_CELTIC_TRACE_KEY);
+    const v = raw ? JSON.parse(raw) : [];
+    return Array.isArray(v) ? v : [];
+  } catch { return []; }
+}
+
+function saveCelticTrace(pt) {
+  try {
+    const next = [...loadCelticTrace(), pt].slice(-CELTIC_TRACE_MAX);
+    localStorage.setItem(LS_CELTIC_TRACE_KEY, JSON.stringify(next));
+  } catch { /* 記録に失敗しても占いは止めない */ }
+}
+
+function CelticPlane({ drawn, openedIndices, lang, isLast }) {
+  const t = T[lang] || T.ja;
+  const [trace] = useState(() => loadCelticTrace());
+  const savedRef = useRef(false);
+
+  const W = 300, H = 300, C = 150, R = 120;
+
+  /*
+    開いた順に押していく。
+    強い札ほど大きく押すので、どの札で跳ねたかが軌跡の折れ方に出る。
+    枠の外へ出ないよう、各段で丸めておさめる。
+  */
+  /*
+    始点は中心。
+
+    一段目の二枚で始点を動かす案を試したが、始点が散ると
+    「どこから来たか」と「どれだけ動いたか」が同時に変数になり、
+    軌跡の読み方が定まらなかった。
+    全員が同じ場所から出発するほうが、到達点の意味が一つに決まる。
+  */
+  const originX = C, originY = C;
+  const path = [{ x: originX, y: originY }];
+  let maxOver = 0;
+
+  openedIndices.forEach((i) => {
+    const d = drawn[i];
+    const push = CELTIC_PUSH[i];
+    if (!d || !push) return;
+    const sc = calcStats({ card: d, reversed: d.reversed }, [], true).scores;
+    const total = sc.reduce((a, b) => a + b, 0) / 8;
+    /*
+      3.5を無風として、そこからの隔たりを強さにする。
+
+      ただし隔たりがそのままだと、値が3.5付近の札で点がほとんど動かず、
+      段を進めても何も起きない回ができる。実測で1px未満の段があった。
+      符号（どちらへ押すか）は値が決め、大きさには下限を置く。
+      どちらへ動くかは分からないまま、必ず動くようにする。
+    */
+    const raw = (total - 3.5) / 0.72;
+    const dir = raw >= 0 ? 1 : -1;
+    const power = dir * Math.max(0.42, Math.abs(raw));
+    const last = path[path.length - 1];
+
+    /*
+      押す向きを段ごとに少しずつ回す。
+
+      軸の方向をそのまま使うと、前の段と正反対に押す組み合わせで
+      点が元の位置へ戻り、移動がほぼ0になる段ができる。
+      実測で全体の13%がこれだった。往復すると軌跡も線が重なって潰れる。
+
+      段の番号に応じて向きを回すと、往復ではなく螺旋を描く。
+      戻る力が働いても同じ道は通らないので、軌跡が図として残る。
+    */
+    const turn = path.length * 0.55;
+    const px = push[0] * Math.cos(turn) - push[1] * Math.sin(turn);
+    const py = push[0] * Math.sin(turn) + push[1] * Math.cos(turn);
+
+    let nx = last.x + px * power * 46;
+    let ny = last.y - py * power * 46;
+    /*
+      円の内側へ収める。
+
+      単純に切り詰めると、縁に達した点は次の段で同じ場所に留まり、
+      移動が0になる段ができる。実測で最小0.0pxだった。
+      外へ出ようとした分は、縁に沿って横へ滑らせる。
+      勢いが行き場を失わないので、縁まで来ても動きは止まらない。
+    */
+    const dx = nx - C, dy = ny - C;
+    const dist = Math.hypot(dx, dy);
+    if (dist > R) {
+      const over = dist - R;
+      // どれだけ外へ出ようとしたか。演出の格を決めるのに使う
+      maxOver = Math.max(maxOver, over);
+      const ang = Math.atan2(dy, dx);
+      // はみ出した勢いを接線方向へ回す。左右どちらへ回るかは押した向きで決まる
+      const spin = (px * -dy + py * dx) >= 0 ? 1 : -1;
+      const slide = Math.min(0.9, over / R) * spin;
+      const na = ang + slide;
+      nx = C + Math.cos(na) * R;
+      ny = C + Math.sin(na) * R;
+    }
+    path.push({ x: nx, y: ny });
+  });
+
+  const cur = path[path.length - 1];
+  const line = path.map((p, k) => `${k === 0 ? "M" : "L"}${p.x.toFixed(1)} ${p.y.toFixed(1)}`).join(" ");
+
+  /*
+    軌跡そのものが持つ意味を、二つの軸で段に分ける。
+
+    内へ帰るか、外へ振り切れるか。どちらも「ただ動いた」ではなく、
+    極端に到達したことを示す。頻度は6万回の実測から取った。
+
+      戻り  完全回帰  4px以内   0.20%
+            原点回帰  15px以内  4.34%
+            原点接近  32px以内  15.40%
+
+      外へ  突破      45px超    0.68%
+            着地      25px超    4.40%
+            接触      0px超     15.28%
+
+    最初は原点回帰を8px以内にしていたが、実測で0.50%となり、
+    完全回帰の0.22%と近すぎて段として働かなかった。
+    外縁側の三段（0.68 / 4.40 / 15.28）に揃うよう広げてある。
+    二軸で同じ格の希少度が一致するので、どちらが出ても重みが等しい。
+
+    上位二段はどちらも1%未満で、週の物語の「極」と同じ希少度に並ぶ。
+    両方が同時に成立する回は5000回に1回ほどで、
+    「大きく巡って元の向きへ帰った」という最も劇的な軌跡になる。
+  */
+  /*
+    終点がどこに落ちたかで軌跡の名を決める。
+
+    「外縁着地」のような、円のどこに触れたかを言う名前はやめた。
+    軌跡が意味を持つのは、円の縁との関係ではなく
+    どの方角へ向かったかだからである。
+
+    軸は上が顕在、下が潜在、左が過去、右が近い未来。
+    そこから、中心・四方位・その中間という区分で名を付ける。
+
+    実測（6万回）での出現率は次のとおり。
+      原点付近（20px以内）      4.78%
+      四直線上（軸から±7度）    16.01%
+      十二方位のいずれか        残り。各 4〜9%
+
+    四直線上は、二つの軸のどちらかに純粋に振り切れた状態で、
+    中間の方位より意味がはっきりする。原点付近はそのどれでもない、
+    どこへも傾かなかった回になる。
+  */
+  const dxE = cur.x - C, dyE = C - cur.y;
+  const distE = Math.hypot(dxE, dyE);
+  const angE = (Math.atan2(dyE, dxE) * 180 / Math.PI + 360) % 360;
+
+  // 軸に乗っているか。乗っていればその方位そのものの名になる
+  const AXIS_AT = [0, 90, 180, 270];
+  const axisHit = AXIS_AT.findIndex(
+    (a) => Math.min(Math.abs(angE - a), 360 - Math.abs(angE - a)) < 7
+  );
+
+  let zoneKey;
+  if (path.length < 2 || distE < 20) {
+    zoneKey = "origin";
+  } else if (axisHit >= 0) {
+    zoneKey = ["axisFuture", "axisSurface", "axisPast", "axisDeep"][axisHit];
+  } else {
+    // 十二方位。0度から30度ごとに時計回りではなく数学の向きで数える
+    zoneKey = `z${Math.floor(angE / 30)}`;
+  }
+
+  const gid = useRef(`cp${Math.random().toString(36).slice(2, 8)}`).current;
+
+  return (
+    <div className="celtic-plane">
+      <div className="celtic-plane-title sheen-text">{t.celticPlaneTitle}</div>
+      {/*
+        図の説明。称号の直前に置くと、称号への注釈に読めてしまう。
+        図そのものの読み方なので、図の上に出す。
+      */}
+      {trace.length > 0 && <p className="celtic-plane-note">{t.celticPlaneNote}</p>}
+
+      <svg viewBox={`0 0 ${W} ${H}`} className="celtic-plane-svg" role="img" aria-label={t.celticPlaneTitle}>
+        <defs>
+          {/* 軌跡は進むほど明るくなる。今どこにいるかが色で分かる */}
+          {/*
+            軌跡の色。
+            薄紫から金への二色だと、途中がくすんだ灰色を通って沈む。
+            出発の青紫から、緑・金・橙を経て、到達点の赤へ抜ける虹にすると、
+            どこまで進んだかが色相の変化で読めるようになる。
+          */}
+          <linearGradient id={`${gid}trail`} x1="0" y1="0" x2="1" y2="1">
+            <stop offset="0" stopColor="#6E7BE0" />
+            <stop offset="0.28" stopColor="#4FB5AE" />
+            <stop offset="0.52" stopColor="#7FD06B" />
+            <stop offset="0.74" stopColor="#E8C24E" />
+            <stop offset="1" stopColor="#E8607A" />
+          </linearGradient>
+          <radialGradient id={`${gid}glow`}>
+            <stop offset="0" stopColor="rgba(255,143,160,0.6)" />
+            <stop offset="1" stopColor="rgba(255,143,160,0)" />
+          </radialGradient>
+        </defs>
+
+        {/* 背景。透けると下の星模様と重なって軌跡が読めなくなる */}
+        <circle cx={C} cy={C} r={R + 16} fill="rgba(14,10,30,0.82)" />
+        <circle cx={C} cy={C} r={R} fill="none" stroke="rgba(169,155,201,0.16)" strokeWidth="0.9" />
+        <circle cx={C} cy={C} r={R * 0.5} fill="none" stroke="rgba(169,155,201,0.10)" strokeWidth="0.8" />
+        <line x1={C} y1={C - R} x2={C} y2={C + R} stroke="rgba(169,155,201,0.20)" strokeWidth="0.9" />
+        <line x1={C - R} y1={C} x2={C + R} y2={C} stroke="rgba(169,155,201,0.20)" strokeWidth="0.9" />
+
+        <text className="celtic-axis-label" x={C} y={C - R - 6} textAnchor="middle">{t.celticAxis.up}</text>
+        <text className="celtic-axis-label" x={C} y={C + R + 13} textAnchor="middle">{t.celticAxis.down}</text>
+        <text className="celtic-axis-label" x={C - R - 4} y={C - 6} textAnchor="start">{t.celticAxis.left}</text>
+        <text className="celtic-axis-label" x={C + R + 4} y={C - 6} textAnchor="end">{t.celticAxis.right}</text>
+
+        {/* 前回までの到達点 */}
+        {trace.map((p, k) => (
+          <circle key={`tr${k}`} cx={p.x} cy={p.y} r="3" fill="var(--muted)" opacity={0.08 + 0.09 * k} />
+        ))}
+
+        {/*
+          始点の印。軌跡が折れ曲がると、どちらが始まりか分からなくなる。
+          出発点そのものに印を置き、光が進む向きと合わせて二重に示す。
+        */}
+        {/*
+          軸に乗った回は、その軸だけが光る。
+          どちらへ純粋に振り切れたかが、線一本で分かる。
+        */}
+        {axisHit === 0 && <line x1={C} y1={C} x2={C + R} y2={C} className="celtic-axis-lit" />}
+        {axisHit === 1 && <line x1={C} y1={C} x2={C} y2={C - R} className="celtic-axis-lit" />}
+        {axisHit === 2 && <line x1={C} y1={C} x2={C - R} y2={C} className="celtic-axis-lit" />}
+        {axisHit === 3 && <line x1={C} y1={C} x2={C} y2={C + R} className="celtic-axis-lit" />}
+
+        {/* 原点付近に落ちた回は、中心に輪が重なる */}
+        {zoneKey === "origin" && path.length > 1 && [0, 1, 2].map((k) => (
+          <circle key={`og${k}`} cx={C} cy={C} r={12 + k * 8}
+            fill="none" stroke="var(--gold)" strokeWidth="1.1"
+            className="celtic-back" style={{ animationDelay: `${k * 0.22}s` }} />
+        ))}
+
+        {/* 始点。全員がここから出発する */}
+        <circle cx={originX} cy={originY} r="8" fill="none" stroke="rgba(169,155,201,0.45)" strokeWidth="1" />
+        <circle cx={originX} cy={originY} r="3" fill="rgba(169,155,201,0.7)" />
+
+        {/* 軌跡。通った跡が残る */}
+        {path.length > 1 && (
+          <path id={`${gid}path`} d={line} fill="none" stroke={`url(#${gid}trail)`} strokeWidth="2.4"
+            strokeLinecap="round" strokeLinejoin="round" className="celtic-trail" />
+        )}
+
+        {/*
+          光が始点から現在地へ走る。
+          線は同じでも、動く向きがあれば始まりと終わりが一目で決まる。
+          折り返しの多い軌跡ほど、この案内が効く。
+        */}
+        {path.length > 1 && (
+          <>
+            <circle r="7" fill={`url(#${gid}glow)`} className="celtic-runner">
+              <animateMotion dur={`${(path.length * 0.42).toFixed(2)}s`} repeatCount="indefinite"
+                keyPoints="0;1" keyTimes="0;1" calcMode="linear">
+                <mpath href={`#${gid}path`} />
+              </animateMotion>
+            </circle>
+            <circle r="2.6" fill="#FFF6D8" className="celtic-runner">
+              <animateMotion dur={`${(path.length * 0.42).toFixed(2)}s`} repeatCount="indefinite"
+                keyPoints="0;1" keyTimes="0;1" calcMode="linear">
+                <mpath href={`#${gid}path`} />
+              </animateMotion>
+            </circle>
+          </>
+        )}
+
+        {/* 各段の折れ点。どこで跳ねたかが見える */}
+        {/* 折れ点。軌跡と同じ色相の流れに乗せる */}
+        {path.slice(1, -1).map((p, k) => {
+          const ratio = (k + 1) / Math.max(1, path.length - 1);
+          const hue = 232 - ratio * 232; // 青紫から赤へ
+          return (
+            <circle key={`n${k}`} cx={p.x} cy={p.y} r="3"
+              fill={`hsl(${hue.toFixed(0)}, 62%, 66%)`} opacity="0.85" />
+          );
+        })}
+
+        {/* 現在地 */}
+        <circle className="celtic-core-glow" cx={cur.x} cy={cur.y} r="17" fill={`url(#${gid}glow)`} />
+        <circle className="celtic-core" cx={cur.x} cy={cur.y} r="6.5" fill="#FF8FA0"
+          stroke="rgba(255,255,255,0.85)" strokeWidth="1.3" />
+      </svg>
+      {/*
+        軌跡の格。名前を出すのは上位二段だけにする。
+        接触や原点接近まで名前を付けると、毎回何かが表示されて
+        「珍しいことが起きた」という合図として働かなくなる。
+      */}
+      {/*
+        軌跡の名。毎回いずれかが出る。
+        週の物語の星と違い、ここは「珍しさ」ではなく「どこへ向かったか」を
+        示すものなので、出ない回があるほうが不自然になる。
+      */}
+      {isLast && path.length > 1 && (
+        <div className={`celtic-verdict${zoneKey === "origin" || axisHit >= 0 ? " strong" : ""}`}>
+          <p className={`celtic-grade sheen-text${zoneKey === "origin" || axisHit >= 0 ? " strong" : ""}`}>
+            {t.celticZone[zoneKey] || ""}
+          </p>
+
+      {/*
+        意味づけの手がかり。断定はしない。
+        引いた札から機械的に出た座標に対して、深層心理の内容まで
+        言い当てる書き方をすると、占いではなく決めつけになる。
+        考える方向だけを示し、当てはめるかどうかは相談者に委ねる。
+      */}
+          {t.celticZoneNote && t.celticZoneNote[zoneKey] && (
+            <p className="celtic-zone-note">{t.celticZoneNote[zoneKey]}</p>
+          )}
+        </div>
+      )}
+
+    </div>
+  );
+}
+
 function WeekRhythm({ drawn, lang, labels, openedCount }) {
-  const [field, setField] = useState("total");
+  const [field, setField] = useState(STAT_CATEGORIES[0].key);
   /*
     横に払って分野を切り替える。
 
@@ -6419,7 +6933,12 @@ function WeekRhythm({ drawn, lang, labels, openedCount }) {
     横の動きだけをこちらで受け取る。両方奪うと、グラフの上で
     ページが動かせなくなる。
   */
-  const FIELD_KEYS = ["total", ...STAT_CATEGORIES.map((f) => f.key)];
+  /*
+    分野を先、総合を最後に置く。
+    総合は八分野をならした値なので、個別を見たあとに全体を見る並びが自然。
+    先頭に置くと、まず総合を見てから細部へ、という逆の順路になる。
+  */
+  const FIELD_KEYS = [...STAT_CATEGORIES.map((f) => f.key), "total"];
   const fieldIdx = Math.max(0, FIELD_KEYS.indexOf(field));
   const [dragX, setDragX] = useState(0);
   const dragStart = useRef(null);
@@ -6457,7 +6976,8 @@ function WeekRhythm({ drawn, lang, labels, openedCount }) {
   const shown = typeof openedCount === "number" ? Math.max(1, openedCount) : drawn.length;
 
   // 各日の8分野。1枚だけを材料に通す（他日の札を混ぜない）
-  const perDay = drawn.map((d) => calcStats({ card: d, reversed: d.reversed }, []).scores);
+  // 星の段分けに使うので、0.5刻みへ丸めない値を取る
+  const perDay = drawn.map((d) => calcStats({ card: d, reversed: d.reversed }, [], true).scores);
   const idxOf = (key) => STAT_CATEGORIES.findIndex((f) => f.key === key);
   const values = perDay.map((sc) =>
     field === "total"
@@ -6466,14 +6986,6 @@ function WeekRhythm({ drawn, lang, labels, openedCount }) {
   );
 
   const W = 300, H = 116, PAD_X = 18, PAD_Y = 14;
-  /*
-    可動域は表示中の分野で変わる。
-
-    重み表を見ると、一枚の札が一分野に加える値は最大1.0、
-    総合（八分野の平均）では最大でも約0.48しか動かない。
-    どちらも同じ物差しで測ると、総合のグラフだけ永久に平坦になり、
-    星も最弱のまま立ち上がらない。分野と総合で物差しを分ける。
-  */
   const BASE = 3.5;
   const SPAN = field === "total" ? 0.48 : 1.0;
 
@@ -6493,11 +7005,175 @@ function WeekRhythm({ drawn, lang, labels, openedCount }) {
     速度を一定に保つには全体の時間を区間数に比例させる。
   */
   const fuseDur = Math.max(0.3, (Math.max(1, shown - 1)) * 0.22);
-  let peak = 0, valley = 0;
-  vis.forEach((x, i) => { if (x > vis[peak]) peak = i; if (x < vis[valley]) valley = i; });
-  // 平坦の閾値も物差しに合わせる。総合で0.35は「ほぼ全部平坦」になってしまう
-  const flat = Math.max(...vis) - Math.min(...vis) < SPAN * 0.22 || vis.length < 2;
-  if (flat) { peak = -1; valley = -1; }
+  /*
+    厳密な大なりで探すと、同率のときは常に時間的に先の曜日が勝つ。
+    先に見た値が更新されない限り居座るため、火曜と木曜が同値なら
+    必ず火曜がホロになり、木曜は無印のまま埋もれていた。
+    最大値・最小値を先に求め、そこに並ぶ日を全部拾う。
+  */
+  /*
+    七日それぞれに格を与える。
+
+    以前は最高と最低の日にだけ印を置いていた。しかしそれでは
+    七日のうち五日が「その他」になり、規則的で単調な日々に意味を
+    与えるという目的の逆を行く。しかも相対評価なので、
+    「たまたま七日の中で一番」でしかなく、その日自体の出来を表さない。
+
+    絶対値で五段に分ける。一日の値は大アルカナ22枚×正逆で
+    44通りしかなく、実測すると14種類の値に収まる。
+    その分布から、各段の出現率を設計できる。
+
+      極  6.8%  一日として最上。週に一度でも出れば39%の珍しさ
+      高 29.5%  良い日
+      平 18.2%  何も起きない日
+      低 22.7%  重い日
+      沈 22.7%  最も沈む日
+
+    「気にも留めなかった日」が、実は極だったと後から分かる。
+    そこに意味づけが生まれる。
+  */
+  /*
+    値域は BASE±SPAN ではなく、実際に出うる値そのものから取る。
+
+    総合の場合、一日の値は 3.0625〜4.5000 の14種類しか出ない。
+    BASE±SPAN（3.02〜3.98）で正規化すると大半が上端を突き抜け、
+    実測で「極」が41%、「高」が2%という壊れた分布になった。
+    分母は理論値ではなく実測の値域で取る。
+  */
+  /*
+    段の分け方は、総合と分野別で変える。
+
+    総合（八分野の平均）は 3.0625〜4.5000 の14種類の値を取り、
+    なめらかに分布するので五段に分けられる。
+
+    分野別は事情が違う。値は 1 / 2.5 / 3 / 3.5 / 4 / 4.5 / 6 の
+    七種類しかなく、しかも 6 が15.1%、4 が33.5%、3 が29.3%と
+    三つの値に9割近くが集まる。ここへ五段を当てると、
+    「極」が15%出て週の68%で発生し、「高」は2.6%しか出ない。
+    段の数が値の種類を上回ると、設計した頻度は再現できない。
+
+    さらに満点の出やすさは分野で3倍以上違う（人運29.5%、行動9.1%）。
+    固定の閾値では、同じ印が分野によって別の希少度になってしまう。
+
+    よって分野別は三段（高・並・沈）に留め、「極」は総合タブだけの印とする。
+    週全体の出来が最上だったときにだけ虹が出るので、極の意味が一つに定まる。
+  */
+  /*
+    段の切り方。総合も分野別も、実測の分位点から引く。
+
+    calcStats の丸め（0.5刻み）を外したことで、一分野の値は
+    7種類から16種類、総合は14種類から29種類に増えた。
+    丸めが解像度を潰していたのが、灰色一色の原因だった。
+
+    ただし分野別は上限6に15.1%が集中する。これをそのまま極にすると
+    週の68%で極が出るので、極は「6かつその週の最高」に限る。
+    塊の中でさらに一段絞ることで、頻度が週あたり約4割に収まる。
+  */
+  /*
+    六段。上から順に希少度が下がる。
+
+      超ホロ  0.5%  週に1日でも出るのは 3.4%。年に数回の出来事
+      ホロ    6.0%  週に1日でも出るのは 35.2%。毎回出てよい上限
+      金     22.0%  良い日
+      淡金   28.0%  少し良い日
+      灰     26.0%  何も起きない日
+      血     17.5%  沈む日
+
+    境界は6万週の実測から取った分位点。
+    「血」を17.5%まで絞ったのは、七日のうち四日が赤くなる週があって
+    画面が不穏になりすぎたため。沈む日は少ないほうが、来たときに効く。
+  */
+  /*
+    段の決め方を、絶対値から順位へ戻す。
+
+    絶対値で切ると、値の塊に当たった段だけが厚くなる。実測では
+    血が15.8%、灰が25.5%まで膨らみ、七日の半分が「はずれ」になった。
+    値の分布が偏っている以上、閾値をどう動かしても偏りは残る。
+
+    順位で決めれば、七日は必ず上から順に並ぶ。
+    ただし同率の日を先着順で分けることはしない。値が同じなら扱いも同じ。
+    以前は「先に来た曜日」が特殊星を取っていたが、それは順序の産物であって
+    その日の出来ではない。同率はまとめて同じ段に置く。
+
+    結果として、星の数は自然に抑えられる。実測では週内の最高値が
+    単独である週が92.4%、二日同率が7.0%、三日が0.6%。
+    複数出るのは、本当に並んだときだけになる。
+  */
+
+  // 値の大きい順に、同率をまとめた組を作る
+  const ranked = [...new Set(vis.map((v) => +v.toFixed(6)))].sort((a, b) => b - a);
+  const rankOf = (v) => ranked.indexOf(+v.toFixed(6));
+  const lastRank = ranked.length - 1;
+
+  /*
+    超ホロ。最上位の日のうち、さらに一握りだけ。
+    引いた七枚から決まる値なので、開き直しても結果は変わらない。
+  */
+  const ULTRA_RATE = 0.05;
+  const ultraSeed = drawn.reduce(
+    (a, d, k) => a + (String(d.id).length + k) * (d.reversed ? 7 : 3) * (k + 11), 0
+  );
+  const ultraHits = (ultraSeed % 1000) / 1000 < ULTRA_RATE;
+
+  /*
+    同率が三日以上並んだ順位は、特殊な星にしない。
+
+    同率を同じ扱いにするのは正しいが、三日も四日も並ぶなら、それは
+    「その週で際立った日」ではなく、単にその値が多かっただけになる。
+    七日のうち五日がホロでは、ホロが週の標準になってしまう。
+    二日までは並びとして認め、三日以上は一段内側へ落とす。
+  */
+  const countAt = (r) => vis.filter((x) => rankOf(x) === r).length;
+  const TIE_LIMIT = 2;
+
+  const dayTier = (v) => {
+    if (ranked.length === 1) return "pale";   // 七日とも同じ値なら平らに
+    const r = rankOf(v);
+
+    if (r === 0) {
+      if (countAt(0) > TIE_LIMIT) return "gold";       // 並びすぎたら金へ
+      return ultraHits ? "ultra" : "holo";
+    }
+    if (r === lastRank) {
+      // 並びすぎたら灰ではなく淡金へ。灰にも上限があるので玉突きさせない
+      if (countAt(lastRank) > TIE_LIMIT) return "pale";
+      return "blood";
+    }
+    if (r === 1) return "gold";
+    if (r === lastRank - 1) {
+      if (countAt(lastRank - 1) > TIE_LIMIT) return "pale";
+      return "grey";
+    }
+    return "pale";
+  };
+
+  const tiers = vis.map(dayTier);
+
+  // 最高と最低は、演出の強さを決めるためだけに残す
+  const maxV = Math.max(...vis), minV = Math.min(...vis);
+  const peakSet = vis.map((x, i) => (tiers[i] === "ultra" || tiers[i] === "holo" ? i : -1)).filter((i) => i >= 0);
+  const valleySet = vis.map((x, i) => (tiers[i] === "blood" ? i : -1)).filter((i) => i >= 0);
+  const peak = peakSet.length ? peakSet[0] : -1;
+  const valley = valleySet.length ? valleySet[0] : -1;
+
+  /*
+    二番目に高い日。最高が飛び抜けている週と、二つ並んでいる週は別物なので、
+    準最高にも印を置く。ホロほど派手にせず、普通の金の星にする。
+  */
+  /*
+    準最高は同率を許す。
+    三日が同じ値で並んだ週に、そのうち一日だけへ印を置くと、
+    「たまたま先に来た日」を選んだことになる。値が同じなら扱いも同じにする。
+  */
+  let second = -1;
+  vis.forEach((x, i) => {
+    if (peakSet.includes(i)) return;
+    if (second < 0 || x > vis[second]) second = i;
+  });
+  const secondSet = second >= 0
+    ? vis.map((x, i) => (!peakSet.includes(i) && Math.abs(x - vis[second]) < 1e-9 ? i : -1)).filter((i) => i >= 0)
+    : [];
+
 
   /*
     派手さは順位ではなく値で決める。
@@ -6510,6 +7186,7 @@ function WeekRhythm({ drawn, lang, labels, openedCount }) {
     星そのものが「一番の印」に格下げされて、強い日の意味が薄まる。
   */
   const upPower = peak >= 0 ? Math.max(0, Math.min(1, (vis[peak] - BASE) / SPAN)) : 0;
+  const secondPower = second >= 0 ? Math.max(0, Math.min(1, (vis[second] - BASE) / SPAN)) : 0;
   const downPower = valley >= 0 ? Math.max(0, Math.min(1, (BASE - vis[valley]) / SPAN)) : 0;
   const STAR_MIN = 0.16; // これ未満は星を立てない
 
@@ -6537,7 +7214,7 @@ function WeekRhythm({ drawn, lang, labels, openedCount }) {
       */}
       <div className="week-rhythm-title">{t.weekRhythmTitle}</div>
       <div className="week-rhythm-field">
-        {field === "total" ? t.weekRhythmTotal : statLabel(field, lang)}
+        {t.weekRhythmOf(field === "total" ? t.weekRhythmTotal : statLabel(field, lang))}
       </div>
 
 
@@ -6604,43 +7281,94 @@ function WeekRhythm({ drawn, lang, labels, openedCount }) {
           </animateMotion>
         </circle>
         {vis.map((v, i) => {
-          const isPeak = i === peak, isValley = i === valley;
+          const tier = tiers[i];
           // 火花が到達する時刻に合わせて点火する
           const ignite = { animationDelay: `${(fuseDur * (vis.length > 1 ? i / (vis.length - 1) : 0)).toFixed(2)}s` };
-          if (isPeak && upPower >= STAR_MIN) {
-            const r = 5.2 + 5.0 * upPower;          // 5.2 〜 10.2
-            const glow = 7 + 12 * upPower;          // 後光
+
+          if (tier === "ultra") {
+            /*
+              超ホロ。0.5%。
+              ここだけ二重の星にする。外側が回り、内側が虹で光る。
+              光条は付けない。星に線が重なると形が読めなくなる。
+            */
             return (
               <g key={i} className="wr-ignite" style={ignite}>
-                <circle cx={x(i)} cy={y(v)} r={glow} fill={`url(#${starIds}glow)`} opacity={0.35 + 0.65 * upPower} />
-                {/* 極まった日だけ、光条が四方へ伸びる */}
-                {upPower > 0.62 && (
-                  <g stroke={`url(#${starIds}holo)`} strokeWidth={0.8 + upPower} strokeLinecap="round" opacity={upPower}>
-                    <line x1={x(i) - r * 1.9} y1={y(v)} x2={x(i) + r * 1.9} y2={y(v)} />
-                    <line x1={x(i)} y1={y(v) - r * 1.9} x2={x(i)} y2={y(v) + r * 1.9} />
-                  </g>
-                )}
-                <polygon points={starPath(x(i), y(v), r)} fill={`url(#${starIds}holo)`}
-                  stroke="rgba(255,255,255,0.75)" strokeWidth={0.5 + 0.5 * upPower} strokeLinejoin="round" />
+                <circle cx={x(i)} cy={y(v)} r="18" fill={`url(#${starIds}glow)`} opacity="0.95" />
+                <polygon className="wr-ultra-outer" points={starPath(x(i), y(v), 13)}
+                  fill="none" stroke={`url(#${starIds}holo)`} strokeWidth="1.4" strokeLinejoin="round" />
+                <polygon className="wr-blink-holo" points={starPath(x(i), y(v), 9)}
+                  fill={`url(#${starIds}holo)`} stroke="#FFFFFF" strokeWidth="1.2" strokeLinejoin="round" />
               </g>
             );
           }
-          if (isValley && downPower >= STAR_MIN) {
-            const r = 4.6 + 3.4 * downPower;        // 4.6 〜 8.0
-            // 沈むほど彩度と明度を落とす。暗くなるほど「くすみ」が強くなる
-            const grey = Math.round(122 - 46 * downPower);
+          if (tier === "holo") {
             return (
-              <polygon key={i} className="wr-ignite" style={ignite} points={starPath(x(i), y(v), r)}
-                fill={`rgb(${grey},${grey - 4},${grey + 12})`}
-                stroke="rgba(20,12,40,0.75)" strokeWidth="0.8" strokeLinejoin="round"
-                opacity={0.55 + 0.45 * downPower} />
+              <g key={i} className="wr-ignite" style={ignite}>
+                <circle cx={x(i)} cy={y(v)} r="12" fill={`url(#${starIds}glow)`} opacity="0.8" />
+                <polygon className="wr-blink-holo" points={starPath(x(i), y(v), 8.5)}
+                  fill={`url(#${starIds}holo)`} stroke="#FFFFFF" strokeWidth="1" strokeLinejoin="round" />
+              </g>
             );
           }
-          // 星に届かない日。一番でも差が小さければ、ただの点のまま
-          return <circle key={i} className="wr-ignite" style={ignite} cx={x(i)} cy={y(v)} r="3.1" fill="var(--gold)" />;
+          if (tier === "gold") {
+            return (
+              <g key={i} className="wr-ignite" style={ignite}>
+                <circle cx={x(i)} cy={y(v)} r="7.5" fill={`url(#${starIds}glow)`} opacity="0.45" />
+                <polygon className="wr-blink-gold" points={starPath(x(i), y(v), 6.4)}
+                  style={{ "--star-max": "#E8C24E" }}
+                  fill="#E8C24E" stroke="rgba(20,12,40,0.6)" strokeWidth="0.7" strokeLinejoin="round" />
+              </g>
+            );
+          }
+          if (tier === "pale") {
+            // 淡い金。光らせない。金との差は明度と後光の有無で付ける
+            return (
+              <g key={i} className="wr-ignite" style={ignite}>
+                <polygon points={starPath(x(i), y(v), 5.4)}
+                  fill="#B9A468" stroke="rgba(20,12,40,0.5)" strokeWidth="0.6" strokeLinejoin="round" />
+              </g>
+            );
+          }
+          if (tier === "grey") {
+            return (
+              <g key={i} className="wr-ignite" style={ignite}>
+                <polygon points={starPath(x(i), y(v), 4.8)}
+                  fill="#8E86A8" stroke="rgba(20,12,40,0.5)" strokeWidth="0.6" strokeLinejoin="round" />
+              </g>
+            );
+          }
+          // 血。沈む日
+          return (
+            <g key={i} className="wr-ignite" style={ignite}>
+              <polygon className="wr-blink-dull" points={starPath(x(i), y(v), 5.6)}
+                strokeWidth="1" strokeLinejoin="round" opacity="0.95" />
+            </g>
+          );
         })}
       </svg>
 
+      </div>
+
+      {/*
+        足元の曜日。
+        以前は端から端へ均等割りしていたため、線の両端（左右に余白がある）と
+        ずれて、曜日が実際の点より外側に離れて見えていた。
+        点と同じ割合の位置に置き、中心を合わせる。
+
+        ここだけ短縮形を使う。七つ並ぶ幅しかないので、正式名だと
+        英語やスウェーデン語で確実に重なる。
+      */}
+      <div className="week-rhythm-days">
+        {labels.map((_, i) => (
+          <span
+            key={i}
+            style={{
+              left: `${((PAD_X + (i * (W - PAD_X * 2)) / (labels.length - 1)) / W) * 100}%`,
+              color: WEEKDAY_COLORS[weekdayIndex(i)],
+              opacity: i < shown ? 1 : 0.3,
+            }}
+          >{weekdayLabel(i, lang, "short")}</span>
+        ))}
       </div>
 
       {/* いま何番目を見ているか。9つあるので、位置が分からないと迷子になる */}
@@ -6651,10 +7379,6 @@ function WeekRhythm({ drawn, lang, labels, openedCount }) {
       </div>
 
       <div className="week-rhythm-tabs">
-        <button
-          className={`week-tab${field === "total" ? " on" : ""}`}
-          onClick={() => setField("total")}
-        >{t.weekRhythmTotal}</button>
         {STAT_CATEGORIES.map((f) => (
           <button
             key={f.key}
@@ -6662,23 +7386,23 @@ function WeekRhythm({ drawn, lang, labels, openedCount }) {
             onClick={() => setField(f.key)}
           >{statLabel(f.key, lang)}</button>
         ))}
+        <button
+          className={`week-tab${field === "total" ? " on" : ""}`}
+          onClick={() => setField("total")}
+        >{t.weekRhythmTotal}</button>
       </div>
 
-      <div className="week-rhythm-days">
-        {labels.map((d, i) => (
-          <span key={i} style={{ color: WEEKDAY_COLORS[weekdayIndex(i)], opacity: i < shown ? 1 : 0.3 }}>{d}</span>
-        ))}
-      </div>
 
       {/* 山と谷を言葉でも出す。線を読めない人にも見せ場が伝わる */}
-      {shown >= drawn.length && (upPower >= STAR_MIN || downPower >= STAR_MIN) && (
+      {/* 注記は「極」か「沈」が実在する週にだけ出す。無い週に見出しを作らない */}
+      {shown >= drawn.length && (peak >= 0 || valley >= 0) && (
         <div className="week-peak-note">
-          {upPower >= STAR_MIN && (
+          {peak >= 0 && (
             <span className="week-peak" style={{ color: WEEKDAY_COLORS[weekdayIndex(peak)] }}>
               {t.weekPeak(weekdayLabel(peak, lang))}
             </span>
           )}
-          {downPower >= STAR_MIN && (
+          {valley >= 0 && (
             <span className="week-valley" style={{ color: WEEKDAY_COLORS[weekdayIndex(valley)] }}>
               {t.weekValley(weekdayLabel(valley, lang))}
             </span>
@@ -6796,12 +7520,13 @@ function NoteLines({ text }) {
   違うのは配置と段の切り方と、付随する入力だけ。
   別コンポーネントに複製すると、演出を直すたびに片方だけ直し忘れる。
 */
-function HexagramPanel({ lang, onBack, question, userName, canDraw, onConsume, onRefund, aiEnabled, spreadKey = "hexagram" }) {
+function HexagramPanel({ lang, onBack, question, userName, canDraw, onConsume, onRefund, aiEnabled, spreadKey = "hexagram", renderSpeakButton }) {
   const isWeekly = spreadKey === "weekly";
-  const STAGES = isWeekly ? WEEKLY_STAGES : HEXAGRAM_STAGES;
+  const isCeltic = spreadKey === "celticCross";
+  const STAGES = isWeekly ? WEEKLY_STAGES : isCeltic ? CELTIC_STAGES : HEXAGRAM_STAGES;
   // 段の見出しと次へ進む文言も、スプレッドに合わせて差し替える
-  const stageTitleTable = () => (isWeekly ? t.weekStageTitle : t.hexStageTitle);
-  const stageNextTable = () => (isWeekly ? t.weekNext : t.hexNext);
+  const stageTitleTable = () => (isWeekly ? t.weekStageTitle : isCeltic ? t.celticStageTitle : t.hexStageTitle);
+  const stageNextTable = () => (isWeekly ? t.weekNext : isCeltic ? t.celticNext : t.hexNext);
   const t = T[lang] || T.ja;
   /*
     週の物語では位置名を実際の曜日にする。
@@ -6830,6 +7555,14 @@ function HexagramPanel({ lang, onBack, question, userName, canDraw, onConsume, o
     文言で「呼吸を置いてください」と書くより、置く時間を実際に作るほうが効く。
   */
   const [dealt, setDealt] = useState(0);
+  /*
+    配り直しの回数。
+
+    札を抜いて混ぜ直すだけでは、同じ鍵のまま並び替わるので要素が作り直されず、
+    配布の演出が走らない。残った札が少し瞬いて見えるだけになる。
+    この数を鍵に混ぜると、毎回きちんと配り直される。
+  */
+  const [dealRound, setDealRound] = useState(0);
   const dealTimer = useRef(null);
   useEffect(() => () => {
     if (revealTimer.current) clearTimeout(revealTimer.current);
@@ -6844,6 +7577,13 @@ function HexagramPanel({ lang, onBack, question, userName, canDraw, onConsume, o
     setAiFailed(false);
     setReading("");
     setRetryNonce((n) => n + 1);
+  };
+
+  const openAll = () => {
+    setBulkAsking(false);
+    if (revealTimer.current) clearTimeout(revealTimer.current);
+    setStage(STAGES.length);
+    setRevealLock(false);
   };
 
   const advanceStage = () => {
@@ -6919,6 +7659,22 @@ function HexagramPanel({ lang, onBack, question, userName, canDraw, onConsume, o
     残っている札だけを混ぜ直し、選んだぶんは場に戻さない。
     戻すと同じ札を二度選べてしまう。
   */
+  /*
+    最初から引き直す。
+    場も選択も開示もすべて戻す。混ぜ直し（reshuffle）は場だけを混ぜる操作で、
+    選んだ札には触れないので、引き直しとは別物として持つ。
+  */
+  const restart = () => {
+    autoRunRef.current = false;
+    setPool(buildPool(fullDeck()));
+    setPicked([]); setPickedCards([]); setVanishing([]); setGone([]);
+    setDrawn(null); setStage(0); setReading(""); setAiFailed(false);
+    setRevealLock(false); setDealt(0); setDealRound((r) => r + 1);
+    setShuffleCount(0);
+    if (revealTimer.current) clearTimeout(revealTimer.current);
+    if (dealTimer.current) clearInterval(dealTimer.current);
+  };
+
   const reshuffle = () => {
     if (shuffleCount >= MAX_RESHUFFLE) return;
     setPool((prev) => {
@@ -6928,6 +7684,7 @@ function HexagramPanel({ lang, onBack, question, userName, canDraw, onConsume, o
     });
     // 消える途中の札が残っていると、混ぜ直した場に幽霊が残る
     setVanishing([]); setGone([]);
+    setDealRound((r) => r + 1);
     setShuffleCount((n) => n + 1);
   };
 
@@ -6953,6 +7710,73 @@ function HexagramPanel({ lang, onBack, question, userName, canDraw, onConsume, o
   const vanishTimers = useRef([]);
   useEffect(() => () => { vanishTimers.current.forEach(clearTimeout); }, []);
 
+  /*
+    選ぶのが面倒な人のための入口。
+
+    七枚も十枚も自分で選ぶのは、毎日引く人には負担になる。
+    ただし「引くのは相談者自身」という前提は崩さないので、
+    どちらの押し方も相談者の操作から始まる。
+
+    自動で選ぶ … 並んでいる順に前から取る。機械的で、迷いが入らない
+    おまかせ   … 場から無作為に取る。引き直しと同じ偶然に委ねる
+
+    走るのは押したときだけ。触れただけでは何が起きるか説明を出す。
+    どちらを押せばどうなるか分からないまま指が触れて選択が始まると、
+    引き直すしかなくなる。触れる操作は知るため、押す操作は決めるため。
+  */
+  const autoRunRef = useRef(false);
+  const [autoHint, setAutoHint] = useState(null);
+  const [celticAsk, setCelticAsk] = useState("");
+  /*
+    一括開封。
+
+    段階開封は初めて引く人には効くが、毎日引く人や急いでいる人には
+    七段も十段も押させることになる。近道を用意する。
+
+    ただし一段でも自分で開いたら、この選択肢は消す。
+    途中まで順に読んできた人が残りを飛ばすと、開いた札と飛ばした札で
+    読み方が変わってしまう。最初に決めた読み方を最後まで通す。
+  */
+  const [bulkAsking, setBulkAsking] = useState(false);
+
+  const autoPick = (mode) => {
+    if (autoRunRef.current) return;
+    if (!pool || picked.length >= spread.count) return;
+    autoRunRef.current = true;
+
+    const rest = pool.filter((c) => !picked.includes(c.id));
+    const need = spread.count - picked.length;
+    const chosen = [];
+    if (mode === "order") {
+      chosen.push(...rest.slice(0, need));
+    } else {
+      const bag = [...rest];
+      for (let k = 0; k < need && bag.length; k++) {
+        chosen.push(...bag.splice(Math.floor(Math.random() * bag.length), 1));
+      }
+    }
+
+    // 一枚ずつ間を置いて選ぶ。まとめて確定すると、選んだ実感が残らない
+    chosen.forEach((card, k) => {
+      vanishTimers.current.push(setTimeout(() => {
+        setPicked((prev) => [...prev, card.id]);
+        setPickedCards((prev) => [...prev, card]);
+        setVanishing((prev) => [...prev, card.id]);
+        /*
+          抜くだけにして、配り直しはしない。
+
+          自分で選ぶときは一枚ごとに場を混ぜ直すが、任せる操作では
+          その必要がない。選ぶ主体が場を見ていないので、混ぜても
+          意味が無いうえ、七枚から十枚ぶん連続で78枚が組み直され、
+          画面が止まったように見えていた。
+        */
+        vanishTimers.current.push(setTimeout(() => {
+          setPool((prev) => (prev ? prev.filter((c) => c.id !== card.id) : prev));
+        }, 620));
+      }, k * 260));
+    });
+  };
+
   const pick = (card) => {
     if (picked.length >= spread.count) return;
     if (picked.includes(card.id)) return;
@@ -6976,7 +7800,8 @@ function HexagramPanel({ lang, onBack, question, userName, canDraw, onConsume, o
         }
         return rest;
       });
-    }, 520));
+      setDealRound((r) => r + 1); // 残りを配り直す
+    }, 620)); // 回転しきってから場を組み直す
   };
 
   /*
@@ -7088,7 +7913,10 @@ function HexagramPanel({ lang, onBack, question, userName, canDraw, onConsume, o
           buildHexagramPrompt(drawn.map((d) => ({ card: d, reversed: d.reversed })), question, AI_LANG_INSTRUCTION[lang],
             isWeekly
               ? "これは七日間を一日ずつ示す配置です。一日ずつ独立した占いではなく、週全体を一つの流れとして読んでください。どこで転換が起き、どこが山場かを示してください。\n\n"
-              : relationLine + viewpointLine),
+              : isCeltic
+                ? (celticAsk.trim() ? `相談者が意味を知りたいと書いたこと:「${celticAsk.trim()}」\n` : "")
+                  + "これはケルト十字です。十枚それぞれの位置の意味を踏まえ、現状・障害・意識と無意識・時間の流れ・周囲・結末を一つの筋として読んでください。\n\n"
+                : relationLine + viewpointLine),
           2000
         );
         if (alive) setReading(normalizeReadingText(txt));
@@ -7134,7 +7962,34 @@ function HexagramPanel({ lang, onBack, question, userName, canDraw, onConsume, o
             （「◯◯との、今現在の相性」として表示する）ので、
             入力させておいて使わない状態にはならない。
           */}
-          {!isWeekly && (<div className="hex-fields">
+          {/*
+            ケルト十字の問い。無料版でも出す。
+            無料版は鑑定に反映されないが、書くこと自体が
+            「何を知りたいのか」の整理になるので、欄は残す。
+          */}
+          {isCeltic && (
+            <div className="hex-fields">
+              <label htmlFor="celtic-ask">{t.celticAskLabel}</label>
+              {/*
+                例示は欄の上に置く。
+                プレースホルダに入れると、書き始めた瞬間に消えてしまい、
+                いちばん参照したいときに見られない。
+              */}
+              <p className="hex-fields-example">{t.celticAskPlaceholder}</p>
+              <input
+                id="celtic-ask"
+                type="text"
+                maxLength={120}
+                value={celticAsk}
+                onChange={(e) => setCelticAsk(e.target.value)}
+              />
+              <p className="hex-fields-note">
+                <NoteLines text={aiEnabled ? t.celticAskNote : t.celticAskNoteFree} />
+              </p>
+            </div>
+          )}
+
+          {!isWeekly && !isCeltic && (<div className="hex-fields">
             {/*
               名前の欄は置かない。ヘキサグラムでは結果の表示にしか使われず、
               「占いを始める」までの距離を伸ばすだけになる。
@@ -7189,8 +8044,26 @@ function HexagramPanel({ lang, onBack, question, userName, canDraw, onConsume, o
         <>
           <p className="round-label">
             {picked.length >= spread.count
-              ? t.hexConfirmPrompt
-              : t.hexPickPrompt(spread.count - picked.length, info.pos[picked.length])}
+              ? t.hexConfirmPrompt(spread.count)
+              : (() => {
+                  const pos = info.pos[picked.length];
+                  const text = t.hexPickPrompt(spread.count - picked.length, pos);
+                  if (!isWeekly) return text;
+                  /*
+                    促し文の中の曜日だけを、その曜日の色にする。
+                    文言は言語ごとに語順が違うので、位置名を探して切り分ける。
+                    見つからなければ何もしない（色が付かないだけで文は正しい）。
+                  */
+                  const at = text.indexOf(pos);
+                  if (at < 0) return text;
+                  return (
+                    <>
+                      {text.slice(0, at)}
+                      <span style={{ color: WEEKDAY_COLORS[weekdayIndex(picked.length)], fontWeight: 700 }}>{pos}</span>
+                      {text.slice(at + pos.length)}
+                    </>
+                  );
+                })()}
           </p>
 
           {picked.length < spread.count && (
@@ -7212,12 +8085,44 @@ function HexagramPanel({ lang, onBack, question, userName, canDraw, onConsume, o
             </div>
           )}
 
+          {/*
+            選ぶのを任せる入口。札の並びより上に置く。
+            下に置くと、全部選び終えてから気づくことになる。
+          */}
+          {picked.length < spread.count && (
+            <div className="auto-pick">
+              <button
+                className="auto-pick-btn"
+                onClick={() => autoPick("order")}
+                onPointerEnter={() => setAutoHint("order")}
+                onPointerLeave={() => setAutoHint(null)}
+                onFocus={() => setAutoHint("order")}
+                onBlur={() => setAutoHint(null)}
+              >{t.autoPickOrder}</button>
+              <button
+                className="auto-pick-btn"
+                onClick={() => autoPick("random")}
+                onPointerEnter={() => setAutoHint("random")}
+                onPointerLeave={() => setAutoHint(null)}
+                onFocus={() => setAutoHint("random")}
+                onBlur={() => setAutoHint(null)}
+              >{t.autoPickRandom}</button>
+            </div>
+          )}
+
+          {/* 触れているあいだだけ、そのボタンが何をするかを出す */}
+          {picked.length < spread.count && autoHint && (
+            <p className="auto-pick-hint">
+              {autoHint === "order" ? t.autoPickOrderNote : t.autoPickRandomNote}
+            </p>
+          )}
+
           <div className="spread-grid">
             {pool.map((card, gi) => {
               const at = picked.indexOf(card.id);
               return (
                 <button
-                  key={card.id}
+                  key={`${card.id}-${dealRound}`}
                   className={`mini-card ${vanishing.includes(card.id) ? "picked-vanish" : ""}`}
                   /*
                     配布の演出。78枚が一斉に出ると「表示された」だけで、
@@ -7225,7 +8130,28 @@ function HexagramPanel({ lang, onBack, question, userName, canDraw, onConsume, o
                     札を抜いて混ぜ直すときは同じ鍵のまま並び替わるだけなので、
                     この演出は最初に配るときにしか走らない。
                   */
-                  style={{ "--rot": `${card.rot}deg`, animationDelay: `${Math.min(gi, 78) * 0.012}s` }}
+                  /*
+                    配る間隔。枚数が少ないときは一枚ずつ置くのが見えるよう遅くする。
+                    22枚に78枚と同じ間隔を使うと、全体が0.26秒で終わって
+                    「一斉に出た」ようにしか見えない。
+                  */
+                  /*
+                    選ばれた札は、その日の曜日の色をまとって場を去る。
+                    どの曜日のために引いたのかが、選んだ瞬間に色で返る。
+                    週の物語以外は従来どおり金で送り出す。
+                  */
+                  style={{
+                    "--rot": `${card.rot}deg`,
+                    /*
+                      選んだ瞬間に picked.length が増えるので、そのまま使うと
+                      消えていく札の色が「次の曜日」になる。一つずれる。
+                      その札が何番目に選ばれたかを見れば、対応する曜日が確定する。
+                    */
+                    "--pick-color": isWeekly
+                      ? WEEKDAY_COLORS[weekdayIndex(at >= 0 ? at : picked.length)]
+                      : "var(--gold)",
+                    animationDelay: `${gi * (pool.length > 40 ? 0.012 : 0.032)}s`,
+                  }}
                   onClick={() => pick(card)}
                   disabled={picked.length >= spread.count || vanishing.includes(card.id)}
                   aria-label={t.pickAriaLabel}
@@ -7286,7 +8212,16 @@ function HexagramPanel({ lang, onBack, question, userName, canDraw, onConsume, o
             盤面ではなく背景に散らばった絵に見える。
             深い臙脂の敷物に金の縁取りを置き、札の居場所を作る。
           */}
-          <div className="hex-carpet" style={{ position: "relative", width: "100%", maxWidth: "340px", aspectRatio: "1 / 1.15" }}>
+          {/*
+            盤面の縦横比は配置で変える。
+            六芒星は縦に長い星形なので 1:1.15 が要るが、週の物語は4枚＋3枚の
+            二段なので、同じ比率だと縦が余り、札が相対的に小さくなる。
+            週用に詰めると札が78pxから88pxになり、上下の余白も揃う。
+          */}
+          <div className="hex-carpet" style={{
+            position: "relative", width: "100%", maxWidth: "340px",
+            aspectRatio: isWeekly ? "1 / 1.31" : isCeltic ? "1 / 1.05" : "1 / 1.15",
+          }}>
             {/* 盤面全体を巡る粒子。カードの手前を横切る */}
             <div className="hex-orbit" aria-hidden="true">
               {HEX_ORBIT_SPARKS.map((sp, k) => (
@@ -7318,7 +8253,7 @@ function HexagramPanel({ lang, onBack, question, userName, canDraw, onConsume, o
                   style={{
                     position: "absolute",
                     left: `${pt.x}%`, top: `${pt.y}%`,
-                    width: "23%",
+                    width: isWeekly ? "27%" : isCeltic ? "19%" : "23%",
                     /*
                       週の物語では、その日の曜日の色でカードの周りを照らす。
                       山の日だけは光を強くして、七日のどこが見せ場かを示す。
@@ -7330,9 +8265,15 @@ function HexagramPanel({ lang, onBack, question, userName, canDraw, onConsume, o
                     } : {}),
                     // 配り終えていないカードは描かない（opacity 0 で待たせない）
                     visibility: i < dealt ? "visible" : "hidden",
-                    zIndex: 1, // 粒子はこの手前（zIndex 2）を通す
+                    // 粒子はこの手前（zIndex 3）を通す。十字に組む札だけ一段上へ
+                    zIndex: pt.cross ? 2 : 1,
                     // 配置の移動と、めくる回転は別の要素が担う（同じtransformを取り合わない）
-                    transform: "translate(-50%, -50%)",
+                    /*
+                      ケルト十字の二枚目は一枚目と同じ座標に置かれる。
+                      横向きに倒して十字に組むのが伝統的な形で、
+                      そうしないと二枚が完全に重なって下の札が見えない。
+                    */
+                    transform: pt.cross ? "translate(-50%, -50%) rotate(90deg)" : "translate(-50%, -50%)",
                   }}
                 >
                   {/*
@@ -7383,7 +8324,11 @@ function HexagramPanel({ lang, onBack, question, userName, canDraw, onConsume, o
                             文字だけだと札の付属物に見えるが、地色を持つ丸にすると
                             札に留められた印として読める。色は曜日そのものが持つ。
                           */
-                          style={isWeekly ? { background: WEEKDAY_COLORS[weekdayIndex(i)] } : undefined}
+                          style={
+                            isWeekly
+                              ? { background: WEEKDAY_COLORS[weekdayIndex(i)] }
+                              : { color: positionColor(spreadKey, i, undefined) }
+                          }
                         >
                           {info.pos[i]}
                         </span>
@@ -7413,7 +8358,7 @@ function HexagramPanel({ lang, onBack, question, userName, canDraw, onConsume, o
           */}
           {/* 配り終えてから出す。配っている最中に出すと、まだ途中なのに終わったように見える */}
           {stage === 0 && dealt >= spread.count && (
-            <p className="hex-ritual"><NoteLines text={t.hexRitual} /></p>
+            <p className="hex-ritual"><NoteLines text={t.hexRitual(spread.count)} /></p>
           )}
 
           {!isLast && (
@@ -7421,6 +8366,26 @@ function HexagramPanel({ lang, onBack, question, userName, canDraw, onConsume, o
               <Sparkles size={15} />
               {stageNextTable()[STAGES[stage].key]}
             </button>
+          )}
+
+          {/*
+            一括開封。まだ一段も自分で開いていないときだけ出す。
+            途中から飛ばすと、順に読んだ札と飛ばした札で読み方が変わる。
+          */}
+          {!isLast && stage === 0 && dealt >= spread.count && !revealLock && (
+            bulkAsking ? (
+              <div className="bulk-confirm">
+                <p className="bulk-confirm-text">{t.bulkConfirm}</p>
+                <div className="bulk-confirm-row">
+                  <button className="bulk-yes" onClick={openAll}>{t.bulkYes}</button>
+                  <button className="bulk-no" onClick={() => setBulkAsking(false)}>{t.bulkNo}</button>
+                </div>
+              </div>
+            ) : (
+              <button className="bulk-btn" onClick={() => setBulkAsking(true)}>
+                {t.bulkOpen}
+              </button>
+            )
           )}
 
           {/*
@@ -7479,8 +8444,13 @@ function HexagramPanel({ lang, onBack, question, userName, canDraw, onConsume, o
             <WeekRhythm drawn={drawn} lang={lang} labels={info.pos} openedCount={openedIndices.length} />
           )}
 
+          {/* ケルト十字は平面。開封のたびに重心が動く */}
+          {isCeltic && stage > 0 && (
+            <CelticPlane drawn={drawn} openedIndices={openedIndices} lang={lang} isLast={isLast} />
+          )}
+
           {/* 相性度。鑑定文より先に見せることで、文章が頭に入りやすくなる */}
-          {isLast && !isWeekly && (
+          {isLast && !isWeekly && !isCeltic && (
             <AffinityGauge
               value={hexagramAffinity(drawn)}
               /* 入力された関係を見出しに返す。無料版でも入力が働く場所になる */
@@ -7513,6 +8483,8 @@ function HexagramPanel({ lang, onBack, question, userName, canDraw, onConsume, o
             <div className="ai-reading" style={{ marginTop: "4px" }}>
               <div className="ai-label">
                 <Sparkles size={12} /> <span>{t.hexAiLabel}</span>
+                {/* 読み上げは App 側が状態を持つので、描画だけを受け取る */}
+                {!loading && !aiFailed && reading && renderSpeakButton && renderSpeakButton("hexAi", reading)}
               </div>
               {loading ? (
                 <p style={{ color: "var(--muted)" }}>
@@ -7541,6 +8513,21 @@ function HexagramPanel({ lang, onBack, question, userName, canDraw, onConsume, o
         「明日またお越しください」だけが出ている画面は行き止まりだった。
         画面ごとに有無が変わる出口は、出口として数えられない。
       */}
+      {/*
+        もう一度占う。結果を読み終えた位置に置く。
+        タイトルへ戻って選び直すより、そのまま引き直せるほうが短い。
+      */}
+      {/*
+        全部開き終えてから出す。
+        drawn だけを条件にしていたため、開封の途中でも押せてしまい、
+        まだ読んでいない札があるのに引き直せる状態になっていた。
+      */}
+      {drawn && stage >= STAGES.length && (
+        <button className="draw-btn" onClick={restart} style={{ marginTop: "10px" }}>
+          <Shuffle size={16} />
+          {t.startButton}
+        </button>
+      )}
       <button className="back-to-title" onClick={onBack}>{t.backToTitle}</button>
     </div>
   );
@@ -9040,6 +10027,45 @@ function LastResultPanel({ entry, lang, onClose }) {
   );
 }
 
+/*
+  課金診断の表示。
+
+  記録されるのは枠を消費した回だけで、内容は消費・返却・鑑定の成否のみ。
+  問いの文面や鑑定文そのものは入れない。状況の再現に要らないうえ、
+  問い合わせのために私生活を送らせることになる。
+*/
+function BillingDiagPanel({ lang }) {
+  const t = T[lang] || T.ja;
+  const [rows] = useState(() => loadBillingLog());
+  const [copied, setCopied] = useState(false);
+  const text = formatBillingLog(rows);
+
+  const copy = async () => {
+    try {
+      await navigator.clipboard.writeText(text);
+      setCopied(true);
+      setTimeout(() => setCopied(false), 1800);
+    } catch { /* 端末が許さない場合は、下の本文を手で選んでもらう */ }
+  };
+
+  return (
+    <div className="diag-panel">
+      <p className="diag-note"><NoteLines text={t.diagNote} /></p>
+      {rows.length === 0 ? (
+        <p className="diag-empty">{t.diagEmpty}</p>
+      ) : (
+        <>
+          <button className="draw-btn copy-btn" onClick={copy}>
+            {copied ? <Check size={15} /> : <Copy size={15} />}
+            {copied ? t.copyDone : t.diagCopy}
+          </button>
+          <pre className="diag-body">{text}</pre>
+        </>
+      )}
+    </div>
+  );
+}
+
 function CouponPanel({ couponInput, setCouponInput, handleCoupon, aiEnabled, lang, codeError }) {
   const t = T[lang] || T.ja;
   return (
@@ -9282,11 +10308,31 @@ const T = {
     affinityLabel: "AFFINITY　현재의 궁합",
     hexStageTitle: {"self": "당신의 발자취", "other": "상대의 마음", "around": "주변의 상황", "choice": "앞으로의 선택"},
     hexNext: {"self": "먼저, 당신의 발자취를 봅시다", "other": "다음으로, 상대의 마음을 봅시다", "around": "그럼, 주변의 상황을 봅시다", "choice": "마지막으로, 앞으로의 선택을 봅시다"},
-    hexRitual: "일곱 장의 카드가 놓였습니다。",
+    hexRitual: (n) => `${n}장의 카드가 놓였습니다。`,
     weekStageTitle: {"early": "주 초반", "middle": "주 중반", "weekend": "주말"},
     weekNext: {"early": "먼저, 주 초반을 봅시다", "middle": "다음으로, 주 중반을 봅시다", "weekend": "마지막으로, 주말을 봅시다"},
     weekRhythmTitle: "한 주의 기복",
-    weekRhythmTotal: "종합",
+    weekRhythmTotal: "종합운",
+    weekRhythmOf: (n) => `${n}의 기복`,
+    celticStageTitle: {"core": "현재와 장애", "axis": "의식과 무의식", "time": "과거와 가까운 미래", "self": "당신 자신", "around": "주변 환경", "hope": "희망과 불안", "final": "최종 결과"},
+    celticNext: {"core": "먼저, 지금 향하고 있는 방향을 봅시다", "axis": "다음으로, 마음의 안팎을 봅시다", "time": "이어서, 시간의 흐름을 봅시다", "self": "그럼, 당신 자신을 봅시다", "around": "다음은 주변 환경입니다", "hope": "그리고 희망과 불안을", "final": "마지막으로, 결말을 봅시다"},
+    celticPlaneTitle: "마음의 무게중심",
+    autoPickOrder: "자동으로 고르기",
+    autoPickRandom: "맡기기",
+    autoPickOrderNote: "맨 앞에서부터 순서대로 기계적으로 고릅니다",
+    autoPickRandomNote: "남은 카드 중에서 무작위로 고릅니다",
+    celticAskLabel: "의미를 알고 싶은 것",
+    celticAskPlaceholder: "예: 답이 나오지 않은 채 안고 있는 것 / 지금 마음에 걸리는 것 / 스스로도 모를 행동",
+    celticAskNote: "무엇이든 괜찮습니다。쓴 내용은 이 기기 안에만 남습니다。",
+    celticAskNoteFree: "무료판에서는 해석에 반영되지 않습니다。무엇을 알고 싶은지 스스로 정리하기 위한 칸입니다。",
+    bulkOpen: "한 번에 모두 펼치기",
+    bulkConfirm: "한 번에 모두 펼치면 단계별로 읽는 즐거움은 사라집니다。괜찮으신가요?",
+    bulkYes: "네, 펼칩니다",
+    bulkNo: "아니요",
+    celticAxis: {"up": "의식", "down": "무의식", "left": "과거", "right": "가까운 미래"},
+    celticPlaneNote: "옅은 점은 지난번까지의 무게중심입니다",
+    celticZone: {"origin": "정지의 자리", "axisFuture": "미래로 곧게", "axisSurface": "각성으로 곧게", "axisPast": "과거로 곧게", "axisDeep": "심층으로 곧게", "z0": "내일을 향해", "z1": "떠오르는 내일", "z2": "맑아지는 의식", "z3": "돌아보는 의식", "z4": "기억을 비추다", "z5": "먼 날을 바라보다", "z6": "가라앉는 기억", "z7": "침전의 바닥", "z8": "잠든 과거", "z9": "안으로 잠기다", "z10": "조짐의 저류", "z11": "다가오는 예감"},
+    celticZoneNote: {"origin": "어느 쪽으로도 기울지 않은 궤적입니다。정하지 못한 것이 아니라, 지금은 모든 방향이 똑같이 열려 있는지도 모릅니다。", "axisFuture": "망설임 없이 앞으로 향하는 궤적입니다。다만 아직 오지 않은 것에 크게 거는 마음일 때도 이 모양이 나타납니다。", "axisSurface": "분명히 자각하고 있는 것으로 향하는 궤적입니다。말이 되는 만큼, 말이 되지 않는 것이 뒤에 남기도 합니다。", "axisPast": "과거로 곧게 향하는 궤적입니다。끝났다고 여긴 일이 아직 동기의 밑바닥에서 작동하는 경우가 있습니다。", "axisDeep": "깊은 곳으로 가라앉는 궤적입니다。스스로도 설명되지 않는 충동이 지금의 선택을 움직이는지도 모릅니다。", "z0": "앞을 보고 있는 궤적입니다。눈앞의 상황보다 그 너머의 결과로 관심이 향해 있습니다。", "z1": "의식이 미래로 들어 올려지는 궤적입니다。계획이나 전망이 지금의 기분을 끌어올리고 있을 수 있습니다。", "z2": "생각이 맑아지는 궤적입니다。설명되지 않던 것에 설명이 붙기 시작한 시기인지도 모릅니다。", "z3": "자신을 돌아보는 궤적입니다。지난 일을 다시 말로 만들려는 움직임이 의식 쪽에서 일어나고 있습니다。", "z4": "기억에 빛을 비추는 궤적입니다。잊은 줄 알았던 일이 지금의 판단에 재료가 되는 경우가 있습니다。", "z5": "먼 날을 바라보는 궤적입니다。되돌릴 수 없는 것을 향한 마음이 동기의 안쪽에 잠들어 있기도 합니다。", "z6": "기억이 가라앉는 궤적입니다。돌아보는 일 자체를 그만두려는 시기인지도 모릅니다。", "z7": "가장 깊이 고인 곳의 궤적입니다。오래 움직이지 못한 것이 조용히 바닥에 쌓여 있습니다。", "z8": "잠든 과거로 향하는 궤적입니다。예전에 채워지지 않았던 바람을 지금 되찾으려는 것인지도 모릅니다。", "z9": "안쪽으로 잠기는 궤적입니다。바깥의 일보다 자신의 반응으로 관심이 옮겨가고 있습니다。", "z10": "아직 형태가 없는 예감의 궤적입니다。이유는 말할 수 없지만 무언가 움직이기 시작했다고 느낄 때 나타납니다。", "z11": "찾아올 것을 기다리는 궤적입니다。자각하지 못한 사이에 다음에 올 것에 대한 준비가 시작되었을 수 있습니다。"},
     weekPeak: (d) => `절정｜${d}`,
     weekValley: (d) => `고요｜${d}`,
     weekHand: {"allUpright": "순풍 가득한 한 주", "allReversed": "뒤집히는 한 주", "destiny": "천명의 한 주", "onecolorDeep": "한 색에 물드는 한 주", "upheaval": "격동의 한 주", "fortune": "행운의 한 주", "misfortune": "불운의 한 주", "flame": "불꽃의 한 주", "tide": "조수의 한 주", "trial": "시련의 한 주", "harvest": "결실의 한 주", "bond": "인연의 한 주", "money": "금전의 한 주", "heart": "마음의 한 주", "spirit": "기력의 한 주", "craft": "일의 한 주", "turning": "전환의 한 주", "dash": "질주의 한 주", "blessing": "가호의 한 주", "inward": "안으로 향하는 한 주", "fair": "순풍의 한 주", "mixed": "뒤섞인 한 주"},
@@ -9295,10 +10341,10 @@ const T = {
     hexAiLabel: "AI 해석",
     hexRetry: "다시 시도하기",
     hexPickPrompt: (n, pos) => `「${pos}」의 카드를 골라주세요 (남은 ${n}장)`,
-    hexConfirmPrompt: "일곱 장 모두 골랐습니다",
+    hexConfirmPrompt: (n) => `${n}장 모두 골랐습니다`,
     pickAriaLabel: "카드를 고르기",
     majorTag: "메이저",
-    hexConfirmAsk: "이 일곱 장으로 하시겠어요?",
+    hexConfirmAsk: (n) => `이 ${n}장으로 하시겠어요?`,
     navDraw: "점보기",
     navRecords: "기록",
     tapToFlip: "탭해서 뒤집기",
@@ -9319,6 +10365,10 @@ const T = {
     legalButtonLabel: "이용약관 · 개인정보처리방침",
     legalClose: "닫기",
     couponButtonLabel: "코드 입력",
+    diagButtonLabel: "이용 기록",
+    diagCopy: "복사하기",
+    diagNote: "횟수를 사용한 점만 기록됩니다。질문 내용이나 점괘 본문은 포함되지 않습니다。문의하실 때 이 내용을 붙여넣어 주세요。",
+    diagEmpty: "아직 기록이 없습니다.",
   },
   vi: {
     appTitle: "Bói Bài Tarot",
@@ -9499,11 +10549,31 @@ const T = {
     affinityLabel: "AFFINITY　Hợp duyên hiện tại",
     hexStageTitle: {"self": "Dấu Chân Của Bạn", "other": "Lòng Người Ấy", "around": "Hoàn Cảnh Xung Quanh", "choice": "Lựa Chọn Phía Trước"},
     hexNext: {"self": "Trước hết, hãy xem hành trình của bạn", "other": "Tiếp theo, hãy xem lòng người ấy", "around": "Giờ, hãy xem hoàn cảnh xung quanh", "choice": "Cuối cùng, hãy xem lựa chọn phía trước"},
-    hexRitual: "Bảy lá bài đã được úp xuống。",
+    hexRitual: (n) => `${n} lá bài đã được úp xuống。`,
     weekStageTitle: {"early": "Đầu tuần", "middle": "Giữa tuần", "weekend": "Cuối tuần"},
     weekNext: {"early": "Trước hết, hãy xem đầu tuần", "middle": "Tiếp theo, hãy xem giữa tuần", "weekend": "Cuối cùng, hãy xem cuối tuần"},
     weekRhythmTitle: "Nhịp của tuần",
-    weekRhythmTotal: "Tổng hợp",
+    weekRhythmTotal: "Vận tổng",
+    weekRhythmOf: (n) => `Nhịp của ${n}`,
+    celticStageTitle: {"core": "Hiện tại và trở ngại", "axis": "Ý thức và vô thức", "time": "Quá khứ và tương lai gần", "self": "Chính bạn", "around": "Hoàn cảnh xung quanh", "hope": "Hy vọng và lo âu", "final": "Kết cục"},
+    celticNext: {"core": "Trước hết, hãy xem hướng bạn đang đi", "axis": "Tiếp theo, trong và ngoài tâm trí", "time": "Rồi đến dòng chảy thời gian", "self": "Giờ, hãy xem chính bạn", "around": "Tiếp đến là hoàn cảnh xung quanh", "hope": "Rồi hy vọng và lo âu", "final": "Cuối cùng, hãy xem kết cục"},
+    celticPlaneTitle: "Trọng tâm của tâm trí",
+    autoPickOrder: "Chọn tự động",
+    autoPickRandom: "Phó thác",
+    autoPickOrderNote: "Chọn lần lượt từ đầu, một cách máy móc",
+    autoPickRandomNote: "Chọn ngẫu nhiên trong số lá còn lại",
+    celticAskLabel: "Điều bạn muốn hiểu ý nghĩa",
+    celticAskPlaceholder: "Ví dụ: điều canh cánh chưa có lời giải / điều đang bận tâm / hành động chính mình cũng không hiểu",
+    celticAskNote: "Viết gì cũng được。Nội dung chỉ lưu trong thiết bị của bạn。",
+    celticAskNoteFree: "Bản miễn phí không phản ánh nội dung này vào luận giải。Đây là chỗ để bạn tự sắp xếp điều mình muốn biết。",
+    bulkOpen: "Mở tất cả cùng lúc",
+    bulkConfirm: "Mở hết một lần sẽ mất đi cái thú đọc từng chặng。Bạn có chắc không?",
+    bulkYes: "Vâng, mở ra",
+    bulkNo: "Không",
+    celticAxis: {"up": "Ý thức", "down": "Vô thức", "left": "Quá khứ", "right": "Tương lai gần"},
+    celticPlaneNote: "Những chấm mờ là trọng tâm các lần trước",
+    celticZone: {"origin": "Chỗ ngồi tĩnh lặng", "axisFuture": "Thẳng tới ngày mai", "axisSurface": "Thẳng tới tỉnh thức", "axisPast": "Thẳng tới quá khứ", "axisDeep": "Thẳng tới tầng sâu", "z0": "Hướng về ngày mai", "z1": "Ngày mai đang lên", "z2": "Tâm trí trong dần", "z3": "Tâm trí soi lại", "z4": "Rọi sáng ký ức", "z5": "Nhìn về ngày xa", "z6": "Ký ức đang chìm", "z7": "Đáy của sự lắng đọng", "z8": "Quá khứ đang ngủ", "z9": "Lặn vào bên trong", "z10": "Dòng ngầm của điềm báo", "z11": "Một linh cảm đang đến"},
+    celticZoneNote: {"origin": "Đường đi không nghiêng về đâu。Có lẽ không phải do dự, mà là lúc mọi hướng đều mở ra như nhau。", "axisFuture": "Đường đi thẳng về phía trước。Hình này cũng xuất hiện khi người ta đặt nhiều vào điều chưa tới。", "axisSurface": "Đường đi hướng tới điều bạn đã tự biết。Chính vì nói ra được, điều không nói được có thể nằm phía sau。", "axisPast": "Đường đi thẳng về quá khứ。Điều bạn tưởng đã xong có thể vẫn đang vận hành dưới đáy động cơ。", "axisDeep": "Đường đi chìm xuống tầng sâu。Một thôi thúc chính bạn cũng không lý giải được có thể đang dẫn dắt lựa chọn。", "z0": "Đường đi hướng mắt về phía trước。Sự chú ý đặt ở kết cục hơn là ở hoàn cảnh trước mắt。", "z1": "Đường đi khi ý thức được nâng về ngày mai。Kế hoạch hay triển vọng có thể đang nâng tâm trạng hiện tại。", "z2": "Đường đi của suy nghĩ đang trong dần。Có lẽ đây là lúc điều chưa có lời giải bắt đầu có lời giải。", "z3": "Đường đi quay lại nhìn chính mình。Chuyển động đặt lại thành lời cho quá khứ đang diễn ra ở phía ý thức。", "z4": "Đường đi rọi sáng ký ức。Điều bạn tưởng đã quên có thể đang là chất liệu cho phán đoán hiện tại。", "z5": "Đường đi nhìn về ngày xa。Tình cảm dành cho điều không lấy lại được có thể đang ngủ dưới đáy động cơ。", "z6": "Đường đi khi ký ức chìm xuống。Có lẽ đây là lúc bạn muốn thôi ngoái nhìn。", "z7": "Đường đi ở tầng sâu tĩnh nhất。Điều lâu nay không dịch chuyển đang lắng xuống đáy trong lặng lẽ。", "z8": "Đường đi hướng về quá khứ đang ngủ。Bạn có thể đang muốn giành lại một ước nguyện từng không được thỏa。", "z9": "Đường đi lặn vào bên trong。Sự quan tâm chuyển từ việc bên ngoài sang cách bạn phản ứng。", "z10": "Đường đi của linh cảm chưa thành hình。Xuất hiện khi thấy điều gì đó bắt đầu chuyển động vì lý do không gọi tên được。", "z11": "Đường đi chờ điều sẽ đến。Sự chuẩn bị cho điều kế tiếp có thể đã bắt đầu mà bạn chưa hay。"},
     weekPeak: (d) => `Đỉnh｜${d}`,
     weekValley: (d) => `Lặng｜${d}`,
     weekHand: {"allUpright": "Tuần căng buồm", "allReversed": "Tuần lật ngược", "destiny": "Tuần định mệnh", "onecolorDeep": "Tuần một sắc", "upheaval": "Tuần biến động", "fortune": "Tuần may mắn", "misfortune": "Tuần rủi ro", "flame": "Tuần lửa", "tide": "Tuần thủy triều", "trial": "Tuần thử thách", "harvest": "Tuần thu hoạch", "bond": "Tuần nhân duyên", "money": "Tuần tài lộc", "heart": "Tuần của lòng", "spirit": "Tuần sinh lực", "craft": "Tuần công việc", "turning": "Tuần chuyển hướng", "dash": "Tuần bứt tốc", "blessing": "Tuần được che chở", "inward": "Tuần hướng nội", "fair": "Tuần thuận gió", "mixed": "Tuần pha trộn"},
@@ -9512,10 +10582,10 @@ const T = {
     hexAiLabel: "Luận giải AI",
     hexRetry: "Thử lại",
     hexPickPrompt: (n, pos) => `Chọn lá bài cho "${pos}" (còn ${n} lá)`,
-    hexConfirmPrompt: "Đã chọn đủ bảy lá bài",
+    hexConfirmPrompt: (n) => `Đã chọn đủ ${n} lá bài`,
     pickAriaLabel: "Chọn một lá bài",
     majorTag: "ẨN CHÍNH",
-    hexConfirmAsk: "Bảy lá bài này đã chắc chưa?",
+    hexConfirmAsk: (n) => `${n} lá bài này đã chắc chưa?`,
     navDraw: "Xem",
     navRecords: "Ghi chép",
     tapToFlip: "Chạm để lật",
@@ -9536,6 +10606,10 @@ const T = {
     legalButtonLabel: "Điều khoản & Chính sách bảo mật",
     legalClose: "Đóng",
     couponButtonLabel: "Nhập mã",
+    diagButtonLabel: "Nhật ký sử dụng",
+    diagCopy: "Sao chép",
+    diagNote: "Chỉ ghi lại những lần đã dùng lượt。Không bao gồm câu hỏi hay nội dung luận giải。Khi liên hệ, hãy dán phần này vào。",
+    diagEmpty: "Chưa có ghi chép nào.",
   },
   id: {
     appTitle: "Ramalan Tarot",
@@ -9714,11 +10788,31 @@ const T = {
     affinityLabel: "AFFINITY　Kecocokan saat ini",
     hexStageTitle: {"self": "Jejakmu", "other": "Hatinya", "around": "Keadaan Sekitar", "choice": "Pilihan ke Depan"},
     hexNext: {"self": "Pertama, mari lihat jejak langkahmu", "other": "Berikutnya, mari lihat isi hatinya", "around": "Sekarang, mari lihat keadaan sekitar", "choice": "Terakhir, mari lihat pilihan ke depan"},
-    hexRitual: "Tujuh kartu telah tertutup。",
+    hexRitual: (n) => `${n} kartu telah tertutup。`,
     weekStageTitle: {"early": "Awal pekan", "middle": "Tengah pekan", "weekend": "Akhir pekan"},
     weekNext: {"early": "Pertama, mari lihat awal pekan", "middle": "Berikutnya, tengah pekan", "weekend": "Terakhir, akhir pekan"},
     weekRhythmTitle: "Irama pekan ini",
-    weekRhythmTotal: "Total",
+    weekRhythmTotal: "Peruntungan total",
+    weekRhythmOf: (n) => `Irama ${n}`,
+    celticStageTitle: {"core": "Kini dan penghalang", "axis": "Sadar dan bawah sadar", "time": "Masa lalu dan masa depan dekat", "self": "Dirimu sendiri", "around": "Keadaan sekitar", "hope": "Harapan dan kecemasan", "final": "Hasil akhir"},
+    celticNext: {"core": "Pertama, mari lihat arah yang kamu tuju", "axis": "Berikutnya, dalam dan luar batinmu", "time": "Lalu, aliran waktunya", "self": "Sekarang, mari lihat dirimu", "around": "Berikutnya keadaan sekitar", "hope": "Lalu harapan dan kecemasan", "final": "Terakhir, mari lihat hasilnya"},
+    celticPlaneTitle: "Titik berat batinmu",
+    autoPickOrder: "Pilih otomatis",
+    autoPickRandom: "Serahkan saja",
+    autoPickOrderNote: "Memilih berurutan dari depan, secara mekanis",
+    autoPickRandomNote: "Memilih acak dari kartu yang tersisa",
+    celticAskLabel: "Hal yang ingin kamu pahami maknanya",
+    celticAskPlaceholder: "Contoh: hal yang belum terjawab / yang mengganjal kini / tindakan yang kamu sendiri tak paham",
+    celticAskNote: "Apa pun boleh。Yang kamu tulis hanya tersimpan di perangkat ini。",
+    celticAskNoteFree: "Versi gratis tidak memakai isian ini dalam bacaan。Ini ruang untuk menata sendiri apa yang ingin kamu ketahui。",
+    bulkOpen: "Buka semuanya sekaligus",
+    bulkConfirm: "Membuka sekaligus menghilangkan nikmatnya membaca bertahap。Yakin?",
+    bulkYes: "Ya, buka",
+    bulkNo: "Tidak",
+    celticAxis: {"up": "Sadar", "down": "Bawah sadar", "left": "Masa lalu", "right": "Masa depan dekat"},
+    celticPlaneNote: "Titik samar adalah titik berat sebelumnya",
+    celticZone: {"origin": "Tempat yang hening", "axisFuture": "Lurus ke esok", "axisSurface": "Lurus ke kesadaran", "axisPast": "Lurus ke masa lalu", "axisDeep": "Lurus ke kedalaman", "z0": "Menghadap esok", "z1": "Esok yang terbit", "z2": "Benak yang menjernih", "z3": "Benak yang merenung", "z4": "Menerangi ingatan", "z5": "Menatap hari yang jauh", "z6": "Ingatan yang tenggelam", "z7": "Dasar yang mengendap", "z8": "Masa lalu yang tertidur", "z9": "Menyelam ke dalam", "z10": "Arus bawah pertanda", "z11": "Firasat yang mendekat"},
+    celticZoneNote: {"origin": "Jejak yang tidak condong ke mana pun。Mungkin bukan keraguan, melainkan saat setiap arah terbuka sama lebarnya。", "axisFuture": "Jejak yang lurus ke depan。Bentuk ini juga muncul ketika banyak dipertaruhkan pada yang belum tiba。", "axisSurface": "Jejak menuju apa yang sudah kamu sadari。Justru karena bisa dikatakan, yang tak terkatakan mungkin tertinggal di belakang。", "axisPast": "Jejak yang lurus ke belakang。Hal yang kamu kira selesai mungkin masih bekerja di dasar motifmu。", "axisDeep": "Jejak yang tenggelam ke kedalaman。Dorongan yang tak bisa kamu jelaskan mungkin sedang menggerakkan pilihanmu。", "z0": "Jejak dengan pandangan ke depan。Perhatian tertuju pada hasil, bukan pada keadaan saat ini。", "z1": "Jejak saat kesadaran terangkat ke esok。Rencana atau harapan mungkin sedang mengangkat suasana hatimu。", "z2": "Jejak pikiran yang menjernih。Mungkin ini masa ketika yang tak terjelaskan mulai menemukan penjelasan。", "z3": "Jejak yang berbalik pada diri。Gerak untuk kembali menuturkan masa lalu sedang terjadi di sisi sadar。", "z4": "Jejak yang menerangi ingatan。Hal yang kamu kira terlupa mungkin menjadi bahan pertimbanganmu kini。", "z5": "Jejak yang menatap hari yang jauh。Perasaan pada yang tak dapat ditarik kembali mungkin tidur di dasar motifmu。", "z6": "Jejak saat ingatan tenggelam。Mungkin ini masa ketika kamu berusaha berhenti menoleh sama sekali。", "z7": "Jejak di kedalaman yang paling diam。Sesuatu yang lama tak bergerak mengendap sunyi di dasar。", "z8": "Jejak menuju masa lalu yang tertidur。Kamu mungkin sedang berusaha menuntut kembali keinginan yang dulu tak terpenuhi。", "z9": "Jejak yang menyelam ke dalam。Perhatian berpindah dari kejadian luar ke caramu menanggapi。", "z10": "Jejak firasat yang belum berbentuk。Muncul ketika sesuatu terasa mulai bergerak tanpa alasan yang bisa disebut。", "z11": "Jejak yang menanti kedatangan。Persiapan untuk yang berikutnya mungkin sudah dimulai tanpa kamu sadari。"},
     weekPeak: (d) => `Puncak｜${d}`,
     weekValley: (d) => `Hening｜${d}`,
     weekHand: {"allUpright": "Pekan layar penuh", "allReversed": "Pekan terbalik", "destiny": "Pekan takdir", "onecolorDeep": "Pekan satu warna", "upheaval": "Pekan gejolak", "fortune": "Pekan keberuntungan", "misfortune": "Pekan kemalangan", "flame": "Pekan api", "tide": "Pekan pasang surut", "trial": "Pekan ujian", "harvest": "Pekan panen", "bond": "Pekan pertemuan", "money": "Pekan rezeki", "heart": "Pekan hati", "spirit": "Pekan tenaga", "craft": "Pekan kerja", "turning": "Pekan peralihan", "dash": "Pekan berlari", "blessing": "Pekan perlindungan", "inward": "Pekan ke dalam", "fair": "Pekan angin baik", "mixed": "Pekan campuran"},
@@ -9727,10 +10821,10 @@ const T = {
     hexAiLabel: "Bacaan AI",
     hexRetry: "Coba lagi",
     hexPickPrompt: (n, pos) => `Pilih kartu untuk "${pos}" (sisa ${n})`,
-    hexConfirmPrompt: "Ketujuh kartu sudah dipilih",
+    hexConfirmPrompt: (n) => `${n} kartu sudah dipilih`,
     pickAriaLabel: "Pilih kartu",
     majorTag: "MAYOR",
-    hexConfirmAsk: "Apakah ketujuh kartu ini sudah pasti?",
+    hexConfirmAsk: (n) => `Sudah pasti dengan ${n} kartu ini?`,
     navDraw: "Tilik",
     navRecords: "Catatan",
     tapToFlip: "Ketuk untuk membuka",
@@ -9753,6 +10847,10 @@ const T = {
     legalButtonLabel: "Ketentuan Layanan & Kebijakan Privasi",
     legalClose: "Tutup",
     couponButtonLabel: "Kode",
+    diagButtonLabel: "Catatan penggunaan",
+    diagCopy: "Salin",
+    diagNote: "Hanya sesi yang memakai kuota yang dicatat。Pertanyaan dan isi ramalan tidak disertakan。Tempelkan ini saat menghubungi kami。",
+    diagEmpty: "Belum ada catatan.",
   },
   ms: {
     appTitle: "Tilikan Tarot",
@@ -9931,11 +11029,31 @@ const T = {
     affinityLabel: "AFFINITY　Keserasian kini",
     hexStageTitle: {"self": "Jejak Anda", "other": "Hatinya", "around": "Keadaan Sekeliling", "choice": "Pilihan ke Hadapan"},
     hexNext: {"self": "Pertama, mari lihat jejak langkah anda", "other": "Seterusnya, mari lihat isi hatinya", "around": "Kini, mari lihat keadaan sekeliling", "choice": "Akhir sekali, mari lihat pilihan mendatang"},
-    hexRitual: "Tujuh kad telah ditutup。",
+    hexRitual: (n) => `${n} kad telah ditutup。`,
     weekStageTitle: {"early": "Awal minggu", "middle": "Pertengahan minggu", "weekend": "Hujung minggu"},
     weekNext: {"early": "Pertama, mari lihat awal minggu", "middle": "Seterusnya, pertengahan minggu", "weekend": "Akhir sekali, hujung minggu"},
     weekRhythmTitle: "Irama minggu ini",
-    weekRhythmTotal: "Jumlah",
+    weekRhythmTotal: "Nasib keseluruhan",
+    weekRhythmOf: (n) => `Irama ${n}`,
+    celticStageTitle: {"core": "Kini dan penghalang", "axis": "Sedar dan bawah sedar", "time": "Lalu dan masa depan dekat", "self": "Diri anda", "around": "Keadaan sekeliling", "hope": "Harapan dan kebimbangan", "final": "Kesudahan"},
+    celticNext: {"core": "Pertama, mari lihat arah yang anda tuju", "axis": "Seterusnya, dalam dan luar hati anda", "time": "Kemudian, aliran masanya", "self": "Kini, mari lihat diri anda", "around": "Seterusnya keadaan sekeliling", "hope": "Lalu harapan dan kebimbangan", "final": "Akhir sekali, mari lihat kesudahannya"},
+    celticPlaneTitle: "Pusat graviti hati anda",
+    autoPickOrder: "Pilih automatik",
+    autoPickRandom: "Serahkan sahaja",
+    autoPickOrderNote: "Memilih mengikut turutan dari depan, secara mekanikal",
+    autoPickRandomNote: "Memilih secara rawak daripada kad yang tinggal",
+    celticAskLabel: "Perkara yang ingin anda fahami maknanya",
+    celticAskPlaceholder: "Contoh: perkara yang belum terjawab / yang mengganggu fikiran kini / tindakan yang anda sendiri tidak fahami",
+    celticAskNote: "Apa sahaja boleh。Apa yang ditulis hanya tersimpan dalam peranti ini。",
+    celticAskNoteFree: "Versi percuma tidak menggunakan isian ini dalam tilikan。Ini ruang untuk anda menyusun sendiri apa yang ingin diketahui。",
+    bulkOpen: "Buka semuanya sekali gus",
+    bulkConfirm: "Membuka sekali gus menghilangkan nikmat membaca berperingkat。Pasti?",
+    bulkYes: "Ya, buka",
+    bulkNo: "Tidak",
+    celticAxis: {"up": "Sedar", "down": "Bawah sedar", "left": "Lalu", "right": "Masa depan dekat"},
+    celticPlaneNote: "Titik samar ialah pusat graviti sebelum ini",
+    celticZone: {"origin": "Tempat yang hening", "axisFuture": "Lurus ke esok", "axisSurface": "Lurus ke kesedaran", "axisPast": "Lurus ke masa lalu", "axisDeep": "Lurus ke kedalaman", "z0": "Menghadap esok", "z1": "Esok yang terbit", "z2": "Fikiran yang menjernih", "z3": "Fikiran yang merenung", "z4": "Menerangi ingatan", "z5": "Menatap hari yang jauh", "z6": "Ingatan yang tenggelam", "z7": "Dasar yang mengendap", "z8": "Masa lalu yang tertidur", "z9": "Menyelam ke dalam", "z10": "Arus bawah petanda", "z11": "Firasat yang menghampiri"},
+    celticZoneNote: {"origin": "Jejak yang tidak condong ke mana-mana。Mungkin bukan keraguan, tetapi saat setiap arah terbuka sama luas。", "axisFuture": "Jejak yang lurus ke hadapan。Bentuk ini juga muncul apabila banyak dipertaruhkan pada yang belum tiba。", "axisSurface": "Jejak menuju apa yang anda sudah sedari。Justeru kerana ia dapat dikatakan, yang tidak terkata mungkin tertinggal di belakang。", "axisPast": "Jejak yang lurus ke belakang。Perkara yang anda sangka selesai mungkin masih bekerja di dasar motif anda。", "axisDeep": "Jejak yang tenggelam ke kedalaman。Dorongan yang anda sendiri tidak dapat jelaskan mungkin sedang menggerakkan pilihan。", "z0": "Jejak dengan pandangan ke hadapan。Perhatian tertumpu pada kesudahan, bukan keadaan sekarang。", "z1": "Jejak apabila kesedaran terangkat ke esok。Rancangan atau harapan mungkin sedang mengangkat perasaan anda。", "z2": "Jejak fikiran yang menjernih。Mungkin ini masa apabila yang tidak terjelaskan mula menemui penjelasan。", "z3": "Jejak yang berpaling kepada diri。Gerak untuk menuturkan semula masa lalu sedang berlaku di sisi sedar。", "z4": "Jejak yang menerangi ingatan。Perkara yang anda sangka terlupa mungkin menjadi bahan pertimbangan kini。", "z5": "Jejak yang menatap hari yang jauh。Perasaan terhadap yang tidak dapat ditarik balik mungkin tidur di dasar motif。", "z6": "Jejak apabila ingatan tenggelam。Mungkin ini masa anda cuba berhenti menoleh sama sekali。", "z7": "Jejak di kedalaman yang paling sunyi。Sesuatu yang lama tidak bergerak mengendap senyap di dasar。", "z8": "Jejak menuju masa lalu yang tertidur。Anda mungkin sedang cuba menuntut semula hasrat yang dahulu tidak terpenuhi。", "z9": "Jejak yang menyelam ke dalam。Perhatian berpindah daripada kejadian luar kepada cara anda bertindak balas。", "z10": "Jejak firasat yang belum berbentuk。Muncul apabila sesuatu terasa mula bergerak atas sebab yang tidak dapat dinamakan。", "z11": "Jejak yang menanti kedatangan。Persiapan untuk yang seterusnya mungkin sudah bermula tanpa anda sedari。"},
     weekPeak: (d) => `Puncak｜${d}`,
     weekValley: (d) => `Sunyi｜${d}`,
     weekHand: {"allUpright": "Minggu layar penuh", "allReversed": "Minggu terbalik", "destiny": "Minggu takdir", "onecolorDeep": "Minggu sewarna", "upheaval": "Minggu gelora", "fortune": "Minggu bertuah", "misfortune": "Minggu malang", "flame": "Minggu api", "tide": "Minggu pasang surut", "trial": "Minggu ujian", "harvest": "Minggu tuaian", "bond": "Minggu pertemuan", "money": "Minggu rezeki", "heart": "Minggu hati", "spirit": "Minggu tenaga", "craft": "Minggu kerja", "turning": "Minggu peralihan", "dash": "Minggu berlari", "blessing": "Minggu perlindungan", "inward": "Minggu ke dalam", "fair": "Minggu angin baik", "mixed": "Minggu campuran"},
@@ -9944,10 +11062,10 @@ const T = {
     hexAiLabel: "Bacaan AI",
     hexRetry: "Cuba lagi",
     hexPickPrompt: (n, pos) => `Pilih kad untuk "${pos}" (tinggal ${n})`,
-    hexConfirmPrompt: "Ketujuh-tujuh kad sudah dipilih",
+    hexConfirmPrompt: (n) => `${n} kad sudah dipilih`,
     pickAriaLabel: "Pilih kad",
     majorTag: "MAJOR",
-    hexConfirmAsk: "Adakah ketujuh-tujuh kad ini muktamad?",
+    hexConfirmAsk: (n) => `Sudah pasti dengan ${n} kad ini?`,
     navDraw: "Tilik",
     navRecords: "Rekod",
     tapToFlip: "Ketik untuk buka",
@@ -9970,6 +11088,10 @@ const T = {
     legalButtonLabel: "Terma Perkhidmatan & Dasar Privasi",
     legalClose: "Tutup",
     couponButtonLabel: "Kod",
+    diagButtonLabel: "Rekod penggunaan",
+    diagCopy: "Salin",
+    diagNote: "Hanya sesi yang menggunakan kuota direkodkan。Soalan dan isi tilikan tidak disertakan。Tampalkan ini apabila menghubungi kami。",
+    diagEmpty: "Belum ada rekod.",
   },
   ja: {
     appTitle: "タロット占い",
@@ -10149,23 +11271,43 @@ const T = {
     affinityLabel: "AFFINITY　今現在の相性",
     hexStageTitle: {"self": "あなたの軌跡", "other": "相手の心", "around": "周囲の状況", "choice": "これからの選択"},
     hexNext: {"self": "まず、あなたの軌跡を見ましょう", "other": "次に、相手の心を見ましょう", "around": "では、周囲の状況を見ましょう", "choice": "最後に、これからの選択を見ましょう"},
-    hexRitual: "七枚のカードが伏せられました。",
+    hexRitual: (n) => `${n}枚のカードが伏せられました。`,
     weekStageTitle: {"early": "週の入り", "middle": "週の半ば", "weekend": "週の終わり"},
     weekNext: {"early": "まず、週の入りを見ましょう", "middle": "次に、週の半ばを見ましょう", "weekend": "最後に、週の終わりを見ましょう"},
     weekRhythmTitle: "週の起伏",
-    weekRhythmTotal: "総合",
+    weekRhythmTotal: "総合運",
+    weekRhythmOf: (n) => `${n}の起伏`,
+    celticStageTitle: {"core": "現在と障害", "axis": "意識と無意識", "time": "過去と近い未来", "self": "あなた自身", "around": "周囲の環境", "hope": "希望と不安", "final": "最終結果"},
+    celticNext: {"core": "まず、いま向いている方向を見ましょう", "axis": "次に、心の内と外を見ましょう", "time": "では、時の流れを見ましょう", "self": "ここから、あなた自身を見ましょう", "around": "次は、周囲の環境を", "hope": "そして、希望と不安を", "final": "最後に、結末を見ましょう"},
+    celticPlaneTitle: "心の重心",
+    autoPickOrder: "自動で選ぶ",
+    autoPickRandom: "おまかせ",
+    autoPickOrderNote: "並んでいる順に、前から機械的に選びます",
+    autoPickRandomNote: "場に残った札から、無作為に選びます",
+    celticAskLabel: "意味を知りたいこと",
+    celticAskPlaceholder: "例：答えの出ないまま抱えていること ／ いま気にかかっていること ／ 自分でも分からない行い",
+    celticAskNote: "何を書いても構いません。書いた内容はこの端末の中だけに残ります。",
+    celticAskNoteFree: "無料版では鑑定に反映されません。何を知りたいのか、自分で整理するための欄です。",
+    bulkOpen: "一括で開く",
+    bulkConfirm: "一括で開くと、段階を追って読む楽しみは無くなります。よろしいですか？",
+    bulkYes: "はい、開きます",
+    bulkNo: "いいえ",
+    celticAxis: {"up": "顕在", "down": "潜在", "left": "過去", "right": "近い未来"},
+    celticPlaneNote: "薄い点は、前回までの重心です",
+    celticZone: {"origin": "静止の座", "axisFuture": "未来への一途", "axisSurface": "覚醒への一途", "axisPast": "過去への一途", "axisDeep": "深層への一途", "z0": "明日を向く", "z1": "昇りゆく明日", "z2": "澄みゆく意識", "z3": "省みる意識", "z4": "記憶を照らす", "z5": "遠い日を望む", "z6": "沈みゆく記憶", "z7": "澱みの底", "z8": "眠れる過去", "z9": "内へ潜る", "z10": "兆しの底流", "z11": "訪れる予感"},
+    celticZoneNote: {"origin": "どこにも傾かなかった軌跡です。決めきれないのではなく、いまはどの方向も等しく開いている状態かもしれません。", "axisFuture": "迷いなく先へ向かう軌跡です。ただし、まだ来ていないものに賭ける気持ちが強いときにも、この形は現れます。", "axisSurface": "はっきりと自覚している事柄へ向かう軌跡です。言葉にできている分、見落としが裏側に残ることもあります。", "axisPast": "過去へまっすぐ向かう軌跡です。終えたはずの出来事が、まだ動機の底で働いていることを示す場合があります。", "axisDeep": "深いところへ沈む軌跡です。自分でも説明のつかない衝動が、いま選択を動かしているのかもしれません。", "z0": "先を見ている軌跡です。目の前の状況より、その先にある結果のほうに関心が向いています。", "z1": "意識が未来へ持ち上がる軌跡です。計画や見通しが、いまの気分を引き上げている状態を示すことがあります。", "z2": "考えが澄んでいく軌跡です。分かっていなかったことに説明がつき始めた時期かもしれません。", "z3": "自分を省みる軌跡です。過ぎたことを言葉にし直そうとする動きが、意識の側で起きています。", "z4": "記憶に光を当てる軌跡です。忘れていたつもりの出来事が、いまの判断の材料になっている場合があります。", "z5": "遠い日を見ている軌跡です。取り戻せないものへの気持ちが、動機の奥に眠っていることがあります。", "z6": "記憶が沈んでいく軌跡です。振り返ること自体をやめようとしている時期かもしれません。", "z7": "最も深く淀んだところにある軌跡です。長く動かせずにいるものが、静かに底に溜まっています。", "z8": "眠ったままの過去へ向かう軌跡です。かつて満たされなかった願いを、いま取り戻そうとしているのかもしれません。", "z9": "内側へ潜っていく軌跡です。外の出来事より、自分の反応のほうに関心が移っています。", "z10": "まだ形にならない予感の軌跡です。理由は言えないが、何かが動き出していると感じているときに現れます。", "z11": "訪れるものを待つ軌跡です。自覚しないうちに、次に来るものへ準備が始まっている場合があります。"},
     weekPeak: (d) => `山｜${d}`,
     weekValley: (d) => `谷｜${d}`,
-    weekHand: {"allUpright": "満帆の週", "allReversed": "逆巻く週", "destiny": "天命の週", "onecolorDeep": "染まる週", "upheaval": "動乱の週", "fortune": "幸運の週", "misfortune": "不運の週", "flame": "炎の週", "tide": "潮の週", "trial": "試練の週", "harvest": "実りの週", "bond": "縁の週", "money": "金運の週", "heart": "心の週", "spirit": "気力の週", "craft": "仕事の週", "turning": "転機の週", "dash": "疾走の週", "blessing": "加護の週", "inward": "内向の週", "fair": "順風の週", "mixed": "入り混じる週"},
+    weekHand: {"allUpright": "順風満帆", "allReversed": "天地反転", "destiny": "運命の一本道", "onecolorDeep": "一色染めの七日", "upheaval": "激動の七日", "fortune": "吉兆の七日", "misfortune": "凶兆の七日", "flame": "燎原の火", "tide": "満ち引きの七日", "trial": "試練の連なり", "harvest": "光の集い", "bond": "縁がつなぐ七日", "money": "金脈の七日", "heart": "胸中さざめく七日", "spirit": "気力充溢", "craft": "手が導く七日", "turning": "転機の連なり", "dash": "駆け抜ける七日", "blessing": "守護のうちにある七日", "inward": "内へ向かう七日", "fair": "追い風の七日", "mixed": "平らかな七日"},
     weekHandNote: {"allUpright": "七枚すべてが良い向き。抗うものが無い七日。", "allReversed": "良い向きが一枚も無い。すべてが裏返る七日。", "destiny": "数が四つ以上連なる。道筋が定まっている。", "onecolorDeep": "同じ帯に六枚。週が一つの段階に染まる。", "upheaval": "終盤の札が五枚以上。大きな主題が重なる。", "fortune": "良い向きでない札が一枚だけ。", "misfortune": "良い向きの札が一枚だけ。", "flame": "序盤の札が五枚以上。始まりの気配が濃い。", "tide": "中盤の札が五枚以上。満ち引きの只中にある。", "trial": "死神・悪魔・塔が三枚以上。重い主題が並ぶ。", "harvest": "恋人たち・星・太陽・世界が三枚以上。光の札が集まる。", "bond": "人運が最も高い。人が運を運んでくる。", "money": "金運が最も高い。入りと出が動く。", "heart": "感情が最も高い。内側が忙しい七日。", "spirit": "気力が最も高い。身体が先に動く。", "craft": "仕事が最も高い。手を動かした分だけ進む。", "turning": "変化が最も高い。同じ場所に留まらない。", "dash": "行動が最も高い。迷う前に足が出る。", "blessing": "加護が最も高い。守られている七日。", "inward": "良い向きが二枚以下。外より内が動く。", "fair": "良い向きが五枚以上。流れに逆らわずに済む。", "mixed": "目立った偏りのない七日。"},
     hexFormalLabel: "形式的な結果",
     hexAiLabel: "AI鑑定",
     hexRetry: "AI鑑定をもう一度試す",
     hexPickPrompt: (n, pos) => `「${pos}」のカードを選んでください（残り${n}枚）`,
-    hexConfirmPrompt: "7枚すべて選び終えました",
+    hexConfirmPrompt: (n) => `${n}枚すべて選び終えました`,
     pickAriaLabel: "カードを選ぶ",
     majorTag: "大アルカナ",
-    hexConfirmAsk: "この7枚でよろしいですか？",
+    hexConfirmAsk: (n) => `この${n}枚でよろしいですか？`,
     navDraw: "占う",
     navRecords: "記録",
     tapToFlip: "タップしてめくる",
@@ -10188,6 +11330,10 @@ const T = {
     legalButtonLabel: "利用規約・プライバシーポリシー",
     legalClose: "閉じる",
     couponButtonLabel: "コード入力",
+    diagButtonLabel: "利用記録",
+    diagCopy: "記録をコピーする",
+    diagNote: "回数を消費した回だけを記録しています。問いの文面や鑑定文は含みません。お問い合わせの際に、この内容を貼り付けてください。",
+    diagEmpty: "まだ記録がありません。",
   },
   "zh-TW": {
     appTitle: "塔羅占卜",
@@ -10366,11 +11512,31 @@ const T = {
     affinityLabel: "AFFINITY　目前的契合度",
     hexStageTitle: {"self": "你的軌跡", "other": "對方的心", "around": "周遭的狀況", "choice": "接下來的選擇"},
     hexNext: {"self": "首先，來看你走過的路", "other": "接著，來看對方的心", "around": "那麼，來看周遭的狀況", "choice": "最後，來看接下來的選擇"},
-    hexRitual: "七張牌已經覆蓋。",
+    hexRitual: (n) => `${n}張牌已經覆蓋。`,
     weekStageTitle: {"early": "週初", "middle": "週中", "weekend": "週末"},
     weekNext: {"early": "首先，來看週初", "middle": "接著，來看週中", "weekend": "最後，來看週末"},
     weekRhythmTitle: "一週的起伏",
-    weekRhythmTotal: "綜合",
+    weekRhythmTotal: "綜合運",
+    weekRhythmOf: (n) => `${n}的起伏`,
+    celticStageTitle: {"core": "現在與阻礙", "axis": "意識與潛意識", "time": "過去與近未來", "self": "你自己", "around": "周遭環境", "hope": "希望與不安", "final": "最終結果"},
+    celticNext: {"core": "首先，來看此刻朝向的方向", "axis": "接著，來看心的內與外", "time": "那麼，來看時間的流向", "self": "從這裡，來看你自己", "around": "接下來是周遭環境", "hope": "然後是希望與不安", "final": "最後，來看結局"},
+    celticPlaneTitle: "心的重心",
+    autoPickOrder: "自動選牌",
+    autoPickRandom: "交給命運",
+    autoPickOrderNote: "依照排列順序，從前面機械式地選取",
+    autoPickRandomNote: "從場上剩下的牌中隨機選取",
+    celticAskLabel: "想知道其意義的事",
+    celticAskPlaceholder: "例：遲遲沒有答案的煩惱 ／ 此刻掛心的事 ／ 連自己也不明白的舉動",
+    celticAskNote: "寫什麼都可以。所寫的內容只會留在這台裝置中。",
+    celticAskNoteFree: "免費版不會將此內容反映在解讀中。這是讓你自行整理想知道什麼的欄位。",
+    bulkOpen: "一次全部翻開",
+    bulkConfirm: "一次全部翻開，就沒有逐段閱讀的樂趣了。確定嗎？",
+    bulkYes: "是，翻開",
+    bulkNo: "不要",
+    celticAxis: {"up": "顯意識", "down": "潛意識", "left": "過去", "right": "近未來"},
+    celticPlaneNote: "淡色的點是先前的重心",
+    celticZone: {"origin": "靜止之座", "axisFuture": "直往未來", "axisSurface": "直往覺醒", "axisPast": "直往過去", "axisDeep": "直往深層", "z0": "面向明日", "z1": "升起的明日", "z2": "澄澈的意識", "z3": "反省的意識", "z4": "照亮記憶", "z5": "遙望遠日", "z6": "下沉的記憶", "z7": "沉澱之底", "z8": "沉睡的過去", "z9": "向內潛入", "z10": "徵兆的暗流", "z11": "來臨的預感"},
+    celticZoneNote: {"origin": "沒有偏向任何一方的軌跡。或許不是無法決定，而是此刻每個方向都同樣敞開著。", "axisFuture": "毫不猶豫向前的軌跡。不過，當人把許多期待押在尚未到來的事物上時，也會出現這個形狀。", "axisSurface": "朝向你已清楚自覺之事的軌跡。正因為說得出口，說不出口的部分可能留在背後。", "axisPast": "筆直往過去去的軌跡。以為已經結束的事，可能仍在動機的底層運作著。", "axisDeep": "沉入深處的軌跡。連自己也說不清的衝動，或許正在推動當下的選擇。", "z0": "望向前方的軌跡。比起眼前的處境，注意力更放在其後的結果上。", "z1": "意識被抬向未來的軌跡。計畫或前景可能正在提振此刻的心情。", "z2": "思緒逐漸澄清的軌跡。或許正處於原本無法解釋之事開始有了說法的時期。", "z3": "回頭審視自己的軌跡。想把過去重新化為語言的動作，正在意識這一側發生。", "z4": "照亮記憶的軌跡。以為已經遺忘的事，可能正成為當下判斷的材料。", "z5": "遙望遠日的軌跡。對於再也取不回之物的心情，或許沉睡在動機深處。", "z6": "記憶逐漸下沉的軌跡。或許正處於想停止回望本身的時期。", "z7": "位於最深沉澱處的軌跡。長久無法挪動的事物，正靜靜堆積在底部。", "z8": "朝向沉睡過去的軌跡。你或許正想取回當年未曾滿足的願望。", "z9": "向內潛入的軌跡。比起外在的事件，關注已轉向自己的反應。", "z10": "尚未成形的預感之軌跡。當人說不出理由卻感到有什麼開始動了，便會出現。", "z11": "等待來訪之物的軌跡。在未曾自覺之間，對下一件事的準備或許已經開始。"},
     weekPeak: (d) => `高峰｜${d}`,
     weekValley: (d) => `低谷｜${d}`,
     weekHand: {"allUpright": "滿帆之週", "allReversed": "翻覆之週", "destiny": "天命之週", "onecolorDeep": "浸染之週", "upheaval": "動盪之週", "fortune": "幸運之週", "misfortune": "不運之週", "flame": "烈焰之週", "tide": "潮汐之週", "trial": "試煉之週", "harvest": "豐收之週", "bond": "緣分之週", "money": "財運之週", "heart": "心之週", "spirit": "氣力之週", "craft": "工作之週", "turning": "轉機之週", "dash": "疾馳之週", "blessing": "守護之週", "inward": "向內之週", "fair": "順風之週", "mixed": "混雜之週"},
@@ -10379,10 +11545,10 @@ const T = {
     hexAiLabel: "AI解讀",
     hexRetry: "再試一次",
     hexPickPrompt: (n, pos) => `請選出「${pos}」的牌（還剩 ${n} 張）`,
-    hexConfirmPrompt: "七張牌都已選好",
+    hexConfirmPrompt: (n) => `${n}張牌都已選好`,
     pickAriaLabel: "選一張牌",
     majorTag: "大牌",
-    hexConfirmAsk: "就用這七張牌嗎？",
+    hexConfirmAsk: (n) => `就用這${n}張牌可以嗎？`,
     navDraw: "占卜",
     navRecords: "記錄",
     tapToFlip: "點一下翻牌",
@@ -10405,6 +11571,10 @@ const T = {
     legalButtonLabel: "使用條款 · 隱私權政策",
     legalClose: "關閉",
     couponButtonLabel: "代碼輸入",
+    diagButtonLabel: "使用紀錄",
+    diagCopy: "複製紀錄",
+    diagNote: "僅記錄消耗次數的占卜。不包含問題內容與解讀本文。聯絡我們時，請貼上這段內容。",
+    diagEmpty: "尚無紀錄。",
   },
   "zh-CN": {
     appTitle: "塔罗占卜",
@@ -10583,11 +11753,31 @@ const T = {
     affinityLabel: "AFFINITY　当前的契合度",
     hexStageTitle: {"self": "你的轨迹", "other": "对方的心", "around": "周遭的状况", "choice": "接下来的选择"},
     hexNext: {"self": "首先，来看你走过的路", "other": "接着，来看对方的心", "around": "那么，来看周遭的状况", "choice": "最后，来看接下来的选择"},
-    hexRitual: "七张牌已经覆盖。",
+    hexRitual: (n) => `${n}张牌已经覆盖。`,
     weekStageTitle: {"early": "周初", "middle": "周中", "weekend": "周末"},
     weekNext: {"early": "首先，来看周初", "middle": "接着，来看周中", "weekend": "最后，来看周末"},
     weekRhythmTitle: "一周的起伏",
-    weekRhythmTotal: "综合",
+    weekRhythmTotal: "综合运",
+    weekRhythmOf: (n) => `${n}的起伏`,
+    celticStageTitle: {"core": "现在与阻碍", "axis": "意识与潜意识", "time": "过去与近未来", "self": "你自己", "around": "周遭环境", "hope": "希望与不安", "final": "最终结果"},
+    celticNext: {"core": "首先，来看此刻朝向的方向", "axis": "接着，来看心的内与外", "time": "那么，来看时间的流向", "self": "从这里，来看你自己", "around": "接下来是周遭环境", "hope": "然后是希望与不安", "final": "最后，来看结局"},
+    celticPlaneTitle: "心的重心",
+    autoPickOrder: "自动选牌",
+    autoPickRandom: "交给命运",
+    autoPickOrderNote: "依照排列顺序，从前面机械式地选取",
+    autoPickRandomNote: "从场上剩下的牌中随机选取",
+    celticAskLabel: "想知道其意义的事",
+    celticAskPlaceholder: "例：迟迟没有答案的烦恼 ／ 此刻挂心的事 ／ 连自己也不明白的举动",
+    celticAskNote: "写什么都可以。所写的内容只会留在这台设备中。",
+    celticAskNoteFree: "免费版不会将此内容反映在解读中。这是让你自行整理想知道什么的栏位。",
+    bulkOpen: "一次全部翻开",
+    bulkConfirm: "一次全部翻开，就没有逐段阅读的乐趣了。确定吗？",
+    bulkYes: "是，翻开",
+    bulkNo: "不要",
+    celticAxis: {"up": "显意识", "down": "潜意识", "left": "过去", "right": "近未来"},
+    celticPlaneNote: "淡色的点是先前的重心",
+    celticZone: {"origin": "静止之座", "axisFuture": "直往未来", "axisSurface": "直往觉醒", "axisPast": "直往过去", "axisDeep": "直往深层", "z0": "面向明日", "z1": "升起的明日", "z2": "澄澈的意识", "z3": "反省的意识", "z4": "照亮记忆", "z5": "遥望远日", "z6": "下沉的记忆", "z7": "沉淀之底", "z8": "沉睡的过去", "z9": "向内潜入", "z10": "征兆的暗流", "z11": "来临的预感"},
+    celticZoneNote: {"origin": "没有偏向任何一方的轨迹。或许不是无法决定，而是此刻每个方向都同样敞开着。", "axisFuture": "毫不犹豫向前的轨迹。不过，当人把许多期待押在尚未到来的事物上时，也会出现这个形状。", "axisSurface": "朝向你已清楚自觉之事的轨迹。正因为说得出口，说不出口的部分可能留在背后。", "axisPast": "笔直往过去去的轨迹。以为已经结束的事，可能仍在动机的底层运作着。", "axisDeep": "沉入深处的轨迹。连自己也说不清的冲动，或许正在推动当下的选择。", "z0": "望向前方的轨迹。比起眼前的处境，注意力更放在其后的结果上。", "z1": "意识被抬向未来的轨迹。计划或前景可能正在提振此刻的心情。", "z2": "思绪逐渐澄清的轨迹。或许正处于原本无法解释之事开始有了说法的时期。", "z3": "回头审视自己的轨迹。想把过去重新化为语言的动作，正在意识这一侧发生。", "z4": "照亮记忆的轨迹。以为已经遗忘的事，可能正成为当下判断的材料。", "z5": "遥望远日的轨迹。对于再也取不回之物的心情，或许沉睡在动机深处。", "z6": "记忆逐渐下沉的轨迹。或许正处于想停止回望本身的时期。", "z7": "位于最深沉淀处的轨迹。长久无法挪动的事物，正静静堆积在底部。", "z8": "朝向沉睡过去的轨迹。你或许正想取回当年未曾满足的愿望。", "z9": "向内潜入的轨迹。比起外在的事件，关注已转向自己的反应。", "z10": "尚未成形的预感之轨迹。当人说不出理由却感到有什么开始动了，便会出现。", "z11": "等待来访之物的轨迹。在未曾自觉之间，对下一件事的准备或许已经开始。"},
     weekPeak: (d) => `高峰｜${d}`,
     weekValley: (d) => `低谷｜${d}`,
     weekHand: {"allUpright": "满帆之周", "allReversed": "翻覆之周", "destiny": "天命之周", "onecolorDeep": "浸染之周", "upheaval": "动荡之周", "fortune": "幸运之周", "misfortune": "不运之周", "flame": "烈焰之周", "tide": "潮汐之周", "trial": "试炼之周", "harvest": "丰收之周", "bond": "缘分之周", "money": "财运之周", "heart": "心之周", "spirit": "气力之周", "craft": "工作之周", "turning": "转机之周", "dash": "疾驰之周", "blessing": "守护之周", "inward": "向内之周", "fair": "顺风之周", "mixed": "混杂之周"},
@@ -10596,10 +11786,10 @@ const T = {
     hexAiLabel: "AI解读",
     hexRetry: "再试一次",
     hexPickPrompt: (n, pos) => `请选出「${pos}」的牌（还剩 ${n} 张）`,
-    hexConfirmPrompt: "七张牌都已选好",
+    hexConfirmPrompt: (n) => `${n}张牌都已选好`,
     pickAriaLabel: "选一张牌",
     majorTag: "大牌",
-    hexConfirmAsk: "就用这七张牌吗？",
+    hexConfirmAsk: (n) => `就用这${n}张牌可以吗？`,
     navDraw: "占卜",
     navRecords: "记录",
     tapToFlip: "点击翻牌",
@@ -10622,6 +11812,10 @@ const T = {
     legalButtonLabel: "使用条款 · 隐私政策",
     legalClose: "关闭",
     couponButtonLabel: "代码输入",
+    diagButtonLabel: "使用记录",
+    diagCopy: "复制记录",
+    diagNote: "仅记录消耗次数的占卜。不包含问题内容与解读本文。联系我们时，请粘贴这段内容。",
+    diagEmpty: "尚无记录。",
   },
   en: {
     appTitle: "Tarot Reading",
@@ -10800,11 +11994,31 @@ const T = {
     affinityLabel: "AFFINITY　Right now",
     hexStageTitle: {"self": "Your Path", "other": "Their Heart", "around": "The Surroundings", "choice": "The Choice Ahead"},
     hexNext: {"self": "First, let us see the path you walked", "other": "Next, let us see their heart", "around": "Now, let us see the surroundings", "choice": "Finally, let us see the choice ahead"},
-    hexRitual: "The seven cards lie face down。",
+    hexRitual: (n) => `The ${n} cards lie face down。`,
     weekStageTitle: {"early": "Early week", "middle": "Midweek", "weekend": "Weekend"},
     weekNext: {"early": "First, let us see the early week", "middle": "Next, the middle of the week", "weekend": "Finally, the weekend"},
     weekRhythmTitle: "The week\u2019s rhythm",
-    weekRhythmTotal: "Overall",
+    weekRhythmTotal: "Overall fortune",
+    weekRhythmOf: (n) => `The rhythm of ${n}`,
+    celticStageTitle: {"core": "The present and its obstacle", "axis": "Conscious and unconscious", "time": "Past and near future", "self": "Yourself", "around": "Your surroundings", "hope": "Hopes and fears", "final": "The outcome"},
+    celticNext: {"core": "First, let us see the way you are facing", "axis": "Next, the inside and outside of your mind", "time": "Now, the flow of time", "self": "From here, let us see you yourself", "around": "Next, your surroundings", "hope": "Then, your hopes and fears", "final": "Finally, let us see the outcome"},
+    celticPlaneTitle: "The centre of your mind",
+    autoPickOrder: "Pick in order",
+    autoPickRandom: "Leave it to chance",
+    autoPickOrderNote: "Takes cards in order, from the front",
+    autoPickRandomNote: "Takes cards at random from what remains",
+    celticAskLabel: "What you want to understand",
+    celticAskPlaceholder: "e.g. something unresolved you keep carrying / what weighs on you now / an act you cannot explain to yourself",
+    celticAskNote: "Anything is fine。What you write stays only on this device。",
+    celticAskNoteFree: "The free version does not use this in the reading。It is a space to sort out for yourself what you want to know。",
+    bulkOpen: "Open all at once",
+    bulkConfirm: "Opening everything at once loses the pleasure of reading stage by stage。Are you sure?",
+    bulkYes: "Yes, open them",
+    bulkNo: "No",
+    celticAxis: {"up": "Conscious", "down": "Unconscious", "left": "Past", "right": "Near future"},
+    celticPlaneNote: "The faint dots are your earlier centres",
+    celticZone: {"origin": "The still seat", "axisFuture": "Straight to tomorrow", "axisSurface": "Straight to waking", "axisPast": "Straight to the past", "axisDeep": "Straight to the depths", "z0": "Facing tomorrow", "z1": "Tomorrow rising", "z2": "Clearing mind", "z3": "Reflecting mind", "z4": "Lighting memory", "z5": "Gazing at distant days", "z6": "Memory sinking", "z7": "The stagnant floor", "z8": "The sleeping past", "z9": "Diving inward", "z10": "The undercurrent of signs", "z11": "A coming sense"},
+    celticZoneNote: {"origin": "A trail that leaned nowhere. Not indecision, perhaps, but a moment when every direction lies equally open.", "axisFuture": "A trail that runs straight ahead. This shape also appears when much is being staked on what has not yet arrived.", "axisSurface": "A trail toward what you already know you feel. Since it can be put into words, what escapes words may sit behind it.", "axisPast": "A trail running straight back. Something you thought was finished may still be working beneath your motives.", "axisDeep": "A trail sinking into the depths. An impulse you cannot account for may be moving your choices now.", "z0": "A trail with its eyes ahead. Attention rests on the outcome rather than on the situation at hand.", "z1": "A trail where awareness lifts toward tomorrow. Plans or prospects may be raising your present mood.", "z2": "A trail of clearing thought. This may be a time when what had no explanation begins to find one.", "z3": "A trail turned back on itself. A movement to put the past into words again is happening at the conscious level.", "z4": "A trail that lights up memory. Something you meant to forget may be feeding your present judgement.", "z5": "A trail gazing at distant days. A feeling toward what cannot be recovered may lie asleep beneath your motives.", "z6": "A trail where memory sinks. This may be a time of trying to stop looking back at all.", "z7": "A trail at the stillest depth. Something long unmoved has been settling quietly at the bottom.", "z8": "A trail toward a sleeping past. You may be trying to reclaim a wish that was never granted.", "z9": "A trail diving inward. Interest has shifted from what happens outside to how you respond.", "z10": "A trail of a sense not yet formed. It appears when something feels set in motion for reasons you cannot name.", "z11": "A trail that waits for arrival. Preparation for what comes next may already have begun without your noticing."},
     weekPeak: (d) => `Peak｜${d}`,
     weekValley: (d) => `Trough｜${d}`,
     weekHand: {"allUpright": "A week in full sail", "allReversed": "A week turned over", "destiny": "A week of fate", "onecolorDeep": "A week steeped in one colour", "upheaval": "A week of upheaval", "fortune": "A fortunate week", "misfortune": "An unlucky week", "flame": "A week of flame", "tide": "A week of tides", "trial": "A week of trials", "harvest": "A week of harvest", "bond": "A week of ties", "money": "A week of coin", "heart": "A week of the heart", "spirit": "A week of vigour", "craft": "A week of craft", "turning": "A week of turning", "dash": "A week at a run", "blessing": "A week of blessing", "inward": "A week turned inward", "fair": "A week with the wind", "mixed": "A mixed week"},
@@ -10813,10 +12027,10 @@ const T = {
     hexAiLabel: "AI reading",
     hexRetry: "Try the AI reading again",
     hexPickPrompt: (n, pos) => `Choose the card for "${pos}" (${n} left)`,
-    hexConfirmPrompt: "All seven cards have been chosen",
+    hexConfirmPrompt: (n) => `All ${n} cards are chosen`,
     pickAriaLabel: "Choose a card",
     majorTag: "MAJOR",
-    hexConfirmAsk: "Are these seven cards final?",
+    hexConfirmAsk: (n) => `Are these ${n} cards final?`,
     navDraw: "Draw",
     navRecords: "Records",
     tapToFlip: "Tap to flip",
@@ -10839,6 +12053,10 @@ const T = {
     legalButtonLabel: "Terms & Privacy Policy",
     legalClose: "Close",
     couponButtonLabel: "Enter code",
+    diagButtonLabel: "Usage log",
+    diagCopy: "Copy the log",
+    diagNote: "Only readings that used a daily slot are recorded。Your question and the reading text are never included。Please paste this when you contact us。",
+    diagEmpty: "Nothing recorded yet.",
   },
   tl: {
     appTitle: "Tarot Reading",
@@ -11017,11 +12235,31 @@ const T = {
     affinityLabel: "AFFINITY　Sa ngayon",
     hexStageTitle: {"self": "Ang Iyong Landas", "other": "Ang Puso Niya", "around": "Ang Paligid", "choice": "Ang Pagpipilian"},
     hexNext: {"self": "Una, tingnan natin ang landas mo", "other": "Sunod, tingnan natin ang puso niya", "around": "Ngayon, tingnan natin ang paligid", "choice": "Panghuli, tingnan natin ang piliing susunod"},
-    hexRitual: "Nakatihaya na ang pitong baraha。",
+    hexRitual: (n) => `Nakatihaya na ang ${n} baraha。`,
     weekStageTitle: {"early": "Simula ng linggo", "middle": "Kalagitnaan", "weekend": "Katapusan"},
     weekNext: {"early": "Una, tingnan ang simula ng linggo", "middle": "Sunod, ang kalagitnaan", "weekend": "Panghuli, ang katapusan"},
     weekRhythmTitle: "Ritmo ng linggo",
-    weekRhythmTotal: "Kabuuan",
+    weekRhythmTotal: "Kabuuang kapalaran",
+    weekRhythmOf: (n) => `Ritmo ng ${n}`,
+    celticStageTitle: {"core": "Ang kasalukuyan at hadlang", "axis": "Malay at di-malay", "time": "Nakaraan at malapit na hinaharap", "self": "Ikaw mismo", "around": "Ang paligid mo", "hope": "Pag-asa at pangamba", "final": "Ang kahihinatnan"},
+    celticNext: {"core": "Una, tingnan natin ang direksyong hinaharap mo", "axis": "Sunod, ang loob at labas ng isip mo", "time": "Ngayon, ang agos ng panahon", "self": "Mula rito, tingnan natin ikaw mismo", "around": "Sunod, ang paligid mo", "hope": "Tapos, ang pag-asa at pangamba", "final": "Panghuli, tingnan natin ang kahihinatnan"},
+    celticPlaneTitle: "Ang sentro ng isip mo",
+    autoPickOrder: "Piliin nang sunod-sunod",
+    autoPickRandom: "Ipaubaya na lang",
+    autoPickOrderNote: "Kinukuha ayon sa pagkakasunod-sunod mula sa unahan",
+    autoPickRandomNote: "Random na kinukuha mula sa mga natitira",
+    celticAskLabel: "Ang nais mong maunawaan",
+    celticAskPlaceholder: "Hal.: bagay na matagal mong dala / ang bumabagabag ngayon / kilos na hindi mo maipaliwanag",
+    celticAskNote: "Kahit ano ay maaari。Ang isinulat mo ay nananatili lamang sa device na ito。",
+    celticAskNoteFree: "Hindi ito ginagamit sa pagbasa sa libreng bersyon。Puwang ito para ayusin mo mismo ang nais mong malaman。",
+    bulkOpen: "Buksan lahat nang sabay",
+    bulkConfirm: "Kapag binuksan lahat, mawawala ang tuwa ng unti-unting pagbasa。Sigurado ka?",
+    bulkYes: "Oo, buksan",
+    bulkNo: "Hindi",
+    celticAxis: {"up": "Malay", "down": "Di-malay", "left": "Nakaraan", "right": "Malapit na hinaharap"},
+    celticPlaneNote: "Ang malalabong tuldok ay mga naunang sentro",
+    celticZone: {"origin": "Ang tahimik na luklukan", "axisFuture": "Tuwid sa bukas", "axisSurface": "Tuwid sa paggising", "axisPast": "Tuwid sa nakaraan", "axisDeep": "Tuwid sa kalaliman", "z0": "Nakaharap sa bukas", "z1": "Sumisikat na bukas", "z2": "Lumilinaw na isip", "z3": "Nagninilay na isip", "z4": "Tinatanglawan ang alaala", "z5": "Tanaw sa malayong araw", "z6": "Lumulubog na alaala", "z7": "Ang tigil na sahig", "z8": "Ang natutulog na nakaraan", "z9": "Sumisisid sa loob", "z10": "Agos sa ilalim ng palatandaan", "z11": "Isang paparating na pakiramdam"},
+    celticZoneNote: {"origin": "Landas na hindi kumiling saanman。Marahil hindi kawalan ng pasya, kundi sandaling pantay ang bukas na bawat direksyon。", "axisFuture": "Landas na tuwid ang tungo。Lumilitaw din ang hugis na ito kapag marami ang itinataya sa hindi pa dumarating。", "axisSurface": "Landas patungo sa alam mo nang nararamdaman。Dahil nasasabi ito, maaaring nasa likod ang hindi masabi。", "axisPast": "Landas na tuwid pabalik。Ang inakala mong tapos ay maaaring gumagana pa rin sa ilalim ng iyong motibo。", "axisDeep": "Landas na lumulubog sa kalaliman。Isang udyok na hindi mo maipaliwanag ang maaaring gumagalaw sa iyong pagpili。", "z0": "Landas na nakatingin sa unahan。Nasa kalalabasan ang pansin, hindi sa kasalukuyang kalagayan。", "z1": "Landas kung saan umaangat ang kamalayan sa bukas。Ang mga plano o pag-asa ay maaaring nag-aangat sa iyong loob。", "z2": "Landas ng lumilinaw na isip。Maaaring panahon ito na nagsisimulang magkaroon ng paliwanag ang dating walang paliwanag。", "z3": "Landas na bumabalik sa sarili。Nagaganap sa malay na bahagi ang pagnanais na muling bigyang-salita ang nakaraan。", "z4": "Landas na tumatanglaw sa alaala。Ang inakala mong nalimot ay maaaring nagiging batayan ng iyong pasya。", "z5": "Landas na tumatanaw sa malayong araw。Ang damdamin sa hindi na maibabalik ay maaaring natutulog sa ilalim ng motibo。", "z6": "Landas kung saan lumulubog ang alaala。Maaaring panahon ito ng pagtigil sa paglingon mismo。", "z7": "Landas sa pinakatahimik na kalaliman。Ang matagal nang hindi natinag ay tahimik na naiipon sa ilalim。", "z8": "Landas patungo sa natutulog na nakaraan。Maaaring sinisikap mong bawiin ang hilig na hindi natupad noon。", "z9": "Landas na sumisisid paloob。Lumipat ang interes mula sa panlabas patungo sa sarili mong tugon。", "z10": "Landas ng pakiramdam na wala pang hugis。Lumilitaw kapag may tila gumagalaw sa dahilang hindi mo mapangalanan。", "z11": "Landas na naghihintay ng darating。Maaaring nagsimula na ang paghahanda sa susunod nang hindi mo namamalayan。"},
     weekPeak: (d) => `Rurok｜${d}`,
     weekValley: (d) => `Lambak｜${d}`,
     weekHand: {"allUpright": "Linggong buong layag", "allReversed": "Linggong baligtad", "destiny": "Linggo ng tadhana", "onecolorDeep": "Linggong isang kulay", "upheaval": "Linggo ng ligalig", "fortune": "Linggo ng suwerte", "misfortune": "Linggo ng malas", "flame": "Linggo ng apoy", "tide": "Linggo ng agos", "trial": "Linggo ng pagsubok", "harvest": "Linggo ng ani", "bond": "Linggo ng ugnayan", "money": "Linggo ng salapi", "heart": "Linggo ng puso", "spirit": "Linggo ng lakas", "craft": "Linggo ng gawa", "turning": "Linggo ng pagbabago", "dash": "Linggo ng takbo", "blessing": "Linggo ng biyaya", "inward": "Linggong pa-loob", "fair": "Linggong pahangin", "mixed": "Linggong halo-halo"},
@@ -11030,10 +12268,10 @@ const T = {
     hexAiLabel: "AI reading",
     hexRetry: "Subukan ulit",
     hexPickPrompt: (n, pos) => `Piliin ang baraha para sa "${pos}" (${n} pa)`,
-    hexConfirmPrompt: "Napili na ang lahat ng pitong baraha",
+    hexConfirmPrompt: (n) => `Napili na ang lahat ng ${n} baraha`,
     pickAriaLabel: "Pumili ng baraha",
     majorTag: "MAJOR",
-    hexConfirmAsk: "Ito na ba ang pitong baraha?",
+    hexConfirmAsk: (n) => `Ito na ba ang ${n} barahang pipiliin mo?`,
     navDraw: "Bunot",
     navRecords: "Tala",
     tapToFlip: "I-tap para buksan",
@@ -11056,6 +12294,10 @@ const T = {
     legalButtonLabel: "Mga Tuntunin at Patakaran sa Privacy",
     legalClose: "Isara",
     couponButtonLabel: "Code",
+    diagButtonLabel: "Tala ng paggamit",
+    diagCopy: "Kopyahin ang tala",
+    diagNote: "Ang mga pagbasa lang na gumamit ng slot ang naitatala。Hindi kasama ang tanong mo at ang teksto ng pagbasa。I-paste ito kapag nakipag-ugnayan ka。",
+    diagEmpty: "Wala pang naitala.",
   },
   th: {
     appTitle: "ไพ่ทาโรต์",
@@ -11234,11 +12476,31 @@ const T = {
     affinityLabel: "AFFINITY　ความเข้ากันในตอนนี้",
     hexStageTitle: {"self": "เส้นทางของคุณ", "other": "ใจของอีกฝ่าย", "around": "สภาพแวดล้อม", "choice": "ทางเลือกข้างหน้า"},
     hexNext: {"self": "อันดับแรก มาดูเส้นทางของคุณกัน", "other": "ต่อไป มาดูใจของอีกฝ่ายกัน", "around": "ทีนี้ มาดูสภาพแวดล้อมกัน", "choice": "สุดท้าย มาดูทางเลือกข้างหน้ากัน"},
-    hexRitual: "ไพ่ทั้งเจ็ดถูกคว่ำไว้แล้ว。",
+    hexRitual: (n) => `ไพ่ ${n} ใบถูกคว่ำไว้แล้ว。`,
     weekStageTitle: {"early": "ต้นสัปดาห์", "middle": "กลางสัปดาห์", "weekend": "ปลายสัปดาห์"},
     weekNext: {"early": "อันดับแรก มาดูต้นสัปดาห์", "middle": "ต่อไป กลางสัปดาห์", "weekend": "สุดท้าย ปลายสัปดาห์"},
     weekRhythmTitle: "จังหวะของสัปดาห์",
-    weekRhythmTotal: "รวม",
+    weekRhythmTotal: "ดวงโดยรวม",
+    weekRhythmOf: (n) => `จังหวะของ${n}`,
+    celticStageTitle: {"core": "ปัจจุบันและอุปสรรค", "axis": "จิตสำนึกและจิตใต้สำนึก", "time": "อดีตและอนาคตอันใกล้", "self": "ตัวคุณเอง", "around": "สภาพแวดล้อมรอบตัว", "hope": "ความหวังและความกังวล", "final": "บทสรุป"},
+    celticNext: {"core": "อันดับแรก มาดูทิศทางที่คุณมุ่งไป", "axis": "ต่อไป ภายในและภายนอกของใจ", "time": "ทีนี้ มาดูการไหลของเวลา", "self": "จากตรงนี้ มาดูตัวคุณเอง", "around": "ต่อไปคือสภาพแวดล้อม", "hope": "แล้วก็ความหวังและความกังวล", "final": "สุดท้าย มาดูบทสรุป"},
+    celticPlaneTitle: "จุดศูนย์ถ่วงของใจ",
+    autoPickOrder: "เลือกตามลำดับ",
+    autoPickRandom: "ปล่อยให้เป็นไป",
+    autoPickOrderNote: "เลือกตามลำดับจากด้านหน้าอย่างเป็นระบบ",
+    autoPickRandomNote: "สุ่มเลือกจากไพ่ที่เหลืออยู่",
+    celticAskLabel: "สิ่งที่คุณอยากเข้าใจความหมาย",
+    celticAskPlaceholder: "เช่น เรื่องค้างคาที่ยังไม่มีคำตอบ / สิ่งที่กังวลอยู่ตอนนี้ / การกระทำที่ตัวเองก็ไม่เข้าใจ",
+    celticAskNote: "เขียนอะไรก็ได้。สิ่งที่เขียนจะอยู่ในเครื่องนี้เท่านั้น。",
+    celticAskNoteFree: "เวอร์ชันฟรีจะไม่นำข้อความนี้ไปใช้ในคำทำนาย。เป็นช่องสำหรับเรียบเรียงสิ่งที่คุณอยากรู้ด้วยตนเอง。",
+    bulkOpen: "เปิดทั้งหมดในคราวเดียว",
+    bulkConfirm: "การเปิดทั้งหมดพร้อมกันจะทำให้เสียอรรถรสของการอ่านทีละช่วง。แน่ใจหรือไม่?",
+    bulkYes: "ใช่ เปิดเลย",
+    bulkNo: "ไม่",
+    celticAxis: {"up": "จิตสำนึก", "down": "จิตใต้สำนึก", "left": "อดีต", "right": "อนาคตอันใกล้"},
+    celticPlaneNote: "จุดจางคือจุดศูนย์ถ่วงของครั้งก่อน",
+    celticZone: {"origin": "ที่นั่งอันนิ่งสงบ", "axisFuture": "ตรงสู่วันพรุ่ง", "axisSurface": "ตรงสู่การตื่นรู้", "axisPast": "ตรงสู่อดีต", "axisDeep": "ตรงสู่ห้วงลึก", "z0": "หันสู่วันพรุ่ง", "z1": "วันพรุ่งที่ทอแสง", "z2": "จิตที่กระจ่างขึ้น", "z3": "จิตที่ทบทวน", "z4": "ส่องความทรงจำ", "z5": "มองวันวานอันไกล", "z6": "ความทรงจำที่จมลง", "z7": "ก้นบึ้งอันนิ่งงัน", "z8": "อดีตที่หลับใหล", "z9": "ดำดิ่งสู่ภายใน", "z10": "กระแสใต้ของลางบอก", "z11": "ลางที่กำลังมาถึง"},
+    celticZoneNote: {"origin": "เส้นทางที่ไม่เอนไปทางใด。อาจไม่ใช่การตัดสินใจไม่ได้ แต่เป็นช่วงที่ทุกทิศทางเปิดอยู่เท่ากัน。", "axisFuture": "เส้นทางที่มุ่งไปข้างหน้าโดยไม่ลังเล。ทว่ารูปนี้ก็ปรากฏเมื่อผู้คนฝากความหวังไว้มากกับสิ่งที่ยังมาไม่ถึง。", "axisSurface": "เส้นทางมุ่งสู่สิ่งที่คุณรู้ตัวชัดเจน。เพราะพูดออกมาได้ สิ่งที่พูดไม่ได้จึงอาจหลงเหลืออยู่ด้านหลัง。", "axisPast": "เส้นทางที่มุ่งตรงสู่อดีต。สิ่งที่คิดว่าจบไปแล้วอาจยังทำงานอยู่ใต้แรงจูงใจ。", "axisDeep": "เส้นทางที่จมสู่ห้วงลึก。แรงผลักที่ตัวเองก็อธิบายไม่ได้ อาจกำลังขับเคลื่อนการเลือกในตอนนี้。", "z0": "เส้นทางที่มองไปข้างหน้า。ความสนใจอยู่ที่ผลลัพธ์เบื้องหน้ามากกว่าสถานการณ์ตรงหน้า。", "z1": "เส้นทางที่จิตสำนึกถูกยกขึ้นสู่อนาคต。แผนการหรือความคาดหวังอาจกำลังยกระดับอารมณ์ปัจจุบัน。", "z2": "เส้นทางที่ความคิดกระจ่างขึ้น。อาจเป็นช่วงที่สิ่งซึ่งเคยอธิบายไม่ได้เริ่มมีคำอธิบาย。", "z3": "เส้นทางที่หันกลับมามองตนเอง。การพยายามให้ถ้อยคำแก่อดีตอีกครั้ง กำลังเกิดขึ้นในฝั่งจิตสำนึก。", "z4": "เส้นทางที่ส่องแสงให้ความทรงจำ。สิ่งที่คิดว่าลืมไปแล้วอาจกำลังเป็นวัตถุดิบของการตัดสินใจ。", "z5": "เส้นทางที่มองวันวานอันไกล。ความรู้สึกต่อสิ่งที่เรียกคืนไม่ได้ อาจหลับอยู่ใต้แรงจูงใจ。", "z6": "เส้นทางที่ความทรงจำจมลง。อาจเป็นช่วงที่พยายามหยุดหันกลับไปมองเสียเลย。", "z7": "เส้นทางที่อยู่ ณ ก้นบึ้งอันนิ่งที่สุด。สิ่งที่ขยับไม่ได้มานาน กำลังทับถมอยู่เงียบ ๆ。", "z8": "เส้นทางที่มุ่งสู่อดีตซึ่งหลับใหล。คุณอาจกำลังพยายามทวงคืนความปรารถนาที่ไม่เคยได้รับการเติมเต็ม。", "z9": "เส้นทางที่ดำดิ่งสู่ภายใน。ความสนใจย้ายจากเหตุการณ์ภายนอกมาสู่ปฏิกิริยาของตนเอง。", "z10": "เส้นทางของลางที่ยังไม่เป็นรูป。ปรากฏเมื่อรู้สึกว่ามีบางอย่างเริ่มเคลื่อน ด้วยเหตุผลที่บอกไม่ได้。", "z11": "เส้นทางที่รอสิ่งซึ่งจะมาถึง。การเตรียมตัวสำหรับสิ่งถัดไปอาจเริ่มขึ้นแล้วโดยไม่รู้ตัว。"},
     weekPeak: (d) => `จุดสูงสุด｜${d}`,
     weekValley: (d) => `จุดต่ำสุด｜${d}`,
     weekHand: {"allUpright": "สัปดาห์ใบเรือเต็มลม", "allReversed": "สัปดาห์พลิกกลับ", "destiny": "สัปดาห์แห่งโชคชะตา", "onecolorDeep": "สัปดาห์สีเดียว", "upheaval": "สัปดาห์แห่งความปั่นป่วน", "fortune": "สัปดาห์แห่งโชคดี", "misfortune": "สัปดาห์แห่งเคราะห์", "flame": "สัปดาห์แห่งเปลวไฟ", "tide": "สัปดาห์แห่งกระแสน้ำ", "trial": "สัปดาห์แห่งบททดสอบ", "harvest": "สัปดาห์แห่งผลผลิต", "bond": "สัปดาห์แห่งผู้คน", "money": "สัปดาห์แห่งทรัพย์", "heart": "สัปดาห์แห่งหัวใจ", "spirit": "สัปดาห์แห่งพลัง", "craft": "สัปดาห์แห่งการงาน", "turning": "สัปดาห์แห่งจุดเปลี่ยน", "dash": "สัปดาห์แห่งการวิ่ง", "blessing": "สัปดาห์แห่งการคุ้มครอง", "inward": "สัปดาห์ที่หันเข้าใน", "fair": "สัปดาห์ตามลม", "mixed": "สัปดาห์ผสม"},
@@ -11247,10 +12509,10 @@ const T = {
     hexAiLabel: "คำทำนายจาก AI",
     hexRetry: "ลองอีกครั้ง",
     hexPickPrompt: (n, pos) => `เลือกไพ่สำหรับ "${pos}" (เหลืออีก ${n} ใบ)`,
-    hexConfirmPrompt: "เลือกครบทั้งเจ็ดใบแล้ว",
+    hexConfirmPrompt: (n) => `เลือกไพ่ครบ ${n} ใบแล้ว`,
     pickAriaLabel: "เลือกไพ่",
     majorTag: "ไพ่ชุดใหญ่",
-    hexConfirmAsk: "ใช้ไพ่เจ็ดใบนี้ใช่ไหม",
+    hexConfirmAsk: (n) => `ใช้ไพ่ ${n} ใบนี้เลยไหม`,
     navDraw: "ดูดวง",
     navRecords: "บันทึก",
     tapToFlip: "แตะเพื่อเปิดไพ่",
@@ -11273,6 +12535,10 @@ const T = {
     legalButtonLabel: "ข้อกำหนดการใช้งาน · นโยบายความเป็นส่วนตัว",
     legalClose: "ปิด",
     couponButtonLabel: "ใส่รหัส",
+    diagButtonLabel: "บันทึกการใช้งาน",
+    diagCopy: "คัดลอกบันทึก",
+    diagNote: "บันทึกเฉพาะครั้งที่ใช้โควตาเท่านั้น。ไม่รวมคำถามและเนื้อหาคำทำนาย。กรุณาวางข้อความนี้เมื่อติดต่อเรา。",
+    diagEmpty: "ยังไม่มีบันทึก",
   },
 
   sv: {
@@ -11452,11 +12718,31 @@ const T = {
     affinityLabel: "AFFINITY　Just nu",
     hexStageTitle: {"self": "Din väg", "other": "Deras hjärta", "around": "Omgivningen", "choice": "Valet framför dig"},
     hexNext: {"self": "Först, låt oss se vägen du gått", "other": "Sedan, låt oss se deras hjärta", "around": "Nu, låt oss se omgivningen", "choice": "Till sist, låt oss se valet framför dig"},
-    hexRitual: "De sju korten ligger med baksidan upp。",
+    hexRitual: (n) => `De ${n} korten ligger med baksidan upp。`,
     weekStageTitle: {"early": "Veckans början", "middle": "Mitt i veckan", "weekend": "Veckoslutet"},
     weekNext: {"early": "Först, låt oss se veckans början", "middle": "Sedan, mitt i veckan", "weekend": "Till sist, veckoslutet"},
     weekRhythmTitle: "Veckans vågor",
-    weekRhythmTotal: "Totalt",
+    weekRhythmTotal: "Den samlade turen",
+    weekRhythmOf: (n) => `${n}s vågor`,
+    celticStageTitle: {"core": "Nuet och dess hinder", "axis": "Medvetet och omedvetet", "time": "Det förflutna och den nära framtiden", "self": "Du själv", "around": "Din omgivning", "hope": "Hopp och oro", "final": "Utgången"},
+    celticNext: {"core": "Först, låt oss se riktningen du är vänd mot", "axis": "Sedan, sinnets insida och utsida", "time": "Nu, tidens flöde", "self": "Härifrån, låt oss se dig själv", "around": "Sedan din omgivning", "hope": "Så hopp och oro", "final": "Till sist, låt oss se utgången"},
+    celticPlaneTitle: "Ditt sinnes tyngdpunkt",
+    autoPickOrder: "Välj i ordning",
+    autoPickRandom: "Låt slumpen avgöra",
+    autoPickOrderNote: "Tar korten i ordning, framifrån",
+    autoPickRandomNote: "Tar kort slumpmässigt bland de kvarvarande",
+    celticAskLabel: "Det du vill förstå innebörden av",
+    celticAskPlaceholder: "T.ex. något olöst du bär på / det som tynger dig nu / en handling du själv inte kan förklara",
+    celticAskNote: "Vad som helst går bra。Det du skriver stannar bara på den här enheten。",
+    celticAskNoteFree: "Gratisversionen använder inte detta i tydningen。Det är en plats att själv reda ut vad du vill veta。",
+    bulkOpen: "Öppna allt på en gång",
+    bulkConfirm: "Att öppna allt på en gång tar bort nöjet att läsa steg för steg。Är du säker?",
+    bulkYes: "Ja, öppna dem",
+    bulkNo: "Nej",
+    celticAxis: {"up": "Medvetet", "down": "Omedvetet", "left": "Förflutet", "right": "Nära framtid"},
+    celticPlaneNote: "De svaga punkterna är dina tidigare tyngdpunkter",
+    celticZone: {"origin": "Den stilla platsen", "axisFuture": "Rakt mot morgondagen", "axisSurface": "Rakt mot vakenhet", "axisPast": "Rakt mot det förflutna", "axisDeep": "Rakt mot djupet", "z0": "Vänd mot morgondagen", "z1": "Morgondagen stiger", "z2": "Ett klarnande sinne", "z3": "Ett begrundande sinne", "z4": "Minnet lyses upp", "z5": "Blicken mot fjärran dagar", "z6": "Minnet sjunker", "z7": "Bottnens stiltje", "z8": "Det sovande förflutna", "z9": "Dyk inåt", "z10": "Tecknens underström", "z11": "En annalkande aning"},
+    celticZoneNote: {"origin": "En bana som inte lutade åt något håll。Kanske inte obeslutsamhet, utan ett läge där varje riktning står lika öppen。", "axisFuture": "En bana rakt framåt。Formen visar sig också när mycket sätts på det som ännu inte kommit。", "axisSurface": "En bana mot det du redan vet att du känner。Just för att det låter sig sägas kan det osagda ligga bakom。", "axisPast": "En bana rakt bakåt。Något du trodde var avslutat kan fortfarande verka under dina bevekelsegrunder。", "axisDeep": "En bana som sjunker mot djupet。En impuls du inte kan redogöra för kan styra dina val nu。", "z0": "En bana med blicken framåt。Uppmärksamheten vilar på utgången snarare än på läget just nu。", "z1": "En bana där medvetandet lyfts mot morgondagen。Planer eller utsikter kan höja ditt nuvarande sinnelag。", "z2": "En bana av klarnande tankar。Det kan vara en tid då det oförklarade börjar få sin förklaring。", "z3": "En bana vänd mot dig själv。En rörelse att åter sätta ord på det förflutna sker på det medvetna planet。", "z4": "En bana som lyser upp minnet。Något du menade att glömma kan mata ditt nuvarande omdöme。", "z5": "En bana med blicken mot fjärran dagar。En känsla för det oåterkalleliga kan sova under dina bevekelsegrunder。", "z6": "En bana där minnet sjunker。Det kan vara en tid då du försöker sluta se tillbaka alls。", "z7": "En bana på det stillaste djupet。Något länge orört har lagt sig tyst på botten。", "z8": "En bana mot ett sovande förflutet。Du kanske söker återta en önskan som aldrig uppfylldes。", "z9": "En bana som dyker inåt。Intresset har flyttat från vad som sker utanför till hur du svarar。", "z10": "En bana av en aning utan form。Den visar sig när något känns satt i rörelse av skäl du inte kan namnge。", "z11": "En bana som väntar på ankomst。Förberedelsen för det som kommer kan redan ha börjat utan att du märkt det。"},
     weekPeak: (d) => `Topp｜${d}`,
     weekValley: (d) => `Dal｜${d}`,
     weekHand: {"allUpright": "En vecka för fulla segel", "allReversed": "En vänd vecka", "destiny": "En vecka av ödet", "onecolorDeep": "En vecka i en enda färg", "upheaval": "En vecka av omvälvning", "fortune": "En lyckosam vecka", "misfortune": "En otursam vecka", "flame": "En vecka av eld", "tide": "En vecka av tidvatten", "trial": "En vecka av prövning", "harvest": "En vecka av skörd", "bond": "En vecka av band", "money": "En vecka av mynt", "heart": "En vecka av hjärtat", "spirit": "En vecka av kraft", "craft": "En vecka av hantverk", "turning": "En vecka av vändning", "dash": "En vecka i språng", "blessing": "En vecka av beskydd", "inward": "En vecka vänd inåt", "fair": "En vecka med vinden", "mixed": "En blandad vecka"},
@@ -11465,10 +12751,10 @@ const T = {
     hexAiLabel: "AI-tydning",
     hexRetry: "Försök med AI-tydningen igen",
     hexPickPrompt: (n, pos) => `Välj kortet för ”${pos}” (${n} kvar)`,
-    hexConfirmPrompt: "Alla sju kort är valda",
+    hexConfirmPrompt: (n) => `Alla ${n} kort är valda`,
     pickAriaLabel: "Välj ett kort",
     majorTag: "MAJOR",
-    hexConfirmAsk: "Är dessa sju kort slutgiltiga?",
+    hexConfirmAsk: (n) => `Är dessa ${n} kort slutgiltiga?`,
     navDraw: "Dra",
     navRecords: "Anteckningar",
     tapToFlip: "Tryck för att vända",
@@ -11491,6 +12777,10 @@ const T = {
     legalButtonLabel: "Villkor och integritetspolicy",
     legalClose: "Stäng",
     couponButtonLabel: "Ange kod",
+    diagButtonLabel: "Användningslogg",
+    diagCopy: "Kopiera loggen",
+    diagNote: "Endast läsningar som förbrukat en plats loggas。Din fråga och tydningens text ingår aldrig。Klistra in detta när du kontaktar oss。",
+    diagEmpty: "Inget loggat ännu.",
   },
 };
 
@@ -11542,6 +12832,7 @@ export default function TarotDraw() {
   const [speechPaused, setSpeechPaused] = useState(false); // 読み上げを一時停止しているか
   const [voiceReady, setVoiceReady] = useState(false); // この言語で喋れる音声が端末にあるか
   const [showCoupon, setShowCoupon] = useState(false);
+  const [showDiag, setShowDiag] = useState(false);
   const [showHistory, setShowHistory] = useState(false);
   const [showStats, setShowStats] = useState(false);
   const [showTitles, setShowTitles] = useState(false);
@@ -11941,7 +13232,7 @@ export default function TarotDraw() {
     どこかを取りこぼす。
   */
   const isFreeDraw = isFreeSpreadKey(drawMode);
-  const isHexLike = drawMode === "hexagram" || drawMode === "hexagramFree" || drawMode === "weekly" || drawMode === "weeklyFree";
+  const isHexLike = ["hexagram", "hexagramFree", "weekly", "weeklyFree", "celticCross", "celticCrossFree"].includes(drawMode);
   /*
     無料版では問いを入力させないので、前の版で書いた文字列が残っていても使わない。
     残したまま履歴に保存すると、AIが読んでいない問いが「その回の問い」として
@@ -12239,8 +13530,10 @@ export default function TarotDraw() {
     // （テーマカードを開く前にリロードして引き直す、というリセマラ抜け道を防ぐ）
     // 暫定消費。ここで減らすことが、札を見てからの引き直しを止める
     if (!isFreeDraw) {
-      setTodayCount(incrementTodayCount());
+      const after = incrementTodayCount();
+      setTodayCount(after);
       pendingConsumeRef.current = true;
+      appendBillingLog("consume", { spread: drawMode, used: after, limit: currentLimit });
     }
     // 進行中セッションを保存（不意のリロード・離脱からの復帰用。課金導線実装後の信頼性に直結する）
     savePendingSession({
@@ -12346,6 +13639,7 @@ export default function TarotDraw() {
         if (stale()) return;
         text3 = got;
         setReading3(text3);
+        appendBillingLog("ai_ok", { spread: drawMode, chars: got.length });
         setReading3Failed(false);
         pendingConsumeRef.current = false; // 文章が出た。ここで確定
       } catch (e) {
@@ -12355,8 +13649,10 @@ export default function TarotDraw() {
           無料版はそもそも willUseAi が false なのでここには来ない。
         */
         if (pendingConsumeRef.current) {
-          setTodayCount(refundTodayCount());
+          const after = refundTodayCount();
+          setTodayCount(after);
           pendingConsumeRef.current = false;
+          appendBillingLog("refund", { spread: drawMode, used: after, reason: "ai_failed" });
         }
         if (stale()) return;
         text3 = t.finalJudgmentFailed; // 失敗時も無音にせず、分かりやすいメッセージを表示
@@ -12770,6 +14066,12 @@ export default function TarotDraw() {
           無料側にも金を使うと、金＝AI鑑定という区別が消える。
         */
         /* ヘキサグラムの入力欄。既存の .question-field と同じ見え方に揃える */
+        /* 入力欄の上に置く例示。書き始めても消えない */
+        .hex-fields-example {
+          margin: -1px 0 1px; font-size: 10.5px; line-height: 1.75;
+          color: var(--muted); opacity: 0.92;
+        }
+
         .hex-fields { width: 100%; max-width: 340px; display: flex; flex-direction: column; gap: 5px; margin: 0 0 4px; }
         .hex-fields label { font-size: 11px; color: var(--gold-soft); letter-spacing: 0.04em; }
         .hex-fields input {
@@ -12839,9 +14141,11 @@ export default function TarotDraw() {
           「読みにくい方」ができる。どちらも同じだけ読めた上で、別の色に見えるのが目標。
         */
         /* 曜日のチップ。地色が曜日、文字は暗く抜く。向きの色より日付の識別を優先する */
+        /* 曜日は正式名になったぶん字数が増えた。読める大きさまで上げる */
         .hex-pos-chip {
           color: #17102E !important; font-weight: 700; letter-spacing: 0;
-          min-width: 17px; height: 17px; padding: 0 5px; border-radius: 999px;
+          font-size: 9.5px; min-width: 18px; height: 19px; padding: 0 7px; border-radius: 999px;
+          max-width: 96%; overflow: hidden; white-space: nowrap;
           display: inline-flex; align-items: center; justify-content: center;
           box-shadow: 0 0 0 1px rgba(20,12,40,0.75), 0 1px 3px rgba(0,0,0,0.5);
         }
@@ -12912,6 +14216,80 @@ export default function TarotDraw() {
         .back-to-title:focus-visible { outline: 2px solid var(--gold); outline-offset: 2px; border-radius: 6px; }
 
         /* 週の起伏。線は1本だけ描く。8本重ねると7点×8本で読めなくなる */
+        /* ケルト十字の平面。開封のたびに重心が動く */
+        .celtic-plane { width: 100%; max-width: 320px; margin: 8px auto 2px; }
+        .celtic-plane-title { font-size: 11px; letter-spacing: 0.12em; text-align: center; margin-bottom: 4px; }
+        .celtic-plane-svg { display: block; width: 100%; height: auto; overflow: visible; }
+        .celtic-axis-label { font-size: 9px; fill: var(--muted); letter-spacing: 0.06em; }
+        /* 意味づけの手がかり。称号より小さく、読ませる速度を落とす */
+        .celtic-zone-note {
+          max-width: none; margin: 7px 0 0; padding: 0;
+          font-size: 11px; line-height: 1.95; letter-spacing: 0.02em;
+          color: var(--parchment); opacity: 0.88; text-align: left;
+        }
+
+        .celtic-plane-note { font-size: 10px; color: var(--muted); text-align: center; margin: 4px 0 0; opacity: 0.85; }
+        /* 点が現れるときだけ弾ませる。重心は滑らかに移る */
+        /* 軸に乗った回。その軸だけが光る */
+        .celtic-axis-lit {
+          stroke: var(--gold); stroke-width: 2.2; opacity: 0.75;
+          filter: drop-shadow(0 0 7px rgba(232,194,78,0.8));
+          animation: celticAxisLit 2.2s ease-in-out infinite;
+        }
+        @keyframes celticAxisLit { 0%,100% { opacity: 0.75; } 50% { opacity: 0.3; } }
+
+        /* 始点へ帰った回の輪。内から外へ広がる */
+        .celtic-back { animation: celticBack 2.4s ease-out infinite; transform-box: fill-box; transform-origin: center; }
+        @keyframes celticBack {
+          0%   { opacity: 0.9; transform: scale(0.7); }
+          70%  { opacity: 0.15; transform: scale(1.15); }
+          100% { opacity: 0; transform: scale(1.25); }
+        }
+
+        /* 軌跡の格。上位二段だけ名前が出る */
+        .celtic-grade {
+          text-align: center; margin: 6px 0 0; font-family: 'Shippori Mincho', serif;
+          font-size: 13px; font-weight: 700; letter-spacing: 0.10em;
+        }
+        /*
+          称号と説明を一つの枠に収める。
+          並べて置くだけだと、どこまでが結果でどこからが図の注記か
+          読み手が判断できない。枠が範囲を決める。
+        */
+        .celtic-verdict {
+          width: 100%; max-width: 320px; margin: 10px auto 0; padding: 11px 14px;
+          border-radius: 12px; box-sizing: border-box;
+          border: 1px solid rgba(169,155,201,0.28); background: rgba(169,155,201,0.05);
+        }
+        .celtic-verdict.strong {
+          border-color: rgba(201,162,75,0.55); background: rgba(201,162,75,0.09);
+          box-shadow: 0 0 20px rgba(201,162,75,0.13);
+        }
+        /* 称号は説明より大きく、流れも速くする。同じ光り方だと見分けが付かない */
+        .celtic-grade { font-size: 15px; animation-duration: 4s; }
+        .celtic-grade.strong { animation-duration: 2.2s; filter: drop-shadow(0 0 8px rgba(255,225,160,0.45)); }
+        /* 軸に乗った回と原点へ落ちた回だけ、名前も虹で流す */
+
+        @media (prefers-reduced-motion: reduce) {
+          .celtic-axis-lit, .celtic-back, .celtic-grade { animation: none !important; }
+        }
+
+        /* 線の上を走る光。始点から現在地へ、向きを示し続ける */
+        .celtic-runner { opacity: 0.9; }
+        @media (prefers-reduced-motion: reduce) { .celtic-runner { display: none; } }
+
+        /* 軌跡が伸びる。線そのものが描かれていく */
+        .celtic-trail { stroke-dasharray: 1000; stroke-dashoffset: 0; animation: celticDraw .7s ease-out; filter: drop-shadow(0 0 4px rgba(232,194,78,0.45)); }
+        @keyframes celticDraw { from { stroke-dashoffset: 60; opacity: 0.4; } to { stroke-dashoffset: 0; opacity: 1; } }
+        .celtic-core { transition: cx .6s cubic-bezier(.3,.9,.3,1), cy .6s cubic-bezier(.3,.9,.3,1); }
+        .celtic-core-glow {
+          transition: cx .6s cubic-bezier(.3,.9,.3,1), cy .6s cubic-bezier(.3,.9,.3,1);
+          animation: wrBlinkGold 2.2s ease-in-out infinite;
+        }
+        @media (prefers-reduced-motion: reduce) {
+          .celtic-trail, .celtic-core, .celtic-core-glow { animation: none !important; transition: none !important; }
+        }
+
         .week-rhythm { width: 100%; max-width: 360px; margin: 6px auto 2px; }
         .week-rhythm-title { font-size: 11px; letter-spacing: 0.12em; color: #D8C89C; text-align: center; margin-bottom: 6px; }
         /* タブはグラフの下。真上に置くと、星の位置と縦に揃って誤読を生む */
@@ -12958,6 +14336,53 @@ export default function TarotDraw() {
         .wr-spark { animation: wrSpark .5s ease-in-out infinite alternate; }
         @keyframes wrSpark { from { opacity: 0.75; } to { opacity: 1; } }
 
+        /*
+          星の明滅。
+          点火の演出は親の <g> が持ち、明滅は中の星が持つ。
+          同じ要素に二つの animation を当てると、後から書いた方だけが残る。
+
+          ホロは光量を、くすみは色そのものを動かす。
+          くすみ星を不透明度で明滅させると「薄くなる」だけで沈んで見えないので、
+          黒と灰の間を行き来させる。
+        */
+        /*
+          三種の星は同じ周期で息をする。
+          周期がばらばらだと、それぞれが勝手に動いて画面が騒がしくなる。
+          揃えると、光り方の違い（何が動くか）だけが際立つ。
+        */
+        /* 超ホロの外周。ゆっくり回る。内側の星と合わせて二重に見せる */
+        .wr-ultra-outer {
+          transform-box: fill-box; transform-origin: center;
+          animation: wrUltraSpin 6s linear infinite;
+        }
+        @keyframes wrUltraSpin { to { transform: rotate(360deg); } }
+
+        .wr-blink-holo { animation: wrBlinkHolo 1.6s ease-in-out infinite; }
+        @keyframes wrBlinkHolo {
+          0%, 100% { opacity: 1; filter: drop-shadow(0 0 3px rgba(255,240,190,0.9)); }
+          50%      { opacity: 0.62; filter: drop-shadow(0 0 9px rgba(255,240,190,1)); }
+        }
+        /* 準最高の星。スリーカードの★と同じ光り方を共有する */
+        .wr-blink-gold { animation: starShimmer 1.6s ease-in-out infinite; }
+        /*
+          最低の星。灰色では地の紫に埋もれて見えなかった。
+          黒と赤の間を行き来させると、暗さと危うさの両方が出る。
+        */
+        /*
+          最低の星。灰色では地の紫に埋もれ、明るい赤では警告灯に見えた。
+          暗い血の色まで落とすと、沈んでいるのに目には留まる。
+        */
+        /*
+          最低の星。塗りだけを動かすと、暗い側に振れた瞬間に地へ沈んで見失う。
+          縁を血の色で光らせ、塗りと逆位相にする。
+          塗りが沈むときに縁が最も光るので、どの時点でも輪郭が残る。
+        */
+        .wr-blink-dull { animation: wrBlinkDull 1.6s ease-in-out infinite; }
+        @keyframes wrBlinkDull {
+          0%, 100% { fill: #140A0E; stroke: #E0323E; filter: drop-shadow(0 0 7px rgba(200,24,36,0.95)); }
+          50%      { fill: #8C1017; stroke: #4A0A10; filter: drop-shadow(0 0 2px rgba(200,24,36,0.35)); }
+        }
+
         /* 火が通った瞬間に点が現れる */
         .wr-ignite { animation: wrIgnite .42s cubic-bezier(.2,.9,.3,1) both; transform-box: fill-box; transform-origin: center; }
         @keyframes wrIgnite {
@@ -12969,8 +14394,11 @@ export default function TarotDraw() {
         /* 面は線が通り過ぎてから浮かぶ。先に出ると導火線が埋もれる */
         .wr-area { opacity: 0; animation-name: wrArea; animation-fill-mode: forwards; animation-timing-function: ease-out; }
         @keyframes wrArea { 0%, 70% { opacity: 0; } 100% { opacity: 1; } }
-        .week-rhythm-days { display: flex; justify-content: space-between; padding: 0 6px; margin-top: 2px; }
-        .week-rhythm-days span { font-size: 8.5px; transition: opacity .3s ease; }
+        .week-rhythm-days { position: relative; height: 13px; margin-top: 2px; }
+        .week-rhythm-days span {
+          position: absolute; transform: translateX(-50%);
+          font-size: 8.5px; white-space: nowrap; transition: opacity .3s ease;
+        }
         /* 山と谷。線を読めない人にも見せ場が伝わるよう、言葉でも出す */
         .week-peak-note { display: flex; justify-content: center; gap: 14px; margin-top: 6px; font-size: 10.5px; }
         /*
@@ -12994,6 +14422,19 @@ export default function TarotDraw() {
         .week-hand.strong .week-hand-name { color: var(--gold); }
         .week-hand.quiet .week-hand-name { color: var(--parchment); }
         .week-hand-note { font-size: 10.5px; color: var(--muted); line-height: 1.7; }
+
+        /* 課金診断。読ませるためのものなので、等幅で折り返さずに出す */
+        .diag-panel { width: 100%; max-width: 480px; margin: 6px auto 0; display: flex; flex-direction: column; align-items: center; gap: 8px; }
+        .diag-note { font-size: 10.5px; color: var(--muted); line-height: 1.8; text-align: center; margin: 0; }
+        .diag-empty { font-size: 11px; color: var(--muted); margin: 0; }
+        .diag-body {
+          width: 100%; max-height: 220px; overflow: auto; margin: 0;
+          padding: 10px 12px; border-radius: 10px; box-sizing: border-box;
+          border: 1px solid rgba(201,162,75,0.24); background: rgba(0,0,0,0.28);
+          font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+          font-size: 10px; line-height: 1.7; color: var(--parchment);
+          white-space: pre; -webkit-overflow-scrolling: touch;
+        }
 
         .plan-badge {
           font-size: 9px; letter-spacing: 0.08em; padding: 2px 7px;
@@ -13100,6 +14541,46 @@ export default function TarotDraw() {
         .nav-tab:active .nav-tab-icon { transform: translateY(0) scale(0.94); }
         .nav-tab:focus-visible { outline: 2px solid var(--gold); outline-offset: -3px; }
 
+        /* 任せる入口。札の並びより目立たせない。あくまで近道 */
+        /* 一括開封。段階開封より控えめに。あくまで近道 */
+        .bulk-btn {
+          font-family: inherit; font-size: 11px; padding: 5px 14px; border-radius: 999px;
+          color: var(--muted); background: transparent; cursor: pointer; margin-top: 2px;
+          border: 1px solid rgba(169,155,201,0.3);
+          transition: color .18s ease, border-color .18s ease;
+        }
+        @media (hover: hover) {
+          .bulk-btn:hover { color: var(--gold-soft); border-color: rgba(201,162,75,0.5); }
+        }
+        .bulk-confirm {
+          width: 100%; max-width: 300px; margin: 4px auto 0; padding: 10px 12px;
+          border-radius: 10px; border: 1px solid rgba(201,162,75,0.35);
+          background: rgba(201,162,75,0.07); box-sizing: border-box;
+        }
+        .bulk-confirm-text { margin: 0 0 8px; font-size: 11.5px; line-height: 1.75; color: var(--parchment); text-align: center; }
+        .bulk-confirm-row { display: flex; gap: 8px; justify-content: center; }
+        .bulk-yes, .bulk-no {
+          font-family: inherit; font-size: 11px; padding: 5px 16px; border-radius: 999px; cursor: pointer;
+        }
+        .bulk-yes { color: #17102E; background: var(--gold); border: none; font-weight: 700; }
+        .bulk-no { color: var(--muted); background: transparent; border: 1px solid rgba(169,155,201,0.3); }
+
+        .auto-pick { display: flex; gap: 8px; justify-content: center; margin: 0 0 6px; }
+        /* 触れているあいだの説明。高さを確保して、出入りで並びが動かないようにする */
+        .auto-pick-hint {
+          min-height: 15px; margin: 0 0 8px; text-align: center;
+          font-size: 10.5px; line-height: 1.6; color: var(--muted);
+        }
+        .auto-pick-btn {
+          font-family: inherit; font-size: 11px; padding: 5px 13px; border-radius: 999px;
+          color: var(--muted); background: transparent; cursor: pointer;
+          border: 1px solid rgba(169,155,201,0.3);
+          transition: color .18s ease, border-color .18s ease, background .18s ease;
+        }
+        @media (hover: hover) {
+          .auto-pick-btn:hover { color: var(--gold-soft); border-color: rgba(201,162,75,0.55); background: rgba(201,162,75,0.08); }
+        }
+
         .spread-grid { position: relative; z-index: 1; display: flex; flex-wrap: wrap; gap: 6px; justify-content: center; max-width: 760px; margin: 0 auto 28px; }
         /* 地色は裏面SVG（TarotCardBack）が持つ。ここで background を敷くと二重になる。
            overflow:hidden は、傾いた札から意匠が角丸の外へ出ないための保険。 */
@@ -13114,12 +14595,36 @@ export default function TarotDraw() {
           いったん金の縁が締まって浮き上がり、それから場を去る。
           すぐ消すと「押した」手応えの前に結果が来てしまう。
         */
-        .mini-card.picked-vanish { animation: pickedVanish .52s cubic-bezier(.3,.9,.3,1) forwards !important; animation-delay: 0s !important; pointer-events: none; }
+        .mini-card.picked-vanish { animation: pickedVanish .62s cubic-bezier(.3,.85,.3,1) forwards !important; animation-delay: 0s !important; pointer-events: none; }
+        /*
+          選んだ札は回りながら去る。
+          ただ縮んで消えると「消去された」に見えるが、縦軸で回してから
+          小さくなると「めくって手元へ引き取った」ように読める。
+          めくる演出と同じ軸で回すので、札の扱い方が画面全体で揃う。
+        */
         @keyframes pickedVanish {
-          0%   { transform: rotate(var(--rot, 0deg)) scale(1); opacity: 1; }
-          30%  { transform: rotate(var(--rot, 0deg)) translateY(-8px) scale(1.16); opacity: 1;
-                 box-shadow: inset 1px 1px 0 rgba(240,221,172,0.5), 0 0 0 2px var(--gold), 0 0 22px rgba(201,162,75,0.65); }
-          100% { transform: rotate(var(--rot, 0deg)) translateY(-26px) scale(0.4); opacity: 0; }
+          0%   { transform: rotate(var(--rot, 0deg)) perspective(500px) rotateY(0deg) scale(1); opacity: 1; }
+          25%  { transform: rotate(var(--rot, 0deg)) perspective(500px) rotateY(90deg) translateY(-8px) scale(1.14); opacity: 1;
+                 border-color: var(--pick-color, var(--gold));
+                 box-shadow: inset 1px 1px 0 rgba(240,221,172,0.5),
+                             0 0 0 2px var(--pick-color, var(--gold)),
+                             0 0 26px var(--pick-color, var(--gold)); }
+          55%  { transform: rotate(var(--rot, 0deg)) perspective(500px) rotateY(240deg) translateY(-16px) scale(0.92); opacity: 0.9;
+                 box-shadow: 0 0 0 3px var(--pick-color, var(--gold)), 0 0 34px var(--pick-color, var(--gold)); }
+          100% { transform: rotate(var(--rot, 0deg)) perspective(500px) rotateY(540deg) translateY(-32px) scale(0.28); opacity: 0; }
+        }
+        /*
+          抜けた跡に残る波紋。札そのものは上へ去るので、
+          場に「ここから抜けた」という痕跡を一拍だけ残す。
+        */
+        .mini-card.picked-vanish::after {
+          content: ""; position: absolute; inset: -2px; border-radius: 8px;
+          border: 2px solid var(--pick-color, var(--gold));
+          animation: pickRipple .62s ease-out forwards;
+        }
+        @keyframes pickRipple {
+          0%   { opacity: 0.9; transform: scale(1); }
+          100% { opacity: 0; transform: scale(1.9); }
         }
         /* 消えた札の跡地。詰めずに空けると、抜けた枚数が目で分かる */
         .mini-gap { display: block; width: 40px; height: 60px; }
@@ -13638,7 +15143,7 @@ export default function TarotDraw() {
         }
 
         .hex-orbit {
-          position: absolute; inset: 0; z-index: 2; pointer-events: none;
+          position: absolute; inset: 0; z-index: 3; pointer-events: none;
           mix-blend-mode: screen;
           animation: holoOrbitSpin 26s linear infinite;
         }
@@ -13812,6 +15317,8 @@ export default function TarotDraw() {
           /* 導火線も止める。線と点は最初から見えている状態にする */
           .wr-fuse { animation: none !important; stroke-dashoffset: 0 !important; }
           .wr-ignite, .wr-spark, .wr-area { animation: none !important; opacity: 1 !important; }
+          .wr-blink-holo, .wr-blink-gold, .wr-ultra-outer { animation: none !important; }
+          .wr-blink-dull { animation: none !important; fill: #6E0D13; stroke: #E0323E; }
           .tc-flip { transition: none !important; }
           /* 出現の回転も止める。both を外さないと、開始前の状態で固まる */
           .tc-flip-outer { animation: none !important; }
@@ -13910,16 +15417,23 @@ export default function TarotDraw() {
                 question={question}
                 userName={userName}
                 spreadKey={spreadBaseKey(drawMode)}
+                renderSpeakButton={(key, text) => <SpeakButton speakKey={key} text={text} />}
                 canDraw={canDraw}
                 aiEnabled={aiEnabled}
                 onConsume={() => {
                   // スリーカードと同じ枠を消費する。
                   // AIを使う占いは同じ財布から出ているため、枠を分けない
-                  if (!isFreeDraw) setTodayCount(incrementTodayCount());
+                  if (isFreeDraw) return;
+                  const after = incrementTodayCount();
+                  setTodayCount(after);
+                  appendBillingLog("consume", { spread: drawMode, used: after, limit: currentLimit });
                 }}
                 onRefund={() => {
                   // 消費していない回（無料版）では呼ばれても何もしない
-                  if (!isFreeDraw) setTodayCount(refundTodayCount());
+                  if (isFreeDraw) return;
+                  const after = refundTodayCount();
+                  setTodayCount(after);
+                  appendBillingLog("refund", { spread: drawMode, used: after, reason: "ai_failed" });
                 }}
               />
             )}
@@ -14119,6 +15633,15 @@ export default function TarotDraw() {
                 {showCoupon ? (
                   <CouponPanel couponInput={couponInput} setCouponInput={setCouponInput} handleCoupon={handleCoupon} aiEnabled={aiEnabled} lang={lang} codeError={resurrectionError} />
                 ) : null}
+                {/*
+                  課金診断。問い合わせのときに、こちらが状況を把握できるようにする。
+                  そのまま読める形で出す。隠す理由が無く、隠せば疑われるだけになる。
+                */}
+                <button className="reset-btn" onClick={() => setShowDiag(!showDiag)} style={{ fontSize: "11px", marginTop: "6px" }}>
+                  {t.diagButtonLabel}
+                </button>
+                {showDiag && <BillingDiagPanel lang={lang} />}
+
                 <button
                   onClick={() => setShowLegal(!showLegal)}
                   style={{
@@ -14876,6 +16399,7 @@ export default function TarotDraw() {
             // 画面を切り替えたら、その画面の中の開閉状態は初期化する
             setShowLastResult(false);
             setShowCoupon(false);
+            setShowDiag(false);
             setShowLegal(false);
             setRecordsTab("last");
             setDrawMode("select");
