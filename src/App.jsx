@@ -2867,16 +2867,19 @@ const ONE_ORACLE_TEMPLATES = {
 /**
  * ワンオラクルのホロ発現判定。
  *
- * 正位置を引いたときのみ、216分の1（6の3乗）で虹色に輝く。
- * 逆位置を除外しているのは、この演出が祝福として働くべきだから。
- * 逆位置で虹色に光ると、意味と見た目が食い違う。
+ * 64分の1（2の6乗）で虹色に輝く。向きは問わない。
+ * 以前は正位置に限っていた（祝福として働くべき、という理由）。
+ * 図鑑を入れた時点でこの制限が穴になったので外してある ――
+ * ホロの棚は正逆156枠あるのに、引いて手に入るのは良い側の78枠だけで、
+ * 難しい側は欠片経由でしか埋まらなかった。
+ * 難しい側で出たホロは「ダークホロ」として別の見た目になる。
  *
- * 216 という数は、既存のポーカー役（★6の3乗）と同じ分母にしてある。
  * ワンオラクルは1枚しか引かないぶん、他のスプレッドのような
- * 役の成立による当たりが存在しない。その代わりに置く仕掛けとして、
- * 同じ確率帯の希少さを持たせた。
+ * 役の成立による当たりが存在しない。その代わりに置く仕掛け。
+ * 以前は 216（★6の3乗＝ポーカー役と同じ分母）だったが、
+ * レアを 1/6 に揃えたのに合わせて 1/64 まで上げてある。
  */
-const ONE_ORACLE_HOLO_ODDS = 216; // 6の3乗
+const ONE_ORACLE_HOLO_ODDS = 64; // 2の6乗
 
 /**
  * ホロ時にカードの周囲を巡る星屑。
@@ -2957,19 +2960,29 @@ const SHEEN_SPARKS = buildSparks({
 /* ============================================================
    レア（宝箱が出る層）
 
-   ホロ（1/216・正位置限定・ばちばち）とは別の、日常的な当たり。
+   ホロ（1/64・ばちばち）とは別の、日常的な当たり。
    図鑑を埋めるのはこの層で、ホロはその上に乗る箔。
 
    確率は「1日5引き」ではなく「引いた回数」で決めてある。
    無制限に引ける以上、日数で設計しても意味がないため。
 
-     大アルカナ 1/12 … 5引きで35%、10引きで58%
-     小アルカナ 1/8  … 5引きで49%、10引きで74%
+     大小とも 1/6 … 5引きで60%、10引きで84%
 
-   小アルカナを高くしているのは、枠が2.5倍（112対44）あるから。
-   同率にすると小アルカナだけ3倍長くかかり、先に見放される。
+   ⚠️ 大小を同率にしてあるので、枠数の差（大44・小112）が
+   そのまま埋まる速さの差になる。小アルカナのほうが
+   2.5倍の枠を同じ率で埋めることになり、後半まで残る。
+   （以前は枠数に合わせて大1/12・小1/8としていた）
+
+   ⚠️ 1/8 から 1/6 に上げてある。実機で100回ほど引いた体感で
+   「思ったより出ない」と判断した。宝箱で当たりが1/3に絞られるので、
+   枠が実際に開くのは 1/6 × 1/3 ＝ 18引きに1回になる。
+   引く行為そのものが作業に見えてしまう懸念のほうを重く取った。
+
+   明るい版と暗い版で率は分けていない。
+   引いた札の向きが「その札にとって難しい側」かどうかで
+   見た目が変わるだけなので、それぞれ約半分ずつ出る。
    ============================================================ */
-const RARE_ODDS = { major: 12, minor: 8 };
+const RARE_ODDS = { major: 6, minor: 6 };
 
 function rollRare(drawn, deck) {
   if (!drawn) return false;
@@ -3045,10 +3058,28 @@ function buildChests() {
 const RARE_SHARD_COST = 15;
 const HOLO_SHARD_BASE = 3;
 
-const LS_RARE_SHARD = "tarot_rare_shard";
-const LS_HOLO_SHARD = "tarot_holo_shard";
-const LS_HOLO_SHARD_SPENT = "tarot_holo_shard_spent"; // 何回交換したか（費用の逓増に使う）
-const LS_RARE_SHARD_SPENT = "tarot_rare_shard_spent";
+/*
+  欠片は4種。段（レア／ホロ）×向き（明るい側／難しい側）の4象限に対応する。
+
+    light  光の欠片   レアの明るい側の枠を開く
+    dark   闇の欠片   レアの難しい側の枠を開く
+    holo   ホロの欠片 ホロの明るい側の枠を開く
+    abyss  深淵の欠片 ホロの難しい側の枠を開く
+
+  1種にまとめないのは、開く先が選べないから ――
+  1種だと「光る札が欲しいのに闇ばかり開く」が起きる。
+  4種に分ければ、集めた欠片の種類がそのまま行き先になる。
+*/
+const SHARD_KINDS = [
+  { key: "light", tier: "rare", dark: false, cost: () => RARE_SHARD_COST },
+  { key: "dark",  tier: "rare", dark: true,  cost: () => RARE_SHARD_COST },
+  { key: "holo",  tier: "holo", dark: false, cost: (spent) => HOLO_SHARD_BASE + spent },
+  { key: "abyss", tier: "holo", dark: true,  cost: (spent) => HOLO_SHARD_BASE + spent },
+];
+const shardKindOf = (tier, dark) =>
+  tier === "holo" ? (dark ? "abyss" : "holo") : (dark ? "dark" : "light");
+const LS_SHARD = (k) => `tarot_shard_${k}`;
+const LS_SHARD_SPENT = (k) => `tarot_shard_spent_${k}`;
 
 function loadNum(key) {
   try { return parseInt(localStorage.getItem(key) || "0", 10) || 0; } catch { return 0; }
@@ -3057,18 +3088,25 @@ function saveNum(key, v) {
   try { localStorage.setItem(key, String(v)); } catch {}
 }
 
-/** 次にホロ枠を1つ開放するのに要る欠片の数 */
-function holoShardCost(spent) {
-  return HOLO_SHARD_BASE + spent;
+/** 欠片1個ぶんの費用。レア系は固定、ホロ系は交換のたびに1ずつ増える */
+function shardCost(kind, spent) {
+  const def = SHARD_KINDS.find((k) => k.key === kind);
+  return def ? def.cost(spent || 0) : RARE_SHARD_COST;
 }
 
-/** 図鑑で未取得の面を1つ選ぶ。無ければ null */
-function pickLockedSlot(dex) {
+/**
+ * 図鑑で未取得の面を1つ選ぶ。無ければ null。
+ * dark を指定すると、その側（難しい側／明るい側）に絞る。
+ */
+function pickLockedSlot(dex, dark) {
   const rest = [];
   [...MAJOR_LIST, ...MINOR_LIST].forEach((c) => {
     const e = (dex && dex[c.id]) || {};
-    if (!e.up) rest.push({ id: c.id, reversed: false });
-    if (!e.rev) rest.push({ id: c.id, reversed: true });
+    [false, true].forEach((rev) => {
+      if (e[rev ? "rev" : "up"]) return;
+      if (dark !== undefined && isGoodOrientation(c, rev) === dark) return;
+      rest.push({ id: c.id, reversed: rev });
+    });
   });
   if (!rest.length) return null;
   return rest[Math.floor(Math.random() * rest.length)];
@@ -3098,7 +3136,7 @@ function rollOneOracleHolo(drawn) {
     向きを問わなくすることで、
       ・156枠すべてが引いて手に入る
       ・月・死神・塔・悪魔・吊られた男の例外分岐がここから消える
-      ・ホロに出会う頻度が2倍（1/432 → 1/216）
+      ・ホロに出会う頻度が2倍（1/128 → 1/64）
     最後の点は意図的。頻度が上がるぶん棚は埋まりにくくなるが、
     年に数回しか会えないものは、前に何が出たか思い出せないまま次が来る。
 
@@ -6148,7 +6186,7 @@ const TITLE_DEFS = [
   { key: "all_major",    test: (st) => st.uniqueMajors >= 22 },
   /*
     ワンオラクル限定の虹称号22種。大アルカナ1枚ごとに用意する。
-    1/216 を22枚ぶん集めることになるので、全種の到達は現実的にはほぼ起きない。
+    1/64 を22枚ぶん集めることになるので、全種の到達は現実的にはほぼ起きない。
     それでよい。届かない場所があること自体が、続ける理由になる。
   */
   ...Array.from({ length: 22 }, (_, i) => ({
@@ -6216,7 +6254,7 @@ const LS_A2HS_DISMISSED_KEY = "tarot_a2hs_dismissed";
 
 /**
  * デバッグ用：ワンオラクルのホロ演出を強制的に発現させる。
- * 216分の1でしか出ないため、そのままでは実機で確認できない。
+ * 64分の1でしか出ないため、そのままでは実機で確認できない。
  * クーポンコード "holo" で有効化し、一度発現したら自動的に解除する。
  */
 const LS_FORCE_ONE_ORACLE_HOLO = "tarot_force_oo_holo";
@@ -6233,7 +6271,7 @@ const LS_FORCE_ONE_ORACLE_HOLO = "tarot_force_oo_holo";
  *
  * 【なぜ上限を設けるか】
  * AIを呼ばないので原価はゼロだが、無制限だと連打になり
- * 1枚ごとの重みが失われる。虹（1/216）も、
+ * 1枚ごとの重みが失われる。虹（1/64）も、
  * 「引き続ければいつか出る」ものになってしまう。
  *
  * 【なぜ3枚か】
@@ -6307,7 +6345,7 @@ function hasSeenHolo() {
  * どの大アルカナを虹で引いたかを記録する。
  *
  * ワンオラクル限定の称号22種の判定に使う。
- * 1/216 を22枚ぶん集めることになるので、全種は現実的にはほぼ到達しない。
+ * 1/64 を22枚ぶん集めることになるので、全種は現実的にはほぼ到達しない。
  * それでいい。届かない場所があること自体が、続ける理由になる。
  */
 const LS_HOLO_CARDS_KEY = "tarot_holo_cards"; // 引いたカードIDの配列
@@ -6330,7 +6368,7 @@ function hasHoloCard(cardId) {
 }
 /*
   レア（宝箱が出る層）の強制発現。
-  ホロ（1/216・ばちばち）とは別の層なので、旗も別に持つ。
+  ホロ（1/64・ばちばち）とは別の層なので、旗も別に持つ。
   同じキーを共用すると、片方を消したときにもう片方まで解除される。
 */
 const LS_FORCE_RARE = "tarot_force_rare";
@@ -9152,10 +9190,11 @@ function OneOraclePanel({ lang, onBack, onHoloConsumed, deck = "major", onCollec
       setCard(picked); setHolo(isHolo); setRare(isRare);
       setFlipping(false); setSettling(false); setDragDeg(0);
       /*
-        レアだがホロではない回だけ宝箱を出す。
-        ホロは既に確定で開放しているので、その上に箱を重ねない。
+        ホロなら虹の宝箱を1個、レアなら通常の3個。
+        どちらの経路でも「箱を開ける」という所作を通す。
       */
-      if (isRare && !isHolo) { setChests(buildChests()); setChestPicked(null); setChestResult(null); }
+      if (isHolo) { setChests([{ type: "holoSlot" }]); setChestPicked(null); setChestResult(null); }
+      else if (isRare) { setChests(buildChests()); setChestPicked(null); setChestResult(null); }
     }, 1600);
   };
 
@@ -9203,11 +9242,12 @@ function OneOraclePanel({ lang, onBack, onHoloConsumed, deck = "major", onCollec
     if (forcedDark) setForcedDark(false);
     if (forcedDarkHolo) setForcedDarkHolo(false);
     /*
-      ホロは宝箱を出さず確定で開放する。
-      最上位で抽選を挟むと「ホロを引いたのに外れる」という
-      最悪の回が必ず生まれる。格の違うものは抽選に混ぜない。
+      ホロも宝箱を出すが、1個だけ・確定で当たる。
+      抽選は挟まない ―― 最上位で外れる回を作ると、
+      ホロを引いた意味がその回だけ消える。
+      箱を開ける所作は儀式として残し、中身は必ず何かが入っている。
+      （既に持っている面なら、被りとしてホロの欠片になる）
     */
-    if (isHolo && onCollect) onCollect({ kind: "holo", cardId: picked.id, reversed: picked.reversed });
     return { isHolo, isRare };
   };
 
@@ -9256,7 +9296,8 @@ function OneOraclePanel({ lang, onBack, onHoloConsumed, deck = "major", onCollec
     setTimeout(() => {
       setCard(picked); setHolo(isHolo); setRare(isRare);
       setFlipping(false); setSettling(false); setDragDeg(0);
-      if (isRare && !isHolo) { setChests(buildChests()); setChestPicked(null); setChestResult(null); }
+      if (isHolo) { setChests([{ type: "holoSlot" }]); setChestPicked(null); setChestResult(null); }
+      else if (isRare) { setChests(buildChests()); setChestPicked(null); setChestResult(null); }
     }, 1600);
   };
 
@@ -9264,6 +9305,16 @@ function OneOraclePanel({ lang, onBack, onHoloConsumed, deck = "major", onCollec
     if (chestPicked !== null || !chests || !card) return;
     setChestPicked(i);
     const got = chests[i];
+    /*
+      ホロの箱は、開けた時点で「新規か被りか」が決まる。
+      その判定は図鑑を持っている App 側にしかできないので、
+      onCollect の戻り値で受け取って表示に反映する。
+    */
+    if (got.type === "holoSlot" && onCollect) {
+      const res = onCollect({ kind: "holoChest", cardId: card.id, reversed: card.reversed });
+      setChestResult({ type: res === "dupe" ? "holoDupe" : "holoSlot" });
+      return;
+    }
     setChestResult(got);
     if (onCollect) onCollect({ kind: "chest", got, cardId: card.id, reversed: card.reversed });
   };
@@ -9560,26 +9611,60 @@ function OneOraclePanel({ lang, onBack, onHoloConsumed, deck = "major", onCollec
           */}
           {chests && (
             <div style={{ width: "100%" }}>
-              <p className="chest-lead">{chestPicked === null ? t.chestLead : "\u00A0"}</p>
+              {/* ホロの箱は1個なので「選んでください」ではない */}
+              <p className="chest-lead">
+                {chestPicked === null ? (holo ? t.chestLeadHolo : t.chestLead) : "\u00A0"}
+              </p>
               <div className="chest-row">
                 {chests.map((c, i) => (
                   <button
                     key={i}
                     type="button"
-                    className={`chest${chestPicked === i ? " opened" : chestPicked !== null ? " dim" : ""}`}
+                    className={`chest${holo ? " holo-chest" : ""}${chestPicked === i ? " opened" : chestPicked !== null ? " dim" : ""}`}
                     onClick={() => openChest(i)}
                     disabled={chestPicked !== null}
-                    aria-label={t.chestLead}
+                    aria-label={holo ? t.chestLeadHolo : t.chestLead}
                   ><ChestIcon open={chestPicked === i} /></button>
                 ))}
               </div>
+              {/* 枠が開いた回は、開いた札そのものをせり上げる */}
+              {chestResult && (chestResult.type === "slot" || chestResult.type === "holoSlot") && (
+                <div className="chest-prize">
+                  <ChestPrizeCard
+                    tier={chestResult.type === "holoSlot" ? "holo" : "rare"}
+                    dark={!isGoodOrientation(card, card.reversed)}
+                  />
+                </div>
+              )}
               {chestResult && (
                 <p className="chest-result">
                   {/* 枠が開いたときは、引いた向きの名前で伝える。
                       「正位置の図鑑が開きました」と出れば、
                       どの枠が埋まったのかが説明なしで分かる */}
                   {chestResult.type === "slot" && (
-                    <span className="hit">{card.reversed ? t.chestGotRev : t.chestGotUp}</span>
+                    /*
+                      段の名前を必ず入れる。
+                      「闇のレアが出現」→「正位置の図鑑が開きました」だけだと
+                      矛盾して見える（月・死神・塔・悪魔・吊られた男は
+                      正位置が難しい側なので、闇の札が正位置で出る）。
+                      「闇のレア・正位置」と書けば食い違いが消える。
+                    */
+                    <span className="hit">
+                      {/* 段の名前を使う。欠片の名前を流用すると
+                          「欠片の図鑑が開きました」という嘘になる */}
+                      {t.chestGotSlot(
+                        t.tierNames[shardKindOf("rare", !isGoodOrientation(card, card.reversed))],
+                        t.historyOrientation(card.reversed)
+                      )}
+                    </span>
+                  )}
+                  {chestResult.type === "holoSlot" && (
+                    <span className="big">
+                      {t.chestGotSlot(
+                        t.tierNames[shardKindOf("holo", !isGoodOrientation(card, card.reversed))],
+                        t.historyOrientation(card.reversed)
+                      )}
+                    </span>
                   )}
                   {chestResult.type === "miss" && <span style={{ color: "var(--muted)" }}>{t.chestMiss}</span>}
                   {/*
@@ -9588,17 +9673,19 @@ function OneOraclePanel({ lang, onBack, onHoloConsumed, deck = "major", onCollec
                     どこで使えるかをその場で教える。
                     常時出すと鑑定の邪魔になるので、触れたときだけにする。
                   */}
-                  {(chestResult.type === "rareShard" || chestResult.type === "holoShard") && (
-                    <span className="shard-got" tabIndex={0}>
-                      <em className={`shard-mark ${chestResult.type === "holoShard" ? "holo" : "rare"}`} aria-hidden="true">
-                        {chestResult.type === "holoShard" ? "✦" : "◈"}
-                      </em>
-                      <span className={chestResult.type === "holoShard" ? "big" : "hit"}>
-                        {chestResult.type === "holoShard" ? t.chestGotShard : t.chestGotRareShard}
+                  {(chestResult.type === "rareShard" || chestResult.type === "holoShard" || chestResult.type === "holoDupe") && (() => {
+                    const dark = !isGoodOrientation(card, card.reversed);
+                    const kind = shardKindOf(chestResult.type === "rareShard" ? "rare" : "holo", dark);
+                    return (
+                      <span className="shard-got" tabIndex={0}>
+                        <em className="shard-mark" aria-hidden="true"><ShardIcon kind={kind} size={22} /></em>
+                        <span className={chestResult.type === "rareShard" ? "hit" : "big"}>
+                          {t.shardGot(t.shardNames[kind])}
+                        </span>
+                        <span className="shard-tip">{t.shardWhere}</span>
                       </span>
-                      <span className="shard-tip">{t.shardWhere}</span>
-                    </span>
-                  )}
+                    );
+                  })()}
                 </p>
               )}
             </div>
@@ -10013,7 +10100,7 @@ function AchievementsPanel({ history, lang }) {
 
    取得状況は2層。どちらも { "major-0": {up:true, rev:false}, ... } の形で持つ。
      rareDex … レア（宝箱が出る層。大1/12・小1/8）
-     holoDex … ホロ（1/216・正位置限定。既存の「ばちばち」）
+     holoDex … ホロ（1/64。向きは問わない）
    第二段が入るまで両方とも空なので、現時点では全枠が未取得になる。
 
    段は上下関係にあるので、一覧では1面につき点を1つだけ置き、
@@ -10082,36 +10169,109 @@ function DexCardView({ card, reversed, tier, lang }) {
  * 所持数は常に出す。押して交換する形にした以上、
  * 貯まっていることが見えていないと「気づかないまま止まる」が起きる。
  */
-function ShardPanel({ lang, rareShard, holoShard, rareCost, holoCost, rareLeft, holoLeft, onExchange, last }) {
+/**
+ * 欠片の絵。4種を形と色で描き分ける。
+ * 文字（◈✦）だと4種を区別できないので、輪郭そのものを変える。
+ *
+ *   light 光   … 上向きの尖った結晶。明るい虹
+ *   dark  闇   … 下向きに割れた結晶。紫と緑
+ *   holo  ホロ … 六角の結晶に内側の芒星。原色の虹
+ *   abyss 深淵 … 六角が欠けた形に渦。紫と紅
+ */
+/**
+ * 宝箱から飛び出す札。
+ *
+ * 図鑑の札（DexCardView）とは別物にする。あちらは中身を読ませるためのもので、
+ * こちらは「何かが出た」という出来事を見せるためのもの。
+ * 記号も文字も入れない ―― 入れると読む対象になり、
+ * 回している最中に読もうとして目が滑る。
+ *
+ * 表は段に応じた輝きだけ、裏は共通の裏面。
+ * 縦軸で回りながら現れ、表を向いて止まる。
+ */
+function ChestPrizeCard({ tier, dark }) {
+  const cls = tier === "holo" ? `holo-card${dark ? " dark" : ""}` : `rare-card${dark ? " dark" : ""}`;
+  return (
+    <div className="prize-stage">
+      <div className="prize-spin">
+        {/* 表。虹の層だけを載せた無地の面 */}
+        <div className={`prize-face prize-front static-card ${cls}`}>
+          <div className="card-depth" aria-hidden="true" />
+          <div className="card-shine-layer" aria-hidden="true" />
+          {tier === "rare" && <div className="rare-frame" aria-hidden="true" />}
+          {dark && <div className="rare-mist" aria-hidden="true" />}
+        </div>
+        {/* 裏。いつもの意匠 */}
+        <div className="prize-face prize-back">
+          <TarotCardBack style={{ position: "absolute", inset: 0, borderRadius: "inherit" }} />
+        </div>
+      </div>
+    </div>
+  );
+}
+
+function ShardIcon({ kind, size = 22 }) {
+  const id = `shard-${kind}`;
+  const grads = {
+    light: ["#FFE6A8", "#FF8FD0", "#8FD8FF"],
+    dark:  ["#C48AFF", "#3AE0A0", "#5A0E22"],
+    holo:  ["#FF3CA6", "#3CD2FF", "#6CFF8D"],
+    abyss: ["#E22CF0", "#7A18C8", "#2A0410"],
+  };
+  const g = grads[kind] || grads.light;
+  const paths = {
+    // 上へ伸びる細い結晶
+    light: "M12 1 L18 9 L14.5 22 L9.5 22 L6 9 Z",
+    // 下へ割れた結晶。上辺が欠けている
+    dark: "M6 3 L12 6 L18 3 L17 14 L12 23 L7 14 Z",
+    // 六角
+    holo: "M12 1.5 L20.5 6.75 L20.5 17.25 L12 22.5 L3.5 17.25 L3.5 6.75 Z",
+    // 六角の右上が欠けた形
+    abyss: "M12 1.5 L20.5 6.75 L18 12 L20.5 17.25 L12 22.5 L3.5 17.25 L3.5 6.75 Z",
+  };
+  return (
+    <svg width={size} height={size} viewBox="0 0 24 24" aria-hidden="true" style={{ display: "block" }}>
+      <defs>
+        <linearGradient id={id} x1="0" y1="0" x2="1" y2="1">
+          <stop offset="0%" stopColor={g[0]} />
+          <stop offset="55%" stopColor={g[1]} />
+          <stop offset="100%" stopColor={g[2]} />
+        </linearGradient>
+      </defs>
+      <path d={paths[kind] || paths.light} fill={`url(#${id})`} stroke="rgba(255,255,255,0.75)" strokeWidth="0.8" strokeLinejoin="round" />
+      {/* 内側の記し。段が上のものほど中に構造を持たせる */}
+      {kind === "holo" && <path d="M12 6.5 L13.6 11 L18 11 L14.4 13.6 L15.8 18 L12 15.3 L8.2 18 L9.6 13.6 L6 11 L10.4 11 Z" fill="rgba(255,255,255,0.85)" />}
+      {kind === "abyss" && <path d="M12 7 a5 5 0 1 1 -4.6 3" fill="none" stroke="rgba(255,255,255,0.8)" strokeWidth="1.5" strokeLinecap="round" />}
+      {kind === "dark" && <path d="M9.5 8 L12 15 L14.5 8" fill="none" stroke="rgba(255,255,255,0.55)" strokeWidth="1.1" strokeLinejoin="round" />}
+      {kind === "light" && <path d="M12 4 L12 20" stroke="rgba(255,255,255,0.6)" strokeWidth="1" />}
+    </svg>
+  );
+}
+
+function ShardPanel({ lang, shards, shardSpent, leftOf, onExchange, last }) {
   const t = T[lang] || T.ja;
-  const rows = [
-    { tier: "rare", have: rareShard, cost: rareCost, left: rareLeft, label: t.dexShardRare, note: t.shardNoteRare },
-    { tier: "holo", have: holoShard, cost: holoCost, left: holoLeft, label: t.dexShardHolo, note: t.shardNoteHolo },
-  ];
   return (
     <div style={{ width: "100%", maxWidth: "560px" }}>
       <p className="shard-intro">{t.shardIntro}</p>
-      {rows.map((r) => {
-        const ready = r.have >= r.cost && r.left;
+      {SHARD_KINDS.map((k) => {
+        const have = shards[k.key] || 0;
+        const cost = shardCost(k.key, shardSpent[k.key]);
+        const left = leftOf(k.key);
+        const ready = have >= cost && left;
         return (
-          <div key={r.tier} className={`shard-row ${r.tier}`}>
+          <div key={k.key} className={`shard-row ${k.key}`}>
             <div className="shard-head">
-              <span className={`shard-mark ${r.tier}`} aria-hidden="true">{r.tier === "holo" ? "✦" : "◈"}</span>
-              <span className="shard-name">{r.label}</span>
-              <span className="shard-count">{r.have} / {r.cost}</span>
+              <span className="shard-mark"><ShardIcon kind={k.key} size={20} /></span>
+              <span className="shard-name">{t.shardNames[k.key]}</span>
+              <span className="shard-count">{have} / {cost}</span>
             </div>
             {/* 進み具合を帯で出す。数字だけだと、あとどれくらいかが直感で分からない */}
             <div className="shard-bar" aria-hidden="true">
-              <i style={{ width: `${Math.min(100, (r.have / r.cost) * 100)}%` }} className={r.tier} />
+              <i style={{ width: `${Math.min(100, (have / cost) * 100)}%` }} className={k.key} />
             </div>
-            <p className="shard-note">{r.note}</p>
-            <button
-              type="button"
-              className="shard-btn"
-              disabled={!ready}
-              onClick={() => onExchange(r.tier)}
-            >
-              {!r.left ? t.shardAllFilled : ready ? t.shardExchange : t.shardShort(r.cost - r.have)}
+            <p className="shard-note">{t.shardOpensWhat[k.key]}</p>
+            <button type="button" className="shard-btn" disabled={!ready} onClick={() => onExchange(k.key)}>
+              {!left ? t.shardAllFilled : ready ? t.shardExchange : t.shardShort(cost - have)}
             </button>
           </div>
         );
@@ -10130,7 +10290,7 @@ function ShardPanel({ lang, rareShard, holoShard, rareCost, holoCost, rareLeft, 
               {t.shardOpened(
                 getCardSub(c, lang),
                 getCardName(c, lang),
-                last.tier === "holo" ? t.dexTierHolo : t.dexTierRare,
+                t.tierNames[last.kind],
                 t.historyOrientation(last.reversed)
               )}
             </p>
@@ -10153,7 +10313,7 @@ function DexCardBack() {
   );
 }
 
-function DexPanel({ lang, rareDex, holoDex, rareShard = 0, holoShard = 0, holoShardCost = 3 }) {
+function DexPanel({ lang, rareDex, holoDex, shards = {}, shardSpent = {} }) {
   const t = T[lang] || T.ja;
   const [openId, setOpenId] = useState(null);
   /*
@@ -10220,13 +10380,14 @@ function DexPanel({ lang, rareDex, holoDex, rareShard = 0, holoShard = 0, holoSh
           欠片は「あと何枚で揃うか」の形で出す。
           所持数だけだと、何に使うものか分からないまま溜まる。
         */}
+        {/* 欠片4種。所持数を図鑑にも出す（交換タブを開かないと分からない状態を避ける） */}
         <div className="dex-summary-row shard">
-          <span className="dex-summary-label">{t.dexShardRare}</span>
-          <span className="dex-summary-value rare small">{rareShard} / {RARE_SHARD_COST}</span>
-        </div>
-        <div className="dex-summary-row shard">
-          <span className="dex-summary-label">{t.dexShardHolo}</span>
-          <span className="dex-summary-value holo small">{holoShard} / {holoShardCost}</span>
+          {SHARD_KINDS.map((k) => (
+            <span key={k.key} className="dex-shard-chip" title={t.shardNames[k.key]}>
+              <ShardIcon kind={k.key} size={15} />
+              <em>{shards[k.key] || 0}<b>/{shardCost(k.key, shardSpent[k.key])}</b></em>
+            </span>
+          ))}
         </div>
       </div>
 
@@ -11396,6 +11557,8 @@ const T = {
     dexTierHolo: "홀로",
     dexFlip: "눌러서 뒤집기",
     chestLead: "상자 하나를 고르세요",
+    chestLeadHolo: "무지개 보물상자가 나타났습니다",
+    chestGotHoloSlot: "홀로 도감이 열렸습니다",
     chestGotUp: "정위치 도감이 열렸습니다",
     chestGotRev: "역위치 도감이 열렸습니다",
     chestMiss: "아무것도 없었습니다",
@@ -11411,6 +11574,11 @@ const T = {
     oneOracleDarkJackpot: "심연!!!",
     dexHowTo: "한 장 뽑기와 쁘띠 한 장 뽑기에서 모을 수 있습니다",
     shardWhere: "기록 > 교환 탭에서 사용할 수 있습니다",
+    shardNames: { light: "빛의 조각", dark: "어둠의 조각", holo: "홀로 조각", abyss: "심연의 조각" },
+    tierNames: { light: "레어", dark: "어둠의 레어", holo: "홀로", abyss: "다크 홀로" },
+    shardOpensWhat: { light: "레어의 밝은 쪽 칸을 엽니다", dark: "레어의 어두운 쪽 칸을 엽니다", holo: "홀로의 밝은 쪽 칸을 엽니다", abyss: "홀로의 어두운 쪽 칸을 엽니다" },
+    shardGot: (n) => `${n} 를 얻었습니다`,
+    chestGotSlot: (t, o) => `당첨！ ${t}・${o} 도감이 개방되었습니다`,
     shardIntro: "조각은 도감의 아직 열리지 않은 칸을 하나 열어 줍니다. 어느 칸이 열릴지는 고를 수 없습니다.",
     shardNoteRare: "보물상자에서 가끔 나옵니다.",
     shardNoteHolo: "교환할 때마다 필요한 수가 하나씩 늘어납니다.",
@@ -11671,6 +11839,8 @@ const T = {
     dexTierHolo: "Holo",
     dexFlip: "Chạm để lật",
     chestLead: "Chọn một rương",
+    chestLeadHolo: "Rương cầu vồng đã xuất hiện",
+    chestGotHoloSlot: "Đã mở ô holo trong bộ sưu tập",
     chestGotUp: "Đã mở ô xuôi trong bộ sưu tập",
     chestGotRev: "Đã mở ô ngược trong bộ sưu tập",
     chestMiss: "Không có gì cả",
@@ -11686,6 +11856,11 @@ const T = {
     oneOracleDarkJackpot: "Vực thẳm!!!",
     dexHowTo: "Thu thập qua One Oracle và Munting Oracle",
     shardWhere: "Dùng ở tab Đổi trong Ghi chép",
+    shardNames: { light: "Mảnh Ánh Sáng", dark: "Mảnh Bóng Tối", holo: "Mảnh Holo", abyss: "Mảnh Vực Thẳm" },
+    tierNames: { light: "Hiếm", dark: "Hiếm Bóng Tối", holo: "Holo", abyss: "Holo Bóng Tối" },
+    shardOpensWhat: { light: "Mở ô sáng của Hiếm", dark: "Mở ô tối của Hiếm", holo: "Mở ô sáng của Holo", abyss: "Mở ô tối của Holo" },
+    shardGot: (n) => `Nhận được ${n}`,
+    chestGotSlot: (t, o) => `Trúng rồi! Đã mở khóa bộ sưu tập ${t}・${o}`,
     shardIntro: "Mảnh vỡ mở một ô chưa mở trong bộ sưu tập. Bạn không chọn được ô nào.",
     shardNoteRare: "Thỉnh thoảng xuất hiện trong rương.",
     shardNoteHolo: "Mỗi lần đổi, số lượng cần tăng thêm một.",
@@ -11946,6 +12121,8 @@ const T = {
     dexTierHolo: "Holo",
     dexFlip: "Ketuk untuk membalik",
     chestLead: "Pilih satu peti",
+    chestLeadHolo: "Peti pelangi muncul",
+    chestGotHoloSlot: "Slot holo terbuka di katalog",
     chestGotUp: "Slot tegak terbuka di katalog",
     chestGotRev: "Slot terbalik terbuka di katalog",
     chestMiss: "Tidak ada apa-apa",
@@ -11961,6 +12138,11 @@ const T = {
     oneOracleDarkJackpot: "Jurang!!!",
     dexHowTo: "Dikumpulkan lewat One Oracle dan Petit One Oracle",
     shardWhere: "Dapat dipakai di tab Tukar pada Catatan",
+    shardNames: { light: "Pecahan Cahaya", dark: "Pecahan Kegelapan", holo: "Pecahan Holo", abyss: "Pecahan Jurang" },
+    tierNames: { light: "Langka", dark: "Langka Gelap", holo: "Holo", abyss: "Holo Gelap" },
+    shardOpensWhat: { light: "Membuka slot sisi terang Langka", dark: "Membuka slot sisi gelap Langka", holo: "Membuka slot sisi terang Holo", abyss: "Membuka slot sisi gelap Holo" },
+    shardGot: (n) => `Mendapat ${n}`,
+    chestGotSlot: (t, o) => `Menang! Katalog ${t}・${o} telah terbuka`,
     shardIntro: "Pecahan membuka satu slot yang belum terbuka di katalog. Anda tidak bisa memilih slotnya.",
     shardNoteRare: "Kadang muncul dari peti.",
     shardNoteHolo: "Setiap penukaran menambah satu jumlah yang dibutuhkan.",
@@ -12221,6 +12403,8 @@ const T = {
     dexTierHolo: "Holo",
     dexFlip: "Ketik untuk terbalikkan",
     chestLead: "Pilih satu peti",
+    chestLeadHolo: "Peti pelangi muncul",
+    chestGotHoloSlot: "Slot holo dibuka dalam katalog",
     chestGotUp: "Slot tegak dibuka dalam katalog",
     chestGotRev: "Slot terbalik dibuka dalam katalog",
     chestMiss: "Tiada apa-apa",
@@ -12236,6 +12420,11 @@ const T = {
     oneOracleDarkJackpot: "Jurang!!!",
     dexHowTo: "Dikumpul melalui One Oracle dan Petit One Oracle",
     shardWhere: "Boleh digunakan di tab Tukar dalam Rekod",
+    shardNames: { light: "Serpihan Cahaya", dark: "Serpihan Kegelapan", holo: "Serpihan Holo", abyss: "Serpihan Jurang" },
+    tierNames: { light: "Jarang", dark: "Jarang Gelap", holo: "Holo", abyss: "Holo Gelap" },
+    shardOpensWhat: { light: "Membuka slot sisi cerah Jarang", dark: "Membuka slot sisi gelap Jarang", holo: "Membuka slot sisi cerah Holo", abyss: "Membuka slot sisi gelap Holo" },
+    shardGot: (n) => `Mendapat ${n}`,
+    chestGotSlot: (t, o) => `Menang! Katalog ${t}・${o} telah dibuka`,
     shardIntro: "Serpihan membuka satu slot yang belum dibuka dalam katalog. Anda tidak boleh memilih slotnya.",
     shardNoteRare: "Kadangkala muncul dari peti.",
     shardNoteHolo: "Setiap penukaran menambah satu jumlah yang diperlukan.",
@@ -12497,6 +12686,8 @@ const T = {
     dexTierHolo: "ホロ",
     dexFlip: "押して裏返す",
     chestLead: "宝箱をひとつ選んでください",
+    chestLeadHolo: "虹の宝箱が現れました",
+    chestGotHoloSlot: "ホロの図鑑が開きました",
     chestGotUp: "正位置の図鑑が開きました",
     chestGotRev: "逆位置の図鑑が開きました",
     chestMiss: "なにも入っていませんでした",
@@ -12512,6 +12703,11 @@ const T = {
     oneOracleDarkJackpot: "深淵！！！",
     dexHowTo: "ワンオラクルとプチワンオラクルで集められます",
     shardWhere: "記録の「交換」タブで使えます",
+    shardNames: { light: "光の欠片", dark: "闇の欠片", holo: "ホロの欠片", abyss: "深淵の欠片" },
+    tierNames: { light: "レア", dark: "闇のレア", holo: "ホロ", abyss: "ダークホロ" },
+    shardOpensWhat: { light: "レアの明るい側の枠を開きます", dark: "レアの闇の側の枠を開きます", holo: "ホロの明るい側の枠を開きます", abyss: "ホロの闇の側の枠を開きます" },
+    shardGot: (n) => `${n}を手に入れました`,
+    chestGotSlot: (t, o) => `当たり！　${t}・${o}の図鑑が開放されました`,
     shardIntro: "欠片は、図鑑のまだ開いていない枠をひとつ開きます。どの枠が開くかは選べません。",
     shardNoteRare: "宝箱からまれに出ます。",
     shardNoteHolo: "一度交換するごとに、必要な数がひとつ増えます。",
@@ -12772,6 +12968,8 @@ const T = {
     dexTierHolo: "虹彩",
     dexFlip: "點擊翻轉",
     chestLead: "請選擇一個寶箱",
+    chestLeadHolo: "出現了虹之寶箱",
+    chestGotHoloSlot: "虹彩圖鑑已開啟",
     chestGotUp: "圖鑑的正位已開啟",
     chestGotRev: "圖鑑的逆位已開啟",
     chestMiss: "裡面什麼也沒有",
@@ -12787,6 +12985,11 @@ const T = {
     oneOracleDarkJackpot: "深淵！！！",
     dexHowTo: "可透過單張神諭與小神諭收集",
     shardWhere: "可在記錄的「兌換」分頁使用",
+    shardNames: { light: "光之碎片", dark: "闇之碎片", holo: "虹彩碎片", abyss: "深淵碎片" },
+    tierNames: { light: "稀有", dark: "闇之稀有", holo: "虹彩", abyss: "闇之虹彩" },
+    shardOpensWhat: { light: "開啟稀有的光之格", dark: "開啟稀有的闇之格", holo: "開啟虹彩的光之格", abyss: "開啟虹彩的闇之格" },
+    shardGot: (n) => `獲得${n}`,
+    chestGotSlot: (t, o) => `中獎！${t}・${o}的圖鑑已開放`,
     shardIntro: "碎片可開啟圖鑑中尚未開啟的一格。無法指定要開啟哪一格。",
     shardNoteRare: "偶爾會從寶箱中出現。",
     shardNoteHolo: "每兌換一次，所需數量便增加一個。",
@@ -13047,6 +13250,8 @@ const T = {
     dexTierHolo: "虹彩",
     dexFlip: "点击翻转",
     chestLead: "请选择一个宝箱",
+    chestLeadHolo: "出现了虹之宝箱",
+    chestGotHoloSlot: "虹彩图鉴已开启",
     chestGotUp: "图鉴的正位已开启",
     chestGotRev: "图鉴的逆位已开启",
     chestMiss: "里面什么也没有",
@@ -13062,6 +13267,11 @@ const T = {
     oneOracleDarkJackpot: "深渊！！！",
     dexHowTo: "可通过单张神谕与小神谕收集",
     shardWhere: "可在记录的「兑换」分页使用",
+    shardNames: { light: "光之碎片", dark: "暗之碎片", holo: "虹彩碎片", abyss: "深渊碎片" },
+    tierNames: { light: "稀有", dark: "暗之稀有", holo: "虹彩", abyss: "暗之虹彩" },
+    shardOpensWhat: { light: "开启稀有的光之格", dark: "开启稀有的暗之格", holo: "开启虹彩的光之格", abyss: "开启虹彩的暗之格" },
+    shardGot: (n) => `获得${n}`,
+    chestGotSlot: (t, o) => `中奖！${t}・${o}的图鉴已开放`,
     shardIntro: "碎片可开启图鉴中尚未开启的一格。无法指定要开启哪一格。",
     shardNoteRare: "偶尔会从宝箱中出现。",
     shardNoteHolo: "每兑换一次，所需数量便增加一个。",
@@ -13322,6 +13532,8 @@ const T = {
     dexTierHolo: "Holo",
     dexFlip: "Tap to flip",
     chestLead: "Choose one chest",
+    chestLeadHolo: "A rainbow chest appeared",
+    chestGotHoloSlot: "A holo slot opened in the codex",
     chestGotUp: "An upright slot opened in the codex",
     chestGotRev: "A reversed slot opened in the codex",
     chestMiss: "Nothing inside",
@@ -13337,6 +13549,11 @@ const T = {
     oneOracleDarkJackpot: "THE ABYSS!!!",
     dexHowTo: "Collected through One Oracle and Petit One Oracle",
     shardWhere: "Use it in the Exchange tab under Records",
+    shardNames: { light: "Shard of Light", dark: "Shard of Dark", holo: "Holo Shard", abyss: "Shard of the Abyss" },
+    tierNames: { light: "Rare", dark: "Dark Rare", holo: "Holo", abyss: "Dark Holo" },
+    shardOpensWhat: { light: "Opens a bright Rare slot", dark: "Opens a dark Rare slot", holo: "Opens a bright Holo slot", abyss: "Opens a dark Holo slot" },
+    shardGot: (n) => `You found a ${n}`,
+    chestGotSlot: (t, o) => `Hit! The ${t} · ${o} codex slot was unlocked`,
     shardIntro: "A shard opens one slot you don't yet have in the codex. You cannot choose which slot.",
     shardNoteRare: "Occasionally found in chests.",
     shardNoteHolo: "Each exchange raises the number required by one.",
@@ -13597,6 +13814,8 @@ const T = {
     dexTierHolo: "Holo",
     dexFlip: "I-tap para baligtarin",
     chestLead: "Pumili ng isang kaban",
+    chestLeadHolo: "Lumitaw ang kabang bahaghari",
+    chestGotHoloSlot: "Nabuksan ang holo na puwang sa kodeks",
     chestGotUp: "Nabuksan ang upright na puwang sa kodeks",
     chestGotRev: "Nabuksan ang reversed na puwang sa kodeks",
     chestMiss: "Walang laman",
@@ -13612,6 +13831,11 @@ const T = {
     oneOracleDarkJackpot: "ANG KALALIMAN!!!",
     dexHowTo: "Nakokolekta sa One Oracle at Munting Orakulo",
     shardWhere: "Gamitin ito sa Palitan tab sa Tala",
+    shardNames: { light: "Shard ng Liwanag", dark: "Shard ng Dilim", holo: "Holo Shard", abyss: "Shard ng Kalaliman" },
+    tierNames: { light: "Rare", dark: "Dark Rare", holo: "Holo", abyss: "Dark Holo" },
+    shardOpensWhat: { light: "Nagbubukas ng maliwanag na Rare", dark: "Nagbubukas ng madilim na Rare", holo: "Nagbubukas ng maliwanag na Holo", abyss: "Nagbubukas ng madilim na Holo" },
+    shardGot: (n) => `Nakakuha ka ng ${n}`,
+    chestGotSlot: (t, o) => `Panalo! Nabuksan ang ${t} · ${o} sa kodeks`,
     shardIntro: "Nagbubukas ang shard ng isang puwang na wala ka pa sa kodeks. Hindi mo mapipili kung alin.",
     shardNoteRare: "Paminsan-minsan ay lumalabas sa mga kaban.",
     shardNoteHolo: "Bawat palit ay nagdaragdag ng isa sa kailangan.",
@@ -13872,6 +14096,8 @@ const T = {
     dexTierHolo: "โฮโล",
     dexFlip: "แตะเพื่อพลิก",
     chestLead: "เลือกหีบหนึ่งใบ",
+    chestLeadHolo: "หีบสายรุ้งปรากฏขึ้น",
+    chestGotHoloSlot: "เปิดช่องโฮโลในสารานุกรมแล้ว",
     chestGotUp: "เปิดช่องตั้งตรงในสารานุกรมแล้ว",
     chestGotRev: "เปิดช่องกลับหัวในสารานุกรมแล้ว",
     chestMiss: "ไม่มีอะไรอยู่ข้างใน",
@@ -13887,6 +14113,11 @@ const T = {
     oneOracleDarkJackpot: "ห้วงลึก!!!",
     dexHowTo: "สะสมได้จากวันออราเคิลและออราเคิลน้อย",
     shardWhere: "ใช้ได้ที่แท็บแลกเปลี่ยนในบันทึก",
+    shardNames: { light: "เศษแห่งแสง", dark: "เศษแห่งความมืด", holo: "เศษโฮโล", abyss: "เศษแห่งห้วงลึก" },
+    tierNames: { light: "แรร์", dark: "แรร์แห่งความมืด", holo: "โฮโล", abyss: "ดาร์กโฮโล" },
+    shardOpensWhat: { light: "เปิดช่องแรร์ฝั่งสว่าง", dark: "เปิดช่องแรร์ฝั่งมืด", holo: "เปิดช่องโฮโลฝั่งสว่าง", abyss: "เปิดช่องโฮโลฝั่งมืด" },
+    shardGot: (n) => `ได้รับ${n}`,
+    chestGotSlot: (t, o) => `ถูกรางวัล! ปลดล็อกสารานุกรม ${t}・${o} แล้ว`,
     shardIntro: "เศษชิ้นจะเปิดช่องที่ยังไม่ได้เปิดในสารานุกรมหนึ่งช่อง คุณเลือกช่องไม่ได้",
     shardNoteRare: "บางครั้งพบได้จากหีบ",
     shardNoteHolo: "การแลกแต่ละครั้งจะเพิ่มจำนวนที่ต้องใช้ทีละหนึ่ง",
@@ -14148,6 +14379,8 @@ const T = {
     dexTierHolo: "Holo",
     dexFlip: "Tryck för att vända",
     chestLead: "Välj en kista",
+    chestLeadHolo: "En regnbågskista dök upp",
+    chestGotHoloSlot: "En holoplats öppnades i kodexet",
     chestGotUp: "En upprätt plats öppnades i kodexet",
     chestGotRev: "En omvänd plats öppnades i kodexet",
     chestMiss: "Ingenting inuti",
@@ -14163,6 +14396,11 @@ const T = {
     oneOracleDarkJackpot: "AVGRUNDEN!!!",
     dexHowTo: "Samlas via One Oracle och Petit One Oracle",
     shardWhere: "Används i fliken Byt under Anteckningar",
+    shardNames: { light: "Ljusets skärva", dark: "Mörkrets skärva", holo: "Holoskärva", abyss: "Avgrundens skärva" },
+    tierNames: { light: "Sällsynt", dark: "Mörk Sällsynt", holo: "Holo", abyss: "Mörk Holo" },
+    shardOpensWhat: { light: "Öppnar en ljus Rare-plats", dark: "Öppnar en mörk Rare-plats", holo: "Öppnar en ljus Holo-plats", abyss: "Öppnar en mörk Holo-plats" },
+    shardGot: (n) => `Du fick en ${n}`,
+    chestGotSlot: (t, o) => `Vinst! Kodexplatsen ${t} · ${o} låstes upp`,
     shardIntro: "En skärva öppnar en plats du ännu inte har i kodexet. Du kan inte välja vilken.",
     shardNoteRare: "Dyker upp ibland ur kistor.",
     shardNoteHolo: "Varje byte höjer antalet som krävs med ett.",
@@ -14332,13 +14570,24 @@ export default function TarotDraw() {
   useEffect(() => { saveRareDex(rareDex); }, [rareDex]);
   useEffect(() => { saveHoloDex(holoDex); }, [holoDex]);
 
-  // 欠片の所持数。交換回数（spent）はホロ側の費用が逓増するので別に持つ
-  const [rareShard, setRareShard] = useState(() => loadNum(LS_RARE_SHARD));
-  const [holoShard, setHoloShard] = useState(() => loadNum(LS_HOLO_SHARD));
-  const [holoShardSpent, setHoloShardSpent] = useState(() => loadNum(LS_HOLO_SHARD_SPENT));
-  useEffect(() => { saveNum(LS_RARE_SHARD, rareShard); }, [rareShard]);
-  useEffect(() => { saveNum(LS_HOLO_SHARD, holoShard); }, [holoShard]);
-  useEffect(() => { saveNum(LS_HOLO_SHARD_SPENT, holoShardSpent); }, [holoShardSpent]);
+  /*
+    欠片4種の所持数と交換回数。
+    種類ごとに別々の器にすると useState が8つ並ぶので、
+    1つの物にまとめて持つ。保存も1キーずつ書く。
+  */
+  const [shards, setShards] = useState(() => {
+    const o = {};
+    SHARD_KINDS.forEach((k) => { o[k.key] = loadNum(LS_SHARD(k.key)); });
+    return o;
+  });
+  const [shardSpent, setShardSpent] = useState(() => {
+    const o = {};
+    SHARD_KINDS.forEach((k) => { o[k.key] = loadNum(LS_SHARD_SPENT(k.key)); });
+    return o;
+  });
+  useEffect(() => { SHARD_KINDS.forEach((k) => saveNum(LS_SHARD(k.key), shards[k.key] || 0)); }, [shards]);
+  useEffect(() => { SHARD_KINDS.forEach((k) => saveNum(LS_SHARD_SPENT(k.key), shardSpent[k.key] || 0)); }, [shardSpent]);
+  const addShard = (kind, n = 1) => setShards((o) => ({ ...o, [kind]: (o[kind] || 0) + n }));
 
   /*
     図鑑への書き込み口。ここ1つに絞る。
@@ -14346,34 +14595,76 @@ export default function TarotDraw() {
     書き込みが1か所なら二重加算や取りこぼしが起きない。
   */
   const handleCollect = ({ kind, got, cardId, reversed }) => {
-    if (kind === "holo") {
-      // ホロは確定。レアの枠も同時に開ける（入れ子）
+    if (kind === "holoChest") {
+      /*
+        虹の宝箱。既に持っている面ならホロの欠片に変える。
+        「開けたのに何も起きない」を作らないための受け皿。
+        戻り値で結果を返すのは、開けた側が表示を決めるため。
+      */
+      const key = reversed ? "rev" : "up";
+      const card = [...MAJOR_LIST, ...MINOR_LIST].find((c) => c.id === cardId);
+      const dark = !isGoodOrientation(card || {}, reversed);
+      if ((holoDex[cardId] || {})[key]) {
+        // 被り。引いた向きに対応する欠片へ変える
+        addShard(shardKindOf("holo", dark));
+        return "dupe";
+      }
+      // ホロを開けたらレアも開く（入れ子）
       setHoloDex((d) => unlockDexSlot(d, cardId, reversed));
       setRareDex((d) => unlockDexSlot(d, cardId, reversed));
-      return;
+      return "new";
     }
     if (kind !== "chest" || !got) return;
+
+    /* 引いた札の向きから、どの欠片になるかが決まる */
+    const card = [...MAJOR_LIST, ...MINOR_LIST].find((c) => c.id === cardId);
+    const dark = !isGoodOrientation(card || {}, reversed);
 
     if (got.type === "slot") {
       setRareDex((d) => {
         const e = d[cardId] || {};
         /*
-          既に持っている面が当たったら、被りとしてレアの欠片に変える。
+          既に持っている面が当たったら、被りとして欠片に変える。
           「当たったのに何も起きない」を作らないための最小の受け皿。
         */
-        if (e[reversed ? "rev" : "up"]) { setRareShard((n) => n + 1); return d; }
+        if (e[reversed ? "rev" : "up"]) { addShard(shardKindOf("rare", dark)); return d; }
         return unlockDexSlot(d, cardId, reversed);
       });
       return;
     }
-    if (got.type === "rareShard") { setRareShard((n) => n + 1); return; }
-    if (got.type === "holoShard") { setHoloShard((n) => n + 1); }
+    if (got.type === "rareShard") { addShard(shardKindOf("rare", dark)); return; }
+    if (got.type === "holoShard") { addShard(shardKindOf("holo", dark)); }
   };
 
-  const [rareShardSpent, setRareShardSpent] = useState(() => loadNum(LS_RARE_SHARD_SPENT));
-  useEffect(() => { saveNum(LS_RARE_SHARD_SPENT, rareShardSpent); }, [rareShardSpent]);
   // 直前に開けた枠。交換した結果を画面に出すために持つ
   const [lastExchanged, setLastExchanged] = useState(null);
+
+  /*
+    欠片の交換。自動ではなく、押して行う。
+
+    最初は自動にしていたが、何も表示されないまま枠が開くので
+    「黙って増える」になっていた。何かが起きたのに
+    起きたことが伝わらない形は、このアプリで何度も潰してきた失敗。
+  */
+  const exchangeShard = (kind) => {
+    const def = SHARD_KINDS.find((k) => k.key === kind);
+    if (!def) return;
+    const cost = shardCost(kind, shardSpent[kind]);
+    if ((shards[kind] || 0) < cost) return;
+    const dex = def.tier === "holo" ? holoDex : rareDex;
+    const slot = pickLockedSlot(dex, def.dark);
+    if (!slot) return; // その側が埋まりきっていれば消費しない
+    if (def.tier === "holo") {
+      // ホロを開けたらレアも開く（引いたときと同じ入れ子）
+      setHoloDex((d) => unlockDexSlot(d, slot.id, slot.reversed));
+      setRareDex((d) => unlockDexSlot(d, slot.id, slot.reversed));
+    } else {
+      setRareDex((d) => unlockDexSlot(d, slot.id, slot.reversed));
+    }
+    setShards((o) => ({ ...o, [kind]: o[kind] - cost }));
+    setShardSpent((o) => ({ ...o, [kind]: (o[kind] || 0) + 1 }));
+    setLastExchanged({ tier: def.tier, kind, ...slot });
+  };
 
   /*
     欠片の交換。自動ではなく、押して行う。
@@ -14385,28 +14676,6 @@ export default function TarotDraw() {
     押す形にすると、貯まっているのに気づかない人が出る恐れがあるが、
     それは所持数を常に表示することで防ぐ（交換のタブに数を出す）。
   */
-  const exchangeShard = (tier) => {
-    if (tier === "rare") {
-      if (rareShard < RARE_SHARD_COST) return;
-      const slot = pickLockedSlot(rareDex);
-      if (!slot) return; // 埋まりきっていれば消費しない
-      setRareDex((d) => unlockDexSlot(d, slot.id, slot.reversed));
-      setRareShard((n) => n - RARE_SHARD_COST);
-      setRareShardSpent((n) => n + 1);
-      setLastExchanged({ tier: "rare", ...slot });
-      return;
-    }
-    const cost = holoShardCost(holoShardSpent);
-    if (holoShard < cost) return;
-    const slot = pickLockedSlot(holoDex);
-    if (!slot) return;
-    // ホロを開けたらレアも開く（引いたときと同じ入れ子）
-    setHoloDex((d) => unlockDexSlot(d, slot.id, slot.reversed));
-    setRareDex((d) => unlockDexSlot(d, slot.id, slot.reversed));
-    setHoloShard((n) => n - cost);
-    setHoloShardSpent((n) => n + 1);
-    setLastExchanged({ tier: "holo", ...slot });
-  };
   const [drawMode, setDrawMode] = useState("select"); // "select" | "oneOracle" | "three"
   /*
     枠の二段消費。
@@ -17035,6 +17304,29 @@ export default function TarotDraw() {
           background: var(--gold); border-color: var(--gold);
           box-shadow: 0 0 4px rgba(201,162,75,0.75);
         }
+        /*
+          虹の宝箱。ホロを引いた回にだけ1個だけ出る。
+          通常の箱と並ぶことはないので、大きさを変えてよい。
+        */
+        .chest.holo-chest {
+          width: 92px; height: 84px;
+          border-color: rgba(255,255,255,0.7);
+          background: linear-gradient(135deg,
+            rgba(255,60,166,0.22), rgba(60,200,255,0.22),
+            rgba(120,255,140,0.22), rgba(255,210,60,0.22));
+          background-size: 260% 260%;
+          color: #fff;
+          animation: holoChestFlow 3s linear infinite, holoChestGlow 1.6s ease-in-out infinite;
+        }
+        .chest.holo-chest svg { width: 46px; height: 39px; }
+        @keyframes holoChestFlow {
+          0%   { background-position: 0% 50%; }
+          100% { background-position: 260% 50%; }
+        }
+        @keyframes holoChestGlow {
+          0%, 100% { box-shadow: 0 0 18px rgba(255,255,255,0.55), 0 0 42px rgba(255,60,180,0.45); }
+          50%      { box-shadow: 0 0 34px rgba(255,255,255,0.95), 0 0 86px rgba(60,200,255,0.7); }
+        }
         /* --- 欠片の交換 --- */
         .shard-intro { font-size: 11.5px; line-height: 1.9; color: var(--muted); margin: 0 0 14px; }
         .shard-row {
@@ -17043,8 +17335,6 @@ export default function TarotDraw() {
         }
         .shard-head { display: flex; align-items: baseline; gap: 8px; margin-bottom: 8px; }
         .shard-mark { font-size: 15px; }
-        .shard-mark.rare { color: var(--rare-tint); }
-        .shard-mark.holo { color: var(--gold); }
         .shard-name { font-size: 12px; letter-spacing: 0.08em; color: var(--parchment); }
         .shard-count { margin-left: auto; font-family: 'Cinzel', serif; font-size: 14px; color: var(--gold-soft); }
         .shard-bar { height: 5px; border-radius: 3px; background: rgba(255,255,255,0.08); overflow: hidden; }
@@ -17073,6 +17363,47 @@ export default function TarotDraw() {
         .shard-result-card { display: flex; justify-content: center; }
         .shard-result-card .dex-view.static-card.oracle { max-width: 130px; }
 
+        /* 図鑑の欠片チップ。4種を横に並べる */
+        .dex-summary-row.shard { display: flex; gap: 10px; justify-content: space-between; }
+        .dex-shard-chip { display: inline-flex; align-items: center; gap: 4px; }
+        .dex-shard-chip em {
+          font-style: normal; font-family: 'Cinzel', serif;
+          font-size: 12px; color: var(--gold-soft);
+        }
+        .dex-shard-chip em b { font-weight: 400; font-size: 9.5px; color: var(--muted); }
+        /* 4種になったので、色分けではなく絵で見分ける */
+        .shard-mark { display: inline-flex; }
+        .shard-bar i.light { background: linear-gradient(90deg,#FFE6A8,#FF8FD0); }
+        .shard-bar i.dark  { background: linear-gradient(90deg,#C48AFF,#3AE0A0); }
+        .shard-bar i.holo  { background: linear-gradient(90deg,#FF3CA6,#3CD2FF,#6CFF8D); box-shadow: 0 0 6px rgba(255,60,166,0.6); }
+        .shard-bar i.abyss { background: linear-gradient(90deg,#E22CF0,#7A18C8); box-shadow: 0 0 6px rgba(226,44,240,0.6); }
+        /*
+          宝箱から出る札。無地・回転あり。
+          perspective は transform の関数として書くこと ――
+          CSSの perspective プロパティは子にしか効かないので、
+          自分自身の回転には効かない（平面的に潰れる）。
+        */
+        .prize-stage { perspective: 900px; width: 104px; height: 156px; }
+        .prize-spin {
+          position: relative; width: 100%; height: 100%;
+          transform-style: preserve-3d;
+          animation: prizeSpin 1.15s cubic-bezier(.16,1,.3,1) forwards;
+        }
+        .prize-face {
+          position: absolute; inset: 0; border-radius: 12px;
+          backface-visibility: hidden; -webkit-backface-visibility: hidden;
+          overflow: hidden;
+        }
+        /* 裏は半回転させておく。こうしないと表と重なって見える */
+        .prize-back { transform: rotateY(180deg); }
+        /* 表は無地。static-card の寸法指定は打ち消す */
+        .prize-front.static-card { width: 100%; height: 100%; }
+        @keyframes prizeSpin {
+          /* 裏を向いた小さい状態から、2回転半して表で止まる */
+          0%   { transform: rotateY(180deg) scale(0.55) translateY(20px); }
+          60%  { transform: rotateY(680deg) scale(1.06) translateY(-6px); }
+          100% { transform: rotateY(900deg) scale(1) translateY(0); }
+        }
         /* --- 宝箱 --- */
         .chest-row { display: flex; gap: 8px; justify-content: center; flex-wrap: wrap; }
         .chest {
@@ -17089,7 +17420,99 @@ export default function TarotDraw() {
         /* 選ばれなかった箱は沈める。中身は最後まで見せない ――
            はずれの位置が分かると、次から「当たりの並び」を探されてしまう */
         .chest.dim { opacity: 0.28; }
-        .chest.opened { border-color: var(--gold); background: rgba(201,162,75,0.22); transform: translateY(-2px); }
+        /*
+          開いた箱。ただ枠が変わるだけでは「開いた」に見えないので、
+          蓋が倒れる（ChestIcon 側）＋ 光条が伸びる ＋ 箱が跳ねる、を重ねる。
+        */
+        .chest.opened {
+          border-color: var(--gold); background: rgba(201,162,75,0.30);
+          animation: chestPop .5s cubic-bezier(.16,1,.3,1);
+          overflow: visible;
+        }
+        .chest.opened::before {
+          content: "";
+          position: absolute; left: 50%; top: 46%;
+          width: 190px; height: 190px; margin: -95px 0 0 -95px;
+          pointer-events: none;
+          /* 光条。中心から放射状に伸びる細い光 */
+          background: conic-gradient(from 0deg,
+            rgba(255,240,190,0.85) 0deg 3deg, transparent 3deg 30deg,
+            rgba(255,240,190,0.6) 30deg 32deg, transparent 32deg 60deg,
+            rgba(255,240,190,0.85) 60deg 63deg, transparent 63deg 90deg,
+            rgba(255,240,190,0.6) 90deg 92deg, transparent 92deg 120deg,
+            rgba(255,240,190,0.85) 120deg 123deg, transparent 123deg 150deg,
+            rgba(255,240,190,0.6) 150deg 152deg, transparent 152deg 180deg,
+            rgba(255,240,190,0.85) 180deg 183deg, transparent 183deg 210deg,
+            rgba(255,240,190,0.6) 210deg 212deg, transparent 212deg 240deg,
+            rgba(255,240,190,0.85) 240deg 243deg, transparent 243deg 270deg,
+            rgba(255,240,190,0.6) 270deg 272deg, transparent 272deg 300deg,
+            rgba(255,240,190,0.85) 300deg 303deg, transparent 303deg 330deg,
+            rgba(255,240,190,0.6) 330deg 332deg, transparent 332deg 360deg);
+          -webkit-mask: radial-gradient(closest-side, #000 8%, rgba(0,0,0,0.5) 45%, transparent 78%);
+          mask: radial-gradient(closest-side, #000 8%, rgba(0,0,0,0.5) 45%, transparent 78%);
+          mix-blend-mode: screen;
+          animation: chestRays 1.1s cubic-bezier(.16,1,.3,1) forwards;
+          z-index: 0;
+        }
+        /* 破裂する光。光条より短く、鋭い */
+        .chest.opened::after {
+          content: "";
+          position: absolute; left: 50%; top: 46%;
+          width: 120px; height: 120px; margin: -60px 0 0 -60px;
+          pointer-events: none;
+          background: radial-gradient(closest-side,
+            rgba(255,255,255,0.95) 0%, rgba(255,225,150,0.7) 34%, transparent 72%);
+          mix-blend-mode: screen;
+          animation: chestBurst .66s cubic-bezier(.16,1,.3,1) forwards;
+          z-index: 0;
+        }
+        .chest.opened svg { position: relative; z-index: 1; }
+        @keyframes chestPop {
+          0%   { transform: translateY(0) scale(1); }
+          35%  { transform: translateY(-7px) scale(1.10); }
+          100% { transform: translateY(-2px) scale(1); }
+        }
+        @keyframes chestRays {
+          0%   { opacity: 0; transform: rotate(0deg) scale(0.3); }
+          30%  { opacity: 1; }
+          100% { opacity: 0; transform: rotate(38deg) scale(1.25); }
+        }
+        @keyframes chestBurst {
+          0%   { opacity: 0; transform: scale(0.2); }
+          25%  { opacity: 1; transform: scale(1.05); }
+          100% { opacity: 0; transform: scale(1.5); }
+        }
+        /* 虹の箱は光条も虹色に */
+        .chest.holo-chest.opened::before {
+          background: conic-gradient(from 0deg,
+            #ff3ca6 0deg 4deg, transparent 4deg 30deg,
+            #ffd23c 30deg 34deg, transparent 34deg 60deg,
+            #6cff8d 60deg 64deg, transparent 64deg 90deg,
+            #3cd2ff 90deg 94deg, transparent 94deg 120deg,
+            #a86cff 120deg 124deg, transparent 124deg 150deg,
+            #ff3ca6 150deg 154deg, transparent 154deg 180deg,
+            #ffd23c 180deg 184deg, transparent 184deg 210deg,
+            #6cff8d 210deg 214deg, transparent 214deg 240deg,
+            #3cd2ff 240deg 244deg, transparent 244deg 270deg,
+            #a86cff 270deg 274deg, transparent 274deg 300deg,
+            #ff3ca6 300deg 304deg, transparent 304deg 330deg,
+            #ffd23c 330deg 334deg, transparent 334deg 360deg);
+        }
+        /*
+          箱から出てきたもの。下からせり上がる。
+          結果の文字だけだと「箱から出た」感じにならない。
+        */
+        .chest-prize {
+          display: flex; justify-content: center; margin-top: 10px;
+          animation: prizeRise .62s cubic-bezier(.16,1,.3,1);
+        }
+        .chest-prize .dex-view.static-card.oracle { max-width: 116px; }
+        @keyframes prizeRise {
+          0%   { opacity: 0; transform: translateY(22px) scale(0.82); }
+          60%  { opacity: 1; transform: translateY(-4px) scale(1.04); }
+          100% { opacity: 1; transform: translateY(0) scale(1); }
+        }
+        .shard-got .shard-mark { animation: prizeRise .62s cubic-bezier(.16,1,.3,1); }
         .chest-result {
           margin-top: 10px; text-align: center; font-size: 12px; line-height: 1.9;
           letter-spacing: 0.04em; color: var(--parchment);
@@ -17100,7 +17523,7 @@ export default function TarotDraw() {
         .shard-line { font-size: 10.5px; color: var(--muted); letter-spacing: 0.06em; text-align: center; margin-top: 6px; }
 
         /*
-          【ホロ】216分の1でのみ発現する、本物の虹。
+          【ホロ】64分の1でのみ発現する、本物の虹。
           常時演出と同じ見え方では特別さが伝わらないので、
           彩度・速度・光量のすべてを一段引き上げ、
           外周に回転する虹の輪を重ねて別物にする。
@@ -17618,7 +18041,13 @@ export default function TarotDraw() {
           /* 閃きは opacity:0 が初期値なので、動きを止めると消えてしまう。
              控えめな値で出したままにする */
           .rare-card::before { opacity: 0.28 !important; }
-          .chest { transition: none !important; }
+          .chest, .chest.holo-chest, .chest.opened, .chest.opened::before,
+          .chest.opened::after, .chest-prize, .shard-got .shard-mark {
+            transition: none !important; animation: none !important;
+          }
+          .chest.opened::before, .chest.opened::after { opacity: 0 !important; }
+          /* 回転を止めると裏を向いたままになるので、表で固定する */
+          .prize-spin { animation: none !important; transform: rotateY(0deg) !important; }
           .reload-btn:hover, .reload-btn:active { transform: none !important; }
         }
         @media (max-width: 520px) {
@@ -17921,13 +18350,15 @@ export default function TarotDraw() {
                 )}
                 {recordsTab === "history" && <HistoryPanel history={history} lang={lang} />}
                 {recordsTab === "stats" && <StatsPanel history={history} lang={lang} />}
-                {recordsTab === "dex" && <DexPanel lang={lang} rareDex={rareDex} holoDex={holoDex} rareShard={rareShard} holoShard={holoShard} holoShardCost={holoShardCost(holoShardSpent)} />}
+                {recordsTab === "dex" && <DexPanel lang={lang} rareDex={rareDex} holoDex={holoDex} shards={shards} shardSpent={shardSpent} />}
                 {recordsTab === "shard" && (
                   <ShardPanel
                     lang={lang}
-                    rareShard={rareShard} holoShard={holoShard}
-                    rareCost={RARE_SHARD_COST} holoCost={holoShardCost(holoShardSpent)}
-                    rareLeft={!!pickLockedSlot(rareDex)} holoLeft={!!pickLockedSlot(holoDex)}
+                    shards={shards} shardSpent={shardSpent}
+                    leftOf={(k) => {
+                      const def = SHARD_KINDS.find((x) => x.key === k);
+                      return !!pickLockedSlot(def.tier === "holo" ? holoDex : rareDex, def.dark);
+                    }}
                     onExchange={exchangeShard} last={lastExchanged}
                   />
                 )}
