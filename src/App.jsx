@@ -1,4 +1,4 @@
-import { useState, useEffect, useRef } from "react";
+import { useState, useEffect, useRef, useMemo } from "react";
 import { Sparkles, Flame, Droplet, Swords, Coins, RotateCcw, Shuffle, Copy, Check, Star, Share2, Volume2, VolumeX, Pause, Play, Square } from "lucide-react";
 
 /* ============================================================
@@ -2175,10 +2175,12 @@ function getCardName(card, lang) {
 
 // カードのサブラベル（「大アルカナ」「小アルカナ・棒（火）」等）を言語別に返す
 const MAJOR_ARCANA_LABEL_I18N = {
-  ja: "大アルカナ", "zh-TW": "大阿爾克那", en: "Major Arcana", tl: "Major Arcana", th: "ไพ่ชุดใหญ่ (Major Arcana)", id: "Major Arcana", ms: "Major Arcana", vi: "Ẩn Chính", ko: "메이저 아르카나",
+  // zh-CN と sv が抜けていて、簡体字の利用者だけ英語が出ていた。
+  // 11言語ぶん揃っているか、表を足すたびに数を数えること
+  ja: "大アルカナ", "zh-TW": "大阿爾克那", "zh-CN": "大阿尔克那", en: "Major Arcana", tl: "Major Arcana", th: "ไพ่ชุดใหญ่ (Major Arcana)", id: "Major Arcana", ms: "Major Arcana", vi: "Ẩn Chính", ko: "메이저 아르카나", sv: "Stora arkanan",
 };
 const MINOR_ARCANA_PREFIX_I18N = {
-  ja: "小アルカナ・", "zh-TW": "小阿爾克那・", en: "Minor Arcana · ", tl: "Minor Arcana · ", th: "ไพ่ชุดเล็ก · ", id: "Minor Arcana · ", ms: "Minor Arcana · ", vi: "Ẩn Phụ · ", ko: "마이너 아르카나 · ",
+  ja: "小アルカナ・", "zh-TW": "小阿爾克那・", "zh-CN": "小阿尔克那・", en: "Minor Arcana · ", tl: "Minor Arcana · ", th: "ไพ่ชุดเล็ก · ", id: "Minor Arcana · ", ms: "Minor Arcana · ", vi: "Ẩn Phụ · ", ko: "마이너 아르카나 · ", sv: "Lilla arkanan · ",
 };
 /**
  * 逆位置でカード全体を180度回したとき、文字だけ読める向きに戻すか。
@@ -2298,6 +2300,49 @@ function noBreakAroundDot(text) {
 
 function needsUprightTextFor(lang) {
   return lang === "en" || lang === "tl" || lang === "th" || lang === "id" || lang === "ms" || lang === "vi";
+}
+
+const RARE_DEX_KEY = "tarot_rare_dex";
+const HOLO_DEX_KEY = "tarot_holo_dex";
+
+function loadDexAt(key) {
+  try {
+    const raw = localStorage.getItem(key);
+    if (!raw) return {};
+    const obj = JSON.parse(raw);
+    return obj && typeof obj === "object" ? obj : {};
+  } catch {
+    return {};
+  }
+}
+
+function saveDexAt(key, dex) {
+  try {
+    localStorage.setItem(key, JSON.stringify(dex || {}));
+  } catch {
+    /* 保存できなくても図鑑以外の動作には影響しない */
+  }
+}
+
+const loadRareDex = () => loadDexAt(RARE_DEX_KEY);
+const loadHoloDex = () => loadDexAt(HOLO_DEX_KEY);
+const saveRareDex = (d) => saveDexAt(RARE_DEX_KEY, d);
+const saveHoloDex = (d) => saveDexAt(HOLO_DEX_KEY, d);
+
+/**
+ * 図鑑に1面を記録する。第二段の宝箱・欠片から呼ぶ入口。
+ * レアとホロで同じ関数を使う（渡す図鑑が違うだけ）。
+ * ここを1つに絞っておくと、開放の経路が増えても書き込み口は1つで済む。
+ */
+function unlockDexSlot(dex, cardId, reversed) {
+  const cur = dex[cardId] || {};
+  const key = reversed ? "rev" : "up";
+  if (cur[key]) return dex; // 既に持っている面は書き換えない
+  return { ...dex, [cardId]: { ...cur, [key]: true } };
+}
+
+function majorArcanaLabel(lang) {
+  return MAJOR_ARCANA_LABEL_I18N[lang] || MAJOR_ARCANA_LABEL_I18N.en || MAJOR_ARCANA_LABEL_I18N.ja;
 }
 
 function getCardSub(card, lang) {
@@ -2909,11 +2954,131 @@ const SHEEN_SPARKS = buildSparks({
   count: 12, colors: SHEEN_SPARK_COLORS, rx: 124, ry: 172, sizeBase: 3, sizeStep: 1,
 });
 
+/* ============================================================
+   レア（宝箱が出る層）
+
+   ホロ（1/216・正位置限定・ばちばち）とは別の、日常的な当たり。
+   図鑑を埋めるのはこの層で、ホロはその上に乗る箔。
+
+   確率は「1日5引き」ではなく「引いた回数」で決めてある。
+   無制限に引ける以上、日数で設計しても意味がないため。
+
+     大アルカナ 1/12 … 5引きで35%、10引きで58%
+     小アルカナ 1/8  … 5引きで49%、10引きで74%
+
+   小アルカナを高くしているのは、枠が2.5倍（112対44）あるから。
+   同率にすると小アルカナだけ3倍長くかかり、先に見放される。
+   ============================================================ */
+const RARE_ODDS = { major: 12, minor: 8 };
+
+function rollRare(drawn, deck) {
+  if (!drawn) return false;
+  if (isForcedRare() || isForcedDark()) return true;
+  /*
+    向きは問わない。ホロは「祝福」なので良い向きに限っているが、
+    レアは蒐集の層なので、どちらの向きで出ても図鑑の別の枠が埋まる。
+    向きを絞ると、絞られた側の枠が永久に埋まらない。
+  */
+  const odds = deck === "minor" ? RARE_ODDS.minor : RARE_ODDS.major;
+  return Math.floor(Math.random() * odds) === 0;
+}
+
+/* ------------------------------------------------------------
+   宝箱
+
+   3つ。①引いた向きの枠 ②はずれ ③はずれ（中に稀な当たり）
+
+   以前は4つで、①正位置 ②逆位置 ③④はずれ だった。
+   暗い版（難しい側の向き）を作った時点で、正逆は別々の見た目を
+   持つ「別の札」になったので、引いていない向きが箱から出るのは
+   筋が通らなくなった。引いた向きの枠だけを対象にする。
+
+   当たりは3つに1つ。以前の1/2より渋くなるが、
+   はずれが2つ並ぶことで、選ぶ行為が賭けとして成立する。
+
+   ③だけ中にさらに稀な当たりを隠してある。
+   ②と③は開ける前も開けた後も見分けが付かない（当たったときだけ
+   演出が変わる）。見分けが付くと③だけ狙われ、選択が選択でなくなる。
+   ------------------------------------------------------------ */
+const CHEST_COUNT = 3;
+const CHEST_RARE_SHARD_ODDS = 6;   // ③の中で レアの欠片
+const CHEST_HOLO_SHARD_ODDS = 80;  // ③の中で ホロの欠片
+
+/**
+ * 宝箱の中身を決める。引く前に全部決めておき、
+ * どれを選んでも公平であることを保証する（並び順に意味を持たせない）。
+ *
+ * 戻り値は3要素の配列。各要素は
+ *   { type: "slot" }        引いた向きの枠
+ *   { type: "miss" }        はずれ
+ *   { type: "rareShard" }   はずれ枠から出たレアの欠片
+ *   { type: "holoShard" }   はずれ枠から出たホロの欠片
+ */
+function buildChests() {
+  const chests = [{ type: "slot" }, { type: "miss" }, { type: "miss" }];
+  // ③に相当する1つ（並べ替える前の3番目）にだけ、稀な当たりを仕込む。
+  // ホロの欠片を先に判定する ―― 逆にするとレアが先に当たって
+  // ホロの目が出る機会そのものが減る
+  if (Math.floor(Math.random() * CHEST_HOLO_SHARD_ODDS) === 0) chests[2] = { type: "holoShard" };
+  else if (Math.floor(Math.random() * CHEST_RARE_SHARD_ODDS) === 0) chests[2] = { type: "rareShard" };
+  // 位置を混ぜる。混ぜないと「左端が当たり」と覚えられてしまう
+  for (let i = chests.length - 1; i > 0; i--) {
+    const j = Math.floor(Math.random() * (i + 1));
+    [chests[i], chests[j]] = [chests[j], chests[i]];
+  }
+  return chests;
+}
+
+/* ------------------------------------------------------------
+   欠片
+
+   チケットではなく欠片と呼ぶ。15枚必要なものを券と呼ぶと、
+   14枚持っている状態が「まだ使えない券」になる。
+   欠片なら14枚は「もう少しで揃う」。同じ数字でも、
+   前者は不足の表示、後者は所有の表示になる。
+
+   レアの欠片は固定15枚。レア図鑑は完成しうるので、
+   後半で余って一気に消費される心配がない。
+   ホロの欠片は3枚から1ずつ増える。ホロ図鑑は完成しないので、
+   固定にすると後半で欠片が余り、一気に消費されて止まる。
+   ------------------------------------------------------------ */
+const RARE_SHARD_COST = 15;
+const HOLO_SHARD_BASE = 3;
+
+const LS_RARE_SHARD = "tarot_rare_shard";
+const LS_HOLO_SHARD = "tarot_holo_shard";
+const LS_HOLO_SHARD_SPENT = "tarot_holo_shard_spent"; // 何回交換したか（費用の逓増に使う）
+const LS_RARE_SHARD_SPENT = "tarot_rare_shard_spent";
+
+function loadNum(key) {
+  try { return parseInt(localStorage.getItem(key) || "0", 10) || 0; } catch { return 0; }
+}
+function saveNum(key, v) {
+  try { localStorage.setItem(key, String(v)); } catch {}
+}
+
+/** 次にホロ枠を1つ開放するのに要る欠片の数 */
+function holoShardCost(spent) {
+  return HOLO_SHARD_BASE + spent;
+}
+
+/** 図鑑で未取得の面を1つ選ぶ。無ければ null */
+function pickLockedSlot(dex) {
+  const rest = [];
+  [...MAJOR_LIST, ...MINOR_LIST].forEach((c) => {
+    const e = (dex && dex[c.id]) || {};
+    if (!e.up) rest.push({ id: c.id, reversed: false });
+    if (!e.rev) rest.push({ id: c.id, reversed: true });
+  });
+  if (!rest.length) return null;
+  return rest[Math.floor(Math.random() * rest.length)];
+}
+
 function rollOneOracleHolo(drawn) {
   if (!drawn) return false;
   // デバッグ用の強制発現。向きを問わず出るようにしておかないと、
   // 引き直すたびに条件の合う向きを待つことになり確認しづらい
-  if (isForcedOneOracleHolo()) return true;
+  if (isForcedOneOracleHolo() || isForcedDarkHolo()) return true;
 
   /*
     ホロは祝福として働くべきなので、そのカードの「良い方の向き」でのみ発現させる。
@@ -2922,10 +3087,23 @@ function rollOneOracleHolo(drawn) {
       逆位置はその行動デバフが消えて霧が晴れる）。
     向きラベルの配色を反転させているのと同じ規則をここでも使う。
   */
-  const inverted = ORIENTATION_INVERTED_CARDS.has(String(drawn.id));
-  const isGoodSide = inverted ? drawn.reversed : !drawn.reversed;
-  if (!isGoodSide) return false;
+  /*
+    【向きの制限を外した】
 
+    以前は「良い方の向き」でしか発現しなかった。祝福として働くべき、
+    という理由だったが、図鑑を入れた時点でこの制限が穴になっていた ――
+    ホロの棚は正逆の156枠あるのに、引いて手に入るのは常に良い側だけで、
+    難しい側の78枠は欠片経由でしか埋まらなかった。
+
+    向きを問わなくすることで、
+      ・156枠すべてが引いて手に入る
+      ・月・死神・塔・悪魔・吊られた男の例外分岐がここから消える
+      ・ホロに出会う頻度が2倍（1/432 → 1/216）
+    最後の点は意図的。頻度が上がるぶん棚は埋まりにくくなるが、
+    年に数回しか会えないものは、前に何が出たか思い出せないまま次が来る。
+
+    難しい側で出たホロは「ダークホロ」として別の見た目になる。
+  */
   return Math.floor(Math.random() * ONE_ORACLE_HOLO_ODDS) === 0;
 }
 
@@ -5294,7 +5472,40 @@ const EXTRA_ACHIEVEMENTS = [
     格が違うものを同じ棚に並べないための切り分け。
   */
   { key: "holo_seen",      test: () => hasSeenHolo() },
+  /*
+    図鑑の収集。履歴ではなく図鑑の保存を直接見る。
+    引いた記録から数え直すと、欠片で開けた枠が数に入らない。
+  */
+  { key: "dex_first",   test: () => dexSlotCount(loadRareDex()) >= 1 },
+  { key: "dex_rare10",  test: () => dexSlotCount(loadRareDex()) >= 10 },
+  { key: "dex_rare50",  test: () => dexSlotCount(loadRareDex()) >= 50 },
+  { key: "dex_rare100", test: () => dexSlotCount(loadRareDex()) >= 100 },
+  { key: "dex_rare_all",test: () => dexSlotCount(loadRareDex()) >= 156 },
+  { key: "dex_holo1",   test: () => dexSlotCount(loadHoloDex()) >= 1 },
+  { key: "dex_holo10",  test: () => dexSlotCount(loadHoloDex()) >= 10 },
+  { key: "dex_holo50",  test: () => dexSlotCount(loadHoloDex()) >= 50 },
+  // 同じ札を4枠すべて（レア正逆・ホロ正逆）そろえた
+  { key: "dex_full_one", test: () => {
+      const r = loadRareDex(), h = loadHoloDex();
+      return [...MAJOR_LIST, ...MINOR_LIST].some((c) => {
+        const a = r[c.id] || {}, b = h[c.id] || {};
+        return a.up && a.rev && b.up && b.rev;
+      });
+    } },
+  // 欠片を使って枠を開けた
+  { key: "shard_used",  test: () => loadNum(LS_HOLO_SHARD_SPENT) >= 1 || loadNum(LS_RARE_SHARD_SPENT) >= 1 },
 ];
+
+/** 図鑑の埋まっている枠数を数える */
+function dexSlotCount(dex) {
+  let n = 0;
+  [...MAJOR_LIST, ...MINOR_LIST].forEach((c) => {
+    const e = (dex && dex[c.id]) || {};
+    if (e.up) n++;
+    if (e.rev) n++;
+  });
+  return n;
+}
 
 function allAchievementDefs() {
   return [...TITLE_DEFS, ...EXTRA_ACHIEVEMENTS];
@@ -5361,6 +5572,16 @@ const TITLE_NAMES = {
     holo_major_20: "虹の告げる審判",
     holo_major_21: "虹に満ちた世界",
     holo_seen: "虹を見た日",
+    dex_first: "最初の一枠",
+    dex_rare10: "十枠の蒐集家",
+    dex_rare50: "五十枠の蒐集家",
+    dex_rare100: "百枠の蒐集家",
+    dex_rare_all: "図鑑を満たす者",
+    dex_holo1: "初めての虹箔",
+    dex_holo10: "十枠の虹箔",
+    dex_holo50: "五十枠の虹箔",
+    dex_full_one: "四面そろえた者",
+    shard_used: "欠片を束ねた者",
     wrote_question: "初めての問いかけ",
     used_deepdive: "深く尋ねた者",
     left_memento: "記憶を託した者",
@@ -5408,6 +5629,16 @@ const TITLE_NAMES = {
     holo_major_20: "무지개가 알리는 심판",
     holo_major_21: "무지개로 가득 찬 세계",
     holo_seen: "무지개를 본 날",
+    dex_first: "첫 번째 칸",
+    dex_rare10: "열 칸의 수집가",
+    dex_rare50: "오십 칸의 수집가",
+    dex_rare100: "백 칸의 수집가",
+    dex_rare_all: "도감을 채운 자",
+    dex_holo1: "첫 홀로",
+    dex_holo10: "열 칸의 홀로",
+    dex_holo50: "오십 칸의 홀로",
+    dex_full_one: "네 면을 모은 자",
+    shard_used: "조각을 엮은 자",
     wrote_question: "첫 물음",
     used_deepdive: "깊이 물은 자",
     left_memento: "기억을 맡긴 자",
@@ -5455,6 +5686,16 @@ const TITLE_NAMES = {
     holo_major_20: "虹所宣告的審判",
     holo_major_21: "盈滿虹光的世界",
     holo_seen: "見過彩虹的日子",
+    dex_first: "最初的一格",
+    dex_rare10: "十格的蒐集者",
+    dex_rare50: "五十格的蒐集者",
+    dex_rare100: "百格的蒐集者",
+    dex_rare_all: "填滿圖鑑之人",
+    dex_holo1: "初次的虹箔",
+    dex_holo10: "十格的虹箔",
+    dex_holo50: "五十格的虹箔",
+    dex_full_one: "集齊四面之人",
+    shard_used: "綴合碎片之人",
     wrote_question: "初次的提問",
     used_deepdive: "深入詢問之人",
     left_memento: "託付記憶之人",
@@ -5502,6 +5743,16 @@ const TITLE_NAMES = {
     holo_major_20: "虹所声明的审判",
     holo_major_21: "盈满虹光的世界",
     holo_seen: "见过彩虹的日子",
+    dex_first: "最初的一格",
+    dex_rare10: "十格的收集者",
+    dex_rare50: "五十格的收集者",
+    dex_rare100: "百格的收集者",
+    dex_rare_all: "填满图鉴之人",
+    dex_holo1: "初次的虹箔",
+    dex_holo10: "十格的虹箔",
+    dex_holo50: "五十格的虹箔",
+    dex_full_one: "集齐四面之人",
+    shard_used: "缀合碎片之人",
     wrote_question: "初次的提问",
     used_deepdive: "深入询问之人",
     left_memento: "托付记忆之人",
@@ -5549,6 +5800,16 @@ const TITLE_NAMES = {
     holo_major_20: "Judgment Told by Rainbow",
     holo_major_21: "World Filled with Rainbow",
     holo_seen: "The Day You Saw the Rainbow",
+    dex_first: "The First Slot",
+    dex_rare10: "Collector of Ten",
+    dex_rare50: "Collector of Fifty",
+    dex_rare100: "Collector of a Hundred",
+    dex_rare_all: "One Who Filled the Codex",
+    dex_holo1: "First Holo",
+    dex_holo10: "Ten Holo Slots",
+    dex_holo50: "Fifty Holo Slots",
+    dex_full_one: "One Who Gathered All Four",
+    shard_used: "One Who Bound the Shards",
     wrote_question: "The First Question",
     used_deepdive: "One Who Asked Deeper",
     left_memento: "One Who Entrusted a Memory",
@@ -5596,6 +5857,16 @@ const TITLE_NAMES = {
     holo_major_20: "Paghuhukom na Ibinalita ng Bahaghari",
     holo_major_21: "Mundong Puno ng Bahaghari",
     holo_seen: "Ang Araw na Nakita Mo ang Bahaghari",
+    dex_first: "Ang Unang Puwang",
+    dex_rare10: "Kolektor ng Sampu",
+    dex_rare50: "Kolektor ng Limampu",
+    dex_rare100: "Kolektor ng Isang Daan",
+    dex_rare_all: "Ang Pumuno sa Kodeks",
+    dex_holo1: "Unang Holo",
+    dex_holo10: "Sampung Holo",
+    dex_holo50: "Limampung Holo",
+    dex_full_one: "Ang Nakatipon ng Apat",
+    shard_used: "Ang Nag-ugnay ng mga Shard",
     wrote_question: "Ang Unang Tanong",
     used_deepdive: "Nagtanong nang Mas Malalim",
     left_memento: "Nagkatiwala ng Alaala",
@@ -5643,6 +5914,16 @@ const TITLE_NAMES = {
     holo_major_20: "คำพิพากษาที่สายรุ้งบอก",
     holo_major_21: "โลกที่เปี่ยมด้วยสายรุ้ง",
     holo_seen: "วันที่ได้เห็นสายรุ้ง",
+    dex_first: "ช่องแรก",
+    dex_rare10: "นักสะสมสิบช่อง",
+    dex_rare50: "นักสะสมห้าสิบช่อง",
+    dex_rare100: "นักสะสมร้อยช่อง",
+    dex_rare_all: "ผู้เติมเต็มสารานุกรม",
+    dex_holo1: "โฮโลครั้งแรก",
+    dex_holo10: "โฮโลสิบช่อง",
+    dex_holo50: "โฮโลห้าสิบช่อง",
+    dex_full_one: "ผู้รวบรวมครบสี่ด้าน",
+    shard_used: "ผู้ประสานเศษชิ้น",
     wrote_question: "คำถามแรก",
     used_deepdive: "ผู้ถามลึกลงไป",
     left_memento: "ผู้ฝากความทรงจำ",
@@ -5690,6 +5971,16 @@ const TITLE_NAMES = {
     holo_major_20: "Penghakiman Dikabarkan Pelangi",
     holo_major_21: "Dunia Penuh Pelangi",
     holo_seen: "Hari Kamu Melihat Pelangi",
+    dex_first: "Slot Pertama",
+    dex_rare10: "Kolektor Sepuluh",
+    dex_rare50: "Kolektor Lima Puluh",
+    dex_rare100: "Kolektor Seratus",
+    dex_rare_all: "Pemenuh Katalog",
+    dex_holo1: "Holo Pertama",
+    dex_holo10: "Sepuluh Slot Holo",
+    dex_holo50: "Lima Puluh Slot Holo",
+    dex_full_one: "Pengumpul Keempat Sisi",
+    shard_used: "Perangkai Pecahan",
     wrote_question: "Pertanyaan Pertama",
     used_deepdive: "Yang Bertanya Lebih Dalam",
     left_memento: "Yang Menitipkan Kenangan",
@@ -5737,6 +6028,16 @@ const TITLE_NAMES = {
     holo_major_20: "Penghakiman Dikabarkan Pelangi",
     holo_major_21: "Dunia Penuh Pelangi",
     holo_seen: "Hari Anda Melihat Pelangi",
+    dex_first: "Slot Pertama",
+    dex_rare10: "Pengumpul Sepuluh",
+    dex_rare50: "Pengumpul Lima Puluh",
+    dex_rare100: "Pengumpul Seratus",
+    dex_rare_all: "Pemenuh Katalog",
+    dex_holo1: "Holo Pertama",
+    dex_holo10: "Sepuluh Slot Holo",
+    dex_holo50: "Lima Puluh Slot Holo",
+    dex_full_one: "Pengumpul Empat Sisi",
+    shard_used: "Perangkai Serpihan",
     wrote_question: "Soalan Pertama",
     used_deepdive: "Yang Bertanya Lebih Dalam",
     left_memento: "Yang Menitipkan Kenangan",
@@ -5784,6 +6085,16 @@ const TITLE_NAMES = {
     holo_major_20: "Phán Xét Do Cầu Vồng Báo",
     holo_major_21: "Thế Giới Đầy Cầu Vồng",
     holo_seen: "Ngày Bạn Thấy Cầu Vồng",
+    dex_first: "Ô Đầu Tiên",
+    dex_rare10: "Người Sưu Tầm Mười Ô",
+    dex_rare50: "Người Sưu Tầm Năm Mươi Ô",
+    dex_rare100: "Người Sưu Tầm Trăm Ô",
+    dex_rare_all: "Người Lấp Đầy Bộ Sưu Tập",
+    dex_holo1: "Holo Đầu Tiên",
+    dex_holo10: "Mười Ô Holo",
+    dex_holo50: "Năm Mươi Ô Holo",
+    dex_full_one: "Người Gom Đủ Bốn Mặt",
+    shard_used: "Người Kết Nối Mảnh Vỡ",
     wrote_question: "Câu Hỏi Đầu Tiên",
     used_deepdive: "Kẻ Hỏi Sâu Hơn",
     left_memento: "Kẻ Gửi Gắm Ký Ức",
@@ -6017,6 +6328,66 @@ function recordHoloSeen(cardId) {
 function hasHoloCard(cardId) {
   return loadHoloCards().includes(cardId);
 }
+/*
+  レア（宝箱が出る層）の強制発現。
+  ホロ（1/216・ばちばち）とは別の層なので、旗も別に持つ。
+  同じキーを共用すると、片方を消したときにもう片方まで解除される。
+*/
+const LS_FORCE_RARE = "tarot_force_rare";
+function isForcedRare() {
+  try { return localStorage.getItem(LS_FORCE_RARE) === "1"; } catch { return false; }
+}
+function setForcedRare(on) {
+  try {
+    if (on) localStorage.setItem(LS_FORCE_RARE, "1");
+    else localStorage.removeItem(LS_FORCE_RARE);
+  } catch {}
+}
+
+/*
+  レアの暗い版を確認するための強制。
+  暗い版は「その札にとって難しい側の向き」に出るので、
+  レアを強制するだけでは半分の確率でしか見られない。
+  向きまで寄せないと、確認のたびに引き直すことになる。
+*/
+const LS_FORCE_DARK = "tarot_force_dark";
+function isForcedDark() {
+  try { return localStorage.getItem(LS_FORCE_DARK) === "1"; } catch { return false; }
+}
+function setForcedDark(on) {
+  try {
+    if (on) localStorage.setItem(LS_FORCE_DARK, "1");
+    else localStorage.removeItem(LS_FORCE_DARK);
+  } catch {}
+}
+
+/*
+  ダークホロ（難しい側の向きで出たホロ）を確認するための強制。
+  ホロは向きを問わず出るようになったので、旗を1つ立てれば
+  「ホロを強制する」と「向きを寄せる」の2つが要る。
+  ホロ用の旗（LS_FORCE_ONE_ORACLE_HOLO）と向き用の旗を
+  別々に立てると、片方だけ消えた状態が生まれるので1つにまとめる。
+*/
+const LS_FORCE_DARK_HOLO = "tarot_force_dark_holo";
+function isForcedDarkHolo() {
+  try { return localStorage.getItem(LS_FORCE_DARK_HOLO) === "1"; } catch { return false; }
+}
+function setForcedDarkHolo(on) {
+  try {
+    if (on) localStorage.setItem(LS_FORCE_DARK_HOLO, "1");
+    else localStorage.removeItem(LS_FORCE_DARK_HOLO);
+  } catch {}
+}
+
+/**
+ * その札にとって難しい側の向きを返す。
+ * 月・死神・塔・悪魔・吊られた男は逆位置が良い向きなので、
+ * この5枚だけ正位置が返る。
+ */
+function badOrientationOf(card) {
+  return !ORIENTATION_INVERTED_CARDS.has(String(card && card.id));
+}
+
 function isForcedOneOracleHolo() {
   try { return localStorage.getItem(LS_FORCE_ONE_ORACLE_HOLO) === "1"; } catch { return false; }
 }
@@ -6772,30 +7143,60 @@ function CelticPlane({ drawn, openedIndices, lang, isLast }) {
   }
 
   /*
-    迷いと安定。
+    動揺と安静。
 
-    迷い … 各段で進む向きがどれだけ変わったかの平均。
-           180度に近い折り返しが続くほど高い。
-    安定 … 到達距離 ÷ 総移動距離。まっすぐ来れば1に近く、
-           行きつ戻りつすれば0に近い。
+    【なぜ作り直したか】
+    以前は「到達距離 ÷ 総移動距離」で測っていた。これは壊れていた。
+    停滞を消すために押す向きを段ごとに回している（螺旋）ので、
+    軌跡は構造上まっすぐにならない。4万回の実測で、安静側（50以上）へ
+    振れるのは3.6%しかなく、残りは全部が動揺側に張り付いていた。
+
+      安静%  平均28.5 / 中央28.4 / 95%点48.6 / 最大64.5
+
+    閾値の問題ではなく物差しの問題である。線の形から測るかぎり、
+    停滞対策として入れた回転をそのまま測ってしまう。
+
+    【何を測るか】
+    四領域のうち、領域を移った回数を数える。
+    この図の軸には意味がある（上下＝顕在と潜在、左右＝過去と近い未来）ので、
+    領域を移るとは、心の置きどころが別の側へ渡ったということになる。
+    幾何の直線性より、軸に与えた意味に沿う。
+
+    起点の中心はどの領域にも属さないので、最初に動いた点から数え始める。
+    軸際での小刻みな往復を除く不感帯も試したが、実測で分布が潰れる
+    （8pxにすると35%が「1回」に集中する）ので入れていない。
+    一段あたりの移動が平均27pxあり、軸際の震えはそもそも起きにくい。
+
+    【実測（4万回）】
+      0回 8.6%  1回 17.7%  2回 25.2%  3回 19.3%  4回 13.6%
+      5回 8.0%  6回  4.5%  7回  2.2%  8回  0.8%  9回  0.2%
+
+    針の位置は、この分布の累積の中央から引いている。
+    0〜9回を等間隔に割ると、平均2.7回が右端寄りに来て、
+    今度は安静側へ張り付く。分位点で置けば中央付近に落ちる。
+
+    【この物差しが持つ意味】
+    札の質が揃っているほど領域をまたぎ、混ざっているほど一つに留まる。
+
+      良い向きの札  0枚 6.34回 / 3枚 2.64 / 5枚 2.46 / 7枚 3.04 / 10枚 6.47
+
+    押しの表は向かい合う位置に反対のベクトルを与えてあるので
+    （顕在[0,1] と 潜在[0,-1]、過去[-1,0] と 近い未来[1,0]）、
+    十枚が同じ強さで押すと打ち消し合い、点はどこにも落ち着かず回る。
+    「顕在と潜在の両方が強く出て拮抗している」状態を動揺と読む形になる。
+    十枚とも良い向きになるのは0.1%なので実害は小さいが、
+    この読み方を採らないなら物差しごと変える必要がある。
   */
-  let turnSum = 0, turnCount = 0, walked = 0;
+  const quadrantOf = (p) => (p.x - C >= 0 ? 0 : 1) + (C - p.y >= 0 ? 0 : 2);
+  let crossed = 0, prevQuad = -1;
   for (let k = 1; k < path.length; k++) {
-    const vx = path[k].x - path[k - 1].x, vy = path[k].y - path[k - 1].y;
-    walked += Math.hypot(vx, vy);
-    if (k >= 2) {
-      const ux = path[k - 1].x - path[k - 2].x, uy = path[k - 1].y - path[k - 2].y;
-      const nu = Math.hypot(ux, uy), nv = Math.hypot(vx, vy);
-      if (nu > 0.01 && nv > 0.01) {
-        const cos = Math.max(-1, Math.min(1, (ux * vx + uy * vy) / (nu * nv)));
-        turnSum += Math.acos(cos) / Math.PI; // 0〜1
-        turnCount++;
-      }
-    }
+    const q = quadrantOf(path[k]);
+    if (prevQuad >= 0 && q !== prevQuad) crossed++;
+    prevQuad = q;
   }
-  const wanderPct = turnCount ? Math.round((turnSum / turnCount) * 100) : 0;
-  const reached = Math.hypot(cur.x - originX, cur.y - originY);
-  const steadyPct = walked > 0.01 ? Math.round((reached / walked) * 100) : 0;
+  // 越えた回数 → 針の位置（安静側の割合）。実測分布の累積の中央
+  const CALM_BY_CROSS = [96, 82, 60, 38, 22, 11, 5, 2, 1, 1];
+  const steadyPct = CALM_BY_CROSS[Math.min(crossed, CALM_BY_CROSS.length - 1)];
 
   const gid = useRef(`cp${Math.random().toString(36).slice(2, 8)}`).current;
 
@@ -6928,8 +7329,8 @@ function CelticPlane({ drawn, openedIndices, lang, isLast }) {
         別々に出すと足して100%にならず、読み手が二つの数を突き合わせる
         羽目になる。針が左右どちらへ寄っているかだけを示す。
 
-        値は、到達距離 ÷ 総移動距離。
-        まっすぐ進めば右（安静）、行きつ戻りつすれば左（動揺）へ寄る。
+        値は、四領域のうち領域を移った回数。
+        一つの領域に留まれば右（安静）、何度も渡り歩けば左（動揺）へ寄る。
       */}
       {isLast && path.length > 1 && (
         <div className="celtic-axis-meter">
@@ -6941,7 +7342,7 @@ function CelticPlane({ drawn, openedIndices, lang, isLast }) {
             <span className="celtic-meter-mid" />
             <span className="celtic-meter-needle" style={{ left: `${steadyPct}%` }} />
           </div>
-          <p className="celtic-meter-read">{t.celticMeterRead(steadyPct)}</p>
+          <p className="celtic-meter-read">{t.celticMeterRead(crossed)}</p>
         </div>
       )}
 
@@ -8653,13 +9054,50 @@ function HexagramPanel({ lang, onBack, question, userName, canDraw, onConsume, o
   積み上がっているためで、複製すると片方だけ直し忘れる形の不具合が必ず出る。
   違うのは束だけなので、束だけを引数にする。
 */
-function OneOraclePanel({ lang, onBack, onHoloConsumed, deck = "major" }) {
+/**
+ * 宝箱の絵。閉じた状態と開いた状態を持つ。
+ * 「?」の文字だと箱に見えず、選ぶ行為がクイズの選択肢に見えてしまう。
+ * 画像は使わずSVGで持つ（数百バイトで済み、「軽い」という優位を崩さない）。
+ */
+function ChestIcon({ open }) {
+  return (
+    <svg viewBox="0 0 40 34" width="34" height="29" aria-hidden="true">
+      {/* 蓋。開くと後ろへ倒れる */}
+      <g style={{
+        transformOrigin: "20px 16px",
+        transform: open ? "translateY(-5px) rotate(-16deg)" : "none",
+        transition: "transform .28s cubic-bezier(.16,1,.3,1)",
+      }}>
+        <path d="M5 16 A15 15 0 0 1 35 16 Z" fill="currentColor" opacity="0.34" />
+        <path d="M5 16 A15 15 0 0 1 35 16" fill="none" stroke="currentColor" strokeWidth="1.6" />
+        {/* 蓋の帯。ここが金具に見えると箱として読まれる */}
+        <path d="M20 3 L20 16" stroke="currentColor" strokeWidth="1.4" opacity="0.75" />
+      </g>
+      {/* 身 */}
+      <rect x="5" y="16" width="30" height="15" rx="2"
+        fill="currentColor" fillOpacity="0.22" stroke="currentColor" strokeWidth="1.6" />
+      <path d="M5 22 H35" stroke="currentColor" strokeWidth="1.2" opacity="0.6" />
+      {/* 錠前 */}
+      <rect x="17.5" y="19" width="5" height="6" rx="1"
+        fill="currentColor" fillOpacity={open ? "0.25" : "0.8"} stroke="currentColor" strokeWidth="1" />
+      {/* 開いたときだけ、中から光が出る */}
+      {open && <circle cx="20" cy="15" r="6" fill="currentColor" opacity="0.28" />}
+    </svg>
+  );
+}
+
+function OneOraclePanel({ lang, onBack, onHoloConsumed, deck = "major", onCollect }) {
   const t = T[lang] || T.ja;
   const deckList = deck === "minor" ? MINOR_LIST : MAJOR_LIST;
   const info = spreadInfo(deck === "minor" ? "oneOracleMinor" : "oneOracle", lang);
   const [card, setCard] = useState(null);
   const [flipping, setFlipping] = useState(false);
   const [holo, setHolo] = useState(false);
+  const [rare, setRare] = useState(false);
+  // 宝箱。null なら出さない。開ける前は中身を伏せる
+  const [chests, setChests] = useState(null);
+  const [chestPicked, setChestPicked] = useState(null);
+  const [chestResult, setChestResult] = useState(null);
   const needsUprightText = needsUprightTextFor(lang);
   const tilt = useTilt(6);
   const [uses, setUses] = useState(() => oneOracleStatus());
@@ -8692,18 +9130,14 @@ function OneOraclePanel({ lang, onBack, onHoloConsumed, deck = "major" }) {
   */
   const draw = () => {
     if (flipping || dragRef.current.dragging) return;
+    setChests(null); setChestPicked(null); setChestResult(null);
     if (oneOracleStatus().remaining <= 0) return; // 引き切っている
     consumeOneOracle();
     setUses(oneOracleStatus());
     setFlipping(true);
     const pool = buildPool(deckList);
     const picked = pool[Math.floor(Math.random() * pool.length)];
-    const isHolo = rollOneOracleHolo(picked);
-    if (isHolo) {
-      setForcedOneOracleHolo(false);
-      recordHoloSeen(picked.id);
-      if (onHoloConsumed) onHoloConsumed();
-    }
+    const { isHolo, isRare } = judge(picked);
     /*
       回転量。3〜4回転させてから止める。
       【重要】360の倍数で止めること。180の倍数だと裏面が正面を向いたまま
@@ -8715,8 +9149,66 @@ function OneOraclePanel({ lang, onBack, onHoloConsumed, deck = "major" }) {
     setSettling(true);
     setDragDeg(finalDeg);
     setTimeout(() => {
-      setCard(picked); setHolo(isHolo); setFlipping(false); setSettling(false); setDragDeg(0);
+      setCard(picked); setHolo(isHolo); setRare(isRare);
+      setFlipping(false); setSettling(false); setDragDeg(0);
+      /*
+        レアだがホロではない回だけ宝箱を出す。
+        ホロは既に確定で開放しているので、その上に箱を重ねない。
+      */
+      if (isRare && !isHolo) { setChests(buildChests()); setChestPicked(null); setChestResult(null); }
     }, 1600);
+  };
+
+  /*
+    引いた1枚に対する当たり判定。
+    ボタンとドラッグの2経路があるので、必ずここを通す。
+    経路ごとに書くと、片方だけ直し忘れる形の不具合が出る。
+  */
+  const judge = (picked) => {
+    /*
+      暗い版の確認用。引いた札の向きを、難しい側へ寄せる。
+      buildPool() が毎回新しい物を返すので、ここで書き換えても
+      元データ（MAJOR_LIST / MINOR_LIST）は汚れない。
+      大アルカナが常に正位置だった不具合は、元データ側を見ていたのが原因で、
+      こちらは pool 由来の物なので同じ穴は開かない。
+    */
+    /*
+      暗い版の確認用。引いた札の向きを、難しい側へ寄せる。
+      レアとホロで同じ処理なので、旗の種類にかかわらず1か所で行う。
+      buildPool() が毎回新しい物を返すので、ここで書き換えても
+      元データ（MAJOR_LIST / MINOR_LIST）は汚れない。
+    */
+    const forcedDark = isForcedDark();
+    const forcedDarkHolo = isForcedDarkHolo();
+    if (forcedDark || forcedDarkHolo) picked.reversed = badOrientationOf(picked);
+    const isHolo = rollOneOracleHolo(picked);
+    /*
+      入れ子にする。ホロが出た回はレアも出たものとして扱う。
+      上位が出たのに下位の棚が進まないのは説明できない。
+      実効のレア率は 1/12 → 1/11.5 程度で、ほぼ無料で整合が取れる。
+    */
+    const isRare = isHolo || rollRare(picked, deck);
+    if (isHolo) {
+      setForcedOneOracleHolo(false);
+      setForcedDarkHolo(false);
+      recordHoloSeen(picked.id);
+      if (onHoloConsumed) onHoloConsumed();
+    }
+    /*
+      旗はすべての判定が終わってから下ろす。
+      判定の途中で下ろすと、まだ旗を読んでいない関数が
+      「立っていない」と受け取る（実際に一度そうなった）。
+    */
+    if (isRare) setForcedRare(false);
+    if (forcedDark) setForcedDark(false);
+    if (forcedDarkHolo) setForcedDarkHolo(false);
+    /*
+      ホロは宝箱を出さず確定で開放する。
+      最上位で抽選を挟むと「ホロを引いたのに外れる」という
+      最悪の回が必ず生まれる。格の違うものは抽選に混ぜない。
+    */
+    if (isHolo && onCollect) onCollect({ kind: "holo", cardId: picked.id, reversed: picked.reversed });
+    return { isHolo, isRare };
   };
 
   const onDragStart = (clientX) => {
@@ -8745,12 +9237,7 @@ function OneOraclePanel({ lang, onBack, onHoloConsumed, deck = "major" }) {
     setFlipping(true);
     const pool = buildPool(deckList);
     const picked = pool[Math.floor(Math.random() * pool.length)];
-    const isHolo = rollOneOracleHolo(picked);
-    if (isHolo) {
-      setForcedOneOracleHolo(false);
-      recordHoloSeen(picked.id);
-      if (onHoloConsumed) onHoloConsumed();
-    }
+    const { isHolo, isRare } = judge(picked);
 
     /*
       離した瞬間の勢いを初速に、そこから数回転して減速し、
@@ -8767,8 +9254,18 @@ function OneOraclePanel({ lang, onBack, onHoloConsumed, deck = "major" }) {
     setDragDeg(finalDeg);
     // transition の秒数（1.2s）と必ず一致させる
     setTimeout(() => {
-      setCard(picked); setHolo(isHolo); setFlipping(false); setSettling(false); setDragDeg(0);
+      setCard(picked); setHolo(isHolo); setRare(isRare);
+      setFlipping(false); setSettling(false); setDragDeg(0);
+      if (isRare && !isHolo) { setChests(buildChests()); setChestPicked(null); setChestResult(null); }
     }, 1600);
+  };
+
+  const openChest = (i) => {
+    if (chestPicked !== null || !chests || !card) return;
+    setChestPicked(i);
+    const got = chests[i];
+    setChestResult(got);
+    if (onCollect) onCollect({ kind: "chest", got, cardId: card.id, reversed: card.reversed });
   };
 
   return (
@@ -8887,16 +9384,27 @@ function OneOraclePanel({ lang, onBack, onHoloConsumed, deck = "major" }) {
         </div>
       ) : (
         <>
-          {/* 大当たりの告知。カードより先に目に入る位置に置く */}
-          {holo && (
-            <p style={{
-              margin: "0 0 2px", fontFamily: "'Shippori Mincho', serif",
-              fontSize: "13px", letterSpacing: "0.18em", textIndent: "0.18em",
-              animation: "holoRevealText 1.4s cubic-bezier(.16,1,.3,1)",
-            }} className="holo-text">
-              {t.oneOracleHoloTitle}
-            </p>
-          )}
+          {/*
+            告知。カードより先に目に入る位置に置く。
+            段（レア／ホロ）と向き（良い側／難しい側）の2軸で文言を変える。
+            ダークホロは「虹」ではない ―― 光ではなく闇が来た回なので、
+            同じ言葉を使うと演出と文言が食い違う。
+          */}
+          {(holo || rare) && (() => {
+            const dark = !isGoodOrientation(card, card.reversed);
+            const label = holo
+              ? (dark ? t.oneOracleDarkHoloTitle : t.oneOracleHoloTitle)
+              : (dark ? t.oneOracleDarkRareTitle : t.oneOracleRareTitle);
+            return (
+              <p style={{
+                margin: "0 0 2px", fontFamily: "'Shippori Mincho', serif",
+                fontSize: holo ? "13px" : "12px", letterSpacing: "0.18em", textIndent: "0.18em",
+                animation: "holoRevealText 1.4s cubic-bezier(.16,1,.3,1)",
+              }} className={`${holo ? "holo-text" : "rare-text"}${dark ? " dark" : ""}`}>
+                {label}
+              </p>
+            );
+          })()}
 
           {/* 星屑の基準となる枠。カードと同じ大きさを明示しないと、
               inset や left:50% の基準が定まらず粒が正しい位置に出ない */}
@@ -8945,14 +9453,54 @@ function OneOraclePanel({ lang, onBack, onHoloConsumed, deck = "major" }) {
             style={{ ...tilt.style, willChange: "transform" }}
           >
           <div
-            className={`static-card oracle ${holo ? "holo-card" : "sheen-card"}`}
+            className={`static-card oracle ${(() => {
+              // 段（ホロ／レア）と、その札にとって難しい側かどうかの2軸で決める。
+              // 暗い版の判定は1つの式に集約する ―― 段ごとに書くと片方だけ直し忘れる
+              const dark = !isGoodOrientation(card, card.reversed);
+              if (holo) return `holo-card${dark ? " dark" : ""}`;
+              if (rare) return `rare-card${dark ? " dark" : ""}`;
+              return "sheen-card";
+            })()}`}
             style={{
               // 幅はCSSクラス側（.static-card.oracle）で指定するので、ここでは上書きしない
-              ...(holo ? { animation: "holoReveal 1.1s cubic-bezier(.16,1,.3,1)" } : null),
+              /*
+                【重要】インラインの animation は CSS 側の animation を丸ごと置き換える。
+                以前はここで holoReveal だけを書いていたため、
+                .holo-card の脈動（holoCardGlow）と
+                .holo-card.dark の脈動（darkHoloGlow）が一度も動いていなかった。
+                出現と脈動を「,」で1つの文字列に組み立てて渡す。
+              */
+              ...(holo ? {
+                animation: [
+                  "holoReveal 1.1s cubic-bezier(.16,1,.3,1)",
+                  isGoodOrientation(card, card.reversed)
+                    ? "holoCardGlow 1.6s ease-in-out infinite"
+                    : "darkHoloGlow 4.8s ease-in-out infinite",
+                ].join(", "),
+              } : null),
             }}
           >
             <div className="card-depth" aria-hidden="true" />
             <div className="card-shine-layer" aria-hidden="true" />
+            {/* レアの金銀枠。専用の要素に分ける ――
+                ::before と ::after は虹と閃きが既に使っている */}
+            {/*
+              枠は「レア」と「ダークホロ」に出す。明るいホロには出さない
+              （あれは輪と粒子で完成しているので、枠を足すと過剰になる）。
+              段の上下と層の数が逆転しないよう、上位ほど層が多くなるようにする。
+            */}
+            {((rare && !holo) || (holo && !isGoodOrientation(card, card.reversed))) && (
+              <div className="rare-frame" aria-hidden="true" />
+            )}
+            {/* ダークホロの縁の閃光。::before と ::after は輪と帯で埋まっている */}
+            {holo && !isGoodOrientation(card, card.reversed) && (
+              <div className="holo-edge" aria-hidden="true" />
+            )}
+            {/* 霧はレアとホロで共用する。段ごとに別の要素を作ると、
+                霧を直すたびに片方だけ直し忘れる */}
+            {!isGoodOrientation(card, card.reversed) && (rare || holo) && (
+              <div className="rare-mist" aria-hidden="true" />
+            )}
             {/*
               既存のカード表示と同じ構造にする。
               .card-face.reversed が全体を180度回し、
@@ -8983,26 +9531,84 @@ function OneOraclePanel({ lang, onBack, onHoloConsumed, deck = "major" }) {
             「！」のような縦長で細い字だと色帯が斜めに横切り、字そのものが
             傾いて見える。単色にすれば起きない。
           */}
-          {holo && (
-            <span style={{
-              fontFamily: "'Shippori Mincho', serif", fontSize: "15px", fontWeight: 800,
-              letterSpacing: "0.10em", textIndent: "0.10em",
-              color: "#FFE9A3",
-              textShadow: "0 0 10px rgba(255,214,110,0.85), 0 0 22px rgba(255,160,60,0.55)",
-              animation: "holoRevealText 1.4s cubic-bezier(.16,1,.3,1)",
-            }}>
-              {t.oneOracleJackpot}
-            </span>
-          )}
+          {holo && (() => {
+            const dark = !isGoodOrientation(card, card.reversed);
+            return (
+              <span style={{
+                fontFamily: "'Shippori Mincho', serif", fontSize: "15px", fontWeight: 800,
+                letterSpacing: "0.10em", textIndent: "0.10em",
+                // 単色にする。.holo-text の斜めグラデーションだと「！」が傾いて見える
+                color: dark ? "#F0A6D8" : "#FFE9A3",
+                textShadow: dark
+                  ? "0 0 10px rgba(226,44,240,0.85), 0 0 22px rgba(120,20,180,0.65)"
+                  : "0 0 10px rgba(255,214,110,0.85), 0 0 22px rgba(255,160,60,0.55)",
+                animation: "holoRevealText 1.4s cubic-bezier(.16,1,.3,1)",
+              }}>
+                {dark ? t.oneOracleDarkJackpot : t.oneOracleJackpot}
+              </span>
+            );
+          })()}
           <span className={`orientation ${orientationToneClass(card, card.reversed)}`}>
             {orientationLabel(card.reversed, lang)}
           </span>
+
+          {/*
+            宝箱。レアの回にだけ出る。
+            開ける前に中身の内訳を明かしておく（何が入っているか秘密にすると、
+            選ぶ行為が賭けではなく当てもののクイズになる）。
+            ただし「どの箱に何が入っているか」は最後まで明かさない。
+          */}
+          {chests && (
+            <div style={{ width: "100%" }}>
+              <p className="chest-lead">{chestPicked === null ? t.chestLead : "\u00A0"}</p>
+              <div className="chest-row">
+                {chests.map((c, i) => (
+                  <button
+                    key={i}
+                    type="button"
+                    className={`chest${chestPicked === i ? " opened" : chestPicked !== null ? " dim" : ""}`}
+                    onClick={() => openChest(i)}
+                    disabled={chestPicked !== null}
+                    aria-label={t.chestLead}
+                  ><ChestIcon open={chestPicked === i} /></button>
+                ))}
+              </div>
+              {chestResult && (
+                <p className="chest-result">
+                  {/* 枠が開いたときは、引いた向きの名前で伝える。
+                      「正位置の図鑑が開きました」と出れば、
+                      どの枠が埋まったのかが説明なしで分かる */}
+                  {chestResult.type === "slot" && (
+                    <span className="hit">{card.reversed ? t.chestGotRev : t.chestGotUp}</span>
+                  )}
+                  {chestResult.type === "miss" && <span style={{ color: "var(--muted)" }}>{t.chestMiss}</span>}
+                  {/*
+                    欠片は、触れると使い道が出る。
+                    もらった側からは「これは何なのか」が分からないので、
+                    どこで使えるかをその場で教える。
+                    常時出すと鑑定の邪魔になるので、触れたときだけにする。
+                  */}
+                  {(chestResult.type === "rareShard" || chestResult.type === "holoShard") && (
+                    <span className="shard-got" tabIndex={0}>
+                      <em className={`shard-mark ${chestResult.type === "holoShard" ? "holo" : "rare"}`} aria-hidden="true">
+                        {chestResult.type === "holoShard" ? "✦" : "◈"}
+                      </em>
+                      <span className={chestResult.type === "holoShard" ? "big" : "hit"}>
+                        {chestResult.type === "holoShard" ? t.chestGotShard : t.chestGotRareShard}
+                      </span>
+                      <span className="shard-tip">{t.shardWhere}</span>
+                    </span>
+                  )}
+                </p>
+              )}
+            </div>
+          )}
 
           <div className="ai-reading" style={{ marginTop: "2px" }}>
             <div className="ai-label">
               <Sparkles size={12} /> <span className={holo ? "holo-text" : "sheen-text"}>{info.pos[0]}</span>
             </div>
-            <p className={holo ? "holo-text" : "sheen-text"}>{buildOneOracleReading(card, lang)}</p>
+            <p className={`${holo ? "holo-text" : rare ? "rare-text" : "sheen-text"}${(holo || rare) && !isGoodOrientation(card, card.reversed) ? " dark" : ""}`}>{buildOneOracleReading(card, lang)}</p>
           </div>
 
           {developerNote({ card, reversed: card.reversed }, lang) && (
@@ -9013,7 +9619,7 @@ function OneOraclePanel({ lang, onBack, onHoloConsumed, deck = "major" }) {
 
           <div style={{ display: "flex", flexDirection: "column", alignItems: "center", gap: "10px" }}>
             {uses.remaining > 0 ? (
-              <button className="reset-btn" onClick={() => { setCard(null); setHolo(false); }}>
+              <button className="reset-btn" onClick={() => { setCard(null); setHolo(false); setRare(false); setChests(null); setChestPicked(null); setChestResult(null); }}>
                 <RotateCcw size={14} />
                 {/*
                   残数は制限が生きているときだけ添える。
@@ -9388,6 +9994,391 @@ function AchievementsPanel({ history, lang }) {
           {t.historyPrivacyNote}
         </p>
       </div>
+    </div>
+  );
+}
+
+/* ============================================================
+   図鑑（コレクション）
+
+   目的は蒐集ではなく、まず辞書である。
+   引いた札だけ解説が読める形にすると、無制限に引ける以上は
+   目当ての札が出るまで回せば数分で破れる。5分で破れる鍵は
+   無いより悪い（破り方を知っている人だけが得をする）ので、
+   通常版は最初から全78枚・正逆とも読める。
+
+   「未取得」はホロ版にのみ存在する。ホロを引いた札だけが
+   その面をホロ仕様で持ち、未取得の面は「？」で伏せる。
+   ここが第二段（宝箱・欠片）で埋まっていく棚になる。
+
+   取得状況は2層。どちらも { "major-0": {up:true, rev:false}, ... } の形で持つ。
+     rareDex … レア（宝箱が出る層。大1/12・小1/8）
+     holoDex … ホロ（1/216・正位置限定。既存の「ばちばち」）
+   第二段が入るまで両方とも空なので、現時点では全枠が未取得になる。
+
+   段は上下関係にあるので、一覧では1面につき点を1つだけ置き、
+   その色で到達した段を示す（暗→レア→ホロ）。
+   面ごとに点を2つずつ並べると、小さな枠に4つの点が入って読めない。
+   ============================================================ */
+/**
+ * 図鑑で1枚を鑑賞するための札。
+ *
+ * ワンオラクルの表示と同じ構造・同じクラスを使う。
+ * 独自に組むと、演出を直すたびに片方だけ直し忘れる形の不具合が出る
+ * （プチワンオラクルで OneOraclePanel を複製しなかったのと同じ理由）。
+ *
+ * tier が "" のときは呼ばない。未取得の面に札を出すと、
+ * 持っていないものを持っているように見せることになる。
+ */
+function DexCardView({ card, reversed, tier, lang }) {
+  const needsUprightText = needsUprightTextFor(lang);
+  const holo = tier === "holo";
+  const rare = tier === "rare";
+  /*
+    暗い版にするかどうかは、正逆ではなく「その札にとって難しい側か」で決める。
+
+    正逆そのものに暗さを結びつけると、月・死神・塔・悪魔・吊られた男の
+    5枚で意味が反転する（この5枚は逆位置が良い向き）。
+    向きラベルの配色で明度を揃えたのも同じ理由で、
+    逆位置を暗くすると「逆位置＝不吉」という含意まで一緒に運んでしまう。
+
+    isGoodOrientation を使えば、5枚の例外が自動的に正しく扱われる。
+  */
+  const dark = !isGoodOrientation(card, reversed);
+  const cls = holo ? `holo-card${dark ? " dark" : ""}`
+    : rare ? `rare-card${dark ? " dark" : ""}` : "sheen-card";
+  return (
+    <div className={`static-card oracle dex-view ${cls}`}>
+      <div className="card-depth" aria-hidden="true" />
+      <div className="card-shine-layer" aria-hidden="true" />
+      {(rare || (holo && dark)) && <div className="rare-frame" aria-hidden="true" />}
+      {holo && dark && <div className="holo-edge" aria-hidden="true" />}
+      {dark && (rare || holo) && <div className="rare-mist" aria-hidden="true" />}
+      <div
+        className={`card-face ${reversed ? "reversed" : ""}`}
+        style={{ "--accent": card.accent || "var(--gold)" }}
+      >
+        <div className="card-corner">{card.corner}</div>
+        <div className="card-icon">{card.Icon ? <card.Icon size={24} /> : <Sparkles size={24} />}</div>
+        <div className={`card-text-wrap${needsUprightText ? " keep-readable" : ""}`}>
+          <div className={`card-name${getCardName(card, lang).length > 10 ? " long" : ""}`}>
+            {getCardName(card, lang)}
+          </div>
+          <div className="card-sub">{getCardSub(card, lang)}</div>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+/**
+ * 図鑑の未取得の枠。カードの裏面に「？」を重ねる。
+ * 空欄にすると、そこに何かがあること自体が伝わらない。
+ * 裏面はカードの意匠そのものなので、伏せられていると読める。
+ */
+/**
+ * 欠片の交換。図鑑の隣のタブ。
+ *
+ * 所持数は常に出す。押して交換する形にした以上、
+ * 貯まっていることが見えていないと「気づかないまま止まる」が起きる。
+ */
+function ShardPanel({ lang, rareShard, holoShard, rareCost, holoCost, rareLeft, holoLeft, onExchange, last }) {
+  const t = T[lang] || T.ja;
+  const rows = [
+    { tier: "rare", have: rareShard, cost: rareCost, left: rareLeft, label: t.dexShardRare, note: t.shardNoteRare },
+    { tier: "holo", have: holoShard, cost: holoCost, left: holoLeft, label: t.dexShardHolo, note: t.shardNoteHolo },
+  ];
+  return (
+    <div style={{ width: "100%", maxWidth: "560px" }}>
+      <p className="shard-intro">{t.shardIntro}</p>
+      {rows.map((r) => {
+        const ready = r.have >= r.cost && r.left;
+        return (
+          <div key={r.tier} className={`shard-row ${r.tier}`}>
+            <div className="shard-head">
+              <span className={`shard-mark ${r.tier}`} aria-hidden="true">{r.tier === "holo" ? "✦" : "◈"}</span>
+              <span className="shard-name">{r.label}</span>
+              <span className="shard-count">{r.have} / {r.cost}</span>
+            </div>
+            {/* 進み具合を帯で出す。数字だけだと、あとどれくらいかが直感で分からない */}
+            <div className="shard-bar" aria-hidden="true">
+              <i style={{ width: `${Math.min(100, (r.have / r.cost) * 100)}%` }} className={r.tier} />
+            </div>
+            <p className="shard-note">{r.note}</p>
+            <button
+              type="button"
+              className="shard-btn"
+              disabled={!ready}
+              onClick={() => onExchange(r.tier)}
+            >
+              {!r.left ? t.shardAllFilled : ready ? t.shardExchange : t.shardShort(r.cost - r.have)}
+            </button>
+          </div>
+        );
+      })}
+      {/*
+        交換した結果。何が開いたか分からないまま数が減るのを避ける。
+        文字だけでなく実物の札も出す ―― 集めているのは札なので、
+        「開いた」と書かれるより、開いた札が見えるほうが早い。
+      */}
+      {last && (() => {
+        const c = [...MAJOR_LIST, ...MINOR_LIST].find((x) => x.id === last.id);
+        if (!c) return null;
+        return (
+          <div className="shard-result">
+            <p className="shard-result-text">
+              {t.shardOpened(
+                getCardSub(c, lang),
+                getCardName(c, lang),
+                last.tier === "holo" ? t.dexTierHolo : t.dexTierRare,
+                t.historyOrientation(last.reversed)
+              )}
+            </p>
+            <div className="shard-result-card">
+              <DexCardView card={c} reversed={last.reversed} tier={last.tier} lang={lang} />
+            </div>
+          </div>
+        );
+      })()}
+    </div>
+  );
+}
+
+function DexCardBack() {
+  return (
+    <div className="static-card oracle dex-view dex-locked">
+      <TarotCardBack style={{ position: "absolute", inset: 0, borderRadius: "inherit" }} />
+      <span className="dex-locked-mark" aria-hidden="true">?</span>
+    </div>
+  );
+}
+
+function DexPanel({ lang, rareDex, holoDex, rareShard = 0, holoShard = 0, holoShardCost = 3 }) {
+  const t = T[lang] || T.ja;
+  const [openId, setOpenId] = useState(null);
+  /*
+    束の開閉。既定は大アルカナだけ開く。
+    78枚を一度に並べると縦に長くなりすぎて、
+    どの束を見ているのかが分からなくなる。
+  */
+  const [openGroups, setOpenGroups] = useState({ major: true });
+  // 表示する束。大アルカナ22枚 → スート順に小アルカナ56枚
+  const groups = useMemo(() => ([
+    { key: "major", label: majorArcanaLabel(lang), cards: MAJOR_LIST },
+    ...SUITS.map((su) => ({
+      key: su.key,
+      label: `${suitLabel(su.key, lang)}（${elementLabel(su.element, lang)}）`,
+      accent: su.accent,
+      cards: MINOR_LIST.filter((c) => c.id.startsWith(su.key + "-")),
+    })),
+  ]), [lang]);
+
+  const rareOf = (id) => (rareDex && rareDex[id]) || {};
+  const holoOf = (id) => (holoDex && holoDex[id]) || {};
+  // 156枠のうち、それぞれの段で埋まっている数
+  const counts = useMemo(() => {
+    let rare = 0, holo = 0;
+    [...MAJOR_LIST, ...MINOR_LIST].forEach((c) => {
+      const r = rareOf(c.id), h = holoOf(c.id);
+      if (r.up) rare++;
+      if (r.rev) rare++;
+      if (h.up) holo++;
+      if (h.rev) holo++;
+    });
+    return { rare, holo };
+  }, [rareDex, holoDex]);
+  const TOTAL_SLOTS = (MAJOR_LIST.length + MINOR_LIST.length) * 2;
+
+  // 1面の到達段を返す。ホロはレアより上なので先に見る
+  const tierOf = (id, rev) => {
+    const key = rev ? "rev" : "up";
+    if (holoOf(id)[key]) return "holo";
+    if (rareOf(id)[key]) return "rare";
+    return "";
+  };
+
+  return (
+    <div style={{ width: "100%", maxWidth: "560px" }}>
+      {/*
+        棚の総数を数字で出す。未取得の枠を一覧で並べると
+        「集められる棚」ではなく「集められないと分かる証拠」になるので、
+        壁の存在は数字で伝え、壁の大きさは目に焼き付けない。
+      */}
+      {/* 集め方を最初に書く。図鑑だけ見ても、どこで集まるのかは分からない */}
+      <p className="dex-howto">{t.dexHowTo}</p>
+
+      <div className="dex-summary">
+        <div className="dex-summary-row">
+          <span className="dex-summary-label">{t.dexRareCount}</span>
+          <span className="dex-summary-value rare">{counts.rare} / {TOTAL_SLOTS}</span>
+        </div>
+        <div className="dex-summary-row">
+          <span className="dex-summary-label">{t.dexHoloCount}</span>
+          <span className="dex-summary-value holo">{counts.holo} / {TOTAL_SLOTS}</span>
+        </div>
+        {/*
+          欠片は「あと何枚で揃うか」の形で出す。
+          所持数だけだと、何に使うものか分からないまま溜まる。
+        */}
+        <div className="dex-summary-row shard">
+          <span className="dex-summary-label">{t.dexShardRare}</span>
+          <span className="dex-summary-value rare small">{rareShard} / {RARE_SHARD_COST}</span>
+        </div>
+        <div className="dex-summary-row shard">
+          <span className="dex-summary-label">{t.dexShardHolo}</span>
+          <span className="dex-summary-value holo small">{holoShard} / {holoShardCost}</span>
+        </div>
+      </div>
+
+      {groups.map((g) => (
+        <section key={g.key} style={{ marginBottom: "18px" }}>
+          {/*
+            束の見出しは押して開閉する。
+            進み具合は「埋まった枠数 / その束の総枠数」で出す。
+          */}
+          <button
+            type="button"
+            className={`dex-group-head${openGroups[g.key] ? " open" : ""}`}
+            onClick={() => setOpenGroups((o) => ({ ...o, [g.key]: !o[g.key] }))}
+            aria-expanded={!!openGroups[g.key]}
+          >
+            <span className="dex-group-caret" aria-hidden="true">{openGroups[g.key] ? "\u25BE" : "\u25B8"}</span>
+            <span className="dex-group-label" style={g.accent ? { color: g.accent } : undefined}>{g.label}</span>
+            <span className="dex-group-count">
+              {g.cards.reduce((a, c) => {
+                const r = rareOf(c.id), h = holoOf(c.id);
+                return a + (r.up ? 1 : 0) + (r.rev ? 1 : 0) + (h.up ? 1 : 0) + (h.rev ? 1 : 0);
+              }, 0)} / {g.cards.length * 4}
+            </span>
+          </button>
+          {openGroups[g.key] && (<>
+          {/*
+            開いた札は、その束の一覧より「上」に出す。
+            下に出すと、22枚や56枚の一覧の末尾まで送られるので、
+            上の方の札を押した人は結果を見るためにスクロールすることになる。
+            上に置けば、押した瞬間に見える。
+
+            各セルの直下に差し込む案は採らない ―― 行の高さが揃わず並びが崩れる。
+          */}
+          {g.cards.some((c) => c.id === openId) && (() => {
+            const c = g.cards.find((x) => x.id === openId);
+            const parts = c.id.split("-");
+            const isMajor = parts[0] === "major";
+            const idx = parseInt(parts[1], 10);
+            const kw = (rev) => (isMajor
+              ? majorKeyword(idx, rev, lang)
+              : minorKeyword(parts[0], idx, rev, lang, c.up, c.rev));
+            return (
+              <div className="dex-detail">
+                <div className="dex-detail-head">
+                  <span className="dex-detail-name">{getCardName(c, lang)}</span>
+                  <span className="dex-detail-sub">{getCardSub(c, lang)}</span>
+                </div>
+                {/*
+                  取得した面だけ、実物の札を並べて鑑賞できるようにする。
+                  文字だけだと、集めたものが手元にある感じがしない。
+                  未取得の面は出さない（持っていないものを見せない）。
+                */}
+                {(() => {
+                  const r = rareOf(c.id), h = holoOf(c.id);
+                  /*
+                    4枠を必ず並べる。レア正・レア逆・ホロ正・ホロ逆。
+
+                    未取得も裏面で出す。持っている札だけを並べると、
+                    その札に何枠あるのかが分からず、集める目標が立たない。
+                    裏面は「伏せられている」という意味を持つ意匠なので、
+                    灰色の空箱より事情が伝わる。
+                  */
+                  const slots = [
+                    { tier: "rare", rev: false, has: !!r.up },
+                    { tier: "rare", rev: true, has: !!r.rev },
+                    { tier: "holo", rev: false, has: !!h.up },
+                    { tier: "holo", rev: true, has: !!h.rev },
+                  ];
+                  return (
+                    <div className="dex-cards">
+                      {slots.map((sl, i) => (
+                        <div key={i} className="dex-card-slot">
+                          {sl.has
+                            ? <DexCardView card={c} reversed={sl.rev} tier={sl.tier} lang={lang} />
+                            : <DexCardBack />}
+                          <span className={`dex-card-cap ${sl.tier === "holo" ? "holo" : sl.rev ? "rev" : "up"}${sl.has ? "" : " off"}`}>
+                            {sl.tier === "holo" ? t.dexTierHolo : t.dexTierRare}
+                            <br />{t.historyOrientation(sl.rev)}
+                          </span>
+                        </div>
+                      ))}
+                    </div>
+                  );
+                })()}
+
+                {[false, true].map((rev) => (
+                  <div key={rev ? "rev" : "up"} className="dex-detail-row">
+                    <span className={`dex-orient ${rev ? "rev" : "up"}`}>
+                      {t.historyOrientation(rev)}
+                      {/* 到達した段だけ印を添える。持っていない面は無印。
+                          一覧では点1つに畳んでいるが、ここでは段を名前で出す */}
+                      {tierOf(c.id, rev) === "holo" && <em className="dex-tier-mark holo">✦ {t.dexTierHolo}</em>}
+                      {tierOf(c.id, rev) === "rare" && <em className="dex-tier-mark rare">◈ {t.dexTierRare}</em>}
+                    </span>
+                    <span className="dex-detail-words">{kw(rev)}</span>
+                  </div>
+                ))}
+                {/*
+                  詳しい解説は後から差し込む。キーが無ければ何も出さないので、
+                  文章が用意できていない言語でも空欄が見えることはない。
+                */}
+                {t.dexNotes && t.dexNotes[c.id] && (
+                  <p className="dex-detail-note">{t.dexNotes[c.id]}</p>
+                )}
+              </div>
+            );
+          })()}
+
+          <div className="dex-grid">
+            {g.cards.map((c) => {
+              const on = openId === c.id;
+              const r = rareOf(c.id), h = holoOf(c.id);
+              /*
+                4つの点。左からレア正・レア逆・ホロ正・ホロ逆。
+                レアは銀、ホロは金。段が色で、向きが位置で分かる。
+                段ごとに1つへ畳んでいたが、それだと
+                「レアだけ持っているのか、両方なのか」が読めなかった。
+              */
+              const marks = [
+                { on: !!r.up, cls: "rare" },
+                { on: !!r.rev, cls: "rare" },
+                { on: !!h.up, cls: "holo" },
+                { on: !!h.rev, cls: "holo" },
+              ];
+              const both = marks.every((m) => m.on); // 4枠そろった札だけ枠を締める
+              return (
+                <button
+                  key={c.id}
+                  type="button"
+                  className={`dex-cell${on ? " on" : ""}${both ? " both" : ""}`}
+                  onClick={() => {
+                    setOpenId(on ? null : c.id);
+                  }}
+                  aria-expanded={on}
+                >
+                  <span className="dex-cell-corner">{c.corner}</span>
+                  <span className="dex-cell-name">{getCardName(c, lang)}</span>
+                  {/*
+                    ホロの取得状況は2つの点で示す。左が正位置、右が逆位置。
+                    埋まっていない側は「？」ではなく暗い点にする ――
+                    枠そのものは全部見えているので、伏せるのは箔の有無だけでよい。
+                  */}
+                  <span className="dex-cell-marks" aria-hidden="true">
+                    {marks.map((m, i) => <i key={i} className={m.on ? m.cls : ""} />)}
+                  </span>
+                </button>
+              );
+            })}
+          </div>
+          </>)}
+        </section>
+      ))}
     </div>
   );
 }
@@ -10234,6 +11225,8 @@ const T = {
     appTitle: "타로 점",
     tagline: "",
     eyebrow: "ARCANA DRAW",
+    reloadLabel: "새로고침",
+    reloadNote: "최신 상태로 다시 불러옵니다",
     intro: "신께 맹세코 조작은 절대 없습니다.\n이론상 카드의 내용에 어떤 편향도 없는 완전 공정 설계.\n비밀 엄수. AI가 당신의 마음의 소리에 조용히 다가갑니다.",
     privacyIntro: "",
     nameLabel: "이름 (닉네임도 괜찮아요)",
@@ -10396,6 +11389,35 @@ const T = {
     subLast: "지난번",
     subHistory: "기록",
     subStats: "통계",
+    subDex: "도감",
+    dexRareCount: "레어 수집",
+    dexHoloCount: "홀로 수집",
+    dexTierRare: "레어",
+    dexTierHolo: "홀로",
+    dexFlip: "눌러서 뒤집기",
+    chestLead: "상자 하나를 고르세요",
+    chestGotUp: "정위치 도감이 열렸습니다",
+    chestGotRev: "역위치 도감이 열렸습니다",
+    chestMiss: "아무것도 없었습니다",
+    chestGotShard: "홀로 조각을 얻었습니다",
+    chestGotRareShard: "레어 조각을 얻었습니다",
+    chestGotHolo: "홀로 도감이 하나 열렸습니다",
+    dexShardRare: "레어 조각",
+    dexShardHolo: "홀로 조각",
+    subShard: "교환",
+    oneOracleRareTitle: "◈ 레어 카드가 나왔습니다 ◈",
+    oneOracleDarkRareTitle: "◈ 어두운 레어가 나왔습니다 ◈",
+    oneOracleDarkHoloTitle: "✦ 어둠이 강림했습니다 ✦",
+    oneOracleDarkJackpot: "심연!!!",
+    dexHowTo: "한 장 뽑기와 쁘띠 한 장 뽑기에서 모을 수 있습니다",
+    shardWhere: "기록 > 교환 탭에서 사용할 수 있습니다",
+    shardIntro: "조각은 도감의 아직 열리지 않은 칸을 하나 열어 줍니다. 어느 칸이 열릴지는 고를 수 없습니다.",
+    shardNoteRare: "보물상자에서 가끔 나옵니다.",
+    shardNoteHolo: "교환할 때마다 필요한 수가 하나씩 늘어납니다.",
+    shardExchange: "교환하기",
+    shardShort: (n) => `앞으로 ${n}개`,
+    shardAllFilled: "모두 열렸습니다",
+    shardOpened: (group, name, tier, orient) => `${group} 「${name}」 ${tier}・${orient} 의 도감이 해방되었습니다`,
     subEmpty: "아직 기록이 없습니다",
     backToTitle: "처음 화면으로",
     oneOracleHoloTitle: "✦ 무지개가 걸렸습니다 ✦",
@@ -10437,7 +11459,7 @@ const T = {
     celticPlaneNote: "옅은 점은 지난번까지의 무게중심입니다",
     celticWander: "동요",
     celticSteady: "안정",
-    celticMeterRead: (p) => p >= 66 ? `곧게 나아간 궤적입니다` : p >= 34 ? `나아가면서도 몇 번 방향을 바꾸었습니다` : `여러 번 되짚으며 나아간 궤적입니다`,
+    celticMeterRead: (n) => n === 0 ? `하나의 영역에 머무른 궤적입니다` : n <= 2 ? `영역을 한두 번 넘어간 궤적입니다` : n <= 4 ? `영역을 여러 번 넘나든 궤적입니다` : `영역 사이를 몇 번이고 오간 궤적입니다`,
     celticZone: {"origin": "정지의 자리", "axisFuture": "미래로 곧게", "axisSurface": "각성으로 곧게", "axisPast": "과거로 곧게", "axisDeep": "심층으로 곧게", "z0": "내일을 향해", "z1": "떠오르는 내일", "z2": "맑아지는 의식", "z3": "돌아보는 의식", "z4": "기억을 비추다", "z5": "먼 날을 바라보다", "z6": "가라앉는 기억", "z7": "침전의 바닥", "z8": "잠든 과거", "z9": "안으로 잠기다", "z10": "조짐의 저류", "z11": "다가오는 예감"},
     celticZoneNote: {"origin": "어느 쪽으로도 기울지 않은 궤적입니다。정하지 못한 것이 아니라, 지금은 모든 방향이 똑같이 열려 있는지도 모릅니다。", "axisFuture": "망설임 없이 앞으로 향하는 궤적입니다。다만 아직 오지 않은 것에 크게 거는 마음일 때도 이 모양이 나타납니다。", "axisSurface": "분명히 자각하고 있는 것으로 향하는 궤적입니다。말이 되는 만큼, 말이 되지 않는 것이 뒤에 남기도 합니다。", "axisPast": "과거로 곧게 향하는 궤적입니다。끝났다고 여긴 일이 아직 동기의 밑바닥에서 작동하는 경우가 있습니다。", "axisDeep": "깊은 곳으로 가라앉는 궤적입니다。스스로도 설명되지 않는 충동이 지금의 선택을 움직이는지도 모릅니다。", "z0": "앞을 보고 있는 궤적입니다。눈앞의 상황보다 그 너머의 결과로 관심이 향해 있습니다。", "z1": "의식이 미래로 들어 올려지는 궤적입니다。계획이나 전망이 지금의 기분을 끌어올리고 있을 수 있습니다。", "z2": "생각이 맑아지는 궤적입니다。설명되지 않던 것에 설명이 붙기 시작한 시기인지도 모릅니다。", "z3": "자신을 돌아보는 궤적입니다。지난 일을 다시 말로 만들려는 움직임이 의식 쪽에서 일어나고 있습니다。", "z4": "기억에 빛을 비추는 궤적입니다。잊은 줄 알았던 일이 지금의 판단에 재료가 되는 경우가 있습니다。", "z5": "먼 날을 바라보는 궤적입니다。되돌릴 수 없는 것을 향한 마음이 동기의 안쪽에 잠들어 있기도 합니다。", "z6": "기억이 가라앉는 궤적입니다。돌아보는 일 자체를 그만두려는 시기인지도 모릅니다。", "z7": "가장 깊이 고인 곳의 궤적입니다。오래 움직이지 못한 것이 조용히 바닥에 쌓여 있습니다。", "z8": "잠든 과거로 향하는 궤적입니다。예전에 채워지지 않았던 바람을 지금 되찾으려는 것인지도 모릅니다。", "z9": "안쪽으로 잠기는 궤적입니다。바깥의 일보다 자신의 반응으로 관심이 옮겨가고 있습니다。", "z10": "아직 형태가 없는 예감의 궤적입니다。이유는 말할 수 없지만 무언가 움직이기 시작했다고 느낄 때 나타납니다。", "z11": "찾아올 것을 기다리는 궤적입니다。자각하지 못한 사이에 다음에 올 것에 대한 준비가 시작되었을 수 있습니다。"},
     weekPeak: (d) => `절정｜${d}`,
@@ -10481,6 +11503,8 @@ const T = {
     appTitle: "Bói Bài Tarot",
     tagline: "",
     eyebrow: "ARCANA DRAW",
+    reloadLabel: "Tải lại",
+    reloadNote: "Tải lại phiên bản mới nhất",
     intro: "Xin thề, ở đây tuyệt đối không có gì được dàn dựng.\nThiết kế hoàn toàn công bằng — về lý thuyết, nội dung lá bài không hề thiên lệch.\nTuyệt đối bảo mật. AI lặng lẽ lắng nghe tiếng lòng của bạn.",
     privacyIntro: "",
     nameLabel: "Tên của bạn (biệt danh cũng được)",
@@ -10640,6 +11664,35 @@ const T = {
     subLast: "Lần trước",
     subHistory: "Lịch sử",
     subStats: "Thống kê",
+    subDex: "Bộ sưu tập",
+    dexRareCount: "Đã thu thập hiếm",
+    dexHoloCount: "Đã thu thập holo",
+    dexTierRare: "Hiếm",
+    dexTierHolo: "Holo",
+    dexFlip: "Chạm để lật",
+    chestLead: "Chọn một rương",
+    chestGotUp: "Đã mở ô xuôi trong bộ sưu tập",
+    chestGotRev: "Đã mở ô ngược trong bộ sưu tập",
+    chestMiss: "Không có gì cả",
+    chestGotShard: "Nhận được mảnh holo",
+    chestGotRareShard: "Nhận được mảnh hiếm",
+    chestGotHolo: "Một ô holo đã được mở",
+    dexShardRare: "Mảnh hiếm",
+    dexShardHolo: "Mảnh holo",
+    subShard: "Đổi",
+    oneOracleRareTitle: "◈ Đã xuất hiện lá Hiếm ◈",
+    oneOracleDarkRareTitle: "◈ Đã xuất hiện lá Hiếm bóng tối ◈",
+    oneOracleDarkHoloTitle: "✦ Bóng tối đã giáng lâm ✦",
+    oneOracleDarkJackpot: "Vực thẳm!!!",
+    dexHowTo: "Thu thập qua One Oracle và Munting Oracle",
+    shardWhere: "Dùng ở tab Đổi trong Ghi chép",
+    shardIntro: "Mảnh vỡ mở một ô chưa mở trong bộ sưu tập. Bạn không chọn được ô nào.",
+    shardNoteRare: "Thỉnh thoảng xuất hiện trong rương.",
+    shardNoteHolo: "Mỗi lần đổi, số lượng cần tăng thêm một.",
+    shardExchange: "Đổi",
+    shardShort: (n) => `Còn thiếu ${n}`,
+    shardAllFilled: "Đã mở hết",
+    shardOpened: (group, name, tier, orient) => `Đã mở khóa bộ sưu tập: ${group}「${name}」${tier}・${orient}`,
     subEmpty: "Chưa có ghi chép",
     backToTitle: "Về màn hình đầu",
     oneOracleHoloTitle: "✦ Cầu Vồng Đã Hiện Ra ✦",
@@ -10681,7 +11734,7 @@ const T = {
     celticPlaneNote: "Những chấm mờ là trọng tâm các lần trước",
     celticWander: "Chao đảo",
     celticSteady: "Tĩnh tại",
-    celticMeterRead: (p) => p >= 66 ? `Một đường đi thẳng hướng` : p >= 34 ? `Có tiến tới, nhưng đã đổi hướng vài lần` : `Một đường đi nhiều lần quay lại`,
+    celticMeterRead: (n) => n === 0 ? `Một đường đi ở yên trong một vùng` : n <= 2 ? `Một đường đi vượt sang vùng khác một hai lần` : n <= 4 ? `Một đường đi qua lại giữa các vùng nhiều lần` : `Một đường đi không ngừng chuyển từ vùng này sang vùng khác`,
     celticZone: {"origin": "Chỗ ngồi tĩnh lặng", "axisFuture": "Thẳng tới ngày mai", "axisSurface": "Thẳng tới tỉnh thức", "axisPast": "Thẳng tới quá khứ", "axisDeep": "Thẳng tới tầng sâu", "z0": "Hướng về ngày mai", "z1": "Ngày mai đang lên", "z2": "Tâm trí trong dần", "z3": "Tâm trí soi lại", "z4": "Rọi sáng ký ức", "z5": "Nhìn về ngày xa", "z6": "Ký ức đang chìm", "z7": "Đáy của sự lắng đọng", "z8": "Quá khứ đang ngủ", "z9": "Lặn vào bên trong", "z10": "Dòng ngầm của điềm báo", "z11": "Một linh cảm đang đến"},
     celticZoneNote: {"origin": "Đường đi không nghiêng về đâu。Có lẽ không phải do dự, mà là lúc mọi hướng đều mở ra như nhau。", "axisFuture": "Đường đi thẳng về phía trước。Hình này cũng xuất hiện khi người ta đặt nhiều vào điều chưa tới。", "axisSurface": "Đường đi hướng tới điều bạn đã tự biết。Chính vì nói ra được, điều không nói được có thể nằm phía sau。", "axisPast": "Đường đi thẳng về quá khứ。Điều bạn tưởng đã xong có thể vẫn đang vận hành dưới đáy động cơ。", "axisDeep": "Đường đi chìm xuống tầng sâu。Một thôi thúc chính bạn cũng không lý giải được có thể đang dẫn dắt lựa chọn。", "z0": "Đường đi hướng mắt về phía trước。Sự chú ý đặt ở kết cục hơn là ở hoàn cảnh trước mắt。", "z1": "Đường đi khi ý thức được nâng về ngày mai。Kế hoạch hay triển vọng có thể đang nâng tâm trạng hiện tại。", "z2": "Đường đi của suy nghĩ đang trong dần。Có lẽ đây là lúc điều chưa có lời giải bắt đầu có lời giải。", "z3": "Đường đi quay lại nhìn chính mình。Chuyển động đặt lại thành lời cho quá khứ đang diễn ra ở phía ý thức。", "z4": "Đường đi rọi sáng ký ức。Điều bạn tưởng đã quên có thể đang là chất liệu cho phán đoán hiện tại。", "z5": "Đường đi nhìn về ngày xa。Tình cảm dành cho điều không lấy lại được có thể đang ngủ dưới đáy động cơ。", "z6": "Đường đi khi ký ức chìm xuống。Có lẽ đây là lúc bạn muốn thôi ngoái nhìn。", "z7": "Đường đi ở tầng sâu tĩnh nhất。Điều lâu nay không dịch chuyển đang lắng xuống đáy trong lặng lẽ。", "z8": "Đường đi hướng về quá khứ đang ngủ。Bạn có thể đang muốn giành lại một ước nguyện từng không được thỏa。", "z9": "Đường đi lặn vào bên trong。Sự quan tâm chuyển từ việc bên ngoài sang cách bạn phản ứng。", "z10": "Đường đi của linh cảm chưa thành hình。Xuất hiện khi thấy điều gì đó bắt đầu chuyển động vì lý do không gọi tên được。", "z11": "Đường đi chờ điều sẽ đến。Sự chuẩn bị cho điều kế tiếp có thể đã bắt đầu mà bạn chưa hay。"},
     weekPeak: (d) => `Đỉnh｜${d}`,
@@ -10725,6 +11778,8 @@ const T = {
     appTitle: "Ramalan Tarot",
     tagline: "",
     eyebrow: "ARCANA DRAW",
+    reloadLabel: "Muat ulang",
+    reloadNote: "Memuat ulang ke versi terbaru",
     intro: "Demi Tuhan, sama sekali tidak ada rekayasa di sini.\nDirancang sepenuhnya adil — secara teori, isi kartunya tanpa kecenderungan sedikit pun.\nRahasia terjaga sepenuhnya. AI menemani suara hatimu dengan tenang.",
     privacyIntro: "",
     nameLabel: "Namamu (nama panggilan juga boleh)",
@@ -10884,6 +11939,35 @@ const T = {
     subLast: "Terakhir",
     subHistory: "Riwayat",
     subStats: "Statistik",
+    subDex: "Katalog",
+    dexRareCount: "Koleksi langka",
+    dexHoloCount: "Koleksi holo",
+    dexTierRare: "Langka",
+    dexTierHolo: "Holo",
+    dexFlip: "Ketuk untuk membalik",
+    chestLead: "Pilih satu peti",
+    chestGotUp: "Slot tegak terbuka di katalog",
+    chestGotRev: "Slot terbalik terbuka di katalog",
+    chestMiss: "Tidak ada apa-apa",
+    chestGotShard: "Mendapat pecahan holo",
+    chestGotRareShard: "Mendapat pecahan langka",
+    chestGotHolo: "Satu slot holo terbuka",
+    dexShardRare: "Pecahan langka",
+    dexShardHolo: "Pecahan holo",
+    subShard: "Tukar",
+    oneOracleRareTitle: "◈ Kartu langka muncul ◈",
+    oneOracleDarkRareTitle: "◈ Kartu langka gelap muncul ◈",
+    oneOracleDarkHoloTitle: "✦ Kegelapan telah turun ✦",
+    oneOracleDarkJackpot: "Jurang!!!",
+    dexHowTo: "Dikumpulkan lewat One Oracle dan Petit One Oracle",
+    shardWhere: "Dapat dipakai di tab Tukar pada Catatan",
+    shardIntro: "Pecahan membuka satu slot yang belum terbuka di katalog. Anda tidak bisa memilih slotnya.",
+    shardNoteRare: "Kadang muncul dari peti.",
+    shardNoteHolo: "Setiap penukaran menambah satu jumlah yang dibutuhkan.",
+    shardExchange: "Tukar",
+    shardShort: (n) => `Kurang ${n}`,
+    shardAllFilled: "Semua sudah terbuka",
+    shardOpened: (group, name, tier, orient) => `Katalog terbuka: ${group}「${name}」${tier}・${orient}`,
     subEmpty: "Belum ada catatan",
     backToTitle: "Kembali ke awal",
     oneOracleHoloTitle: "✦ Pelangi Telah Muncul ✦",
@@ -10923,7 +12007,7 @@ const T = {
     celticPlaneNote: "Titik samar adalah titik berat sebelumnya",
     celticWander: "Gejolak",
     celticSteady: "Ketenangan",
-    celticMeterRead: (p) => p >= 66 ? `Jejak yang melaju lurus` : p >= 34 ? `Maju, namun beberapa kali berbelok` : `Jejak yang berulang kali berbalik`,
+    celticMeterRead: (n) => n === 0 ? `Jejak yang tetap berada di satu wilayah` : n <= 2 ? `Jejak yang melintas ke wilayah lain sekali dua kali` : n <= 4 ? `Jejak yang beberapa kali berpindah wilayah` : `Jejak yang terus berpindah dari satu wilayah ke wilayah lain`,
     celticZone: {"origin": "Tempat yang hening", "axisFuture": "Lurus ke esok", "axisSurface": "Lurus ke kesadaran", "axisPast": "Lurus ke masa lalu", "axisDeep": "Lurus ke kedalaman", "z0": "Menghadap esok", "z1": "Esok yang terbit", "z2": "Benak yang menjernih", "z3": "Benak yang merenung", "z4": "Menerangi ingatan", "z5": "Menatap hari yang jauh", "z6": "Ingatan yang tenggelam", "z7": "Dasar yang mengendap", "z8": "Masa lalu yang tertidur", "z9": "Menyelam ke dalam", "z10": "Arus bawah pertanda", "z11": "Firasat yang mendekat"},
     celticZoneNote: {"origin": "Jejak yang tidak condong ke mana pun。Mungkin bukan keraguan, melainkan saat setiap arah terbuka sama lebarnya。", "axisFuture": "Jejak yang lurus ke depan。Bentuk ini juga muncul ketika banyak dipertaruhkan pada yang belum tiba。", "axisSurface": "Jejak menuju apa yang sudah kamu sadari。Justru karena bisa dikatakan, yang tak terkatakan mungkin tertinggal di belakang。", "axisPast": "Jejak yang lurus ke belakang。Hal yang kamu kira selesai mungkin masih bekerja di dasar motifmu。", "axisDeep": "Jejak yang tenggelam ke kedalaman。Dorongan yang tak bisa kamu jelaskan mungkin sedang menggerakkan pilihanmu。", "z0": "Jejak dengan pandangan ke depan。Perhatian tertuju pada hasil, bukan pada keadaan saat ini。", "z1": "Jejak saat kesadaran terangkat ke esok。Rencana atau harapan mungkin sedang mengangkat suasana hatimu。", "z2": "Jejak pikiran yang menjernih。Mungkin ini masa ketika yang tak terjelaskan mulai menemukan penjelasan。", "z3": "Jejak yang berbalik pada diri。Gerak untuk kembali menuturkan masa lalu sedang terjadi di sisi sadar。", "z4": "Jejak yang menerangi ingatan。Hal yang kamu kira terlupa mungkin menjadi bahan pertimbanganmu kini。", "z5": "Jejak yang menatap hari yang jauh。Perasaan pada yang tak dapat ditarik kembali mungkin tidur di dasar motifmu。", "z6": "Jejak saat ingatan tenggelam。Mungkin ini masa ketika kamu berusaha berhenti menoleh sama sekali。", "z7": "Jejak di kedalaman yang paling diam。Sesuatu yang lama tak bergerak mengendap sunyi di dasar。", "z8": "Jejak menuju masa lalu yang tertidur。Kamu mungkin sedang berusaha menuntut kembali keinginan yang dulu tak terpenuhi。", "z9": "Jejak yang menyelam ke dalam。Perhatian berpindah dari kejadian luar ke caramu menanggapi。", "z10": "Jejak firasat yang belum berbentuk。Muncul ketika sesuatu terasa mulai bergerak tanpa alasan yang bisa disebut。", "z11": "Jejak yang menanti kedatangan。Persiapan untuk yang berikutnya mungkin sudah dimulai tanpa kamu sadari。"},
     weekPeak: (d) => `Puncak｜${d}`,
@@ -10969,6 +12053,8 @@ const T = {
     appTitle: "Tilikan Tarot",
     tagline: "",
     eyebrow: "ARCANA DRAW",
+    reloadLabel: "Muat semula",
+    reloadNote: "Memuat semula ke versi terkini",
     intro: "Sesungguhnya, tiada langsung sebarang manipulasi di sini.\nDirancang sepenuhnya adil — secara teori, isi kadnya tanpa kecenderungan sedikit pun.\nRahsia terjamin sepenuhnya. AI menemani suara hati anda dengan tenang.",
     privacyIntro: "",
     nameLabel: "Nama anda (nama panggilan juga boleh)",
@@ -11128,6 +12214,35 @@ const T = {
     subLast: "Terakhir",
     subHistory: "Sejarah",
     subStats: "Statistik",
+    subDex: "Katalog",
+    dexRareCount: "Koleksi jarang",
+    dexHoloCount: "Koleksi holo",
+    dexTierRare: "Jarang",
+    dexTierHolo: "Holo",
+    dexFlip: "Ketik untuk terbalikkan",
+    chestLead: "Pilih satu peti",
+    chestGotUp: "Slot tegak dibuka dalam katalog",
+    chestGotRev: "Slot terbalik dibuka dalam katalog",
+    chestMiss: "Tiada apa-apa",
+    chestGotShard: "Mendapat serpihan holo",
+    chestGotRareShard: "Mendapat serpihan jarang",
+    chestGotHolo: "Satu slot holo dibuka",
+    dexShardRare: "Serpihan jarang",
+    dexShardHolo: "Serpihan holo",
+    subShard: "Tukar",
+    oneOracleRareTitle: "◈ Kad jarang muncul ◈",
+    oneOracleDarkRareTitle: "◈ Kad jarang gelap muncul ◈",
+    oneOracleDarkHoloTitle: "✦ Kegelapan telah turun ✦",
+    oneOracleDarkJackpot: "Jurang!!!",
+    dexHowTo: "Dikumpul melalui One Oracle dan Petit One Oracle",
+    shardWhere: "Boleh digunakan di tab Tukar dalam Rekod",
+    shardIntro: "Serpihan membuka satu slot yang belum dibuka dalam katalog. Anda tidak boleh memilih slotnya.",
+    shardNoteRare: "Kadangkala muncul dari peti.",
+    shardNoteHolo: "Setiap penukaran menambah satu jumlah yang diperlukan.",
+    shardExchange: "Tukar",
+    shardShort: (n) => `Kurang ${n}`,
+    shardAllFilled: "Semua telah dibuka",
+    shardOpened: (group, name, tier, orient) => `Katalog dibuka: ${group}「${name}」${tier}・${orient}`,
     subEmpty: "Belum ada rekod",
     backToTitle: "Kembali ke awal",
     oneOracleHoloTitle: "✦ Pelangi Telah Muncul ✦",
@@ -11167,7 +12282,7 @@ const T = {
     celticPlaneNote: "Titik samar ialah pusat graviti sebelum ini",
     celticWander: "Gelora",
     celticSteady: "Ketenangan",
-    celticMeterRead: (p) => p >= 66 ? `Jejak yang melaju lurus` : p >= 34 ? `Maju, namun beberapa kali berpaling` : `Jejak yang berulang kali berpatah balik`,
+    celticMeterRead: (n) => n === 0 ? `Jejak yang kekal dalam satu wilayah` : n <= 2 ? `Jejak yang melintasi wilayah lain sekali dua` : n <= 4 ? `Jejak yang beberapa kali bertukar wilayah` : `Jejak yang berulang kali berpindah antara wilayah`,
     celticZone: {"origin": "Tempat yang hening", "axisFuture": "Lurus ke esok", "axisSurface": "Lurus ke kesedaran", "axisPast": "Lurus ke masa lalu", "axisDeep": "Lurus ke kedalaman", "z0": "Menghadap esok", "z1": "Esok yang terbit", "z2": "Fikiran yang menjernih", "z3": "Fikiran yang merenung", "z4": "Menerangi ingatan", "z5": "Menatap hari yang jauh", "z6": "Ingatan yang tenggelam", "z7": "Dasar yang mengendap", "z8": "Masa lalu yang tertidur", "z9": "Menyelam ke dalam", "z10": "Arus bawah petanda", "z11": "Firasat yang menghampiri"},
     celticZoneNote: {"origin": "Jejak yang tidak condong ke mana-mana。Mungkin bukan keraguan, tetapi saat setiap arah terbuka sama luas。", "axisFuture": "Jejak yang lurus ke hadapan。Bentuk ini juga muncul apabila banyak dipertaruhkan pada yang belum tiba。", "axisSurface": "Jejak menuju apa yang anda sudah sedari。Justeru kerana ia dapat dikatakan, yang tidak terkata mungkin tertinggal di belakang。", "axisPast": "Jejak yang lurus ke belakang。Perkara yang anda sangka selesai mungkin masih bekerja di dasar motif anda。", "axisDeep": "Jejak yang tenggelam ke kedalaman。Dorongan yang anda sendiri tidak dapat jelaskan mungkin sedang menggerakkan pilihan。", "z0": "Jejak dengan pandangan ke hadapan。Perhatian tertumpu pada kesudahan, bukan keadaan sekarang。", "z1": "Jejak apabila kesedaran terangkat ke esok。Rancangan atau harapan mungkin sedang mengangkat perasaan anda。", "z2": "Jejak fikiran yang menjernih。Mungkin ini masa apabila yang tidak terjelaskan mula menemui penjelasan。", "z3": "Jejak yang berpaling kepada diri。Gerak untuk menuturkan semula masa lalu sedang berlaku di sisi sedar。", "z4": "Jejak yang menerangi ingatan。Perkara yang anda sangka terlupa mungkin menjadi bahan pertimbangan kini。", "z5": "Jejak yang menatap hari yang jauh。Perasaan terhadap yang tidak dapat ditarik balik mungkin tidur di dasar motif。", "z6": "Jejak apabila ingatan tenggelam。Mungkin ini masa anda cuba berhenti menoleh sama sekali。", "z7": "Jejak di kedalaman yang paling sunyi。Sesuatu yang lama tidak bergerak mengendap senyap di dasar。", "z8": "Jejak menuju masa lalu yang tertidur。Anda mungkin sedang cuba menuntut semula hasrat yang dahulu tidak terpenuhi。", "z9": "Jejak yang menyelam ke dalam。Perhatian berpindah daripada kejadian luar kepada cara anda bertindak balas。", "z10": "Jejak firasat yang belum berbentuk。Muncul apabila sesuatu terasa mula bergerak atas sebab yang tidak dapat dinamakan。", "z11": "Jejak yang menanti kedatangan。Persiapan untuk yang seterusnya mungkin sudah bermula tanpa anda sedari。"},
     weekPeak: (d) => `Puncak｜${d}`,
@@ -11213,6 +12328,8 @@ const T = {
     appTitle: "タロット占い",
     tagline: "",
     eyebrow: "ARCANA DRAW",
+    reloadLabel: "更新",
+    reloadNote: "最新の状態に読み込み直します",
     intro: "神に誓って絶対にやらせはありません。\n理論上カードの内容に一切の偏りがない完全公平設計。\n秘密厳守。AIがあなたの心の声に、静かに寄り添います。",
     privacyIntro: "",
     nameLabel: "お名前（ニックネームでOK）",
@@ -11373,6 +12490,35 @@ const T = {
     subLast: "前回",
     subHistory: "履歴",
     subStats: "統計",
+    subDex: "図鑑",
+    dexRareCount: "レアの収集",
+    dexHoloCount: "ホロの収集",
+    dexTierRare: "レア",
+    dexTierHolo: "ホロ",
+    dexFlip: "押して裏返す",
+    chestLead: "宝箱をひとつ選んでください",
+    chestGotUp: "正位置の図鑑が開きました",
+    chestGotRev: "逆位置の図鑑が開きました",
+    chestMiss: "なにも入っていませんでした",
+    chestGotShard: "ホロの欠片を手に入れました",
+    chestGotRareShard: "レアの欠片を手に入れました",
+    chestGotHolo: "ホロの図鑑がひとつ開きました",
+    dexShardRare: "レアの欠片",
+    dexShardHolo: "ホロの欠片",
+    subShard: "交換",
+    oneOracleRareTitle: "◈ レアカードが出現しました ◈",
+    oneOracleDarkRareTitle: "◈ 闇のレアカードが出現しました ◈",
+    oneOracleDarkHoloTitle: "✦ 闇が降臨しました ✦",
+    oneOracleDarkJackpot: "深淵！！！",
+    dexHowTo: "ワンオラクルとプチワンオラクルで集められます",
+    shardWhere: "記録の「交換」タブで使えます",
+    shardIntro: "欠片は、図鑑のまだ開いていない枠をひとつ開きます。どの枠が開くかは選べません。",
+    shardNoteRare: "宝箱からまれに出ます。",
+    shardNoteHolo: "一度交換するごとに、必要な数がひとつ増えます。",
+    shardExchange: "交換する",
+    shardShort: (n) => `あと${n}個`,
+    shardAllFilled: "すべて開いています",
+    shardOpened: (group, name, tier, orient) => `${group}　「${name}」　${tier}・${orient}　の図鑑が解放されました`,
     subEmpty: "まだ記録がありません",
     backToTitle: "タイトルに戻る",
     oneOracleHoloTitle: "✦ 虹がかかりました ✦",
@@ -11412,7 +12558,7 @@ const T = {
     celticPlaneNote: "薄い点は、前回までの重心です",
     celticWander: "動揺",
     celticSteady: "安静",
-    celticMeterRead: (p) => p >= 66 ? `まっすぐに進んだ軌跡です` : p >= 34 ? `進みながらも、幾度か向きを変えました` : `何度も引き返しながら進んだ軌跡です`,
+    celticMeterRead: (n) => n === 0 ? `ひとつの領域に留まりつづけた軌跡です` : n <= 2 ? `領域を一度か二度またいだ軌跡です` : n <= 4 ? `領域を幾度もまたいだ軌跡です` : `領域のあいだを何度も渡り歩いた軌跡です`,
     celticZone: {"origin": "静止の座", "axisFuture": "未来への一途", "axisSurface": "覚醒への一途", "axisPast": "過去への一途", "axisDeep": "深層への一途", "z0": "明日を向く", "z1": "昇りゆく明日", "z2": "澄みゆく意識", "z3": "省みる意識", "z4": "記憶を照らす", "z5": "遠い日を望む", "z6": "沈みゆく記憶", "z7": "澱みの底", "z8": "眠れる過去", "z9": "内へ潜る", "z10": "兆しの底流", "z11": "訪れる予感"},
     celticZoneNote: {"origin": "どこにも傾かなかった軌跡です。決めきれないのではなく、いまはどの方向も等しく開いている状態かもしれません。", "axisFuture": "迷いなく先へ向かう軌跡です。ただし、まだ来ていないものに賭ける気持ちが強いときにも、この形は現れます。", "axisSurface": "はっきりと自覚している事柄へ向かう軌跡です。言葉にできている分、見落としが裏側に残ることもあります。", "axisPast": "過去へまっすぐ向かう軌跡です。終えたはずの出来事が、まだ動機の底で働いていることを示す場合があります。", "axisDeep": "深いところへ沈む軌跡です。自分でも説明のつかない衝動が、いま選択を動かしているのかもしれません。", "z0": "先を見ている軌跡です。目の前の状況より、その先にある結果のほうに関心が向いています。", "z1": "意識が未来へ持ち上がる軌跡です。計画や見通しが、いまの気分を引き上げている状態を示すことがあります。", "z2": "考えが澄んでいく軌跡です。分かっていなかったことに説明がつき始めた時期かもしれません。", "z3": "自分を省みる軌跡です。過ぎたことを言葉にし直そうとする動きが、意識の側で起きています。", "z4": "記憶に光を当てる軌跡です。忘れていたつもりの出来事が、いまの判断の材料になっている場合があります。", "z5": "遠い日を見ている軌跡です。取り戻せないものへの気持ちが、動機の奥に眠っていることがあります。", "z6": "記憶が沈んでいく軌跡です。振り返ること自体をやめようとしている時期かもしれません。", "z7": "最も深く淀んだところにある軌跡です。長く動かせずにいるものが、静かに底に溜まっています。", "z8": "眠ったままの過去へ向かう軌跡です。かつて満たされなかった願いを、いま取り戻そうとしているのかもしれません。", "z9": "内側へ潜っていく軌跡です。外の出来事より、自分の反応のほうに関心が移っています。", "z10": "まだ形にならない予感の軌跡です。理由は言えないが、何かが動き出していると感じているときに現れます。", "z11": "訪れるものを待つ軌跡です。自覚しないうちに、次に来るものへ準備が始まっている場合があります。"},
     weekPeak: (d) => `山｜${d}`,
@@ -11458,6 +12604,8 @@ const T = {
     appTitle: "塔羅占卜",
     tagline: "來自日本的全新塔羅體驗",
     eyebrow: "ARCANA DRAW",
+    reloadLabel: "重新整理",
+    reloadNote: "重新載入至最新版本",
     intro: "我對天發誓，絕對沒有任何作假。\n理論上牌面內容毫無偏頗的完全公平設計。\n絕對保密。AI靜靜地傾聽你內心的聲音。",
     privacyIntro: "",
     nameLabel: "您的名字（暱稱也可以）",
@@ -11617,6 +12765,35 @@ const T = {
     subLast: "上次",
     subHistory: "歷史",
     subStats: "統計",
+    subDex: "圖鑑",
+    dexRareCount: "稀有收集",
+    dexHoloCount: "虹彩收集",
+    dexTierRare: "稀有",
+    dexTierHolo: "虹彩",
+    dexFlip: "點擊翻轉",
+    chestLead: "請選擇一個寶箱",
+    chestGotUp: "圖鑑的正位已開啟",
+    chestGotRev: "圖鑑的逆位已開啟",
+    chestMiss: "裡面什麼也沒有",
+    chestGotShard: "獲得虹彩碎片",
+    chestGotRareShard: "獲得稀有碎片",
+    chestGotHolo: "虹彩圖鑑開啟了一格",
+    dexShardRare: "稀有碎片",
+    dexShardHolo: "虹彩碎片",
+    subShard: "兌換",
+    oneOracleRareTitle: "◈ 出現了稀有卡 ◈",
+    oneOracleDarkRareTitle: "◈ 出現了闇之稀有卡 ◈",
+    oneOracleDarkHoloTitle: "✦ 黑暗降臨 ✦",
+    oneOracleDarkJackpot: "深淵！！！",
+    dexHowTo: "可透過單張神諭與小神諭收集",
+    shardWhere: "可在記錄的「兌換」分頁使用",
+    shardIntro: "碎片可開啟圖鑑中尚未開啟的一格。無法指定要開啟哪一格。",
+    shardNoteRare: "偶爾會從寶箱中出現。",
+    shardNoteHolo: "每兌換一次，所需數量便增加一個。",
+    shardExchange: "進行兌換",
+    shardShort: (n) => `還差 ${n} 個`,
+    shardAllFilled: "已全部開啟",
+    shardOpened: (group, name, tier, orient) => `${group}「${name}」${tier}・${orient} 的圖鑑已解放`,
     subEmpty: "尚無紀錄",
     backToTitle: "回到首頁",
     oneOracleHoloTitle: "✦ 彩虹降臨了 ✦",
@@ -11656,7 +12833,7 @@ const T = {
     celticPlaneNote: "淡色的點是先前的重心",
     celticWander: "動搖",
     celticSteady: "安靜",
-    celticMeterRead: (p) => p >= 66 ? `一路筆直前行的軌跡` : p >= 34 ? `一面前進，一面數度轉向` : `幾度折返而行的軌跡`,
+    celticMeterRead: (n) => n === 0 ? `始終停留於同一領域的軌跡` : n <= 2 ? `一兩次跨入另一領域的軌跡` : n <= 4 ? `數度往來於各領域之間的軌跡` : `不斷在領域之間往返的軌跡`,
     celticZone: {"origin": "靜止之座", "axisFuture": "直往未來", "axisSurface": "直往覺醒", "axisPast": "直往過去", "axisDeep": "直往深層", "z0": "面向明日", "z1": "升起的明日", "z2": "澄澈的意識", "z3": "反省的意識", "z4": "照亮記憶", "z5": "遙望遠日", "z6": "下沉的記憶", "z7": "沉澱之底", "z8": "沉睡的過去", "z9": "向內潛入", "z10": "徵兆的暗流", "z11": "來臨的預感"},
     celticZoneNote: {"origin": "沒有偏向任何一方的軌跡。或許不是無法決定，而是此刻每個方向都同樣敞開著。", "axisFuture": "毫不猶豫向前的軌跡。不過，當人把許多期待押在尚未到來的事物上時，也會出現這個形狀。", "axisSurface": "朝向你已清楚自覺之事的軌跡。正因為說得出口，說不出口的部分可能留在背後。", "axisPast": "筆直往過去去的軌跡。以為已經結束的事，可能仍在動機的底層運作著。", "axisDeep": "沉入深處的軌跡。連自己也說不清的衝動，或許正在推動當下的選擇。", "z0": "望向前方的軌跡。比起眼前的處境，注意力更放在其後的結果上。", "z1": "意識被抬向未來的軌跡。計畫或前景可能正在提振此刻的心情。", "z2": "思緒逐漸澄清的軌跡。或許正處於原本無法解釋之事開始有了說法的時期。", "z3": "回頭審視自己的軌跡。想把過去重新化為語言的動作，正在意識這一側發生。", "z4": "照亮記憶的軌跡。以為已經遺忘的事，可能正成為當下判斷的材料。", "z5": "遙望遠日的軌跡。對於再也取不回之物的心情，或許沉睡在動機深處。", "z6": "記憶逐漸下沉的軌跡。或許正處於想停止回望本身的時期。", "z7": "位於最深沉澱處的軌跡。長久無法挪動的事物，正靜靜堆積在底部。", "z8": "朝向沉睡過去的軌跡。你或許正想取回當年未曾滿足的願望。", "z9": "向內潛入的軌跡。比起外在的事件，關注已轉向自己的反應。", "z10": "尚未成形的預感之軌跡。當人說不出理由卻感到有什麼開始動了，便會出現。", "z11": "等待來訪之物的軌跡。在未曾自覺之間，對下一件事的準備或許已經開始。"},
     weekPeak: (d) => `高峰｜${d}`,
@@ -11702,6 +12879,8 @@ const T = {
     appTitle: "塔罗占卜",
     tagline: "来自日本的全新塔罗体验",
     eyebrow: "ARCANA DRAW",
+    reloadLabel: "刷新",
+    reloadNote: "重新载入至最新版本",
     intro: "我对天发誓，绝对没有任何作假。\n理论上牌面内容毫无偏颇的完全公平设计。\n绝对保密。AI静静地倾听你内心的声音。",
     privacyIntro: "",
     nameLabel: "您的名字（暱称也可以）",
@@ -11861,6 +13040,35 @@ const T = {
     subLast: "上次",
     subHistory: "历史",
     subStats: "统计",
+    subDex: "图鉴",
+    dexRareCount: "稀有收集",
+    dexHoloCount: "虹彩收集",
+    dexTierRare: "稀有",
+    dexTierHolo: "虹彩",
+    dexFlip: "点击翻转",
+    chestLead: "请选择一个宝箱",
+    chestGotUp: "图鉴的正位已开启",
+    chestGotRev: "图鉴的逆位已开启",
+    chestMiss: "里面什么也没有",
+    chestGotShard: "获得虹彩碎片",
+    chestGotRareShard: "获得稀有碎片",
+    chestGotHolo: "虹彩图鉴开启了一格",
+    dexShardRare: "稀有碎片",
+    dexShardHolo: "虹彩碎片",
+    subShard: "兑换",
+    oneOracleRareTitle: "◈ 出现了稀有卡 ◈",
+    oneOracleDarkRareTitle: "◈ 出现了暗之稀有卡 ◈",
+    oneOracleDarkHoloTitle: "✦ 黑暗降临 ✦",
+    oneOracleDarkJackpot: "深渊！！！",
+    dexHowTo: "可通过单张神谕与小神谕收集",
+    shardWhere: "可在记录的「兑换」分页使用",
+    shardIntro: "碎片可开启图鉴中尚未开启的一格。无法指定要开启哪一格。",
+    shardNoteRare: "偶尔会从宝箱中出现。",
+    shardNoteHolo: "每兑换一次，所需数量便增加一个。",
+    shardExchange: "进行兑换",
+    shardShort: (n) => `还差 ${n} 个`,
+    shardAllFilled: "已全部开启",
+    shardOpened: (group, name, tier, orient) => `${group}「${name}」${tier}・${orient} 的图鉴已解放`,
     subEmpty: "尚无记录",
     backToTitle: "回到首页",
     oneOracleHoloTitle: "✦ 彩虹降临了 ✦",
@@ -11900,7 +13108,7 @@ const T = {
     celticPlaneNote: "淡色的点是先前的重心",
     celticWander: "动摇",
     celticSteady: "安静",
-    celticMeterRead: (p) => p >= 66 ? `一路笔直前行的轨迹` : p >= 34 ? `一面前进，一面数度转向` : `几度折返而行的轨迹`,
+    celticMeterRead: (n) => n === 0 ? `始终停留于同一领域的轨迹` : n <= 2 ? `一两次跨入另一领域的轨迹` : n <= 4 ? `数度往来于各领域之间的轨迹` : `不断在领域之间往返的轨迹`,
     celticZone: {"origin": "静止之座", "axisFuture": "直往未来", "axisSurface": "直往觉醒", "axisPast": "直往过去", "axisDeep": "直往深层", "z0": "面向明日", "z1": "升起的明日", "z2": "澄澈的意识", "z3": "反省的意识", "z4": "照亮记忆", "z5": "遥望远日", "z6": "下沉的记忆", "z7": "沉淀之底", "z8": "沉睡的过去", "z9": "向内潜入", "z10": "征兆的暗流", "z11": "来临的预感"},
     celticZoneNote: {"origin": "没有偏向任何一方的轨迹。或许不是无法决定，而是此刻每个方向都同样敞开着。", "axisFuture": "毫不犹豫向前的轨迹。不过，当人把许多期待押在尚未到来的事物上时，也会出现这个形状。", "axisSurface": "朝向你已清楚自觉之事的轨迹。正因为说得出口，说不出口的部分可能留在背后。", "axisPast": "笔直往过去去的轨迹。以为已经结束的事，可能仍在动机的底层运作着。", "axisDeep": "沉入深处的轨迹。连自己也说不清的冲动，或许正在推动当下的选择。", "z0": "望向前方的轨迹。比起眼前的处境，注意力更放在其后的结果上。", "z1": "意识被抬向未来的轨迹。计划或前景可能正在提振此刻的心情。", "z2": "思绪逐渐澄清的轨迹。或许正处于原本无法解释之事开始有了说法的时期。", "z3": "回头审视自己的轨迹。想把过去重新化为语言的动作，正在意识这一侧发生。", "z4": "照亮记忆的轨迹。以为已经遗忘的事，可能正成为当下判断的材料。", "z5": "遥望远日的轨迹。对于再也取不回之物的心情，或许沉睡在动机深处。", "z6": "记忆逐渐下沉的轨迹。或许正处于想停止回望本身的时期。", "z7": "位于最深沉淀处的轨迹。长久无法挪动的事物，正静静堆积在底部。", "z8": "朝向沉睡过去的轨迹。你或许正想取回当年未曾满足的愿望。", "z9": "向内潜入的轨迹。比起外在的事件，关注已转向自己的反应。", "z10": "尚未成形的预感之轨迹。当人说不出理由却感到有什么开始动了，便会出现。", "z11": "等待来访之物的轨迹。在未曾自觉之间，对下一件事的准备或许已经开始。"},
     weekPeak: (d) => `高峰｜${d}`,
@@ -11946,6 +13154,8 @@ const T = {
     appTitle: "Tarot Reading",
     tagline: "A new tarot experience designed in Japan",
     eyebrow: "ARCANA DRAW",
+    reloadLabel: "Reload",
+    reloadNote: "Fetches the latest version",
     intro: "I swear to you, nothing here is rigged.\nA completely fair design with, in theory, no bias whatsoever in the cards.\nCompletely confidential. AI quietly listens to what's on your mind.",
     privacyIntro: "",
     nameLabel: "Your name (nickname is fine)",
@@ -12105,6 +13315,35 @@ const T = {
     subLast: "Last",
     subHistory: "History",
     subStats: "Stats",
+    subDex: "Codex",
+    dexRareCount: "Rare collected",
+    dexHoloCount: "Holo collected",
+    dexTierRare: "Rare",
+    dexTierHolo: "Holo",
+    dexFlip: "Tap to flip",
+    chestLead: "Choose one chest",
+    chestGotUp: "An upright slot opened in the codex",
+    chestGotRev: "A reversed slot opened in the codex",
+    chestMiss: "Nothing inside",
+    chestGotShard: "You found a holo shard",
+    chestGotRareShard: "You found a rare shard",
+    chestGotHolo: "One holo slot opened",
+    dexShardRare: "Rare shards",
+    dexShardHolo: "Holo shards",
+    subShard: "Exchange",
+    oneOracleRareTitle: "◈ A Rare card appeared ◈",
+    oneOracleDarkRareTitle: "◈ A dark Rare card appeared ◈",
+    oneOracleDarkHoloTitle: "✦ Darkness has descended ✦",
+    oneOracleDarkJackpot: "THE ABYSS!!!",
+    dexHowTo: "Collected through One Oracle and Petit One Oracle",
+    shardWhere: "Use it in the Exchange tab under Records",
+    shardIntro: "A shard opens one slot you don't yet have in the codex. You cannot choose which slot.",
+    shardNoteRare: "Occasionally found in chests.",
+    shardNoteHolo: "Each exchange raises the number required by one.",
+    shardExchange: "Exchange",
+    shardShort: (n) => `${n} more needed`,
+    shardAllFilled: "All slots are open",
+    shardOpened: (group, name, tier, orient) => `Codex unlocked: ${group} \u2014 \u201c${name}\u201d \u00b7 ${tier} \u00b7 ${orient}`,
     subEmpty: "No records yet",
     backToTitle: "Back to title",
     oneOracleHoloTitle: "✦ A Rainbow Has Appeared ✦",
@@ -12144,7 +13383,7 @@ const T = {
     celticPlaneNote: "The faint dots are your earlier centres",
     celticWander: "Agitation",
     celticSteady: "Calm",
-    celticMeterRead: (p) => p >= 66 ? `A trail that ran straight` : p >= 34 ? `Moving on, yet turning more than once` : `A trail that doubled back again and again`,
+    celticMeterRead: (n) => n === 0 ? `A trail that stayed within one region` : n <= 2 ? `A trail that crossed into another region once or twice` : n <= 4 ? `A trail that crossed between regions several times` : `A trail that kept moving from one region to the next`,
     celticZone: {"origin": "The still seat", "axisFuture": "Straight to tomorrow", "axisSurface": "Straight to waking", "axisPast": "Straight to the past", "axisDeep": "Straight to the depths", "z0": "Facing tomorrow", "z1": "Tomorrow rising", "z2": "Clearing mind", "z3": "Reflecting mind", "z4": "Lighting memory", "z5": "Gazing at distant days", "z6": "Memory sinking", "z7": "The stagnant floor", "z8": "The sleeping past", "z9": "Diving inward", "z10": "The undercurrent of signs", "z11": "A coming sense"},
     celticZoneNote: {"origin": "A trail that leaned nowhere. Not indecision, perhaps, but a moment when every direction lies equally open.", "axisFuture": "A trail that runs straight ahead. This shape also appears when much is being staked on what has not yet arrived.", "axisSurface": "A trail toward what you already know you feel. Since it can be put into words, what escapes words may sit behind it.", "axisPast": "A trail running straight back. Something you thought was finished may still be working beneath your motives.", "axisDeep": "A trail sinking into the depths. An impulse you cannot account for may be moving your choices now.", "z0": "A trail with its eyes ahead. Attention rests on the outcome rather than on the situation at hand.", "z1": "A trail where awareness lifts toward tomorrow. Plans or prospects may be raising your present mood.", "z2": "A trail of clearing thought. This may be a time when what had no explanation begins to find one.", "z3": "A trail turned back on itself. A movement to put the past into words again is happening at the conscious level.", "z4": "A trail that lights up memory. Something you meant to forget may be feeding your present judgement.", "z5": "A trail gazing at distant days. A feeling toward what cannot be recovered may lie asleep beneath your motives.", "z6": "A trail where memory sinks. This may be a time of trying to stop looking back at all.", "z7": "A trail at the stillest depth. Something long unmoved has been settling quietly at the bottom.", "z8": "A trail toward a sleeping past. You may be trying to reclaim a wish that was never granted.", "z9": "A trail diving inward. Interest has shifted from what happens outside to how you respond.", "z10": "A trail of a sense not yet formed. It appears when something feels set in motion for reasons you cannot name.", "z11": "A trail that waits for arrival. Preparation for what comes next may already have begun without your noticing."},
     weekPeak: (d) => `Peak｜${d}`,
@@ -12190,6 +13429,8 @@ const T = {
     appTitle: "Tarot Reading",
     tagline: "A new tarot experience designed in Japan",
     eyebrow: "ARCANA DRAW",
+    reloadLabel: "I-reload",
+    reloadNote: "Kinukuha ang pinakabagong bersyon",
     intro: "Sumusumpa ako sa Diyos, walang anumang dayaan dito.\nGanap na patas na disenyo — sa teorya, walang kahit anong kiling sa mga baraha.\nGanap na kumpidensyal. Tahimik na pinapakinggan ng AI ang laman ng puso mo.",
     privacyIntro: "",
     nameLabel: "Pangalan mo (pwede ring nickname)",
@@ -12349,6 +13590,35 @@ const T = {
     subLast: "Huli",
     subHistory: "Kasaysayan",
     subStats: "Estadistika",
+    subDex: "Kodeks",
+    dexRareCount: "Nakolektang rare",
+    dexHoloCount: "Nakolektang holo",
+    dexTierRare: "Rare",
+    dexTierHolo: "Holo",
+    dexFlip: "I-tap para baligtarin",
+    chestLead: "Pumili ng isang kaban",
+    chestGotUp: "Nabuksan ang upright na puwang sa kodeks",
+    chestGotRev: "Nabuksan ang reversed na puwang sa kodeks",
+    chestMiss: "Walang laman",
+    chestGotShard: "Nakakuha ka ng holo shard",
+    chestGotRareShard: "Nakakuha ka ng rare shard",
+    chestGotHolo: "Nabuksan ang isang holo na puwang",
+    dexShardRare: "Rare shards",
+    dexShardHolo: "Holo shards",
+    subShard: "Palitan",
+    oneOracleRareTitle: "◈ Lumitaw ang Rare na baraha ◈",
+    oneOracleDarkRareTitle: "◈ Lumitaw ang madilim na Rare ◈",
+    oneOracleDarkHoloTitle: "✦ Bumaba ang kadiliman ✦",
+    oneOracleDarkJackpot: "ANG KALALIMAN!!!",
+    dexHowTo: "Nakokolekta sa One Oracle at Munting Orakulo",
+    shardWhere: "Gamitin ito sa Palitan tab sa Tala",
+    shardIntro: "Nagbubukas ang shard ng isang puwang na wala ka pa sa kodeks. Hindi mo mapipili kung alin.",
+    shardNoteRare: "Paminsan-minsan ay lumalabas sa mga kaban.",
+    shardNoteHolo: "Bawat palit ay nagdaragdag ng isa sa kailangan.",
+    shardExchange: "Palitan",
+    shardShort: (n) => `Kulang pa ng ${n}`,
+    shardAllFilled: "Bukas na ang lahat",
+    shardOpened: (group, name, tier, orient) => `Nabuksan ang kodeks: ${group} \u2014 \u201c${name}\u201d \u00b7 ${tier} \u00b7 ${orient}`,
     subEmpty: "Wala pang tala",
     backToTitle: "Bumalik sa simula",
     oneOracleHoloTitle: "✦ Lumitaw ang Bahaghari ✦",
@@ -12388,7 +13658,7 @@ const T = {
     celticPlaneNote: "Ang malalabong tuldok ay mga naunang sentro",
     celticWander: "Pagkabalisa",
     celticSteady: "Katahimikan",
-    celticMeterRead: (p) => p >= 66 ? `Landas na tuwid ang takbo` : p >= 34 ? `Umuusad, ngunit paulit-ulit lumiliko` : `Landas na paulit-ulit bumabalik`,
+    celticMeterRead: (n) => n === 0 ? `Isang landas na nanatili sa iisang rehiyon` : n <= 2 ? `Isang landas na tumawid sa ibang rehiyon nang isa o dalawang beses` : n <= 4 ? `Isang landas na ilang beses tumawid sa pagitan ng mga rehiyon` : `Isang landas na paulit-ulit na lumilipat mula sa isang rehiyon patungo sa iba`,
     celticZone: {"origin": "Ang tahimik na luklukan", "axisFuture": "Tuwid sa bukas", "axisSurface": "Tuwid sa paggising", "axisPast": "Tuwid sa nakaraan", "axisDeep": "Tuwid sa kalaliman", "z0": "Nakaharap sa bukas", "z1": "Sumisikat na bukas", "z2": "Lumilinaw na isip", "z3": "Nagninilay na isip", "z4": "Tinatanglawan ang alaala", "z5": "Tanaw sa malayong araw", "z6": "Lumulubog na alaala", "z7": "Ang tigil na sahig", "z8": "Ang natutulog na nakaraan", "z9": "Sumisisid sa loob", "z10": "Agos sa ilalim ng palatandaan", "z11": "Isang paparating na pakiramdam"},
     celticZoneNote: {"origin": "Landas na hindi kumiling saanman。Marahil hindi kawalan ng pasya, kundi sandaling pantay ang bukas na bawat direksyon。", "axisFuture": "Landas na tuwid ang tungo。Lumilitaw din ang hugis na ito kapag marami ang itinataya sa hindi pa dumarating。", "axisSurface": "Landas patungo sa alam mo nang nararamdaman。Dahil nasasabi ito, maaaring nasa likod ang hindi masabi。", "axisPast": "Landas na tuwid pabalik。Ang inakala mong tapos ay maaaring gumagana pa rin sa ilalim ng iyong motibo。", "axisDeep": "Landas na lumulubog sa kalaliman。Isang udyok na hindi mo maipaliwanag ang maaaring gumagalaw sa iyong pagpili。", "z0": "Landas na nakatingin sa unahan。Nasa kalalabasan ang pansin, hindi sa kasalukuyang kalagayan。", "z1": "Landas kung saan umaangat ang kamalayan sa bukas。Ang mga plano o pag-asa ay maaaring nag-aangat sa iyong loob。", "z2": "Landas ng lumilinaw na isip。Maaaring panahon ito na nagsisimulang magkaroon ng paliwanag ang dating walang paliwanag。", "z3": "Landas na bumabalik sa sarili。Nagaganap sa malay na bahagi ang pagnanais na muling bigyang-salita ang nakaraan。", "z4": "Landas na tumatanglaw sa alaala。Ang inakala mong nalimot ay maaaring nagiging batayan ng iyong pasya。", "z5": "Landas na tumatanaw sa malayong araw。Ang damdamin sa hindi na maibabalik ay maaaring natutulog sa ilalim ng motibo。", "z6": "Landas kung saan lumulubog ang alaala。Maaaring panahon ito ng pagtigil sa paglingon mismo。", "z7": "Landas sa pinakatahimik na kalaliman。Ang matagal nang hindi natinag ay tahimik na naiipon sa ilalim。", "z8": "Landas patungo sa natutulog na nakaraan。Maaaring sinisikap mong bawiin ang hilig na hindi natupad noon。", "z9": "Landas na sumisisid paloob。Lumipat ang interes mula sa panlabas patungo sa sarili mong tugon。", "z10": "Landas ng pakiramdam na wala pang hugis。Lumilitaw kapag may tila gumagalaw sa dahilang hindi mo mapangalanan。", "z11": "Landas na naghihintay ng darating。Maaaring nagsimula na ang paghahanda sa susunod nang hindi mo namamalayan。"},
     weekPeak: (d) => `Rurok｜${d}`,
@@ -12434,6 +13704,8 @@ const T = {
     appTitle: "ไพ่ทาโรต์",
     tagline: "ประสบการณ์ไพ่ทาโรต์รูปแบบใหม่ ออกแบบจากญี่ปุ่น",
     eyebrow: "ARCANA DRAW",
+    reloadLabel: "โหลดใหม่",
+    reloadNote: "โหลดเวอร์ชันล่าสุดใหม่",
     intro: "ขอสาบานว่าไม่มีการจัดฉากใดๆ ทั้งสิ้น\nออกแบบให้ยุติธรรมอย่างสมบูรณ์ ตามทฤษฎีแล้วเนื้อหาไพ่ไม่มีความลำเอียงใดๆ\nเก็บเป็นความลับอย่างสมบูรณ์ AI รับฟังเสียงในใจคุณอย่างเงียบๆ",
     privacyIntro: "",
     nameLabel: "ชื่อของคุณ (ใช้ชื่อเล่นก็ได้)",
@@ -12593,6 +13865,35 @@ const T = {
     subLast: "ครั้งล่าสุด",
     subHistory: "ประวัติ",
     subStats: "สถิติ",
+    subDex: "สารานุกรม",
+    dexRareCount: "แรร์ที่สะสมได้",
+    dexHoloCount: "โฮโลที่สะสมได้",
+    dexTierRare: "แรร์",
+    dexTierHolo: "โฮโล",
+    dexFlip: "แตะเพื่อพลิก",
+    chestLead: "เลือกหีบหนึ่งใบ",
+    chestGotUp: "เปิดช่องตั้งตรงในสารานุกรมแล้ว",
+    chestGotRev: "เปิดช่องกลับหัวในสารานุกรมแล้ว",
+    chestMiss: "ไม่มีอะไรอยู่ข้างใน",
+    chestGotShard: "ได้รับเศษโฮโล",
+    chestGotRareShard: "ได้รับเศษแรร์",
+    chestGotHolo: "เปิดช่องโฮโลได้หนึ่งช่อง",
+    dexShardRare: "เศษแรร์",
+    dexShardHolo: "เศษโฮโล",
+    subShard: "แลกเปลี่ยน",
+    oneOracleRareTitle: "◈ ปรากฏการ์ดแรร์ ◈",
+    oneOracleDarkRareTitle: "◈ ปรากฏการ์ดแรร์แห่งความมืด ◈",
+    oneOracleDarkHoloTitle: "✦ ความมืดได้ลงมา ✦",
+    oneOracleDarkJackpot: "ห้วงลึก!!!",
+    dexHowTo: "สะสมได้จากวันออราเคิลและออราเคิลน้อย",
+    shardWhere: "ใช้ได้ที่แท็บแลกเปลี่ยนในบันทึก",
+    shardIntro: "เศษชิ้นจะเปิดช่องที่ยังไม่ได้เปิดในสารานุกรมหนึ่งช่อง คุณเลือกช่องไม่ได้",
+    shardNoteRare: "บางครั้งพบได้จากหีบ",
+    shardNoteHolo: "การแลกแต่ละครั้งจะเพิ่มจำนวนที่ต้องใช้ทีละหนึ่ง",
+    shardExchange: "แลกเปลี่ยน",
+    shardShort: (n) => `ขาดอีก ${n}`,
+    shardAllFilled: "เปิดครบทุกช่องแล้ว",
+    shardOpened: (group, name, tier, orient) => `ปลดล็อกสารานุกรม: ${group}「${name}」${tier}・${orient}`,
     subEmpty: "ยังไม่มีบันทึก",
     backToTitle: "กลับหน้าแรก",
     oneOracleHoloTitle: "✦ สายรุ้งปรากฏขึ้นแล้ว ✦",
@@ -12632,7 +13933,7 @@ const T = {
     celticPlaneNote: "จุดจางคือจุดศูนย์ถ่วงของครั้งก่อน",
     celticWander: "ความปั่นป่วน",
     celticSteady: "ความสงบ",
-    celticMeterRead: (p) => p >= 66 ? `เส้นทางที่มุ่งตรงไป` : p >= 34 ? `เดินหน้าไป แต่เปลี่ยนทิศหลายครั้ง` : `เส้นทางที่ย้อนกลับครั้งแล้วครั้งเล่า`,
+    celticMeterRead: (n) => n === 0 ? `ร่องรอยที่อยู่ในพื้นที่เดียวตลอด` : n <= 2 ? `ร่องรอยที่ข้ามไปอีกพื้นที่หนึ่งหรือสองครั้ง` : n <= 4 ? `ร่องรอยที่ข้ามไปมาระหว่างพื้นที่หลายครั้ง` : `ร่องรอยที่ย้ายจากพื้นที่หนึ่งไปอีกพื้นที่ครั้งแล้วครั้งเล่า`,
     celticZone: {"origin": "ที่นั่งอันนิ่งสงบ", "axisFuture": "ตรงสู่วันพรุ่ง", "axisSurface": "ตรงสู่การตื่นรู้", "axisPast": "ตรงสู่อดีต", "axisDeep": "ตรงสู่ห้วงลึก", "z0": "หันสู่วันพรุ่ง", "z1": "วันพรุ่งที่ทอแสง", "z2": "จิตที่กระจ่างขึ้น", "z3": "จิตที่ทบทวน", "z4": "ส่องความทรงจำ", "z5": "มองวันวานอันไกล", "z6": "ความทรงจำที่จมลง", "z7": "ก้นบึ้งอันนิ่งงัน", "z8": "อดีตที่หลับใหล", "z9": "ดำดิ่งสู่ภายใน", "z10": "กระแสใต้ของลางบอก", "z11": "ลางที่กำลังมาถึง"},
     celticZoneNote: {"origin": "เส้นทางที่ไม่เอนไปทางใด。อาจไม่ใช่การตัดสินใจไม่ได้ แต่เป็นช่วงที่ทุกทิศทางเปิดอยู่เท่ากัน。", "axisFuture": "เส้นทางที่มุ่งไปข้างหน้าโดยไม่ลังเล。ทว่ารูปนี้ก็ปรากฏเมื่อผู้คนฝากความหวังไว้มากกับสิ่งที่ยังมาไม่ถึง。", "axisSurface": "เส้นทางมุ่งสู่สิ่งที่คุณรู้ตัวชัดเจน。เพราะพูดออกมาได้ สิ่งที่พูดไม่ได้จึงอาจหลงเหลืออยู่ด้านหลัง。", "axisPast": "เส้นทางที่มุ่งตรงสู่อดีต。สิ่งที่คิดว่าจบไปแล้วอาจยังทำงานอยู่ใต้แรงจูงใจ。", "axisDeep": "เส้นทางที่จมสู่ห้วงลึก。แรงผลักที่ตัวเองก็อธิบายไม่ได้ อาจกำลังขับเคลื่อนการเลือกในตอนนี้。", "z0": "เส้นทางที่มองไปข้างหน้า。ความสนใจอยู่ที่ผลลัพธ์เบื้องหน้ามากกว่าสถานการณ์ตรงหน้า。", "z1": "เส้นทางที่จิตสำนึกถูกยกขึ้นสู่อนาคต。แผนการหรือความคาดหวังอาจกำลังยกระดับอารมณ์ปัจจุบัน。", "z2": "เส้นทางที่ความคิดกระจ่างขึ้น。อาจเป็นช่วงที่สิ่งซึ่งเคยอธิบายไม่ได้เริ่มมีคำอธิบาย。", "z3": "เส้นทางที่หันกลับมามองตนเอง。การพยายามให้ถ้อยคำแก่อดีตอีกครั้ง กำลังเกิดขึ้นในฝั่งจิตสำนึก。", "z4": "เส้นทางที่ส่องแสงให้ความทรงจำ。สิ่งที่คิดว่าลืมไปแล้วอาจกำลังเป็นวัตถุดิบของการตัดสินใจ。", "z5": "เส้นทางที่มองวันวานอันไกล。ความรู้สึกต่อสิ่งที่เรียกคืนไม่ได้ อาจหลับอยู่ใต้แรงจูงใจ。", "z6": "เส้นทางที่ความทรงจำจมลง。อาจเป็นช่วงที่พยายามหยุดหันกลับไปมองเสียเลย。", "z7": "เส้นทางที่อยู่ ณ ก้นบึ้งอันนิ่งที่สุด。สิ่งที่ขยับไม่ได้มานาน กำลังทับถมอยู่เงียบ ๆ。", "z8": "เส้นทางที่มุ่งสู่อดีตซึ่งหลับใหล。คุณอาจกำลังพยายามทวงคืนความปรารถนาที่ไม่เคยได้รับการเติมเต็ม。", "z9": "เส้นทางที่ดำดิ่งสู่ภายใน。ความสนใจย้ายจากเหตุการณ์ภายนอกมาสู่ปฏิกิริยาของตนเอง。", "z10": "เส้นทางของลางที่ยังไม่เป็นรูป。ปรากฏเมื่อรู้สึกว่ามีบางอย่างเริ่มเคลื่อน ด้วยเหตุผลที่บอกไม่ได้。", "z11": "เส้นทางที่รอสิ่งซึ่งจะมาถึง。การเตรียมตัวสำหรับสิ่งถัดไปอาจเริ่มขึ้นแล้วโดยไม่รู้ตัว。"},
     weekPeak: (d) => `จุดสูงสุด｜${d}`,
@@ -12679,6 +13980,8 @@ const T = {
     appTitle: "Tarotläsning",
     tagline: "En ny tarotupplevelse formgiven i Japan",
     eyebrow: "ARCANA DRAW",
+    reloadLabel: "Uppdatera",
+    reloadNote: "Hämtar den senaste versionen",
     intro: "Jag lovar dig: ingenting här är riggat.\nEn fullständigt rättvis konstruktion, i teorin utan någon som helst snedvridning i korten.\nHelt förtroligt. AI:n lyssnar stilla på det du bär på.",
     privacyIntro: "",
     nameLabel: "Ditt namn (smeknamn går bra)",
@@ -12838,6 +14141,35 @@ const T = {
     subLast: "Senaste",
     subHistory: "Historik",
     subStats: "Statistik",
+    subDex: "Kodex",
+    dexRareCount: "Sällsynta insamlade",
+    dexHoloCount: "Holo insamlade",
+    dexTierRare: "Sällsynt",
+    dexTierHolo: "Holo",
+    dexFlip: "Tryck för att vända",
+    chestLead: "Välj en kista",
+    chestGotUp: "En upprätt plats öppnades i kodexet",
+    chestGotRev: "En omvänd plats öppnades i kodexet",
+    chestMiss: "Ingenting inuti",
+    chestGotShard: "Du fick en holoskärva",
+    chestGotRareShard: "Du fick en sällsynt skärva",
+    chestGotHolo: "En holoplats öppnades",
+    dexShardRare: "Sällsynta skärvor",
+    dexShardHolo: "Holoskärvor",
+    subShard: "Byt",
+    oneOracleRareTitle: "◈ Ett sällsynt kort dök upp ◈",
+    oneOracleDarkRareTitle: "◈ Ett mörkt sällsynt kort dök upp ◈",
+    oneOracleDarkHoloTitle: "✦ Mörkret har stigit ned ✦",
+    oneOracleDarkJackpot: "AVGRUNDEN!!!",
+    dexHowTo: "Samlas via One Oracle och Petit One Oracle",
+    shardWhere: "Används i fliken Byt under Anteckningar",
+    shardIntro: "En skärva öppnar en plats du ännu inte har i kodexet. Du kan inte välja vilken.",
+    shardNoteRare: "Dyker upp ibland ur kistor.",
+    shardNoteHolo: "Varje byte höjer antalet som krävs med ett.",
+    shardExchange: "Byt",
+    shardShort: (n) => `${n} till behövs`,
+    shardAllFilled: "Alla platser är öppna",
+    shardOpened: (group, name, tier, orient) => `Kodex uppl\u00e4st: ${group} \u2014 \u201d${name}\u201d \u00b7 ${tier} \u00b7 ${orient}`,
     subEmpty: "Inga anteckningar ännu",
     backToTitle: "Tillbaka till start",
     oneOracleHoloTitle: "✦ En regnbåge har visat sig ✦",
@@ -12877,7 +14209,7 @@ const T = {
     celticPlaneNote: "De svaga punkterna är dina tidigare tyngdpunkter",
     celticWander: "Oro",
     celticSteady: "Stillhet",
-    celticMeterRead: (p) => p >= 66 ? `En bana som gick rakt fram` : p >= 34 ? `Framåt, men med flera vändningar` : `En bana som gång på gång vände tillbaka`,
+    celticMeterRead: (n) => n === 0 ? `Ett spår som stannade inom ett område` : n <= 2 ? `Ett spår som korsade till ett annat område en eller två gånger` : n <= 4 ? `Ett spår som växlade mellan områden flera gånger` : `Ett spår som gång på gång flyttade från ett område till nästa`,
     celticZone: {"origin": "Den stilla platsen", "axisFuture": "Rakt mot morgondagen", "axisSurface": "Rakt mot vakenhet", "axisPast": "Rakt mot det förflutna", "axisDeep": "Rakt mot djupet", "z0": "Vänd mot morgondagen", "z1": "Morgondagen stiger", "z2": "Ett klarnande sinne", "z3": "Ett begrundande sinne", "z4": "Minnet lyses upp", "z5": "Blicken mot fjärran dagar", "z6": "Minnet sjunker", "z7": "Bottnens stiltje", "z8": "Det sovande förflutna", "z9": "Dyk inåt", "z10": "Tecknens underström", "z11": "En annalkande aning"},
     celticZoneNote: {"origin": "En bana som inte lutade åt något håll。Kanske inte obeslutsamhet, utan ett läge där varje riktning står lika öppen。", "axisFuture": "En bana rakt framåt。Formen visar sig också när mycket sätts på det som ännu inte kommit。", "axisSurface": "En bana mot det du redan vet att du känner。Just för att det låter sig sägas kan det osagda ligga bakom。", "axisPast": "En bana rakt bakåt。Något du trodde var avslutat kan fortfarande verka under dina bevekelsegrunder。", "axisDeep": "En bana som sjunker mot djupet。En impuls du inte kan redogöra för kan styra dina val nu。", "z0": "En bana med blicken framåt。Uppmärksamheten vilar på utgången snarare än på läget just nu。", "z1": "En bana där medvetandet lyfts mot morgondagen。Planer eller utsikter kan höja ditt nuvarande sinnelag。", "z2": "En bana av klarnande tankar。Det kan vara en tid då det oförklarade börjar få sin förklaring。", "z3": "En bana vänd mot dig själv。En rörelse att åter sätta ord på det förflutna sker på det medvetna planet。", "z4": "En bana som lyser upp minnet。Något du menade att glömma kan mata ditt nuvarande omdöme。", "z5": "En bana med blicken mot fjärran dagar。En känsla för det oåterkalleliga kan sova under dina bevekelsegrunder。", "z6": "En bana där minnet sjunker。Det kan vara en tid då du försöker sluta se tillbaka alls。", "z7": "En bana på det stillaste djupet。Något länge orört har lagt sig tyst på botten。", "z8": "En bana mot ett sovande förflutet。Du kanske söker återta en önskan som aldrig uppfylldes。", "z9": "En bana som dyker inåt。Intresset har flyttat från vad som sker utanför till hur du svarar。", "z10": "En bana av en aning utan form。Den visar sig när något känns satt i rörelse av skäl du inte kan namnge。", "z11": "En bana som väntar på ankomst。Förberedelsen för det som kommer kan redan ha börjat utan att du märkt det。"},
     weekPeak: (d) => `Topp｜${d}`,
@@ -12979,6 +14311,102 @@ export default function TarotDraw() {
   const [showLegal, setShowLegal] = useState(false);
   const [navTab, setNavTab] = useState("draw"); // ボトムナビで選択中の画面
   const [recordsTab, setRecordsTab] = useState("last"); // 記録タブ内のサブタブ
+
+  /*
+    ホロ図鑑の取得状況。{ "major-0": { up: true, rev: false }, ... }
+
+    第二段（ホロ判定・宝箱・欠片）が入るまで、ここは常に空のまま。
+    先に器を作っておくのは、図鑑の画面を後から作り直さずに済ませるため。
+    保存形式を最初に決めておかないと、収集を足すときに
+    画面と保存の両方を同時に変えることになる。
+  */
+  const [rareDex, setRareDex] = useState(() => loadRareDex());
+  const [holoDex, setHoloDex] = useState(() => loadHoloDex());
+
+  /*
+    書き込み経路を今のうちに通しておく。
+    第二段で初めて保存を書くと、そのとき画面と保存の両方を同時に変えることになる。
+    setRareDex / setHoloDex と unlockDexSlot は、
+    第二段（宝箱・欠片）から呼ぶ入口として置いてある。
+  */
+  useEffect(() => { saveRareDex(rareDex); }, [rareDex]);
+  useEffect(() => { saveHoloDex(holoDex); }, [holoDex]);
+
+  // 欠片の所持数。交換回数（spent）はホロ側の費用が逓増するので別に持つ
+  const [rareShard, setRareShard] = useState(() => loadNum(LS_RARE_SHARD));
+  const [holoShard, setHoloShard] = useState(() => loadNum(LS_HOLO_SHARD));
+  const [holoShardSpent, setHoloShardSpent] = useState(() => loadNum(LS_HOLO_SHARD_SPENT));
+  useEffect(() => { saveNum(LS_RARE_SHARD, rareShard); }, [rareShard]);
+  useEffect(() => { saveNum(LS_HOLO_SHARD, holoShard); }, [holoShard]);
+  useEffect(() => { saveNum(LS_HOLO_SHARD_SPENT, holoShardSpent); }, [holoShardSpent]);
+
+  /*
+    図鑑への書き込み口。ここ1つに絞る。
+    開放の経路（ホロ確定・宝箱・欠片の交換）が増えても、
+    書き込みが1か所なら二重加算や取りこぼしが起きない。
+  */
+  const handleCollect = ({ kind, got, cardId, reversed }) => {
+    if (kind === "holo") {
+      // ホロは確定。レアの枠も同時に開ける（入れ子）
+      setHoloDex((d) => unlockDexSlot(d, cardId, reversed));
+      setRareDex((d) => unlockDexSlot(d, cardId, reversed));
+      return;
+    }
+    if (kind !== "chest" || !got) return;
+
+    if (got.type === "slot") {
+      setRareDex((d) => {
+        const e = d[cardId] || {};
+        /*
+          既に持っている面が当たったら、被りとしてレアの欠片に変える。
+          「当たったのに何も起きない」を作らないための最小の受け皿。
+        */
+        if (e[reversed ? "rev" : "up"]) { setRareShard((n) => n + 1); return d; }
+        return unlockDexSlot(d, cardId, reversed);
+      });
+      return;
+    }
+    if (got.type === "rareShard") { setRareShard((n) => n + 1); return; }
+    if (got.type === "holoShard") { setHoloShard((n) => n + 1); }
+  };
+
+  const [rareShardSpent, setRareShardSpent] = useState(() => loadNum(LS_RARE_SHARD_SPENT));
+  useEffect(() => { saveNum(LS_RARE_SHARD_SPENT, rareShardSpent); }, [rareShardSpent]);
+  // 直前に開けた枠。交換した結果を画面に出すために持つ
+  const [lastExchanged, setLastExchanged] = useState(null);
+
+  /*
+    欠片の交換。自動ではなく、押して行う。
+
+    最初は自動にしていたが、何も表示されないまま枠が開くので
+    「黙って増える」になっていた。何かが起きたのに、
+    起きたことが伝わらない形は、このアプリで何度も潰してきた失敗。
+
+    押す形にすると、貯まっているのに気づかない人が出る恐れがあるが、
+    それは所持数を常に表示することで防ぐ（交換のタブに数を出す）。
+  */
+  const exchangeShard = (tier) => {
+    if (tier === "rare") {
+      if (rareShard < RARE_SHARD_COST) return;
+      const slot = pickLockedSlot(rareDex);
+      if (!slot) return; // 埋まりきっていれば消費しない
+      setRareDex((d) => unlockDexSlot(d, slot.id, slot.reversed));
+      setRareShard((n) => n - RARE_SHARD_COST);
+      setRareShardSpent((n) => n + 1);
+      setLastExchanged({ tier: "rare", ...slot });
+      return;
+    }
+    const cost = holoShardCost(holoShardSpent);
+    if (holoShard < cost) return;
+    const slot = pickLockedSlot(holoDex);
+    if (!slot) return;
+    // ホロを開けたらレアも開く（引いたときと同じ入れ子）
+    setHoloDex((d) => unlockDexSlot(d, slot.id, slot.reversed));
+    setRareDex((d) => unlockDexSlot(d, slot.id, slot.reversed));
+    setHoloShard((n) => n - cost);
+    setHoloShardSpent((n) => n + 1);
+    setLastExchanged({ tier: "holo", ...slot });
+  };
   const [drawMode, setDrawMode] = useState("select"); // "select" | "oneOracle" | "three"
   /*
     枠の二段消費。
@@ -13333,6 +14761,27 @@ export default function TarotDraw() {
       setLimitExpanded(newLimit);
       setCouponInput("");
       alert(`✓ 今日の占い回数が${newLimit}回になりました`);
+    } else if (code === "darkholo") {
+      // ホロを強制したうえで、向きも難しい側へ寄せる
+      setForcedDarkHolo(true);
+      setForceStarVariant("holo");
+      setCouponInput("");
+      setShowCoupon(false);
+      alert("✓ 次の1枚が、ダークホロになります（難しい側の向きで出ます）");
+    } else if (code === "dark") {
+      // レアの暗い版。向きまで寄せる点だけが rare と違う
+      setForcedDark(true);
+      setCouponInput("");
+      setShowCoupon(false);
+      alert("✓ 次の1枚が、レアの暗い版になります（難しい側の向きで出ます）");
+    } else if (code === "rare") {
+      // レア（宝箱が出る層）の強制。判定そのものは第二段で実装するが、
+      // 旗の置き場だけ先に作っておく。読み取り側が後から生えても
+      // 保存キーと解除の作法を変えずに済む
+      setForcedRare(true);
+      setCouponInput("");
+      setShowCoupon(false);
+      alert("✓ 次の1枚がレアになります（宝箱が出ます）");
     } else if (code === "holo") {
       setForceStarVariant("holo");
       setForcedOneOracleHolo(true); // ワンオラクル側のホロも強制する
@@ -14050,6 +15499,63 @@ export default function TarotDraw() {
 
   const showHeldChip = atLeast("minor-spread") && phase !== "major-revealed" && majorCard;
 
+  /* ------------------------------------------------------------
+     更新ボタン
+
+     ホーム画面から起動すると manifest の display: standalone により
+     URLバーが消えるため、利用者の手元から再読み込みの手段が無くなる。
+     新しい版を出しても古い index.html を掴んだままの端末が残るので、
+     明示的な入口をタイトル画面に置く。
+
+     置き場所をタイトル画面（drawMode === "select"）に限っているのは、
+     占いの進行中に押されると引いた札が失われるため。
+     ボトムナビを隠しているのと同じ条件。
+     ------------------------------------------------------------ */
+  const [reloading, setReloading] = useState(false);
+
+  // 更新後に付いた問い合わせ文字列を消す。
+  // 残したままだと共有されたURLに _r が乗り、以後ずっと付き回る
+  useEffect(() => {
+    if (typeof window === "undefined" || !window.history?.replaceState) return;
+    try {
+      const url = new URL(window.location.href);
+      if (!url.searchParams.has("_r")) return;
+      url.searchParams.delete("_r");
+      window.history.replaceState(null, "", url.pathname + url.search + url.hash);
+    } catch {
+      /* 消せなくても実害は無いので黙って諦める */
+    }
+  }, []);
+
+  const handleReload = async () => {
+    if (reloading) return;
+    setReloading(true);
+    try {
+      // Service Worker とキャッシュは現時点で使っていない。
+      // 後から入れたときにこのボタンだけ効かなくなるのを避けるため、先に消しておく
+      if (typeof navigator !== "undefined" && "serviceWorker" in navigator) {
+        const regs = await navigator.serviceWorker.getRegistrations();
+        await Promise.all(regs.map((r) => r.unregister()));
+      }
+      if (typeof caches !== "undefined" && caches.keys) {
+        const keys = await caches.keys();
+        await Promise.all(keys.map((k) => caches.delete(k)));
+      }
+    } catch {
+      /* 消せなくても再読み込みは続行する */
+    }
+    try {
+      // location.reload() だけだと、standalone 起動の端末で
+      // 古い index.html が HTTP キャッシュから返ることがある。
+      // 問い合わせ文字列を変えると必ず取得し直される
+      const url = new URL(window.location.href);
+      url.searchParams.set("_r", String(Date.now()));
+      window.location.replace(url.toString());
+    } catch {
+      window.location.reload();
+    }
+  };
+
   return (
     <div className={`tarot-root${phase === "idle" && mode === "normal" && drawMode === "select" ? " has-bottom-nav" : ""}`}>
       {/* 裏面の意匠。ここで1回だけ定義し、各カードは <use> で参照する */}
@@ -14069,6 +15575,9 @@ export default function TarotDraw() {
             相対輝度はどちらも約0.48で、片方だけ読みにくくならない。
             逆位置を暗くすると、色が「不吉」という意味まで運んでしまう。
           */
+          /* レアの色。金銀は見慣れられているので、真珠光沢寄りの淡い青白にする。
+             虹はホロが使うので、レアでは使わない */
+          --rare-tint: #B9D4DA;
           --orient-up: #EAA6A6;
           --orient-rev: #A6B6EA;
           --orient-up-soft: #F0C6C6;
@@ -14123,7 +15632,144 @@ export default function TarotDraw() {
           width: 100%; height: 100%; display: block;
           opacity: 0.85;
         }
+        /* --- 図鑑 --- */
+        .dex-summary {
+          display: flex; flex-direction: column; gap: 4px;
+          padding: 8px 12px; margin-bottom: 14px;
+          border: 1px solid rgba(201,162,75,0.22); border-radius: 8px;
+          background: rgba(255,255,255,0.03);
+        }
+        .dex-summary-row { display: flex; justify-content: space-between; align-items: baseline; }
+        .dex-summary-label { font-size: 10.5px; letter-spacing: 0.12em; color: var(--muted); }
+        .dex-summary-value { font-family: 'Cinzel', serif; font-size: 14px; }
+        /* レアは真珠光沢（彩度の低い青白）、ホロは金。
+           虹はホロの領分なのでレアには使わない */
+        .dex-summary-value.rare { color: var(--rare-tint); }
+        .dex-summary-value.holo { color: var(--gold); }
+        .dex-summary-value.small { font-size: 12px; opacity: 0.9; }
+        .dex-summary-row.shard { padding-top: 3px; border-top: 1px solid rgba(201,162,75,0.12); }
+        .dex-group-label {
+          font-family: 'Shippori Mincho', serif; font-size: 12px; font-weight: 400;
+          letter-spacing: 0.14em; color: var(--gold-soft);
+          margin: 0; padding: 0;
+        }
+        /* 1行3枚。札の名前は言語によって長さが大きく変わるので、
+           幅を固定せず auto-fill で折り返す */
+        .dex-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(96px, 1fr)); gap: 6px; }
+        .dex-cell {
+          position: relative; display: flex; flex-direction: column; gap: 3px;
+          padding: 8px 8px 20px; min-height: 56px;
+          font-family: inherit; text-align: left; cursor: pointer;
+          border: 1px solid rgba(201,162,75,0.20); border-radius: 6px;
+          background: rgba(255,255,255,0.03); color: var(--parchment);
+          -webkit-tap-highlight-color: rgba(201,162,75,0.25);
+          transition: background .18s, border-color .18s;
+        }
+        @media (hover: hover) { .dex-cell:hover { background: rgba(201,162,75,0.10); border-color: rgba(201,162,75,0.40); } }
+        .dex-cell.on { background: rgba(201,162,75,0.14); border-color: var(--gold); }
+        /* 両面そろった札だけ枠を締める。ここが第二段で意味を持つ */
+        .dex-cell.both { border-color: rgba(201,162,75,0.55); }
+        .dex-cell-corner { font-family: 'Cinzel', serif; font-size: 9px; letter-spacing: 0.1em; color: var(--muted); }
+        .dex-cell-name { font-size: 11px; line-height: 1.35; letter-spacing: 0.02em; }
+        .dex-cell-marks { position: absolute; left: 8px; bottom: 7px; display: flex; gap: 3px; }
+        .dex-cell-marks i {
+          width: 4.5px; height: 4.5px; border-radius: 50%;
+          background: rgba(255,255,255,0.10); border: 1px solid rgba(201,162,75,0.22);
+        }
+        .dex-cell-marks i.rare { background: var(--rare-tint); border-color: var(--rare-tint); }
+        .dex-cell-marks i.holo {
+          background: var(--gold); border-color: var(--gold);
+          /* ホロの点だけ後光を持たせる。色だけだと小さすぎて段の差が読めない */
+          box-shadow: 0 0 4px rgba(201,162,75,0.75);
+        }
+        .dex-detail {
+          margin-top: 8px; padding: 12px;
+          border: 1px solid rgba(201,162,75,0.28); border-radius: 8px;
+          background: rgba(255,255,255,0.04);
+        }
+        .dex-detail-head { display: flex; flex-direction: column; gap: 2px; margin-bottom: 10px; }
+        .dex-detail-name { font-family: 'Shippori Mincho', serif; font-size: 15px; color: var(--parchment); letter-spacing: 0.06em; }
+        .dex-detail-sub { font-size: 10px; color: var(--muted); letter-spacing: 0.06em; }
+        /* 鑑賞用の札。2枚並ぶので、ワンオラクルの168pxより一回り小さくする。
+           それ以上詰めると札名が潰れて、鑑賞にならない */
+        /*
+          4枠を並べる。flex + wrap にすると、幅が中途半端なときに
+          3枚＋1枚に割れる（実際にそうなった）。
+          割れ方を幅任せにせず、桁数を明示する。
+        */
+        .dex-cards {
+          display: grid; grid-template-columns: repeat(4, minmax(0, 1fr));
+          gap: 10px; margin: 4px 0 14px;
+        }
+        .dex-card-slot { display: flex; flex-direction: column; align-items: center; gap: 6px; }
+        /* 桁に合わせて伸縮させる。固定幅だと桁数と噛み合わない */
+        .dex-view.static-card.oracle {
+          width: 100%; height: auto; aspect-ratio: 2 / 3; max-width: 120px;
+        }
+        .dex-card-slot { width: 100%; }
+        .dex-card-cap { line-height: 1.5; text-align: center; }
+        @media (max-width: 520px) {
+          /* 狭い画面は2桁×2段。4桁のままだと札が小さすぎて鑑賞にならない */
+          .dex-cards { grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 8px; }
+          .dex-view.static-card.oracle { max-width: 140px; }
+        }
+        .dex-card-cap { font-size: 10px; letter-spacing: 0.08em; }
+        .dex-card-cap.up { color: var(--orient-up); }
+        .dex-card-cap.rev { color: var(--orient-rev); }
+        .dex-card-cap.holo { color: var(--gold); }
+        /* 未取得の枠。裏面に「？」を重ねる */
+        .dex-locked { position: relative; opacity: 0.55; }
+        .dex-locked-mark {
+          position: absolute; inset: 0; display: flex; align-items: center; justify-content: center;
+          font-family: 'Cinzel', serif; font-size: 30px; color: rgba(240,230,210,0.85);
+          text-shadow: 0 0 4px rgba(0,0,0,0.9), 0 0 12px rgba(0,0,0,0.7);
+          pointer-events: none;
+        }
+        .dex-card-cap.off { color: var(--muted); opacity: 0.7; }
+        .dex-detail-row { display: flex; gap: 10px; align-items: baseline; padding: 5px 0; }
+        /* 向きの色は明度を揃えて色相だけ離す（形式的結果と同じ変数を使う）。
+           逆位置を暗くすると「不吉」という含意まで一緒に運んでしまう */
+        .dex-orient { flex: 0 0 auto; min-width: 4.2em; font-size: 10.5px; letter-spacing: 0.08em; }
+        .dex-orient.up { color: var(--orient-up); }
+        .dex-orient.rev { color: var(--orient-rev); }
+        .dex-tier-mark { font-style: normal; margin-left: 5px; font-size: 9.5px; letter-spacing: 0.06em; }
+        .dex-tier-mark.rare { color: var(--rare-tint); }
+        .dex-tier-mark.holo { color: var(--gold); }
+        .dex-detail-words { font-size: 11.5px; line-height: 1.75; color: var(--parchment); }
+        .dex-detail-note { margin: 10px 0 0; font-size: 11.5px; line-height: 1.9; color: var(--parchment); }
+        @media (max-width: 520px) {
+          .dex-grid { grid-template-columns: repeat(auto-fill, minmax(88px, 1fr)); }
+          .dex-cell-name { font-size: 10.5px; }
+        }
         .tarot-header { text-align: center; position: relative; z-index: 1; margin-bottom: 30px; }
+        /* 更新ボタン。タイトルの右横に絶対配置する。
+           行の中に入れると、中央揃えのタイトルがボタンの幅だけ左へずれる */
+        /* 中身が2つとも絶対配置なので、この入れ物は高さを持たせない。
+           インラインのまま置くと空の行ボックスができてタイトルが下へずれる */
+        .reload-wrap { display: block; height: 0; }
+        .reload-btn {
+          position: absolute; top: 0; right: 0;
+          font-family: inherit; font-size: 10px; letter-spacing: 0.06em;
+          padding: 4px 11px; border-radius: 999px; cursor: pointer;
+          background: rgba(201,162,75,0.07);
+          border: 1px solid rgba(201,162,75,0.42);
+          color: var(--gold-soft);
+          -webkit-tap-highlight-color: rgba(201,162,75,0.25);
+          transition: background 0.18s ease, border-color 0.18s ease, color 0.18s ease, transform 0.18s ease;
+        }
+        @media (hover: hover) {
+          .reload-btn:hover { background: rgba(201,162,75,0.16); border-color: var(--gold); color: var(--gold); transform: translateY(-1px); }
+        }
+        .reload-btn:active { transform: translateY(1px); }
+        .reload-btn[disabled] { opacity: 0.55; cursor: default; transform: none; }
+        /* 説明は触れたときに出す。高さを先に確保して、出入りでタイトルが動かないようにする */
+        .reload-note {
+          position: absolute; top: 26px; right: 0;
+          font-size: 9.5px; color: var(--muted); letter-spacing: 0.02em;
+          opacity: 0; pointer-events: none; transition: opacity 0.18s ease;
+          white-space: nowrap; max-width: 60vw; overflow: hidden; text-overflow: ellipsis;
+        }
+        .reload-wrap:hover .reload-note, .reload-wrap:focus-within .reload-note { opacity: 1; }
         .eyebrow { display: inline-flex; align-items: center; gap: 7px; font-family: 'Cinzel', serif; font-size: 10px; letter-spacing: 0.32em; text-indent: 0.32em; color: var(--gold); margin-bottom: 14px; opacity: 0.9; }
         .privacy-note { font-size: 11px; color: var(--gold-soft); opacity: 0.8; margin-top: 10px; letter-spacing: 0.02em; }
         .tarot-header h1 { font-family: 'Shippori Mincho', serif; font-size: 30px; font-weight: 400; margin: 0 0 14px; letter-spacing: 0.18em; text-indent: 0.18em; color: var(--parchment); animation: titleGlow 3.2s ease-in-out infinite; }
@@ -15009,6 +16655,9 @@ export default function TarotDraw() {
            他のカード表示（星の一覧など）には一切影響させない */
         .sheen-card > .card-face,
         .holo-card > .card-face { position: relative; z-index: 1; }
+        /* レアも同じ扱いにする。これが無いと ::after の虹が絵柄の上に被り、
+           札の内容が読めなくなる（ホロで一度通った道） */
+        .rare-card > .card-face { position: relative; z-index: 1; }
         .sheen-card::after {
           content: "";
           position: absolute; inset: 0; border-radius: 12px; pointer-events: none;
@@ -15040,6 +16689,416 @@ export default function TarotDraw() {
           100% { background-position: 300% 50%; }
         }
 
+        /* ============================================================
+           レア／ダークレア／ダークホロ の演出
+
+           【この環境で確定している制約】
+           書く前にこれを満たしているか確認すること。
+           どれも一度破って作り直しになった。
+
+             1. .static-card は overflow:hidden。
+                札の外へはみ出す層は作れない（inset を負にしても切られる）。
+             2. .rare-card > .card-face は z-index:1。
+                擬似要素（z-index 指定なし）は自動的に文字より下に来る。
+                文字より前に出したい層だけ z-index:2以上を明示する。
+             3. mix-blend-mode:multiply の要素の中に、
+                screen で光らせる層を入れてはいけない。必ず潰される。
+             4. .rare-frame は mask-composite で枠だけを残す要素。
+                その擬似要素も同じ mask で切られるので、層として使えない。
+             5. インラインの style="animation:..." は CSS 側の animation を
+                丸ごと置き換える。JSX 側で組み立てて渡すこと。
+             6. 複数の animation は「,」で1つの宣言に並べる。
+                行を分けると後に書いた方だけが残る。
+
+           【構造】層は4つまで。増やすほど破綻する。
+             ::after      虹の帯（文字より下）
+             ::before     縁の光（文字より前。中央は必ず透明）
+             .rare-frame  金属の枠（レアのみ）
+             .rare-mist   赤黒の翳り＋暗転（文字より下。暗い版のみ）
+
+           【拍】すべて 4.8秒。事件は 62〜80% に置く。
+             62%  沈みはじめる
+             69%  最も暗い
+             72%  縁が光る
+             80%  戻りはじめる
+           ============================================================ */
+
+        /* ---------- レア（明） ---------- */
+        .rare-card { position: relative; animation: rareGlow 4.8s ease-in-out infinite; }
+        /* 虹の帯。常時演出（0.34）とホロ（0.75）の中間 */
+        .rare-card::after {
+          content: "";
+          position: absolute; inset: 0; border-radius: 12px; pointer-events: none;
+          /*
+            ダークレアが紫と緑なので、明るいレアはその対抗色を厚くする。
+            緑だけ微かに落とし（0.52→0.44）、
+            紅・金・水色を微かに上げる（0.52→0.60）。
+            紫は最初から入れていない。
+            同じ量ずつ動かすより、片側を落として片側を上げるほうが
+            2枚並べたときの差が開く。
+          */
+          background: linear-gradient(115deg,
+            transparent 8%,
+            rgba(255,95,195,0.74) 22%,
+            rgba(95,195,255,0.72) 38%,
+            rgba(130,255,185,0.56) 54%,
+            rgba(255,210,100,0.76) 70%,
+            rgba(255,120,200,0.62) 84%,
+            transparent 94%);
+          background-size: 300% 300%;
+          mix-blend-mode: screen;
+          /* 彩度を上げると、同じ不透明度でも色が濃く出る。
+             不透明度だけで濃くすると白に寄って色が飛ぶ */
+          filter: saturate(1.35);
+          animation: rareBand 2.4s linear infinite;
+        }
+        /* 縁の光。中央58%は透明なので文字にかからない */
+        .rare-card::before {
+          content: "";
+          position: absolute; inset: 0; border-radius: 12px; pointer-events: none;
+          z-index: 2;
+          background: radial-gradient(closest-side at 50% 50%,
+            rgba(0,0,0,0) 58%,
+            rgba(255,225,150,0.55) 78%,
+            rgba(255,255,255,0.75) 100%);
+          mix-blend-mode: screen;
+          opacity: 0;
+          animation: rareEdge 4.8s ease-in-out infinite;
+        }
+        /* 金属の枠。金と銀が流れる */
+        .rare-frame {
+          position: absolute; inset: 0; border-radius: 12px; pointer-events: none;
+          z-index: 2; padding: 2px;
+          background: linear-gradient(115deg,
+            #6E5B2E 0%, #F5DE9B 14%, #C9A24B 28%,
+            #6F7378 42%, #EDF1F5 56%, #A9B0B8 70%,
+            #C9A24B 84%, #F5DE9B 100%);
+          background-size: 300% 100%;
+          -webkit-mask: linear-gradient(#000 0 0) content-box, linear-gradient(#000 0 0);
+          -webkit-mask-composite: xor; mask-composite: exclude;
+          animation: rareBand 4.8s linear infinite, rareFrameLight 4.8s ease-in-out infinite;
+        }
+        @keyframes rareBand {
+          0%   { background-position: 0% 50%; }
+          100% { background-position: 300% 50%; }
+        }
+        @keyframes rareEdge {
+          0%, 64%   { opacity: 0; }
+          72%       { opacity: 1; }
+          80%       { opacity: 0.5; }
+          90%, 100% { opacity: 0; }
+        }
+        @keyframes rareFrameLight {
+          0%, 64%   { filter: drop-shadow(0 0 4px rgba(201,162,75,0.5)); }
+          72%       { filter: drop-shadow(0 0 14px rgba(255,235,180,0.95)); }
+          84%, 100% { filter: drop-shadow(0 0 4px rgba(201,162,75,0.5)); }
+        }
+        @keyframes rareGlow {
+          /* 内側は白。有彩色の後光は「色が付いた光」にしか見えない */
+          0%, 64%   { box-shadow: 0 0 20px rgba(255,255,255,0.34), 0 0 44px rgba(255,190,140,0.30); }
+          72%       { box-shadow: 0 0 46px rgba(255,255,255,0.95), 0 0 104px rgba(255,190,140,0.72); }
+          84%, 100% { box-shadow: 0 0 20px rgba(255,255,255,0.34), 0 0 44px rgba(255,190,140,0.30); }
+        }
+        .rare-text {
+          background: linear-gradient(100deg,
+            #FF9AD0 0%, #FFD98A 25%, #A8F0BC 50%, #9FD6F5 75%, #FF9AD0 100%);
+          background-size: 300% 100%;
+          -webkit-background-clip: text; background-clip: text;
+          -webkit-text-fill-color: transparent; color: transparent;
+          animation: sheenTextFlow 4.5s linear infinite;
+        }
+
+        /* ---------- 暗い版に共通の翳り ---------- */
+        /*
+          文字より下に置く。前に出すと、色を何にしても
+          「文字の上に何かが乗っている」＝煙にしか見えない。
+          .card-face には背景が無く地の色は札が持っているので、
+          下に敷けば地だけが沈み、文字は残る。
+        */
+        .rare-mist {
+          position: absolute; inset: 0; border-radius: 12px; pointer-events: none;
+          background: radial-gradient(95% 75% at 50% 42%,
+            rgba(70,6,20,0) 28%, rgba(48,4,15,0.40) 60%, rgba(24,2,8,0.72) 100%);
+          mix-blend-mode: multiply;
+        }
+        /* 暗転。均一な赤黒の板を、事件の拍だけ被せる */
+        .rare-mist::after {
+          content: "";
+          position: absolute; inset: 0; border-radius: 12px; pointer-events: none;
+          background: linear-gradient(180deg, rgba(28,2,10,1), rgba(10,0,4,1));
+          mix-blend-mode: multiply;
+          opacity: 0;
+          animation: darkFall 4.8s ease-in-out infinite;
+        }
+        @keyframes darkFall {
+          0%, 54%   { opacity: 0; }
+          64%       { opacity: 0.92; }
+          70%       { opacity: 0.94; }
+          78%       { opacity: 0.45; }
+          88%       { opacity: 0.22; }
+          96%, 100% { opacity: 0; }
+        }
+
+        /* ---------- ダークレア ---------- */
+        /* 色は紫・緑・赤黒の3つだけ。全色そろうのが健やかさ、偏るのが妖しさ */
+        .rare-card.dark::after {
+          background: linear-gradient(115deg,
+            transparent 6%,
+            rgba(168,32,240,0.78) 24%,
+            rgba(34,224,140,0.72) 48%,
+            rgba(198,36,214,0.78) 72%,
+            transparent 92%);
+          background-size: 300% 300%;
+          animation: rareBand 2.4s linear infinite, darkBandEbb 4.8s ease-in-out infinite;
+        }
+        .rare-card.dark::before {
+          background: radial-gradient(closest-side at 50% 50%,
+            rgba(0,0,0,0) 58%,
+            rgba(168,32,240,0.60) 78%,
+            rgba(34,224,140,0.80) 100%);
+          filter: saturate(1.5) brightness(1.3);
+        }
+        .rare-card.dark .rare-frame {
+          background: linear-gradient(115deg,
+            #140A18 0%, #7A22B4 16%, #A820F0 28%,
+            #1C0A12 42%, #1E8F63 54%, #22E08C 64%,
+            #1C0A12 78%, #C62CD6 90%, #140A18 100%);
+          background-size: 300% 100%;
+          animation: rareBand 4.8s linear infinite, darkFrameLight 4.8s ease-in-out infinite;
+        }
+        .rare-card.dark { animation: darkGlow 4.8s ease-in-out infinite; }
+        @keyframes darkBandEbb {
+          /* 0にはしない。色が抜ける一瞬があると安っぽく見える */
+          0%, 56%   { opacity: 1; }
+          66%       { opacity: 0.40; }
+          74%       { opacity: 1; }
+          100%      { opacity: 1; }
+        }
+        @keyframes darkFrameLight {
+          0%, 58%   { filter: drop-shadow(0 0 6px rgba(168,32,240,0.55)) brightness(1); }
+          68%       { filter: drop-shadow(0 0 3px rgba(120,10,40,0.5)) brightness(0.45); }
+          72%       { filter: drop-shadow(0 0 18px rgba(34,224,140,0.95)) brightness(1.8); }
+          86%, 100% { filter: drop-shadow(0 0 6px rgba(168,32,240,0.55)) brightness(1); }
+        }
+        @keyframes darkGlow {
+          /* 暗転中も消さない。0まで落とすと札が背景に溶けて黒い板になる */
+          0%, 56%   { box-shadow: 0 0 18px rgba(120,20,70,0.40), 0 0 46px rgba(140,40,220,0.40); }
+          68%       { box-shadow: 0 0 12px rgba(90,6,26,0.60), 0 0 28px rgba(50,2,14,0.48); }
+          72%       { box-shadow: 0 0 34px rgba(34,224,140,0.85), 0 0 96px rgba(168,32,240,0.95); }
+          86%, 100% { box-shadow: 0 0 18px rgba(120,20,70,0.40), 0 0 46px rgba(140,40,220,0.40); }
+        }
+        .rare-text.dark {
+          background: linear-gradient(100deg,
+            #B84BE8 0%, #3ADFA0 33%, #8B2A4E 66%, #B84BE8 100%);
+          background-size: 300% 100%;
+          -webkit-background-clip: text; background-clip: text;
+          -webkit-text-fill-color: transparent; color: transparent;
+        }
+
+        /* ---------- ダークホロ ---------- */
+        /* ホロ（.holo-card）は触らない。色と拍だけを上書きする */
+        .holo-card.dark::after {
+          background: linear-gradient(115deg,
+            transparent 4%,
+            rgba(186,40,255,1) 22%,
+            rgba(42,255,160,0.95) 50%,
+            rgba(226,44,240,1) 78%,
+            transparent 98%);
+          background-size: 300% 300%;
+          filter: saturate(1.4);
+          animation: holoSweep 1.5s linear infinite, darkHoloBandEbb 4.8s ease-in-out infinite;
+        }
+        .holo-card.dark::before {
+          /* 外周の輪。札の外を回るので文字にかからない */
+          background: conic-gradient(from 0deg,
+            #A820F0, #22E08C, #FF2896, #C62CD6, #22E08C, #A820F0);
+          filter: blur(12px) saturate(1.8);
+          animation: holoRing 2.2s linear infinite, darkRingEbb 4.8s ease-in-out infinite;
+        }
+        /* 出現との合成はインライン側で行う（CSSのanimationは上書きされる） */
+        .holo-card.dark { animation: darkHoloGlow 4.8s ease-in-out infinite; }
+        /*
+          ダークホロにも枠を与える。
+          層の数を数えたら ダークレア5・ダークホロ3 で、
+          上位のほうが層が少なかった。段の上下と層の数が逆転してはいけない。
+          枠は同じ要素を使い、色と光量だけ上げる。
+        */
+        .holo-card.dark .rare-frame {
+          padding: 3px;
+          background: linear-gradient(115deg,
+            #1A0620 0%, #C42CFF 14%, #FF2896 26%,
+            #240A2C 40%, #2AFFA0 52%, #22E08C 62%,
+            #240A2C 76%, #E24BF0 88%, #1A0620 100%);
+          background-size: 300% 100%;
+          animation: rareBand 3.6s linear infinite, holoFrameLight 4.8s ease-in-out infinite;
+        }
+        @keyframes holoFrameLight {
+          0%, 58%   { filter: drop-shadow(0 0 9px rgba(196,44,255,0.75)); }
+          66%       { filter: drop-shadow(0 0 2px rgba(80,6,26,0.4)) brightness(0.16); }
+          72%       { filter: drop-shadow(0 0 26px rgba(42,255,160,1)) brightness(2.1); }
+          86%, 100% { filter: drop-shadow(0 0 9px rgba(196,44,255,0.75)); }
+        }
+        /*
+          縁の閃光。::before は輪、::after は帯で埋まっているので、
+          枠の内側に重ねる専用の要素を1つだけ足す。
+          中央は透明なので文字にはかからない。
+        */
+        .holo-edge {
+          position: absolute; inset: 0; border-radius: 12px; pointer-events: none;
+          z-index: 2;
+          background: radial-gradient(closest-side at 50% 50%,
+            rgba(0,0,0,0) 52%,
+            rgba(186,40,255,0.75) 74%,
+            rgba(42,255,160,0.95) 90%,
+            rgba(255,255,255,0.9) 100%);
+          mix-blend-mode: screen;
+          filter: saturate(1.6) brightness(1.4);
+          opacity: 0;
+          animation: holoEdgeFlash 4.8s ease-in-out infinite;
+        }
+        @keyframes holoEdgeFlash {
+          0%, 64%   { opacity: 0; }
+          72%       { opacity: 1; }
+          82%       { opacity: 0.55; }
+          92%, 100% { opacity: 0; }
+        }
+        /*
+          【暗転が白く見えていた原因】
+          虹の帯（::after）は screen 合成で、霧より後に描かれる。
+          霧をどれだけ黒くしても、その上から帯が明るく塗り直す。
+          ダークホロの帯は不透明度1.0なので、
+          ダークレアと同じ 0.40 まで引いても十分に明るく、
+          暗転しているはずの瞬間に札が白く光って見えていた。
+
+          帯そのものをほぼ消さないと、黒にはならない。
+        */
+        @keyframes darkHoloBandEbb {
+          0%, 56%   { opacity: 1; }
+          64%       { opacity: 0.06; }
+          70%       { opacity: 0.08; }
+          76%, 100% { opacity: 1; }
+        }
+        @keyframes darkRingEbb {
+          0%, 56%   { opacity: 0.85; }
+          64%       { opacity: 0.05; }
+          70%       { opacity: 0.07; }
+          72%       { opacity: 1; }
+          86%, 100% { opacity: 0.85; }
+        }
+        @keyframes darkHoloGlow {
+          /* レアの倍の規模で爆ぜる。白は芯に一瞬だけ */
+          /* 平時からダークレア（18/46px）の倍以上。事件では3倍以上に振る */
+          0%, 56%   { box-shadow: 0 0 40px rgba(226,44,240,0.72), 0 0 104px rgba(168,32,240,0.72); }
+          66%       { box-shadow: 0 0 6px rgba(60,4,18,0.45), 0 0 16px rgba(30,2,10,0.35); }
+          72%       { box-shadow: 0 0 26px rgba(255,255,255,0.95), 0 0 110px rgba(42,255,160,1), 0 0 260px rgba(186,40,255,1); }
+          82%       { box-shadow: 0 0 64px rgba(42,255,160,0.70), 0 0 180px rgba(186,40,255,0.88); }
+          92%, 100% { box-shadow: 0 0 40px rgba(226,44,240,0.72), 0 0 104px rgba(168,32,240,0.72); }
+        }
+        .holo-text.dark {
+          background: linear-gradient(100deg,
+            #C24BFF 0%, #2AFFA0 33%, #A02A52 66%, #C24BFF 100%);
+          background-size: 300% 100%;
+          -webkit-background-clip: text; background-clip: text;
+          -webkit-text-fill-color: transparent; color: transparent;
+        }
+
+        /* 欠片を手に入れたときの表示。触れると使い道が出る */
+        .shard-got { position: relative; display: inline-flex; align-items: center; gap: 5px; cursor: help; }
+        .shard-tip {
+          position: absolute; left: 50%; transform: translateX(-50%);
+          top: calc(100% + 6px); white-space: nowrap;
+          padding: 5px 10px; border-radius: 6px;
+          border: 1px solid rgba(201,162,75,0.40); background: rgba(20,14,36,0.96);
+          font-size: 10.5px; color: var(--gold-soft); letter-spacing: 0.04em;
+          opacity: 0; pointer-events: none; transition: opacity .18s ease; z-index: 5;
+        }
+        .shard-got:hover .shard-tip, .shard-got:focus-within .shard-tip { opacity: 1; }
+        /* 集め方の一文 */
+        .dex-howto {
+          font-size: 11px; line-height: 1.9; color: var(--muted);
+          margin: 0 0 12px; letter-spacing: 0.04em;
+        }
+        /* 束の見出し。押して開閉する */
+        .dex-group-head {
+          display: flex; align-items: baseline; gap: 7px; width: 100%;
+          padding: 7px 4px; margin-bottom: 6px; cursor: pointer;
+          background: none; border: none; border-bottom: 1px solid rgba(201,162,75,0.16);
+          font-family: inherit; text-align: left;
+          -webkit-tap-highlight-color: rgba(201,162,75,0.25);
+        }
+        @media (hover: hover) { .dex-group-head:hover { background: rgba(201,162,75,0.06); } }
+        .dex-group-caret { font-size: 10px; color: var(--gold-soft); }
+        .dex-group-count { margin-left: auto; font-family: 'Cinzel', serif; font-size: 11px; color: var(--muted); }
+        /* 銀（レア）と金（ホロ）。4つ並ぶので点を一回り小さくする */
+        .dex-cell-marks i.rare { background: #C6CCD4; border-color: #C6CCD4; }
+        .dex-cell-marks i.holo {
+          background: var(--gold); border-color: var(--gold);
+          box-shadow: 0 0 4px rgba(201,162,75,0.75);
+        }
+        /* --- 欠片の交換 --- */
+        .shard-intro { font-size: 11.5px; line-height: 1.9; color: var(--muted); margin: 0 0 14px; }
+        .shard-row {
+          padding: 12px; margin-bottom: 12px; border-radius: 8px;
+          border: 1px solid rgba(201,162,75,0.22); background: rgba(255,255,255,0.03);
+        }
+        .shard-head { display: flex; align-items: baseline; gap: 8px; margin-bottom: 8px; }
+        .shard-mark { font-size: 15px; }
+        .shard-mark.rare { color: var(--rare-tint); }
+        .shard-mark.holo { color: var(--gold); }
+        .shard-name { font-size: 12px; letter-spacing: 0.08em; color: var(--parchment); }
+        .shard-count { margin-left: auto; font-family: 'Cinzel', serif; font-size: 14px; color: var(--gold-soft); }
+        .shard-bar { height: 5px; border-radius: 3px; background: rgba(255,255,255,0.08); overflow: hidden; }
+        .shard-bar i { display: block; height: 100%; transition: width .3s ease; }
+        .shard-bar i.rare { background: var(--rare-tint); }
+        .shard-bar i.holo { background: var(--gold); box-shadow: 0 0 6px rgba(201,162,75,0.7); }
+        .shard-note { font-size: 10.5px; line-height: 1.8; color: var(--muted); margin: 8px 0 10px; }
+        .shard-btn {
+          width: 100%; padding: 9px; border-radius: 6px; cursor: pointer;
+          font-family: inherit; font-size: 12px; letter-spacing: 0.08em;
+          border: 1px solid rgba(201,162,75,0.45);
+          background: rgba(201,162,75,0.10); color: var(--gold-soft);
+          -webkit-tap-highlight-color: rgba(201,162,75,0.25);
+          transition: background .18s, border-color .18s;
+        }
+        @media (hover: hover) { .shard-btn:not([disabled]):hover { background: rgba(201,162,75,0.20); border-color: var(--gold); } }
+        /* 押せないものが押せるように見えないようにする */
+        .shard-btn[disabled] { opacity: 0.45; cursor: default; }
+        .shard-result {
+          margin: 4px 0 0; padding: 12px; border-radius: 8px;
+          border: 1px solid rgba(201,162,75,0.35); background: rgba(201,162,75,0.08);
+          text-align: center;
+        }
+        .shard-result-text { margin: 0 0 10px; font-size: 12px; line-height: 1.9; color: var(--parchment); }
+        /* 札は1枚だけなので、図鑑の4枚並びより大きく出してよい */
+        .shard-result-card { display: flex; justify-content: center; }
+        .shard-result-card .dex-view.static-card.oracle { max-width: 130px; }
+
+        /* --- 宝箱 --- */
+        .chest-row { display: flex; gap: 8px; justify-content: center; flex-wrap: wrap; }
+        .chest {
+          width: 68px; height: 62px; border-radius: 8px; cursor: pointer;
+          display: flex; align-items: center; justify-content: center;
+          font-family: 'Cinzel', serif; font-size: 18px;
+          border: 1px solid rgba(201,162,75,0.42);
+          background: rgba(201,162,75,0.08); color: var(--gold-soft);
+          -webkit-tap-highlight-color: rgba(201,162,75,0.25);
+          transition: transform .18s, background .18s, border-color .18s, opacity .25s;
+        }
+        @media (hover: hover) { .chest:not([disabled]):hover { transform: translateY(-2px); background: rgba(201,162,75,0.16); border-color: var(--gold); } }
+        .chest[disabled] { cursor: default; }
+        /* 選ばれなかった箱は沈める。中身は最後まで見せない ――
+           はずれの位置が分かると、次から「当たりの並び」を探されてしまう */
+        .chest.dim { opacity: 0.28; }
+        .chest.opened { border-color: var(--gold); background: rgba(201,162,75,0.22); transform: translateY(-2px); }
+        .chest-result {
+          margin-top: 10px; text-align: center; font-size: 12px; line-height: 1.9;
+          letter-spacing: 0.04em; color: var(--parchment);
+        }
+        .chest-result .hit { color: var(--rare-tint); }
+        .chest-result .big { color: var(--gold); }
+        .chest-lead { font-size: 11px; color: var(--muted); text-align: center; margin: 0 0 8px; letter-spacing: 0.06em; }
+        .shard-line { font-size: 10.5px; color: var(--muted); letter-spacing: 0.06em; text-align: center; margin-top: 6px; }
+
         /*
           【ホロ】216分の1でのみ発現する、本物の虹。
           常時演出と同じ見え方では特別さが伝わらないので、
@@ -15055,10 +17114,18 @@ export default function TarotDraw() {
           content: "";
           position: absolute; inset: 0; border-radius: 12px; pointer-events: none;
           background: linear-gradient(115deg,
-            transparent 8%, rgba(255,60,180,0.75) 24%, rgba(60,200,255,0.75) 38%,
-            rgba(120,255,140,0.75) 52%, rgba(255,220,60,0.75) 66%, rgba(255,60,180,0.6) 80%, transparent 94%);
+            transparent 6%, rgba(255,60,180,0.90) 22%, rgba(60,200,255,0.90) 37%,
+            rgba(120,255,140,0.90) 52%, rgba(255,220,60,0.90) 67%, rgba(255,60,180,0.78) 82%, transparent 96%);
           background-size: 320% 320%;
           mix-blend-mode: screen;
+          /* 原色をさらに立たせる。文字は card-text-wrap の暗い膜で守られている */
+          filter: saturate(1.4);
+          /*
+            引き（holoEbb）は外した。
+            正位置のホロは最上位の当たりなので、常に最大でよい。
+            一瞬でも薄くなる時間があると、その1/6ぶん派手さが落ちる。
+            引いて戻す演出は暗い版（暗転）の役割にする。
+          */
           animation: holoSweep 1.5s linear infinite;
         }
         /* 外周を回る虹の輪。これが常時版との決定的な差になる */
@@ -15072,13 +17139,29 @@ export default function TarotDraw() {
           position: absolute; inset: 0; border-radius: 12px; pointer-events: none;
           background: conic-gradient(from 0deg,
             #ff3ca6, #ffd23c, #6cff8d, #3cd2ff, #a86cff, #ff3ca6);
-          filter: blur(12px) saturate(1.8);
-          opacity: 0.55;
+          filter: blur(12px) saturate(2.1) brightness(1.2);
+          opacity: 0.72;
+          /* 輪も同じ拍で引く。片方だけ引くと、色が抜けたのに輪だけ残って
+             「描画が壊れた」ように見える */
           animation: holoRing 2.2s linear infinite;
         }
+        /*
+          脈動。周期は 4.8秒 ―― 図鑑ではレア・ホロ・ダークレア・ダークホロが
+          並ぶので、4枚の「事件」の拍が揃っていないと画面がざわつく。
+          もとは1.6秒だったので、同じ速さの山を3つ置いて波形を保つ。
+        */
+        /*
+          脈動。1.6秒の速い明滅がホロの「バチバチ」の正体。
+
+          【白であること】
+          外側を桃色に変えていた時期があったが、あれで眩しさが消えた。
+          有彩色の後光は「色が付いた光」にしか見えない。
+          白は飽和した光そのものとして読まれるので、同じ光量でも眩しい。
+          内側だけ白、外側に色を置く ―― この順序を入れ替えない。
+        */
         @keyframes holoCardGlow {
-          0%, 100% { box-shadow: 0 0 20px rgba(255,255,255,0.55), 0 0 46px rgba(255,60,180,0.45); }
-          50%      { box-shadow: 0 0 34px rgba(255,255,255,0.85), 0 0 78px rgba(60,200,255,0.65); }
+          0%, 100% { box-shadow: 0 0 26px rgba(255,255,255,0.70), 0 0 64px rgba(255,60,180,0.62); }
+          50%      { box-shadow: 0 0 46px rgba(255,255,255,1), 0 0 116px rgba(60,200,255,0.88), 0 0 190px rgba(255,60,180,0.55); }
         }
         @keyframes holoSweep {
           0%   { background-position: 0% 50%; }
@@ -15087,6 +17170,27 @@ export default function TarotDraw() {
         @keyframes holoRing {
           0%   { transform: rotate(0deg); }
           100% { transform: rotate(360deg); }
+        }
+        /*
+          【ホロの引き】
+          レアが「普段は中くらい、一瞬だけ最大」なのに対して、
+          ホロは「普段は最大、一瞬だけ引く」。上下を逆にした対。
+
+          常に最大のままだと、強さが基準になって強く見えなくなる。
+          一度引いてから戻ることで、戻った瞬間の最大が改めて最大として読まれる。
+
+          引き切らないのが要点。0.30 まで落とすとレアの下地（0.55）より
+          薄くなり、その一瞬だけホロがレアより地味に見える。
+          0.42 で止めれば、引いている最中でもレアを下回らない。
+
+          落ちるのも戻るのも速く、底で少しだけ留める（呼吸の「吸う」に相当）。
+          ゆっくり落とすと、ただ暗くなったようにしか見えない。
+        */
+                  83%       { opacity: 0.46; }
+          89%, 100% { opacity: 1; }
+        }
+                  83%       { opacity: 0.20; }
+          89%, 100% { opacity: 0.55; }
         }
         /* 文字も原色寄りにして、光量を上げる */
         .holo-text {
@@ -15112,15 +17216,15 @@ export default function TarotDraw() {
         .holo-card .card-corner {
           color: #fff !important;
           text-shadow:
-            0 0 2px rgba(0,0,0,0.95), 0 0 5px rgba(0,0,0,0.85),
-            0 1px 2px rgba(0,0,0,0.9), 0 0 14px rgba(255,255,255,0.55);
+            0 0 2px rgba(0,0,0,0.98), 0 0 6px rgba(0,0,0,0.92),
+            0 1px 2px rgba(0,0,0,0.95), 0 0 16px rgba(255,255,255,0.65);
           font-weight: 600;
         }
         .holo-card .card-icon { filter: drop-shadow(0 0 4px rgba(0,0,0,0.9)) drop-shadow(0 0 8px rgba(255,255,255,0.7)); }
         /* 文字の背後だけ暗い膜を敷き、虹の帯から切り離す */
         .holo-card .card-text-wrap {
           position: relative; z-index: 2;
-          background: rgba(12,8,26,0.42);
+          background: rgba(12,8,26,0.55);
           border-radius: 8px; padding: 4px 8px;
           backdrop-filter: blur(2px);
         }
@@ -15506,9 +17610,21 @@ export default function TarotDraw() {
           .nav-tab, .nav-tab-icon { transition: none !important; }
           .nav-tab:hover .nav-tab-icon, .nav-tab:active .nav-tab-icon { transform: none !important; }
           .lang-chip { transition: none !important; }
+          .reload-btn { transition: none !important; }
+          .rare-card, .rare-card::after, .rare-card::before,
+          .rare-frame, .rare-mist::after, .rare-text, .holo-edge { animation: none !important; }
+          .holo-card.dark, .holo-card.dark::after, .holo-card.dark::before,
+          .rare-mist::after { animation: none !important; }
+          /* 閃きは opacity:0 が初期値なので、動きを止めると消えてしまう。
+             控えめな値で出したままにする */
+          .rare-card::before { opacity: 0.28 !important; }
+          .chest { transition: none !important; }
+          .reload-btn:hover, .reload-btn:active { transform: none !important; }
         }
         @media (max-width: 520px) {
           .tarot-header h1 { font-size: 24px; }
+          .reload-btn { font-size: 9.5px; padding: 3px 9px; }
+          .reload-note { top: 24px; }
           .mini-gap { width: 32px; height: 48px; }
           .mini-card { width: 32px; height: 48px; }
           .static-card { width: 108px; height: 160px; }
@@ -15541,6 +17657,21 @@ export default function TarotDraw() {
       </div>
 
       <header className="tarot-header">
+        {phase === "idle" && mode === "normal" && drawMode === "select" && (
+          <span className="reload-wrap">
+            <button
+              type="button"
+              className="reload-btn"
+              onClick={handleReload}
+              disabled={reloading}
+              title={t.reloadNote}
+              aria-label={`${t.reloadLabel} ― ${t.reloadNote}`}
+            >
+              {t.reloadLabel}
+            </button>
+            <span className="reload-note" aria-hidden="true">{t.reloadNote}</span>
+          </span>
+        )}
         <div className="eyebrow">
           <Sparkles size={14} />
           <span>{t.eyebrow}</span>
@@ -15622,6 +17753,7 @@ export default function TarotDraw() {
                 lang={lang}
                 onBack={() => setDrawMode("select")}
                 onHoloConsumed={() => { if (forceStarVariant === "holo") setForceStarVariant(null); }}
+                onCollect={handleCollect}
               />
             )}
 
@@ -15752,6 +17884,8 @@ export default function TarotDraw() {
                     { key: "last", label: t.subLast },
                     { key: "history", label: t.subHistory },
                     { key: "stats", label: t.subStats },
+                    { key: "dex", label: t.subDex },
+                    { key: "shard", label: t.subShard },
                   ].map((it, i) => {
                     const on = recordsTab === it.key;
                     return (
@@ -15764,7 +17898,9 @@ export default function TarotDraw() {
                           background: on ? "rgba(201,162,75,0.20)" : "transparent",
                           border: on ? "1px solid rgba(201,162,75,0.45)" : "1px solid transparent",
                           borderRadius: "999px", cursor: "pointer",
-                          padding: "8px 18px", fontFamily: "inherit", fontSize: "11px",
+                          // 4つ並ぶので左右の余白を詰める。18pxのままだと狭い画面で溢れる
+                          padding: "8px 12px", fontFamily: "inherit", fontSize: "11px",
+                          whiteSpace: "nowrap",
                           letterSpacing: "0.06em",
                           color: on ? "var(--gold)" : "var(--parchment)",
                           opacity: on ? 1 : 0.85,
@@ -15785,6 +17921,16 @@ export default function TarotDraw() {
                 )}
                 {recordsTab === "history" && <HistoryPanel history={history} lang={lang} />}
                 {recordsTab === "stats" && <StatsPanel history={history} lang={lang} />}
+                {recordsTab === "dex" && <DexPanel lang={lang} rareDex={rareDex} holoDex={holoDex} rareShard={rareShard} holoShard={holoShard} holoShardCost={holoShardCost(holoShardSpent)} />}
+                {recordsTab === "shard" && (
+                  <ShardPanel
+                    lang={lang}
+                    rareShard={rareShard} holoShard={holoShard}
+                    rareCost={RARE_SHARD_COST} holoCost={holoShardCost(holoShardSpent)}
+                    rareLeft={!!pickLockedSlot(rareDex)} holoLeft={!!pickLockedSlot(holoDex)}
+                    onExchange={exchangeShard} last={lastExchanged}
+                  />
+                )}
               </div>
             )}
 
