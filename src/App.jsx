@@ -897,66 +897,138 @@ function minorCardName(suitKey, rankIndex, lang) {
 
 /* ---------- 棒（火） ---------- */
 const WANDS_UP = [
-  "新しい挑戦・情熱の芽生え・ひらめき", "計画と選択・将来への展望・支配力", "拡大・前進・チームでの成果",
-  "安定した喜び・祝祭・帰属", "競争・意見の衝突・切磋琢磨", "勝利・承認・自信の回復",
-  "防衛・優位を守る・粘り強さ", "急速な進展・スピード・吉報", "粘り強さ・最後の踏ん張り・回復力",
-  "重い責任・やり遂げる重圧・負担", "探求心・新しい情熱の発見・好奇心", "大胆な行動・冒険・勢いある前進",
-  "自信・温かいカリスマ・自立した行動力", "リーダーシップ・ビジョンの実現・大胆な統率",
+  "新しい挑戦・情熱の芽生え・ひらめき・意志の点火・世界が広がる予感",
+  "計画と選択・将来への展望・支配力・次の段階への野心・戦略を練る時間",
+  "拡大・前進・チームでの成果・機を待つ判断・視界の先にある陸地",
+  "安定した喜び・祝祭・帰属・ひと区切りの充足・迎えてくれる場所",
+  "競争・意見の衝突・切磋琢磨・本音のぶつかり合い・摩擦から生まれる案",
+  "勝利・承認・自信の回復・称賛を受ける・成果が名実ともに認められる",
+  "防衛・優位を守る・粘り強さ・高所からの奮闘・主導権を手放さない",
+  "急速な進展・スピード・吉報・一気に動く局面・言葉と行動の一致",
+  "粘り強さ・最後の踏ん張り・回復力・警戒を解かない構え・備えの厚さ",
+  "重い責任・やり遂げる重圧・負担・抱えすぎた荷・手放せない執心",
+  "探求心・新しい情熱の発見・好奇心・素直な熱中・知らせが届く",
+  "大胆な行動・冒険・勢いある前進・新天地へ出る・抑えきれない衝動",
+  "自信・温かいカリスマ・自立した行動力・人を引き寄せる余裕・裏表のなさ",
+  "リーダーシップ・ビジョンの実現・大胆な統率・確固たる軸・味方が集まる",
 ];
 const WANDS_REV = [
-  "出だしの遅れ・エネルギー切れ・計画の停滞", "迷い・優柔不断・視野の狭さ", "遅延・連携の乱れ・見通しの誤り",
-  "不安定な基盤・調和の乱れ・孤立感", "不毛な争い・対立の悪化・協調の欠如", "評価されない努力・傲慢・敗北感",
-  "圧倒される・防戦一方・限界", "遅延・空回り・性急さによる失敗", "燃え尽き・頑固さ・あきらめ",
-  "重荷からの解放・限界・責任放棄", "計画性のない行動・気まぐれ・空回り", "性急さ・無謀・衝動的な決断",
-  "嫉妬・気まぐれ・自信の揺らぎ", "横暴・無謀な決断・権威の濫用",
+  "出だしの遅れ・エネルギー切れ・計画の停滞・向かう先を見失う・熱が冷める",
+  "迷い・優柔不断・視野の狭さ・不測の横やり・得たものが揺らぐ",
+  "遅延・連携の乱れ・見通しの誤り・肩透かし・機を逃す",
+  "不安定な基盤・調和の乱れ・孤立感・現状への甘え・受け身になる",
+  "不毛な争い・対立の悪化・協調の欠如・勝ち負けへの固執・押されて折れる",
+  "評価されない努力・傲慢・敗北感・素直に喜べない・高すぎる自負",
+  "圧倒される・防戦一方・限界・不利な地形・怖じ気づく",
+  "遅延・空回り・性急さによる失敗・思わぬ足止め・番狂わせ",
+  "燃え尽き・頑固さ・あきらめ・準備不足・状況の見誤り",
+  "重荷からの解放・限界・責任放棄・その場しのぎ・投げ出したい心",
+  "計画性のない行動・気まぐれ・空回り・反抗心・口先が先行する",
+  "性急さ・無謀・衝動的な決断・望まぬ変化・落ち着かない足元",
+  "嫉妬・気まぐれ・自信の揺らぎ・心の余裕の欠如・我が強く出る",
+  "横暴・無謀な決断・権威の濫用・短気・思い込みで押し通す",
 ];
 
 /* ---------- 聖杯（水） ---------- */
 const CUPS_UP = [
-  "新しい愛・感情の充実・直感の開花", "心の結びつき・相互理解・パートナーシップ", "友情・祝福・喜びの共有",
-  "内省・無関心・退屈からの停滞", "後悔・失望・心の痛み", "懐かしさ・無邪気な思い出・再会",
-  "選択肢の多さ・夢想・幻想", "探求のための別れ・新たな道への旅立ち", "満足・願いの実現・心の充足",
-  "幸福な家庭・心の調和・満たされた関係", "感受性豊かな知らせ・純粋な好奇心", "ロマンス・感情に従う行動・優美な提案",
-  "深い直感・優しさ・感情の成熟", "感情の統制・寛容なリーダーシップ・成熟した愛",
+  "新しい愛・感情の充実・直感の開花・満ちてくる心・与えられる温もり",
+  "心の結びつき・相互理解・パートナーシップ・対等な信頼・本音を交わす",
+  "友情・祝福・喜びの共有・輪が広がる・苦労を分け合った仲",
+  "内省・無関心・退屈からの停滞・差し出された手に気づかない・満たされない日常",
+  "後悔・失望・心の痛み・こぼれたものだけを見る・残った分に目が向かない",
+  "懐かしさ・無邪気な思い出・再会・原点を思い出す・過去に残された手がかり",
+  "選択肢の多さ・夢想・幻想・目移り・本心がまだ見えない",
+  "探求のための別れ・新たな道への旅立ち・引き際の見極め・こだわりを置いていく",
+  "満足・願いの実現・心の充足・自分を認められる・望んだものが手に入る",
+  "幸福な家庭・心の調和・満たされた関係・当たり前への感謝・穏やかな時間",
+  "感受性豊かな知らせ・純粋な好奇心・柔らかい発想・心を開いた対話",
+  "ロマンス・感情に従う行動・優美な提案・理想へ踏み出す・望みが近づく",
+  "深い直感・優しさ・感情の成熟・寄り添う力・芯を失わない受容",
+  "感情の統制・寛容なリーダーシップ・成熟した愛・揺れを楽しむ余裕・支える器",
 ];
 const CUPS_REV = [
-  "感情の抑圧・愛の停滞・空虚感", "すれ違い・不均衡な関係・誤解", "過度な享楽・三角関係・孤立",
-  "新たな関心の発見・停滞からの脱却", "過去を乗り越える・再生への気づき", "過去への執着・現実逃避",
-  "現実との対峙・選択の明確化", "未練・現状への停滞", "表面的な満足・過剰な自己満足",
-  "不和・理想と現実のずれ", "過敏な感情・現実離れした夢想", "移り気・感情に流される・空約束",
-  "過度な感受性・自己犠牲・情緒不安定", "感情の操作・気分のむら・冷淡さ",
+  "感情の抑圧・愛の停滞・空虚感・心に空いた穴・損得が先に立つ",
+  "すれ違い・不均衡な関係・誤解・心を開けない・一人に偏る執着",
+  "過度な享楽・三角関係・孤立・馴れ合い・けじめの欠如",
+  "新たな関心の発見・停滞からの脱却・打開策が見える・視野が広がる",
+  "過去を乗り越える・再生への気づき・残されたものに目が向く・前進の覚悟",
+  "過去への執着・現実逃避・清算されない記憶・甘えと依存・思い出の美化",
+  "現実との対峙・選択の明確化・地に足がつく・優先順位が定まる",
+  "未練・現状への停滞・引き返す誘惑・再挑戦の芽・経験の意味に気づく",
+  "表面的な満足・過剰な自己満足・欲の膨張・見失う本質",
+  "不和・理想と現実のずれ・退屈・感謝を忘れる・ないものねだり",
+  "過敏な感情・現実離れした夢想・気分の上下・頼りすぎ",
+  "移り気・感情に流される・空約束・喜べない結果・疑いが芽生える",
+  "過度な感受性・自己犠牲・情緒不安定・人の感情に飲まれる・軸が薄れる",
+  "感情の操作・気分のむら・冷淡さ・顔色をうかがう・自分に嘘をつく",
 ];
 
 /* ---------- 剣（風） ---------- */
 const SWORDS_UP = [
-  "明晰な思考・真実の発見・突破口", "葛藤・決断の保留・均衡した緊張", "心の痛み・裏切り・悲しみ",
-  "休息・思考の整理・一時的撤退", "勝利のための犠牲・対立・自己中心的な勝ち", "困難からの脱出・移行・前進",
-  "戦略・抜け目のなさ・隠れた行動", "制約・自己束縛・行き詰まり感", "不安・悪夢・思考の堂々巡り",
-  "苦難の終わり・どん底からの再起点", "鋭い観察力・新しい情報・警戒心", "迅速な行動・決断力・直進する意志",
-  "明晰な判断・独立心・率直さ", "知的権威・公正な判断・論理的統率",
+  "明晰な思考・真実の発見・突破口・道を切り拓く意志・知で挑む姿勢",
+  "葛藤・決断の保留・均衡した緊張・板挟み・目を背けたいものがある",
+  "心の痛み・裏切り・悲しみ・衝撃の事実・受け止めて初めて進める",
+  "休息・思考の整理・一時的撤退・回復を待つ・動かない選択",
+  "勝利のための犠牲・対立・自己中心的な勝ち・後味の悪さ・奪って得たもの",
+  "困難からの脱出・移行・前進・場所を変える・知恵を携えて渡る",
+  "戦略・抜け目のなさ・隠れた行動・後ろめたさ・見つかる前の駆け引き",
+  "制約・自己束縛・行き詰まり感・思い込みという縄・助けを求められない",
+  "不安・悪夢・思考の堂々巡り・夜に膨らむ後悔・視界を塞ぐ絶望",
+  "苦難の終わり・どん底からの再起点・すべてを認める・夜明け前の空",
+  "鋭い観察力・新しい情報・警戒心・四方への目配り・水面下で進める",
+  "迅速な行動・決断力・直進する意志・無駄のない速さ・機を逃さない",
+  "明晰な判断・独立心・率直さ・核心を突く・厳しさと真心",
+  "知的権威・公正な判断・論理的統率・私情を挟まない・説得力ある言葉",
 ];
 const SWORDS_REV = [
-  "混乱・誤った判断・破壊的な言葉", "情報過多による麻痺・優柔不断", "痛みからの回復・古傷の浄化",
-  "焦りからの再起動・休息の不足", "和解・無益な争いの終結", "未解決の問題・足踏み",
-  "露見・自己欺瞞からの反省", "束縛からの解放・視野の広がり", "不安の解消・希望の光",
-  "再生の始まり・過度な悲観の終息", "誤情報・詮索・軽率な発言", "衝動的・攻撃的・配慮の欠如",
-  "冷酷さ・批判的・孤独感", "権威の濫用・冷徹な支配",
+  "混乱・誤った判断・破壊的な言葉・力任せ・自ら状況を壊す",
+  "情報過多による麻痺・優柔不断・その場しのぎ・核心から目を逸らす",
+  "痛みからの回復・古傷の浄化・受け入れられない心・混乱が長引く",
+  "焦りからの再起動・休息の不足・動き出す合図・止まりきれない",
+  "和解・無益な争いの終結・奪われる側に回る・備えの甘さ",
+  "未解決の問題・足踏み・逆戻り・抜け出せない状況・泥沼化",
+  "露見・自己欺瞞からの反省・危険を避ける・助言が届く",
+  "束縛からの解放・視野の広がり・疑いが膨らむ・不満の増大",
+  "不安の解消・希望の光・人のせいにする・問題から目を背ける",
+  "再生の始まり・過度な悲観の終息・自分を憐れむ癖・大げさに捉える",
+  "誤情報・詮索・軽率な発言・油断と詰めの甘さ・漏れる秘密",
+  "衝動的・攻撃的・配慮の欠如・急ぎすぎる・言葉が刃になる",
+  "冷酷さ・批判的・孤独感・張りつめすぎ・勝ち負けへの固執",
+  "権威の濫用・冷徹な支配・非を認めない・切り捨てる厳しさ",
 ];
 
 /* ---------- 貨幣（地） ---------- */
 const PENT_UP = [
-  "新しい好機・物質的な始まり・実りの種", "やりくり・優先順位の調整・柔軟性", "協力・職人技・着実な積み重ね",
-  "安定・保守・所有への執着", "経済的困難・孤立感・試練", "分かち合い・寛容さ・互恵関係",
-  "投資・地道な努力・将来への評価", "技術の習得・勤勉・着実な前進", "自立した豊かさ・洗練・成果の享受",
-  "繁栄・家族の安定・継承される豊かさ", "学びへの意欲・現実的な好奇心・新しい計画", "着実な努力・忍耐強い前進・責任感",
-  "実務的な豊かさ・現実的な優しさ・安定した養育", "物質的成功・現実的な統率・安定した繁栄",
+  "新しい好機・物質的な始まり・実りの種・努力が形になる・確かな手応え",
+  "やりくり・優先順位の調整・柔軟性・波に乗る器用さ・同時に回す力",
+  "協力・職人技・着実な積み重ね・抜擢される機会・専門が認められる",
+  "安定・保守・所有への執着・手堅い選択・失いたくない気持ち",
+  "経済的困難・孤立感・試練・助けを求められない・寒空の下",
+  "分かち合い・寛容さ・互恵関係・見返りを求めない善意・巡らせる余裕",
+  "投資・地道な努力・将来への評価・見直しの時期・次の一段への壁",
+  "技術の習得・勤勉・着実な前進・黙々と積む時間・腕が上がる実感",
+  "自立した豊かさ・洗練・成果の享受・引き立てを得る・さらに上を目指せる",
+  "繁栄・家族の安定・継承される豊かさ・受け継いだもので栄える・世代を越える縁",
+  "学びへの意欲・現実的な好奇心・新しい計画・焦らず積む姿勢・後に開花する種",
+  "着実な努力・忍耐強い前進・責任感・最後までやり遂げる・質を優先する",
+  "実務的な豊かさ・現実的な優しさ・安定した養育・育てることで自分も育つ",
+  "物質的成功・現実的な統率・安定した繁栄・持てるものを役立てる・信頼される力",
 ];
 const PENT_REV = [
-  "好機の逸失・計画の遅れ・準備不足", "バランスの崩れ・管理不足・浪費", "連携不足・質の低下・評価の不一致",
-  "過度なしがみつき・物欲・ケチ", "困難からの回復・支援の発見", "不公平な分配・見返りを求める施し",
-  "努力の停滞・見通しの誤り", "雑な仕事・モチベーションの低下", "過度な物質主義・孤独な成功",
-  "財産争い・基盤の崩れ", "計画性の欠如・現実逃避", "停滞・頑固さ・進歩のなさ",
-  "過保護・物質への偏重・自己犠牲", "権威への執着・物欲・頑固な保守",
+  "好機の逸失・計画の遅れ・準備不足・利益に目が眩む・実力への不信",
+  "バランスの崩れ・管理不足・浪費・変化についていけない・落ち着かない日々",
+  "連携不足・質の低下・評価の不一致・機がまだ熟していない・経験が足りない",
+  "過度なしがみつき・物欲・ケチ・支配したい心・出し惜しみ",
+  "困難からの回復・支援の発見・差し伸べられる手・小さな喜びに気づく",
+  "不公平な分配・見返りを求める施し・力で従わせたい心・偽りの善意・人で態度を変える",
+  "努力の停滞・見通しの誤り・目的のない作業・自己評価の甘さ・方法を変える時",
+  "雑な仕事・モチベーションの低下・気が散る・取り繕うだけの仕上げ",
+  "過度な物質主義・孤独な成功・見栄・偽りで得た地位・悪い誘惑",
+  "財産争い・基盤の崩れ・引き継いだ負担・重すぎる立場・管理の失敗",
+  "計画性の欠如・現実逃避・時間と金の浪費・先送り・見通しの甘さ",
+  "停滞・頑固さ・進歩のなさ・守りに入りすぎる・惰性の現状維持",
+  "過保護・物質への偏重・自己犠牲・口出しが過ぎる・際限なく受け入れる",
+  "権威への執着・物欲・頑固な保守・使いこなせない力・不完全燃焼",
 ];
 
 // 小アルカナ キーワードの多言語対応（各スート14枚・正逆）
@@ -2208,12 +2280,47 @@ const MINOR_ARCANA_PREFIX_I18N = {
   ここに入れるのは色の判定（orientationToneClass）だけで、
   正逆そのものの決まり方は変えていない。引きの公平性には影響しない。
 */
+/*
+  逆位置が「良い向き」になる札。
+
+  ⚠️ 吊られた男（major-12）は 2026-08 に外した。
+  停止と犠牲を経て視点が変わる札なので、正位置を前向きに取る読み方に戻した。
+  この集合は色・星の符号・暗い版の判定・領域図の長所判定まで
+  すべての入口になっているので、増減させると影響が広い。
+*/
 const ORIENTATION_INVERTED_CARDS = new Set([
-  "major-12", // 吊られた男 ― 正位置は停止と犠牲、逆位置は状況が動き出す
+  // --- 大アルカナ ---
   "major-13", // 死神 ― 正位置は終わり、逆位置は再生と再出発
   "major-15", // 悪魔 ― 正位置は束縛と依存、逆位置は鎖を外す
   "major-16", // 塔 ― 正位置は突然の崩壊、逆位置は崩壊を免れる
   "major-18", // 月 ― 正位置は不安と欺瞞、逆位置は霧が晴れる
+
+  /*
+    --- 小アルカナ（2026-08 に追加）---
+
+    小アルカナにも、正位置がはっきり否定的な札がある。
+    たとえば剣の5は正位置が「勝利のための犠牲・対立・後味の悪さ」で、
+    逆位置が「和解・無益な争いの終結」。
+    それまで正位置を一律に良い向きとしていたため、
+    ホロスコープの領域図で「伸ばすべき長所」と表示されていた。
+
+    判定は語句表（各スートの up / rev）を根拠にしている。
+    正位置が否定に寄り、逆位置に回復・解放・和解の語が入る札を選んだ。
+
+    ⚠️ 剣の10 は入れていない。
+    正位置を「苦難の終わり・どん底からの再起点」と書いてあり、
+    語句の上では既に肯定側だから。図像ではなく語句表に従う。
+  */
+  "wands-9",     // 棒の10 ― 正位置は重荷、逆位置は降ろす
+  "cups-3",      // 聖杯の4 ― 正位置は無関心と停滞、逆位置は脱却
+  "cups-4",      // 聖杯の5 ― 正位置は後悔と失望、逆位置は乗り越える
+  "cups-6",      // 聖杯の7 ― 正位置は夢想と目移り、逆位置は現実と向き合う
+  "swords-2",    // 剣の3 ― 正位置は心の痛み、逆位置は回復と浄化
+  "swords-4",    // 剣の5 ― 正位置は後味の悪い勝ち、逆位置は和解
+  "swords-6",    // 剣の7 ― 正位置は隠れた行動と後ろめたさ、逆位置は露見と反省
+  "swords-7",    // 剣の8 ― 正位置は自己束縛、逆位置は解放
+  "swords-8",    // 剣の9 ― 正位置は不安と堂々巡り、逆位置は解消
+  "pentacles-4", // 貨幣の5 ― 正位置は困窮と孤立、逆位置は支援の発見
 ]);
 
 /*
@@ -2754,7 +2861,7 @@ const SPREAD_I18N = {
     choice: { name: "二者択一", desc: "二つの道を並べて、比べて選ぶ。", pos: ["現在の状況", "Aを選んだ場合", "Aの結果", "Bを選んだ場合", "Bの結果"] },
     celticCross: { name: "ケルト十字", desc: "十枚で顕在意識と潜在意識の両方を照らす。深く掘りたいときに。", pos: ["現在の意識の方向", "障害となるもの", "顕在意識", "潜在意識", "過去", "近い未来", "あなた自身", "周囲の環境", "希望と不安", "最終結果"] },
     relationship: { name: "関係の杯", desc: "二人の関係を、両側から読む。", pos: ["あなたの状況", "相手の状況", "あなたの願い", "相手の願い", "あなたの不安", "相手の不安", "二人の現在", "障害", "可能性", "あなたの取るべき道", "二人の行く先"] },
-    horoscope: { name: "ホロスコープ", desc: "十二の領域と中央の一枚で、人生の全体を見渡す。", pos: ["自分自身", "財と価値", "学びと交流", "家庭と基盤", "恋愛と創造", "日々の務め", "相手と契約", "変容と継承", "遠方と探求", "天職と地位", "仲間と願い", "秘密と癒し", "総合とアドバイス"] },
+    horoscope: { name: "ホロスコープ", desc: "十二の領域と中央の一枚で、現状の人生を見渡す。", pos: ["決断と自分", "財産と五感", "学習と交流", "家庭と基盤", "恋愛と子供", "労働と健康", "関係と契約", "挫折と承継", "挑戦と探究", "天職と地位", "仲間と理想", "因縁と霊性", "現状の人生に対する総合とアドバイス"] },
   },
   en: {
     oneOracle: { name: "One Oracle", desc: "The simplest reading: a single Major Arcana card.", pos: ["What Is Shown"] },
@@ -2765,7 +2872,7 @@ const SPREAD_I18N = {
     choice: { name: "Two Paths", desc: "Set two roads side by side, and choose.", pos: ["Where you stand", "If you choose A", "Result of A", "If you choose B", "Result of B"] },
     celticCross: { name: "Celtic Cross", desc: "Ten cards lighting both the conscious and the unconscious. For digging deep.", pos: ["Where your mind is turned", "What crosses it", "Conscious mind", "Unconscious mind", "The past", "The near future", "Yourself", "Your surroundings", "Hopes and fears", "The outcome"] },
     relationship: { name: "Cup of Relationship", desc: "Reading a bond from both sides.", pos: ["Your situation", "Their situation", "Your wish", "Their wish", "Your fear", "Their fear", "Where you are now", "The obstacle", "What is possible", "Your path", "Where you are heading"] },
-    horoscope: { name: "Horoscope Spread", desc: "Survey a whole life across twelve realms and one card at the centre.", pos: ["Self", "Wealth and value", "Learning and exchange", "Home and roots", "Love and creation", "Daily work", "Partners and pacts", "Transformation", "Distance and inquiry", "Vocation and standing", "Allies and wishes", "Secrets and healing", "The Whole and the Counsel"] },
+    horoscope: { name: "Horoscope Spread", desc: "Survey your life as it stands across twelve realms and one card at the centre.", pos: ["Decision and Self", "Property and the Senses", "Learning and Exchange", "Home and Foundation", "Love and Children", "Work and Health", "Relations and Contracts", "Setback and Succession", "Challenge and Inquiry", "Vocation and Standing", "Companions and Ideals", "Karma and Spirit", "The Whole and the Counsel for Life as It Stands"] },
   },
   ko: {
     oneOracle: { name: "원 오라클", desc: "메이저 아르카나 한 장만으로 보는 가장 간결한 방식", pos: ["드러난 것"] },
@@ -2776,7 +2883,7 @@ const SPREAD_I18N = {
     choice: { name: "양자택일", desc: "두 갈래 길을 나란히 놓고 고른다.", pos: ["현재 상황", "A를 택한다면", "A의 결과", "B를 택한다면", "B의 결과"] },
     celticCross: { name: "켈틱 크로스", desc: "열 장으로 현재의식과 잠재의식을 함께 비춘다. 깊이 파고들 때.", pos: ["현재 의식의 방향", "가로막는 것", "표면 의식", "잠재 의식", "과거", "가까운 미래", "당신 자신", "주변 환경", "희망과 불안", "최종 결과"] },
     relationship: { name: "관계의 잔", desc: "두 사람의 관계를 양쪽에서 읽는다.", pos: ["당신의 상황", "상대의 상황", "당신의 바람", "상대의 바람", "당신의 불안", "상대의 불안", "두 사람의 현재", "장애", "가능성", "당신이 나아갈 길", "두 사람의 앞날"] },
-    horoscope: { name: "호로스코프", desc: "열두 영역과 중앙의 한 장으로 삶 전체를 조망한다.", pos: ["자기 자신", "재물과 가치", "배움과 교류", "가정과 기반", "연애와 창조", "일상의 의무", "상대와 계약", "변용과 계승", "먼 곳과 탐구", "천직과 지위", "동료와 소망", "비밀과 치유", "총합과 조언"] },
+    horoscope: { name: "호로스코프", desc: "열두 영역과 중앙의 한 장으로 지금의 삶을 조망한다.", pos: ["결단과 자신", "재산과 오감", "학습과 교류", "가정과 기반", "연애와 자녀", "노동과 건강", "관계와 계약", "좌절과 승계", "도전과 탐구", "천직과 지위", "동료와 이상", "인연과 영성", "지금의 삶에 대한 총합과 조언"] },
   },
   "zh-TW": {
     oneOracle: { name: "單張神諭", desc: "只用一張大阿爾克那占卜的最簡形式", pos: ["所示之物"] },
@@ -2787,7 +2894,7 @@ const SPREAD_I18N = {
     choice: { name: "二擇一", desc: "將兩條路並列，比較後選擇。", pos: ["目前的狀況", "若選擇A", "A的結果", "若選擇B", "B的結果"] },
     celticCross: { name: "凱爾特十字", desc: "以十張牌照亮顯意識與潛意識。想深入挖掘時。", pos: ["當下意識的方向", "阻礙之物", "顯意識", "潛意識", "過去", "不久的未來", "你自己", "周遭環境", "希望與不安", "最終結果"] },
     relationship: { name: "關係之杯", desc: "從兩側解讀兩人的關係。", pos: ["你的狀況", "對方的狀況", "你的願望", "對方的願望", "你的不安", "對方的不安", "兩人的現在", "障礙", "可能性", "你該走的路", "兩人的去向"] },
-    horoscope: { name: "占星盤", desc: "以十二領域與中央一張，綜觀人生的全貌。", pos: ["自我", "財富與價值", "學習與交流", "家庭與根基", "戀愛與創造", "日常的職責", "伴侶與契約", "變容與繼承", "遠方與探求", "天職與地位", "夥伴與願望", "秘密與療癒", "總合與建議"] },
+    horoscope: { name: "占星盤", desc: "以十二領域與中央一張，綜觀當下的人生。", pos: ["決斷與自我", "財產與五感", "學習與交流", "家庭與根基", "戀愛與子女", "勞動與健康", "關係與契約", "挫折與承繼", "挑戰與探究", "天職與地位", "夥伴與理想", "因緣與靈性", "對當下人生的總合與建議"] },
   },
   "zh-CN": {
     oneOracle: { name: "单张神谕", desc: "只用一张大阿尔克那占卜的最简形式", pos: ["所示之物"] },
@@ -2798,7 +2905,7 @@ const SPREAD_I18N = {
     choice: { name: "二择一", desc: "将两条路并列，比较后选择。", pos: ["目前的状况", "若选择A", "A的结果", "若选择B", "B的结果"] },
     celticCross: { name: "凯尔特十字", desc: "以十张牌照亮显意识与潜意识。想深入挖掘时。", pos: ["当下意识的方向", "阻碍之物", "显意识", "潜意识", "过去", "不久的未来", "你自己", "周遭环境", "希望与不安", "最终结果"] },
     relationship: { name: "关系之杯", desc: "从两侧解读两人的关系。", pos: ["你的状况", "对方的状况", "你的愿望", "对方的愿望", "你的不安", "对方的不安", "两人的现在", "障碍", "可能性", "你该走的路", "两人的去向"] },
-    horoscope: { name: "占星盘", desc: "以十二领域与中央一张，综观人生的全貌。", pos: ["自我", "财富与价值", "学习与交流", "家庭与根基", "恋爱与创造", "日常的职责", "伴侣与契约", "变容与继承", "远方与探求", "天职与地位", "伙伴与愿望", "秘密与疗愈", "总合与建议"] },
+    horoscope: { name: "占星盘", desc: "以十二领域与中央一张，综观当下的人生。", pos: ["决断与自我", "财产与五感", "学习与交流", "家庭与根基", "恋爱与子女", "劳动与健康", "关系与契约", "挫折与承继", "挑战与探究", "天职与地位", "伙伴与理想", "因缘与灵性", "对当下人生的总合与建议"] },
   },
   th: {
     oneOracle: { name: "ไพ่ใบเดียว", desc: "รูปแบบเรียบง่ายที่สุด ทำนายด้วยไพ่เมเจอร์อาร์คานาเพียงใบเดียว", pos: ["สิ่งที่ปรากฏ"] },
@@ -2809,7 +2916,7 @@ const SPREAD_I18N = {
     choice: { name: "สองทางเลือก", desc: "วางสองเส้นทางเคียงกันแล้วเลือก", pos: ["สถานการณ์ปัจจุบัน", "ถ้าเลือก A", "ผลของ A", "ถ้าเลือก B", "ผลของ B"] },
     celticCross: { name: "เซลติกครอส", desc: "ไพ่สิบใบส่องทั้งจิตสำนึกและจิตใต้สำนึก เมื่ออยากขุดลึก", pos: ["ทิศทางของจิตสำนึกตอนนี้", "สิ่งที่ขวางกั้น", "จิตสำนึก", "จิตใต้สำนึก", "อดีต", "อนาคตอันใกล้", "ตัวคุณเอง", "สภาพแวดล้อม", "ความหวังและความกลัว", "ผลลัพธ์"] },
     relationship: { name: "ถ้วยแห่งความสัมพันธ์", desc: "อ่านความสัมพันธ์จากทั้งสองฝ่าย", pos: ["สถานการณ์ของคุณ", "สถานการณ์ของเขา", "ความปรารถนาของคุณ", "ความปรารถนาของเขา", "ความกังวลของคุณ", "ความกังวลของเขา", "ปัจจุบันของทั้งสอง", "อุปสรรค", "ความเป็นไปได้", "ทางที่คุณควรไป", "ปลายทางของทั้งสอง"] },
-    horoscope: { name: "ดวงชะตาสิบสองเรือน", desc: "มองภาพรวมของชีวิตผ่านสิบสองขอบเขตและไพ่ใบกลาง", pos: ["ตัวตน", "ทรัพย์และคุณค่า", "การเรียนรู้และการสื่อสาร", "บ้านและรากฐาน", "ความรักและการสร้างสรรค์", "หน้าที่ประจำวัน", "คู่และข้อตกลง", "การแปรเปลี่ยน", "ระยะไกลและการแสวงหา", "อาชีพและสถานะ", "มิตรและความปรารถนา", "ความลับและการเยียวยา", "ภาพรวมและคำแนะนำ"] },
+    horoscope: { name: "ดวงชะตาสิบสองเรือน", desc: "มองภาพรวมชีวิตในปัจจุบันผ่านสิบสองขอบเขตและไพ่ใบกลาง", pos: ["การตัดสินใจและตัวตน", "ทรัพย์สินและผัสสะ", "การเรียนรู้และการแลกเปลี่ยน", "บ้านและรากฐาน", "ความรักและบุตร", "การงานและสุขภาพ", "ความสัมพันธ์และสัญญา", "ความพ่ายแพ้และการสืบทอด", "การท้าทายและการค้นหา", "อาชีพและสถานะ", "มิตรสหายและอุดมคติ", "กรรมและจิตวิญญาณ", "ภาพรวมและคำแนะนำต่อชีวิตปัจจุบัน"] },
   },
   tl: {
     oneOracle: { name: "Isang Orakulo", desc: "Ang pinakasimpleng pagbasa: iisang Major Arcana.", pos: ["Ang Ipinapakita"] },
@@ -2820,7 +2927,7 @@ const SPREAD_I18N = {
     choice: { name: "Dalawang Landas", desc: "Ipantay ang dalawang daan, at pumili.", pos: ["Kasalukuyang lagay", "Kung pipiliin ang A", "Bunga ng A", "Kung pipiliin ang B", "Bunga ng B"] },
     celticCross: { name: "Celtic Cross", desc: "Sampung baraha para tanglawan ang malay at di-malay. Para sa malalim na paghukay.", pos: ["Kung saan nakatuon ang isip mo", "Ang humahadlang", "Malay na isip", "Di-malay na isip", "Nakaraan", "Malapit na hinaharap", "Ikaw mismo", "Ang paligid", "Pag-asa at takot", "Kalalabasan"] },
     relationship: { name: "Kopa ng Ugnayan", desc: "Binabasa ang ugnayan mula sa magkabilang panig.", pos: ["Lagay mo", "Lagay niya", "Hangad mo", "Hangad niya", "Takot mo", "Takot niya", "Kayo ngayon", "Ang balakid", "Ang posible", "Landas mo", "Patutunguhan ninyo"] },
-    horoscope: { name: "Horoscope Spread", desc: "Tanawin ang buong buhay sa labindalawang larangan at isang baraha sa gitna.", pos: ["Sarili", "Yaman at halaga", "Pag-aaral at palitan", "Tahanan at ugat", "Pag-ibig at paglikha", "Gawaing araw-araw", "Kapareha at kasunduan", "Pagbabago", "Malayo at paghahanap", "Bokasyon at katayuan", "Kaalyado at hangarin", "Lihim at paggaling", "Kabuuan at Payo"] },
+    horoscope: { name: "Horoscope Spread", desc: "Tanawin ang buhay sa kasalukuyan sa labindalawang larangan at isang baraha sa gitna.", pos: ["Pasya at Sarili", "Ari-arian at Pandama", "Pag-aaral at Palitan", "Tahanan at Pundasyon", "Pag-ibig at mga Anak", "Paggawa at Kalusugan", "Ugnayan at Kontrata", "Pagkabigo at Pagmana", "Hamon at Pagsisiyasat", "Bokasyon at Katayuan", "Kasama at Mithiin", "Karma at Espiritu", "Kabuuan at Payo para sa Buhay Ngayon"] },
   },
   id: {
     oneOracle: { name: "Satu Kartu", desc: "Cara paling sederhana: meramal dengan satu kartu Major Arcana.", pos: ["Yang Ditunjukkan"] },
@@ -2831,7 +2938,7 @@ const SPREAD_I18N = {
     choice: { name: "Dua Jalan", desc: "Menjajarkan dua jalan, lalu memilih.", pos: ["Keadaan sekarang", "Jika memilih A", "Hasil A", "Jika memilih B", "Hasil B"] },
     celticCross: { name: "Salib Celtic", desc: "Sepuluh kartu menerangi sadar dan bawah sadar. Untuk menggali dalam.", pos: ["Arah kesadaranmu kini", "Yang menghalangi", "Kesadaran", "Bawah sadar", "Masa lalu", "Masa depan dekat", "Dirimu sendiri", "Lingkungan", "Harapan dan ketakutan", "Hasil akhir"] },
     relationship: { name: "Cawan Hubungan", desc: "Membaca hubungan dari kedua sisi.", pos: ["Keadaanmu", "Keadaannya", "Harapanmu", "Harapannya", "Ketakutanmu", "Ketakutannya", "Kalian saat ini", "Rintangan", "Kemungkinan", "Jalan yang kamu tempuh", "Ke mana kalian menuju"] },
-    horoscope: { name: "Horoskop", desc: "Menyurvei keseluruhan hidup lewat dua belas wilayah dan satu kartu di pusat.", pos: ["Diri sendiri", "Harta dan nilai", "Belajar dan bertukar", "Rumah dan akar", "Cinta dan cipta", "Tugas sehari-hari", "Pasangan dan perjanjian", "Perubahan", "Jauh dan pencarian", "Panggilan dan kedudukan", "Sekutu dan harapan", "Rahasia dan penyembuhan", "Keseluruhan dan Nasihat"] },
+    horoscope: { name: "Horoskop", desc: "Menyurvei hidup Anda saat ini lewat dua belas wilayah dan satu kartu di pusat.", pos: ["Keputusan dan Diri", "Harta dan Pancaindra", "Belajar dan Bertukar", "Rumah dan Fondasi", "Cinta dan Anak", "Kerja dan Kesehatan", "Relasi dan Kontrak", "Kegagalan dan Warisan", "Tantangan dan Penyelidikan", "Panggilan dan Kedudukan", "Kawan dan Cita-cita", "Karma dan Rohani", "Keseluruhan dan Nasihat untuk Hidup Saat Ini"] },
   },
   ms: {
     oneOracle: { name: "Satu Kad", desc: "Cara paling ringkas: menilik dengan satu kad Major Arcana.", pos: ["Yang Ditunjukkan"] },
@@ -2842,7 +2949,7 @@ const SPREAD_I18N = {
     choice: { name: "Dua Jalan", desc: "Menjajarkan dua jalan, kemudian memilih.", pos: ["Keadaan sekarang", "Jika memilih A", "Hasil A", "Jika memilih B", "Hasil B"] },
     celticCross: { name: "Salib Celtic", desc: "Sepuluh kad menerangi sedar dan bawah sedar. Untuk menggali dalam.", pos: ["Arah kesedaran anda kini", "Yang menghalang", "Kesedaran", "Bawah sedar", "Masa lalu", "Masa depan terdekat", "Diri anda sendiri", "Persekitaran", "Harapan dan ketakutan", "Hasil akhir"] },
     relationship: { name: "Cawan Hubungan", desc: "Membaca hubungan dari kedua-dua belah pihak.", pos: ["Keadaan anda", "Keadaannya", "Harapan anda", "Harapannya", "Ketakutan anda", "Ketakutannya", "Kalian kini", "Halangan", "Kemungkinan", "Jalan yang anda tempuh", "Ke mana kalian menuju"] },
-    horoscope: { name: "Horoskop", desc: "Meninjau keseluruhan hidup melalui dua belas wilayah dan satu kad di tengah.", pos: ["Diri sendiri", "Harta dan nilai", "Pembelajaran dan pertukaran", "Rumah dan akar", "Cinta dan ciptaan", "Tugas harian", "Pasangan dan perjanjian", "Perubahan", "Jauh dan pencarian", "Panggilan dan kedudukan", "Sekutu dan harapan", "Rahsia dan penyembuhan", "Keseluruhan dan Nasihat"] },
+    horoscope: { name: "Horoskop", desc: "Meninjau hidup anda kini melalui dua belas wilayah dan satu kad di tengah.", pos: ["Keputusan dan Diri", "Harta dan Pancaindera", "Belajar dan Bertukar", "Rumah dan Asas", "Cinta dan Anak", "Kerja dan Kesihatan", "Hubungan dan Kontrak", "Kegagalan dan Warisan", "Cabaran dan Penyelidikan", "Panggilan dan Kedudukan", "Rakan dan Cita-cita", "Karma dan Rohani", "Keseluruhan dan Nasihat untuk Hidup Kini"] },
   },
   vi: {
     oneOracle: { name: "Một Lá", desc: "Cách xem đơn giản nhất: chỉ một lá Ẩn Chính.", pos: ["Điều Được Chỉ Ra"] },
@@ -2853,7 +2960,7 @@ const SPREAD_I18N = {
     choice: { name: "Hai Ngả Đường", desc: "Đặt hai con đường cạnh nhau rồi chọn.", pos: ["Hoàn cảnh hiện tại", "Nếu chọn A", "Kết quả của A", "Nếu chọn B", "Kết quả của B"] },
     celticCross: { name: "Thập Tự Celt", desc: "Mười lá soi cả ý thức lẫn vô thức. Khi muốn đào sâu.", pos: ["Hướng của ý thức hiện tại", "Điều cản trở", "Ý thức", "Vô thức", "Quá khứ", "Tương lai gần", "Chính bạn", "Môi trường xung quanh", "Hy vọng và lo sợ", "Kết quả"] },
     relationship: { name: "Chiếc Cốc Quan Hệ", desc: "Đọc mối quan hệ từ cả hai phía.", pos: ["Hoàn cảnh của bạn", "Hoàn cảnh của người ấy", "Mong muốn của bạn", "Mong muốn của người ấy", "Nỗi lo của bạn", "Nỗi lo của người ấy", "Hai người lúc này", "Trở ngại", "Khả năng", "Con đường của bạn", "Nơi hai người hướng tới"] },
-    horoscope: { name: "Vòng Hoàng Đạo", desc: "Nhìn bao quát cả một đời qua mười hai lĩnh vực và lá bài ở trung tâm.", pos: ["Bản thân", "Của cải và giá trị", "Học hỏi và giao tiếp", "Gia đình và cội rễ", "Tình yêu và sáng tạo", "Việc thường ngày", "Bạn đời và giao ước", "Biến chuyển", "Phương xa và tìm kiếm", "Thiên chức và địa vị", "Đồng minh và ước nguyện", "Bí mật và chữa lành", "Tổng thể và Lời khuyên"] },
+    horoscope: { name: "Vòng Hoàng Đạo", desc: "Nhìn bao quát cuộc sống hiện tại qua mười hai lĩnh vực và lá bài ở trung tâm.", pos: ["Quyết định và Bản thân", "Tài sản và Ngũ giác", "Học tập và Giao lưu", "Gia đình và Nền tảng", "Tình yêu và Con cái", "Lao động và Sức khỏe", "Quan hệ và Hợp đồng", "Thất bại và Kế thừa", "Thử thách và Tìm tòi", "Thiên chức và Địa vị", "Bạn hữu và Lý tưởng", "Nhân duyên và Tâm linh", "Tổng thể và Lời khuyên cho cuộc sống hiện tại"] },
   },
 };
 
@@ -3158,7 +3265,7 @@ function rollOneOracleHolo(drawn) {
 
     向きを問わなくすることで、
       ・156枠すべてが引いて手に入る
-      ・月・死神・塔・悪魔・吊られた男の例外分岐がここから消える
+      ・月・死神・塔・悪魔の例外分岐がここから消える
       ・ホロに出会う頻度が2倍（1/128 → 1/64）
     最後の点は意図的。頻度が上がるぶん棚は埋まりにくくなるが、
     年に数回しか会えないものは、前に何が出たか思い出せないまま次が来る。
@@ -4865,7 +4972,7 @@ function calcStats(majorCard, minorResults, fine = false) {
     const w = STAT_WEIGHTS[suitKeyOf(card)] || Array(N).fill(0);
     /*
       正逆そのままではなく「その札にとって良い向きか」で符号を決める。
-      死神・塔・悪魔・吊られた男・月は、逆位置が解放を示す札なので、
+      死神・塔・悪魔・月は、逆位置が解放を示す札なので、
       正逆をそのまま点数に使うと、色や鑑定文と逆の結果になる。
     */
     const v = isGoodOrientation(card, reversed) ? 1 : -1;
@@ -6494,7 +6601,7 @@ function setForcedDarkHolo(on) {
 
 /**
  * その札にとって難しい側の向きを返す。
- * 月・死神・塔・悪魔・吊られた男は逆位置が良い向きなので、
+ * 月・死神・塔・悪魔は逆位置が良い向きなので、
  * この5枚だけ正位置が返る。
  */
 function badOrientationOf(card) {
@@ -6992,7 +7099,7 @@ function weekPeaks(drawn) {
   前者は永久に不発、後者は常に成立という空の条件だった。
 
   大アルカナで数えられるものは三つある。
-  ・良い向きの枚数（月・死神・塔・悪魔・吊られた男は逆位置が良い向き）
+  ・良い向きの枚数（月・死神・塔・悪魔は逆位置が良い向き）
   ・数の並び（0〜21に順序がある。連なれば道筋になる）
   ・数の帯（序盤0〜7・中盤8〜14・終盤15〜21）
   判定はこの三つだけで組む。解釈は入れない。
@@ -7161,8 +7268,123 @@ function saveCelticTrace(pt) {
  * 良い向き（isGoodOrientation）なら伸ばすべき長所、
  * そうでなければ向き合うべき課題として色を分ける。
  * 正逆そのままではなく isGoodOrientation を使うのは、
- * 月・死神・塔・悪魔・吊られた男の5枚で意味が反転するため。
+ * 月・死神・塔・悪魔の4枚で意味が反転するため。
  */
+/*
+  ホロスコープ中央（13枚目）の助言。
+  78枚×正逆＝156通り。円をひと巡りしたあと、最後に一言を渡す。
+
+  ⚠️ 位置のキーワード（houseKeywords）とは別物。
+  あちらは領域の説明、こちらは『で、どうするか』を言う。
+  命令形で書いてあるのは中央の札だけの扱いで、
+  他の場所では『〜かもしれません』の形を守ること。
+  中央は総合と助言の位置なので、ここだけは言い切ってよい。
+
+  ⚠️ 文面は、その札のキーワード（MAJOR_UP/REV, 各スートの up/rev）から
+  直接おこしてある。比喩で書くと具体性が失われる ――
+  たとえば剣の2は「決断の保留・優柔不断」なので、
+  「目隠しを外しなさい」ではなく「期限を今日中に設定して選びなさい」と書く。
+  札を足したり語句を変えたときは、ここも合わせて直すこと。
+
+  日本語のみ。他言語は語句（キーワード）に落ちる。
+*/
+const HORO_CENTER_ADVICE_JA = {
+  "major-0": ["まだ何者でもない立場を活かし、経験のない領域へ応募や登録をしてみなさい。", "勢いだけで動いて空回りしています。着手する前に、日程と費用だけは紙に書き出しなさい。"],
+  "major-1": ["必要な道具も知識も既に手元にあります。準備を続けず、今日から着手しなさい。", "選択肢を並べたまま止まっています。条件の悪いものから順に消して、一つに絞りなさい。"],
+  "major-2": ["即答を避けなさい。判断は一晩置き、静かな場所で考え直してから返事をすること。", "勘だけで決めています。根拠を三つ挙げられないなら、その判断は保留にしなさい。"],
+  "major-3": ["育てているものに時間と金を惜しまず注ぎなさい。今は投じた分だけ実ります。", "世話を焼きすぎて相手の力を奪っています。手を出す回数を半分に減らしなさい。"],
+  "major-4": ["役割と締切をはっきり決めなさい。曖昧なまま任せると、あなたが全部背負います。", "強く出すぎています。指示ではなく相談の形に言い換えて、一度相手に決めさせなさい。"],
+  "major-5": ["自己流を捨て、実績のある手順どおりにやりなさい。学ぶ相手を一人決めること。", "前例に縛られています。「昔からこうだ」という理由の決まりを、一つ疑って外しなさい。"],
+  "major-6": ["惹かれるほうを選びなさい。条件を比べるより、一緒にいて楽な相手を取ること。", "相手に合わせて自分を曲げています。譲れない一点を決め、それだけは伝えなさい。"],
+  "major-7": ["目標を一つに絞り、他を断りなさい。同時に二つ追うと、どちらも届きません。", "急いで空回りしています。速度を落とし、進む先が正しいかを先に確かめなさい。"],
+  "major-8": ["力で押さず、時間をかけて慣らしなさい。今日は説得せず、関係だけ保つこと。", "自信が持てないまま無理をしています。できない部分は、率直に助けを求めなさい。"],
+  "major-9": ["一度、人から離れなさい。予定を空け、自分の考えだけを整理する時間を取ること。", "こもりすぎて情報が古くなっています。今週中に、外の誰かと一度話しなさい。"],
+  "major-10": ["流れが変わります。声がかかったら、条件を細かく見る前にまず受けなさい。", "悪い循環に入っています。今は仕掛けず、条件が変わるまで手を止めて待ちなさい。"],
+  "major-11": ["感情ではなく事実で判断しなさい。約束は口頭で済ませず、記録に残すこと。", "不公平を我慢しています。損得を数字にして、相手に提示しなさい。"],
+  "major-12": ["今は動かず、見る位置を変えなさい。相手の立場から同じ話を書き直してみること。", "報われない我慢が続いています。何のための犠牲か答えられないなら、やめなさい。"],
+  "major-13": ["終わったものを正式に終わらせなさい。連絡・契約・持ち物を、実際に整理すること。", "終わりを認められずにいます。まず一つだけ、返す・捨てる・削除するを実行しなさい。"],
+  "major-14": ["両極端の中間を取りなさい。全部か無かではなく、半分だけやる案を作ること。", "やりすぎと足りなさが同居しています。量を測り、多い側を先に削りなさい。"],
+  "major-15": ["欲を否定せず、望みをそのまま口に出しなさい。隠すほど扱いにくくなります。", "縛られている自覚が出ました。今週、その関係や習慣から距離を取る一歩を踏みなさい。"],
+  "major-16": ["前提が崩れます。守ろうとせず、壊れたあとに何を残すかを先に決めなさい。", "危機は避けられます。ただし応急処置です。根本の一つを、期限を決めて直しなさい。"],
+  "major-17": ["焦らず、続けられる小さな習慣を一つ選びなさい。回復は静かに進みます。", "期待が外れて自信を失っています。他人の評価ではなく、進んだ距離だけを数えなさい。"],
+  "major-18": ["事実がはっきりしません。今は決めず、確かめられることだけを確かめなさい。", "霧が晴れます。保留にしていた確認を、今こそ相手に直接ぶつけなさい。"],
+  "major-19": ["結果が出ます。隠さず公表し、協力した人の名前も一緒に出しなさい。", "うまくいっていた前提が崩れかけています。過信を捨て、点検を一巡させなさい。"],
+  "major-20": ["過去を清算しなさい。連絡していない相手に、今日ひとこと送ること。", "下した判断に迷いがあります。撤回できるうちに、もう一度だけ検討し直しなさい。"],
+  "major-21": ["一つの区切りがつきます。完了を宣言し、次に何を始めるかを言葉にしなさい。", "仕上げ切れていません。残した一点を特定し、そこだけ片付けてから次へ行きなさい。"],
+  "wands-0": ["思いついた案を、今日中に誰か一人に話しなさい。話した時点で始まります。", "始めたいのに動けていません。最初の一手を五分で終わる作業まで小さくしなさい。"],
+  "wands-1": ["先の見取り図を描きなさい。半年後どこにいたいかを、一行で書くこと。", "選べずに止まっています。見えている範囲が狭いので、経験者に一度聞きなさい。"],
+  "wands-2": ["手を広げてよい時期です。人を巻き込み、任せる部分を作りなさい。", "段取りがずれています。関係者に現状を共有し、日程を組み直しなさい。"],
+  "wands-3": ["いったん祝いなさい。区切りを人と分かち合うと、次の力が出ます。", "土台が不安定です。新しいことより、崩れている足場の補修を先にしなさい。"],
+  "wands-4": ["競う場に出なさい。ぶつかることで足りない部分が見えます。", "不毛な言い争いです。勝敗をつけず、その話題から降りなさい。"],
+  "wands-5": ["成果を堂々と示しなさい。控えめにすると、無かったことにされます。", "評価されず疲れています。相手を変えるか、示し方を変えるか、決めなさい。"],
+  "wands-6": ["守りに入ってよい場面です。譲れない一線を決め、そこだけ死守しなさい。", "一人で抱えて限界です。手放してよいものを、今日ひとつ選びなさい。"],
+  "wands-7": ["速さが要ります。返事・提出・連絡を、今日のうちに済ませなさい。", "急いで雑になっています。一度止まり、見落としがないか確認しなさい。"],
+  "wands-8": ["あと一息です。ここでやめず、決めた期日まで続けなさい。", "燃え尽きています。頑張り方を変えるか、正式に休みを取りなさい。"],
+  "wands-9": ["背負った責任は最後まで運びなさい。ただし期限は区切ること。", "荷が重すぎます。降ろせるものを一覧にし、上位から返しなさい。"],
+  "wands-10": ["興味の湧いたことを、まず調べるところから始めなさい。", "気まぐれで散っています。手をつけた三つのうち、二つを止めなさい。"],
+  "wands-11": ["思い切って動いてよい時です。誘いや依頼は受けなさい。", "衝動で決めそうです。返事は明日にすると伝えて、一日置きなさい。"],
+  "wands-12": ["自分の熱で人を巻き込みなさい。あなたが先に楽しむこと。", "嫉妬が判断を曇らせています。比べる相手を見るのをやめなさい。"],
+  "wands-13": ["先頭に立ちなさい。方針を示せば、周りは動きます。", "押し付けが強すぎます。決定を一つ、相手に委ねなさい。"],
+  "cups-0": ["心が動いたことを、そのまま相手に伝えなさい。", "気持ちを抑え込んでいます。誰かに一度、素直に話しなさい。"],
+  "cups-1": ["一対一の関係に時間を使いなさい。会う約束を取ること。", "噛み合っていません。期待していることを、言葉にして確かめなさい。"],
+  "cups-2": ["人と集まりなさい。喜びは分かち合うほど確かになります。", "楽しさに逃げています。一度、静かな時間を作りなさい。"],
+  "cups-3": ["今あるものを数え直しなさい。差し出されていたものに気づきます。", "停滞から抜ける入口が見えます。誘いを一つ受けなさい。"],
+  "cups-4": ["失ったものを悼みなさい。ただし、残ったものも数えること。", "立ち直りが始まります。過去の話をするのを、今日でやめなさい。"],
+  "cups-5": ["懐かしい相手に連絡しなさい。過去の縁が今を助けます。", "昔に留まりすぎています。今の生活の話ができる相手を作りなさい。"],
+  "cups-6": ["夢を描いてよい時です。ただし紙に書き、数を絞ること。", "現実と向き合う時が来ました。実行できる一つだけを残しなさい。"],
+  "cups-7": ["満たされた場を離れ、次を探しなさい。区切りをつけること。", "未練が足を止めています。行くか残るかを、期限を決めて選びなさい。"],
+  "cups-8": ["願いは形になります。望んでいることを、はっきり口にしなさい。", "満足したつもりでいます。本当に欲しいものを一つ書き出しなさい。"],
+  "cups-9": ["身近な人との時間を優先しなさい。関係が土台になります。", "理想と現状の差に疲れています。求める水準を一段下げなさい。"],
+  "cups-10": ["感じたことを素直に伝えなさい。飾らないほど届きます。", "感情が現実を覆っています。事実だけを紙に分けて書きなさい。"],
+  "cups-11": ["気持ちを行動で示しなさい。誘う、贈る、会いに行くこと。", "口約束が増えています。できる約束だけに絞りなさい。"],
+  "cups-12": ["相手の事情を汲みなさい。今は聞く側に回ること。", "相手に入り込みすぎています。自分の時間を先に確保しなさい。"],
+  "cups-13": ["感情を抑えて場を治めなさい。あなたの落ち着きが要になります。", "冷たく見えています。理由を一言添えて伝えなさい。"],
+  "swords-0": ["はっきり言いなさい。曖昧にすると、あとで大きく揉めます。", "言葉が乱れています。今日は重要な連絡をせず、明日に回しなさい。"],
+  "swords-1": ["決めるのを先延ばしにしています。期限を今日中に設定し、情報が足りなくても選びなさい。", "調べすぎて動けません。集める作業をやめ、今ある材料で決めなさい。"],
+  "swords-2": ["痛みは事実として認めなさい。無かったことにしないこと。", "回復が始まっています。前を向く話を、意識して口にしなさい。"],
+  "swords-3": ["休みなさい。判断は体力が戻ってからにすること。", "休息が足りないまま動いています。半日でよいので予定を空けなさい。"],
+  "swords-4": ["勝ちにいくなら代償を計算しなさい。得るものと失うものを並べること。", "争いを終わらせなさい。先に歩み寄ったほうが結果的に得をします。"],
+  "swords-5": ["今の場所を離れなさい。移ること自体が解決になります。", "移りきれていません。荷物か手続きか、残っている一つを片付けなさい。"],
+  "swords-6": ["正面からでは通りません。手順と根回しを考えなさい。", "隠していたことが表に出ます。先に自分から明かしなさい。"],
+  "swords-7": ["制約の多くは思い込みです。できない理由を紙に書き、一つ潰しなさい。", "縛りが外れます。試しに一度、断ってみなさい。"],
+  "swords-8": ["不安が実物より大きくなっています。眠り、朝に判断しなさい。", "不安が薄れます。止めていた連絡を、今日再開しなさい。"],
+  "swords-9": ["苦しい局面は終わります。まず終わったことを認めなさい。", "再出発の時です。生活の形を一つだけ変えなさい。"],
+  "swords-10": ["よく観察しなさい。まだ情報が足りません。", "確かめずに広めています。出所の分からない話を口にしないこと。"],
+  "swords-11": ["速く動きなさい。今日の連絡が結果を変えます。", "言い方がきつすぎます。送る前に一度読み返しなさい。"],
+  "swords-12": ["私情を抜いて判断しなさい。事実だけを見ること。", "批判が先に出ています。良い点を一つ挙げてから話しなさい。"],
+  "swords-13": ["筋を通しなさい。論理で説明できる形にすること。", "支配が強すぎます。決定権を一つ、相手に渡しなさい。"],
+  "pentacles-0": ["実際の一歩を踏みなさい。口座を作る、申し込む、見積もりを取ること。", "好機を逃しかけています。準備不足でも、期限のあるほうを先に押さえなさい。"],
+  "pentacles-1": ["優先順位を並べ替えなさい。二つまでなら回せます。", "抱えすぎて崩れています。今週やらないことを、三つ決めなさい。"],
+  "pentacles-2": ["人と組みなさい。自分にない技を借りること。", "品質が落ちています。急がず、一つを丁寧に仕上げなさい。"],
+  "pentacles-3": ["守りを固めてよい時です。蓄えを作りなさい。", "抱え込みすぎています。使う・貸す・渡すを一つ実行しなさい。"],
+  "pentacles-4": ["苦しい時期です。一人で耐えず、支援や制度を調べなさい。", "助けが見つかります。相談先に、今日連絡しなさい。"],
+  "pentacles-5": ["余裕のある分を分けなさい。回すほど戻ってきます。", "見返りを期待した施しになっています。条件を先に明示しなさい。"],
+  "pentacles-6": ["結果を急がず育てなさい。今は評価の時期ではありません。", "見通しが外れています。計画を数字から見直しなさい。"],
+  "pentacles-7": ["腕を磨きなさい。同じ作業を、質を上げて繰り返すこと。", "作業が惰性です。目的を書き直してから手を動かしなさい。"],
+  "pentacles-8": ["自分のために使いなさい。成果を味わう時間を取ること。", "豊かさが独りよがりです。誰かと分かち合いなさい。"],
+  "pentacles-9": ["長く続く形にしなさい。契約・相続・保険を整えること。", "土台が揺れています。金の流れを一度、全部書き出しなさい。"],
+  "pentacles-10": ["学び始めなさい。教材を一つ買い、初回を今日終えること。", "計画が現実離れしています。規模を三分の一に縮めなさい。"],
+  "pentacles-11": ["地道に続けなさい。派手さより、毎日の一定量が効きます。", "進みが止まっています。やり方を変えず、量だけ半分にして再開しなさい。"],
+  "pentacles-12": ["生活を整えなさい。住まいと食事を先に立て直すこと。", "世話を焼きすぎています。相手に任せる範囲を決めなさい。"],
+  "pentacles-13": ["築いたもので示しなさい。実績を数字で出すこと。", "守りが固すぎます。新しい方法を一つだけ試しなさい。"],
+};
+
+/**
+ * 中央の13枚目の助言を返す。
+ * 用意していない言語では、その札の語句を返して空欄にしない。
+ */
+function horoCenterAdvice(card, reversed, lang) {
+  if (lang === "ja") {
+    const pair = HORO_CENTER_ADVICE_JA[String(card.id)];
+    if (pair) return pair[reversed ? 1 : 0];
+  }
+  const [suit, rankStr] = String(card.id).split("-");
+  const rank = parseInt(rankStr, 10);
+  return suit === "major"
+    ? majorKeyword(rank, reversed, lang)
+    : minorKeyword(suit, rank, reversed, lang, card.up, card.rev);
+}
+
 function HoroscopeWheel({ drawn, labels, lang, openedCount }) {
   const t = T[lang] || T.ja;
   const W = 300, C = 150, R = 118, INNER = 34;
@@ -7242,18 +7464,30 @@ function HoroscopeWheel({ drawn, labels, lang, openedCount }) {
     面積比にすると差が小さく見えて図が平坦になるため。
   */
   /*
-    占有率が各帯に入る確率。4%刻み。12万回の実測。
+    称号の境界。
 
-      0〜4%   8.8    12〜16%  9.6    24〜28% 0.2
-      4〜8%  42.5    16〜20%  3.7    28%〜   0.0
-      8〜12% 33.9    20〜24%  1.3
+    最初は4%刻みで区切っていたが、それだと分布の山（8〜12%）に
+    半数近くが集まり、「育ちゆく芽」ばかりが並ぶ状態になった。
+    占いとして、どの回でも同じ称号が続くのは成立しない。
 
-    均等なら 8.33% なので、4〜12% に76%が集まる。
-    16%を超えると5%強、20%を超えると1.5%しかない。
-    「その領域がどれくらい珍しく張り出しているか」を数字で示す。
+    そこで刻みを捨て、7段が均等に出るよう実測の分位点で切る。
+    240万件（20万回×12領域）から取った境界がこれ。
+    値が半端なのは、分布そのものが半端だから ――
+    きりのよい数字に丸めると、また偏る。
+
+      〜4.34   4.34〜5.34   5.34〜7.23   7.23〜8.45
+      8.45〜9.71   9.71〜12.14   12.14〜
+      いずれも 14.3%
+
+    ⚠️ 寄与度（contributionOf）や正規化の値域を変えたら、
+    この境界も測り直すこと。分布が動けば均等でなくなる。
   */
-  const SHARE_BINS = [8.8, 42.5, 33.9, 9.6, 3.7, 1.3, 0.2, 0.05, 0.05];
-  const binOf = (share) => Math.min(SHARE_BINS.length - 1, Math.floor(share / 4));
+  const SHARE_CUTS = [4.34, 5.34, 7.23, 8.45, 9.71, 12.14];
+  const binOf = (share) => {
+    let k = 0;
+    while (k < SHARE_CUTS.length && share >= SHARE_CUTS[k]) k++;
+    return k;
+  };
 
   const EVEN = 100 / 12;
   const radiusOf = (share) => {
@@ -7267,6 +7501,13 @@ function HoroscopeWheel({ drawn, labels, lang, openedCount }) {
     const a1 = a0 + (Math.PI * 2) / 12;
     const p = (a, r) => `${(C + Math.cos(a) * r).toFixed(2)} ${(C - Math.sin(a) * r).toFixed(2)}`;
     return `M ${p(a0, INNER)} L ${p(a0, rad)} A ${rad} ${rad} 0 0 0 ${p(a1, rad)} L ${p(a1, INNER)} A ${INNER} ${INNER} 0 0 1 ${p(a0, INNER)} Z`;
+  };
+  // 扇の先端だけをなぞる弧。伸びた先を光らせるために使う
+  const arcTip = (i, rad) => {
+    const a0 = Math.PI + (Math.PI * 2 * i) / 12 - Math.PI / 12 + 0.03;
+    const a1 = a0 + (Math.PI * 2) / 12 - 0.06;
+    const p = (a, r) => `${(C + Math.cos(a) * r).toFixed(2)} ${(C - Math.sin(a) * r).toFixed(2)}`;
+    return `M ${p(a0, rad)} A ${rad} ${rad} 0 0 0 ${p(a1, rad)}`;
   };
   const labelPos = (i, rad) => {
     const a = Math.PI + (Math.PI * 2 * i) / 12;
@@ -7282,35 +7523,80 @@ function HoroscopeWheel({ drawn, labels, lang, openedCount }) {
       <div className="horo-wheel-title sheen-text">{t.horoWheelTitle}</div>
       <svg viewBox={`0 0 ${W} ${W}`} className="horo-wheel-svg" role="img" aria-label={t.horoWheelTitle}>
         <defs>
-          {/* 占有率の数字に使う虹。ホロと同じ語彙だが、彩度を落として上品に留める */}
-          <linearGradient id="horo-share-grad" x1="0" y1="0" x2="1" y2="1">
-            <stop offset="0%" stopColor="#FFE9A3" />
-            <stop offset="35%" stopColor="#F0A6D8" />
-            <stop offset="70%" stopColor="#9FD6F5" />
-            <stop offset="100%" stopColor="#A8F0BC" />
-          </linearGradient>
+          {/* 扇の塗り。中心側を濃く、外へ向かって薄くすると伸びた感じが出る */}
+          <radialGradient id="horo-fill-good" cx="50%" cy="50%" r="50%">
+            <stop offset="0%" stopColor="#FFE9A3" stopOpacity="0.62" />
+            <stop offset="70%" stopColor="#F0C878" stopOpacity="0.34" />
+            <stop offset="100%" stopColor="#F0C878" stopOpacity="0.14" />
+          </radialGradient>
+          <radialGradient id="horo-fill-bad" cx="50%" cy="50%" r="50%">
+            <stop offset="0%" stopColor="#C89AFF" stopOpacity="0.60" />
+            <stop offset="70%" stopColor="#9A6ED8" stopOpacity="0.32" />
+            <stop offset="100%" stopColor="#9A6ED8" stopOpacity="0.14" />
+          </radialGradient>
+          {/* 外へ光を漏らす。扇の先が発光して見える */}
+          <filter id="horo-glow" x="-40%" y="-40%" width="180%" height="180%">
+            <feGaussianBlur stdDeviation="3.2" result="b" />
+            <feMerge><feMergeNode in="b" /><feMergeNode in="SourceGraphic" /></feMerge>
+          </filter>
         </defs>
-        {/* 目安の円。扇がどこまで伸びているかの基準になる */}
-        <circle cx={C} cy={C} r={R} fill="none" stroke="rgba(201,162,75,0.16)" strokeWidth="1" />
-        <circle cx={C} cy={C} r={(R + INNER) / 2} fill="none" stroke="rgba(201,162,75,0.10)" strokeWidth="1" strokeDasharray="3 5" />
+
+        {/* 目盛りの輪。何本か引くと、扇がどこまで届いたかが読める */}
+        {[0.34, 0.56, 0.78, 1].map((k, i) => (
+          <circle key={i} cx={C} cy={C} r={INNER + (R - INNER) * k}
+            fill="none" stroke="rgba(201,162,75,0.14)" strokeWidth="1"
+            strokeDasharray={k === 1 ? "none" : "2 6"} />
+        ))}
+        {/* 十二の仕切り。円が12等分されていることを先に示す */}
+        {Array.from({ length: 12 }, (_, i) => {
+          const a2 = Math.PI + (Math.PI * 2 * i) / 12 - Math.PI / 12;
+          return (
+            <line key={i}
+              x1={C + Math.cos(a2) * INNER} y1={C - Math.sin(a2) * INNER}
+              x2={C + Math.cos(a2) * R} y2={C - Math.sin(a2) * R}
+              stroke="rgba(201,162,75,0.10)" strokeWidth="1" />
+          );
+        })}
+
         {shown.map((c) => {
           const rad = radiusOf(c.share);
           const pos = labelPos(c.i, rad);
+          /*
+            開いた順に少しずつ遅らせて伸ばす。
+            一斉に出ると十二枚ぶんの情報が一度に来て読む作業になるが、
+            順に伸びると、どの領域が張り出したかが目で追える。
+            （週の物語の導火線と同じ考え方）
+          */
+          const delay = `${c.i * 0.07}s`;
           return (
-            <g key={c.i}>
+            <g key={c.i} className="horo-sector" style={{ animationDelay: delay }}>
               <path
                 d={arc(c.i, rad)}
-                fill={c.good ? "rgba(240,200,120,0.30)" : "rgba(160,110,220,0.30)"}
-                stroke={c.good ? "rgba(240,200,120,0.85)" : "rgba(170,120,230,0.85)"}
-                strokeWidth={c.isMajor ? 1.6 : 1}
+                fill={c.good ? "url(#horo-fill-good)" : "url(#horo-fill-bad)"}
+                stroke={c.good ? "rgba(255,220,150,0.95)" : "rgba(190,150,240,0.95)"}
+                strokeWidth={c.isMajor ? 1.8 : 1}
+                filter="url(#horo-glow)"
               />
+              {/* 先端の弧を一段明るく。伸びた先が光って見える */}
+              <path d={arcTip(c.i, rad)} fill="none"
+                stroke={c.good ? "#FFE9A3" : "#D8B0FF"} strokeWidth="2" strokeLinecap="round"
+                opacity="0.9" />
               <text x={pos.x} y={pos.y} className="horo-wheel-num" textAnchor="middle" dominantBaseline="middle">
                 {c.i + 1}
               </text>
             </g>
           );
         })}
-        <circle cx={C} cy={C} r={INNER} fill="rgba(20,14,36,0.85)" stroke="rgba(201,162,75,0.35)" strokeWidth="1" />
+
+        {/* 中央。長所の割合を数字で置く。図の重心がここに来る */}
+        <circle cx={C} cy={C} r={INNER} fill="rgba(16,10,30,0.92)" stroke="rgba(201,162,75,0.45)" strokeWidth="1" />
+        {(() => {
+          const g = shown.filter((x) => x.good).reduce((a2, x) => a2 + x.share, 0);
+          return (<>
+            <text x={C} y={C - 5} className="horo-hub-num" textAnchor="middle">{Math.round(g)}</text>
+            <text x={C} y={C + 11} className="horo-hub-unit" textAnchor="middle">%</text>
+          </>);
+        })()}
       </svg>
 
       {/* 凡例。色が何を意味するかを書かないと、ただ二色に分かれた図になる */}
@@ -7318,6 +7604,29 @@ function HoroscopeWheel({ drawn, labels, lang, openedCount }) {
         <span><i className="good" />{t.horoStrength}</span>
         <span><i className="bad" />{t.horoChallenge}</span>
       </div>
+
+      {/*
+        長所と課題の合計。
+        12領域それぞれの判定は分かっても、盤面全体がどちらに傾いているかは
+        足さないと見えない。占有率で重みづけした割合にする
+        （枚数で数えると、小さな領域も大きな領域も同じ1票になる）。
+      */}
+      {(() => {
+        const g = shown.filter((c) => c.good).reduce((a, c) => a + c.share, 0);
+        const b = 100 - g;
+        return (
+          <div className="horo-balance">
+            <div className="horo-balance-bar" aria-hidden="true">
+              <i className="good" style={{ width: `${g}%` }} />
+              <i className="bad" style={{ width: `${b}%` }} />
+            </div>
+            <div className="horo-balance-row">
+              <span className="good">{t.horoStrength}<b>{g.toFixed(1)}%</b></span>
+              <span className="bad"><b>{b.toFixed(1)}%</b>{t.horoChallenge}</span>
+            </div>
+          </div>
+        );
+      })()}
 
       {/*
         ① 十二段の内訳。位置・札・向き・キーワード・占有率を一段にまとめる。
@@ -7337,11 +7646,9 @@ function HoroscopeWheel({ drawn, labels, lang, openedCount }) {
               <em>{c.i + 1}</em>
               <div className="horo-rank-main">
                 {/*
-                  長所か課題かを最初に出す。
-                  末尾に置くと、札とキーワードを読み終えてから
-                  「で、これはどっちなのか」を探すことになる。
+                  いちばん先に読ませたいのは領域の名前。
+                  占有率と同じ虹をかけて、この行の主役にする。
                 */}
-                <div className="horo-rank-note">{c.good ? t.horoStrength : t.horoChallenge}</div>
                 <div className="horo-rank-head">
                   <span className="horo-rank-name">{labels[c.i]}</span>
                   <span className={`horo-rank-card${d.reversed ? " rev" : ""}`}>
@@ -7358,11 +7665,20 @@ function HoroscopeWheel({ drawn, labels, lang, openedCount }) {
               <span className="horo-share-wrap">
                 <span className="horo-share">{c.share.toFixed(1)}<u>%</u></span>
                 {/*
-                  その帯に入る確率。数字だけだと 19.4% が珍しいのか
-                  ありふれているのか分からない。
+                  帯ごとの称号。
+                  「16〜20%の帯 3.7%」では、その数字が何を意味するか伝わらない。
+                  占有率の大きさを、長所なら強さ、課題なら重さとして言葉にする。
                 */}
-                <span className="horo-share-odds">
-                  {t.horoShareOdds(binOf(c.share) * 4, (binOf(c.share) + 1) * 4, SHARE_BINS[binOf(c.share)])}
+                <span className={`horo-share-rank ${c.good ? "good" : "bad"}`}>
+                  {(c.good ? t.horoBandGood : t.horoBandBad)[binOf(c.share)]}
+                </span>
+                {/*
+                  長所か課題かは右下へ。
+                  左上に置くと領域名より先に目に入り、
+                  いちばん見たい「どの領域か」が二番手になる。
+                */}
+                <span className={`horo-rank-note ${c.good ? "good" : "bad"}`}>
+                  {c.good ? t.horoStrength : t.horoChallenge}
                 </span>
               </span>
             </li>
@@ -9144,7 +9460,19 @@ function HexagramPanel({ lang, onBack, question, userName, canDraw, onConsume, o
                     // 配り終えていないカードは描かない（opacity 0 で待たせない）
                     visibility: i < dealt ? "visible" : "hidden",
                     // 粒子はこの手前（zIndex 3）を通す。十字に組む札だけ一段上へ
-                    zIndex: pt.center ? 4 : pt.cross ? 2 : 1,
+                    /*
+                      重なりの順序。
+
+                      既定では DOM の順（＝ハウスの番号順）で後の札が上に来るので、
+                      1ハウスが2ハウスと12ハウスの両方の下に潜って読みにくかった。
+                      ホロスコープでは番号が若いほど上に置き、
+                      1→2→3… と手前から奥へ順に重なる形にする。
+                      札を配る順序と重なりの順序が一致するので、
+                      どちらが先に置かれたかが目で分かる。
+
+                      中央の13枚目は常に最前面。
+                    */
+                    zIndex: pt.center ? 40 : pt.cross ? 2 : isHoro ? 20 - i : 1,
                     // 配置の移動と、めくる回転は別の要素が担う（同じtransformを取り合わない）
                     /*
                       ケルト十字の二枚目は一枚目と同じ座標に置かれる。
@@ -9247,7 +9575,67 @@ function HexagramPanel({ lang, onBack, question, userName, canDraw, onConsume, o
           )}
 
           {/*
-            ホロスコープの象意。盤面の直下に置く。
+            一括開封。まだ一段も自分で開いていないときだけ出す。
+            途中から飛ばすと、順に読んだ札と飛ばした札で読み方が変わる。
+          */}
+          {!isLast && stage === 0 && dealt >= spread.count && !revealLock && (
+            bulkAsking ? (
+              <div className="bulk-confirm">
+                <p className="bulk-confirm-text">{t.bulkConfirm}</p>
+                <div className="bulk-confirm-row">
+                  <button className="bulk-yes" onClick={openAll}>{t.bulkYes}</button>
+                  <button className="bulk-no" onClick={() => setBulkAsking(false)}>{t.bulkNo}</button>
+                </div>
+              </div>
+            ) : (
+              <button className="bulk-btn" onClick={() => setBulkAsking(true)}>
+                {t.bulkOpen}
+              </button>
+            )
+          )}
+
+          {/*
+            中央の一枚の助言。盤面の直下に置く。
+
+            十二を一巡したあとに渡す一言なので、
+            開き終えるまで出さない（先に結論が見えると、
+            そこへ寄せて十二枚を読むことになる）。
+          */}
+          {isHoro && isLast && drawn && drawn[12] && (
+            <div className="horo-center">
+              <div className="horo-center-head">
+                <span className="horo-center-title">{info.pos[12]}</span>
+                <span className={`horo-center-card${drawn[12].reversed ? " rev" : ""}`}>
+                  {getCardName(drawn[12], lang)}
+                  <i className={`orientation ${orientationToneClass(drawn[12], drawn[12].reversed)}`}>
+                    {orientationLabel(drawn[12].reversed, lang)}
+                  </i>
+                </span>
+              </div>
+              {/*
+                句点で改行する。助言はたいてい二文からなり
+                （現状の指摘 → 具体的な行動）、続けて置くと
+                どこまでが状況でどこからが指示か読み分けられない。
+                CSSの white-space に任せず要素を分けるのは、
+                行間を指定して二文の間を空けたいため。
+              */}
+              <div className="horo-center-text">
+                {/*
+                  ⚠️ 正規表現の後読み（?<=。）は使わない。
+                  Safari 15以前は構文解析の時点で失敗し、アプリ全体が起動しなくなる。
+                  句点を区切り文字として残したいので、置換してから分ける。
+                */}
+                {horoCenterAdvice(drawn[12], drawn[12].reversed, lang)
+                  .replace(/。/g, "。\n")
+                  .split("\n")
+                  .filter((x) => x.trim())
+                  .map((line, i) => <p key={i}>{line}</p>)}
+              </div>
+            </div>
+          )}
+
+          {/*
+            ホロスコープの象意。中央の助言のすぐ下に置く。
             十二の領域＋中央の一枚が何を指すのかは、
             引いた札を読む前に知っておく必要がある。
 
@@ -9291,25 +9679,6 @@ function HexagramPanel({ lang, onBack, question, userName, canDraw, onConsume, o
             </div>
           )}
 
-          {/*
-            一括開封。まだ一段も自分で開いていないときだけ出す。
-            途中から飛ばすと、順に読んだ札と飛ばした札で読み方が変わる。
-          */}
-          {!isLast && stage === 0 && dealt >= spread.count && !revealLock && (
-            bulkAsking ? (
-              <div className="bulk-confirm">
-                <p className="bulk-confirm-text">{t.bulkConfirm}</p>
-                <div className="bulk-confirm-row">
-                  <button className="bulk-yes" onClick={openAll}>{t.bulkYes}</button>
-                  <button className="bulk-no" onClick={() => setBulkAsking(false)}>{t.bulkNo}</button>
-                </div>
-              </div>
-            ) : (
-              <button className="bulk-btn" onClick={() => setBulkAsking(true)}>
-                {t.bulkOpen}
-              </button>
-            )
-          )}
 
           {/*
             今の段階で開いたカードの詳細。
@@ -10073,7 +10442,7 @@ function OneOraclePanel({ lang, onBack, onHoloConsumed, deck = "major", onCollec
                     /*
                       段の名前を必ず入れる。
                       「闇のレアが出現」→「正位置の図鑑が開きました」だけだと
-                      矛盾して見える（月・死神・塔・悪魔・吊られた男は
+                      矛盾して見える（月・死神・塔・悪魔は
                       正位置が難しい側なので、闇の札が正位置で出る）。
                       「闇のレア・正位置」と書けば食い違いが消える。
                     */
@@ -10552,7 +10921,7 @@ function DexCardView({ card, reversed, tier, lang }) {
   /*
     暗い版にするかどうかは、正逆ではなく「その札にとって難しい側か」で決める。
 
-    正逆そのものに暗さを結びつけると、月・死神・塔・悪魔・吊られた男の
+    正逆そのものに暗さを結びつけると、月・死神・塔・悪魔の
     5枚で意味が反転する（この5枚は逆位置が良い向き）。
     向きラベルの配色で明度を揃えたのも同じ理由で、
     逆位置を暗くすると「逆位置＝不吉」という含意まで一緒に運んでしまう。
@@ -12004,7 +12373,7 @@ const T = {
     shardWhere: "기록 > 교환 탭에서 사용할 수 있습니다",
     shardNames: { light: "빛의 조각", dark: "어둠의 조각", holo: "홀로 조각", abyss: "심연의 조각" },
     tierNames: { light: "레어", dark: "어둠의 레어", holo: "홀로", abyss: "다크 홀로" },
-    shardOpensWhat: { light: "레어의 밝은 쪽 칸을 엽니다", dark: "레어의 어두운 쪽 칸을 엽니다", holo: "홀로의 밝은 쪽 칸을 엽니다", abyss: "홀로의 어두운 쪽 칸을 엽니다" },
+    shardOpensWhat: { light: "무작위로 미개방 레어 카드의 도감을 엽니다", dark: "무작위로 미개방 다크 레어 카드의 도감을 엽니다", holo: "무작위로 미개방 홀로 카드의 도감을 엽니다", abyss: "무작위로 미개방 다크 홀로 카드의 도감을 엽니다" },
     shardGot: (n) => `${n} 를 얻었습니다`,
     chestGotSlot: (t, o) => `당첨！ ${t}・${o} 도감이 개방되었습니다`,
     shardIntro: "조각은 도감의 아직 열리지 않은 칸을 하나 열어 줍니다. 어느 칸이 열릴지는 고를 수 없습니다.",
@@ -12048,7 +12417,8 @@ const T = {
     horoWheelTitle: "열두 영역의 부풀기",
     horoStrength: "뻗어야 할 강점",
     horoChallenge: "마주해야 할 과제",
-    horoShareOdds: (a, b, p) => `${a}〜${b}% 대 ${p}%`,
+    horoBandGood: ["아직 잠든 자질", "조용한 바탕", "자라나는 싹", "확실한 개성", "변치 않는 매력", "흔들림 없는 중심", "하늘이 준 영역"],
+    horoBandBad: ["희미한 앙금", "작은 그늘", "마음에 걸리는 씨앗", "넘길 수 없는 균열", "불운의 싹", "거스르기 힘든 그림자", "숙명의 무게"],
     celticNext: {"core": "먼저, 지금 향하고 있는 방향을 봅시다", "axis": "다음으로, 마음의 안팎을 봅시다", "time": "이어서, 시간의 흐름을 봅시다", "self": "그럼, 당신 자신을 봅시다", "around": "다음은 주변 환경입니다", "hope": "그리고 희망과 불안을", "final": "마지막으로, 결말을 봅시다"},
     celticPlaneTitle: "마음의 무게중심",
     autoPickOrder: "자동으로 고르기",
@@ -12298,7 +12668,7 @@ const T = {
     shardWhere: "Dùng ở tab Đổi trong Ghi chép",
     shardNames: { light: "Mảnh Ánh Sáng", dark: "Mảnh Bóng Tối", holo: "Mảnh Holo", abyss: "Mảnh Vực Thẳm" },
     tierNames: { light: "Hiếm", dark: "Hiếm Bóng Tối", holo: "Holo", abyss: "Holo Bóng Tối" },
-    shardOpensWhat: { light: "Mở ô sáng của Hiếm", dark: "Mở ô tối của Hiếm", holo: "Mở ô sáng của Holo", abyss: "Mở ô tối của Holo" },
+    shardOpensWhat: { light: "Mở ngẫu nhiên một ô Hiếm chưa mở", dark: "Mở ngẫu nhiên một ô Hiếm Bóng Tối chưa mở", holo: "Mở ngẫu nhiên một ô Holo chưa mở", abyss: "Mở ngẫu nhiên một ô Holo Bóng Tối chưa mở" },
     shardGot: (n) => `Nhận được ${n}`,
     chestGotSlot: (t, o) => `Trúng rồi! Đã mở khóa bộ sưu tập ${t}・${o}`,
     shardIntro: "Mảnh vỡ mở một ô chưa mở trong bộ sưu tập. Bạn không chọn được ô nào.",
@@ -12342,7 +12712,8 @@ const T = {
     horoWheelTitle: "Độ nở của mười hai lĩnh vực",
     horoStrength: "Điểm mạnh nên phát huy",
     horoChallenge: "Vấn đề cần đối diện",
-    horoShareOdds: (a, b, p) => `Khoảng ${a}–${b}%: ${p}%`,
+    horoBandGood: ["Tư chất còn ngủ yên", "Nền tảng lặng lẽ", "Mầm đang lớn", "Sức mạnh đã vững", "Sức hút không đổi", "Trung tâm không lay", "Lĩnh vực trời cho"],
+    horoBandBad: ["Cặn lắng mờ nhạt", "Bóng nhỏ", "Hạt mầm lo âu", "Vết nứt không thể bỏ qua", "Mầm của vận rủi", "Bóng khó cưỡng lại", "Sức nặng của số phận"],
     celticNext: {"core": "Trước hết, hãy xem hướng bạn đang đi", "axis": "Tiếp theo, trong và ngoài tâm trí", "time": "Rồi đến dòng chảy thời gian", "self": "Giờ, hãy xem chính bạn", "around": "Tiếp đến là hoàn cảnh xung quanh", "hope": "Rồi hy vọng và lo âu", "final": "Cuối cùng, hãy xem kết cục"},
     celticPlaneTitle: "Trọng tâm của tâm trí",
     autoPickOrder: "Chọn tự động",
@@ -12592,7 +12963,7 @@ const T = {
     shardWhere: "Dapat dipakai di tab Tukar pada Catatan",
     shardNames: { light: "Pecahan Cahaya", dark: "Pecahan Kegelapan", holo: "Pecahan Holo", abyss: "Pecahan Jurang" },
     tierNames: { light: "Langka", dark: "Langka Gelap", holo: "Holo", abyss: "Holo Gelap" },
-    shardOpensWhat: { light: "Membuka slot sisi terang Langka", dark: "Membuka slot sisi gelap Langka", holo: "Membuka slot sisi terang Holo", abyss: "Membuka slot sisi gelap Holo" },
+    shardOpensWhat: { light: "Membuka acak katalog kartu Langka yang belum terbuka", dark: "Membuka acak katalog kartu Langka Gelap yang belum terbuka", holo: "Membuka acak katalog kartu Holo yang belum terbuka", abyss: "Membuka acak katalog kartu Holo Gelap yang belum terbuka" },
     shardGot: (n) => `Mendapat ${n}`,
     chestGotSlot: (t, o) => `Menang! Katalog ${t}・${o} telah terbuka`,
     shardIntro: "Pecahan membuka satu slot yang belum terbuka di katalog. Anda tidak bisa memilih slotnya.",
@@ -12634,7 +13005,8 @@ const T = {
     horoWheelTitle: "Bentangan dua belas wilayah",
     horoStrength: "Kekuatan untuk dikembangkan",
     horoChallenge: "Tantangan untuk dihadapi",
-    horoShareOdds: (a, b, p) => `Rentang ${a}–${b}%: ${p}%`,
+    horoBandGood: ["Bakat yang masih tidur", "Fondasi yang sunyi", "Tunas yang tumbuh", "Kekuatan yang mapan", "Pesona yang tak berubah", "Pusat yang tak goyah", "Wilayah anugerah"],
+    horoBandBad: ["Endapan samar", "Bayangan kecil", "Benih kecemasan", "Retak yang tak boleh diabaikan", "Tunas kemalangan", "Bayangan yang sulit dilawan", "Beban takdir"],
     celticNext: {"core": "Pertama, mari lihat arah yang kamu tuju", "axis": "Berikutnya, dalam dan luar batinmu", "time": "Lalu, aliran waktunya", "self": "Sekarang, mari lihat dirimu", "around": "Berikutnya keadaan sekitar", "hope": "Lalu harapan dan kecemasan", "final": "Terakhir, mari lihat hasilnya"},
     celticPlaneTitle: "Titik berat batinmu",
     autoPickOrder: "Pilih otomatis",
@@ -12886,7 +13258,7 @@ const T = {
     shardWhere: "Boleh digunakan di tab Tukar dalam Rekod",
     shardNames: { light: "Serpihan Cahaya", dark: "Serpihan Kegelapan", holo: "Serpihan Holo", abyss: "Serpihan Jurang" },
     tierNames: { light: "Jarang", dark: "Jarang Gelap", holo: "Holo", abyss: "Holo Gelap" },
-    shardOpensWhat: { light: "Membuka slot sisi cerah Jarang", dark: "Membuka slot sisi gelap Jarang", holo: "Membuka slot sisi cerah Holo", abyss: "Membuka slot sisi gelap Holo" },
+    shardOpensWhat: { light: "Membuka rawak katalog kad Jarang yang belum dibuka", dark: "Membuka rawak katalog kad Jarang Gelap yang belum dibuka", holo: "Membuka rawak katalog kad Holo yang belum dibuka", abyss: "Membuka rawak katalog kad Holo Gelap yang belum dibuka" },
     shardGot: (n) => `Mendapat ${n}`,
     chestGotSlot: (t, o) => `Menang! Katalog ${t}・${o} telah dibuka`,
     shardIntro: "Serpihan membuka satu slot yang belum dibuka dalam katalog. Anda tidak boleh memilih slotnya.",
@@ -12928,7 +13300,8 @@ const T = {
     horoWheelTitle: "Bentangan dua belas wilayah",
     horoStrength: "Kekuatan untuk dikembangkan",
     horoChallenge: "Cabaran untuk dihadapi",
-    horoShareOdds: (a, b, p) => `Julat ${a}–${b}%: ${p}%`,
+    horoBandGood: ["Bakat yang masih lena", "Asas yang sunyi", "Pucuk yang tumbuh", "Kekuatan yang mantap", "Pesona yang tak berubah", "Pusat yang tak goyah", "Wilayah kurniaan"],
+    horoBandBad: ["Enapan samar", "Bayang kecil", "Benih kerisauan", "Retak yang tak boleh diabai", "Pucuk malang", "Bayang yang sukar dilawan", "Beban takdir"],
     celticNext: {"core": "Pertama, mari lihat arah yang anda tuju", "axis": "Seterusnya, dalam dan luar hati anda", "time": "Kemudian, aliran masanya", "self": "Kini, mari lihat diri anda", "around": "Seterusnya keadaan sekeliling", "hope": "Lalu harapan dan kebimbangan", "final": "Akhir sekali, mari lihat kesudahannya"},
     celticPlaneTitle: "Pusat graviti hati anda",
     autoPickOrder: "Pilih automatik",
@@ -13181,7 +13554,7 @@ const T = {
     shardWhere: "記録の「交換」タブで使えます",
     shardNames: { light: "光の欠片", dark: "闇の欠片", holo: "ホロの欠片", abyss: "深淵の欠片" },
     tierNames: { light: "レア", dark: "闇のレア", holo: "ホロ", abyss: "ダークホロ" },
-    shardOpensWhat: { light: "レアの明るい側の枠を開きます", dark: "レアの闇の側の枠を開きます", holo: "ホロの明るい側の枠を開きます", abyss: "ホロの闇の側の枠を開きます" },
+    shardOpensWhat: { light: "ランダムに未開放のレアカードの図鑑を開きます", dark: "ランダムに未開放のダークレアカードの図鑑を開きます", holo: "ランダムに未開放のホロカードの図鑑を開きます", abyss: "ランダムに未開放のダークホロカードの図鑑を開きます" },
     shardGot: (n) => `${n}を手に入れました`,
     chestGotSlot: (t, o) => `当たり！　${t}・${o}の図鑑が開放されました`,
     shardIntro: "欠片は、図鑑のまだ開いていない枠をひとつ開きます。どの枠が開くかは選べません。",
@@ -13223,20 +13596,21 @@ const T = {
     horoWheelTitle: "十二領域のふくらみ",
     horoStrength: "伸ばすべき長所",
     horoChallenge: "向き合うべき課題",
-    horoShareOdds: (a, b, p) => `${a}〜${b}%の帯 ${p}%`,
+    horoBandGood: ["まだ眠る資質", "静かな下地", "育ちゆく芽", "確かな持ち味", "不変の魅力", "揺るぎない個性", "天賦の才能"],
+    horoBandBad: ["かすかな澱み", "小さな影", "気がかりの種", "見過ごせぬ綻び", "不運の萌芽", "抗いがたい闇", "宿命の重石"],
     houseKeywords: [
-      "自分自身、体質と容姿、第一印象、生まれ持った気質、人生への構え、物事の始め方",
+      "自分自身、決断の癖、体質と容姿、第一印象、生まれ持った気質、人生への構え、物事の始め方",
       "金運、物質運、才能、価値観、快適性に関する感度、五感（味覚、声、嗅覚、視覚、聴覚の良し悪し）、所有欲",
       "学習、初等教育、言葉と文章、兄弟姉妹、近所と近距離の移動、好奇心、情報の集め方",
       "家庭、住まい、家族と親（特に育ての親）、ルーツと土地、心の土台、晩年、引きこもる場所",
       "恋愛、創造、趣味と遊び、子ども、自己表現、投機と賭け、承認欲求、舞台に立つこと",
       "日々の勤め、労働環境、健康と体調管理、規律と習慣、奉仕、部下と同僚、ペット",
       "結婚とパートナー、契約、共同事業、公然の敵、対人関係全般、自分に足りないものを映す相手",
-      "継承と遺産、他者の財、性、深い結びつき、変容と再生、死と生まれ変わり、隠された事柄",
-      "遠方、海外、高等教育と専門、哲学と宗教、思想、長距離の旅、精神的な冒険",
+      "挫折と再起、継承と遺産、他者の財、性、深い結びつき、変容と再生、隠された事柄",
+      "挑戦、遠方と海外、高等教育と専門、哲学と宗教、思想、長距離の旅、精神的な冒険",
       "天職と社会的地位、名声、目標、上司と権威、世間からの評価、達成、父親的なもの",
       "仲間と友人、所属する集団、願いと理想、未来への展望、社会活動、束縛からの自由",
-      "秘密、潜在意識、孤独と隠遁、癒しと療養、隠れた敵、犠牲、前世的なもの、手放し",
+      "因縁と前世、霊性、潜在意識、秘密、孤独と隠遁、癒しと療養、隠れた敵、手放し",
       "全体の総合、いま最も必要な助言、十二の領域を束ねる一枚",
     ],
     celticNext: {"core": "まず、いま向いている方向を見ましょう", "axis": "次に、心の内と外を見ましょう", "time": "では、時の流れを見ましょう", "self": "ここから、あなた自身を見ましょう", "around": "次は、周囲の環境を", "hope": "そして、希望と不安を", "final": "最後に、結末を見ましょう"},
@@ -13490,7 +13864,7 @@ const T = {
     shardWhere: "可在記錄的「兌換」分頁使用",
     shardNames: { light: "光之碎片", dark: "闇之碎片", holo: "虹彩碎片", abyss: "深淵碎片" },
     tierNames: { light: "稀有", dark: "闇之稀有", holo: "虹彩", abyss: "闇之虹彩" },
-    shardOpensWhat: { light: "開啟稀有的光之格", dark: "開啟稀有的闇之格", holo: "開啟虹彩的光之格", abyss: "開啟虹彩的闇之格" },
+    shardOpensWhat: { light: "隨機開啟一格未開放的稀有卡圖鑑", dark: "隨機開啟一格未開放的闇之稀有卡圖鑑", holo: "隨機開啟一格未開放的虹彩卡圖鑑", abyss: "隨機開啟一格未開放的闇之虹彩卡圖鑑" },
     shardGot: (n) => `獲得${n}`,
     chestGotSlot: (t, o) => `中獎！${t}・${o}的圖鑑已開放`,
     shardIntro: "碎片可開啟圖鑑中尚未開啟的一格。無法指定要開啟哪一格。",
@@ -13532,7 +13906,8 @@ const T = {
     horoWheelTitle: "十二領域的起伏",
     horoStrength: "應當發揮的長處",
     horoChallenge: "應當面對的課題",
-    horoShareOdds: (a, b, p) => `${a}〜${b}% 區間 ${p}%`,
+    horoBandGood: ["尚未甦醒的資質", "靜默的底蘊", "正在成長的芽", "確實的特質", "不變的魅力", "不搖的核心", "天賦之地"],
+    horoBandBad: ["微弱的淤積", "小小的陰翳", "掛心的種子", "不可忽視的裂痕", "厄運的萌芽", "難以抗拒的陰影", "宿命的重壓"],
     celticNext: {"core": "首先，來看此刻朝向的方向", "axis": "接著，來看心的內與外", "time": "那麼，來看時間的流向", "self": "從這裡，來看你自己", "around": "接下來是周遭環境", "hope": "然後是希望與不安", "final": "最後，來看結局"},
     celticPlaneTitle: "心的重心",
     autoPickOrder: "自動選牌",
@@ -13784,7 +14159,7 @@ const T = {
     shardWhere: "可在记录的「兑换」分页使用",
     shardNames: { light: "光之碎片", dark: "暗之碎片", holo: "虹彩碎片", abyss: "深渊碎片" },
     tierNames: { light: "稀有", dark: "暗之稀有", holo: "虹彩", abyss: "暗之虹彩" },
-    shardOpensWhat: { light: "开启稀有的光之格", dark: "开启稀有的暗之格", holo: "开启虹彩的光之格", abyss: "开启虹彩的暗之格" },
+    shardOpensWhat: { light: "随机开启一格未开放的稀有卡图鉴", dark: "随机开启一格未开放的暗之稀有卡图鉴", holo: "随机开启一格未开放的虹彩卡图鉴", abyss: "随机开启一格未开放的暗之虹彩卡图鉴" },
     shardGot: (n) => `获得${n}`,
     chestGotSlot: (t, o) => `中奖！${t}・${o}的图鉴已开放`,
     shardIntro: "碎片可开启图鉴中尚未开启的一格。无法指定要开启哪一格。",
@@ -13826,7 +14201,8 @@ const T = {
     horoWheelTitle: "十二领域的起伏",
     horoStrength: "应当发挥的长处",
     horoChallenge: "应当面对的课题",
-    horoShareOdds: (a, b, p) => `${a}〜${b}% 区间 ${p}%`,
+    horoBandGood: ["尚未苏醒的资质", "静默的底蕴", "正在成长的芽", "确实的特质", "不变的魅力", "不摇的核心", "天赋之地"],
+    horoBandBad: ["微弱的淤积", "小小的阴翳", "挂心的种子", "不可忽视的裂痕", "厄运的萌芽", "难以抗拒的阴影", "宿命的重压"],
     celticNext: {"core": "首先，来看此刻朝向的方向", "axis": "接着，来看心的内与外", "time": "那么，来看时间的流向", "self": "从这里，来看你自己", "around": "接下来是周遭环境", "hope": "然后是希望与不安", "final": "最后，来看结局"},
     celticPlaneTitle: "心的重心",
     autoPickOrder: "自动选牌",
@@ -14078,7 +14454,7 @@ const T = {
     shardWhere: "Use it in the Exchange tab under Records",
     shardNames: { light: "Shard of Light", dark: "Shard of Dark", holo: "Holo Shard", abyss: "Shard of the Abyss" },
     tierNames: { light: "Rare", dark: "Dark Rare", holo: "Holo", abyss: "Dark Holo" },
-    shardOpensWhat: { light: "Opens a bright Rare slot", dark: "Opens a dark Rare slot", holo: "Opens a bright Holo slot", abyss: "Opens a dark Holo slot" },
+    shardOpensWhat: { light: "Opens a random unclaimed Rare slot", dark: "Opens a random unclaimed Dark Rare slot", holo: "Opens a random unclaimed Holo slot", abyss: "Opens a random unclaimed Dark Holo slot" },
     shardGot: (n) => `You found a ${n}`,
     chestGotSlot: (t, o) => `Hit! The ${t} · ${o} codex slot was unlocked`,
     shardIntro: "A shard opens one slot you don't yet have in the codex. You cannot choose which slot.",
@@ -14120,7 +14496,8 @@ const T = {
     horoWheelTitle: "The swell of the twelve realms",
     horoStrength: "A strength to extend",
     horoChallenge: "A challenge to face",
-    horoShareOdds: (a, b, p) => `${a}–${b}% band: ${p}%`,
+    horoBandGood: ["A gift still sleeping", "A quiet foundation", "A growing shoot", "A settled strength", "An enduring charm", "An unshaken centre", "A given domain"],
+    horoBandBad: ["A faint sediment", "A small shadow", "A seed of concern", "A rift not to ignore", "The bud of misfortune", "A shadow hard to resist", "The weight of fate"],
     houseKeywords: [
       "The self, body and appearance, first impressions, innate temperament, how one begins things",
       "Money, possessions, talents, values, sensitivity to comfort, the five senses, what one wants to own",
@@ -14387,7 +14764,7 @@ const T = {
     shardWhere: "Gamitin ito sa Palitan tab sa Tala",
     shardNames: { light: "Shard ng Liwanag", dark: "Shard ng Dilim", holo: "Holo Shard", abyss: "Shard ng Kalaliman" },
     tierNames: { light: "Rare", dark: "Dark Rare", holo: "Holo", abyss: "Dark Holo" },
-    shardOpensWhat: { light: "Nagbubukas ng maliwanag na Rare", dark: "Nagbubukas ng madilim na Rare", holo: "Nagbubukas ng maliwanag na Holo", abyss: "Nagbubukas ng madilim na Holo" },
+    shardOpensWhat: { light: "Nagbubukas ng random na hindi pa nakukuhang Rare", dark: "Nagbubukas ng random na hindi pa nakukuhang Dark Rare", holo: "Nagbubukas ng random na hindi pa nakukuhang Holo", abyss: "Nagbubukas ng random na hindi pa nakukuhang Dark Holo" },
     shardGot: (n) => `Nakakuha ka ng ${n}`,
     chestGotSlot: (t, o) => `Panalo! Nabuksan ang ${t} · ${o} sa kodeks`,
     shardIntro: "Nagbubukas ang shard ng isang puwang na wala ka pa sa kodeks. Hindi mo mapipili kung alin.",
@@ -14429,7 +14806,8 @@ const T = {
     horoWheelTitle: "Ang laki ng labindalawang larangan",
     horoStrength: "Lakas na dapat palawigin",
     horoChallenge: "Hamong dapat harapin",
-    horoShareOdds: (a, b, p) => `${a}–${b}% banda: ${p}%`,
+    horoBandGood: ["Kaloob na natutulog pa", "Tahimik na pundasyon", "Usbong na lumalago", "Tiyak na lakas", "Di-nagbabagong bighani", "Di-natitinag na gitna", "Kaloob na larangan"],
+    horoBandBad: ["Manipis na latak", "Maliit na anino", "Binhi ng pag-aalala", "Bitak na di dapat balewalain", "Usbong ng malas", "Aninong mahirap labanan", "Bigat ng tadhana"],
     celticNext: {"core": "Una, tingnan natin ang direksyong hinaharap mo", "axis": "Sunod, ang loob at labas ng isip mo", "time": "Ngayon, ang agos ng panahon", "self": "Mula rito, tingnan natin ikaw mismo", "around": "Sunod, ang paligid mo", "hope": "Tapos, ang pag-asa at pangamba", "final": "Panghuli, tingnan natin ang kahihinatnan"},
     celticPlaneTitle: "Ang sentro ng isip mo",
     autoPickOrder: "Piliin nang sunod-sunod",
@@ -14681,7 +15059,7 @@ const T = {
     shardWhere: "ใช้ได้ที่แท็บแลกเปลี่ยนในบันทึก",
     shardNames: { light: "เศษแห่งแสง", dark: "เศษแห่งความมืด", holo: "เศษโฮโล", abyss: "เศษแห่งห้วงลึก" },
     tierNames: { light: "แรร์", dark: "แรร์แห่งความมืด", holo: "โฮโล", abyss: "ดาร์กโฮโล" },
-    shardOpensWhat: { light: "เปิดช่องแรร์ฝั่งสว่าง", dark: "เปิดช่องแรร์ฝั่งมืด", holo: "เปิดช่องโฮโลฝั่งสว่าง", abyss: "เปิดช่องโฮโลฝั่งมืด" },
+    shardOpensWhat: { light: "เปิดช่องแรร์ที่ยังไม่ได้รับแบบสุ่ม", dark: "เปิดช่องแรร์แห่งความมืดที่ยังไม่ได้รับแบบสุ่ม", holo: "เปิดช่องโฮโลที่ยังไม่ได้รับแบบสุ่ม", abyss: "เปิดช่องดาร์กโฮโลที่ยังไม่ได้รับแบบสุ่ม" },
     shardGot: (n) => `ได้รับ${n}`,
     chestGotSlot: (t, o) => `ถูกรางวัล! ปลดล็อกสารานุกรม ${t}・${o} แล้ว`,
     shardIntro: "เศษชิ้นจะเปิดช่องที่ยังไม่ได้เปิดในสารานุกรมหนึ่งช่อง คุณเลือกช่องไม่ได้",
@@ -14723,7 +15101,8 @@ const T = {
     horoWheelTitle: "ความกว้างของสิบสองขอบเขต",
     horoStrength: "จุดแข็งที่ควรขยาย",
     horoChallenge: "โจทย์ที่ควรเผชิญ",
-    horoShareOdds: (a, b, p) => `ช่วง ${a}–${b}%: ${p}%`,
+    horoBandGood: ["คุณสมบัติที่ยังหลับใหล", "รากฐานอันเงียบงัน", "หน่อที่กำลังเติบโต", "จุดแข็งที่มั่นคง", "เสน่ห์ที่ไม่เปลี่ยน", "แกนกลางที่ไม่สั่นคลอน", "ดินแดนที่ฟ้าประทาน"],
+    horoBandBad: ["ตะกอนจาง ๆ", "เงาเล็ก ๆ", "เมล็ดแห่งความกังวล", "รอยร้าวที่มองข้ามไม่ได้", "หน่อแห่งเคราะห์", "เงาที่ยากจะต้านทาน", "น้ำหนักแห่งโชคชะตา"],
     celticNext: {"core": "อันดับแรก มาดูทิศทางที่คุณมุ่งไป", "axis": "ต่อไป ภายในและภายนอกของใจ", "time": "ทีนี้ มาดูการไหลของเวลา", "self": "จากตรงนี้ มาดูตัวคุณเอง", "around": "ต่อไปคือสภาพแวดล้อม", "hope": "แล้วก็ความหวังและความกังวล", "final": "สุดท้าย มาดูบทสรุป"},
     celticPlaneTitle: "จุดศูนย์ถ่วงของใจ",
     autoPickOrder: "เลือกตามลำดับ",
@@ -14976,7 +15355,7 @@ const T = {
     shardWhere: "Används i fliken Byt under Anteckningar",
     shardNames: { light: "Ljusets skärva", dark: "Mörkrets skärva", holo: "Holoskärva", abyss: "Avgrundens skärva" },
     tierNames: { light: "Sällsynt", dark: "Mörk Sällsynt", holo: "Holo", abyss: "Mörk Holo" },
-    shardOpensWhat: { light: "Öppnar en ljus Rare-plats", dark: "Öppnar en mörk Rare-plats", holo: "Öppnar en ljus Holo-plats", abyss: "Öppnar en mörk Holo-plats" },
+    shardOpensWhat: { light: "Öppnar en slumpad oöppnad Rare-plats", dark: "Öppnar en slumpad oöppnad Mörk Rare-plats", holo: "Öppnar en slumpad oöppnad Holo-plats", abyss: "Öppnar en slumpad oöppnad Mörk Holo-plats" },
     shardGot: (n) => `Du fick en ${n}`,
     chestGotSlot: (t, o) => `Vinst! Kodexplatsen ${t} · ${o} låstes upp`,
     shardIntro: "En skärva öppnar en plats du ännu inte har i kodexet. Du kan inte välja vilken.",
@@ -15018,7 +15397,8 @@ const T = {
     horoWheelTitle: "De tolv områdenas svall",
     horoStrength: "En styrka att bygga på",
     horoChallenge: "En utmaning att möta",
-    horoShareOdds: (a, b, p) => `${a}–${b}% band: ${p}%`,
+    horoBandGood: ["En gåva som ännu sover", "En tyst grund", "Ett växande skott", "En stadgad styrka", "En bestående dragning", "Ett orubbligt centrum", "Ett givet område"],
+    horoBandBad: ["En svag bottensats", "En liten skugga", "Ett frö av oro", "En spricka att inte ignorera", "Olyckans knopp", "En skugga svår att stå emot", "Ödets tyngd"],
     celticNext: {"core": "Först, låt oss se riktningen du är vänd mot", "axis": "Sedan, sinnets insida och utsida", "time": "Nu, tidens flöde", "self": "Härifrån, låt oss se dig själv", "around": "Sedan din omgivning", "hope": "Så hopp och oro", "final": "Till sist, låt oss se utgången"},
     celticPlaneTitle: "Ditt sinnes tyngdpunkt",
     autoPickOrder: "Välj i ordning",
@@ -17931,6 +18311,32 @@ export default function TarotDraw() {
           0%, 100% { box-shadow: 0 0 18px rgba(255,255,255,0.55), 0 0 42px rgba(255,60,180,0.45); }
           50%      { box-shadow: 0 0 34px rgba(255,255,255,0.95), 0 0 86px rgba(60,200,255,0.7); }
         }
+        /* --- ホロスコープ中央の助言 --- */
+        .horo-center {
+          width: 100%; max-width: 340px; margin: 12px auto 2px;
+          padding: 14px 16px; border-radius: 10px;
+          border: 1px solid rgba(201,162,75,0.35);
+          background: linear-gradient(160deg, rgba(201,162,75,0.10), rgba(255,255,255,0.02));
+        }
+        .horo-center-head {
+          display: flex; flex-wrap: wrap; align-items: baseline; gap: 4px 10px;
+          padding-bottom: 8px; margin-bottom: 10px;
+          border-bottom: 1px solid rgba(201,162,75,0.20);
+        }
+        .horo-center-title {
+          font-family: 'Shippori Mincho', serif; font-size: 12px;
+          letter-spacing: 0.14em; color: var(--gold-soft);
+        }
+        .horo-center-card { font-size: 11px; color: var(--orient-up-soft); display: inline-flex; align-items: baseline; gap: 6px; }
+        .horo-center-card.rev { color: var(--orient-rev); }
+        .horo-center-card i { font-style: normal; font-size: 9px; padding: 1px 6px; }
+        /* 助言は読ませる文なので、この画面でいちばん大きい本文にする */
+        .horo-center-text p {
+          margin: 0 0 6px; font-family: 'Shippori Mincho', serif;
+          font-size: 14px; line-height: 1.9; letter-spacing: 0.04em;
+          color: var(--parchment);
+        }
+        .horo-center-text p:last-child { margin-bottom: 0; }
         /* --- ホロスコープの領域図 --- */
         .horo-wheel { width: 100%; max-width: 340px; margin: 14px auto 4px; }
         .horo-wheel-title {
@@ -17938,7 +18344,48 @@ export default function TarotDraw() {
           letter-spacing: 0.14em; text-align: center; margin-bottom: 8px;
         }
         .horo-wheel-svg { display: block; width: 100%; height: auto; }
-        .horo-wheel-num { font-family: 'Cinzel', serif; font-size: 11px; fill: rgba(255,248,232,0.9); }
+        .horo-wheel-num {
+          font-family: 'Cinzel', serif; font-size: 11px; fill: rgba(255,248,232,0.95);
+          paint-order: stroke; stroke: rgba(12,8,24,0.85); stroke-width: 2.5px;
+        }
+        /* 中央。長所の割合を大きく置く */
+        .horo-hub-num {
+          font-family: 'Cinzel', serif; font-size: 20px; fill: #FFE9A3;
+          filter: drop-shadow(0 0 5px rgba(255,220,150,0.6));
+        }
+        .horo-hub-unit { font-family: 'Cinzel', serif; font-size: 9px; fill: rgba(255,248,232,0.6); }
+        /*
+          扇が中心から伸びる。開いた順に少し遅らせる。
+          transform-origin を中心に置かないと、左上から伸びてくる。
+        */
+        .horo-sector {
+          transform-origin: 150px 150px;
+          animation: horoGrow .68s cubic-bezier(.16,1,.3,1) backwards;
+        }
+        @keyframes horoGrow {
+          0%   { transform: scale(0.35); opacity: 0; }
+          70%  { transform: scale(1.04); opacity: 1; }
+          100% { transform: scale(1); opacity: 1; }
+        }
+
+        /* 長所と課題の合計 */
+        .horo-balance { margin: 2px 0 12px; }
+        .horo-balance-bar {
+          display: flex; height: 10px; border-radius: 5px; overflow: hidden;
+          border: 1px solid rgba(201,162,75,0.22);
+        }
+        .horo-balance-bar i { display: block; height: 100%; transition: width .4s ease; }
+        .horo-balance-bar i.good { background: linear-gradient(90deg, #FFE9A3, #F0C878); }
+        .horo-balance-bar i.bad { background: linear-gradient(90deg, #9A6ED8, #C89AFF); }
+        .horo-balance-row {
+          display: flex; justify-content: space-between; margin-top: 5px;
+          font-size: 10px; letter-spacing: 0.04em;
+        }
+        .horo-balance-row b {
+          font-family: 'Cinzel', serif; font-size: 13px; font-weight: 400; margin: 0 4px;
+        }
+        .horo-balance-row .good { color: rgba(240,200,120,0.95); }
+        .horo-balance-row .bad { color: rgba(190,150,240,0.95); }
         .horo-legend {
           display: flex; gap: 16px; justify-content: center;
           font-size: 10px; color: var(--muted); margin: 6px 0 10px;
@@ -17968,14 +18415,25 @@ export default function TarotDraw() {
         }
         .horo-rank-main { flex: 1; min-width: 0; }
         .horo-rank-head { display: flex; flex-wrap: wrap; align-items: baseline; gap: 4px 8px; }
-        .horo-rank-name { font-size: 11.5px; color: var(--parchment); letter-spacing: 0.04em; }
+        /* 領域名。占有率と同じ虹をかけ、行の主役にする */
+        .horo-rank-name {
+          font-family: 'Shippori Mincho', serif;
+          font-size: 14px; letter-spacing: 0.08em;
+          background: linear-gradient(115deg, #FFE9A3, #F0A6D8, #9FD6F5, #A8F0BC, #FFE9A3);
+          background-size: 300% 100%;
+          -webkit-background-clip: text; background-clip: text;
+          -webkit-text-fill-color: transparent; color: transparent;
+          animation: sheenTextFlow 5.5s linear infinite;
+          filter: drop-shadow(0 0 5px rgba(255,233,163,0.30));
+        }
         .horo-rank-card { font-size: 10.5px; color: var(--orient-up-soft); display: inline-flex; align-items: baseline; gap: 5px; }
         .horo-rank-card.rev { color: var(--orient-rev); }
         .horo-rank-card i { font-style: normal; font-size: 9px; padding: 1px 6px; }
         .horo-rank-kw { font-size: 9.5px; line-height: 1.7; color: var(--muted); margin-top: 2px; }
-        .horo-rank-note { font-size: 9.5px; letter-spacing: 0.08em; margin-bottom: 3px; font-weight: 600; }
-        .horo-rank li.good .horo-rank-note { color: rgba(240,200,120,0.95); }
-        .horo-rank li.bad .horo-rank-note { color: rgba(190,150,240,0.95); }
+        /* 右下に置く。行の締めくくりとして読ませる */
+        .horo-rank-note { font-size: 9px; letter-spacing: 0.06em; white-space: nowrap; }
+        .horo-rank-note.good { color: rgba(240,200,120,0.9); }
+        .horo-rank-note.bad { color: rgba(190,150,240,0.9); }
         /*
           占有率。この図でいちばん見せたい数字なので大きく置く。
           虹は使うが彩度を落とし、ホロの原色とは別物にする
@@ -17996,8 +18454,13 @@ export default function TarotDraw() {
           position: relative; z-index: 1; flex: 0 0 auto;
           display: flex; flex-direction: column; align-items: flex-end; gap: 1px;
         }
-        /* 帯の確率は補助なので、占有率よりずっと小さく置く */
-        .horo-share-odds { font-size: 8.5px; color: var(--muted); letter-spacing: 0.02em; white-space: nowrap; }
+        /* 帯の称号。占有率のすぐ下に、小さく添える */
+        .horo-share-rank {
+          font-family: 'Shippori Mincho', serif; font-size: 9.5px;
+          letter-spacing: 0.06em; white-space: nowrap;
+        }
+        .horo-share-rank.good { color: rgba(240,200,120,0.95); }
+        .horo-share-rank.bad { color: rgba(190,150,240,0.95); }
         /* --- ホロスコープの象意 --- */
         .house-guide { width: 100%; max-width: 340px; margin: 4px auto 2px; }
         .house-guide-head {
@@ -18769,7 +19232,8 @@ export default function TarotDraw() {
           .nav-tab, .nav-tab-icon { transition: none !important; }
           .nav-tab:hover .nav-tab-icon, .nav-tab:active .nav-tab-icon { transform: none !important; }
           .lang-chip { transition: none !important; }
-          .horo-share { animation: none !important; }
+          .horo-share, .horo-rank-name { animation: none !important; }
+          .horo-sector { animation: none !important; }
           .reload-btn { transition: none !important; }
           .rare-card, .rare-card::after, .rare-card::before,
           .rare-frame, .rare-mist::after, .rare-text, .holo-edge { animation: none !important; }
