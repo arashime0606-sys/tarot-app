@@ -2704,14 +2704,37 @@ const SPREADS = {
   horoscope: {
     key: "horoscope",
     deck: "full",
-    count: 12,
+    /*
+      12のハウス＋中央の1枚。
+
+      中央は「総合とアドバイス」。十二の領域を一巡したあとに、
+      全体を束ねる1枚を置く。円の中心は元々どのハウスにも属さない場所なので、
+      そこに全体を代表する札を置くのは配置の構造に沿っている。
+      （ケルト十字で軌跡を作れたのと同じ理屈 ―― 配置が既に持つ意味を使う）
+    */
+    count: 13,
     layout: (() => {
-      // 円形配置。第1ハウスを左（東）に置き、反時計回りに巡る占星術の慣習に従う
+      /*
+        円形配置。第1ハウスを左（東）に置き、反時計回りに巡る。
+
+        ⚠️ 角度は「足す」こと。引くと時計回りになり、盤面が上下に反転する
+        （4ハウスが天頂、10ハウスが底に来る）。実際にその状態で出していた。
+
+          i=0  第1ハウス   左  （アセンダント）
+          i=3  第4ハウス   底  （IC）
+          i=6  第7ハウス   右  （ディセンダント）
+          i=9  第10ハウス  天頂（MC）
+
+        画面のy軸は下向きなので、y は「引く」ことで上へ行く。
+        角度の向きと y の向きを別々に考えないと、片方だけ直して反転が残る。
+      */
       const pts = [];
       for (let i = 0; i < 12; i++) {
-        const a = Math.PI - (Math.PI * 2 * i) / 12;
+        const a = Math.PI + (Math.PI * 2 * i) / 12;
         pts.push({ x: 50 + Math.cos(a) * 38, y: 50 - Math.sin(a) * 38 });
       }
+      // 13枚目は中心。他より大きく描くので center を目印に持たせる
+      pts.push({ x: 50, y: 50, center: true });
       return pts;
     })(),
   },
@@ -2731,7 +2754,7 @@ const SPREAD_I18N = {
     choice: { name: "二者択一", desc: "二つの道を並べて、比べて選ぶ。", pos: ["現在の状況", "Aを選んだ場合", "Aの結果", "Bを選んだ場合", "Bの結果"] },
     celticCross: { name: "ケルト十字", desc: "十枚で顕在意識と潜在意識の両方を照らす。深く掘りたいときに。", pos: ["現在の意識の方向", "障害となるもの", "顕在意識", "潜在意識", "過去", "近い未来", "あなた自身", "周囲の環境", "希望と不安", "最終結果"] },
     relationship: { name: "関係の杯", desc: "二人の関係を、両側から読む。", pos: ["あなたの状況", "相手の状況", "あなたの願い", "相手の願い", "あなたの不安", "相手の不安", "二人の現在", "障害", "可能性", "あなたの取るべき道", "二人の行く先"] },
-    horoscope: { name: "ホロスコープ", desc: "十二の領域で、一年の全体を見渡す。", pos: ["自分自身", "財と価値", "学びと交流", "家庭と基盤", "恋愛と創造", "日々の務め", "相手と契約", "変容と継承", "遠方と探求", "天職と地位", "仲間と願い", "秘密と癒し"] },
+    horoscope: { name: "ホロスコープ", desc: "十二の領域と中央の一枚で、人生の全体を見渡す。", pos: ["自分自身", "財と価値", "学びと交流", "家庭と基盤", "恋愛と創造", "日々の務め", "相手と契約", "変容と継承", "遠方と探求", "天職と地位", "仲間と願い", "秘密と癒し", "総合とアドバイス"] },
   },
   en: {
     oneOracle: { name: "One Oracle", desc: "The simplest reading: a single Major Arcana card.", pos: ["What Is Shown"] },
@@ -2742,7 +2765,7 @@ const SPREAD_I18N = {
     choice: { name: "Two Paths", desc: "Set two roads side by side, and choose.", pos: ["Where you stand", "If you choose A", "Result of A", "If you choose B", "Result of B"] },
     celticCross: { name: "Celtic Cross", desc: "Ten cards lighting both the conscious and the unconscious. For digging deep.", pos: ["Where your mind is turned", "What crosses it", "Conscious mind", "Unconscious mind", "The past", "The near future", "Yourself", "Your surroundings", "Hopes and fears", "The outcome"] },
     relationship: { name: "Cup of Relationship", desc: "Reading a bond from both sides.", pos: ["Your situation", "Their situation", "Your wish", "Their wish", "Your fear", "Their fear", "Where you are now", "The obstacle", "What is possible", "Your path", "Where you are heading"] },
-    horoscope: { name: "Horoscope Spread", desc: "Twelve houses. A whole year at a glance.", pos: ["Self", "Wealth and value", "Learning and exchange", "Home and roots", "Love and creation", "Daily work", "Partners and pacts", "Transformation", "Distance and inquiry", "Vocation and standing", "Allies and wishes", "Secrets and healing"] },
+    horoscope: { name: "Horoscope Spread", desc: "Survey a whole life across twelve realms and one card at the centre.", pos: ["Self", "Wealth and value", "Learning and exchange", "Home and roots", "Love and creation", "Daily work", "Partners and pacts", "Transformation", "Distance and inquiry", "Vocation and standing", "Allies and wishes", "Secrets and healing", "The Whole and the Counsel"] },
   },
   ko: {
     oneOracle: { name: "원 오라클", desc: "메이저 아르카나 한 장만으로 보는 가장 간결한 방식", pos: ["드러난 것"] },
@@ -2753,7 +2776,7 @@ const SPREAD_I18N = {
     choice: { name: "양자택일", desc: "두 갈래 길을 나란히 놓고 고른다.", pos: ["현재 상황", "A를 택한다면", "A의 결과", "B를 택한다면", "B의 결과"] },
     celticCross: { name: "켈틱 크로스", desc: "열 장으로 현재의식과 잠재의식을 함께 비춘다. 깊이 파고들 때.", pos: ["현재 의식의 방향", "가로막는 것", "표면 의식", "잠재 의식", "과거", "가까운 미래", "당신 자신", "주변 환경", "희망과 불안", "최종 결과"] },
     relationship: { name: "관계의 잔", desc: "두 사람의 관계를 양쪽에서 읽는다.", pos: ["당신의 상황", "상대의 상황", "당신의 바람", "상대의 바람", "당신의 불안", "상대의 불안", "두 사람의 현재", "장애", "가능성", "당신이 나아갈 길", "두 사람의 앞날"] },
-    horoscope: { name: "호로스코프", desc: "열두 영역으로 한 해 전체를 조망한다.", pos: ["자기 자신", "재물과 가치", "배움과 교류", "가정과 기반", "연애와 창조", "일상의 의무", "상대와 계약", "변용과 계승", "먼 곳과 탐구", "천직과 지위", "동료와 소망", "비밀과 치유"] },
+    horoscope: { name: "호로스코프", desc: "열두 영역과 중앙의 한 장으로 삶 전체를 조망한다.", pos: ["자기 자신", "재물과 가치", "배움과 교류", "가정과 기반", "연애와 창조", "일상의 의무", "상대와 계약", "변용과 계승", "먼 곳과 탐구", "천직과 지위", "동료와 소망", "비밀과 치유", "총합과 조언"] },
   },
   "zh-TW": {
     oneOracle: { name: "單張神諭", desc: "只用一張大阿爾克那占卜的最簡形式", pos: ["所示之物"] },
@@ -2764,7 +2787,7 @@ const SPREAD_I18N = {
     choice: { name: "二擇一", desc: "將兩條路並列，比較後選擇。", pos: ["目前的狀況", "若選擇A", "A的結果", "若選擇B", "B的結果"] },
     celticCross: { name: "凱爾特十字", desc: "以十張牌照亮顯意識與潛意識。想深入挖掘時。", pos: ["當下意識的方向", "阻礙之物", "顯意識", "潛意識", "過去", "不久的未來", "你自己", "周遭環境", "希望與不安", "最終結果"] },
     relationship: { name: "關係之杯", desc: "從兩側解讀兩人的關係。", pos: ["你的狀況", "對方的狀況", "你的願望", "對方的願望", "你的不安", "對方的不安", "兩人的現在", "障礙", "可能性", "你該走的路", "兩人的去向"] },
-    horoscope: { name: "占星盤", desc: "以十二個領域綜觀一整年。", pos: ["自我", "財富與價值", "學習與交流", "家庭與根基", "戀愛與創造", "日常的職責", "伴侶與契約", "變容與繼承", "遠方與探求", "天職與地位", "夥伴與願望", "秘密與療癒"] },
+    horoscope: { name: "占星盤", desc: "以十二領域與中央一張，綜觀人生的全貌。", pos: ["自我", "財富與價值", "學習與交流", "家庭與根基", "戀愛與創造", "日常的職責", "伴侶與契約", "變容與繼承", "遠方與探求", "天職與地位", "夥伴與願望", "秘密與療癒", "總合與建議"] },
   },
   "zh-CN": {
     oneOracle: { name: "单张神谕", desc: "只用一张大阿尔克那占卜的最简形式", pos: ["所示之物"] },
@@ -2775,7 +2798,7 @@ const SPREAD_I18N = {
     choice: { name: "二择一", desc: "将两条路并列，比较后选择。", pos: ["目前的状况", "若选择A", "A的结果", "若选择B", "B的结果"] },
     celticCross: { name: "凯尔特十字", desc: "以十张牌照亮显意识与潜意识。想深入挖掘时。", pos: ["当下意识的方向", "阻碍之物", "显意识", "潜意识", "过去", "不久的未来", "你自己", "周遭环境", "希望与不安", "最终结果"] },
     relationship: { name: "关系之杯", desc: "从两侧解读两人的关系。", pos: ["你的状况", "对方的状况", "你的愿望", "对方的愿望", "你的不安", "对方的不安", "两人的现在", "障碍", "可能性", "你该走的路", "两人的去向"] },
-    horoscope: { name: "占星盘", desc: "以十二个领域综观一整年。", pos: ["自我", "财富与价值", "学习与交流", "家庭与根基", "恋爱与创造", "日常的职责", "伴侣与契约", "变容与继承", "远方与探求", "天职与地位", "伙伴与愿望", "秘密与疗愈"] },
+    horoscope: { name: "占星盘", desc: "以十二领域与中央一张，综观人生的全貌。", pos: ["自我", "财富与价值", "学习与交流", "家庭与根基", "恋爱与创造", "日常的职责", "伴侣与契约", "变容与继承", "远方与探求", "天职与地位", "伙伴与愿望", "秘密与疗愈", "总合与建议"] },
   },
   th: {
     oneOracle: { name: "ไพ่ใบเดียว", desc: "รูปแบบเรียบง่ายที่สุด ทำนายด้วยไพ่เมเจอร์อาร์คานาเพียงใบเดียว", pos: ["สิ่งที่ปรากฏ"] },
@@ -2786,7 +2809,7 @@ const SPREAD_I18N = {
     choice: { name: "สองทางเลือก", desc: "วางสองเส้นทางเคียงกันแล้วเลือก", pos: ["สถานการณ์ปัจจุบัน", "ถ้าเลือก A", "ผลของ A", "ถ้าเลือก B", "ผลของ B"] },
     celticCross: { name: "เซลติกครอส", desc: "ไพ่สิบใบส่องทั้งจิตสำนึกและจิตใต้สำนึก เมื่ออยากขุดลึก", pos: ["ทิศทางของจิตสำนึกตอนนี้", "สิ่งที่ขวางกั้น", "จิตสำนึก", "จิตใต้สำนึก", "อดีต", "อนาคตอันใกล้", "ตัวคุณเอง", "สภาพแวดล้อม", "ความหวังและความกลัว", "ผลลัพธ์"] },
     relationship: { name: "ถ้วยแห่งความสัมพันธ์", desc: "อ่านความสัมพันธ์จากทั้งสองฝ่าย", pos: ["สถานการณ์ของคุณ", "สถานการณ์ของเขา", "ความปรารถนาของคุณ", "ความปรารถนาของเขา", "ความกังวลของคุณ", "ความกังวลของเขา", "ปัจจุบันของทั้งสอง", "อุปสรรค", "ความเป็นไปได้", "ทางที่คุณควรไป", "ปลายทางของทั้งสอง"] },
-    horoscope: { name: "ดวงชะตาสิบสองเรือน", desc: "มองภาพรวมทั้งปีผ่านสิบสองด้าน", pos: ["ตัวตน", "ทรัพย์และคุณค่า", "การเรียนรู้และการสื่อสาร", "บ้านและรากฐาน", "ความรักและการสร้างสรรค์", "หน้าที่ประจำวัน", "คู่และข้อตกลง", "การแปรเปลี่ยน", "ระยะไกลและการแสวงหา", "อาชีพและสถานะ", "มิตรและความปรารถนา", "ความลับและการเยียวยา"] },
+    horoscope: { name: "ดวงชะตาสิบสองเรือน", desc: "มองภาพรวมของชีวิตผ่านสิบสองขอบเขตและไพ่ใบกลาง", pos: ["ตัวตน", "ทรัพย์และคุณค่า", "การเรียนรู้และการสื่อสาร", "บ้านและรากฐาน", "ความรักและการสร้างสรรค์", "หน้าที่ประจำวัน", "คู่และข้อตกลง", "การแปรเปลี่ยน", "ระยะไกลและการแสวงหา", "อาชีพและสถานะ", "มิตรและความปรารถนา", "ความลับและการเยียวยา", "ภาพรวมและคำแนะนำ"] },
   },
   tl: {
     oneOracle: { name: "Isang Orakulo", desc: "Ang pinakasimpleng pagbasa: iisang Major Arcana.", pos: ["Ang Ipinapakita"] },
@@ -2797,7 +2820,7 @@ const SPREAD_I18N = {
     choice: { name: "Dalawang Landas", desc: "Ipantay ang dalawang daan, at pumili.", pos: ["Kasalukuyang lagay", "Kung pipiliin ang A", "Bunga ng A", "Kung pipiliin ang B", "Bunga ng B"] },
     celticCross: { name: "Celtic Cross", desc: "Sampung baraha para tanglawan ang malay at di-malay. Para sa malalim na paghukay.", pos: ["Kung saan nakatuon ang isip mo", "Ang humahadlang", "Malay na isip", "Di-malay na isip", "Nakaraan", "Malapit na hinaharap", "Ikaw mismo", "Ang paligid", "Pag-asa at takot", "Kalalabasan"] },
     relationship: { name: "Kopa ng Ugnayan", desc: "Binabasa ang ugnayan mula sa magkabilang panig.", pos: ["Lagay mo", "Lagay niya", "Hangad mo", "Hangad niya", "Takot mo", "Takot niya", "Kayo ngayon", "Ang balakid", "Ang posible", "Landas mo", "Patutunguhan ninyo"] },
-    horoscope: { name: "Horoscope Spread", desc: "Labindalawang larangan. Buong taon sa isang sulyap.", pos: ["Sarili", "Yaman at halaga", "Pag-aaral at palitan", "Tahanan at ugat", "Pag-ibig at paglikha", "Gawaing araw-araw", "Kapareha at kasunduan", "Pagbabago", "Malayo at paghahanap", "Bokasyon at katayuan", "Kaalyado at hangarin", "Lihim at paggaling"] },
+    horoscope: { name: "Horoscope Spread", desc: "Tanawin ang buong buhay sa labindalawang larangan at isang baraha sa gitna.", pos: ["Sarili", "Yaman at halaga", "Pag-aaral at palitan", "Tahanan at ugat", "Pag-ibig at paglikha", "Gawaing araw-araw", "Kapareha at kasunduan", "Pagbabago", "Malayo at paghahanap", "Bokasyon at katayuan", "Kaalyado at hangarin", "Lihim at paggaling", "Kabuuan at Payo"] },
   },
   id: {
     oneOracle: { name: "Satu Kartu", desc: "Cara paling sederhana: meramal dengan satu kartu Major Arcana.", pos: ["Yang Ditunjukkan"] },
@@ -2808,7 +2831,7 @@ const SPREAD_I18N = {
     choice: { name: "Dua Jalan", desc: "Menjajarkan dua jalan, lalu memilih.", pos: ["Keadaan sekarang", "Jika memilih A", "Hasil A", "Jika memilih B", "Hasil B"] },
     celticCross: { name: "Salib Celtic", desc: "Sepuluh kartu menerangi sadar dan bawah sadar. Untuk menggali dalam.", pos: ["Arah kesadaranmu kini", "Yang menghalangi", "Kesadaran", "Bawah sadar", "Masa lalu", "Masa depan dekat", "Dirimu sendiri", "Lingkungan", "Harapan dan ketakutan", "Hasil akhir"] },
     relationship: { name: "Cawan Hubungan", desc: "Membaca hubungan dari kedua sisi.", pos: ["Keadaanmu", "Keadaannya", "Harapanmu", "Harapannya", "Ketakutanmu", "Ketakutannya", "Kalian saat ini", "Rintangan", "Kemungkinan", "Jalan yang kamu tempuh", "Ke mana kalian menuju"] },
-    horoscope: { name: "Horoskop", desc: "Dua belas bidang. Setahun penuh dalam satu pandangan.", pos: ["Diri sendiri", "Harta dan nilai", "Belajar dan bertukar", "Rumah dan akar", "Cinta dan cipta", "Tugas sehari-hari", "Pasangan dan perjanjian", "Perubahan", "Jauh dan pencarian", "Panggilan dan kedudukan", "Sekutu dan harapan", "Rahasia dan penyembuhan"] },
+    horoscope: { name: "Horoskop", desc: "Menyurvei keseluruhan hidup lewat dua belas wilayah dan satu kartu di pusat.", pos: ["Diri sendiri", "Harta dan nilai", "Belajar dan bertukar", "Rumah dan akar", "Cinta dan cipta", "Tugas sehari-hari", "Pasangan dan perjanjian", "Perubahan", "Jauh dan pencarian", "Panggilan dan kedudukan", "Sekutu dan harapan", "Rahasia dan penyembuhan", "Keseluruhan dan Nasihat"] },
   },
   ms: {
     oneOracle: { name: "Satu Kad", desc: "Cara paling ringkas: menilik dengan satu kad Major Arcana.", pos: ["Yang Ditunjukkan"] },
@@ -2819,7 +2842,7 @@ const SPREAD_I18N = {
     choice: { name: "Dua Jalan", desc: "Menjajarkan dua jalan, kemudian memilih.", pos: ["Keadaan sekarang", "Jika memilih A", "Hasil A", "Jika memilih B", "Hasil B"] },
     celticCross: { name: "Salib Celtic", desc: "Sepuluh kad menerangi sedar dan bawah sedar. Untuk menggali dalam.", pos: ["Arah kesedaran anda kini", "Yang menghalang", "Kesedaran", "Bawah sedar", "Masa lalu", "Masa depan terdekat", "Diri anda sendiri", "Persekitaran", "Harapan dan ketakutan", "Hasil akhir"] },
     relationship: { name: "Cawan Hubungan", desc: "Membaca hubungan dari kedua-dua belah pihak.", pos: ["Keadaan anda", "Keadaannya", "Harapan anda", "Harapannya", "Ketakutan anda", "Ketakutannya", "Kalian kini", "Halangan", "Kemungkinan", "Jalan yang anda tempuh", "Ke mana kalian menuju"] },
-    horoscope: { name: "Horoskop", desc: "Dua belas bidang. Setahun penuh dalam satu pandangan.", pos: ["Diri sendiri", "Harta dan nilai", "Pembelajaran dan pertukaran", "Rumah dan akar", "Cinta dan ciptaan", "Tugas harian", "Pasangan dan perjanjian", "Perubahan", "Jauh dan pencarian", "Panggilan dan kedudukan", "Sekutu dan harapan", "Rahsia dan penyembuhan"] },
+    horoscope: { name: "Horoskop", desc: "Meninjau keseluruhan hidup melalui dua belas wilayah dan satu kad di tengah.", pos: ["Diri sendiri", "Harta dan nilai", "Pembelajaran dan pertukaran", "Rumah dan akar", "Cinta dan ciptaan", "Tugas harian", "Pasangan dan perjanjian", "Perubahan", "Jauh dan pencarian", "Panggilan dan kedudukan", "Sekutu dan harapan", "Rahsia dan penyembuhan", "Keseluruhan dan Nasihat"] },
   },
   vi: {
     oneOracle: { name: "Một Lá", desc: "Cách xem đơn giản nhất: chỉ một lá Ẩn Chính.", pos: ["Điều Được Chỉ Ra"] },
@@ -2830,7 +2853,7 @@ const SPREAD_I18N = {
     choice: { name: "Hai Ngả Đường", desc: "Đặt hai con đường cạnh nhau rồi chọn.", pos: ["Hoàn cảnh hiện tại", "Nếu chọn A", "Kết quả của A", "Nếu chọn B", "Kết quả của B"] },
     celticCross: { name: "Thập Tự Celt", desc: "Mười lá soi cả ý thức lẫn vô thức. Khi muốn đào sâu.", pos: ["Hướng của ý thức hiện tại", "Điều cản trở", "Ý thức", "Vô thức", "Quá khứ", "Tương lai gần", "Chính bạn", "Môi trường xung quanh", "Hy vọng và lo sợ", "Kết quả"] },
     relationship: { name: "Chiếc Cốc Quan Hệ", desc: "Đọc mối quan hệ từ cả hai phía.", pos: ["Hoàn cảnh của bạn", "Hoàn cảnh của người ấy", "Mong muốn của bạn", "Mong muốn của người ấy", "Nỗi lo của bạn", "Nỗi lo của người ấy", "Hai người lúc này", "Trở ngại", "Khả năng", "Con đường của bạn", "Nơi hai người hướng tới"] },
-    horoscope: { name: "Vòng Hoàng Đạo", desc: "Mười hai lĩnh vực. Trọn một năm trong một cái nhìn.", pos: ["Bản thân", "Của cải và giá trị", "Học hỏi và giao tiếp", "Gia đình và cội rễ", "Tình yêu và sáng tạo", "Việc thường ngày", "Bạn đời và giao ước", "Biến chuyển", "Phương xa và tìm kiếm", "Thiên chức và địa vị", "Đồng minh và ước nguyện", "Bí mật và chữa lành"] },
+    horoscope: { name: "Vòng Hoàng Đạo", desc: "Nhìn bao quát cả một đời qua mười hai lĩnh vực và lá bài ở trung tâm.", pos: ["Bản thân", "Của cải và giá trị", "Học hỏi và giao tiếp", "Gia đình và cội rễ", "Tình yêu và sáng tạo", "Việc thường ngày", "Bạn đời và giao ước", "Biến chuyển", "Phương xa và tìm kiếm", "Thiên chức và địa vị", "Đồng minh và ước nguyện", "Bí mật và chữa lành", "Tổng thể và Lời khuyên"] },
   },
 };
 
@@ -3177,7 +3200,39 @@ function spreadInfo(key, lang) {
   無料版は有料版のすぐ下に置く。離して並べると別物に見え、
   「同じ占いの、鑑定文の出どころが違う版」だと伝わらない。
 */
-const SPREAD_ORDER = ["oneOracle", "oneOracleMinor", "three", "threeFree", "hexagram", "hexagramFree", "weekly", "weeklyFree", "celticCross", "celticCrossFree", "choice", "relationship", "horoscope"];
+const SPREAD_ORDER = ["oneOracle", "oneOracleMinor", "three", "threeFree", "hexagram", "hexagramFree", "weekly", "weeklyFree", "celticCross", "celticCrossFree", "horoscope", "horoscopeFree", "choice", "relationship"];
+
+/*
+  ============================================================
+  流派
+
+  占うを押すと、まず流派を選ぶ。
+
+    classic  伝統的な配置。既存のスプレッドはすべてこちら。
+             タロットの型として確立しているもの。
+    modern   現代の主題に合わせて組む配置。まだ中身は無い。
+
+  【なぜ今、器だけ作るのか】
+  メニューは今 SPREAD_ORDER の一次元の並びで、drawMode も平坦。
+  ここに階層を入れると、戻る導線・ボトムナビの表示条件・
+  「もう一度占う」の戻り先が同時に影響を受ける。
+  6種の今なら確認は軽いが、13種になってからでは倍になる。
+
+  【流派を分ける理由】
+  ・AIの語り口を変える根拠になる（読むのと、整理するのは別の作法）
+  ・現代派は「発明してよい場所」になる。
+    古典派に独自のスプレッドを混ぜると異物になるが、枠が別なら成立する
+  ・伝統的な配置に手を加えて現代化する誘惑が消える
+
+  ⚠️ 訳語は「古い側」に読まれないようにする。
+  完成度が高いのは古典派のほうなので、そちらが古臭く見えると損をする。
+  英語は Classical ではなく Traditional を当ててある。
+  ============================================================
+*/
+const SCHOOLS = ["classic", "modern"];
+/** 現代派に入るスプレッド。今は空 ―― 中身が入るまで準備中の画面を出す */
+const MODERN_SPREADS = [];
+const schoolOf = (key) => (MODERN_SPREADS.includes(spreadBaseKey(key)) ? "modern" : "classic");
 
 /** 末尾が Free の項目は、同じスプレッドのAI無し版。定義は元の鍵を共有する */
 const spreadBaseKey = (key) => key.replace(/Free$/, "");
@@ -3192,10 +3247,10 @@ const FREE_XP_PER_DAY = 3;
  * 隠してしまうと「これしかない」と受け取られるが、
  * 見えていれば「まだ増える」と伝わる。萎えさせないための配慮。
  */
-const SPREAD_READY = { oneOracle: true, oneOracleMinor: true, three: true, threeFree: true, hexagram: true, hexagramFree: true, weekly: true, weeklyFree: true, celticCross: true, celticCrossFree: true };
+const SPREAD_READY = { oneOracle: true, oneOracleMinor: true, three: true, threeFree: true, hexagram: true, hexagramFree: true, weekly: true, weeklyFree: true, celticCross: true, celticCrossFree: true, horoscope: true, horoscopeFree: true };
 
 /** そのスプレッドがAIを使うか。使わないものは回数を消費しない */
-const SPREAD_USES_AI = { oneOracle: false, oneOracleMinor: false, three: true, threeFree: false, hexagram: true, hexagramFree: false, weekly: true, weeklyFree: false, choice: true, celticCross: true, celticCrossFree: false, relationship: true, horoscope: true };
+const SPREAD_USES_AI = { oneOracle: false, oneOracleMinor: false, three: true, threeFree: false, hexagram: true, hexagramFree: false, weekly: true, weeklyFree: false, choice: true, celticCross: true, celticCrossFree: false, relationship: true, horoscope: true, horoscopeFree: false };
 
 const POSITION_LABELS = ["過去", "現在", "未来"];
 const PHASE_ORDER = ["idle", "major-spread", "major-confirm", "major-resolving", "minor-spread", "minor-confirm", "minor-resolving", "minor-revealed", "major-revealed"];
@@ -3575,6 +3630,26 @@ const CELTIC_STAGES = [
   { key: "around", indices: [7] },
   { key: "hope",   indices: [8] },
   { key: "final",  indices: [9] },
+];
+
+/*
+  ホロスコープの開示段階。
+
+  十二の位置を一枚ずつ開くと十二段になって長すぎる。
+  この配置は占星術のハウスに由来しており、
+  四つの角（1・4・7・10ハウス）が骨格をなすという見方が古くからある。
+  そこを手がかりに、まず四隅、次に残りを三つずつに分ける。
+
+  最初の段が「自分・家・関係・社会的な立場」の四点になるので、
+  盤面の骨格が最初に見え、あとはその間が埋まっていく形になる。
+*/
+const HOROSCOPE_STAGES = [
+  { key: "angles",  indices: [0, 3, 6, 9] },   // 四つの角。人生の骨格
+  { key: "ground",  indices: [1, 2] },         // 所有と学び
+  { key: "inner",   indices: [4, 5] },         // 創造と勤め
+  { key: "others",  indices: [7, 8] },         // 共有と探求
+  { key: "beyond",  indices: [10, 11] },       // 縁と、その奥にあるもの
+  { key: "center",  indices: [12] },           // 中央。十二を束ねる一枚
 ];
 
 const HEXAGRAM_STAGES = [
@@ -6750,13 +6825,47 @@ function legalDoc(lang) {
  */
 function SpreadSelect({ lang, onSelect }) {
   const t = T[lang] || T.ja;
+  /*
+    流派。既定は古典派 ―― 現代派が空のうちに既定にすると、
+    占うを押した人が最初に見るのが準備中の画面になる。
+  */
+  const [school, setSchool] = useState("classic");
+  const list = SPREAD_ORDER.filter((k) => schoolOf(k) === school);
   return (
     <div style={{ width: "100%", maxWidth: "460px", margin: "0 auto" }}>
+      {/* 流派の切り替え。2つしかないので、タブではなく並んだ札で示す */}
+      <div className="school-tabs">
+        {SCHOOLS.map((k) => (
+          <button
+            key={k}
+            type="button"
+            className={`school-tab${school === k ? " on" : ""}`}
+            onClick={() => setSchool(k)}
+            aria-pressed={school === k}
+          >
+            <span className="school-name">{t.schoolNames[k]}</span>
+            <span className="school-note">{t.schoolNotes[k]}</span>
+          </button>
+        ))}
+      </div>
+
       <p style={{ fontSize: "11px", color: "var(--muted)", textAlign: "center", margin: "0 0 16px", lineHeight: 1.8 }}>
         {t.spreadSelectHint}
       </p>
+
+      {/*
+        現代派はまだ空。準備中の項目を7つ並べる案は採らない ――
+        押せない項目のほうが多いメニューは、未完成に見える。
+        1枚の案内に、これから来るものを書く。
+      */}
+      {school === "modern" && list.length === 0 && (
+        <div className="school-soon">
+          <p className="school-soon-title">{t.modernSoonTitle}</p>
+          <p className="school-soon-body">{t.modernSoonBody}</p>
+        </div>
+      )}
       <div className="stagger" style={{ display: "flex", flexDirection: "column", gap: "9px" }}>
-        {SPREAD_ORDER.map((key) => {
+        {list.map((key) => {
           // 無料版はスプレッドの定義を有料版と共有する（名前も枚数も同じ占いなので）
           const base = spreadBaseKey(key);
           const info = spreadInfo(base, lang);
@@ -7029,6 +7138,239 @@ function saveCelticTrace(pt) {
     const next = [...loadCelticTrace(), pt].slice(-CELTIC_TRACE_MAX);
     localStorage.setItem(LS_CELTIC_TRACE_KEY, JSON.stringify(next));
   } catch { /* 記録に失敗しても占いは止めない */ }
+}
+
+/**
+ * ホロスコープの領域図。
+ *
+ * 十二のハウスを扇形で並べ、その領域に出た札の強さで扇の面積を変える。
+ * 円グラフというより「どこが張り出しているか」を見る図。
+ *
+ * 【なぜこの配置でだけ作れるか】
+ * 十二ハウスは既に円という座標系を持っている。
+ * 面積を変えられるのは、各領域が円周上の決まった角度を占めているから。
+ * 週の物語（一列）やヘキサグラム（役割ごとの配置）には移植できない
+ * ―― 座標系を持たない配置に持ち込むと、軸の意味を発明することになる。
+ *
+ * 【強さの決め方】
+ * その札1枚だけで calcStats を通し、8分野の平均を取る。
+ * 引いた札そのものから機械的に出しているので、
+ * 「一切の偏りがない」という宣言と矛盾しない。
+ *
+ * 【向きの扱い】
+ * 良い向き（isGoodOrientation）なら伸ばすべき長所、
+ * そうでなければ向き合うべき課題として色を分ける。
+ * 正逆そのままではなく isGoodOrientation を使うのは、
+ * 月・死神・塔・悪魔・吊られた男の5枚で意味が反転するため。
+ */
+function HoroscopeWheel({ drawn, labels, lang, openedCount }) {
+  const t = T[lang] || T.ja;
+  const W = 300, C = 150, R = 118, INNER = 34;
+
+  /*
+    12ハウスぶんの重み。中央の13枚目は総合なので円には入れない。
+
+    【寄与度の考え方】
+    札の総合値（calcStats）だけだと、大アルカナも小アルカナも同じ幅に収まる。
+    実際には大アルカナのほうが盤面に対して重い札なので、
+    その差が面積に出ないと「どの領域に力が集まっているか」が読めない。
+
+      大アルカナ  1.00〜1.60  番号が大きい札ほど重い
+                  （0=愚者 から 21=世界 へ、物語が進むほど力が増す）
+      小アルカナ  0.55〜0.85  数札は数が大きいほどわずかに重く、
+                  コートカードはその上に置く
+
+    ⚠️ この重みは面積の見え方にだけ効く。
+    calcStats（8分野の値）にも引きの確率にも触れていないので、
+    「一切の偏りがない」という宣言とは無関係。
+  */
+  const contributionOf = (card) => {
+    const [suit, rankStr] = String(card.id).split("-");
+    const rank = parseInt(rankStr, 10);
+    if (suit === "major") {
+      // 0〜21 を 1.00〜1.60 に写す
+      return 1.0 + (rank / 21) * 0.6;
+    }
+    // 小アルカナ 0〜13（エース〜キング）。数札は緩やかに、コートは一段上へ
+    const court = rank >= 10;
+    const base = court ? 0.74 : 0.55;
+    const span = court ? 0.11 : 0.16;
+    const k = court ? (rank - 10) / 3 : rank / 9;
+    return base + span * k;
+  };
+
+  const cells = useMemo(() => {
+    return Array.from({ length: 12 }, (_, i) => {
+      const d = drawn && drawn[i];
+      if (!d) return null;
+      const sc = calcStats({ card: d, reversed: d.reversed }, [], true).scores;
+      const total = sc.reduce((a, b) => a + b, 0) / sc.length;
+      const good = isGoodOrientation(d, d.reversed);
+      const [suit, rankStr] = String(d.id).split("-");
+      const rank = parseInt(rankStr, 10);
+      const kw = suit === "major"
+        ? majorKeyword(rank, d.reversed, lang)
+        : minorKeyword(suit, rank, d.reversed, lang, d.up, d.rev);
+      /*
+        面積のもとになる値。
+        総合値を 0〜1 に均してから寄与度を掛ける。
+        足し算にすると寄与度の差が総合値の差に埋もれる。
+      */
+      const k = Math.max(0, Math.min(1, (total - 2.95) / (4.55 - 2.95)));
+      const weight = (0.35 + k * 0.65) * contributionOf(d);
+      return { i, total, good, card: d, kw, weight, isMajor: suit === "major" };
+    });
+  }, [drawn, lang]);
+
+  const shown = cells.filter((c) => c && c.i < openedCount);
+  if (!shown.length) return null;
+
+  // 占有率。開いている領域のなかでの割合にする（途中でも合計100%になる）
+  const sumW = shown.reduce((a, c) => a + c.weight, 0) || 1;
+  shown.forEach((c) => { c.share = (c.weight / sumW) * 100; });
+
+  /*
+    半径の正規化。理論値ではなく実測の値域で割る。
+    理論値で割ると大半が上下に振り切れる（週の物語で一度やった失敗）。
+    1枚だけの総合値は概ね 3.0〜4.5 に収まる。
+  */
+  /*
+    半径は占有率から引く。
+    12等分なら1領域あたり8.33%なので、そこを基準の丸みに置き、
+    上下に振れるぶんだけ扇が伸び縮みする。
+    面積（半径の二乗）ではなく半径に比例させているのは、
+    面積比にすると差が小さく見えて図が平坦になるため。
+  */
+  /*
+    占有率が各帯に入る確率。4%刻み。12万回の実測。
+
+      0〜4%   8.8    12〜16%  9.6    24〜28% 0.2
+      4〜8%  42.5    16〜20%  3.7    28%〜   0.0
+      8〜12% 33.9    20〜24%  1.3
+
+    均等なら 8.33% なので、4〜12% に76%が集まる。
+    16%を超えると5%強、20%を超えると1.5%しかない。
+    「その領域がどれくらい珍しく張り出しているか」を数字で示す。
+  */
+  const SHARE_BINS = [8.8, 42.5, 33.9, 9.6, 3.7, 1.3, 0.2, 0.05, 0.05];
+  const binOf = (share) => Math.min(SHARE_BINS.length - 1, Math.floor(share / 4));
+
+  const EVEN = 100 / 12;
+  const radiusOf = (share) => {
+    const k = Math.max(0, Math.min(1, (share - EVEN * 0.45) / (EVEN * 1.55)));
+    return INNER + (R - INNER) * (0.30 + k * 0.70);
+  };
+
+  const arc = (i, rad) => {
+    // ハウスの配置と同じ角度に合わせる。第1ハウスが左、反時計回り
+    const a0 = Math.PI + (Math.PI * 2 * i) / 12 - Math.PI / 12;
+    const a1 = a0 + (Math.PI * 2) / 12;
+    const p = (a, r) => `${(C + Math.cos(a) * r).toFixed(2)} ${(C - Math.sin(a) * r).toFixed(2)}`;
+    return `M ${p(a0, INNER)} L ${p(a0, rad)} A ${rad} ${rad} 0 0 0 ${p(a1, rad)} L ${p(a1, INNER)} A ${INNER} ${INNER} 0 0 1 ${p(a0, INNER)} Z`;
+  };
+  const labelPos = (i, rad) => {
+    const a = Math.PI + (Math.PI * 2 * i) / 12;
+    return { x: C + Math.cos(a) * (rad * 0.72), y: C - Math.sin(a) * (rad * 0.72) };
+  };
+
+  // ② 順位は占有率の高い順。図の扇の大きさと並びが一致する
+  const ranking = [...shown].sort((a, b) => b.share - a.share);
+  const maxShare = ranking[0].share || 1;
+
+  return (
+    <div className="horo-wheel">
+      <div className="horo-wheel-title sheen-text">{t.horoWheelTitle}</div>
+      <svg viewBox={`0 0 ${W} ${W}`} className="horo-wheel-svg" role="img" aria-label={t.horoWheelTitle}>
+        <defs>
+          {/* 占有率の数字に使う虹。ホロと同じ語彙だが、彩度を落として上品に留める */}
+          <linearGradient id="horo-share-grad" x1="0" y1="0" x2="1" y2="1">
+            <stop offset="0%" stopColor="#FFE9A3" />
+            <stop offset="35%" stopColor="#F0A6D8" />
+            <stop offset="70%" stopColor="#9FD6F5" />
+            <stop offset="100%" stopColor="#A8F0BC" />
+          </linearGradient>
+        </defs>
+        {/* 目安の円。扇がどこまで伸びているかの基準になる */}
+        <circle cx={C} cy={C} r={R} fill="none" stroke="rgba(201,162,75,0.16)" strokeWidth="1" />
+        <circle cx={C} cy={C} r={(R + INNER) / 2} fill="none" stroke="rgba(201,162,75,0.10)" strokeWidth="1" strokeDasharray="3 5" />
+        {shown.map((c) => {
+          const rad = radiusOf(c.share);
+          const pos = labelPos(c.i, rad);
+          return (
+            <g key={c.i}>
+              <path
+                d={arc(c.i, rad)}
+                fill={c.good ? "rgba(240,200,120,0.30)" : "rgba(160,110,220,0.30)"}
+                stroke={c.good ? "rgba(240,200,120,0.85)" : "rgba(170,120,230,0.85)"}
+                strokeWidth={c.isMajor ? 1.6 : 1}
+              />
+              <text x={pos.x} y={pos.y} className="horo-wheel-num" textAnchor="middle" dominantBaseline="middle">
+                {c.i + 1}
+              </text>
+            </g>
+          );
+        })}
+        <circle cx={C} cy={C} r={INNER} fill="rgba(20,14,36,0.85)" stroke="rgba(201,162,75,0.35)" strokeWidth="1" />
+      </svg>
+
+      {/* 凡例。色が何を意味するかを書かないと、ただ二色に分かれた図になる */}
+      <div className="horo-legend">
+        <span><i className="good" />{t.horoStrength}</span>
+        <span><i className="bad" />{t.horoChallenge}</span>
+      </div>
+
+      {/*
+        ① 十二段の内訳。位置・札・向き・キーワード・占有率を一段にまとめる。
+        図だけでは僅差が読めず、数字だけでは形が見えない。
+      */}
+      <ol className="horo-rank">
+        {ranking.map((c, k) => {
+          const d = c.card;
+          return (
+            <li key={c.i} className={c.good ? "good" : "bad"}>
+              {/*
+                ② 濃さを占有率で変える。順位が下がるほど淡くなるので、
+                並びと図の扇の大きさが目でつながる。
+              */}
+              <span className="horo-rank-bar" aria-hidden="true"
+                style={{ width: `${(c.share / maxShare) * 100}%`, opacity: 0.18 + (c.share / maxShare) * 0.5 }} />
+              <em>{c.i + 1}</em>
+              <div className="horo-rank-main">
+                {/*
+                  長所か課題かを最初に出す。
+                  末尾に置くと、札とキーワードを読み終えてから
+                  「で、これはどっちなのか」を探すことになる。
+                */}
+                <div className="horo-rank-note">{c.good ? t.horoStrength : t.horoChallenge}</div>
+                <div className="horo-rank-head">
+                  <span className="horo-rank-name">{labels[c.i]}</span>
+                  <span className={`horo-rank-card${d.reversed ? " rev" : ""}`}>
+                    {getCardName(d, lang)}
+                    {c.isMajor && <b className="hex-major-tag">{t.majorTag}</b>}
+                    <i className={`orientation ${orientationToneClass(d, d.reversed)}`}>
+                      {orientationLabel(d.reversed, lang)}
+                    </i>
+                  </span>
+                </div>
+                <div className="horo-rank-kw">{noBreakAroundDot(c.kw)}</div>
+              </div>
+              {/* 占有率。大きく、濃く、控えめな虹で光らせる */}
+              <span className="horo-share-wrap">
+                <span className="horo-share">{c.share.toFixed(1)}<u>%</u></span>
+                {/*
+                  その帯に入る確率。数字だけだと 19.4% が珍しいのか
+                  ありふれているのか分からない。
+                */}
+                <span className="horo-share-odds">
+                  {t.horoShareOdds(binOf(c.share) * 4, (binOf(c.share) + 1) * 4, SHARE_BINS[binOf(c.share)])}
+                </span>
+              </span>
+            </li>
+          );
+        })}
+      </ol>
+    </div>
+  );
 }
 
 function CelticPlane({ drawn, openedIndices, lang, isLast }) {
@@ -8013,10 +8355,11 @@ function NoteLines({ text }) {
 function HexagramPanel({ lang, onBack, question, userName, canDraw, onConsume, onRefund, aiEnabled, spreadKey = "hexagram", renderSpeakButton }) {
   const isWeekly = spreadKey === "weekly";
   const isCeltic = spreadKey === "celticCross";
-  const STAGES = isWeekly ? WEEKLY_STAGES : isCeltic ? CELTIC_STAGES : HEXAGRAM_STAGES;
+  const isHoro = spreadKey === "horoscope";
+  const STAGES = isWeekly ? WEEKLY_STAGES : isCeltic ? CELTIC_STAGES : isHoro ? HOROSCOPE_STAGES : HEXAGRAM_STAGES;
   // 段の見出しと次へ進む文言も、スプレッドに合わせて差し替える
-  const stageTitleTable = () => (isWeekly ? t.weekStageTitle : isCeltic ? t.celticStageTitle : t.hexStageTitle);
-  const stageNextTable = () => (isWeekly ? t.weekNext : isCeltic ? t.celticNext : t.hexNext);
+  const stageTitleTable = () => (isWeekly ? t.weekStageTitle : isCeltic ? t.celticStageTitle : isHoro ? t.horoStageTitle : t.hexStageTitle);
+  const stageNextTable = () => (isWeekly ? t.weekNext : isCeltic ? t.celticNext : isHoro ? t.horoNext : t.hexNext);
   const t = T[lang] || T.ja;
   /*
     週の物語では位置名を実際の曜日にする。
@@ -8228,6 +8571,8 @@ function HexagramPanel({ lang, onBack, question, userName, canDraw, onConsume, o
     読み方が変わってしまう。最初に決めた読み方を最後まで通す。
   */
   const [bulkAsking, setBulkAsking] = useState(false);
+  // ホロスコープの象意の解説。長いので既定は閉じる
+  const [houseGuideOpen, setHouseGuideOpen] = useState(false);
   const [hexCopied, setHexCopied] = useState(false);
   const [hexShared, setHexShared] = useState(false);
 
@@ -8444,7 +8789,9 @@ function HexagramPanel({ lang, onBack, question, userName, canDraw, onConsume, o
               : isCeltic
                 ? (celticAsk.trim() ? `相談者が意味を知りたいと書いたこと:「${celticAsk.trim()}」\n` : "")
                   + "これはケルト十字です。十枚それぞれの位置の意味を踏まえ、現状・障害・意識と無意識・時間の流れ・周囲・結末を一つの筋として読んでください。\n\n"
-                : relationLine + viewpointLine),
+                : isHoro
+                  ? "これは十二の位置からなる円形の配置に、中央の一枚を加えたものです。円の十二枚は人生の領域を一巡するように並んでいます（自分自身・所有・学び・基盤・創造・勤め・関係・共有・探求・立場・縁・内奥）。十三枚目は中央にあり、全体を束ねる総合と助言を示します。ひとつずつ論評するのではなく、円をひと巡りする流れとして読み、どの領域に力が集まり、どこが手薄かを示したうえで、最後に中央の一枚で全体をまとめてください。\n\n"
+                  : relationLine + viewpointLine),
           2000
         );
         if (alive) setReading(normalizeReadingText(txt));
@@ -8517,7 +8864,7 @@ function HexagramPanel({ lang, onBack, question, userName, canDraw, onConsume, o
             </div>
           )}
 
-          {!isWeekly && !isCeltic && (<div className="hex-fields">
+          {!isWeekly && !isCeltic && !isHoro && (<div className="hex-fields">
             {/*
               名前の欄は置かない。ヘキサグラムでは結果の表示にしか使われず、
               「占いを始める」までの距離を伸ばすだけになる。
@@ -8748,7 +9095,8 @@ function HexagramPanel({ lang, onBack, question, userName, canDraw, onConsume, o
           */}
           <div className="hex-carpet" style={{
             position: "relative", width: "100%", maxWidth: "340px",
-            aspectRatio: isWeekly ? "1 / 1.31" : isCeltic ? "1 / 1.05" : "1 / 1.15",
+            // 円配置は正方形に近い。縦に余ると札が相対的に小さく、上下の余白も非対称になる
+            aspectRatio: isWeekly ? "1 / 1.31" : isCeltic ? "1 / 1.05" : isHoro ? "1 / 1.02" : "1 / 1.15",
           }}>
             {/* 盤面全体を巡る粒子。カードの手前を横切る */}
             <div className="hex-orbit" aria-hidden="true">
@@ -8781,7 +9129,9 @@ function HexagramPanel({ lang, onBack, question, userName, canDraw, onConsume, o
                   style={{
                     position: "absolute",
                     left: `${pt.x}%`, top: `${pt.y}%`,
-                    width: isWeekly ? "27%" : isCeltic ? "19%" : "23%",
+                    // 12枚が円周に並ぶので、隣と触れない幅に抑える。
+                    // 中央の1枚だけは全体を束ねる札なので、一回り大きく置く
+                    width: pt.center ? "24%" : isWeekly ? "27%" : isCeltic ? "19%" : isHoro ? "17%" : "23%",
                     /*
                       週の物語では、その日の曜日の色でカードの周りを照らす。
                       山の日だけは光を強くして、七日のどこが見せ場かを示す。
@@ -8794,7 +9144,7 @@ function HexagramPanel({ lang, onBack, question, userName, canDraw, onConsume, o
                     // 配り終えていないカードは描かない（opacity 0 で待たせない）
                     visibility: i < dealt ? "visible" : "hidden",
                     // 粒子はこの手前（zIndex 3）を通す。十字に組む札だけ一段上へ
-                    zIndex: pt.cross ? 2 : 1,
+                    zIndex: pt.center ? 4 : pt.cross ? 2 : 1,
                     // 配置の移動と、めくる回転は別の要素が担う（同じtransformを取り合わない）
                     /*
                       ケルト十字の二枚目は一枚目と同じ座標に置かれる。
@@ -8897,6 +9247,51 @@ function HexagramPanel({ lang, onBack, question, userName, canDraw, onConsume, o
           )}
 
           {/*
+            ホロスコープの象意。盤面の直下に置く。
+            十二の領域＋中央の一枚が何を指すのかは、
+            引いた札を読む前に知っておく必要がある。
+
+            長いので既定は閉じる。開いたままにすると盤面が押し下げられ、
+            札を見ながら読めなくなる。
+          */}
+          {isHoro && (
+            <div className="house-guide">
+              <button
+                type="button"
+                className={`house-guide-head${houseGuideOpen ? " open" : ""}`}
+                onClick={() => setHouseGuideOpen((v) => !v)}
+                aria-expanded={houseGuideOpen}
+              >
+                <span className="house-guide-caret" aria-hidden="true">{houseGuideOpen ? "\u25BE" : "\u25B8"}</span>
+                {t.houseGuideTitle}
+              </button>
+              {houseGuideOpen && (
+                <div className="house-guide-body">
+                  {/*
+                    ⚠️ ここに載っているのは占星術で一般に挙げられるキーワードで、
+                    まだ下書きの段階。本人が加筆する前提で置いてある。
+                    t.houseKeywords が無い言語では、位置の名前だけを出す。
+                  */}
+                  <p className="house-guide-soon">{t.houseGuideSoon}</p>
+                  <ol className="house-guide-list">
+                    {info.pos.map((label, i) => (
+                      <li key={i}>
+                        <em>{i < 12 ? `${i + 1}` : "\u2726"}</em>
+                        <span>
+                          <b>{label}</b>
+                          {t.houseKeywords && t.houseKeywords[i] && (
+                            <i>{t.houseKeywords[i]}</i>
+                          )}
+                        </span>
+                      </li>
+                    ))}
+                  </ol>
+                </div>
+              )}
+            </div>
+          )}
+
+          {/*
             一括開封。まだ一段も自分で開いていないときだけ出す。
             途中から飛ばすと、順に読んだ札と飛ばした札で読み方が変わる。
           */}
@@ -8921,7 +9316,24 @@ function HexagramPanel({ lang, onBack, question, userName, canDraw, onConsume, o
             すでに読んだ段階のカードは繰り返さず、今回開いたぶんだけを示す。
             重複して並べると、どれが新しく出たのか分からなくなる。
           */}
-          {stage > 0 && (
+          {/*
+            ホロスコープでは段ごとの部分結果を出さない。
+            13枚を5段に分けているので、段ごとに並べると同じ形の一覧が
+            6回続き、盤面より一覧のほうが長くなる。
+            最後にまとめて出すほうが、円をひと巡りする読み方に合う。
+          */}
+          {/*
+            ホロスコープは、段ごとではなく最後にまとめて出す。
+            13枚を5段に分けているので、段ごとに並べると同じ形の一覧が
+            6回続き、盤面より一覧のほうが長くなる。
+          */}
+          {/*
+            ホロスコープでは札の一覧を出さない。
+            位置ごとの象意は上の折りたたみに整理してあるので、
+            同じ情報を一覧でもう一度並べる必要がない。
+            見るべきは盤面と、下の円グラフ。
+          */}
+          {!isHoro && stage > 0 && (
             <div className="hex-stage-box">
               <div className="hex-stage-title">{stageTitleTable()[STAGES[stage - 1].key]}</div>
               {STAGES[stage - 1].indices.map((idx) => {
@@ -8933,7 +9345,18 @@ function HexagramPanel({ lang, onBack, question, userName, canDraw, onConsume, o
                   : minorKeyword(suit, rank, d.reversed, lang, d.up, d.rev);
                 return (
                   <div key={idx} className="hex-stage-row">
-                    <span className="hex-stage-pos">{info.pos[idx]}</span>
+                    <span className="hex-stage-pos">
+                      {info.pos[idx]}
+                      {/*
+                        位置の象意を添える。
+                        「変容と継承」とだけ書かれても、その位置が何を指すのか
+                        占う人には分からない。札の意味と位置の意味の両方が
+                        見えて初めて、その札がそこに出た意味が読める。
+                      */}
+                      {isHoro && t.houseKeywords && t.houseKeywords[idx] && (
+                        <em className="hex-stage-house">{t.houseKeywords[idx]}</em>
+                      )}
+                    </span>
                     <div style={{ flex: 1, minWidth: 0 }}>
                       <div className={`hex-stage-card${d.reversed ? " rev" : ""}`}>
                         {getCardName(d, lang)}
@@ -8972,13 +9395,18 @@ function HexagramPanel({ lang, onBack, question, userName, canDraw, onConsume, o
             <WeekRhythm drawn={drawn} lang={lang} labels={info.pos} openedCount={openedIndices.length} />
           )}
 
+          {/* ホロスコープは領域図。開いた領域だけ扇が伸びる */}
+          {isHoro && stage > 0 && (
+            <HoroscopeWheel drawn={drawn} labels={info.pos} lang={lang} openedCount={openedIndices.length} />
+          )}
+
           {/* ケルト十字は平面。開封のたびに重心が動く */}
           {isCeltic && stage > 0 && (
             <CelticPlane drawn={drawn} openedIndices={openedIndices} lang={lang} isLast={isLast} />
           )}
 
           {/* 相性度。鑑定文より先に見せることで、文章が頭に入りやすくなる */}
-          {isLast && !isWeekly && !isCeltic && (
+          {isLast && !isWeekly && !isCeltic && !isHoro && (
             <AffinityGauge
               value={hexagramAffinity(drawn)}
               /* 入力された関係を見出しに返す。無料版でも入力が働く場所になる */
@@ -11594,6 +12022,10 @@ const T = {
     oneOracleAgain: "한 장 더 뽑기",
     oneOracleFree: "횟수를 쓰지 않고 몇 번이든 뽑을 수 있습니다",
     spreadSelectHint: "어떤 방식으로 읽을까요.",
+    schoolNames: { classic: "전통파", modern: "현대파" },
+    schoolNotes: { classic: "확립된 배열로 읽습니다", modern: "현대의 주제에 맞춘 배열" },
+    modernSoonTitle: "준비 중입니다",
+    modernSoonBody: "다음과 같은 배열을 준비하고 있습니다。\n\n・소망 실현\n・인물 읽기\n・이달의 흐름\n・새로운 관계\n・계절의 흐름\n・직감과의 연결",
     spreadCardUnit: "장",
     spreadNoCost: "횟수 불요",
     drawAgainFree: "다시 점 보기",
@@ -11609,6 +12041,14 @@ const T = {
     weekRhythmTotal: "종합운",
     weekRhythmOf: (n) => `${n}의 기복`,
     celticStageTitle: {"core": "현재와 장애", "axis": "의식과 무의식", "time": "과거와 가까운 미래", "self": "당신 자신", "around": "주변 환경", "hope": "희망과 불안", "final": "최종 결과"},
+    horoStageTitle: {"angles": "네 개의 축", "ground": "소유와 배움", "inner": "창조와 일상", "others": "관계와 탐구", "beyond": "인연과 그 안쪽", "center": "중앙의 한 장"},
+    horoNext: {"angles": "먼저 인생의 골격을 봅시다", "ground": "다음으로 발밑을 봅시다", "inner": "이어서 나날의 영역을", "others": "그리고 타인과의 사이를", "beyond": "마지막으로 가장 깊은 곳을", "center": "마지막으로 전체를 묶는 한 장을"},
+    houseGuideTitle: "십이 하우스와 중앙 한 장의 상의",
+    houseGuideSoon: "각 영역의 자세한 해설은 준비 중입니다。지금은 위치의 이름만 표시합니다。",
+    horoWheelTitle: "열두 영역의 부풀기",
+    horoStrength: "뻗어야 할 강점",
+    horoChallenge: "마주해야 할 과제",
+    horoShareOdds: (a, b, p) => `${a}〜${b}% 대 ${p}%`,
     celticNext: {"core": "먼저, 지금 향하고 있는 방향을 봅시다", "axis": "다음으로, 마음의 안팎을 봅시다", "time": "이어서, 시간의 흐름을 봅시다", "self": "그럼, 당신 자신을 봅시다", "around": "다음은 주변 환경입니다", "hope": "그리고 희망과 불안을", "final": "마지막으로, 결말을 봅시다"},
     celticPlaneTitle: "마음의 무게중심",
     autoPickOrder: "자동으로 고르기",
@@ -11876,6 +12316,10 @@ const T = {
     oneOracleAgain: "Rút lá nữa",
     oneOracleFree: "Không tốn lượt. Rút bao nhiêu tùy bạn",
     spreadSelectHint: "Bạn muốn đọc theo cách nào?",
+    schoolNames: { classic: "Truyền thống", modern: "Hiện đại" },
+    schoolNotes: { classic: "Đọc bằng các trải bài đã định hình", modern: "Trải bài theo chủ đề hiện đại" },
+    modernSoonTitle: "Đang chuẩn bị",
+    modernSoonBody: "Chúng tôi đang chuẩn bị các trải bài sau。\n\n・Hiện thực hóa mong muốn\n・Đọc một con người\n・Dòng chảy của tháng\n・Mối quan hệ mới\n・Nhịp của mùa\n・Kết nối với trực giác",
     spreadCardUnit: "lá",
     spreadNoCost: "không tốn lượt",
     drawAgainFree: "Xem lại lần nữa",
@@ -11891,6 +12335,14 @@ const T = {
     weekRhythmTotal: "Vận tổng",
     weekRhythmOf: (n) => `Nhịp của ${n}`,
     celticStageTitle: {"core": "Hiện tại và trở ngại", "axis": "Ý thức và vô thức", "time": "Quá khứ và tương lai gần", "self": "Chính bạn", "around": "Hoàn cảnh xung quanh", "hope": "Hy vọng và lo âu", "final": "Kết cục"},
+    horoStageTitle: {"angles": "Bốn trục", "ground": "Sở hữu và học hỏi", "inner": "Sáng tạo và thường nhật", "others": "Quan hệ và tìm kiếm", "beyond": "Duyên và chiều sâu", "center": "Lá ở trung tâm"},
+    horoNext: {"angles": "Trước hết hãy xem khung của đời", "ground": "Tiếp theo là nền dưới chân", "inner": "Rồi đến những ngày thường", "others": "Và khoảng giữa với người khác", "beyond": "Cuối cùng là nơi sâu nhất", "center": "Cuối cùng, lá gộp lại tất cả"},
+    houseGuideTitle: "Ý nghĩa của mười hai cung và lá trung tâm",
+    houseGuideSoon: "Phần giải nghĩa chi tiết đang được chuẩn bị. Hiện chỉ hiển thị tên các vị trí.",
+    horoWheelTitle: "Độ nở của mười hai lĩnh vực",
+    horoStrength: "Điểm mạnh nên phát huy",
+    horoChallenge: "Vấn đề cần đối diện",
+    horoShareOdds: (a, b, p) => `Khoảng ${a}–${b}%: ${p}%`,
     celticNext: {"core": "Trước hết, hãy xem hướng bạn đang đi", "axis": "Tiếp theo, trong và ngoài tâm trí", "time": "Rồi đến dòng chảy thời gian", "self": "Giờ, hãy xem chính bạn", "around": "Tiếp đến là hoàn cảnh xung quanh", "hope": "Rồi hy vọng và lo âu", "final": "Cuối cùng, hãy xem kết cục"},
     celticPlaneTitle: "Trọng tâm của tâm trí",
     autoPickOrder: "Chọn tự động",
@@ -12158,6 +12610,10 @@ const T = {
     oneOracleAgain: "Ambil lagi",
     oneOracleFree: "Tidak memakai jatah harian. Ambil sesering yang kamu mau",
     spreadSelectHint: "Ingin dibaca dengan cara apa?",
+    schoolNames: { classic: "Tradisional", modern: "Modern" },
+    schoolNotes: { classic: "Membaca dengan tebaran yang sudah mapan", modern: "Tebaran untuk tema masa kini" },
+    modernSoonTitle: "Sedang disiapkan",
+    modernSoonBody: "Kami sedang menyiapkan tebaran berikut。\n\n・Mewujudkan keinginan\n・Membaca seseorang\n・Arus bulan ini\n・Hubungan baru\n・Irama musim\n・Hubungan dengan intuisi",
     spreadCardUnit: "kartu",
     spreadNoCost: "tanpa kuota",
     spreadComingSoon: "segera",
@@ -12171,6 +12627,14 @@ const T = {
     weekRhythmTotal: "Peruntungan total",
     weekRhythmOf: (n) => `Irama ${n}`,
     celticStageTitle: {"core": "Kini dan penghalang", "axis": "Sadar dan bawah sadar", "time": "Masa lalu dan masa depan dekat", "self": "Dirimu sendiri", "around": "Keadaan sekitar", "hope": "Harapan dan kecemasan", "final": "Hasil akhir"},
+    horoStageTitle: {"angles": "Empat poros", "ground": "Milik dan pembelajaran", "inner": "Cipta dan keseharian", "others": "Relasi dan pencarian", "beyond": "Ikatan dan kedalaman", "center": "Kartu di pusat"},
+    horoNext: {"angles": "Mula-mula lihat kerangka hidup", "ground": "Berikutnya, pijakan di bawah", "inner": "Lalu wilayah keseharian", "others": "Dan jarak dengan orang lain", "beyond": "Terakhir, tempat terdalam", "center": "Terakhir, kartu yang merangkum semuanya"},
+    houseGuideTitle: "Makna dua belas rumah dan kartu pusat",
+    houseGuideSoon: "Penjelasan rinci sedang disiapkan. Untuk kini hanya nama posisi yang ditampilkan.",
+    horoWheelTitle: "Bentangan dua belas wilayah",
+    horoStrength: "Kekuatan untuk dikembangkan",
+    horoChallenge: "Tantangan untuk dihadapi",
+    horoShareOdds: (a, b, p) => `Rentang ${a}–${b}%: ${p}%`,
     celticNext: {"core": "Pertama, mari lihat arah yang kamu tuju", "axis": "Berikutnya, dalam dan luar batinmu", "time": "Lalu, aliran waktunya", "self": "Sekarang, mari lihat dirimu", "around": "Berikutnya keadaan sekitar", "hope": "Lalu harapan dan kecemasan", "final": "Terakhir, mari lihat hasilnya"},
     celticPlaneTitle: "Titik berat batinmu",
     autoPickOrder: "Pilih otomatis",
@@ -12440,6 +12904,10 @@ const T = {
     oneOracleAgain: "Ambil lagi",
     oneOracleFree: "Tidak menggunakan kuota harian. Ambil seberapa kerap anda mahu",
     spreadSelectHint: "Mahu dibaca dengan cara apa?",
+    schoolNames: { classic: "Tradisional", modern: "Moden" },
+    schoolNotes: { classic: "Membaca dengan tebaran yang mapan", modern: "Tebaran untuk tema masa kini" },
+    modernSoonTitle: "Sedang disediakan",
+    modernSoonBody: "Kami sedang menyediakan tebaran berikut。\n\n・Mewujudkan hasrat\n・Membaca seseorang\n・Aliran bulan ini\n・Hubungan baharu\n・Irama musim\n・Hubungan dengan gerak hati",
     spreadCardUnit: "kad",
     spreadNoCost: "tanpa kuota",
     spreadComingSoon: "akan datang",
@@ -12453,6 +12921,14 @@ const T = {
     weekRhythmTotal: "Nasib keseluruhan",
     weekRhythmOf: (n) => `Irama ${n}`,
     celticStageTitle: {"core": "Kini dan penghalang", "axis": "Sedar dan bawah sedar", "time": "Lalu dan masa depan dekat", "self": "Diri anda", "around": "Keadaan sekeliling", "hope": "Harapan dan kebimbangan", "final": "Kesudahan"},
+    horoStageTitle: {"angles": "Empat paksi", "ground": "Milik dan pembelajaran", "inner": "Cipta dan keseharian", "others": "Hubungan dan pencarian", "beyond": "Ikatan dan kedalaman", "center": "Kad di tengah"},
+    horoNext: {"angles": "Mula-mula lihat rangka hidup", "ground": "Seterusnya, pijakan di bawah", "inner": "Kemudian wilayah harian", "others": "Dan jarak dengan orang lain", "beyond": "Akhirnya, tempat terdalam", "center": "Akhirnya, kad yang merangkum semuanya"},
+    houseGuideTitle: "Makna dua belas rumah dan kad tengah",
+    houseGuideSoon: "Penjelasan terperinci sedang disediakan. Buat masa ini hanya nama kedudukan dipaparkan.",
+    horoWheelTitle: "Bentangan dua belas wilayah",
+    horoStrength: "Kekuatan untuk dikembangkan",
+    horoChallenge: "Cabaran untuk dihadapi",
+    horoShareOdds: (a, b, p) => `Julat ${a}–${b}%: ${p}%`,
     celticNext: {"core": "Pertama, mari lihat arah yang anda tuju", "axis": "Seterusnya, dalam dan luar hati anda", "time": "Kemudian, aliran masanya", "self": "Kini, mari lihat diri anda", "around": "Seterusnya keadaan sekeliling", "hope": "Lalu harapan dan kebimbangan", "final": "Akhir sekali, mari lihat kesudahannya"},
     celticPlaneTitle: "Pusat graviti hati anda",
     autoPickOrder: "Pilih automatik",
@@ -12723,6 +13199,10 @@ const T = {
     oneOracleAgain: "もう一枚引く",
     oneOracleFree: "回数を使わず、何度でも引けます",
     spreadSelectHint: "どの占い方で読みますか。",
+    schoolNames: { classic: "古典派", modern: "現代派" },
+    schoolNotes: { classic: "確立された配置で読む", modern: "現代の主題に合わせた配置" },
+    modernSoonTitle: "準備中です",
+    modernSoonBody: "次のような配置を用意しています。\n\n・願いの実現\n・人物を読む\n・今月の流れ\n・新しい関係\n・季節の巡り\n・直感とのつながり",
     spreadCardUnit: "枚",
     spreadNoCost: "回数不要",
     spreadComingSoon: "準備中",
@@ -12736,6 +13216,29 @@ const T = {
     weekRhythmTotal: "総合運",
     weekRhythmOf: (n) => `${n}の起伏`,
     celticStageTitle: {"core": "現在と障害", "axis": "意識と無意識", "time": "過去と近い未来", "self": "あなた自身", "around": "周囲の環境", "hope": "希望と不安", "final": "最終結果"},
+    horoStageTitle: {"angles": "四つの軸", "ground": "所有と学び", "inner": "創造と務め", "others": "関わりと探求", "beyond": "縁と、その奥", "center": "中央の一枚"},
+    horoNext: {"angles": "まず、人生の骨格を見ましょう", "ground": "次に、足もとを見ましょう", "inner": "続いて、日々の領域を", "others": "そして、他者との間を", "beyond": "最後に、最も深いところを", "center": "最後に、すべてを束ねる一枚を"},
+    houseGuideTitle: "十二のハウスと中央の一枚の象意",
+    houseGuideSoon: "各領域の詳しい解説は準備中です。今は位置の名前だけを表示しています。",
+    horoWheelTitle: "十二領域のふくらみ",
+    horoStrength: "伸ばすべき長所",
+    horoChallenge: "向き合うべき課題",
+    horoShareOdds: (a, b, p) => `${a}〜${b}%の帯 ${p}%`,
+    houseKeywords: [
+      "自分自身、体質と容姿、第一印象、生まれ持った気質、人生への構え、物事の始め方",
+      "金運、物質運、才能、価値観、快適性に関する感度、五感（味覚、声、嗅覚、視覚、聴覚の良し悪し）、所有欲",
+      "学習、初等教育、言葉と文章、兄弟姉妹、近所と近距離の移動、好奇心、情報の集め方",
+      "家庭、住まい、家族と親（特に育ての親）、ルーツと土地、心の土台、晩年、引きこもる場所",
+      "恋愛、創造、趣味と遊び、子ども、自己表現、投機と賭け、承認欲求、舞台に立つこと",
+      "日々の勤め、労働環境、健康と体調管理、規律と習慣、奉仕、部下と同僚、ペット",
+      "結婚とパートナー、契約、共同事業、公然の敵、対人関係全般、自分に足りないものを映す相手",
+      "継承と遺産、他者の財、性、深い結びつき、変容と再生、死と生まれ変わり、隠された事柄",
+      "遠方、海外、高等教育と専門、哲学と宗教、思想、長距離の旅、精神的な冒険",
+      "天職と社会的地位、名声、目標、上司と権威、世間からの評価、達成、父親的なもの",
+      "仲間と友人、所属する集団、願いと理想、未来への展望、社会活動、束縛からの自由",
+      "秘密、潜在意識、孤独と隠遁、癒しと療養、隠れた敵、犠牲、前世的なもの、手放し",
+      "全体の総合、いま最も必要な助言、十二の領域を束ねる一枚",
+    ],
     celticNext: {"core": "まず、いま向いている方向を見ましょう", "axis": "次に、心の内と外を見ましょう", "time": "では、時の流れを見ましょう", "self": "ここから、あなた自身を見ましょう", "around": "次は、周囲の環境を", "hope": "そして、希望と不安を", "final": "最後に、結末を見ましょう"},
     celticPlaneTitle: "心の重心",
     autoPickOrder: "自動で選ぶ",
@@ -13005,6 +13508,10 @@ const T = {
     oneOracleAgain: "再抽一張",
     oneOracleFree: "不消耗次數，可無限次抽取",
     spreadSelectHint: "要以哪種方式解讀呢。",
+    schoolNames: { classic: "古典派", modern: "現代派" },
+    schoolNotes: { classic: "以既有的牌陣解讀", modern: "貼合當代主題的牌陣" },
+    modernSoonTitle: "準備中",
+    modernSoonBody: "正在準備以下牌陣。\n\n・願望實現\n・解讀人物\n・本月的流向\n・新的關係\n・季節的循環\n・與直覺的連結",
     spreadCardUnit: "張",
     spreadNoCost: "不計次數",
     spreadComingSoon: "準備中",
@@ -13018,6 +13525,14 @@ const T = {
     weekRhythmTotal: "綜合運",
     weekRhythmOf: (n) => `${n}的起伏`,
     celticStageTitle: {"core": "現在與阻礙", "axis": "意識與潛意識", "time": "過去與近未來", "self": "你自己", "around": "周遭環境", "hope": "希望與不安", "final": "最終結果"},
+    horoStageTitle: {"angles": "四個軸", "ground": "所有與學習", "inner": "創造與職責", "others": "關係與探求", "beyond": "緣分與其深處", "center": "中央的一張"},
+    horoNext: {"angles": "先看人生的骨架", "ground": "接著看腳下的基礎", "inner": "再看日常的領域", "others": "然後是與他人之間", "beyond": "最後看最深之處", "center": "最後，看束起全體的一張"},
+    houseGuideTitle: "十二宮與中央一張的象意",
+    houseGuideSoon: "各領域的詳細解說準備中。目前僅顯示位置名稱。",
+    horoWheelTitle: "十二領域的起伏",
+    horoStrength: "應當發揮的長處",
+    horoChallenge: "應當面對的課題",
+    horoShareOdds: (a, b, p) => `${a}〜${b}% 區間 ${p}%`,
     celticNext: {"core": "首先，來看此刻朝向的方向", "axis": "接著，來看心的內與外", "time": "那麼，來看時間的流向", "self": "從這裡，來看你自己", "around": "接下來是周遭環境", "hope": "然後是希望與不安", "final": "最後，來看結局"},
     celticPlaneTitle: "心的重心",
     autoPickOrder: "自動選牌",
@@ -13287,6 +13802,10 @@ const T = {
     oneOracleAgain: "再抽一张",
     oneOracleFree: "不消耗次数，可无限次抽取",
     spreadSelectHint: "要以哪种方式解读呢。",
+    schoolNames: { classic: "古典派", modern: "现代派" },
+    schoolNotes: { classic: "以既有的牌阵解读", modern: "贴合当代主题的牌阵" },
+    modernSoonTitle: "准备中",
+    modernSoonBody: "正在准备以下牌阵。\n\n・愿望实现\n・解读人物\n・本月的流向\n・新的关系\n・季节的循环\n・与直觉的连结",
     spreadCardUnit: "张",
     spreadNoCost: "不计次数",
     spreadComingSoon: "准备中",
@@ -13300,6 +13819,14 @@ const T = {
     weekRhythmTotal: "综合运",
     weekRhythmOf: (n) => `${n}的起伏`,
     celticStageTitle: {"core": "现在与阻碍", "axis": "意识与潜意识", "time": "过去与近未来", "self": "你自己", "around": "周遭环境", "hope": "希望与不安", "final": "最终结果"},
+    horoStageTitle: {"angles": "四个轴", "ground": "所有与学习", "inner": "创造与职责", "others": "关系与探求", "beyond": "缘分与其深处", "center": "中央的一张"},
+    horoNext: {"angles": "先看人生的骨架", "ground": "接着看脚下的基础", "inner": "再看日常的领域", "others": "然后是与他人之间", "beyond": "最后看最深之处", "center": "最后，看束起全体的一张"},
+    houseGuideTitle: "十二宫与中央一张的象意",
+    houseGuideSoon: "各领域的详细解说准备中。目前仅显示位置名称。",
+    horoWheelTitle: "十二领域的起伏",
+    horoStrength: "应当发挥的长处",
+    horoChallenge: "应当面对的课题",
+    horoShareOdds: (a, b, p) => `${a}〜${b}% 区间 ${p}%`,
     celticNext: {"core": "首先，来看此刻朝向的方向", "axis": "接着，来看心的内与外", "time": "那么，来看时间的流向", "self": "从这里，来看你自己", "around": "接下来是周遭环境", "hope": "然后是希望与不安", "final": "最后，来看结局"},
     celticPlaneTitle: "心的重心",
     autoPickOrder: "自动选牌",
@@ -13569,6 +14096,10 @@ const T = {
     oneOracleAgain: "Draw another",
     oneOracleFree: "Doesn't use your daily count. Draw as often as you like",
     spreadSelectHint: "How would you like to read?",
+    schoolNames: { classic: "Traditional", modern: "Modern" },
+    schoolNotes: { classic: "Read with established spreads", modern: "Spreads shaped for present-day themes" },
+    modernSoonTitle: "In preparation",
+    modernSoonBody: "The following spreads are being prepared.\n\n· Manifestation\n· Reading a person\n· The month ahead\n· A new relationship\n· The turn of the season\n· Connection with intuition",
     spreadCardUnit: "cards",
     spreadNoCost: "free",
     spreadComingSoon: "soon",
@@ -13582,6 +14113,29 @@ const T = {
     weekRhythmTotal: "Overall fortune",
     weekRhythmOf: (n) => `The rhythm of ${n}`,
     celticStageTitle: {"core": "The present and its obstacle", "axis": "Conscious and unconscious", "time": "Past and near future", "self": "Yourself", "around": "Your surroundings", "hope": "Hopes and fears", "final": "The outcome"},
+    horoStageTitle: {"angles": "The four angles", "ground": "Holding and learning", "inner": "Making and daily work", "others": "Meeting and seeking", "beyond": "Ties, and what lies beneath", "center": "The card at the centre"},
+    horoNext: {"angles": "First, the frame of a life", "ground": "Next, the ground beneath", "inner": "Then the everyday realms", "others": "And the space between people", "beyond": "Last, the deepest place", "center": "Last, the card that binds it all"},
+    houseGuideTitle: "What the twelve houses and the centre card mean",
+    houseGuideSoon: "Detailed notes for each area are in preparation. For now only the position names are shown.",
+    horoWheelTitle: "The swell of the twelve realms",
+    horoStrength: "A strength to extend",
+    horoChallenge: "A challenge to face",
+    horoShareOdds: (a, b, p) => `${a}–${b}% band: ${p}%`,
+    houseKeywords: [
+      "The self, body and appearance, first impressions, innate temperament, how one begins things",
+      "Money, possessions, talents, values, sensitivity to comfort, the five senses, what one wants to own",
+      "Learning, early schooling, words and writing, siblings, short journeys, curiosity",
+      "Home, dwelling, family and parents, roots and land, the foundation of the heart, later years",
+      "Romance, creation, play and hobbies, children, self-expression, speculation, being seen",
+      "Daily work, working conditions, health and routine, discipline, service, colleagues, pets",
+      "Marriage and partners, contracts, joint ventures, open rivals, relationships in general",
+      "Inheritance, others' resources, sex, deep bonds, transformation and rebirth, hidden matters",
+      "Distance, abroad, higher study, philosophy and faith, long travel, the adventure of the mind",
+      "Vocation and standing, reputation, goals, authority, how the world judges you, achievement",
+      "Friends and companions, the groups one belongs to, wishes and ideals, the view ahead, freedom",
+      "Secrets, the unconscious, solitude, healing and rest, hidden adversaries, sacrifice, letting go",
+      "The whole, the counsel most needed now, the card that binds the twelve",
+    ],
     celticNext: {"core": "First, let us see the way you are facing", "axis": "Next, the inside and outside of your mind", "time": "Now, the flow of time", "self": "From here, let us see you yourself", "around": "Next, your surroundings", "hope": "Then, your hopes and fears", "final": "Finally, let us see the outcome"},
     celticPlaneTitle: "The centre of your mind",
     autoPickOrder: "Pick in order",
@@ -13851,6 +14405,10 @@ const T = {
     oneOracleAgain: "Bumunot muli",
     oneOracleFree: "Hindi ginagamit ang bilang mo. Bumunot nang paulit-ulit",
     spreadSelectHint: "Paano mo gustong basahin?",
+    schoolNames: { classic: "Tradisyonal", modern: "Moderno" },
+    schoolNotes: { classic: "Basahin sa mga itinatag na spread", modern: "Mga spread para sa kasalukuyang tema" },
+    modernSoonTitle: "Inihahanda pa",
+    modernSoonBody: "Inihahanda ang mga sumusunod na spread.\n\n· Pagsasakatuparan ng hangarin\n· Pagbasa sa isang tao\n· Ang buwang darating\n· Bagong relasyon\n· Pagpihit ng panahon\n· Ugnayan sa intuwisyon",
     spreadCardUnit: "baraha",
     spreadNoCost: "libre",
     spreadComingSoon: "malapit na",
@@ -13864,6 +14422,14 @@ const T = {
     weekRhythmTotal: "Kabuuang kapalaran",
     weekRhythmOf: (n) => `Ritmo ng ${n}`,
     celticStageTitle: {"core": "Ang kasalukuyan at hadlang", "axis": "Malay at di-malay", "time": "Nakaraan at malapit na hinaharap", "self": "Ikaw mismo", "around": "Ang paligid mo", "hope": "Pag-asa at pangamba", "final": "Ang kahihinatnan"},
+    horoStageTitle: {"angles": "Ang apat na anggulo", "ground": "Pag-aari at pagkatuto", "inner": "Paglikha at araw-araw", "others": "Pakikipag-ugnay at paghahanap", "beyond": "Ugnayan at ang kalaliman", "center": "Ang baraha sa gitna"},
+    horoNext: {"angles": "Una, ang balangkas ng buhay", "ground": "Susunod, ang lupa sa ilalim", "inner": "Tapos ang pang-araw-araw", "others": "At ang pagitan ng mga tao", "beyond": "Huli, ang pinakamalalim", "center": "Huli, ang barahang bumubuklod sa lahat"},
+    houseGuideTitle: "Ang kahulugan ng labindalawang bahay at ang gitnang baraha",
+    houseGuideSoon: "Inihahanda pa ang detalyadong paliwanag. Sa ngayon ay ang pangalan lamang ng posisyon ang ipinapakita.",
+    horoWheelTitle: "Ang laki ng labindalawang larangan",
+    horoStrength: "Lakas na dapat palawigin",
+    horoChallenge: "Hamong dapat harapin",
+    horoShareOdds: (a, b, p) => `${a}–${b}% banda: ${p}%`,
     celticNext: {"core": "Una, tingnan natin ang direksyong hinaharap mo", "axis": "Sunod, ang loob at labas ng isip mo", "time": "Ngayon, ang agos ng panahon", "self": "Mula rito, tingnan natin ikaw mismo", "around": "Sunod, ang paligid mo", "hope": "Tapos, ang pag-asa at pangamba", "final": "Panghuli, tingnan natin ang kahihinatnan"},
     celticPlaneTitle: "Ang sentro ng isip mo",
     autoPickOrder: "Piliin nang sunod-sunod",
@@ -14133,6 +14699,10 @@ const T = {
     oneOracleAgain: "จั่วอีกใบ",
     oneOracleFree: "ไม่นับจำนวนครั้ง จั่วได้ไม่จำกัด",
     spreadSelectHint: "จะอ่านด้วยวิธีใดดี",
+    schoolNames: { classic: "สายคลาสสิก", modern: "สายร่วมสมัย" },
+    schoolNotes: { classic: "อ่านด้วยการวางไพ่ที่เป็นแบบแผน", modern: "การวางไพ่ตามหัวข้อร่วมสมัย" },
+    modernSoonTitle: "กำลังเตรียมการ",
+    modernSoonBody: "กำลังเตรียมการวางไพ่ต่อไปนี้。\n\n・การทำให้ความปรารถนาเป็นจริง\n・การอ่านบุคคล\n・กระแสของเดือนนี้\n・ความสัมพันธ์ใหม่\n・การหมุนเวียนของฤดูกาล\n・การเชื่อมต่อกับสัญชาตญาณ",
     spreadCardUnit: "ใบ",
     spreadNoCost: "ไม่นับครั้ง",
     spreadComingSoon: "เร็วๆ นี้",
@@ -14146,6 +14716,14 @@ const T = {
     weekRhythmTotal: "ดวงโดยรวม",
     weekRhythmOf: (n) => `จังหวะของ${n}`,
     celticStageTitle: {"core": "ปัจจุบันและอุปสรรค", "axis": "จิตสำนึกและจิตใต้สำนึก", "time": "อดีตและอนาคตอันใกล้", "self": "ตัวคุณเอง", "around": "สภาพแวดล้อมรอบตัว", "hope": "ความหวังและความกังวล", "final": "บทสรุป"},
+    horoStageTitle: {"angles": "สี่แกน", "ground": "การครอบครองและการเรียนรู้", "inner": "การสร้างและหน้าที่", "others": "ความสัมพันธ์และการค้นหา", "beyond": "สายสัมพันธ์และส่วนลึก", "center": "ไพ่ใบกลาง"},
+    horoNext: {"angles": "ก่อนอื่น มาดูโครงของชีวิต", "ground": "ต่อไป ดูพื้นใต้เท้า", "inner": "จากนั้น ดูขอบเขตประจำวัน", "others": "และช่องว่างระหว่างผู้คน", "beyond": "สุดท้าย ที่ลึกที่สุด", "center": "สุดท้าย ไพ่ที่รวบรวมทั้งหมด"},
+    houseGuideTitle: "ความหมายของสิบสองเรือนและไพ่ใบกลาง",
+    houseGuideSoon: "คำอธิบายโดยละเอียดกำลังเตรียมการ ขณะนี้แสดงเพียงชื่อตำแหน่ง",
+    horoWheelTitle: "ความกว้างของสิบสองขอบเขต",
+    horoStrength: "จุดแข็งที่ควรขยาย",
+    horoChallenge: "โจทย์ที่ควรเผชิญ",
+    horoShareOdds: (a, b, p) => `ช่วง ${a}–${b}%: ${p}%`,
     celticNext: {"core": "อันดับแรก มาดูทิศทางที่คุณมุ่งไป", "axis": "ต่อไป ภายในและภายนอกของใจ", "time": "ทีนี้ มาดูการไหลของเวลา", "self": "จากตรงนี้ มาดูตัวคุณเอง", "around": "ต่อไปคือสภาพแวดล้อม", "hope": "แล้วก็ความหวังและความกังวล", "final": "สุดท้าย มาดูบทสรุป"},
     celticPlaneTitle: "จุดศูนย์ถ่วงของใจ",
     autoPickOrder: "เลือกตามลำดับ",
@@ -14416,6 +14994,10 @@ const T = {
     oneOracleAgain: "Dra ett till",
     oneOracleFree: "Räknas inte mot din dagsgräns. Dra så ofta du vill",
     spreadSelectHint: "Hur vill du läsa?",
+    schoolNames: { classic: "Traditionell", modern: "Modern" },
+    schoolNotes: { classic: "Läs med etablerade läggningar", modern: "Läggningar formade för nutida teman" },
+    modernSoonTitle: "Under förberedelse",
+    modernSoonBody: "Följande läggningar förbereds.\n\n· Manifestation\n· Att läsa en människa\n· Månaden framför\n· En ny relation\n· Årstidens vändning\n· Kontakt med intuitionen",
     spreadCardUnit: "kort",
     spreadNoCost: "gratis",
     spreadComingSoon: "snart",
@@ -14429,6 +15011,14 @@ const T = {
     weekRhythmTotal: "Den samlade turen",
     weekRhythmOf: (n) => `${n}s vågor`,
     celticStageTitle: {"core": "Nuet och dess hinder", "axis": "Medvetet och omedvetet", "time": "Det förflutna och den nära framtiden", "self": "Du själv", "around": "Din omgivning", "hope": "Hopp och oro", "final": "Utgången"},
+    horoStageTitle: {"angles": "De fyra axlarna", "ground": "Ägande och lärande", "inner": "Skapande och vardag", "others": "Möten och sökande", "beyond": "Band, och det som ligger under", "center": "Kortet i mitten"},
+    horoNext: {"angles": "Först, livets stomme", "ground": "Sedan marken under", "inner": "Därefter vardagens områden", "others": "Och rummet mellan människor", "beyond": "Till sist, den djupaste platsen", "center": "Till sist, kortet som binder allt"},
+    houseGuideTitle: "Vad de tolv husen och mittkortet betyder",
+    houseGuideSoon: "Utförliga noter för varje område förbereds. Just nu visas endast positionernas namn.",
+    horoWheelTitle: "De tolv områdenas svall",
+    horoStrength: "En styrka att bygga på",
+    horoChallenge: "En utmaning att möta",
+    horoShareOdds: (a, b, p) => `${a}–${b}% band: ${p}%`,
     celticNext: {"core": "Först, låt oss se riktningen du är vänd mot", "axis": "Sedan, sinnets insida och utsida", "time": "Nu, tidens flöde", "self": "Härifrån, låt oss se dig själv", "around": "Sedan din omgivning", "hope": "Så hopp och oro", "final": "Till sist, låt oss se utgången"},
     celticPlaneTitle: "Ditt sinnes tyngdpunkt",
     autoPickOrder: "Välj i ordning",
@@ -15087,7 +15677,7 @@ export default function TarotDraw() {
     どこかを取りこぼす。
   */
   const isFreeDraw = isFreeSpreadKey(drawMode);
-  const isHexLike = ["hexagram", "hexagramFree", "weekly", "weeklyFree", "celticCross", "celticCrossFree"].includes(drawMode);
+  const isHexLike = ["hexagram", "hexagramFree", "weekly", "weeklyFree", "celticCross", "celticCrossFree", "horoscope", "horoscopeFree"].includes(drawMode);
   /*
     無料版では問いを入力させないので、前の版で書いた文字列が残っていても使わない。
     残したまま履歴に保存すると、AIが読んでいない問いが「その回の問い」として
@@ -15962,25 +16552,39 @@ export default function TarotDraw() {
         /* 鑑賞用の札。2枚並ぶので、ワンオラクルの168pxより一回り小さくする。
            それ以上詰めると札名が潰れて、鑑賞にならない */
         /*
-          4枠を並べる。flex + wrap にすると、幅が中途半端なときに
-          3枚＋1枚に割れる（実際にそうなった）。
-          割れ方を幅任せにせず、桁数を明示する。
+          4枠を 2×2 で並べる。
+
+          横一列（4桁）にすると1枚あたり100px前後になり、
+          「大アルカナ」が2行に折れて下が切れた。
+          鑑賞のための札なので、桁数より1枚の大きさを優先する。
+          2桁なら幅に余裕があり、札名も収まる。
         */
         .dex-cards {
-          display: grid; grid-template-columns: repeat(4, minmax(0, 1fr));
-          gap: 10px; margin: 4px 0 14px;
+          display: grid; grid-template-columns: repeat(2, minmax(0, 1fr));
+          gap: 12px; margin: 4px 0 14px; justify-items: center;
         }
         .dex-card-slot { display: flex; flex-direction: column; align-items: center; gap: 6px; }
         /* 桁に合わせて伸縮させる。固定幅だと桁数と噛み合わない */
         .dex-view.static-card.oracle {
-          width: 100%; height: auto; aspect-ratio: 2 / 3; max-width: 120px;
+          width: 100%; height: auto; aspect-ratio: 2 / 3; max-width: 168px;
         }
-        .dex-card-slot { width: 100%; }
+        .dex-card-slot { width: 100%; max-width: 168px; }
         .dex-card-cap { line-height: 1.5; text-align: center; }
-        @media (max-width: 520px) {
-          /* 狭い画面は2桁×2段。4桁のままだと札が小さすぎて鑑賞にならない */
-          .dex-cards { grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 8px; }
-          .dex-view.static-card.oracle { max-width: 140px; }
+        /*
+          札の中の文字。札が大きくなったので原寸に近づけてよいが、
+          札名が長い言語（Ang Hangal / Gã Khờ 等）でも溢れないよう
+          折り返しを許し、はみ出す前に縮める。
+        */
+        /* 札の中に余白を作る。無いと文字が縁に触れて切れて見える */
+        .dex-view .card-face { padding: 10px 8px; box-sizing: border-box; }
+        .dex-view .card-text-wrap { max-width: 100%; }
+        .dex-view .card-name { font-size: 14px; word-break: break-word; }
+        .dex-view .card-name.long { font-size: 12px; }
+        .dex-view .card-sub { font-size: 9px; line-height: 1.4; word-break: break-word; }
+        @media (max-width: 380px) {
+          .dex-cards { gap: 8px; }
+          .dex-view .card-name { font-size: 12.5px; }
+          .dex-view .card-name.long { font-size: 11px; }
         }
         .dex-card-cap { font-size: 10px; letter-spacing: 0.08em; }
         .dex-card-cap.up { color: var(--orient-up); }
@@ -17327,6 +17931,138 @@ export default function TarotDraw() {
           0%, 100% { box-shadow: 0 0 18px rgba(255,255,255,0.55), 0 0 42px rgba(255,60,180,0.45); }
           50%      { box-shadow: 0 0 34px rgba(255,255,255,0.95), 0 0 86px rgba(60,200,255,0.7); }
         }
+        /* --- ホロスコープの領域図 --- */
+        .horo-wheel { width: 100%; max-width: 340px; margin: 14px auto 4px; }
+        .horo-wheel-title {
+          font-family: 'Shippori Mincho', serif; font-size: 12px;
+          letter-spacing: 0.14em; text-align: center; margin-bottom: 8px;
+        }
+        .horo-wheel-svg { display: block; width: 100%; height: auto; }
+        .horo-wheel-num { font-family: 'Cinzel', serif; font-size: 11px; fill: rgba(255,248,232,0.9); }
+        .horo-legend {
+          display: flex; gap: 16px; justify-content: center;
+          font-size: 10px; color: var(--muted); margin: 6px 0 10px;
+        }
+        .horo-legend span { display: inline-flex; align-items: center; gap: 5px; }
+        .horo-legend i { width: 9px; height: 9px; border-radius: 2px; display: inline-block; }
+        /* 長所は金、課題は紫。逆位置＝悪いではなく「向き合う対象」として置く */
+        .horo-legend i.good { background: rgba(240,200,120,0.85); }
+        .horo-legend i.bad { background: rgba(170,120,230,0.85); }
+        .horo-rank { list-style: none; margin: 0; padding: 0; display: grid; gap: 4px; }
+        .horo-rank li {
+          position: relative; overflow: hidden;
+          display: flex; align-items: flex-start; gap: 8px;
+          padding: 7px 10px; border-radius: 6px; background: rgba(255,255,255,0.03);
+        }
+        /* 占有率に応じた帯。順位が下がるほど淡くなる */
+        .horo-rank-bar {
+          position: absolute; left: 0; top: 0; bottom: 0; z-index: 0;
+          border-radius: 6px 0 0 6px; pointer-events: none;
+        }
+        .horo-rank li.good .horo-rank-bar { background: linear-gradient(90deg, rgba(240,200,120,0.55), rgba(240,200,120,0)); }
+        .horo-rank li.bad  .horo-rank-bar { background: linear-gradient(90deg, rgba(170,120,230,0.55), rgba(170,120,230,0)); }
+        .horo-rank em, .horo-rank-main { position: relative; z-index: 1; }
+        .horo-rank em {
+          flex: 0 0 1.5em; text-align: right; font-style: normal; padding-top: 1px;
+          font-family: 'Cinzel', serif; font-size: 10.5px; color: var(--gold-soft);
+        }
+        .horo-rank-main { flex: 1; min-width: 0; }
+        .horo-rank-head { display: flex; flex-wrap: wrap; align-items: baseline; gap: 4px 8px; }
+        .horo-rank-name { font-size: 11.5px; color: var(--parchment); letter-spacing: 0.04em; }
+        .horo-rank-card { font-size: 10.5px; color: var(--orient-up-soft); display: inline-flex; align-items: baseline; gap: 5px; }
+        .horo-rank-card.rev { color: var(--orient-rev); }
+        .horo-rank-card i { font-style: normal; font-size: 9px; padding: 1px 6px; }
+        .horo-rank-kw { font-size: 9.5px; line-height: 1.7; color: var(--muted); margin-top: 2px; }
+        .horo-rank-note { font-size: 9.5px; letter-spacing: 0.08em; margin-bottom: 3px; font-weight: 600; }
+        .horo-rank li.good .horo-rank-note { color: rgba(240,200,120,0.95); }
+        .horo-rank li.bad .horo-rank-note { color: rgba(190,150,240,0.95); }
+        /*
+          占有率。この図でいちばん見せたい数字なので大きく置く。
+          虹は使うが彩度を落とし、ホロの原色とは別物にする
+          （ホロは当たりの記号なので、そこと同じ強さにはしない）。
+        */
+        .horo-share {
+          flex: 0 0 auto; align-self: center;
+          font-family: 'Cinzel', serif; font-size: 19px; letter-spacing: 0.02em;
+          background: linear-gradient(115deg, #FFE9A3, #F0A6D8, #9FD6F5, #A8F0BC, #FFE9A3);
+          background-size: 300% 100%;
+          -webkit-background-clip: text; background-clip: text;
+          -webkit-text-fill-color: transparent; color: transparent;
+          animation: sheenTextFlow 5.5s linear infinite;
+          filter: drop-shadow(0 0 6px rgba(255,233,163,0.35));
+        }
+        .horo-share u { font-size: 11px; text-decoration: none; opacity: 0.85; }
+        .horo-share-wrap {
+          position: relative; z-index: 1; flex: 0 0 auto;
+          display: flex; flex-direction: column; align-items: flex-end; gap: 1px;
+        }
+        /* 帯の確率は補助なので、占有率よりずっと小さく置く */
+        .horo-share-odds { font-size: 8.5px; color: var(--muted); letter-spacing: 0.02em; white-space: nowrap; }
+        /* --- ホロスコープの象意 --- */
+        .house-guide { width: 100%; max-width: 340px; margin: 4px auto 2px; }
+        .house-guide-head {
+          display: flex; align-items: center; gap: 7px; width: 100%;
+          padding: 8px 10px; cursor: pointer;
+          font-family: inherit; font-size: 11.5px; letter-spacing: 0.06em; text-align: left;
+          border: 1px solid rgba(201,162,75,0.24); border-radius: 8px;
+          background: rgba(255,255,255,0.03); color: var(--gold-soft);
+          -webkit-tap-highlight-color: rgba(201,162,75,0.25);
+        }
+        @media (hover: hover) { .house-guide-head:hover { background: rgba(201,162,75,0.08); } }
+        .house-guide-head.open { border-radius: 8px 8px 0 0; border-bottom-color: transparent; }
+        .house-guide-caret { font-size: 10px; }
+        .house-guide-body {
+          padding: 12px; border: 1px solid rgba(201,162,75,0.24); border-top: none;
+          border-radius: 0 0 8px 8px; background: rgba(255,255,255,0.02);
+        }
+        .house-guide-soon { margin: 0 0 10px; font-size: 10.5px; color: var(--muted); line-height: 1.9; }
+        .house-guide-list { list-style: none; margin: 0; padding: 0; display: grid; gap: 4px; }
+        .house-guide-list li { display: flex; gap: 8px; align-items: baseline; font-size: 11px; padding: 3px 0; }
+        .house-guide-list b { display: block; font-weight: 400; color: var(--parchment); letter-spacing: 0.06em; }
+        /* キーワードは本文より一段落とす。名前と並列に見えると、どちらが位置名か分からない */
+        .hex-stage-house {
+          display: block; font-style: normal; font-size: 9px; line-height: 1.7;
+          color: var(--muted); margin-top: 3px; letter-spacing: 0.02em;
+        }
+        .house-guide-list i {
+          display: block; font-style: normal; font-size: 10px; line-height: 1.75;
+          color: var(--muted); margin-top: 1px;
+        }
+        .house-guide-list em {
+          flex: 0 0 1.6em; text-align: right; font-style: normal;
+          font-family: 'Cinzel', serif; font-size: 10px; color: var(--gold-soft);
+        }
+        .house-guide-list span { color: var(--parchment); }
+        /* --- 流派の切り替え --- */
+        .school-tabs { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; margin-bottom: 14px; }
+        .school-tab {
+          padding: 10px 8px; border-radius: 10px; cursor: pointer;
+          font-family: inherit; text-align: center;
+          border: 1px solid rgba(201,162,75,0.24);
+          background: rgba(255,255,255,0.03); color: var(--muted);
+          -webkit-tap-highlight-color: rgba(201,162,75,0.25);
+          transition: background .18s, border-color .18s, color .18s;
+        }
+        @media (hover: hover) { .school-tab:not(.on):hover { background: rgba(201,162,75,0.08); } }
+        /* 選んでいる側だけ金にする。今どちらにいるかが色で分かる */
+        .school-tab.on {
+          border-color: var(--gold); background: rgba(201,162,75,0.14); color: var(--parchment);
+        }
+        .school-name {
+          display: block; font-family: 'Shippori Mincho', serif;
+          font-size: 13px; letter-spacing: 0.10em; margin-bottom: 3px;
+        }
+        .school-tab.on .school-name { color: var(--gold-soft); }
+        .school-note { display: block; font-size: 9.5px; line-height: 1.6; opacity: 0.85; }
+        .school-soon {
+          padding: 18px 16px; border-radius: 12px; margin-bottom: 12px;
+          border: 1px dashed rgba(201,162,75,0.30); background: rgba(255,255,255,0.03);
+        }
+        .school-soon-title {
+          margin: 0 0 8px; font-family: 'Shippori Mincho', serif;
+          font-size: 13px; letter-spacing: 0.08em; color: var(--gold-soft); text-align: center;
+        }
+        .school-soon-body { margin: 0; font-size: 11px; line-height: 2.0; color: var(--muted); white-space: pre-line; }
         /* --- 欠片の交換 --- */
         .shard-intro { font-size: 11.5px; line-height: 1.9; color: var(--muted); margin: 0 0 14px; }
         .shard-row {
@@ -18033,6 +18769,7 @@ export default function TarotDraw() {
           .nav-tab, .nav-tab-icon { transition: none !important; }
           .nav-tab:hover .nav-tab-icon, .nav-tab:active .nav-tab-icon { transform: none !important; }
           .lang-chip { transition: none !important; }
+          .horo-share { animation: none !important; }
           .reload-btn { transition: none !important; }
           .rare-card, .rare-card::after, .rare-card::before,
           .rare-frame, .rare-mist::after, .rare-text, .holo-edge { animation: none !important; }
