@@ -2829,7 +2829,7 @@ const SPREADS = {
   },
   /*
     生命の樹。10枚。
-    カバラのセフィロトの配置。三本の柱（左＝峻厳、中央＝均衡、右＝慈悲）と
+    カバラのセフィロトの配置。三本の柱（左＝冷酷、中央＝均衡、右＝慈悲）と
     上から下への流れを持つ。この配置は縦に長いので、盤面の比率を変える。
   */
   treeOfLife: {
@@ -2927,8 +2927,8 @@ const SPREAD_I18N = {
     horoscope: { name: "ホロスコープ", desc: "十二の領域と中央の一枚で、現状の人生を見渡す。", pos: ["決断と自分", "財産と五感", "学習と交流", "家庭と基盤", "恋愛と子供", "労働と健康", "関係と契約", "挫折と承継", "挑戦と探究", "天職と地位", "仲間と理想", "因縁と霊性", "現状の人生に対する総合とアドバイス"] },
     simpleCross: { name: "シンプル・クロス", desc: "二枚で状況と障害を、一枚で進む道を見る。", pos: ["現在の状況", "横切るもの", "進むべき道"] },
     greekCross: { name: "ギリシャ十字", desc: "核を中心に、時間と意識の深さを四方から読む。", pos: ["ことの核心", "これまで", "これから", "表に出ている願い", "底にあるもの"] },
-    horseshoe: { name: "ホースシュー", desc: "七枚の弧で、山を越えるまでの流れを追う。", pos: ["過ぎたこと", "いまの状況", "隠れた働き", "立ちはだかるもの", "周りの人", "取るべき道", "行き着く先"] },
-    treeOfLife: { name: "生命の樹", desc: "十のセフィロトで、精神から現実までを縦に貫く。", pos: ["根源の意志", "閃きと拡がり", "形を与える理", "慈しみと恵み", "裁きと律", "調和の中心", "情熱と欲", "知性と伝達", "無意識の土台", "現実の暮らし"] },
+    horseshoe: { name: "ホースシュー", desc: "七枚の弧で、目標へ向かう過程のどこにいるかを見る。", pos: ["これまで積んだもの", "いまの状況", "隠れた働き", "立ちはだかるもの", "周りの人", "取るべき道", "この先に育つもの"] },
+    treeOfLife: { name: "生命の樹", desc: "十のセフィロトで、精神から現実までを縦に貫く。", pos: ["根源の意志", "閃きと拡がり", "形を与える理", "慈しみと恵み", "裁きと冷徹", "調和の中心", "情熱と欲", "知性と伝達", "無意識の土台", "現実の暮らし"] },
   },
   en: {
     oneOracle: { name: "One Oracle", desc: "The simplest reading: a single Major Arcana card.", pos: ["What Is Shown"] },
@@ -2942,7 +2942,7 @@ const SPREAD_I18N = {
     horoscope: { name: "Horoscope Spread", desc: "Survey your life as it stands across twelve realms and one card at the centre.", pos: ["Decision and Self", "Property and the Senses", "Learning and Exchange", "Home and Foundation", "Love and Children", "Work and Health", "Relations and Contracts", "Setback and Succession", "Challenge and Inquiry", "Vocation and Standing", "Companions and Ideals", "Karma and Spirit", "The Whole and the Counsel for Life as It Stands"] },
     simpleCross: { name: "Simple Cross", desc: "Two cards for the situation and its obstacle, one for the way ahead.", pos: ["The present situation", "What crosses it", "The way to go"] },
     greekCross: { name: "Greek Cross", desc: "A core at the centre, read across time and depth.", pos: ["The heart of it", "What has been", "What is coming", "The wish in the open", "What lies beneath"] },
-    horseshoe: { name: "Horseshoe", desc: "Seven cards in an arc, following the climb and the descent.", pos: ["What has passed", "The present", "Hidden influences", "What stands in the way", "Those around you", "The road to take", "Where it leads"] },
+    horseshoe: { name: "Horseshoe", desc: "Seven cards in an arc, showing where you stand in the process.", pos: ["What you have built", "The present", "Hidden influences", "What stands in the way", "Those around you", "The road to take", "What will grow from here"] },
     treeOfLife: { name: "Tree of Life", desc: "Ten sephirot, from spirit down to daily life.", pos: ["The root will", "Insight and expansion", "The law that gives form", "Mercy and bounty", "Judgement and rigour", "The centre of balance", "Passion and desire", "Intellect and speech", "The ground of the unconscious", "Daily life"] },
   },
   ko: {
@@ -2957,7 +2957,7 @@ const SPREAD_I18N = {
     horoscope: { name: "호로스코프", desc: "열두 영역과 중앙의 한 장으로 지금의 삶을 조망한다.", pos: ["결단과 자신", "재산과 오감", "학습과 교류", "가정과 기반", "연애와 자녀", "노동과 건강", "관계와 계약", "좌절과 승계", "도전과 탐구", "천직과 지위", "동료와 이상", "인연과 영성", "지금의 삶에 대한 총합과 조언"] },
     simpleCross: { name: "심플 크로스", desc: "두 장으로 상황과 장애를, 한 장으로 나아갈 길을 봅니다.", pos: ["현재의 상황", "가로막는 것", "나아갈 길"] },
     greekCross: { name: "그리스 십자", desc: "핵을 중심으로 시간과 의식의 깊이를 읽습니다.", pos: ["일의 핵심", "지나온 것", "다가올 것", "드러난 바람", "밑바닥에 있는 것"] },
-    horseshoe: { name: "호스슈", desc: "일곱 장의 호로 고비를 넘는 흐름을 좇습니다.", pos: ["지나간 일", "지금의 상황", "숨은 영향", "가로막는 것", "주변 사람", "택할 길", "도달할 곳"] },
+    horseshoe: { name: "호스슈", desc: "일곱 장의 호로 목표를 향한 과정의 어디에 있는지 봅니다.", pos: ["지금까지 쌓은 것", "지금의 상황", "숨은 영향", "가로막는 것", "주변 사람", "택할 길", "앞으로 자라날 것"] },
     treeOfLife: { name: "생명의 나무", desc: "열 개의 세피로트로 정신에서 현실까지를 꿰뚫습니다.", pos: ["근원의 의지", "섬광과 확장", "형태를 주는 이치", "자애와 은혜", "심판과 규율", "조화의 중심", "정열과 욕망", "지성과 전달", "무의식의 토대", "현실의 삶"] },
   },
   "zh-TW": {
@@ -2972,7 +2972,7 @@ const SPREAD_I18N = {
     horoscope: { name: "占星盤", desc: "以十二領域與中央一張，綜觀當下的人生。", pos: ["決斷與自我", "財產與五感", "學習與交流", "家庭與根基", "戀愛與子女", "勞動與健康", "關係與契約", "挫折與承繼", "挑戰與探究", "天職與地位", "夥伴與理想", "因緣與靈性", "對當下人生的總合與建議"] },
     simpleCross: { name: "簡易十字", desc: "以兩張看處境與阻礙，一張看該走的路。", pos: ["目前的處境", "橫亙其上的", "該走的路"] },
     greekCross: { name: "希臘十字", desc: "以核心為中，從四方讀時間與意識的深淺。", pos: ["事情的核心", "已然過去", "即將到來", "浮於表面的願望", "沉在底下的"] },
-    horseshoe: { name: "馬蹄", desc: "七張成弧，追蹤翻山越嶺的流向。", pos: ["已過去的事", "當前的處境", "潛藏的影響", "橫阻的事物", "周遭的人", "該取的路", "終將抵達"] },
+    horseshoe: { name: "馬蹄", desc: "七張成弧，看您在邁向目標的過程中身處何處。", pos: ["至今累積的", "當前的處境", "潛藏的影響", "橫阻的事物", "周遭的人", "該取的路", "此後將滋長的"] },
     treeOfLife: { name: "生命之樹", desc: "以十個薩弗洛特，自精神貫穿至現實。", pos: ["根源的意志", "靈光與擴展", "賦形之理", "慈愛與恩澤", "裁斷與律則", "調和的中心", "熱情與欲望", "智性與傳達", "潛意識的根基", "現實的生活"] },
   },
   "zh-CN": {
@@ -2987,7 +2987,7 @@ const SPREAD_I18N = {
     horoscope: { name: "占星盘", desc: "以十二领域与中央一张，综观当下的人生。", pos: ["决断与自我", "财产与五感", "学习与交流", "家庭与根基", "恋爱与子女", "劳动与健康", "关系与契约", "挫折与承继", "挑战与探究", "天职与地位", "伙伴与理想", "因缘与灵性", "对当下人生的总合与建议"] },
     simpleCross: { name: "简易十字", desc: "以两张看处境与阻碍，一张看该走的路。", pos: ["目前的处境", "横亘其上的", "该走的路"] },
     greekCross: { name: "希腊十字", desc: "以核心为中，从四方读时间与意识的深浅。", pos: ["事情的核心", "已然过去", "即将到来", "浮于表面的愿望", "沉在底下的"] },
-    horseshoe: { name: "马蹄", desc: "七张成弧，追踪翻山越岭的流向。", pos: ["已过去的事", "当前的处境", "潜藏的影响", "横阻的事物", "周遭的人", "该取的路", "终将抵达"] },
+    horseshoe: { name: "马蹄", desc: "七张成弧，看您在迈向目标的过程中身处何处。", pos: ["至今累积的", "当前的处境", "潜藏的影响", "横阻的事物", "周遭的人", "该取的路", "此后将滋长的"] },
     treeOfLife: { name: "生命之树", desc: "以十个萨弗洛特，自精神贯穿至现实。", pos: ["根源的意志", "灵光与扩展", "赋形之理", "慈爱与恩泽", "裁断与律则", "调和的中心", "热情与欲望", "智性与传达", "潜意识的根基", "现实的生活"] },
   },
   th: {
@@ -3002,7 +3002,7 @@ const SPREAD_I18N = {
     horoscope: { name: "ดวงชะตาสิบสองเรือน", desc: "มองภาพรวมชีวิตในปัจจุบันผ่านสิบสองขอบเขตและไพ่ใบกลาง", pos: ["การตัดสินใจและตัวตน", "ทรัพย์สินและผัสสะ", "การเรียนรู้และการแลกเปลี่ยน", "บ้านและรากฐาน", "ความรักและบุตร", "การงานและสุขภาพ", "ความสัมพันธ์และสัญญา", "ความพ่ายแพ้และการสืบทอด", "การท้าทายและการค้นหา", "อาชีพและสถานะ", "มิตรสหายและอุดมคติ", "กรรมและจิตวิญญาณ", "ภาพรวมและคำแนะนำต่อชีวิตปัจจุบัน"] },
     simpleCross: { name: "ไม้กางเขนอย่างง่าย", desc: "สองใบสำหรับสถานการณ์และอุปสรรค หนึ่งใบสำหรับทางที่ควรไป", pos: ["สถานการณ์ปัจจุบัน", "สิ่งที่ขวางอยู่", "ทางที่ควรไป"] },
     greekCross: { name: "ไม้กางเขนกรีก", desc: "แก่นอยู่ตรงกลาง อ่านทั้งเวลาและความลึก", pos: ["แก่นของเรื่อง", "สิ่งที่ผ่านมา", "สิ่งที่กำลังมา", "ความปรารถนาที่เปิดเผย", "สิ่งที่อยู่เบื้องล่าง"] },
-    horseshoe: { name: "เกือกม้า", desc: "ไพ่เจ็ดใบเป็นโค้ง ติดตามการข้ามผ่าน", pos: ["สิ่งที่ผ่านไป", "สถานการณ์ตอนนี้", "อิทธิพลที่ซ่อนอยู่", "สิ่งที่ขวางกั้น", "ผู้คนรอบตัว", "ทางที่ควรเลือก", "ปลายทาง"] },
+    horseshoe: { name: "เกือกม้า", desc: "ไพ่เจ็ดใบเป็นโค้ง ดูว่าคุณอยู่ตรงไหนของกระบวนการ", pos: ["สิ่งที่สั่งสมมา", "สถานการณ์ตอนนี้", "อิทธิพลที่ซ่อนอยู่", "สิ่งที่ขวางกั้น", "ผู้คนรอบตัว", "ทางที่ควรเลือก", "สิ่งที่จะเติบโตต่อจากนี้"] },
     treeOfLife: { name: "ต้นไม้แห่งชีวิต", desc: "สิบเซฟิรอท จากจิตวิญญาณสู่ชีวิตประจำวัน", pos: ["เจตจำนงต้นกำเนิด", "ประกายและการขยาย", "กฎที่ให้รูปทรง", "ความเมตตาและพร", "การตัดสินและวินัย", "ศูนย์กลางแห่งสมดุล", "ความเร่าร้อนและปรารถนา", "ปัญญาและการสื่อสาร", "รากฐานของจิตใต้สำนึก", "ชีวิตประจำวัน"] },
   },
   tl: {
@@ -3017,7 +3017,7 @@ const SPREAD_I18N = {
     horoscope: { name: "Horoscope Spread", desc: "Tanawin ang buhay sa kasalukuyan sa labindalawang larangan at isang baraha sa gitna.", pos: ["Pasya at Sarili", "Ari-arian at Pandama", "Pag-aaral at Palitan", "Tahanan at Pundasyon", "Pag-ibig at mga Anak", "Paggawa at Kalusugan", "Ugnayan at Kontrata", "Pagkabigo at Pagmana", "Hamon at Pagsisiyasat", "Bokasyon at Katayuan", "Kasama at Mithiin", "Karma at Espiritu", "Kabuuan at Payo para sa Buhay Ngayon"] },
     simpleCross: { name: "Simpleng Krus", desc: "Dalawang baraha para sa sitwasyon at hadlang, isa para sa daan.", pos: ["Ang kasalukuyang sitwasyon", "Ang tumatawid dito", "Ang daang tatahakin"] },
     greekCross: { name: "Krus na Griyego", desc: "Isang ubod sa gitna, binabasa sa panahon at lalim.", pos: ["Ang ubod nito", "Ang nakaraan", "Ang paparating", "Ang hayag na hangarin", "Ang nasa ilalim"] },
-    horseshoe: { name: "Bakal ng Kabayo", desc: "Pitong baraha sa arko, sinusundan ang akyat at baba.", pos: ["Ang lumipas", "Ang kasalukuyan", "Nakatagong impluwensya", "Ang humahadlang", "Ang mga nakapaligid", "Ang daang tatahakin", "Kung saan patungo"] },
+    horseshoe: { name: "Bakal ng Kabayo", desc: "Pitong baraha sa arko, ipinapakita kung nasaan ka sa proseso.", pos: ["Ang naitayo mo", "Ang kasalukuyan", "Nakatagong impluwensya", "Ang humahadlang", "Ang mga nakapaligid", "Ang daang tatahakin", "Ang lalago mula rito"] },
     treeOfLife: { name: "Puno ng Buhay", desc: "Sampung sephirot, mula espiritu hanggang araw-araw.", pos: ["Ang ugat na kalooban", "Kislap at paglawak", "Ang batas na nagbibigay-anyo", "Awa at biyaya", "Paghatol at higpit", "Sentro ng balanse", "Silakbo at pagnanasa", "Talino at pagsasalita", "Saligan ng malay-tao", "Ang pang-araw-araw"] },
   },
   id: {
@@ -3032,7 +3032,7 @@ const SPREAD_I18N = {
     horoscope: { name: "Horoskop", desc: "Menyurvei hidup Anda saat ini lewat dua belas wilayah dan satu kartu di pusat.", pos: ["Keputusan dan Diri", "Harta dan Pancaindra", "Belajar dan Bertukar", "Rumah dan Fondasi", "Cinta dan Anak", "Kerja dan Kesehatan", "Relasi dan Kontrak", "Kegagalan dan Warisan", "Tantangan dan Penyelidikan", "Panggilan dan Kedudukan", "Kawan dan Cita-cita", "Karma dan Rohani", "Keseluruhan dan Nasihat untuk Hidup Saat Ini"] },
     simpleCross: { name: "Salib Sederhana", desc: "Dua kartu untuk keadaan dan halangan, satu untuk jalan ke depan.", pos: ["Keadaan sekarang", "Yang melintanginya", "Jalan yang ditempuh"] },
     greekCross: { name: "Salib Yunani", desc: "Inti di tengah, dibaca lewat waktu dan kedalaman.", pos: ["Inti persoalan", "Yang telah lalu", "Yang akan datang", "Keinginan yang tampak", "Yang ada di dasar"] },
-    horseshoe: { name: "Tapal Kuda", desc: "Tujuh kartu melengkung, mengikuti pendakian dan penurunan.", pos: ["Yang telah berlalu", "Keadaan kini", "Pengaruh tersembunyi", "Yang menghadang", "Orang di sekitar", "Jalan yang diambil", "Tempat berakhirnya"] },
+    horseshoe: { name: "Tapal Kuda", desc: "Tujuh kartu melengkung, melihat di mana Anda dalam prosesnya.", pos: ["Yang telah Anda bangun", "Keadaan kini", "Pengaruh tersembunyi", "Yang menghadang", "Orang di sekitar", "Jalan yang diambil", "Yang akan tumbuh dari sini"] },
     treeOfLife: { name: "Pohon Kehidupan", desc: "Sepuluh sefirot, dari roh hingga kehidupan sehari-hari.", pos: ["Kehendak asal", "Kilasan dan perluasan", "Hukum yang memberi bentuk", "Belas kasih dan berkah", "Penghakiman dan disiplin", "Pusat keseimbangan", "Gairah dan hasrat", "Nalar dan tutur", "Landasan bawah sadar", "Kehidupan sehari-hari"] },
   },
   ms: {
@@ -3047,7 +3047,7 @@ const SPREAD_I18N = {
     horoscope: { name: "Horoskop", desc: "Meninjau hidup anda kini melalui dua belas wilayah dan satu kad di tengah.", pos: ["Keputusan dan Diri", "Harta dan Pancaindera", "Belajar dan Bertukar", "Rumah dan Asas", "Cinta dan Anak", "Kerja dan Kesihatan", "Hubungan dan Kontrak", "Kegagalan dan Warisan", "Cabaran dan Penyelidikan", "Panggilan dan Kedudukan", "Rakan dan Cita-cita", "Karma dan Rohani", "Keseluruhan dan Nasihat untuk Hidup Kini"] },
     simpleCross: { name: "Salib Ringkas", desc: "Dua kad untuk keadaan dan halangan, satu untuk jalan ke hadapan.", pos: ["Keadaan sekarang", "Yang melintanginya", "Jalan yang ditempuh"] },
     greekCross: { name: "Salib Yunani", desc: "Inti di tengah, dibaca melalui masa dan kedalaman.", pos: ["Inti persoalan", "Yang telah lalu", "Yang akan datang", "Keinginan yang nyata", "Yang di dasar"] },
-    horseshoe: { name: "Ladam Kuda", desc: "Tujuh kad melengkung, mengikuti pendakian dan penurunan.", pos: ["Yang telah berlalu", "Keadaan kini", "Pengaruh tersembunyi", "Yang menghalang", "Orang di sekeliling", "Jalan yang diambil", "Tempat berakhirnya"] },
+    horseshoe: { name: "Ladam Kuda", desc: "Tujuh kad melengkung, melihat di mana anda dalam prosesnya.", pos: ["Yang telah anda bina", "Keadaan kini", "Pengaruh tersembunyi", "Yang menghalang", "Orang di sekeliling", "Jalan yang diambil", "Yang akan tumbuh dari sini"] },
     treeOfLife: { name: "Pokok Kehidupan", desc: "Sepuluh sefirot, dari roh hingga kehidupan seharian.", pos: ["Kehendak asal", "Kilauan dan perluasan", "Hukum yang memberi bentuk", "Belas kasihan dan rahmat", "Penghakiman dan disiplin", "Pusat keseimbangan", "Ghairah dan keinginan", "Akal dan tutur", "Asas bawah sedar", "Kehidupan seharian"] },
   },
   vi: {
@@ -3062,7 +3062,7 @@ const SPREAD_I18N = {
     horoscope: { name: "Vòng Hoàng Đạo", desc: "Nhìn bao quát cuộc sống hiện tại qua mười hai lĩnh vực và lá bài ở trung tâm.", pos: ["Quyết định và Bản thân", "Tài sản và Ngũ giác", "Học tập và Giao lưu", "Gia đình và Nền tảng", "Tình yêu và Con cái", "Lao động và Sức khỏe", "Quan hệ và Hợp đồng", "Thất bại và Kế thừa", "Thử thách và Tìm tòi", "Thiên chức và Địa vị", "Bạn hữu và Lý tưởng", "Nhân duyên và Tâm linh", "Tổng thể và Lời khuyên cho cuộc sống hiện tại"] },
     simpleCross: { name: "Thập giá đơn giản", desc: "Hai lá cho tình thế và trở ngại, một lá cho con đường.", pos: ["Tình thế hiện tại", "Thứ chắn ngang", "Con đường nên đi"] },
     greekCross: { name: "Thập giá Hy Lạp", desc: "Cốt lõi ở giữa, đọc theo thời gian và chiều sâu.", pos: ["Cốt lõi của việc", "Điều đã qua", "Điều sắp tới", "Ước muốn lộ ra", "Thứ nằm dưới đáy"] },
-    horseshoe: { name: "Móng ngựa", desc: "Bảy lá theo hình cung, dõi theo lúc lên và lúc xuống.", pos: ["Điều đã qua", "Tình thế hiện nay", "Ảnh hưởng ẩn giấu", "Thứ cản đường", "Những người xung quanh", "Con đường nên chọn", "Nơi sẽ đến"] },
+    horseshoe: { name: "Móng ngựa", desc: "Bảy lá theo hình cung, xem bạn đang ở đâu trong tiến trình.", pos: ["Điều bạn đã dựng nên", "Tình thế hiện nay", "Ảnh hưởng ẩn giấu", "Thứ cản đường", "Những người xung quanh", "Con đường nên chọn", "Điều sẽ lớn lên từ đây"] },
     treeOfLife: { name: "Cây Sự Sống", desc: "Mười sephirot, từ tinh thần xuống đời sống thường ngày.", pos: ["Ý chí cội nguồn", "Tia sáng và mở rộng", "Lẽ tạo hình", "Từ ái và ân sủng", "Phán xét và kỷ luật", "Trung tâm hài hòa", "Nhiệt huyết và dục vọng", "Trí tuệ và truyền đạt", "Nền của vô thức", "Đời sống thường ngày"] },
   },
 };
@@ -7829,7 +7829,7 @@ function HorseshoePass({ drawn, labels, lang, openedIndices }) {
 /**
  * 【生命の樹】三柱と稲妻
  *
- * この配置は三本の柱を持つ ―― 右が慈悲、左が峻厳、中央が均衡。
+ * この配置は三本の柱を持つ ―― 右が慈悲、左が冷酷、中央が均衡。
  * 柱ごとに重みを足せば、その人の傾きが出る。
  *
  * そして上から下へ稲妻が走る（1→2→3→…→10）。
@@ -7902,6 +7902,101 @@ function TreeLightning({ drawn, lang, openedIndices }) {
   );
 }
 
+/**
+ * 結論。盤面のすぐ下に置く。
+ *
+ * 視覚補完は形を見せるが、「で、何なのか」までは言わない。
+ * 図の読み取り文は図に付随する一言なので、
+ * 札を見終えた人が最初に読む位置には結論を別に置く。
+ *
+ * ⚠️ 断定してよいのは、引いた札から機械的に出る事実だけ。
+ * 「どちらを選べ」「こうなる」は書かない。
+ */
+function SpreadVerdict({ spreadKey, drawn, lang, openedIndices, extra }) {
+  const t = T[lang] || T.ja;
+  const seen = new Set(openedIndices);
+  const has = (...ix) => ix.every((i) => seen.has(i));
+  let title = null, lines = [];
+
+  if (spreadKey === "simpleCross" && has(0, 1)) {
+    const a = drawn[0], b = drawn[1];
+    const vy = cardPower(a) * (isGoodOrientation(a, a.reversed) ? 1 : -1);
+    const vx = cardPower(b) * (isGoodOrientation(b, b.reversed) ? 1 : -1);
+    const deg = ((Math.atan2(vy, vx) * 180) / Math.PI + 360) % 360;
+    const dir = deg < 45 || deg >= 315 ? 0 : deg < 135 ? 1 : deg < 225 ? 2 : 3;
+    const strong = Math.hypot(vx, vy) / Math.SQRT2 > 0.55;
+    title = t.verdictTitle;
+    lines = [t.crossVerdict[dir], strong ? t.crossVerdictStrong : t.crossVerdictWeak];
+  }
+
+  if (spreadKey === "greekCross") {
+    const arms = [3, 2, 4, 1]; // 上・右・下・左
+    const open = arms.filter((i) => seen.has(i));
+    if (open.length >= 2) {
+      let top = open[0];
+      open.forEach((i) => { if (cardPower(drawn[i]) > cardPower(drawn[top])) top = i; });
+      const v = open.map((i) => cardPower(drawn[i]));
+      const skew = Math.max(...v) - Math.min(...v);
+      title = t.verdictTitle;
+      lines = [t.greekVerdict[arms.indexOf(top)], skew < 0.3 ? t.greekVerdictEven : t.greekVerdictSkew];
+    }
+  }
+
+  if (spreadKey === "horseshoe" && seen.size) {
+    /*
+      ホースシューは「いつ・どうなる」ではなく、
+      いま過程のどこにいるかを返す。
+      結果を言い切ると現実とすぐ食い違う。
+      峠より手前なら準備、峠なら山場、越えていれば仕上げ。
+    */
+    const idx = [...seen].sort((a, b) => a - b);
+    let peak = idx[0];
+    idx.forEach((i) => { if (cardPower(drawn[i]) > cardPower(drawn[peak])) peak = i; });
+    const last = idx[idx.length - 1];
+    const phase = last < peak ? 0 : last === peak ? 1 : 2;
+    const heavy = cardPower(drawn[peak]) > 0.6;
+    title = t.verdictTitle;
+    lines = [t.hsVerdict[phase], heavy ? t.hsVerdictHeavy : t.hsVerdictLight];
+  }
+
+  if (spreadKey === "treeOfLife" && seen.size >= 3) {
+    const sum = (arr) => arr.filter((i) => seen.has(i)).reduce((a, i) => a + cardPower(drawn[i]), 0);
+    const R = sum(TREE_PILLARS.right), L = sum(TREE_PILLARS.left), M = sum(TREE_PILLARS.middle);
+    const lean = R - L;
+    let top = [...seen][0];
+    seen.forEach((i) => { if (cardPower(drawn[i]) > cardPower(drawn[top])) top = i; });
+    title = t.verdictTitle;
+    lines = [
+      Math.abs(lean) < 0.35 ? t.treeVerdictBalanced : lean > 0 ? t.treeVerdictMercy : t.treeVerdictSeverity,
+      t.treeVerdictNode(extra && extra.labels ? extra.labels[top] : ""),
+    ];
+  }
+
+  if (spreadKey === "choice" && has(1, 2, 3, 4)) {
+    const side = (a, b) =>
+      (choiceOrderValue(drawn[a], drawn[a].reversed) + choiceOrderValue(drawn[b], drawn[b].reversed)) / 2;
+    const va = side(1, 2), vb = side(3, 4);
+    const grade = (v) => (v >= 0.70 ? 0 : v >= 0.40 ? 1 : v >= 0.15 ? 2 : v > -0.15 ? 3 : v > -0.40 ? 4 : v > -0.70 ? 5 : 6);
+    const d = Math.abs(va - vb);
+    const gap = d < 0.15 ? 0 : d < 0.45 ? 1 : d < 0.85 ? 2 : d < 1.30 ? 3 : 4;
+    title = t.verdictTitle;
+    lines = [
+      t.choiceVerdict(extra && extra.a ? extra.a : t.choiceSideA, t.choiceGrade[grade(va)],
+                      extra && extra.b ? extra.b : t.choiceSideB, t.choiceGrade[grade(vb)]),
+      t.choiceGap[gap],
+      t.choiceVerdictNote,
+    ];
+  }
+
+  if (!title || !lines.length) return null;
+  return (
+    <div className="verdict">
+      <div className="verdict-title">{title}</div>
+      {lines.filter(Boolean).map((x, i) => <p key={i}>{x}</p>)}
+    </div>
+  );
+}
+
 function ChoiceAxis({ drawn, labelA, labelB, lang, openedIndices }) {
   const t = T[lang] || T.ja;
   const seen = new Set(openedIndices);
@@ -7913,17 +8008,35 @@ function ChoiceAxis({ drawn, labelA, labelB, lang, openedIndices }) {
   };
   const a = sideOf(1, 2), b = sideOf(3, 4);
   if (a === null && b === null) return null;
-  // -1〜1 を 0〜100% に写す。守る側が左、変える側が右
-  const pos = (v) => ((v + 1) / 2) * 100;
+  /*
+    -1〜1 を 0〜100% に写す。
+
+    ⚠️ 帯は左が秩序、右が混沌。値は 秩序が正（+1）なので、
+    そのまま (v+1)/2 とすると秩序の札が右へ行き、
+    「秩序寄りの道」が混沌の側に立つ。符号を反転させること。
+  */
+  const pos = (v) => ((1 - v) / 2) * 100;
   /*
     道の性質を五段に分ける。
     境界は等間隔ではなく、中央（どちらにも寄らない）をやや広く取る ――
     二枚の平均なので値が中心へ寄りやすく、
     等間隔だと「どちらでもない」が出すぎる。
   */
-  const kindOf = (v) => (v >= 0.55 ? 0 : v >= 0.18 ? 1 : v > -0.18 ? 2 : v > -0.55 ? 3 : 4);
-  // 三区分。中庸の幅は kindOf の中央と同じ（-0.18〜0.18）
-  const zoneOf = (v) => (v >= 0.18 ? "law" : v <= -0.18 ? "chaos" : "neutral");
+  /*
+    七段に分ける。
+    三区分（秩序・中庸・混沌）だけだと、
+    「秩序寄り」の中に強弱の差があることが読めなかった。
+    帯の上の位置は連続だが、言葉は段で渡すほうが伝わる。
+
+      +0.70〜  強い秩序     -0.15〜-0.40  やや混沌
+      +0.40〜  秩序         -0.40〜-0.70  混沌
+      +0.15〜  やや秩序     -0.70〜       強い混沌
+      -0.15〜+0.15  中庸
+  */
+  const gradeOf = (v) =>
+    v >= 0.70 ? 0 : v >= 0.40 ? 1 : v >= 0.15 ? 2 : v > -0.15 ? 3 : v > -0.40 ? 4 : v > -0.70 ? 5 : 6;
+  // 三区分。中庸の幅は七段の中央と同じ（-0.15〜0.15）
+  const zoneOf = (v) => (v >= 0.15 ? "law" : v <= -0.15 ? "chaos" : "neutral");
   const rows = [
     { v: a, label: labelA || t.choiceSideA, cls: "a" },
     { v: b, label: labelB || t.choiceSideB, cls: "b" },
@@ -7947,10 +8060,9 @@ function ChoiceAxis({ drawn, labelA, labelB, lang, openedIndices }) {
           <div className="choice-axis-row">
             <span className={`choice-axis-name ${r.cls}`}>{r.label}</span>
             {/* どの区分に入ったかを語で出す。位置だけでは名前が分からない */}
+            {/* 七段の呼び名。三区分だけでは強弱が読めない */}
             {r.v !== null && (
-              <span className={`choice-zone-tag ${zoneOf(r.v)}`}>
-                {zoneOf(r.v) === "law" ? t.choiceLaw : zoneOf(r.v) === "chaos" ? t.choiceChaos : t.choiceNeutral}
-              </span>
+              <span className={`choice-zone-tag ${zoneOf(r.v)}`}>{t.choiceGrade[gradeOf(r.v)]}</span>
             )}
             <div className="choice-axis-track">
               {/* 中庸の帯。目盛りの区分と同じ幅（-0.18〜0.18 → 41%〜59%） */}
@@ -7967,7 +8079,7 @@ function ChoiceAxis({ drawn, labelA, labelB, lang, openedIndices }) {
             五段に分けて、得るものと手放すものを対で述べる。
           */}
           {r.v !== null && (
-            <p className={`choice-axis-kind ${r.cls}`}>{t.choiceKind[kindOf(r.v)]}</p>
+            <p className={`choice-axis-kind ${r.cls}`}>{t.choiceKind[gradeOf(r.v)]}</p>
           )}
         </div>
       ))}
@@ -7977,9 +8089,12 @@ function ChoiceAxis({ drawn, labelA, labelB, lang, openedIndices }) {
       */}
       {a !== null && b !== null && (
         <p className="choice-axis-read">
-          {Math.abs(a - b) < 0.3 ? t.choiceAxisNear
-            : Math.abs(a - b) < 0.9 ? t.choiceAxisSome
-            : t.choiceAxisFar}
+          {(() => {
+            // 二本の隔たりも五段に。近い／違う の二値では差が伝わらない
+            const d = Math.abs(a - b);
+            const k = d < 0.15 ? 0 : d < 0.45 ? 1 : d < 0.85 ? 2 : d < 1.30 ? 3 : 4;
+            return t.choiceGap[k];
+          })()}
         </p>
       )}
     </div>
@@ -9746,6 +9861,8 @@ function HexagramPanel({ lang, onBack, question, userName, canDraw, onConsume, o
               : isCeltic
                 ? (celticAsk.trim() ? `相談者が意味を知りたいと書いたこと:「${celticAsk.trim()}」\n` : "")
                   + "これはケルト十字です。十枚それぞれの位置の意味を踏まえ、現状・障害・意識と無意識・時間の流れ・周囲・結末を一つの筋として読んでください。\n\n"
+                : isHorseshoe
+                  ? `これは七枚の弧で、目標へ向かう過程のどこにいるかを読む配置です。${choiceA ? `目標は「${choiceA}」。` : ""}${choiceB ? `いま取り組んでいるのは「${choiceB}」。` : ""}\n\n⚠️ いつ叶うか、叶うかどうかは断定しないでください。示すのは、いまが準備の時なのか、山場なのか、仕上げの時なのか ―― 過程のどの段にいて、そこで何が効くかです。\n\n`
                 : isChoice
                   ? `これは二つの道を並べて比べる配置です。1枚目が現在の状況、2〜3枚目がAの道とその結果、4〜5枚目がBの道とその結果です。${choiceA ? `Aは「${choiceA}」。` : ""}${choiceB ? `Bは「${choiceB}」。` : ""}\n\n⚠️ どちらを選ぶべきかは断定しないでください。それぞれの道がどんな性質を持ち、何を得て何を手放すことになるかを示し、選ぶのは相談者だという立場を保ってください。\n\n`
                 : isHoro
@@ -9848,6 +9965,27 @@ function HexagramPanel({ lang, onBack, question, userName, canDraw, onConsume, o
                 className="hex-input" type="text" maxLength={40}
                 value={choiceB} onChange={(e) => setChoiceB(e.target.value)}
               />
+              <p className="hex-fields-note">
+                <NoteLines text={aiEnabled ? t.choiceNoteAi : t.choiceNote} />
+              </p>
+            </div>
+          )}
+          {/*
+            ホースシューの入力欄。
+            この配置は「いつ・どうなる」ではなく過程を読むものなので、
+            目標と、いまやっていることを先に置いてもらう。
+            そこが空だと、過程のどこにいるかを言いようがない。
+          */}
+          {isHorseshoe && (
+            <div className="hex-fields">
+              <label className="hex-field-label">{t.hsGoalLabel}</label>
+              <p className="hex-fields-example">{t.hsGoalExample}</p>
+              <input className="hex-input" type="text" maxLength={40}
+                value={choiceA} onChange={(e) => setChoiceA(e.target.value)} />
+              <label className="hex-field-label" style={{ marginTop: "10px" }}>{t.hsMeansLabel}</label>
+              <p className="hex-fields-example">{t.hsMeansExample}</p>
+              <input className="hex-input" type="text" maxLength={40}
+                value={choiceB} onChange={(e) => setChoiceB(e.target.value)} />
               <p className="hex-fields-note">
                 <NoteLines text={aiEnabled ? t.choiceNoteAi : t.choiceNote} />
               </p>
@@ -10319,6 +10457,44 @@ function HexagramPanel({ lang, onBack, question, userName, canDraw, onConsume, o
             長いので既定は閉じる。開いたままにすると盤面が押し下げられ、
             札を見ながら読めなくなる。
           */}
+          {/*
+            ⑤ 読み方の説明。どの配置にも置く。
+            一括開封の直下、結論より前 ―― 図を見る前に
+            「何をどう読むのか」を知っておけるようにする。
+            既定は閉じる。開いたままだと盤面が押し下げられる。
+
+            ホロスコープだけは十二の象意という固有の中身があるので、
+            そちらは従来どおり別に持つ。
+          */}
+          {!isHoro && (
+            <div className="house-guide">
+              <button
+                type="button"
+                className={`house-guide-head${houseGuideOpen ? " open" : ""}`}
+                onClick={() => setHouseGuideOpen((v) => !v)}
+                aria-expanded={houseGuideOpen}
+              >
+                <span className="house-guide-caret" aria-hidden="true">{houseGuideOpen ? "\u25BE" : "\u25B8"}</span>
+                {t.readGuideTitle}
+              </button>
+              {houseGuideOpen && (
+                <div className="house-guide-body">
+                  {/* 配置ごとの読み方。用意していない言語では位置の一覧だけを出す */}
+                  {t.readGuide && t.readGuide[spreadKey] && (
+                    <p className="house-guide-soon" style={{ whiteSpace: "pre-line" }}>
+                      {t.readGuide[spreadKey]}
+                    </p>
+                  )}
+                  <ol className="house-guide-list">
+                    {info.pos.map((label, i) => (
+                      <li key={i}><em>{i + 1}</em><span><b>{label}</b></span></li>
+                    ))}
+                  </ol>
+                </div>
+              )}
+            </div>
+          )}
+
           {isHoro && (
             <div className="house-guide">
               <button
@@ -10439,6 +10615,18 @@ function HexagramPanel({ lang, onBack, question, userName, canDraw, onConsume, o
           */}
           {isWeekly && stage > 0 && (
             <WeekRhythm drawn={drawn} lang={lang} labels={info.pos} openedCount={openedIndices.length} />
+          )}
+
+          {/*
+            結論。盤面の直下、視覚補完より前に置く。
+            図を読む前に「で、何なのか」が分かるようにする。
+          */}
+          {stage > 0 && (
+            <SpreadVerdict
+              spreadKey={spreadKey} drawn={drawn} lang={lang}
+              openedIndices={openedIndices}
+              extra={{ labels: info.pos, a: choiceA, b: choiceB }}
+            />
           )}
 
           {/* シンプル・クロスは合力の矢。直交する二枚を一本にまとめる */}
@@ -13115,6 +13303,8 @@ const T = {
     horoStageTitle: {"angles": "네 개의 축", "ground": "소유와 배움", "inner": "창조와 일상", "others": "관계와 탐구", "beyond": "인연과 그 안쪽", "center": "중앙의 한 장"},
     horoNext: {"angles": "먼저 인생의 골격을 봅시다", "ground": "다음으로 발밑을 봅시다", "inner": "이어서 나날의 영역을", "others": "그리고 타인과의 사이를", "beyond": "마지막으로 가장 깊은 곳을", "center": "마지막으로 전체를 묶는 한 장을"},
     houseGuideTitle: "십이 하우스와 중앙 한 장의 상의",
+    readGuideTitle: "읽는 법",
+    readGuide: { hexagram: "Six cards form a hexagram, with a seventh at the centre. It reads the distance between you and another.\nThe affinity gauge below is drawn from the cards on the board and reflects the present moment only.", weekly: "Seven days from the weekday you drew on.\nThe graph below has nine tabs — eight fields and the total. Swipe sideways to change field. The star ranks split the seven days by order; if three or more days tie, they lose the special ranks.", celticCross: "Ten cards light both the conscious and the unconscious. The two at the centre are a pair and always open together.\nOn the plane below, up and down is depth of mind, left and right is time. Each card opened pushes the point once, and the path it leaves is the trail.", simpleCross: "The second card crosses the first. The vertical is the situation, the horizontal is what crosses it.\nThe arrow below is those two forces added together. The third card (the way ahead) sets its colour. The faint dashes are the separate forces.", greekCross: "A core at the centre, time to the sides, depth of mind above and below.\nThe diamond below shows how hard each arm pulls. Even, and the four are in balance; distorted, and something is leaning.", horseshoe: "Seven cards arc up and back down.\nThis spread is not about when a thing will happen, but where you stand in the process. The heaviest card is the pass: gold up to it, blue beyond. The pass moves as you open more.", treeOfLife: "The sephirot of Kabbalah, with three pillars — Coldness on the left, Balance at the centre, Mercy on the right.\nThe lightning below runs from the root (1) down to daily life (10). It is the path this arrangement already carries. The bars beside it weigh each pillar.", choice: "The situation above, roads A and B below.\nOn the gauge, left is Order (building, keeping) and right is Chaos (change, risk). It does not say which is better — only what each road is like. The band at the centre is Neutral." },
     houseGuideSoon: "각 영역의 자세한 해설은 준비 중입니다。지금은 위치의 이름만 표시합니다。",
     horoWheelTitle: "열두 영역의 부풀기",
     horoStrength: "뻗어야 할 강점",
@@ -13150,10 +13340,29 @@ const T = {
     treeBalanced: "세 기둥이 균형을 이룹니다",
     treeMercy: "자비의 기둥으로 기울었습니다",
     treeSeverity: "준엄의 기둥으로 기울었습니다",
-    choiceKind: ["쌓아 올려 지키는 길。확실하지만 걸음은 느립니다", "순서를 지켜 나아가는 길。손이 가지만 무너지지 않습니다", "어느 쪽에도 치우치지 않는 길。상황에 맞춰 정할 수 있습니다", "흐름에 올라타는 길。빠르지만 형태는 정해지지 않습니다", "부수고 다시 만드는 길。얻는 것도 잃는 것도 큽니다"],
-    choiceAxisNear: "두 길의 성질은 비슷합니다",
-    choiceAxisSome: "두 길은 어느 정도 성질이 다릅니다",
-    choiceAxisFar: "두 길은 성질이 크게 다릅니다",
+    choiceGrade: ["강한 질서", "질서", "약한 질서", "중용", "약한 혼돈", "혼돈", "강한 혼돈"],
+    choiceKind: ["지키며 쌓아 올리는 길。느리지만 확실합니다", "쌓아 올려 지키는 길。확실하지만 걸음은 느립니다", "순서를 지켜 나아가는 길。손이 가지만 무너지지 않습니다", "어느 쪽에도 치우치지 않는 길。상황에 맞춰 정할 수 있습니다", "흐름에 올라타는 길。빠르지만 형태는 정해지지 않습니다", "기세로 움직이는 길。얻는 것은 빠르지만 이어질지는 모릅니다", "부수고 다시 만드는 길。얻는 것도 잃는 것도 큽니다"],
+    choiceGap: ["두 길은 거의 같은 성질입니다", "두 길의 성질은 가깝습니다", "두 길은 어느 정도 성질이 다릅니다", "두 길은 성질이 크게 다릅니다", "두 길은 정반대의 성질입니다"],
+    verdictTitle: "결론",
+    crossVerdict: ["앞으로 미는 힘이 앞섭니다。움직인다면 지금입니다", "안으로 향하는 힘이 앞섭니다。먼저 정돈하십시오", "물러나는 힘이 앞섭니다。지킬 때입니다", "밖으로 열리는 힘이 앞섭니다。사람들 앞에 내놓을 때입니다"],
+    crossVerdictStrong: "힘이 뚜렷합니다。망설이지 말고 한 수를 두십시오",
+    crossVerdictWeak: "힘이 약합니다。작게 시험하는 것부터 시작하십시오",
+    greekVerdict: ["드러난 바람이 가장 강하게 나옵니다", "다가올 것이 가장 강하게 나옵니다", "밑바닥에 있는 것이 가장 강하게 나옵니다", "지금까지의 축적이 가장 강하게 나옵니다"],
+    greekVerdictEven: "사방이 균형을 이루니 어디서 시작해도 무너지지 않습니다",
+    greekVerdictSkew: "한쪽으로 치우쳤으니 약한 쪽부터 손대십시오",
+    hsVerdict: ["지금은 준비의 시간입니다。묵묵한 축적이 그대로 효과를 냅니다", "지금이 고비입니다。여기서의 한 수가 앞을 정합니다", "산은 넘었습니다。마무리하고 정착시킬 때입니다"],
+    hsVerdictHeavy: "넘을 산이 무거워 보입니다。힘을 배분하십시오",
+    hsVerdictLight: "넘을 산이 가벼워 보입니다。기세대로 나아가도 됩니다",
+    treeVerdictBalanced: "세 기둥이 균형을 이룹니다。굳이 한쪽으로 기울일 필요는 없습니다",
+    treeVerdictMercy: "자비의 기둥으로 기울었습니다。너무 주고 있지 않은지 보십시오",
+    treeVerdictSeverity: "냉혹의 기둥으로 기울었습니다。엄격함을 늦출 여지가 있습니다",
+    treeVerdictNode: (x) => `지금 가장 강한 것은 「${x}」입니다`,
+    choiceVerdict: (a, ga, b, gb) => `${a}는 ${ga}、${b}는 ${gb}의 길입니다`,
+    choiceVerdictNote: "어느 쪽이 옳은지는 말하지 않습니다。성질을 보고 스스로 고르십시오",
+    hsGoalLabel: "목표（원하는 결과）",
+    hsGoalExample: "예: 자격시험 합격",
+    hsMeansLabel: "수단（지금 하고 있는 것）",
+    hsMeansExample: "예: 매일 아침 1시간 문제 풀이",
     choiceLabelA: "A의 길（선택지 하나）",
     choiceLabelB: "B의 길（또 하나）",
     choiceExampleA: "예: 지금 회사에 남는다",
@@ -13451,6 +13660,8 @@ const T = {
     horoStageTitle: {"angles": "Bốn trục", "ground": "Sở hữu và học hỏi", "inner": "Sáng tạo và thường nhật", "others": "Quan hệ và tìm kiếm", "beyond": "Duyên và chiều sâu", "center": "Lá ở trung tâm"},
     horoNext: {"angles": "Trước hết hãy xem khung của đời", "ground": "Tiếp theo là nền dưới chân", "inner": "Rồi đến những ngày thường", "others": "Và khoảng giữa với người khác", "beyond": "Cuối cùng là nơi sâu nhất", "center": "Cuối cùng, lá gộp lại tất cả"},
     houseGuideTitle: "Ý nghĩa của mười hai cung và lá trung tâm",
+    readGuideTitle: "Cách đọc",
+    readGuide: { hexagram: "Six cards form a hexagram, with a seventh at the centre. It reads the distance between you and another.\nThe affinity gauge below is drawn from the cards on the board and reflects the present moment only.", weekly: "Seven days from the weekday you drew on.\nThe graph below has nine tabs — eight fields and the total. Swipe sideways to change field. The star ranks split the seven days by order; if three or more days tie, they lose the special ranks.", celticCross: "Ten cards light both the conscious and the unconscious. The two at the centre are a pair and always open together.\nOn the plane below, up and down is depth of mind, left and right is time. Each card opened pushes the point once, and the path it leaves is the trail.", simpleCross: "The second card crosses the first. The vertical is the situation, the horizontal is what crosses it.\nThe arrow below is those two forces added together. The third card (the way ahead) sets its colour. The faint dashes are the separate forces.", greekCross: "A core at the centre, time to the sides, depth of mind above and below.\nThe diamond below shows how hard each arm pulls. Even, and the four are in balance; distorted, and something is leaning.", horseshoe: "Seven cards arc up and back down.\nThis spread is not about when a thing will happen, but where you stand in the process. The heaviest card is the pass: gold up to it, blue beyond. The pass moves as you open more.", treeOfLife: "The sephirot of Kabbalah, with three pillars — Coldness on the left, Balance at the centre, Mercy on the right.\nThe lightning below runs from the root (1) down to daily life (10). It is the path this arrangement already carries. The bars beside it weigh each pillar.", choice: "The situation above, roads A and B below.\nOn the gauge, left is Order (building, keeping) and right is Chaos (change, risk). It does not say which is better — only what each road is like. The band at the centre is Neutral." },
     houseGuideSoon: "Phần giải nghĩa chi tiết đang được chuẩn bị. Hiện chỉ hiển thị tên các vị trí.",
     horoWheelTitle: "Độ nở của mười hai lĩnh vực",
     horoStrength: "Điểm mạnh nên phát huy",
@@ -13486,10 +13697,29 @@ const T = {
     treeBalanced: "Ba trụ cân bằng",
     treeMercy: "Nghiêng về Từ ái",
     treeSeverity: "Nghiêng về Nghiêm khắc",
-    choiceKind: ["Con đường tích lũy và gìn giữ。Chắc chắn nhưng chậm", "Con đường theo trình tự。Tốn công nhưng khó đổ vỡ", "Con đường không nghiêng bên nào。Có thể tùy tình huống", "Con đường thuận theo dòng chảy。Nhanh nhưng chưa định hình", "Con đường phá đi làm lại。Được nhiều mà mất cũng nhiều"],
-    choiceAxisNear: "Hai con đường có tính chất gần nhau",
-    choiceAxisSome: "Hai con đường khác nhau phần nào",
-    choiceAxisFar: "Hai con đường khác nhau rõ rệt",
+    choiceGrade: ["Trật tự mạnh", "Trật tự", "Hơi trật tự", "Trung dung", "Hơi hỗn mang", "Hỗn mang", "Hỗn mang mạnh"],
+    choiceKind: ["Con đường giữ gìn và tích lũy. Chậm, nhưng chắc.", "Con đường tích lũy và gìn giữ。Chắc chắn nhưng chậm", "Con đường theo trình tự。Tốn công nhưng khó đổ vỡ", "Con đường không nghiêng bên nào。Có thể tùy tình huống", "Con đường thuận theo dòng chảy。Nhanh nhưng chưa định hình", "Con đường đi bằng đà. Kết quả nhanh; có bền hay không thì chưa rõ.", "Con đường phá đi làm lại。Được nhiều mà mất cũng nhiều"],
+    choiceGap: ["Hai con đường gần như giống nhau", "Hai con đường có tính chất gần nhau", "Hai con đường khác nhau phần nào", "Hai con đường khác nhau rõ rệt", "Hai con đường trái ngược nhau"],
+    verdictTitle: "The conclusion",
+    crossVerdict: ["The force pushing forward prevails. Now is the time to move.", "The force turning inward prevails. Set things in order first.", "The force pulling back prevails. This is a time to hold.", "The force opening outward prevails. Time to put it before others."],
+    crossVerdictStrong: "The force is clear. You can act without hesitating.",
+    crossVerdictWeak: "The force is faint. Begin with a small trial.",
+    greekVerdict: ["The wish in the open shows strongest", "What is coming shows strongest", "What lies beneath shows strongest", "What has been built shows strongest"],
+    greekVerdictEven: "The four are balanced; you can begin anywhere without it collapsing.",
+    greekVerdictSkew: "It leans to one side; start with the weaker side.",
+    hsVerdict: ["This is a time of preparation. Plain, steady work counts now.", "This is the crest. What you do here decides what follows.", "The climb is behind you. Now comes finishing and settling in."],
+    hsVerdictHeavy: "The climb looks heavy. Portion out your strength.",
+    hsVerdictLight: "The climb looks light. You may keep your momentum.",
+    treeVerdictBalanced: "The three pillars are even. There is no need to force a lean.",
+    treeVerdictMercy: "It leans toward Mercy. Watch that you are not giving too much.",
+    treeVerdictSeverity: "It leans toward Coldness. There is room to soften.",
+    treeVerdictNode: (x) => `The strongest right now is \u201c${x}\u201d`,
+    choiceVerdict: (a, ga, b, gb) => `${a} is a road of ${ga}; ${b} is a road of ${gb}`,
+    choiceVerdictNote: "We will not say which is right. Look at the natures and choose for yourself.",
+    hsGoalLabel: "The goal (what you want)",
+    hsGoalExample: "e.g. pass the exam",
+    hsMeansLabel: "The means (what you are doing)",
+    hsMeansExample: "e.g. one hour of practice each morning",
     choiceLabelA: "Đường A（một lựa chọn）",
     choiceLabelB: "Đường B（lựa chọn còn lại）",
     choiceExampleA: "Ví dụ: ở lại công ty hiện tại",
@@ -13785,6 +14015,8 @@ const T = {
     horoStageTitle: {"angles": "Empat poros", "ground": "Milik dan pembelajaran", "inner": "Cipta dan keseharian", "others": "Relasi dan pencarian", "beyond": "Ikatan dan kedalaman", "center": "Kartu di pusat"},
     horoNext: {"angles": "Mula-mula lihat kerangka hidup", "ground": "Berikutnya, pijakan di bawah", "inner": "Lalu wilayah keseharian", "others": "Dan jarak dengan orang lain", "beyond": "Terakhir, tempat terdalam", "center": "Terakhir, kartu yang merangkum semuanya"},
     houseGuideTitle: "Makna dua belas rumah dan kartu pusat",
+    readGuideTitle: "Cara membaca",
+    readGuide: { hexagram: "Six cards form a hexagram, with a seventh at the centre. It reads the distance between you and another.\nThe affinity gauge below is drawn from the cards on the board and reflects the present moment only.", weekly: "Seven days from the weekday you drew on.\nThe graph below has nine tabs — eight fields and the total. Swipe sideways to change field. The star ranks split the seven days by order; if three or more days tie, they lose the special ranks.", celticCross: "Ten cards light both the conscious and the unconscious. The two at the centre are a pair and always open together.\nOn the plane below, up and down is depth of mind, left and right is time. Each card opened pushes the point once, and the path it leaves is the trail.", simpleCross: "The second card crosses the first. The vertical is the situation, the horizontal is what crosses it.\nThe arrow below is those two forces added together. The third card (the way ahead) sets its colour. The faint dashes are the separate forces.", greekCross: "A core at the centre, time to the sides, depth of mind above and below.\nThe diamond below shows how hard each arm pulls. Even, and the four are in balance; distorted, and something is leaning.", horseshoe: "Seven cards arc up and back down.\nThis spread is not about when a thing will happen, but where you stand in the process. The heaviest card is the pass: gold up to it, blue beyond. The pass moves as you open more.", treeOfLife: "The sephirot of Kabbalah, with three pillars — Coldness on the left, Balance at the centre, Mercy on the right.\nThe lightning below runs from the root (1) down to daily life (10). It is the path this arrangement already carries. The bars beside it weigh each pillar.", choice: "The situation above, roads A and B below.\nOn the gauge, left is Order (building, keeping) and right is Chaos (change, risk). It does not say which is better — only what each road is like. The band at the centre is Neutral." },
     houseGuideSoon: "Penjelasan rinci sedang disiapkan. Untuk kini hanya nama posisi yang ditampilkan.",
     horoWheelTitle: "Bentangan dua belas wilayah",
     horoStrength: "Kekuatan untuk dikembangkan",
@@ -13820,10 +14052,29 @@ const T = {
     treeBalanced: "Ketiga pilar seimbang",
     treeMercy: "Condong ke Belas kasih",
     treeSeverity: "Condong ke Ketegasan",
-    choiceKind: ["Jalan menumpuk dan menjaga。Pasti, tetapi lambat", "Jalan yang mengikuti urutan。Merepotkan, tetapi tak mudah runtuh", "Jalan yang tak condong ke mana pun。Bisa ditentukan sesuai keadaan", "Jalan mengikuti arus。Cepat, tetapi bentuknya belum tetap", "Jalan merobohkan dan membangun ulang。Besar untung, besar pula kehilangan"],
-    choiceAxisNear: "Kedua jalan bersifat serupa",
-    choiceAxisSome: "Kedua jalan agak berbeda",
-    choiceAxisFar: "Kedua jalan sangat berbeda",
+    choiceGrade: ["Ketertiban Kuat", "Ketertiban", "Sedikit Tertib", "Netral", "Sedikit Kacau", "Kekacauan", "Kekacauan Kuat"],
+    choiceKind: ["Jalan menjaga dan menumpuk. Lambat, tetapi pasti.", "Jalan menumpuk dan menjaga。Pasti, tetapi lambat", "Jalan yang mengikuti urutan。Merepotkan, tetapi tak mudah runtuh", "Jalan yang tak condong ke mana pun。Bisa ditentukan sesuai keadaan", "Jalan mengikuti arus。Cepat, tetapi bentuknya belum tetap", "Jalan yang digerakkan momentum. Hasil cepat; bertahan atau tidak belum tentu.", "Jalan merobohkan dan membangun ulang。Besar untung, besar pula kehilangan"],
+    choiceGap: ["Kedua jalan hampir sama", "Kedua jalan bersifat serupa", "Kedua jalan agak berbeda", "Kedua jalan sangat berbeda", "Kedua jalan berlawanan sifatnya"],
+    verdictTitle: "The conclusion",
+    crossVerdict: ["The force pushing forward prevails. Now is the time to move.", "The force turning inward prevails. Set things in order first.", "The force pulling back prevails. This is a time to hold.", "The force opening outward prevails. Time to put it before others."],
+    crossVerdictStrong: "The force is clear. You can act without hesitating.",
+    crossVerdictWeak: "The force is faint. Begin with a small trial.",
+    greekVerdict: ["The wish in the open shows strongest", "What is coming shows strongest", "What lies beneath shows strongest", "What has been built shows strongest"],
+    greekVerdictEven: "The four are balanced; you can begin anywhere without it collapsing.",
+    greekVerdictSkew: "It leans to one side; start with the weaker side.",
+    hsVerdict: ["This is a time of preparation. Plain, steady work counts now.", "This is the crest. What you do here decides what follows.", "The climb is behind you. Now comes finishing and settling in."],
+    hsVerdictHeavy: "The climb looks heavy. Portion out your strength.",
+    hsVerdictLight: "The climb looks light. You may keep your momentum.",
+    treeVerdictBalanced: "The three pillars are even. There is no need to force a lean.",
+    treeVerdictMercy: "It leans toward Mercy. Watch that you are not giving too much.",
+    treeVerdictSeverity: "It leans toward Coldness. There is room to soften.",
+    treeVerdictNode: (x) => `The strongest right now is \u201c${x}\u201d`,
+    choiceVerdict: (a, ga, b, gb) => `${a} is a road of ${ga}; ${b} is a road of ${gb}`,
+    choiceVerdictNote: "We will not say which is right. Look at the natures and choose for yourself.",
+    hsGoalLabel: "The goal (what you want)",
+    hsGoalExample: "e.g. pass the exam",
+    hsMeansLabel: "The means (what you are doing)",
+    hsMeansExample: "e.g. one hour of practice each morning",
     choiceLabelA: "Jalan A（satu pilihan）",
     choiceLabelB: "Jalan B（pilihan lainnya）",
     choiceExampleA: "Contoh: bertahan di tempat sekarang",
@@ -14121,6 +14372,8 @@ const T = {
     horoStageTitle: {"angles": "Empat paksi", "ground": "Milik dan pembelajaran", "inner": "Cipta dan keseharian", "others": "Hubungan dan pencarian", "beyond": "Ikatan dan kedalaman", "center": "Kad di tengah"},
     horoNext: {"angles": "Mula-mula lihat rangka hidup", "ground": "Seterusnya, pijakan di bawah", "inner": "Kemudian wilayah harian", "others": "Dan jarak dengan orang lain", "beyond": "Akhirnya, tempat terdalam", "center": "Akhirnya, kad yang merangkum semuanya"},
     houseGuideTitle: "Makna dua belas rumah dan kad tengah",
+    readGuideTitle: "Cara membaca",
+    readGuide: { hexagram: "Six cards form a hexagram, with a seventh at the centre. It reads the distance between you and another.\nThe affinity gauge below is drawn from the cards on the board and reflects the present moment only.", weekly: "Seven days from the weekday you drew on.\nThe graph below has nine tabs — eight fields and the total. Swipe sideways to change field. The star ranks split the seven days by order; if three or more days tie, they lose the special ranks.", celticCross: "Ten cards light both the conscious and the unconscious. The two at the centre are a pair and always open together.\nOn the plane below, up and down is depth of mind, left and right is time. Each card opened pushes the point once, and the path it leaves is the trail.", simpleCross: "The second card crosses the first. The vertical is the situation, the horizontal is what crosses it.\nThe arrow below is those two forces added together. The third card (the way ahead) sets its colour. The faint dashes are the separate forces.", greekCross: "A core at the centre, time to the sides, depth of mind above and below.\nThe diamond below shows how hard each arm pulls. Even, and the four are in balance; distorted, and something is leaning.", horseshoe: "Seven cards arc up and back down.\nThis spread is not about when a thing will happen, but where you stand in the process. The heaviest card is the pass: gold up to it, blue beyond. The pass moves as you open more.", treeOfLife: "The sephirot of Kabbalah, with three pillars — Coldness on the left, Balance at the centre, Mercy on the right.\nThe lightning below runs from the root (1) down to daily life (10). It is the path this arrangement already carries. The bars beside it weigh each pillar.", choice: "The situation above, roads A and B below.\nOn the gauge, left is Order (building, keeping) and right is Chaos (change, risk). It does not say which is better — only what each road is like. The band at the centre is Neutral." },
     houseGuideSoon: "Penjelasan terperinci sedang disediakan. Buat masa ini hanya nama kedudukan dipaparkan.",
     horoWheelTitle: "Bentangan dua belas wilayah",
     horoStrength: "Kekuatan untuk dikembangkan",
@@ -14156,10 +14409,29 @@ const T = {
     treeBalanced: "Ketiga-tiga tiang seimbang",
     treeMercy: "Condong ke Belas kasihan",
     treeSeverity: "Condong ke Ketegasan",
-    choiceKind: ["Jalan mengumpul dan menjaga。Pasti, tetapi perlahan", "Jalan yang menurut aturan。Menyusahkan, tetapi sukar runtuh", "Jalan yang tidak condong ke mana-mana。Boleh ditentukan ikut keadaan", "Jalan mengikut arus。Pantas, tetapi bentuknya belum tetap", "Jalan meruntuh dan membina semula。Besar untung, besar juga kehilangan"],
-    choiceAxisNear: "Kedua-dua jalan bersifat serupa",
-    choiceAxisSome: "Kedua-dua jalan agak berbeza",
-    choiceAxisFar: "Kedua-dua jalan sangat berbeza",
+    choiceGrade: ["Ketertiban Kuat", "Ketertiban", "Sedikit Tertib", "Neutral", "Sedikit Kacau", "Kekacauan", "Kekacauan Kuat"],
+    choiceKind: ["Jalan menjaga dan mengumpul. Perlahan, tetapi pasti.", "Jalan mengumpul dan menjaga。Pasti, tetapi perlahan", "Jalan yang menurut aturan。Menyusahkan, tetapi sukar runtuh", "Jalan yang tidak condong ke mana-mana。Boleh ditentukan ikut keadaan", "Jalan mengikut arus。Pantas, tetapi bentuknya belum tetap", "Jalan yang digerakkan momentum. Hasil pantas; kekal atau tidak belum pasti.", "Jalan meruntuh dan membina semula。Besar untung, besar juga kehilangan"],
+    choiceGap: ["Kedua-dua jalan hampir sama", "Kedua-dua jalan bersifat serupa", "Kedua-dua jalan agak berbeza", "Kedua-dua jalan sangat berbeza", "Kedua-dua jalan bertentangan sifatnya"],
+    verdictTitle: "The conclusion",
+    crossVerdict: ["The force pushing forward prevails. Now is the time to move.", "The force turning inward prevails. Set things in order first.", "The force pulling back prevails. This is a time to hold.", "The force opening outward prevails. Time to put it before others."],
+    crossVerdictStrong: "The force is clear. You can act without hesitating.",
+    crossVerdictWeak: "The force is faint. Begin with a small trial.",
+    greekVerdict: ["The wish in the open shows strongest", "What is coming shows strongest", "What lies beneath shows strongest", "What has been built shows strongest"],
+    greekVerdictEven: "The four are balanced; you can begin anywhere without it collapsing.",
+    greekVerdictSkew: "It leans to one side; start with the weaker side.",
+    hsVerdict: ["This is a time of preparation. Plain, steady work counts now.", "This is the crest. What you do here decides what follows.", "The climb is behind you. Now comes finishing and settling in."],
+    hsVerdictHeavy: "The climb looks heavy. Portion out your strength.",
+    hsVerdictLight: "The climb looks light. You may keep your momentum.",
+    treeVerdictBalanced: "The three pillars are even. There is no need to force a lean.",
+    treeVerdictMercy: "It leans toward Mercy. Watch that you are not giving too much.",
+    treeVerdictSeverity: "It leans toward Coldness. There is room to soften.",
+    treeVerdictNode: (x) => `The strongest right now is \u201c${x}\u201d`,
+    choiceVerdict: (a, ga, b, gb) => `${a} is a road of ${ga}; ${b} is a road of ${gb}`,
+    choiceVerdictNote: "We will not say which is right. Look at the natures and choose for yourself.",
+    hsGoalLabel: "The goal (what you want)",
+    hsGoalExample: "e.g. pass the exam",
+    hsMeansLabel: "The means (what you are doing)",
+    hsMeansExample: "e.g. one hour of practice each morning",
     choiceLabelA: "Jalan A（satu pilihan）",
     choiceLabelB: "Jalan B（pilihan satu lagi）",
     choiceExampleA: "Contoh: kekal di tempat sekarang",
@@ -14458,6 +14730,8 @@ const T = {
     horoStageTitle: {"angles": "四つの軸", "ground": "所有と学び", "inner": "創造と務め", "others": "関わりと探求", "beyond": "縁と、その奥", "center": "中央の一枚"},
     horoNext: {"angles": "まず、人生の骨格を見ましょう", "ground": "次に、足もとを見ましょう", "inner": "続いて、日々の領域を", "others": "そして、他者との間を", "beyond": "最後に、最も深いところを", "center": "最後に、すべてを束ねる一枚を"},
     houseGuideTitle: "十二のハウスと中央の一枚の象意",
+    readGuideTitle: "読み方",
+    readGuide: { hexagram: "六芒星に六枚を置き、七枚目を中央に添えます。相手との距離を読む配置です。\n下の相性ゲージは、盤面の札から出した「今現在の」相性です。恒久的な判定ではありません。", weekly: "引いた日の曜日から七日ぶんを並べます。\n下の起伏グラフは八分野＋総合の九タブ。横に払うと分野が切り替わります。星の段は七日を順位で分けており、同率が三日以上並んだ日は特殊な星の資格を失います。", celticCross: "十枚で顕在意識と潜在意識の両方を照らします。中央の二枚は対なので必ず同時に開きます。\n下の平面は、上下が意識の深さ、左右が時間。開いた札が一枚ずつ点を押し、その跡が軌跡として残ります。動揺／安静は、まっすぐ進んだか行きつ戻りつしたかを示します。", simpleCross: "一枚目に二枚目が十字に重なります。縦が状況、横がそれを横切るもの。\n下の矢は、この直交する二つの力を足した向きです。三枚目（進むべき道）が矢の色を決めます。薄い破線は、それぞれの分力です。", greekCross: "中心を核として、左右に時間、上下に意識の深さを取ります。\n下の菱形は、四本の腕がどれだけ強く引いているかの形です。整っていれば四方が釣り合い、歪んでいればどこかに偏りがあります。中心の丸は核の札です。", horseshoe: "七枚が弧を描き、上って下ります。\nこの配置は「いつ叶うか」ではなく、いま過程のどこにいるかを見るものです。下の図は最も重い札を峠とし、そこまでを金（上り）、その先を青（下り）に塗り分けます。開くたびに峠は動きます。", treeOfLife: "カバラのセフィロトの配置です。三本の柱を持ちます ―― 左が冷酷、中央が均衡、右が慈悲。\n下の稲妻は、根源（1）から現実（10）へ力が降りる順路です。カバラで「稲妻の閃き」と呼ばれるもので、この配置が元から持っています。横の縦棒は三本の柱それぞれの重みです。", choice: "上に現在の状況、下にAとBの二本の道を並べます。\n下のゲージは、左が秩序（積み上げ・維持）、右が混沌（変化・賭け）。どちらが良いかを示すものではなく、道の性質だけを示します。中央の帯は中庸で、どちらにも寄っていない状態です。" },
     houseGuideSoon: "各領域の詳しい解説は準備中です。今は位置の名前だけを表示しています。",
     horoWheelTitle: "十二領域のふくらみ",
     horoStrength: "伸ばすべき長所",
@@ -14487,16 +14761,35 @@ const T = {
     hsPassAt: "いま越えるところです",
     hsPassBefore: "まだこれからです",
     treeVisTitle: "三柱と稲妻",
-    treePillarLeft: "峻厳",
+    treePillarLeft: "冷酷",
     treePillarMid: "均衡",
     treePillarRight: "慈悲",
     treeBalanced: "三本の柱は釣り合っています",
     treeMercy: "慈悲の柱に傾いています",
-    treeSeverity: "峻厳の柱に傾いています",
-    choiceKind: ["積み上げて守る道。確かですが、歩みは遅くなります", "順を踏んで進む道。手間はかかりますが、崩れにくい道です", "どちらにも寄らない道。状況に合わせて決められます", "流れに乗る道。速く進めますが、形は定まりません", "壊して作り直す道。得るものも、手放すものも大きい道です"],
-    choiceAxisNear: "二つの道の性質は近いようです",
-    choiceAxisSome: "二つの道は、いくらか性質が違います",
-    choiceAxisFar: "二つの道は、性質が大きく違います",
+    treeSeverity: "冷酷の柱に傾いています",
+    choiceGrade: ["強い秩序", "秩序", "やや秩序", "中庸", "やや混沌", "混沌", "強い混沌"],
+    choiceKind: ["守りを固めて積み上げる道。動きは遅く、確かです", "積み上げて守る道。確かですが、歩みは遅くなります", "順を踏んで進む道。手間はかかりますが、崩れにくい道です", "どちらにも寄らない道。状況に合わせて決められます", "流れに乗る道。速く進めますが、形は定まりません", "勢いで動く道。得るものは早く、続くかは分かりません", "壊して作り直す道。得るものも、手放すものも大きい道です"],
+    choiceGap: ["二つの道は、ほとんど同じ性質です", "二つの道の性質は近いようです", "二つの道は、いくらか性質が違います", "二つの道は、性質が大きく違います", "二つの道は、正反対の性質です"],
+    verdictTitle: "結論",
+    crossVerdict: ["前へ押し出す力が勝っています。動くなら今です", "内へ向かう力が勝っています。整えることが先です", "退く力が勝っています。守りに回るべき時です", "外へ開く力が勝っています。人に出す時です"],
+    crossVerdictStrong: "力ははっきり出ています。迷わず一手を打てます",
+    crossVerdictWeak: "力は弱めです。小さく試すところから始めなさい",
+    greekVerdict: ["表に出ている願いが最も強く出ています", "これから来るものが最も強く出ています", "底にあるものが最も強く出ています", "これまでの積み重ねが最も強く出ています"],
+    greekVerdictEven: "四方が釣り合っているので、どこから手をつけても崩れません",
+    greekVerdictSkew: "一方に偏っているので、弱い側から先に手を入れなさい",
+    hsVerdict: ["いまは準備の時です。地味な積み上げがそのまま効きます", "いまが山場です。ここでの一手が、この先を決めます", "山は越えました。仕上げと、定着させる作業の時です"],
+    hsVerdictHeavy: "越える山は重いようです。力を配分して臨みなさい",
+    hsVerdictLight: "越える山は軽いようです。勢いのまま進んで構いません",
+    treeVerdictBalanced: "三本の柱は釣り合っています。無理に片方へ寄せる必要はありません",
+    treeVerdictMercy: "慈悲の柱に傾いています。与えすぎていないか見なさい",
+    treeVerdictSeverity: "冷酷の柱に傾いています。厳しさを緩める余地があります",
+    treeVerdictNode: (x) => `いま最も強いのは「${x}」です`,
+    choiceVerdict: (a, ga, b, gb) => `${a}は${ga}、${b}は${gb}の道です`,
+    choiceVerdictNote: "どちらが正しいかは申し上げません。性質を見て、ご自身で選んでください",
+    hsGoalLabel: "目標（ほしい結果）",
+    hsGoalExample: "例：資格に合格する",
+    hsMeansLabel: "手段（今やっていること）",
+    hsMeansExample: "例：毎朝1時間の問題演習",
     choiceLabelA: "Aの道（選択肢のひとつ）",
     choiceLabelB: "Bの道（もうひとつ）",
     choiceExampleA: "例：今の会社に残る",
@@ -14809,6 +15102,8 @@ const T = {
     horoStageTitle: {"angles": "四個軸", "ground": "所有與學習", "inner": "創造與職責", "others": "關係與探求", "beyond": "緣分與其深處", "center": "中央的一張"},
     horoNext: {"angles": "先看人生的骨架", "ground": "接著看腳下的基礎", "inner": "再看日常的領域", "others": "然後是與他人之間", "beyond": "最後看最深之處", "center": "最後，看束起全體的一張"},
     houseGuideTitle: "十二宮與中央一張的象意",
+    readGuideTitle: "讀法",
+    readGuide: { hexagram: "Six cards form a hexagram, with a seventh at the centre. It reads the distance between you and another.\nThe affinity gauge below is drawn from the cards on the board and reflects the present moment only.", weekly: "Seven days from the weekday you drew on.\nThe graph below has nine tabs — eight fields and the total. Swipe sideways to change field. The star ranks split the seven days by order; if three or more days tie, they lose the special ranks.", celticCross: "Ten cards light both the conscious and the unconscious. The two at the centre are a pair and always open together.\nOn the plane below, up and down is depth of mind, left and right is time. Each card opened pushes the point once, and the path it leaves is the trail.", simpleCross: "The second card crosses the first. The vertical is the situation, the horizontal is what crosses it.\nThe arrow below is those two forces added together. The third card (the way ahead) sets its colour. The faint dashes are the separate forces.", greekCross: "A core at the centre, time to the sides, depth of mind above and below.\nThe diamond below shows how hard each arm pulls. Even, and the four are in balance; distorted, and something is leaning.", horseshoe: "Seven cards arc up and back down.\nThis spread is not about when a thing will happen, but where you stand in the process. The heaviest card is the pass: gold up to it, blue beyond. The pass moves as you open more.", treeOfLife: "The sephirot of Kabbalah, with three pillars — Coldness on the left, Balance at the centre, Mercy on the right.\nThe lightning below runs from the root (1) down to daily life (10). It is the path this arrangement already carries. The bars beside it weigh each pillar.", choice: "The situation above, roads A and B below.\nOn the gauge, left is Order (building, keeping) and right is Chaos (change, risk). It does not say which is better — only what each road is like. The band at the centre is Neutral." },
     houseGuideSoon: "各領域的詳細解說準備中。目前僅顯示位置名稱。",
     horoWheelTitle: "十二領域的起伏",
     horoStrength: "應當發揮的長處",
@@ -14844,10 +15139,29 @@ const T = {
     treeBalanced: "三柱保持均衡",
     treeMercy: "偏向慈悲之柱",
     treeSeverity: "偏向嚴峻之柱",
-    choiceKind: ["累積並守成之路。踏實，但步伐緩慢", "循序前進之路。費工夫，卻不易崩塌", "不偏向任一方之路。可依情況決定", "順流而行之路。走得快，但形貌未定", "破而後立之路。所得與所失都大"],
-    choiceAxisNear: "兩條路的性質相近",
-    choiceAxisSome: "兩條路的性質略有不同",
-    choiceAxisFar: "兩條路的性質大不相同",
+    choiceGrade: ["強秩序", "秩序", "略偏秩序", "中庸", "略偏混沌", "混沌", "強混沌"],
+    choiceKind: ["固守而累積之路。緩慢，卻踏實", "累積並守成之路。踏實，但步伐緩慢", "循序前進之路。費工夫，卻不易崩塌", "不偏向任一方之路。可依情況決定", "順流而行之路。走得快，但形貌未定", "乘勢而動之路。得手快，能否延續則未知", "破而後立之路。所得與所失都大"],
+    choiceGap: ["兩條路幾乎相同", "兩條路的性質相近", "兩條路的性質略有不同", "兩條路的性質大不相同", "兩條路的性質恰恰相反"],
+    verdictTitle: "The conclusion",
+    crossVerdict: ["The force pushing forward prevails. Now is the time to move.", "The force turning inward prevails. Set things in order first.", "The force pulling back prevails. This is a time to hold.", "The force opening outward prevails. Time to put it before others."],
+    crossVerdictStrong: "The force is clear. You can act without hesitating.",
+    crossVerdictWeak: "The force is faint. Begin with a small trial.",
+    greekVerdict: ["The wish in the open shows strongest", "What is coming shows strongest", "What lies beneath shows strongest", "What has been built shows strongest"],
+    greekVerdictEven: "The four are balanced; you can begin anywhere without it collapsing.",
+    greekVerdictSkew: "It leans to one side; start with the weaker side.",
+    hsVerdict: ["This is a time of preparation. Plain, steady work counts now.", "This is the crest. What you do here decides what follows.", "The climb is behind you. Now comes finishing and settling in."],
+    hsVerdictHeavy: "The climb looks heavy. Portion out your strength.",
+    hsVerdictLight: "The climb looks light. You may keep your momentum.",
+    treeVerdictBalanced: "The three pillars are even. There is no need to force a lean.",
+    treeVerdictMercy: "It leans toward Mercy. Watch that you are not giving too much.",
+    treeVerdictSeverity: "It leans toward Coldness. There is room to soften.",
+    treeVerdictNode: (x) => `The strongest right now is \u201c${x}\u201d`,
+    choiceVerdict: (a, ga, b, gb) => `${a} is a road of ${ga}; ${b} is a road of ${gb}`,
+    choiceVerdictNote: "We will not say which is right. Look at the natures and choose for yourself.",
+    hsGoalLabel: "The goal (what you want)",
+    hsGoalExample: "e.g. pass the exam",
+    hsMeansLabel: "The means (what you are doing)",
+    hsMeansExample: "e.g. one hour of practice each morning",
     choiceLabelA: "A之路（其中一個選項）",
     choiceLabelB: "B之路（另一個）",
     choiceExampleA: "例：留在現在的公司",
@@ -15145,6 +15459,8 @@ const T = {
     horoStageTitle: {"angles": "四个轴", "ground": "所有与学习", "inner": "创造与职责", "others": "关系与探求", "beyond": "缘分与其深处", "center": "中央的一张"},
     horoNext: {"angles": "先看人生的骨架", "ground": "接着看脚下的基础", "inner": "再看日常的领域", "others": "然后是与他人之间", "beyond": "最后看最深之处", "center": "最后，看束起全体的一张"},
     houseGuideTitle: "十二宫与中央一张的象意",
+    readGuideTitle: "读法",
+    readGuide: { hexagram: "Six cards form a hexagram, with a seventh at the centre. It reads the distance between you and another.\nThe affinity gauge below is drawn from the cards on the board and reflects the present moment only.", weekly: "Seven days from the weekday you drew on.\nThe graph below has nine tabs — eight fields and the total. Swipe sideways to change field. The star ranks split the seven days by order; if three or more days tie, they lose the special ranks.", celticCross: "Ten cards light both the conscious and the unconscious. The two at the centre are a pair and always open together.\nOn the plane below, up and down is depth of mind, left and right is time. Each card opened pushes the point once, and the path it leaves is the trail.", simpleCross: "The second card crosses the first. The vertical is the situation, the horizontal is what crosses it.\nThe arrow below is those two forces added together. The third card (the way ahead) sets its colour. The faint dashes are the separate forces.", greekCross: "A core at the centre, time to the sides, depth of mind above and below.\nThe diamond below shows how hard each arm pulls. Even, and the four are in balance; distorted, and something is leaning.", horseshoe: "Seven cards arc up and back down.\nThis spread is not about when a thing will happen, but where you stand in the process. The heaviest card is the pass: gold up to it, blue beyond. The pass moves as you open more.", treeOfLife: "The sephirot of Kabbalah, with three pillars — Coldness on the left, Balance at the centre, Mercy on the right.\nThe lightning below runs from the root (1) down to daily life (10). It is the path this arrangement already carries. The bars beside it weigh each pillar.", choice: "The situation above, roads A and B below.\nOn the gauge, left is Order (building, keeping) and right is Chaos (change, risk). It does not say which is better — only what each road is like. The band at the centre is Neutral." },
     houseGuideSoon: "各领域的详细解说准备中。目前仅显示位置名称。",
     horoWheelTitle: "十二领域的起伏",
     horoStrength: "应当发挥的长处",
@@ -15180,10 +15496,29 @@ const T = {
     treeBalanced: "三柱保持均衡",
     treeMercy: "偏向慈悲之柱",
     treeSeverity: "偏向严峻之柱",
-    choiceKind: ["累积并守成之路。踏实，但步伐缓慢", "循序前进之路。费工夫，却不易崩塌", "不偏向任一方之路。可依情况决定", "顺流而行之路。走得快，但形貌未定", "破而后立之路。所得与所失都大"],
-    choiceAxisNear: "两条路的性质相近",
-    choiceAxisSome: "两条路的性质略有不同",
-    choiceAxisFar: "两条路的性质大不相同",
+    choiceGrade: ["强秩序", "秩序", "略偏秩序", "中庸", "略偏混沌", "混沌", "强混沌"],
+    choiceKind: ["固守而累积之路。缓慢，却踏实", "累积并守成之路。踏实，但步伐缓慢", "循序前进之路。费工夫，却不易崩塌", "不偏向任一方之路。可依情况决定", "顺流而行之路。走得快，但形貌未定", "乘势而动之路。得手快，能否延续则未知", "破而后立之路。所得与所失都大"],
+    choiceGap: ["两条路几乎相同", "两条路的性质相近", "两条路的性质略有不同", "两条路的性质大不相同", "两条路的性质恰恰相反"],
+    verdictTitle: "The conclusion",
+    crossVerdict: ["The force pushing forward prevails. Now is the time to move.", "The force turning inward prevails. Set things in order first.", "The force pulling back prevails. This is a time to hold.", "The force opening outward prevails. Time to put it before others."],
+    crossVerdictStrong: "The force is clear. You can act without hesitating.",
+    crossVerdictWeak: "The force is faint. Begin with a small trial.",
+    greekVerdict: ["The wish in the open shows strongest", "What is coming shows strongest", "What lies beneath shows strongest", "What has been built shows strongest"],
+    greekVerdictEven: "The four are balanced; you can begin anywhere without it collapsing.",
+    greekVerdictSkew: "It leans to one side; start with the weaker side.",
+    hsVerdict: ["This is a time of preparation. Plain, steady work counts now.", "This is the crest. What you do here decides what follows.", "The climb is behind you. Now comes finishing and settling in."],
+    hsVerdictHeavy: "The climb looks heavy. Portion out your strength.",
+    hsVerdictLight: "The climb looks light. You may keep your momentum.",
+    treeVerdictBalanced: "The three pillars are even. There is no need to force a lean.",
+    treeVerdictMercy: "It leans toward Mercy. Watch that you are not giving too much.",
+    treeVerdictSeverity: "It leans toward Coldness. There is room to soften.",
+    treeVerdictNode: (x) => `The strongest right now is \u201c${x}\u201d`,
+    choiceVerdict: (a, ga, b, gb) => `${a} is a road of ${ga}; ${b} is a road of ${gb}`,
+    choiceVerdictNote: "We will not say which is right. Look at the natures and choose for yourself.",
+    hsGoalLabel: "The goal (what you want)",
+    hsGoalExample: "e.g. pass the exam",
+    hsMeansLabel: "The means (what you are doing)",
+    hsMeansExample: "e.g. one hour of practice each morning",
     choiceLabelA: "A之路（其中一个选项）",
     choiceLabelB: "B之路（另一个）",
     choiceExampleA: "例：留在现在的公司",
@@ -15481,6 +15816,8 @@ const T = {
     horoStageTitle: {"angles": "The four angles", "ground": "Holding and learning", "inner": "Making and daily work", "others": "Meeting and seeking", "beyond": "Ties, and what lies beneath", "center": "The card at the centre"},
     horoNext: {"angles": "First, the frame of a life", "ground": "Next, the ground beneath", "inner": "Then the everyday realms", "others": "And the space between people", "beyond": "Last, the deepest place", "center": "Last, the card that binds it all"},
     houseGuideTitle: "What the twelve houses and the centre card mean",
+    readGuideTitle: "How to read",
+    readGuide: { hexagram: "Six cards form a hexagram, with a seventh at the centre. It reads the distance between you and another.\nThe affinity gauge below is drawn from the cards on the board and reflects the present moment only.", weekly: "Seven days from the weekday you drew on.\nThe graph below has nine tabs — eight fields and the total. Swipe sideways to change field. The star ranks split the seven days by order; if three or more days tie, they lose the special ranks.", celticCross: "Ten cards light both the conscious and the unconscious. The two at the centre are a pair and always open together.\nOn the plane below, up and down is depth of mind, left and right is time. Each card opened pushes the point once, and the path it leaves is the trail.", simpleCross: "The second card crosses the first. The vertical is the situation, the horizontal is what crosses it.\nThe arrow below is those two forces added together. The third card (the way ahead) sets its colour. The faint dashes are the separate forces.", greekCross: "A core at the centre, time to the sides, depth of mind above and below.\nThe diamond below shows how hard each arm pulls. Even, and the four are in balance; distorted, and something is leaning.", horseshoe: "Seven cards arc up and back down.\nThis spread is not about when a thing will happen, but where you stand in the process. The heaviest card is the pass: gold up to it, blue beyond. The pass moves as you open more.", treeOfLife: "The sephirot of Kabbalah, with three pillars — Coldness on the left, Balance at the centre, Mercy on the right.\nThe lightning below runs from the root (1) down to daily life (10). It is the path this arrangement already carries. The bars beside it weigh each pillar.", choice: "The situation above, roads A and B below.\nOn the gauge, left is Order (building, keeping) and right is Chaos (change, risk). It does not say which is better — only what each road is like. The band at the centre is Neutral." },
     houseGuideSoon: "Detailed notes for each area are in preparation. For now only the position names are shown.",
     horoWheelTitle: "The swell of the twelve realms",
     horoStrength: "A strength to extend",
@@ -15516,10 +15853,29 @@ const T = {
     treeBalanced: "The three pillars are even",
     treeMercy: "It leans toward Mercy",
     treeSeverity: "It leans toward Severity",
-    choiceKind: ["A road that builds and keeps. Sure, but slow.", "A road that follows an order. It takes effort, but it holds.", "A road leaning neither way. You can decide as things unfold.", "A road that rides the current. Fast, but the shape stays loose.", "A road that breaks and rebuilds. Much gained, much let go."],
-    choiceAxisNear: "The two roads are alike in nature",
-    choiceAxisSome: "The two roads differ somewhat",
-    choiceAxisFar: "The two roads differ greatly",
+    choiceGrade: ["Strong Order", "Order", "Mild Order", "Neutral", "Mild Chaos", "Chaos", "Strong Chaos"],
+    choiceKind: ["A road of guarding and building. Slow, and sure.", "A road that builds and keeps. Sure, but slow.", "A road that follows an order. It takes effort, but it holds.", "A road leaning neither way. You can decide as things unfold.", "A road that rides the current. Fast, but the shape stays loose.", "A road driven by momentum. Quick returns; whether they last is unknown.", "A road that breaks and rebuilds. Much gained, much let go."],
+    choiceGap: ["The two roads are almost the same", "The two roads are alike in nature", "The two roads differ somewhat", "The two roads differ greatly", "The two roads are opposite in nature"],
+    verdictTitle: "The conclusion",
+    crossVerdict: ["The force pushing forward prevails. Now is the time to move.", "The force turning inward prevails. Set things in order first.", "The force pulling back prevails. This is a time to hold.", "The force opening outward prevails. Time to put it before others."],
+    crossVerdictStrong: "The force is clear. You can act without hesitating.",
+    crossVerdictWeak: "The force is faint. Begin with a small trial.",
+    greekVerdict: ["The wish in the open shows strongest", "What is coming shows strongest", "What lies beneath shows strongest", "What has been built shows strongest"],
+    greekVerdictEven: "The four are balanced; you can begin anywhere without it collapsing.",
+    greekVerdictSkew: "It leans to one side; start with the weaker side.",
+    hsVerdict: ["This is a time of preparation. Plain, steady work counts now.", "This is the crest. What you do here decides what follows.", "The climb is behind you. Now comes finishing and settling in."],
+    hsVerdictHeavy: "The climb looks heavy. Portion out your strength.",
+    hsVerdictLight: "The climb looks light. You may keep your momentum.",
+    treeVerdictBalanced: "The three pillars are even. There is no need to force a lean.",
+    treeVerdictMercy: "It leans toward Mercy. Watch that you are not giving too much.",
+    treeVerdictSeverity: "It leans toward Coldness. There is room to soften.",
+    treeVerdictNode: (x) => `The strongest right now is \u201c${x}\u201d`,
+    choiceVerdict: (a, ga, b, gb) => `${a} is a road of ${ga}; ${b} is a road of ${gb}`,
+    choiceVerdictNote: "We will not say which is right. Look at the natures and choose for yourself.",
+    hsGoalLabel: "The goal (what you want)",
+    hsGoalExample: "e.g. pass the exam",
+    hsMeansLabel: "The means (what you are doing)",
+    hsMeansExample: "e.g. one hour of practice each morning",
     choiceLabelA: "Road A (one option)",
     choiceLabelB: "Road B (the other)",
     choiceExampleA: "e.g. stay where I am",
@@ -15832,6 +16188,8 @@ const T = {
     horoStageTitle: {"angles": "Ang apat na anggulo", "ground": "Pag-aari at pagkatuto", "inner": "Paglikha at araw-araw", "others": "Pakikipag-ugnay at paghahanap", "beyond": "Ugnayan at ang kalaliman", "center": "Ang baraha sa gitna"},
     horoNext: {"angles": "Una, ang balangkas ng buhay", "ground": "Susunod, ang lupa sa ilalim", "inner": "Tapos ang pang-araw-araw", "others": "At ang pagitan ng mga tao", "beyond": "Huli, ang pinakamalalim", "center": "Huli, ang barahang bumubuklod sa lahat"},
     houseGuideTitle: "Ang kahulugan ng labindalawang bahay at ang gitnang baraha",
+    readGuideTitle: "Paano basahin",
+    readGuide: { hexagram: "Six cards form a hexagram, with a seventh at the centre. It reads the distance between you and another.\nThe affinity gauge below is drawn from the cards on the board and reflects the present moment only.", weekly: "Seven days from the weekday you drew on.\nThe graph below has nine tabs — eight fields and the total. Swipe sideways to change field. The star ranks split the seven days by order; if three or more days tie, they lose the special ranks.", celticCross: "Ten cards light both the conscious and the unconscious. The two at the centre are a pair and always open together.\nOn the plane below, up and down is depth of mind, left and right is time. Each card opened pushes the point once, and the path it leaves is the trail.", simpleCross: "The second card crosses the first. The vertical is the situation, the horizontal is what crosses it.\nThe arrow below is those two forces added together. The third card (the way ahead) sets its colour. The faint dashes are the separate forces.", greekCross: "A core at the centre, time to the sides, depth of mind above and below.\nThe diamond below shows how hard each arm pulls. Even, and the four are in balance; distorted, and something is leaning.", horseshoe: "Seven cards arc up and back down.\nThis spread is not about when a thing will happen, but where you stand in the process. The heaviest card is the pass: gold up to it, blue beyond. The pass moves as you open more.", treeOfLife: "The sephirot of Kabbalah, with three pillars — Coldness on the left, Balance at the centre, Mercy on the right.\nThe lightning below runs from the root (1) down to daily life (10). It is the path this arrangement already carries. The bars beside it weigh each pillar.", choice: "The situation above, roads A and B below.\nOn the gauge, left is Order (building, keeping) and right is Chaos (change, risk). It does not say which is better — only what each road is like. The band at the centre is Neutral." },
     houseGuideSoon: "Inihahanda pa ang detalyadong paliwanag. Sa ngayon ay ang pangalan lamang ng posisyon ang ipinapakita.",
     horoWheelTitle: "Ang laki ng labindalawang larangan",
     horoStrength: "Lakas na dapat palawigin",
@@ -15867,10 +16225,29 @@ const T = {
     treeBalanced: "Pantay ang tatlong haligi",
     treeMercy: "Kumikiling sa Awa",
     treeSeverity: "Kumikiling sa Higpit",
-    choiceKind: ["Landas na nagtatayo at nag-iingat. Tiyak, ngunit mabagal.", "Landas na sumusunod sa ayos. Nakakapagod, ngunit matibay.", "Landas na hindi kumikiling. Puwedeng magpasya habang umuusad.", "Landas na sumasabay sa agos. Mabilis, ngunit walang tiyak na hugis.", "Landas na winawasak at muling itinatayo. Marami ang makukuha, marami rin ang mawawala."],
-    choiceAxisNear: "Magkatulad ang dalawang daan",
-    choiceAxisSome: "Medyo magkaiba ang dalawang daan",
-    choiceAxisFar: "Malaki ang pagkakaiba ng dalawang daan",
+    choiceGrade: ["Matibay na Kaayusan", "Kaayusan", "Bahagyang Kaayusan", "Neutral", "Bahagyang Kaguluhan", "Kaguluhan", "Matinding Kaguluhan"],
+    choiceKind: ["Landas ng pag-iingat at pagtatayo. Mabagal, ngunit tiyak.", "Landas na nagtatayo at nag-iingat. Tiyak, ngunit mabagal.", "Landas na sumusunod sa ayos. Nakakapagod, ngunit matibay.", "Landas na hindi kumikiling. Puwedeng magpasya habang umuusad.", "Landas na sumasabay sa agos. Mabilis, ngunit walang tiyak na hugis.", "Landas na hatid ng sigla. Mabilis ang bunga; kung tatagal ay di tiyak.", "Landas na winawasak at muling itinatayo. Marami ang makukuha, marami rin ang mawawala."],
+    choiceGap: ["Halos magkapareho ang dalawang daan", "Magkatulad ang dalawang daan", "Medyo magkaiba ang dalawang daan", "Malaki ang pagkakaiba ng dalawang daan", "Magkasalungat ang dalawang daan"],
+    verdictTitle: "The conclusion",
+    crossVerdict: ["The force pushing forward prevails. Now is the time to move.", "The force turning inward prevails. Set things in order first.", "The force pulling back prevails. This is a time to hold.", "The force opening outward prevails. Time to put it before others."],
+    crossVerdictStrong: "The force is clear. You can act without hesitating.",
+    crossVerdictWeak: "The force is faint. Begin with a small trial.",
+    greekVerdict: ["The wish in the open shows strongest", "What is coming shows strongest", "What lies beneath shows strongest", "What has been built shows strongest"],
+    greekVerdictEven: "The four are balanced; you can begin anywhere without it collapsing.",
+    greekVerdictSkew: "It leans to one side; start with the weaker side.",
+    hsVerdict: ["This is a time of preparation. Plain, steady work counts now.", "This is the crest. What you do here decides what follows.", "The climb is behind you. Now comes finishing and settling in."],
+    hsVerdictHeavy: "The climb looks heavy. Portion out your strength.",
+    hsVerdictLight: "The climb looks light. You may keep your momentum.",
+    treeVerdictBalanced: "The three pillars are even. There is no need to force a lean.",
+    treeVerdictMercy: "It leans toward Mercy. Watch that you are not giving too much.",
+    treeVerdictSeverity: "It leans toward Coldness. There is room to soften.",
+    treeVerdictNode: (x) => `The strongest right now is \u201c${x}\u201d`,
+    choiceVerdict: (a, ga, b, gb) => `${a} is a road of ${ga}; ${b} is a road of ${gb}`,
+    choiceVerdictNote: "We will not say which is right. Look at the natures and choose for yourself.",
+    hsGoalLabel: "The goal (what you want)",
+    hsGoalExample: "e.g. pass the exam",
+    hsMeansLabel: "The means (what you are doing)",
+    hsMeansExample: "e.g. one hour of practice each morning",
     choiceLabelA: "Daan A (isang pagpipilian)",
     choiceLabelB: "Daan B (ang isa pa)",
     choiceExampleA: "hal. manatili sa kinaroroonan",
@@ -16168,6 +16545,8 @@ const T = {
     horoStageTitle: {"angles": "สี่แกน", "ground": "การครอบครองและการเรียนรู้", "inner": "การสร้างและหน้าที่", "others": "ความสัมพันธ์และการค้นหา", "beyond": "สายสัมพันธ์และส่วนลึก", "center": "ไพ่ใบกลาง"},
     horoNext: {"angles": "ก่อนอื่น มาดูโครงของชีวิต", "ground": "ต่อไป ดูพื้นใต้เท้า", "inner": "จากนั้น ดูขอบเขตประจำวัน", "others": "และช่องว่างระหว่างผู้คน", "beyond": "สุดท้าย ที่ลึกที่สุด", "center": "สุดท้าย ไพ่ที่รวบรวมทั้งหมด"},
     houseGuideTitle: "ความหมายของสิบสองเรือนและไพ่ใบกลาง",
+    readGuideTitle: "วิธีอ่าน",
+    readGuide: { hexagram: "Six cards form a hexagram, with a seventh at the centre. It reads the distance between you and another.\nThe affinity gauge below is drawn from the cards on the board and reflects the present moment only.", weekly: "Seven days from the weekday you drew on.\nThe graph below has nine tabs — eight fields and the total. Swipe sideways to change field. The star ranks split the seven days by order; if three or more days tie, they lose the special ranks.", celticCross: "Ten cards light both the conscious and the unconscious. The two at the centre are a pair and always open together.\nOn the plane below, up and down is depth of mind, left and right is time. Each card opened pushes the point once, and the path it leaves is the trail.", simpleCross: "The second card crosses the first. The vertical is the situation, the horizontal is what crosses it.\nThe arrow below is those two forces added together. The third card (the way ahead) sets its colour. The faint dashes are the separate forces.", greekCross: "A core at the centre, time to the sides, depth of mind above and below.\nThe diamond below shows how hard each arm pulls. Even, and the four are in balance; distorted, and something is leaning.", horseshoe: "Seven cards arc up and back down.\nThis spread is not about when a thing will happen, but where you stand in the process. The heaviest card is the pass: gold up to it, blue beyond. The pass moves as you open more.", treeOfLife: "The sephirot of Kabbalah, with three pillars — Coldness on the left, Balance at the centre, Mercy on the right.\nThe lightning below runs from the root (1) down to daily life (10). It is the path this arrangement already carries. The bars beside it weigh each pillar.", choice: "The situation above, roads A and B below.\nOn the gauge, left is Order (building, keeping) and right is Chaos (change, risk). It does not say which is better — only what each road is like. The band at the centre is Neutral." },
     houseGuideSoon: "คำอธิบายโดยละเอียดกำลังเตรียมการ ขณะนี้แสดงเพียงชื่อตำแหน่ง",
     horoWheelTitle: "ความกว้างของสิบสองขอบเขต",
     horoStrength: "จุดแข็งที่ควรขยาย",
@@ -16203,10 +16582,29 @@ const T = {
     treeBalanced: "สามเสาสมดุลกัน",
     treeMercy: "เอนไปทางเสาเมตตา",
     treeSeverity: "เอนไปทางเสาเข้มงวด",
-    choiceKind: ["ทางที่สั่งสมและรักษา แน่นอนแต่ช้า", "ทางที่เดินตามลำดับ ใช้แรงแต่ไม่พังง่าย", "ทางที่ไม่เอนไปด้านใด ตัดสินใจตามสถานการณ์ได้", "ทางที่ไหลไปตามกระแส เร็วแต่รูปยังไม่นิ่ง", "ทางที่ทุบแล้วสร้างใหม่ ได้มากและเสียมากพอกัน"],
-    choiceAxisNear: "สองเส้นทางมีลักษณะใกล้เคียงกัน",
-    choiceAxisSome: "สองเส้นทางต่างกันอยู่บ้าง",
-    choiceAxisFar: "สองเส้นทางต่างกันมาก",
+    choiceGrade: ["ระเบียบเข้ม", "ระเบียบ", "ค่อนไประเบียบ", "ทางสายกลาง", "ค่อนไปอลวน", "อลวน", "อลวนรุนแรง"],
+    choiceKind: ["ทางที่ปกป้องและสั่งสม ช้าแต่แน่นอน", "ทางที่สั่งสมและรักษา แน่นอนแต่ช้า", "ทางที่เดินตามลำดับ ใช้แรงแต่ไม่พังง่าย", "ทางที่ไม่เอนไปด้านใด ตัดสินใจตามสถานการณ์ได้", "ทางที่ไหลไปตามกระแส เร็วแต่รูปยังไม่นิ่ง", "ทางที่เคลื่อนด้วยแรงส่ง ได้ผลเร็วแต่ไม่รู้ว่าจะอยู่ยาวไหม", "ทางที่ทุบแล้วสร้างใหม่ ได้มากและเสียมากพอกัน"],
+    choiceGap: ["สองเส้นทางแทบเหมือนกัน", "สองเส้นทางมีลักษณะใกล้เคียงกัน", "สองเส้นทางต่างกันอยู่บ้าง", "สองเส้นทางต่างกันมาก", "สองเส้นทางตรงข้ามกัน"],
+    verdictTitle: "The conclusion",
+    crossVerdict: ["The force pushing forward prevails. Now is the time to move.", "The force turning inward prevails. Set things in order first.", "The force pulling back prevails. This is a time to hold.", "The force opening outward prevails. Time to put it before others."],
+    crossVerdictStrong: "The force is clear. You can act without hesitating.",
+    crossVerdictWeak: "The force is faint. Begin with a small trial.",
+    greekVerdict: ["The wish in the open shows strongest", "What is coming shows strongest", "What lies beneath shows strongest", "What has been built shows strongest"],
+    greekVerdictEven: "The four are balanced; you can begin anywhere without it collapsing.",
+    greekVerdictSkew: "It leans to one side; start with the weaker side.",
+    hsVerdict: ["This is a time of preparation. Plain, steady work counts now.", "This is the crest. What you do here decides what follows.", "The climb is behind you. Now comes finishing and settling in."],
+    hsVerdictHeavy: "The climb looks heavy. Portion out your strength.",
+    hsVerdictLight: "The climb looks light. You may keep your momentum.",
+    treeVerdictBalanced: "The three pillars are even. There is no need to force a lean.",
+    treeVerdictMercy: "It leans toward Mercy. Watch that you are not giving too much.",
+    treeVerdictSeverity: "It leans toward Coldness. There is room to soften.",
+    treeVerdictNode: (x) => `The strongest right now is \u201c${x}\u201d`,
+    choiceVerdict: (a, ga, b, gb) => `${a} is a road of ${ga}; ${b} is a road of ${gb}`,
+    choiceVerdictNote: "We will not say which is right. Look at the natures and choose for yourself.",
+    hsGoalLabel: "The goal (what you want)",
+    hsGoalExample: "e.g. pass the exam",
+    hsMeansLabel: "The means (what you are doing)",
+    hsMeansExample: "e.g. one hour of practice each morning",
     choiceLabelA: "เส้นทาง A（ตัวเลือกหนึ่ง）",
     choiceLabelB: "เส้นทาง B（อีกตัวเลือก）",
     choiceExampleA: "เช่น อยู่ที่เดิมต่อไป",
@@ -16505,6 +16903,8 @@ const T = {
     horoStageTitle: {"angles": "De fyra axlarna", "ground": "Ägande och lärande", "inner": "Skapande och vardag", "others": "Möten och sökande", "beyond": "Band, och det som ligger under", "center": "Kortet i mitten"},
     horoNext: {"angles": "Först, livets stomme", "ground": "Sedan marken under", "inner": "Därefter vardagens områden", "others": "Och rummet mellan människor", "beyond": "Till sist, den djupaste platsen", "center": "Till sist, kortet som binder allt"},
     houseGuideTitle: "Vad de tolv husen och mittkortet betyder",
+    readGuideTitle: "Så läser du",
+    readGuide: { hexagram: "Six cards form a hexagram, with a seventh at the centre. It reads the distance between you and another.\nThe affinity gauge below is drawn from the cards on the board and reflects the present moment only.", weekly: "Seven days from the weekday you drew on.\nThe graph below has nine tabs — eight fields and the total. Swipe sideways to change field. The star ranks split the seven days by order; if three or more days tie, they lose the special ranks.", celticCross: "Ten cards light both the conscious and the unconscious. The two at the centre are a pair and always open together.\nOn the plane below, up and down is depth of mind, left and right is time. Each card opened pushes the point once, and the path it leaves is the trail.", simpleCross: "The second card crosses the first. The vertical is the situation, the horizontal is what crosses it.\nThe arrow below is those two forces added together. The third card (the way ahead) sets its colour. The faint dashes are the separate forces.", greekCross: "A core at the centre, time to the sides, depth of mind above and below.\nThe diamond below shows how hard each arm pulls. Even, and the four are in balance; distorted, and something is leaning.", horseshoe: "Seven cards arc up and back down.\nThis spread is not about when a thing will happen, but where you stand in the process. The heaviest card is the pass: gold up to it, blue beyond. The pass moves as you open more.", treeOfLife: "The sephirot of Kabbalah, with three pillars — Coldness on the left, Balance at the centre, Mercy on the right.\nThe lightning below runs from the root (1) down to daily life (10). It is the path this arrangement already carries. The bars beside it weigh each pillar.", choice: "The situation above, roads A and B below.\nOn the gauge, left is Order (building, keeping) and right is Chaos (change, risk). It does not say which is better — only what each road is like. The band at the centre is Neutral." },
     houseGuideSoon: "Utförliga noter för varje område förbereds. Just nu visas endast positionernas namn.",
     horoWheelTitle: "De tolv områdenas svall",
     horoStrength: "En styrka att bygga på",
@@ -16540,10 +16940,29 @@ const T = {
     treeBalanced: "De tre pelarna är jämna",
     treeMercy: "Det lutar mot Nåd",
     treeSeverity: "Det lutar mot Stränghet",
-    choiceKind: ["En väg som bygger och bevarar. Säker, men långsam.", "En väg som följer en ordning. Den kräver möda, men håller.", "En väg som inte lutar åt något håll. Du kan avgöra efter hand.", "En väg som följer strömmen. Snabb, men formen förblir lös.", "En väg som river och bygger om. Mycket vinns, mycket släpps."],
-    choiceAxisNear: "De två vägarna liknar varandra",
-    choiceAxisSome: "De två vägarna skiljer sig något",
-    choiceAxisFar: "De två vägarna skiljer sig mycket",
+    choiceGrade: ["Stark ordning", "Ordning", "Svag ordning", "Neutral", "Svagt kaos", "Kaos", "Starkt kaos"],
+    choiceKind: ["En väg av att vakta och bygga. Långsam, och säker.", "En väg som bygger och bevarar. Säker, men långsam.", "En väg som följer en ordning. Den kräver möda, men håller.", "En väg som inte lutar åt något håll. Du kan avgöra efter hand.", "En väg som följer strömmen. Snabb, men formen förblir lös.", "En väg driven av fart. Snabb vinst; om den håller är osäkert.", "En väg som river och bygger om. Mycket vinns, mycket släpps."],
+    choiceGap: ["De två vägarna är nästan lika", "De två vägarna liknar varandra", "De två vägarna skiljer sig något", "De två vägarna skiljer sig mycket", "De två vägarna är varandras motsatser"],
+    verdictTitle: "The conclusion",
+    crossVerdict: ["The force pushing forward prevails. Now is the time to move.", "The force turning inward prevails. Set things in order first.", "The force pulling back prevails. This is a time to hold.", "The force opening outward prevails. Time to put it before others."],
+    crossVerdictStrong: "The force is clear. You can act without hesitating.",
+    crossVerdictWeak: "The force is faint. Begin with a small trial.",
+    greekVerdict: ["The wish in the open shows strongest", "What is coming shows strongest", "What lies beneath shows strongest", "What has been built shows strongest"],
+    greekVerdictEven: "The four are balanced; you can begin anywhere without it collapsing.",
+    greekVerdictSkew: "It leans to one side; start with the weaker side.",
+    hsVerdict: ["This is a time of preparation. Plain, steady work counts now.", "This is the crest. What you do here decides what follows.", "The climb is behind you. Now comes finishing and settling in."],
+    hsVerdictHeavy: "The climb looks heavy. Portion out your strength.",
+    hsVerdictLight: "The climb looks light. You may keep your momentum.",
+    treeVerdictBalanced: "The three pillars are even. There is no need to force a lean.",
+    treeVerdictMercy: "It leans toward Mercy. Watch that you are not giving too much.",
+    treeVerdictSeverity: "It leans toward Coldness. There is room to soften.",
+    treeVerdictNode: (x) => `The strongest right now is \u201c${x}\u201d`,
+    choiceVerdict: (a, ga, b, gb) => `${a} is a road of ${ga}; ${b} is a road of ${gb}`,
+    choiceVerdictNote: "We will not say which is right. Look at the natures and choose for yourself.",
+    hsGoalLabel: "The goal (what you want)",
+    hsGoalExample: "e.g. pass the exam",
+    hsMeansLabel: "The means (what you are doing)",
+    hsMeansExample: "e.g. one hour of practice each morning",
     choiceLabelA: "Väg A (ett alternativ)",
     choiceLabelB: "Väg B (det andra)",
     choiceExampleA: "t.ex. stanna kvar där jag är",
@@ -19478,6 +19897,25 @@ export default function TarotDraw() {
           0%, 100% { box-shadow: 0 0 18px rgba(255,255,255,0.55), 0 0 42px rgba(255,60,180,0.45); }
           50%      { box-shadow: 0 0 34px rgba(255,255,255,0.95), 0 0 86px rgba(60,200,255,0.7); }
         }
+        /* --- 結論 --- */
+        .verdict {
+          width: 100%; max-width: 340px; margin: 12px auto 4px;
+          padding: 13px 15px; border-radius: 10px;
+          border: 1px solid rgba(201,162,75,0.35);
+          background: linear-gradient(160deg, rgba(201,162,75,0.10), rgba(255,255,255,0.02));
+        }
+        .verdict-title {
+          font-family: 'Shippori Mincho', serif; font-size: 11px;
+          letter-spacing: 0.16em; color: var(--gold-soft);
+          padding-bottom: 7px; margin-bottom: 9px;
+          border-bottom: 1px solid rgba(201,162,75,0.20);
+        }
+        .verdict p {
+          margin: 0 0 6px; font-family: 'Shippori Mincho', serif;
+          font-size: 13px; line-height: 1.9; letter-spacing: 0.03em;
+          color: var(--parchment);
+        }
+        .verdict p:last-child { margin-bottom: 0; }
         /* --- 追加4種の視覚補完 --- */
         .cross-vec, .greek-ten, .hs-pass, .tree-vis { width: 100%; max-width: 340px; margin: 14px auto 4px; }
         .cross-vec-title, .greek-ten-title, .hs-pass-title, .tree-vis-title {
@@ -19553,7 +19991,7 @@ export default function TarotDraw() {
           display: flex; align-items: flex-end; overflow: hidden;
         }
         .tree-pillar-bar i { display: block; width: 100%; transition: height .5s ease; }
-        /* 左＝峻厳（紫）、中央＝均衡（生成り）、右＝慈悲（金） */
+        /* 左＝冷酷（紫）、中央＝均衡（生成り）、右＝慈悲（金） */
         .tree-pillar-bar i.left { background: linear-gradient(180deg, #C89AFF, #7A4FB0); }
         .tree-pillar-bar i.middle { background: linear-gradient(180deg, #F1EAD8, #B8AE96); }
         .tree-pillar-bar i.right { background: linear-gradient(180deg, #FFD98A, #C9A24B); }
@@ -19568,7 +20006,7 @@ export default function TarotDraw() {
         /* 秩序は寒色、混沌は暖色。どちらが良いという色にはしない */
         .choice-axis-block { margin-bottom: 12px; }
         .choice-zones {
-          display: grid; grid-template-columns: 41% 18% 41%;
+          display: grid; grid-template-columns: 42.5% 15% 42.5%;
           margin: 0 0 6px; padding-left: calc(4.6em + 6px);
           font-size: 9.5px; letter-spacing: 0.06em; text-align: center;
         }
@@ -19577,14 +20015,20 @@ export default function TarotDraw() {
         .choice-zones .chaos { color: #E8A87C; text-align: right; }
         /* 中庸の帯。目盛りの上に薄く敷いて、区分の幅を示す */
         .choice-axis-track .zone-neutral {
-          position: absolute; left: 41%; width: 18%; top: -2px; bottom: -2px;
+          position: absolute; left: 42.5%; width: 15%; top: -2px; bottom: -2px;
           background: rgba(255,255,255,0.10);
           border-left: 1px solid rgba(201,162,75,0.30);
           border-right: 1px solid rgba(201,162,75,0.30);
         }
+        /*
+          段の呼び名。幅を固定する ――
+          「中庸」と「強い混沌」で字数が違うと、
+          その分だけ目盛りの幅が変わって、点の位置が段ごとにずれる。
+        */
         .choice-zone-tag {
-          flex: 0 0 auto; font-size: 9px; padding: 1px 6px; border-radius: 999px;
-          letter-spacing: 0.06em;
+          flex: 0 0 5.2em; text-align: center;
+          font-size: 9px; padding: 1px 4px; border-radius: 999px;
+          letter-spacing: 0.02em; white-space: nowrap; overflow: hidden;
         }
         .choice-zone-tag.law { color: #8FC7E8; background: rgba(143,199,232,0.14); }
         .choice-zone-tag.neutral { color: rgba(220,210,190,0.9); background: rgba(255,255,255,0.10); }
