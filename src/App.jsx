@@ -8470,17 +8470,21 @@ function YesNoPanel({ lang, onBack }) {
 
   return (
     <div style={{ width: "100%", maxWidth: "460px", margin: "0 auto" }}>
-      <button onClick={onBack} className="back-link">{t.backToSelect}</button>
+      {/* 既存の戻る導線と同じクラス・同じ文言を使う。独自に作らない */}
+      <button className="back-to-title" onClick={onBack}>{t.backToTitle}</button>
 
       {!drawn ? (
         <>
           <p className="yn-intro">{t.ynIntro}</p>
-          <label htmlFor="yn-question">{t.ynQuestionLabel}</label>
-          <p className="hex-fields-example">{t.ynQuestionExample}</p>
-          <input
-            id="yn-question" className="hex-input" type="text" maxLength={80}
-            value={question} onChange={(e) => setQuestion(e.target.value)}
-          />
+          {/* 入力欄の整形は .hex-fields input が持っているので、その中に入れる */}
+          <div className="hex-fields">
+            <label htmlFor="yn-question">{t.ynQuestionLabel}</label>
+            <p className="hex-fields-example">{t.ynQuestionExample}</p>
+            <input
+              id="yn-question" type="text" maxLength={80}
+              value={question} onChange={(e) => setQuestion(e.target.value)}
+            />
+          </div>
           {/*
             枚数を先に固定させる。3段の呼び名は「慎重さ」であって
             「精度」ではない ―― 枚数を増やしても当たりやすくなる
@@ -10522,13 +10526,13 @@ function HexagramPanel({ lang, onBack, question, userName, canDraw, onConsume, o
               <label className="hex-field-label">{t.choiceLabelA}</label>
               <p className="hex-fields-example">{t.choiceExampleA}</p>
               <input
-                className="hex-input" type="text" maxLength={40}
+                type="text" maxLength={40}
                 value={choiceA} onChange={(e) => setChoiceA(e.target.value)}
               />
               <label className="hex-field-label" style={{ marginTop: "10px" }}>{t.choiceLabelB}</label>
               <p className="hex-fields-example">{t.choiceExampleB}</p>
               <input
-                className="hex-input" type="text" maxLength={40}
+                type="text" maxLength={40}
                 value={choiceB} onChange={(e) => setChoiceB(e.target.value)}
               />
               <p className="hex-fields-note">
@@ -10558,7 +10562,7 @@ function HexagramPanel({ lang, onBack, question, userName, canDraw, onConsume, o
               {/* 例示は欄の上。プレースホルダだと書き始めた瞬間に消える */}
               <p className="hex-fields-example">{isTree ? t.treeTopicExample : t.topicExample}</p>
               <input
-                id="spread-topic" className="hex-input" type="text" maxLength={120}
+                id="spread-topic" type="text" maxLength={120}
                 value={topic} onChange={(e) => setTopic(e.target.value)}
               />
               <p className="hex-fields-note">
@@ -10577,11 +10581,11 @@ function HexagramPanel({ lang, onBack, question, userName, canDraw, onConsume, o
             <div className="hex-fields">
               <label className="hex-field-label">{t.hsGoalLabel}</label>
               <p className="hex-fields-example">{t.hsGoalExample}</p>
-              <input className="hex-input" type="text" maxLength={40}
+              <input type="text" maxLength={40}
                 value={choiceA} onChange={(e) => setChoiceA(e.target.value)} />
               <label className="hex-field-label" style={{ marginTop: "10px" }}>{t.hsMeansLabel}</label>
               <p className="hex-fields-example">{t.hsMeansExample}</p>
-              <input className="hex-input" type="text" maxLength={40}
+              <input type="text" maxLength={40}
                 value={choiceB} onChange={(e) => setChoiceB(e.target.value)} />
               <p className="hex-fields-note">
                 <NoteLines text={aiEnabled ? t.choiceNoteAi : t.choiceNote} />
