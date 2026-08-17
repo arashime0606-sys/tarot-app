@@ -8555,6 +8555,14 @@ function YesNoPanel({ lang, onBack }) {
           <button className="reset-btn" onClick={reset} style={{ marginTop: "14px" }}>
             {t.oneOracleAgain}
           </button>
+          {/*
+            戻る導線を下にも置く。
+            結果まで開くと画面が縦に伸びて、上の戻るボタンが
+            画面の外へ出てしまう。長い画面では下にも要る。
+          */}
+          <div style={{ textAlign: "center" }}>
+            <button className="back-to-title" onClick={onBack}>{t.backToTitle}</button>
+          </div>
         </>
       )}
     </div>
