@@ -2784,6 +2784,32 @@ const SPREADS = {
     ],
   },
   /*
+    イエス・ノー。5枚（普通）を代表値として登録する。
+    実際の枚数は5・7・9から選ぶが、メニューでは並べ替えと
+    表示のために一つの数が要る。最小の5を採る。
+    layout は独立パネルが自前で並べるので使わない。
+  */
+  yesNo: { key: "yesNo", deck: "major", count: 5, layout: [] },
+
+  /* ============================================================
+     現代派。まだ開放していない（SPREAD_READY が false）。
+     配置と位置ラベルだけ先に置き、メニューには近日公開として並べる。
+     何が来るのかが分かれば、待つ側の見通しが立つ。
+     ============================================================ */
+  manifestation: { key: "manifestation", deck: "full", count: 6, layout: [{ x: 50, y: 12 }, { x: 20, y: 38 }, { x: 80, y: 38 }, { x: 20, y: 68 }, { x: 80, y: 68 }, { x: 50, y: 90 }] },
+  shadowWork: { key: "shadowWork", deck: "full", count: 5, layout: [{ x: 50, y: 14 }, { x: 22, y: 42 }, { x: 78, y: 42 }, { x: 35, y: 72 }, { x: 65, y: 72 }] },
+  innerChild: { key: "innerChild", deck: "full", count: 5, layout: [{ x: 50, y: 16 }, { x: 24, y: 44 }, { x: 76, y: 44 }, { x: 50, y: 62 }, { x: 50, y: 88 }] },
+  boundary: { key: "boundary", deck: "full", count: 4, layout: [{ x: 28, y: 22 }, { x: 72, y: 22 }, { x: 28, y: 70 }, { x: 72, y: 70 }] },
+  selfSabotage: { key: "selfSabotage", deck: "full", count: 5, layout: [{ x: 50, y: 12 }, { x: 50, y: 36 }, { x: 24, y: 60 }, { x: 76, y: 60 }, { x: 50, y: 86 }] },
+  character: { key: "character", deck: "full", count: 5, layout: [{ x: 50, y: 14 }, { x: 20, y: 44 }, { x: 80, y: 44 }, { x: 35, y: 74 }, { x: 65, y: 74 }] },
+  monthly: { key: "monthly", deck: "full", count: 7, layout: [{ x: 14, y: 26 }, { x: 30, y: 14 }, { x: 50, y: 10 }, { x: 70, y: 14 }, { x: 86, y: 26 }, { x: 35, y: 62 }, { x: 65, y: 62 }] },
+  newRelation: { key: "newRelation", deck: "full", count: 6, layout: [{ x: 28, y: 16 }, { x: 72, y: 16 }, { x: 50, y: 40 }, { x: 28, y: 66 }, { x: 72, y: 66 }, { x: 50, y: 90 }] },
+  season: { key: "season", deck: "full", count: 5, layout: [{ x: 50, y: 10 }, { x: 20, y: 40 }, { x: 80, y: 40 }, { x: 20, y: 74 }, { x: 80, y: 74 }] },
+  spiritGuide: { key: "spiritGuide", deck: "full", count: 7, layout: [{ x: 50, y: 8 }, { x: 24, y: 30 }, { x: 76, y: 30 }, { x: 50, y: 50 }, { x: 24, y: 72 }, { x: 76, y: 72 }, { x: 50, y: 92 }] },
+  careerCross: { key: "careerCross", deck: "full", count: 6, layout: [{ x: 50, y: 12 }, { x: 22, y: 38 }, { x: 78, y: 38 }, { x: 22, y: 68 }, { x: 78, y: 68 }, { x: 50, y: 90 }] },
+  burnout: { key: "burnout", deck: "full", count: 4, layout: [{ x: 50, y: 14 }, { x: 26, y: 48 }, { x: 74, y: 48 }, { x: 50, y: 84 }] },
+
+  /*
     シンプル・クロス。3枚。
     中心の札に2枚目が十字に重なり、その上に進むべき道を置く。
     十字に重ねる形はケルト十字と同じ（cross: true）。
@@ -2916,6 +2942,7 @@ const SPREADS = {
  */
 const SPREAD_I18N = {
   ja: {
+    yesNo: { name: "イエス・ノー", desc: "質問に対して、はい・いいえで答える。" },
     oneOracle: { name: "ワンオラクル", desc: "大アルカナ１枚だけで占う最も簡素な占い方式", pos: ["示されたもの"] },
     oneOracleMinor: { name: "プチワンオラクル", desc: "小アルカナ１枚で本日の運勢情報を読み取る方式", pos: ["示されたもの"] },
     three: { name: "スリーカード", desc: "過去から未来への流れを三枚で追う。はじめの一歩に。", pos: ["過去", "現在", "未来"] },
@@ -2926,11 +2953,24 @@ const SPREAD_I18N = {
     relationship: { name: "関係の杯", desc: "二人の関係を、両側から読む。", pos: ["あなたの状況", "相手の状況", "あなたの願い", "相手の願い", "あなたの不安", "相手の不安", "二人の現在", "障害", "可能性", "あなたの取るべき道", "二人の行く先"] },
     horoscope: { name: "ホロスコープ", desc: "十二の領域と中央の一枚で、現状の人生を見渡す。", pos: ["決断と自分", "財産と五感", "学習と交流", "家庭と基盤", "恋愛と子供", "労働と健康", "関係と契約", "挫折と承継", "挑戦と探究", "天職と地位", "仲間と理想", "因縁と霊性", "現状の人生に対する総合とアドバイス"] },
     simpleCross: { name: "シンプル・クロス", desc: "二枚で状況と障害を、一枚で進む道を見る。", pos: ["現在の状況", "横切るもの", "進むべき道"] },
-    greekCross: { name: "ギリシャ十字", desc: "核を中心に、時間と意識の深さを四方から読む。", pos: ["ことの核心", "これまで", "これから", "表に出ている願い", "底にあるもの"] },
+    greekCross: { name: "ギリシャ十字", desc: "四方の力が結果をどこまで広げるかを見る。", pos: ["結果", "現状", "障害", "このまま進むと", "対策"] },
     horseshoe: { name: "ホースシュー", desc: "七枚の弧で、目標へ向かう過程のどこにいるかを見る。", pos: ["これまで積んだもの", "いまの状況", "隠れた働き", "立ちはだかるもの", "周りの人", "取るべき道", "この先に育つもの"] },
     treeOfLife: { name: "生命の樹", desc: "十のセフィロトで、精神から現実までを縦に貫く。", pos: ["根源の意志", "閃きと拡がり", "形を与える理", "慈しみと恵み", "裁きと冷徹", "調和の中心", "情熱と欲", "知性と伝達", "無意識の土台", "現実の暮らし"] },
+    shadowWork: { name: "影の統合", desc: "認めたくない側面を、欠点ではなく使えていない力として見る。", pos: ["目を背けている面", "それが生まれた事情", "日常での現れ方", "認めたときに得るもの", "統合への一歩"] },
+    innerChild: { name: "内なる子ども", desc: "幼い頃に置いてきた感情に、いまの自分から声をかける。", pos: ["幼い自分の今の姿", "置き去りにした感情", "その子が伝えたいこと", "いま与えられる世話", "取り戻せる喜び"] },
+    selfSabotage: { name: "自己妨害を解く", desc: "うまくいきかけると止めてしまう仕組みを見つける。", pos: ["繰り返している型", "止める直前の合図", "守ろうとしているもの", "本当の怖れ", "型を外す一手"] },
+    boundary: { name: "境界線", desc: "どこまでが自分の領分かを引き直す。", pos: ["越えられている線", "越えさせている理由", "引き直したあとの姿", "伝えるときの言葉"] },
+    burnout: { name: "消耗からの回復", desc: "燃え尽きの手前で、何を降ろすかを決める。", pos: ["すり減っているもの", "消耗の源", "いま降ろしてよいもの", "回復のはじめ方"] },
+    manifestation: { name: "願いの実現", desc: "望みを言葉にし、妨げと資源を並べて道筋にする。", pos: ["本当に望んでいるもの", "妨げているもの", "持っている資源", "手放すべきもの", "具体的な一歩", "実現へ向かう力"] },
+    careerCross: { name: "キャリアの岐路", desc: "仕事の選択を、適性と現実の両面から見る。", pos: ["いまの立ち位置", "持っている強み", "足りていないもの", "外から来る流れ", "選べる道", "半年後の手応え"] },
+    character: { name: "人物を読む", desc: "ひとりの人となりを、長所と短所の両面から見る。", pos: ["その人そのもの", "最大の長所", "最大の短所", "いま最も気にしていること", "関わることで得るもの"] },
+    newRelation: { name: "新しい関係", desc: "始まったばかりの間柄を、双方の持ち込みから読む。", pos: ["関係の土台", "相手が持ち込むもの", "自分が持ち込むもの", "いまの課題", "秘めた可能性", "育てる方法"] },
+    monthly: { name: "今月の流れ", desc: "ひと月を、主題と機会と障害で見渡す。", pos: ["今月の主題", "隠れた好機", "越える障害", "伸びる部分", "注意すべきこと", "取るべき行動", "月末に残るもの"] },
+    season: { name: "季節の巡り", desc: "三月ほどの周期を、種と収穫で捉える。", pos: ["いまの勢い", "これから育てる種", "光を当てる領域", "影に置いたもの", "収穫できるもの"] },
+    spiritGuide: { name: "直感とのつながり", desc: "勘の通り道が、いまどれだけ開いているかを見る。", pos: ["直感の開き具合", "受け取ろうとしているもの", "現状の見え方", "つながりを強める方法", "いま必要な導き", "邪魔しているもの", "果たしている役割"] },
   },
   en: {
+    yesNo: { name: "Yes / No", desc: "Answers a question with a plain yes or no." },
     oneOracle: { name: "One Oracle", desc: "The simplest reading: a single Major Arcana card.", pos: ["What Is Shown"] },
     oneOracleMinor: { name: "Petit One Oracle", desc: "Read today's fortune from a single Minor Arcana card.", pos: ["What Is Shown"] },
     three: { name: "Three Cards", desc: "The most fundamental form: reading the flow of time.", pos: ["Past", "Present", "Future"] },
@@ -2941,11 +2981,24 @@ const SPREAD_I18N = {
     relationship: { name: "Cup of Relationship", desc: "Reading a bond from both sides.", pos: ["Your situation", "Their situation", "Your wish", "Their wish", "Your fear", "Their fear", "Where you are now", "The obstacle", "What is possible", "Your path", "Where you are heading"] },
     horoscope: { name: "Horoscope Spread", desc: "Survey your life as it stands across twelve realms and one card at the centre.", pos: ["Decision and Self", "Property and the Senses", "Learning and Exchange", "Home and Foundation", "Love and Children", "Work and Health", "Relations and Contracts", "Setback and Succession", "Challenge and Inquiry", "Vocation and Standing", "Companions and Ideals", "Karma and Spirit", "The Whole and the Counsel for Life as It Stands"] },
     simpleCross: { name: "Simple Cross", desc: "Two cards for the situation and its obstacle, one for the way ahead.", pos: ["The present situation", "What crosses it", "The way to go"] },
-    greekCross: { name: "Greek Cross", desc: "A core at the centre, read across time and depth.", pos: ["The heart of it", "What has been", "What is coming", "The wish in the open", "What lies beneath"] },
+    greekCross: { name: "Greek Cross", desc: "See how far the four forces widen the outcome.", pos: ["The outcome", "The present", "The obstacle", "If this continues", "The countermeasure"] },
     horseshoe: { name: "Horseshoe", desc: "Seven cards in an arc, showing where you stand in the process.", pos: ["What you have built", "The present", "Hidden influences", "What stands in the way", "Those around you", "The road to take", "What will grow from here"] },
     treeOfLife: { name: "Tree of Life", desc: "Ten sephirot, from spirit down to daily life.", pos: ["The root will", "Insight and expansion", "The law that gives form", "Mercy and bounty", "Judgement and rigour", "The centre of balance", "Passion and desire", "Intellect and speech", "The ground of the unconscious", "Daily life"] },
+    shadowWork: { name: "Shadow Integration", desc: "See the side you would rather not admit as unused power, not a flaw.", pos: ["What you look away from", "How it came about", "How it shows in daily life", "What admitting it gives you", "One step toward integration"] },
+    innerChild: { name: "The Inner Child", desc: "Speak, as you are now, to the feelings you left behind.", pos: ["How the young self is now", "The feeling left behind", "What that child wants to say", "The care you can give now", "The joy you can reclaim"] },
+    selfSabotage: { name: "Undoing Self-Sabotage", desc: "Find the mechanism that stops you just as things start to work.", pos: ["The pattern you repeat", "The signal just before you stop", "What it is protecting", "The real fear", "One move that breaks the pattern"] },
+    boundary: { name: "Boundaries", desc: "Redraw the line where your own ground ends.", pos: ["The line being crossed", "Why you allow it", "How it looks once redrawn", "The words to say it with"] },
+    burnout: { name: "Recovering from Depletion", desc: "Before burning out, decide what to set down.", pos: ["What is wearing thin", "The source of the drain", "What you may set down now", "How recovery begins"] },
+    manifestation: { name: "Manifestation", desc: "Put the wish into words, then lay out what blocks it and what you hold.", pos: ["What you truly want", "What blocks it", "The resources you hold", "What to let go of", "A concrete first step", "The force carrying it"] },
+    careerCross: { name: "Career Crossroads", desc: "Read a work decision from both aptitude and circumstance.", pos: ["Where you stand", "The strength you hold", "What is missing", "The current from outside", "The roads open to you", "How it feels in six months"] },
+    character: { name: "Reading a Person", desc: "See one person from both their strengths and their faults.", pos: ["The person themselves", "Their greatest strength", "Their greatest fault", "What weighs on them now", "What you gain from knowing them"] },
+    newRelation: { name: "A New Relationship", desc: "Read a young bond from what each side brings.", pos: ["The ground of the bond", "What they bring", "What you bring", "The present difficulty", "The hidden possibility", "How to grow it"] },
+    monthly: { name: "The Month Ahead", desc: "Survey a month by its theme, its chances and its obstacles.", pos: ["The theme of the month", "A hidden chance", "The obstacle to clear", "Where you will grow", "What to watch for", "The action to take", "What remains at month's end"] },
+    season: { name: "The Turn of the Season", desc: "Take a season by its seed and its harvest.", pos: ["The present momentum", "The seed to grow", "Where to put the light", "What you set in shadow", "What can be harvested"] },
+    spiritGuide: { name: "Connection with Intuition", desc: "See how far the channel of instinct is open right now.", pos: ["How open the intuition is", "What you are reaching for", "How things look from here", "How to strengthen the link", "The guidance needed now", "What gets in the way", "The role you are playing"] },
   },
   ko: {
+    yesNo: { name: "예・아니오", desc: "질문에 예 또는 아니오로 답합니다." },
     oneOracle: { name: "원 오라클", desc: "메이저 아르카나 한 장만으로 보는 가장 간결한 방식", pos: ["드러난 것"] },
     oneOracleMinor: { name: "쁘띠 원 오라클", desc: "마이너 아르카나 한 장으로 오늘의 운세를 읽는 방식", pos: ["드러난 것"] },
     three: { name: "쓰리 카드", desc: "시간의 흐름을 읽는 가장 기본적인 형태.", pos: ["과거", "현재", "미래"] },
@@ -2956,11 +3009,12 @@ const SPREAD_I18N = {
     relationship: { name: "관계의 잔", desc: "두 사람의 관계를 양쪽에서 읽는다.", pos: ["당신의 상황", "상대의 상황", "당신의 바람", "상대의 바람", "당신의 불안", "상대의 불안", "두 사람의 현재", "장애", "가능성", "당신이 나아갈 길", "두 사람의 앞날"] },
     horoscope: { name: "호로스코프", desc: "열두 영역과 중앙의 한 장으로 지금의 삶을 조망한다.", pos: ["결단과 자신", "재산과 오감", "학습과 교류", "가정과 기반", "연애와 자녀", "노동과 건강", "관계와 계약", "좌절과 승계", "도전과 탐구", "천직과 지위", "동료와 이상", "인연과 영성", "지금의 삶에 대한 총합과 조언"] },
     simpleCross: { name: "심플 크로스", desc: "두 장으로 상황과 장애를, 한 장으로 나아갈 길을 봅니다.", pos: ["현재의 상황", "가로막는 것", "나아갈 길"] },
-    greekCross: { name: "그리스 십자", desc: "핵을 중심으로 시간과 의식의 깊이를 읽습니다.", pos: ["일의 핵심", "지나온 것", "다가올 것", "드러난 바람", "밑바닥에 있는 것"] },
+    greekCross: { name: "그리스 십자", desc: "사방의 힘이 결과를 얼마나 넓히는지 봅니다.", pos: ["결과", "현재 상황", "장애", "이대로 가면", "대책"] },
     horseshoe: { name: "호스슈", desc: "일곱 장의 호로 목표를 향한 과정의 어디에 있는지 봅니다.", pos: ["지금까지 쌓은 것", "지금의 상황", "숨은 영향", "가로막는 것", "주변 사람", "택할 길", "앞으로 자라날 것"] },
     treeOfLife: { name: "생명의 나무", desc: "열 개의 세피로트로 정신에서 현실까지를 꿰뚫습니다.", pos: ["근원의 의지", "섬광과 확장", "형태를 주는 이치", "자애와 은혜", "심판과 규율", "조화의 중심", "정열과 욕망", "지성과 전달", "무의식의 토대", "현실의 삶"] },
   },
   "zh-TW": {
+    yesNo: { name: "是・否", desc: "針對問題以是或否回答。" },
     oneOracle: { name: "單張神諭", desc: "只用一張大阿爾克那占卜的最簡形式", pos: ["所示之物"] },
     oneOracleMinor: { name: "小小單張占卜", desc: "以一張小阿爾克那讀取今日運勢", pos: ["所顯示的"] },
     three: { name: "三張牌", desc: "解讀時間流動的最基本形式。", pos: ["過去", "現在", "未來"] },
@@ -2971,11 +3025,12 @@ const SPREAD_I18N = {
     relationship: { name: "關係之杯", desc: "從兩側解讀兩人的關係。", pos: ["你的狀況", "對方的狀況", "你的願望", "對方的願望", "你的不安", "對方的不安", "兩人的現在", "障礙", "可能性", "你該走的路", "兩人的去向"] },
     horoscope: { name: "占星盤", desc: "以十二領域與中央一張，綜觀當下的人生。", pos: ["決斷與自我", "財產與五感", "學習與交流", "家庭與根基", "戀愛與子女", "勞動與健康", "關係與契約", "挫折與承繼", "挑戰與探究", "天職與地位", "夥伴與理想", "因緣與靈性", "對當下人生的總合與建議"] },
     simpleCross: { name: "簡易十字", desc: "以兩張看處境與阻礙，一張看該走的路。", pos: ["目前的處境", "橫亙其上的", "該走的路"] },
-    greekCross: { name: "希臘十字", desc: "以核心為中，從四方讀時間與意識的深淺。", pos: ["事情的核心", "已然過去", "即將到來", "浮於表面的願望", "沉在底下的"] },
+    greekCross: { name: "希臘十字", desc: "看四方之力將結果撐開到什麼程度。", pos: ["結果", "現況", "阻礙", "照此下去", "對策"] },
     horseshoe: { name: "馬蹄", desc: "七張成弧，看您在邁向目標的過程中身處何處。", pos: ["至今累積的", "當前的處境", "潛藏的影響", "橫阻的事物", "周遭的人", "該取的路", "此後將滋長的"] },
     treeOfLife: { name: "生命之樹", desc: "以十個薩弗洛特，自精神貫穿至現實。", pos: ["根源的意志", "靈光與擴展", "賦形之理", "慈愛與恩澤", "裁斷與律則", "調和的中心", "熱情與欲望", "智性與傳達", "潛意識的根基", "現實的生活"] },
   },
   "zh-CN": {
+    yesNo: { name: "是・否", desc: "针对问题以是或否回答。" },
     oneOracle: { name: "单张神谕", desc: "只用一张大阿尔克那占卜的最简形式", pos: ["所示之物"] },
     oneOracleMinor: { name: "小小单张占卜", desc: "以一张小阿尔克那读取今日运势", pos: ["所显示的"] },
     three: { name: "三张牌", desc: "解读时间流动的最基本形式。", pos: ["过去", "现在", "未来"] },
@@ -2986,11 +3041,12 @@ const SPREAD_I18N = {
     relationship: { name: "关系之杯", desc: "从两侧解读两人的关系。", pos: ["你的状况", "对方的状况", "你的愿望", "对方的愿望", "你的不安", "对方的不安", "两人的现在", "障碍", "可能性", "你该走的路", "两人的去向"] },
     horoscope: { name: "占星盘", desc: "以十二领域与中央一张，综观当下的人生。", pos: ["决断与自我", "财产与五感", "学习与交流", "家庭与根基", "恋爱与子女", "劳动与健康", "关系与契约", "挫折与承继", "挑战与探究", "天职与地位", "伙伴与理想", "因缘与灵性", "对当下人生的总合与建议"] },
     simpleCross: { name: "简易十字", desc: "以两张看处境与阻碍，一张看该走的路。", pos: ["目前的处境", "横亘其上的", "该走的路"] },
-    greekCross: { name: "希腊十字", desc: "以核心为中，从四方读时间与意识的深浅。", pos: ["事情的核心", "已然过去", "即将到来", "浮于表面的愿望", "沉在底下的"] },
+    greekCross: { name: "希腊十字", desc: "看四方之力将结果撑开到什么程度。", pos: ["结果", "现况", "阻碍", "照此下去", "对策"] },
     horseshoe: { name: "马蹄", desc: "七张成弧，看您在迈向目标的过程中身处何处。", pos: ["至今累积的", "当前的处境", "潜藏的影响", "横阻的事物", "周遭的人", "该取的路", "此后将滋长的"] },
     treeOfLife: { name: "生命之树", desc: "以十个萨弗洛特，自精神贯穿至现实。", pos: ["根源的意志", "灵光与扩展", "赋形之理", "慈爱与恩泽", "裁断与律则", "调和的中心", "热情与欲望", "智性与传达", "潜意识的根基", "现实的生活"] },
   },
   th: {
+    yesNo: { name: "ใช่ / ไม่ใช่", desc: "ตอบคำถามด้วยใช่หรือไม่ใช่" },
     oneOracle: { name: "ไพ่ใบเดียว", desc: "รูปแบบเรียบง่ายที่สุด ทำนายด้วยไพ่เมเจอร์อาร์คานาเพียงใบเดียว", pos: ["สิ่งที่ปรากฏ"] },
     oneOracleMinor: { name: "เปอตี วัน ออราเคิล", desc: "อ่านดวงประจำวันจากไพ่ไมเนอร์อาร์คานาหนึ่งใบ", pos: ["สิ่งที่ปรากฏ"] },
     three: { name: "สามใบ", desc: "รูปแบบพื้นฐานที่สุด อ่านกระแสของเวลา", pos: ["อดีต", "ปัจจุบัน", "อนาคต"] },
@@ -3001,11 +3057,12 @@ const SPREAD_I18N = {
     relationship: { name: "ถ้วยแห่งความสัมพันธ์", desc: "อ่านความสัมพันธ์จากทั้งสองฝ่าย", pos: ["สถานการณ์ของคุณ", "สถานการณ์ของเขา", "ความปรารถนาของคุณ", "ความปรารถนาของเขา", "ความกังวลของคุณ", "ความกังวลของเขา", "ปัจจุบันของทั้งสอง", "อุปสรรค", "ความเป็นไปได้", "ทางที่คุณควรไป", "ปลายทางของทั้งสอง"] },
     horoscope: { name: "ดวงชะตาสิบสองเรือน", desc: "มองภาพรวมชีวิตในปัจจุบันผ่านสิบสองขอบเขตและไพ่ใบกลาง", pos: ["การตัดสินใจและตัวตน", "ทรัพย์สินและผัสสะ", "การเรียนรู้และการแลกเปลี่ยน", "บ้านและรากฐาน", "ความรักและบุตร", "การงานและสุขภาพ", "ความสัมพันธ์และสัญญา", "ความพ่ายแพ้และการสืบทอด", "การท้าทายและการค้นหา", "อาชีพและสถานะ", "มิตรสหายและอุดมคติ", "กรรมและจิตวิญญาณ", "ภาพรวมและคำแนะนำต่อชีวิตปัจจุบัน"] },
     simpleCross: { name: "ไม้กางเขนอย่างง่าย", desc: "สองใบสำหรับสถานการณ์และอุปสรรค หนึ่งใบสำหรับทางที่ควรไป", pos: ["สถานการณ์ปัจจุบัน", "สิ่งที่ขวางอยู่", "ทางที่ควรไป"] },
-    greekCross: { name: "ไม้กางเขนกรีก", desc: "แก่นอยู่ตรงกลาง อ่านทั้งเวลาและความลึก", pos: ["แก่นของเรื่อง", "สิ่งที่ผ่านมา", "สิ่งที่กำลังมา", "ความปรารถนาที่เปิดเผย", "สิ่งที่อยู่เบื้องล่าง"] },
+    greekCross: { name: "ไม้กางเขนกรีก", desc: "ดูว่าพลังทั้งสี่ขยายผลลัพธ์ได้เพียงใด", pos: ["ผลลัพธ์", "สถานการณ์ปัจจุบัน", "อุปสรรค", "หากเป็นเช่นนี้ต่อไป", "แนวทางรับมือ"] },
     horseshoe: { name: "เกือกม้า", desc: "ไพ่เจ็ดใบเป็นโค้ง ดูว่าคุณอยู่ตรงไหนของกระบวนการ", pos: ["สิ่งที่สั่งสมมา", "สถานการณ์ตอนนี้", "อิทธิพลที่ซ่อนอยู่", "สิ่งที่ขวางกั้น", "ผู้คนรอบตัว", "ทางที่ควรเลือก", "สิ่งที่จะเติบโตต่อจากนี้"] },
     treeOfLife: { name: "ต้นไม้แห่งชีวิต", desc: "สิบเซฟิรอท จากจิตวิญญาณสู่ชีวิตประจำวัน", pos: ["เจตจำนงต้นกำเนิด", "ประกายและการขยาย", "กฎที่ให้รูปทรง", "ความเมตตาและพร", "การตัดสินและวินัย", "ศูนย์กลางแห่งสมดุล", "ความเร่าร้อนและปรารถนา", "ปัญญาและการสื่อสาร", "รากฐานของจิตใต้สำนึก", "ชีวิตประจำวัน"] },
   },
   tl: {
+    yesNo: { name: "Oo / Hindi", desc: "Sumasagot sa tanong nang oo o hindi." },
     oneOracle: { name: "Isang Orakulo", desc: "Ang pinakasimpleng pagbasa: iisang Major Arcana.", pos: ["Ang Ipinapakita"] },
     oneOracleMinor: { name: "Munting Orakulo", desc: "Basahin ang kapalaran ngayong araw sa isang Minor Arcana.", pos: ["Ang Ipinapakita"] },
     three: { name: "Tatlong Baraha", desc: "Ang pinakapayak na anyo: pagbasa sa agos ng panahon.", pos: ["Nakaraan", "Kasalukuyan", "Hinaharap"] },
@@ -3016,11 +3073,12 @@ const SPREAD_I18N = {
     relationship: { name: "Kopa ng Ugnayan", desc: "Binabasa ang ugnayan mula sa magkabilang panig.", pos: ["Lagay mo", "Lagay niya", "Hangad mo", "Hangad niya", "Takot mo", "Takot niya", "Kayo ngayon", "Ang balakid", "Ang posible", "Landas mo", "Patutunguhan ninyo"] },
     horoscope: { name: "Horoscope Spread", desc: "Tanawin ang buhay sa kasalukuyan sa labindalawang larangan at isang baraha sa gitna.", pos: ["Pasya at Sarili", "Ari-arian at Pandama", "Pag-aaral at Palitan", "Tahanan at Pundasyon", "Pag-ibig at mga Anak", "Paggawa at Kalusugan", "Ugnayan at Kontrata", "Pagkabigo at Pagmana", "Hamon at Pagsisiyasat", "Bokasyon at Katayuan", "Kasama at Mithiin", "Karma at Espiritu", "Kabuuan at Payo para sa Buhay Ngayon"] },
     simpleCross: { name: "Simpleng Krus", desc: "Dalawang baraha para sa sitwasyon at hadlang, isa para sa daan.", pos: ["Ang kasalukuyang sitwasyon", "Ang tumatawid dito", "Ang daang tatahakin"] },
-    greekCross: { name: "Krus na Griyego", desc: "Isang ubod sa gitna, binabasa sa panahon at lalim.", pos: ["Ang ubod nito", "Ang nakaraan", "Ang paparating", "Ang hayag na hangarin", "Ang nasa ilalim"] },
+    greekCross: { name: "Krus na Griyego", desc: "Tingnan kung gaano pinalalawak ng apat na puwersa ang kalalabasan.", pos: ["Ang kalalabasan", "Ang kasalukuyan", "Ang hadlang", "Kung magpapatuloy ito", "Ang panlunas"] },
     horseshoe: { name: "Bakal ng Kabayo", desc: "Pitong baraha sa arko, ipinapakita kung nasaan ka sa proseso.", pos: ["Ang naitayo mo", "Ang kasalukuyan", "Nakatagong impluwensya", "Ang humahadlang", "Ang mga nakapaligid", "Ang daang tatahakin", "Ang lalago mula rito"] },
     treeOfLife: { name: "Puno ng Buhay", desc: "Sampung sephirot, mula espiritu hanggang araw-araw.", pos: ["Ang ugat na kalooban", "Kislap at paglawak", "Ang batas na nagbibigay-anyo", "Awa at biyaya", "Paghatol at higpit", "Sentro ng balanse", "Silakbo at pagnanasa", "Talino at pagsasalita", "Saligan ng malay-tao", "Ang pang-araw-araw"] },
   },
   id: {
+    yesNo: { name: "Ya / Tidak", desc: "Menjawab pertanyaan dengan ya atau tidak." },
     oneOracle: { name: "Satu Kartu", desc: "Cara paling sederhana: meramal dengan satu kartu Major Arcana.", pos: ["Yang Ditunjukkan"] },
     oneOracleMinor: { name: "Petit One Oracle", desc: "Membaca peruntungan hari ini dari satu kartu Minor Arcana.", pos: ["Yang Ditunjukkan"] },
     three: { name: "Tiga Kartu", desc: "Bentuk paling dasar: membaca aliran waktu.", pos: ["Masa lalu", "Masa kini", "Masa depan"] },
@@ -3031,11 +3089,12 @@ const SPREAD_I18N = {
     relationship: { name: "Cawan Hubungan", desc: "Membaca hubungan dari kedua sisi.", pos: ["Keadaanmu", "Keadaannya", "Harapanmu", "Harapannya", "Ketakutanmu", "Ketakutannya", "Kalian saat ini", "Rintangan", "Kemungkinan", "Jalan yang kamu tempuh", "Ke mana kalian menuju"] },
     horoscope: { name: "Horoskop", desc: "Menyurvei hidup Anda saat ini lewat dua belas wilayah dan satu kartu di pusat.", pos: ["Keputusan dan Diri", "Harta dan Pancaindra", "Belajar dan Bertukar", "Rumah dan Fondasi", "Cinta dan Anak", "Kerja dan Kesehatan", "Relasi dan Kontrak", "Kegagalan dan Warisan", "Tantangan dan Penyelidikan", "Panggilan dan Kedudukan", "Kawan dan Cita-cita", "Karma dan Rohani", "Keseluruhan dan Nasihat untuk Hidup Saat Ini"] },
     simpleCross: { name: "Salib Sederhana", desc: "Dua kartu untuk keadaan dan halangan, satu untuk jalan ke depan.", pos: ["Keadaan sekarang", "Yang melintanginya", "Jalan yang ditempuh"] },
-    greekCross: { name: "Salib Yunani", desc: "Inti di tengah, dibaca lewat waktu dan kedalaman.", pos: ["Inti persoalan", "Yang telah lalu", "Yang akan datang", "Keinginan yang tampak", "Yang ada di dasar"] },
+    greekCross: { name: "Salib Yunani", desc: "Lihat seberapa jauh keempat gaya melebarkan hasilnya.", pos: ["Hasil", "Keadaan kini", "Halangan", "Jika ini berlanjut", "Langkah penanganan"] },
     horseshoe: { name: "Tapal Kuda", desc: "Tujuh kartu melengkung, melihat di mana Anda dalam prosesnya.", pos: ["Yang telah Anda bangun", "Keadaan kini", "Pengaruh tersembunyi", "Yang menghadang", "Orang di sekitar", "Jalan yang diambil", "Yang akan tumbuh dari sini"] },
     treeOfLife: { name: "Pohon Kehidupan", desc: "Sepuluh sefirot, dari roh hingga kehidupan sehari-hari.", pos: ["Kehendak asal", "Kilasan dan perluasan", "Hukum yang memberi bentuk", "Belas kasih dan berkah", "Penghakiman dan disiplin", "Pusat keseimbangan", "Gairah dan hasrat", "Nalar dan tutur", "Landasan bawah sadar", "Kehidupan sehari-hari"] },
   },
   ms: {
+    yesNo: { name: "Ya / Tidak", desc: "Menjawab soalan dengan ya atau tidak." },
     oneOracle: { name: "Satu Kad", desc: "Cara paling ringkas: menilik dengan satu kad Major Arcana.", pos: ["Yang Ditunjukkan"] },
     oneOracleMinor: { name: "Petit One Oracle", desc: "Membaca nasib hari ini daripada satu kad Minor Arcana.", pos: ["Yang Ditunjukkan"] },
     three: { name: "Tiga Kad", desc: "Bentuk paling asas: membaca aliran masa.", pos: ["Masa lalu", "Masa kini", "Masa depan"] },
@@ -3046,11 +3105,12 @@ const SPREAD_I18N = {
     relationship: { name: "Cawan Hubungan", desc: "Membaca hubungan dari kedua-dua belah pihak.", pos: ["Keadaan anda", "Keadaannya", "Harapan anda", "Harapannya", "Ketakutan anda", "Ketakutannya", "Kalian kini", "Halangan", "Kemungkinan", "Jalan yang anda tempuh", "Ke mana kalian menuju"] },
     horoscope: { name: "Horoskop", desc: "Meninjau hidup anda kini melalui dua belas wilayah dan satu kad di tengah.", pos: ["Keputusan dan Diri", "Harta dan Pancaindera", "Belajar dan Bertukar", "Rumah dan Asas", "Cinta dan Anak", "Kerja dan Kesihatan", "Hubungan dan Kontrak", "Kegagalan dan Warisan", "Cabaran dan Penyelidikan", "Panggilan dan Kedudukan", "Rakan dan Cita-cita", "Karma dan Rohani", "Keseluruhan dan Nasihat untuk Hidup Kini"] },
     simpleCross: { name: "Salib Ringkas", desc: "Dua kad untuk keadaan dan halangan, satu untuk jalan ke hadapan.", pos: ["Keadaan sekarang", "Yang melintanginya", "Jalan yang ditempuh"] },
-    greekCross: { name: "Salib Yunani", desc: "Inti di tengah, dibaca melalui masa dan kedalaman.", pos: ["Inti persoalan", "Yang telah lalu", "Yang akan datang", "Keinginan yang nyata", "Yang di dasar"] },
+    greekCross: { name: "Salib Yunani", desc: "Lihat sejauh mana keempat daya meluaskan hasilnya.", pos: ["Hasil", "Keadaan kini", "Halangan", "Jika ini berterusan", "Langkah tindakan"] },
     horseshoe: { name: "Ladam Kuda", desc: "Tujuh kad melengkung, melihat di mana anda dalam prosesnya.", pos: ["Yang telah anda bina", "Keadaan kini", "Pengaruh tersembunyi", "Yang menghalang", "Orang di sekeliling", "Jalan yang diambil", "Yang akan tumbuh dari sini"] },
     treeOfLife: { name: "Pokok Kehidupan", desc: "Sepuluh sefirot, dari roh hingga kehidupan seharian.", pos: ["Kehendak asal", "Kilauan dan perluasan", "Hukum yang memberi bentuk", "Belas kasihan dan rahmat", "Penghakiman dan disiplin", "Pusat keseimbangan", "Ghairah dan keinginan", "Akal dan tutur", "Asas bawah sedar", "Kehidupan seharian"] },
   },
   vi: {
+    yesNo: { name: "Có / Không", desc: "Trả lời câu hỏi bằng có hoặc không." },
     oneOracle: { name: "Một Lá", desc: "Cách xem đơn giản nhất: chỉ một lá Ẩn Chính.", pos: ["Điều Được Chỉ Ra"] },
     oneOracleMinor: { name: "Petit One Oracle", desc: "Đọc vận hôm nay từ một lá Ẩn Phụ.", pos: ["Điều Được Chỉ Ra"] },
     three: { name: "Ba Lá", desc: "Hình thức căn bản nhất: đọc dòng chảy thời gian.", pos: ["Quá khứ", "Hiện tại", "Tương lai"] },
@@ -3061,7 +3121,7 @@ const SPREAD_I18N = {
     relationship: { name: "Chiếc Cốc Quan Hệ", desc: "Đọc mối quan hệ từ cả hai phía.", pos: ["Hoàn cảnh của bạn", "Hoàn cảnh của người ấy", "Mong muốn của bạn", "Mong muốn của người ấy", "Nỗi lo của bạn", "Nỗi lo của người ấy", "Hai người lúc này", "Trở ngại", "Khả năng", "Con đường của bạn", "Nơi hai người hướng tới"] },
     horoscope: { name: "Vòng Hoàng Đạo", desc: "Nhìn bao quát cuộc sống hiện tại qua mười hai lĩnh vực và lá bài ở trung tâm.", pos: ["Quyết định và Bản thân", "Tài sản và Ngũ giác", "Học tập và Giao lưu", "Gia đình và Nền tảng", "Tình yêu và Con cái", "Lao động và Sức khỏe", "Quan hệ và Hợp đồng", "Thất bại và Kế thừa", "Thử thách và Tìm tòi", "Thiên chức và Địa vị", "Bạn hữu và Lý tưởng", "Nhân duyên và Tâm linh", "Tổng thể và Lời khuyên cho cuộc sống hiện tại"] },
     simpleCross: { name: "Thập giá đơn giản", desc: "Hai lá cho tình thế và trở ngại, một lá cho con đường.", pos: ["Tình thế hiện tại", "Thứ chắn ngang", "Con đường nên đi"] },
-    greekCross: { name: "Thập giá Hy Lạp", desc: "Cốt lõi ở giữa, đọc theo thời gian và chiều sâu.", pos: ["Cốt lõi của việc", "Điều đã qua", "Điều sắp tới", "Ước muốn lộ ra", "Thứ nằm dưới đáy"] },
+    greekCross: { name: "Thập giá Hy Lạp", desc: "Xem bốn lực mở rộng kết quả đến đâu.", pos: ["Kết quả", "Tình thế hiện tại", "Trở ngại", "Nếu cứ tiếp tục", "Đối sách"] },
     horseshoe: { name: "Móng ngựa", desc: "Bảy lá theo hình cung, xem bạn đang ở đâu trong tiến trình.", pos: ["Điều bạn đã dựng nên", "Tình thế hiện nay", "Ảnh hưởng ẩn giấu", "Thứ cản đường", "Những người xung quanh", "Con đường nên chọn", "Điều sẽ lớn lên từ đây"] },
     treeOfLife: { name: "Cây Sự Sống", desc: "Mười sephirot, từ tinh thần xuống đời sống thường ngày.", pos: ["Ý chí cội nguồn", "Tia sáng và mở rộng", "Lẽ tạo hình", "Từ ái và ân sủng", "Phán xét và kỷ luật", "Trung tâm hài hòa", "Nhiệt huyết và dục vọng", "Trí tuệ và truyền đạt", "Nền của vô thức", "Đời sống thường ngày"] },
   },
@@ -3410,7 +3470,9 @@ function spreadInfo(key, lang) {
   無料版は有料版のすぐ下に置く。離して並べると別物に見え、
   「同じ占いの、鑑定文の出どころが違う版」だと伝わらない。
 */
-const SPREAD_ORDER = ["oneOracle", "oneOracleMinor", "three", "threeFree", "hexagram", "hexagramFree", "weekly", "weeklyFree", "celticCross", "celticCrossFree", "simpleCross", "simpleCrossFree", "greekCross", "greekCrossFree", "horseshoe", "horseshoeFree", "horoscope", "horoscopeFree", "treeOfLife", "treeOfLifeFree", "choice", "choiceFree", "relationship"];
+const SPREAD_ORDER = ["yesNo", "oneOracle", "oneOracleMinor", "three", "threeFree", "hexagram", "hexagramFree", "weekly", "weeklyFree", "celticCross", "celticCrossFree", "simpleCross", "simpleCrossFree", "greekCross", "greekCrossFree", "horseshoe", "horseshoeFree", "horoscope", "horoscopeFree", "treeOfLife", "treeOfLifeFree", "choice", "choiceFree", "relationship",
+  "shadowWork", "innerChild", "selfSabotage", "boundary", "burnout", "manifestation",
+  "careerCross", "character", "newRelation", "monthly", "season", "spiritGuide"];
 
 /*
   ============================================================
@@ -3439,6 +3501,27 @@ const SPREAD_ORDER = ["oneOracle", "oneOracleMinor", "three", "threeFree", "hexa
   英語は Classical ではなく Traditional を当ててある。
   ============================================================
 */
+/*
+  育成に経験値が入る配置。スリーカードだけ。
+
+  ⚠️ アナログ結果分析（手元の札を入力する形式）を作るときは、
+  そちらを絶対に含めないこと。乱数が手の届く場所に移るので、
+  経験値が入ると嘘の入力で育成できてしまう。
+*/
+const SPREAD_GROWS = ["three"];
+
+/*
+  汎用。相談の主題を選ばない配置。スリーカードだけ。
+  他は相手・二択・夢・目標など、扱うものが決まっている。
+*/
+const SPREAD_GENERAL = ["three"];
+
+/*
+  図鑑に載る配置。レア・ホロの収集が起きるのはこの2つだけ。
+  他の配置で引いても図鑑は埋まらないので、そこを札で示す。
+*/
+const SPREAD_DEX = ["oneOracle", "oneOracleMinor"];
+
 const SCHOOLS = ["classic", "modern", "analog", "multi"];
 /*
   流派ごとのスプレッド。空のものは準備中の画面を出す。
@@ -3448,7 +3531,7 @@ const SCHOOLS = ["classic", "modern", "analog", "multi"];
     analog   手元の実物のカードを入力して、計算と視覚化だけを担う
     multi    1台の端末を複数人で回す占い
 */
-const MODERN_SPREADS = [];
+const MODERN_SPREADS = ["manifestation", "shadowWork", "innerChild", "boundary", "selfSabotage", "character", "monthly", "newRelation", "season", "spiritGuide", "careerCross", "burnout"];
 const ANALOG_SPREADS = [];
 const MULTI_SPREADS = ["relationship"];
 const schoolOf = (key) => {
@@ -3472,7 +3555,7 @@ const FREE_XP_PER_DAY = 3;
  * 隠してしまうと「これしかない」と受け取られるが、
  * 見えていれば「まだ増える」と伝わる。萎えさせないための配慮。
  */
-const SPREAD_READY = { oneOracle: true, oneOracleMinor: true, three: true, threeFree: true, hexagram: true, hexagramFree: true, weekly: true, weeklyFree: true, celticCross: true, celticCrossFree: true, horoscope: true, horoscopeFree: true, choice: true, choiceFree: true, simpleCross: true, simpleCrossFree: true, greekCross: true, greekCrossFree: true, horseshoe: true, horseshoeFree: true, treeOfLife: true, treeOfLifeFree: true };
+const SPREAD_READY = { yesNo: true, oneOracle: true, oneOracleMinor: true, three: true, threeFree: true, hexagram: true, hexagramFree: true, weekly: true, weeklyFree: true, celticCross: true, celticCrossFree: true, horoscope: true, horoscopeFree: true, choice: true, choiceFree: true, simpleCross: true, simpleCrossFree: true, greekCross: true, greekCrossFree: true, horseshoe: true, horseshoeFree: true, treeOfLife: true, treeOfLifeFree: true };
 
 /** そのスプレッドがAIを使うか。使わないものは回数を消費しない */
 const SPREAD_USES_AI = { oneOracle: false, oneOracleMinor: false, three: true, threeFree: false, hexagram: true, hexagramFree: false, weekly: true, weeklyFree: false, choice: true, choiceFree: false, celticCross: true, celticCrossFree: false, relationship: true, horoscope: true, horoscopeFree: false,
@@ -3594,7 +3677,33 @@ AIの役割は、答えを外から与えることではなく、本人の内に
 どちらとも取れる言い回しに逃げた鑑定は、相談者に何の判断材料も残さず、
 かえって本人が自分で決めるための足場を奪う。それは尊厳の回復に反する。
 カードが示すものが明確なときは、その根拠を具体的に挙げたうえで、はっきりと語ること。
-鏡であるとは、輪郭をぼかすことではなく、見えているものを歪めずに映すことである。`;
+鏡であるとは、輪郭をぼかすことではなく、見えているものを歪めずに映すことである。
+
+【言い切ること：この項目は最優先で守る】
+相談者は、迷っているから引いている。読み終えて「で、どうすればいいのか」が
+残る鑑定は、時間を使わせただけで何も渡していない。
+盤面から言えることは、遠慮せず言い切ること。
+
+必ず守る形：
+・鑑定文のどこかに一度は、主語と述語のはっきりした断言を置く。
+  「〜という側面もあるでしょう」ではなく「〜です」「〜が起きています」と書く。
+・結びには、その人が今日から取れる具体的な行動をひとつだけ挙げる。
+  ひとつだけにするのは、三つ並べると選ぶ作業が増えて動けなくなるため。
+  「意識してみましょう」ではなく、動作が思い浮かぶ言葉で書く。
+・断言の直後に、その根拠となった札と位置を明示する。
+  「◯◯（位置）の△△が示しています」と書けば、断言が独断にならない。
+
+書いてはならない言い回し：
+・「〜かもしれませんし、〜かもしれません」のような両論併記の逃げ
+・「あなた次第です」「時が来ればわかるでしょう」のような、判断を返すだけの結び
+・全体を通して一度も言い切らないまま終わること
+・条件節を重ねて結論をぼかすこと（「もし〜なら、場合によっては〜」）
+
+言い切ってよい範囲：
+盤面が示していることについては言い切る。
+盤面が示していないこと（起きる時期、金額、他人の内心、医療や法律の判断）は
+言い切らない。この線引きは守ること。
+言い切れないときは、なぜ言い切れないのかを一行で述べる。黙って濁さない。`;
 
 function buildMinorPrompt(results, question, userName) {
   const cardLines = results
@@ -3893,14 +4002,28 @@ const CHOICE_STAGES = [
   4種×13段ぶんの文言を11言語で新設すると表が破綻するうえ、
   位置の名前をそのまま出すほうが、その段で何を見るのかが正確に伝わる。
 */
+/*
+  共通の「占いたいこと」欄を出す配置。
+  専用の入力欄（相手との関係／意味を知りたいこと／A と B／目標と手段）を
+  持つものは、そちらで足りるので出さない。
+*/
+const NEEDS_TOPIC = ["weekly", "horoscope", "simpleCross", "greekCross", "treeOfLife"];
+
 const SIMPLE_CROSS_STAGES = [
   { key: "core", indices: [0, 1] },  // 状況と、それを横切るもの。対なので同時に開く
   { key: "way",  indices: [2] },
 ];
+/*
+  ギリシャ十字。結果を最後に開く。
+  結果を先に見ると、そこへ寄せて残りを読むことになる。
+    左右 = 現状と障害（いま何があるか）
+    上下 = 傾向と対策（このままどうなるか、どう動くか）
+    中央 = 結果
+*/
 const GREEK_CROSS_STAGES = [
-  { key: "core", indices: [0] },
-  { key: "time", indices: [1, 2] },  // 左右の時間軸
-  { key: "mind", indices: [3, 4] },  // 上下の意識の深さ
+  { key: "field", indices: [1, 2] },
+  { key: "move", indices: [3, 4] },
+  { key: "result", indices: [0] },
 ];
 const HORSESHOE_STAGES = [
   { key: "past",   indices: [0, 1] },
@@ -7102,7 +7225,33 @@ function SpreadSelect({ lang, onSelect }) {
     占うを押した人が最初に見るのが準備中の画面になる。
   */
   const [school, setSchool] = useState("classic");
-  const list = SPREAD_ORDER.filter((k) => schoolOf(k) === school);
+  /*
+    枚数順に並べる。
+    同じ枚数なら、有料版・無料版の順（isFreeSpreadKey が後ろ）。
+    定義の並び順ではなく枚数で並べるのは、
+    「軽く一枚だけ」から「腰を据えて十枚」までが
+    そのまま上から下への並びになるため。
+  */
+  /*
+    枚数順に並べる。
+
+    ⚠️ 並べ替えの鍵は「枚数 → 基底キー → 有料/無料」の順にすること。
+    枚数のあとに有料/無料で分けると、同じ枚数の有料版がまとまって並び、
+    そのあと無料版がまとまってしまう ―― 同じ占いの二つの版が離れて、
+    「同じ占いの、鑑定文の出どころが違う版」だと伝わらなくなる。
+    実際に一度そうなった。
+  */
+  const list = SPREAD_ORDER.filter((k) => schoolOf(k) === school)
+    .slice()
+    .sort((a, b) => {
+      const ba = spreadBaseKey(a), bb = spreadBaseKey(b);
+      const ca = SPREADS[ba].count, cb = SPREADS[bb].count;
+      if (ca !== cb) return ca - cb;
+      // 同じ枚数のなかでは、まず占いごとにまとめる
+      if (ba !== bb) return SPREAD_ORDER.indexOf(ba) - SPREAD_ORDER.indexOf(bb);
+      // 同じ占いなら、有料版を先に、無料版をすぐ下に
+      return (isFreeSpreadKey(a) ? 1 : 0) - (isFreeSpreadKey(b) ? 1 : 0);
+    });
   return (
     <div style={{ width: "100%", maxWidth: "460px", margin: "0 auto" }}>
       {/* 流派の切り替え。2つしかないので、タブではなく並んだ札で示す */}
@@ -7173,7 +7322,12 @@ function SpreadSelect({ lang, onSelect }) {
               </div>
 
               <div style={{ flex: 1, minWidth: 0 }}>
-                <div style={{ display: "flex", alignItems: "center", gap: "7px", marginBottom: "3px", flexWrap: "wrap" }}>
+                {/*
+                  名前と札の行。
+                  インラインの style だと崩れたときに原因を追いにくいので
+                  クラスに寄せ、札が伸びないことを明示的に指定する。
+                */}
+                <div className="spread-badges">
                   <span className="spread-name" style={{
                     fontFamily: "'Shippori Mincho', serif", fontSize: "13px",
                     letterSpacing: "0.06em", textIndent: "0.06em",
@@ -7188,6 +7342,20 @@ function SpreadSelect({ lang, onSelect }) {
                     <span className={`plan-badge${usesAi ? " ai" : " free"}`}>
                       {usesAi ? t.planAi : t.planFree}
                     </span>
+                  )}
+                  {/*
+                    育成に経験値が入るか、どんな相談にも使えるか。
+                    枚数と課金の区分だけでは、
+                    「どれを選べばいいか」の判断材料が足りない。
+                  */}
+                  {ready && SPREAD_GROWS.includes(base) && (
+                    <span className="plan-badge grow">{t.planGrow}</span>
+                  )}
+                  {ready && SPREAD_GENERAL.includes(base) && (
+                    <span className="plan-badge general">{t.planGeneral}</span>
+                  )}
+                  {ready && SPREAD_DEX.includes(base) && (
+                    <span className="plan-badge dex">{t.planDex}</span>
                   )}
                   {!ready && (
                     <span style={{
@@ -7699,34 +7867,88 @@ function CrossVector({ drawn, lang, openedIndices }) {
   );
 }
 
-/**
- * 【ギリシャ十字】四方の張力
- *
- * 中心を核として、四本の腕がそれぞれ引っ張る。
- * 四点を結ぶと菱形になり、その歪みがそのまま偏りになる。
- *
- * 上下は意識の深さ（表に出ている願い ⇔ 底にあるもの）、
- * 左右は時間（これまで ⇔ これから）。
- * ケルト十字と同じ座標系だが、あちらは軌跡、こちらは形。
- * 同じ軸から別のものを取り出している。
- */
-function GreekTension({ drawn, lang, openedIndices }) {
+/*
+  【ギリシャ十字】四方の張力
+
+  四方はそれぞれ元素に対応する。
+  その位置に出た札が、その元素の性質をどれだけ持つかで腕が伸びる。
+
+    現状（左） 地 ― 物質。積み上がっているもの
+    障害（右） 水 ― 感情。引っかかっているもの
+    傾向（上） 火 ― 意志。このまま進む勢い
+    対策（下） 風 ― 思考。手を打つ余地
+
+  【なぜ元素で測るのか】
+  位置の意味をそのまま強さに読み替えると、
+  「障害が強い」が良いのか悪いのか決められない。
+  元素なら「その札がどれだけ水の性質を持つか」という
+  一つの物差しで四方を同じように測れる。
+
+  測り方は、札の八分野の値を、その元素のスートが持つ
+  重みの並び（STAT_WEIGHTS）に射影する。
+  重みの表は既にあるので、こちらで係数を発明していない。
+
+  【中央】
+  中央の札は倍率として働く。良い向きなら四方を押し広げ、
+  そうでなければ狭める。結果の札が全体の広さを決める、
+  という配置の意味がそのまま面積になる。
+
+  【面積】
+  凧形の面積は（上＋下）×（左＋右）÷2。
+  広いほどよい ―― 四方の力が結果を大きく開いた状態になる。
+*/
+const GREEK_ELEMENTS = ["pentacles", "cups", "wands", "swords"]; // 上下左右の順に使う添字は下で対応づける
+
+/** 札が、ある元素の性質をどれだけ持つか（0〜1） */
+function elementAffinity(card, suitKey) {
+  const w = STAT_WEIGHTS[suitKey];
+  if (!w) return 0.5;
+  const sc = calcStats({ card, reversed: card.reversed }, [], true).scores;
+  let dot = 0, sum = 0;
+  for (let i = 0; i < w.length; i++) { dot += (sc[i] - 3.5) * w[i]; sum += w[i]; }
+  // 実測でおおむね -1.1〜1.1 に収まる。理論値ではなく実測で割る
+  const v = dot / (sum || 1);
+  return Math.max(0, Math.min(1, (v + 1.1) / 2.2));
+}
+
+function GreekTension({ drawn, labels, lang, openedIndices }) {
   const t = T[lang] || T.ja;
   const seen = new Set(openedIndices);
-  const arms = [3, 2, 4, 1]; // 上・右・下・左（時計回り）
-  if (!arms.some((i) => seen.has(i))) return null;
-  const W = 250, C = 125, R = 92, MIN = 26;
-  const v = arms.map((i) => (seen.has(i) ? MIN + cardPower(drawn[i]) * (R - MIN) : MIN));
-  const good = arms.map((i) => (seen.has(i) ? isGoodOrientation(drawn[i], drawn[i].reversed) : true));
+  /*
+    腕の順序は 上・右・下・左。
+    位置の添字は 3=傾向(上) 2=障害(右) 4=対策(下) 1=現状(左)。
+    元素は 傾向=火 障害=水 対策=風 現状=地。
+  */
+  const ARMS = [
+    { idx: 3, suit: "wands" },     // 上・火・意志
+    { idx: 2, suit: "cups" },      // 右・水・感情
+    { idx: 4, suit: "swords" },    // 下・風・思考
+    { idx: 1, suit: "pentacles" }, // 左・地・物質
+  ];
+  if (!ARMS.some((a) => seen.has(a.idx))) return null;
+  const W = 250, C = 125, R = 96, MIN = 24;
+
+  // 中央の倍率。良い向きなら広げ、そうでなければ狭める
+  const core = seen.has(0) ? drawn[0] : null;
+  const coreGood = core ? isGoodOrientation(core, core.reversed) : true;
+  const corePow = core ? cardPower(core) : 0;
+  const mul = core ? (coreGood ? 1 + corePow * 0.45 : 1 - corePow * 0.40) : 1;
+
+  const v = ARMS.map((a) => {
+    if (!seen.has(a.idx)) return MIN;
+    const k = elementAffinity(drawn[a.idx], a.suit) * mul;
+    return MIN + Math.max(0, Math.min(1, k)) * (R - MIN);
+  });
   const pts = [
     { x: C, y: C - v[0] }, { x: C + v[1], y: C },
     { x: C, y: C + v[2] }, { x: C - v[3], y: C },
   ];
   const poly = pts.map((p) => `${p.x.toFixed(1)},${p.y.toFixed(1)}`).join(" ");
-  const core = seen.has(0) ? drawn[0] : null;
-  // 歪みの度合い。四本が揃っているほど菱形が整う
-  const mx = Math.max(...v), mn = Math.min(...v);
-  const skew = (mx - mn) / (R - MIN);
+  // 面積。とりうる最大に対する割合で出す
+  const area = ((v[0] + v[2]) * (v[1] + v[3])) / 2;
+  const areaMax = ((R + R) * (R + R)) / 2;
+  const pct = Math.round((area / areaMax) * 100);
+
   return (
     <div className="greek-ten">
       <div className="greek-ten-title sheen-text">{t.greekTenTitle}</div>
@@ -7737,21 +7959,36 @@ function GreekTension({ drawn, lang, openedIndices }) {
                      [C, C + MIN + (R - MIN) * k], [C - MIN - (R - MIN) * k, C]]
               .map((p) => p.join(",")).join(" ")} />
         ))}
-        <polygon points={poly} fill="rgba(240,200,120,0.16)" stroke="rgba(255,220,150,0.85)" strokeWidth="2"
-          className="greek-ten-poly" style={{ filter: "drop-shadow(0 0 7px rgba(255,220,150,0.45))" }} />
-        {pts.map((p, i) => (
-          <circle key={i} cx={p.x} cy={p.y} r="5"
-            fill={good[i] ? "#FFD98A" : "#C89AFF"}
-            style={{ filter: `drop-shadow(0 0 5px ${good[i] ? "#FFD98A" : "#C89AFF"})` }} />
-        ))}
+        <polygon points={poly} fill="rgba(240,200,120,0.18)" stroke="rgba(255,220,150,0.9)" strokeWidth="2"
+          className="greek-ten-poly" style={{ filter: "drop-shadow(0 0 8px rgba(255,220,150,0.5))" }} />
+        {pts.map((p, i) => {
+          const open = seen.has(ARMS[i].idx);
+          return <circle key={i} cx={p.x} cy={p.y} r={open ? 5 : 3}
+            fill={open ? "#FFD98A" : "rgba(255,255,255,0.15)"}
+            style={open ? { filter: "drop-shadow(0 0 5px #FFD98A)" } : undefined} />;
+        })}
+        {/* 元素の名前を四方に置く。何を測っている軸なのかを示す */}
+        <text x={C} y="12" className="greek-el" textAnchor="middle">{t.greekEl.fire}</text>
+        <text x={W - 3} y={C + 4} className="greek-el" textAnchor="end">{t.greekEl.water}</text>
+        <text x={C} y={W - 3} className="greek-el" textAnchor="middle">{t.greekEl.air}</text>
+        <text x="3" y={C + 4} className="greek-el" textAnchor="start">{t.greekEl.earth}</text>
         {core && (
-          <circle cx={C} cy={C} r="9" fill="rgba(16,10,30,0.9)"
-            stroke={isGoodOrientation(core, core.reversed) ? "#FFD98A" : "#C89AFF"} strokeWidth="2" />
+          <circle cx={C} cy={C} r="10" fill="rgba(16,10,30,0.9)"
+            stroke={coreGood ? "#FFD98A" : "#C89AFF"} strokeWidth="2" />
         )}
       </svg>
-      <p className="greek-ten-read">
-        {skew < 0.3 ? t.greekTenEven : skew < 0.62 ? t.greekTenSome : t.greekTenSkew}
-      </p>
+      {/* 面積。広いほどよい、という向きを数字と言葉の両方で出す */}
+      <div className="greek-area">
+        <span className="greek-area-num">{pct}<u>%</u></span>
+        <span className="greek-area-note">
+          {pct >= 60 ? t.greekArea[0] : pct >= 38 ? t.greekArea[1] : pct >= 20 ? t.greekArea[2] : t.greekArea[3]}
+        </span>
+      </div>
+      {core && (
+        <p className="greek-ten-read">
+          {coreGood ? t.greekCoreOpen(labels[0]) : t.greekCoreClose(labels[0])}
+        </p>
+      )}
     </div>
   );
 }
@@ -7841,7 +8078,64 @@ function HorseshoePass({ drawn, labels, lang, openedIndices }) {
  */
 const TREE_PILLARS = { right: [1, 3, 6], left: [2, 4, 7], middle: [0, 5, 8, 9] };
 
-function TreeLightning({ drawn, lang, openedIndices }) {
+/*
+  ============================================================
+  22のパス
+
+  生命の樹は十のセフィロトを二十二本の小径で結ぶ。
+  そして大アルカナはちょうど二十二枚 ―― この対応は
+  黄金の夜明け団以来の標準的な帰属で、こちらの発明ではない。
+
+  つまり大アルカナが出た位置は、単なる一点ではなく
+  「どのセフィロトとどのセフィロトを結ぶ道か」を示す。
+  夢や、なぜか目が行くものが、心のどこと現実のどこを
+  つないでいるのかを読むのに使える。
+
+  配列は札の番号順（0=愚者 〜 21=世界）。
+  値は結ぶ二つのセフィロトの添字（0=ケテル 〜 9=マルクト）。
+  小アルカナにはパスが無い ―― その場合はその位置そのものを見る。
+  ============================================================
+*/
+const MAJOR_PATHS = [
+  [0, 1], // 0  愚者      ケテル ― コクマー
+  [0, 2], // 1  魔術師    ケテル ― ビナー
+  [0, 5], // 2  女教皇    ケテル ― ティファレト
+  [1, 2], // 3  女帝      コクマー ― ビナー
+  [1, 5], // 4  皇帝      コクマー ― ティファレト
+  [1, 3], // 5  教皇      コクマー ― ケセド
+  [2, 5], // 6  恋人たち  ビナー ― ティファレト
+  [2, 4], // 7  戦車      ビナー ― ゲブラー
+  [3, 4], // 8  力        ケセド ― ゲブラー
+  [3, 5], // 9  隠者      ケセド ― ティファレト
+  [3, 6], // 10 運命の輪  ケセド ― ネツァク
+  [4, 5], // 11 正義      ゲブラー ― ティファレト
+  [4, 7], // 12 吊られた男 ゲブラー ― ホド
+  [5, 6], // 13 死神      ティファレト ― ネツァク
+  [5, 8], // 14 節制      ティファレト ― イェソド
+  [5, 7], // 15 悪魔      ティファレト ― ホド
+  [6, 7], // 16 塔        ネツァク ― ホド
+  [6, 8], // 17 星        ネツァク ― イェソド
+  [6, 9], // 18 月        ネツァク ― マルクト
+  [7, 8], // 19 太陽      ホド ― イェソド
+  [7, 9], // 20 審判      ホド ― マルクト
+  [8, 9], // 21 世界      イェソド ― マルクト
+];
+
+/*
+  現実からの深さ。マルクト（現実の暮らし）を0として、上へ数える。
+  夢や無意識の像が、日々の生活のすぐ隣にあるのか、
+  それとももっと奥から来ているのかを測る物差しにする。
+*/
+const SEPHIRA_DEPTH = [6, 5, 5, 4, 4, 3, 2, 2, 1, 0];
+
+/** 大アルカナならパスを返す。小アルカナは null */
+function pathOfCard(card) {
+  const [suit, rankStr] = String(card.id).split("-");
+  if (suit !== "major") return null;
+  return MAJOR_PATHS[parseInt(rankStr, 10)] || null;
+}
+
+function TreeLightning({ drawn, lang, openedIndices, labels = [] }) {
   const t = T[lang] || T.ja;
   const seen = new Set(openedIndices);
   if (!seen.size) return null;
@@ -7858,6 +8152,14 @@ function TreeLightning({ drawn, lang, openedIndices }) {
   return (
     <div className="tree-vis">
       <div className="tree-vis-title sheen-text">{t.treeVisTitle}</div>
+      {/*
+        上下が何を意味するかを図の外に書く。
+        セフィロトの名前だけでは、上が根源で下が現実だと分からない。
+      */}
+      <div className="tree-axis-note">
+        <span className="up">{t.treeAxisTop}</span>
+        <span className="down">{t.treeAxisBottom}</span>
+      </div>
       <div className="tree-vis-body">
         <svg viewBox={`0 0 ${W} ${H}`} className="tree-vis-svg" role="img" aria-label={t.treeVisTitle}>
           {/* 三本の柱を薄く敷く */}
@@ -7865,6 +8167,28 @@ function TreeLightning({ drawn, lang, openedIndices }) {
             <line key={i} x1={(x / 100) * W} y1="10" x2={(x / 100) * W} y2={H - 10}
               stroke="rgba(201,162,75,0.10)" strokeWidth="1" />
           ))}
+          {/*
+            22のパス。まず全部を薄く敷く。
+            この形が二十二本で結ばれていること自体が、
+            大アルカナとの対応の前提になる。
+          */}
+          {MAJOR_PATHS.map(([a, b], i) => {
+            const p1 = pt(a), p2 = pt(b);
+            return <line key={`p${i}`} x1={p1.x} y1={p1.y} x2={p2.x} y2={p2.y}
+              stroke="rgba(201,162,75,0.10)" strokeWidth="1" />;
+          })}
+          {/* 出た大アルカナのパスだけを灯す。夢が現実のどこと結ばれているか */}
+          {LAY.map((_, i) => {
+            if (!seen.has(i)) return null;
+            const pa = pathOfCard(drawn[i]);
+            if (!pa) return null;
+            const p1 = pt(pa[0]), p2 = pt(pa[1]);
+            const g = isGoodOrientation(drawn[i], drawn[i].reversed);
+            const col = g ? "#FFD98A" : "#C89AFF";
+            return <line key={`lit${i}`} x1={p1.x} y1={p1.y} x2={p2.x} y2={p2.y}
+              stroke={col} strokeWidth="2.4" strokeLinecap="round"
+              className="tree-path" style={{ filter: `drop-shadow(0 0 5px ${col})`, animationDelay: `${i * 0.08}s` }} />;
+          })}
           {/* 稲妻。上から下へ走る */}
           <path d={bolt} fill="none" stroke="rgba(255,240,200,0.25)" strokeWidth="1.5" />
           <path d={bolt} fill="none" stroke="#FFF3D0" strokeWidth="2.6" strokeLinecap="round"
@@ -7895,6 +8219,42 @@ function TreeLightning({ drawn, lang, openedIndices }) {
           ))}
         </div>
       </div>
+      {/*
+        灯った小径の内訳。
+        柱の割合だけでは「どちらへ傾いた」しか分からず、
+        なぜそうなったのかが読めない。
+        どの札がどこを結んで、現実からどれだけ遠いかを一行ずつ書く。
+      */}
+      {(() => {
+        const rows = [...seen]
+          .map((i) => ({ i, p: pathOfCard(drawn[i]) }))
+          .filter((x) => x.p)
+          .map((x) => ({ ...x, depth: (SEPHIRA_DEPTH[x.p[0]] + SEPHIRA_DEPTH[x.p[1]]) / 2 }))
+          .sort((a, b) => b.depth - a.depth);
+        if (!rows.length) return <p className="tree-vis-read">{t.treeNoPath}</p>;
+        return (
+          <ul className="tree-paths">
+            {rows.map(({ i, p, depth }) => {
+              const g = isGoodOrientation(drawn[i], drawn[i].reversed);
+              return (
+                <li key={i} className={g ? "good" : "bad"}>
+                  <span className="tree-path-card">
+                    {getCardName(drawn[i], lang)}
+                    <i>{orientationLabel(drawn[i].reversed, lang)}</i>
+                  </span>
+                  <span className="tree-path-link">
+                    {labels[p[0]]} <em>―</em> {labels[p[1]]}
+                  </span>
+                  {/* 現実からの遠さ。数字ではなく段で示す */}
+                  <span className="tree-path-depth">
+                    {t.treeDepthShort[depth >= 4.5 ? 0 : depth >= 3 ? 1 : depth >= 1.5 ? 2 : 3]}
+                  </span>
+                </li>
+              );
+            })}
+          </ul>
+        );
+      })()}
       <p className="tree-vis-read">
         {Math.abs(lean) < 0.35 ? t.treeBalanced : lean > 0 ? t.treeMercy : t.treeSeverity}
       </p>
@@ -7930,15 +8290,31 @@ function SpreadVerdict({ spreadKey, drawn, lang, openedIndices, extra }) {
   }
 
   if (spreadKey === "greekCross") {
-    const arms = [3, 2, 4, 1]; // 上・右・下・左
-    const open = arms.filter((i) => seen.has(i));
+    /*
+      四方は元素で測る。どの方角がいちばん伸びているかが、
+      いま結果を押し広げている（あるいは狭めている）力になる。
+    */
+    const ARMS = [
+      { idx: 3, suit: "wands" }, { idx: 2, suit: "cups" },
+      { idx: 4, suit: "swords" }, { idx: 1, suit: "pentacles" },
+    ];
+    const open = ARMS.filter((a) => seen.has(a.idx));
     if (open.length >= 2) {
-      let top = open[0];
-      open.forEach((i) => { if (cardPower(drawn[i]) > cardPower(drawn[top])) top = i; });
-      const v = open.map((i) => cardPower(drawn[i]));
-      const skew = Math.max(...v) - Math.min(...v);
+      let top = open[0], topV = elementAffinity(drawn[top.idx], top.suit);
+      open.forEach((a) => {
+        const v2 = elementAffinity(drawn[a.idx], a.suit);
+        if (v2 > topV) { top = a; topV = v2; }
+      });
+      const vals = open.map((a) => elementAffinity(drawn[a.idx], a.suit));
+      const skew = Math.max(...vals) - Math.min(...vals);
+      const core = seen.has(0) ? drawn[0] : null;
+      const L2 = extra && extra.labels ? extra.labels : [];
       title = t.verdictTitle;
-      lines = [t.greekVerdict[arms.indexOf(top)], skew < 0.3 ? t.greekVerdictEven : t.greekVerdictSkew];
+      lines = [
+        t.greekTop(L2[top.idx] || ""),
+        skew < 0.25 ? t.greekVerdictEven : t.greekVerdictSkew,
+        core ? (isGoodOrientation(core, core.reversed) ? t.greekCoreVerdictOpen : t.greekCoreVerdictClose) : "",
+      ];
     }
   }
 
@@ -7965,10 +8341,27 @@ function SpreadVerdict({ spreadKey, drawn, lang, openedIndices, extra }) {
     const lean = R - L;
     let top = [...seen][0];
     seen.forEach((i) => { if (cardPower(drawn[i]) > cardPower(drawn[top])) top = i; });
+    /*
+      大アルカナが出た位置は、22のパスのどれかにあたる。
+      そのパスが結ぶ二つのセフィロトが、
+      夢や気にかかっているものと、現実との接点になる。
+      深さはマルクト（現実）からの距離で測る。
+    */
+    const paths = [...seen].map((i) => ({ i, p: pathOfCard(drawn[i]) })).filter((x) => x.p);
+    let deepest = null;
+    paths.forEach((x) => {
+      const d = (SEPHIRA_DEPTH[x.p[0]] + SEPHIRA_DEPTH[x.p[1]]) / 2;
+      if (!deepest || d > deepest.d) deepest = { ...x, d };
+    });
+    const posLabels = extra && extra.labels ? extra.labels : [];
     title = t.verdictTitle;
     lines = [
       Math.abs(lean) < 0.35 ? t.treeVerdictBalanced : lean > 0 ? t.treeVerdictMercy : t.treeVerdictSeverity,
-      t.treeVerdictNode(extra && extra.labels ? extra.labels[top] : ""),
+      t.treeVerdictNode(posLabels[top] || ""),
+      deepest
+        ? t.treePathRead(posLabels[deepest.p[0]] || "", posLabels[deepest.p[1]] || "",
+            t.treeDepth[deepest.d >= 4.5 ? 0 : deepest.d >= 3 ? 1 : deepest.d >= 1.5 ? 2 : 3])
+        : t.treeNoPath,
     ];
   }
 
@@ -7977,14 +8370,41 @@ function SpreadVerdict({ spreadKey, drawn, lang, openedIndices, extra }) {
       (choiceOrderValue(drawn[a], drawn[a].reversed) + choiceOrderValue(drawn[b], drawn[b].reversed)) / 2;
     const va = side(1, 2), vb = side(3, 4);
     const grade = (v) => (v >= 0.70 ? 0 : v >= 0.40 ? 1 : v >= 0.15 ? 2 : v > -0.15 ? 3 : v > -0.40 ? 4 : v > -0.70 ? 5 : 6);
-    const d = Math.abs(va - vb);
-    const gap = d < 0.15 ? 0 : d < 0.45 ? 1 : d < 0.85 ? 2 : d < 1.30 ? 3 : 4;
+    /*
+      隔たりの判定。
+
+      秩序⇔混沌の差だけでは、値がたまたま近いと
+      「性質が近い」と言い切ってしまう。実際には
+      大アルカナが片側に偏っている、スートが揃っている、
+      といった構造の違いがある。そこを加点して測る。
+
+        大アルカナの偏り  片側に多いほど、道の重さが違う
+        スートの一致      A側の2枚が同じスートなら、その道は性質が明確
+        向きの一致        2枚とも同じ側なら、迷いが少ない道
+    */
+    const sideCards = (a, b) => [drawn[a], drawn[b]];
+    const majors = (cs) => cs.filter((c) => String(c.id).startsWith("major")).length;
+    const suited = (cs) => {
+      const s0 = String(cs[0].id).split("-")[0], s1 = String(cs[1].id).split("-")[0];
+      return s0 !== "major" && s0 === s1;
+    };
+    const sameDir = (cs) => isGoodOrientation(cs[0], cs[0].reversed) === isGoodOrientation(cs[1], cs[1].reversed);
+    const ca = sideCards(1, 2), cb = sideCards(3, 4);
+    let d = Math.abs(va - vb);
+    // 大アルカナの枚数差。0〜2枚差を最大0.5まで加える
+    d += (Math.abs(majors(ca) - majors(cb)) / 2) * 0.5;
+    // 片方だけスートが揃っている＝性質の輪郭が片側だけ明確
+    if (suited(ca) !== suited(cb)) d += 0.25;
+    // 向きの揃い方が違う＝片方だけ迷いがある
+    if (sameDir(ca) !== sameDir(cb)) d += 0.2;
+    const gap = d < 0.20 ? 0 : d < 0.55 ? 1 : d < 1.00 ? 2 : d < 1.55 ? 3 : 4;
     title = t.verdictTitle;
     lines = [
       t.choiceVerdict(extra && extra.a ? extra.a : t.choiceSideA, t.choiceGrade[grade(va)],
                       extra && extra.b ? extra.b : t.choiceSideB, t.choiceGrade[grade(vb)]),
       t.choiceGap[gap],
-      t.choiceVerdictNote,
+      // 「申し上げません」と「ご自身で選んでください」は別の文なので行を分ける
+      t.choiceVerdictNote, t.choiceVerdictNote2,
     ];
   }
 
@@ -7993,6 +8413,146 @@ function SpreadVerdict({ spreadKey, drawn, lang, openedIndices, extra }) {
     <div className="verdict">
       <div className="verdict-title">{title}</div>
       {lines.filter(Boolean).map((x, i) => <p key={i}>{x}</p>)}
+    </div>
+  );
+}
+
+/**
+ * イエス・ノー・スプレッド。
+ *
+ * 古典派・無料版のみ。大アルカナだけを使い、正位置の多数決で答える。
+ * AIは読まない ―― 多数決という判定自体が答えなので、
+ * 文章で覆うと判定と鑑定文がずれたときに信頼を失う。
+ *
+ * 枚数を先に選ばせる。あとから増やせるようにはしない ――
+ * 「ノーが出たから枚数を増やして引き直す」を許すと、
+ * 望む答えが出るまで枚数を変えるという抜け道になる。
+ */
+const YESNO_COUNTS = { normal: 5, careful: 7, extra: 9 };
+
+function YesNoPanel({ lang, onBack }) {
+  const t = T[lang] || T.ja;
+  const [level, setLevel] = useState(null); // 枚数を選ぶ前は null
+  const [question, setQuestion] = useState("");
+  const [pool, setPool] = useState(null);
+  const [drawn, setDrawn] = useState(null);
+  const [revealed, setRevealed] = useState(0); // 何枚めくったか
+
+  const count = level ? YESNO_COUNTS[level] : 0;
+
+  const start = () => {
+    if (!level) return;
+    const p = buildPool(MAJOR_LIST);
+    setPool(p);
+    setDrawn(p.slice(0, count));
+    setRevealed(0);
+  };
+
+  const reveal = () => {
+    if (revealed >= count) return;
+    setRevealed((n) => n + 1);
+  };
+
+  const reset = () => {
+    setLevel(null); setQuestion(""); setPool(null); setDrawn(null); setRevealed(0);
+  };
+
+  const upCount = drawn ? drawn.slice(0, revealed).filter((c) => !c.reversed).length : 0;
+  const downCount = revealed - upCount;
+  const done = drawn && revealed >= count;
+  /*
+    奇数枚なので同数にはならない。多いほうがそのまま答えになる。
+    僅差（1枚差）かどうかは表示だけ変える。答えそのものは変えない ――
+    「僅差だから逆」を許すと多数決の意味が消える。
+  */
+  const yes = done && upCount > downCount;
+  const margin = done ? Math.abs(upCount - downCount) : 0;
+
+  return (
+    <div style={{ width: "100%", maxWidth: "460px", margin: "0 auto" }}>
+      <button onClick={onBack} className="back-link">{t.backToSelect}</button>
+
+      {!drawn ? (
+        <>
+          <p className="yn-intro">{t.ynIntro}</p>
+          <label htmlFor="yn-question">{t.ynQuestionLabel}</label>
+          <p className="hex-fields-example">{t.ynQuestionExample}</p>
+          <input
+            id="yn-question" className="hex-input" type="text" maxLength={80}
+            value={question} onChange={(e) => setQuestion(e.target.value)}
+          />
+          {/*
+            枚数を先に固定させる。3段の呼び名は「慎重さ」であって
+            「精度」ではない ―― 枚数を増やしても当たりやすくなる
+            わけではないと誤解させないため。
+          */}
+          <p className="yn-level-label">{t.ynLevelLabel}</p>
+          <div className="yn-levels">
+            {Object.entries(YESNO_COUNTS).map(([key, n]) => (
+              <button
+                key={key}
+                type="button"
+                className={`yn-level${level === key ? " on" : ""}`}
+                onClick={() => setLevel(key)}
+              >
+                <span className="yn-level-name">{t.ynLevelName[key]}</span>
+                <span className="yn-level-n">{n}{t.ynCardsUnit}</span>
+              </button>
+            ))}
+          </div>
+          <button className="draw-btn" onClick={start} disabled={!level}>
+            <Shuffle size={16} />
+            {t.startButton}
+          </button>
+        </>
+      ) : (
+        <>
+          {question.trim() && <p className="yn-question-echo">「{question.trim()}」</p>}
+          <div className="yn-row">
+            {drawn.map((c, i) => {
+              const open = i < revealed;
+              return (
+                <button
+                  key={i}
+                  type="button"
+                  className={`yn-card${open ? " open" : ""}${open && !c.reversed ? " up" : ""}${open && c.reversed ? " down" : ""}`}
+                  onClick={i === revealed ? reveal : undefined}
+                  disabled={i !== revealed}
+                  aria-label={open ? (c.reversed ? t.reversed : t.upright) : t.ynCardHidden}
+                >
+                  {open ? (
+                    <span className={`yn-card-face ${c.reversed ? "reversed" : ""}`}>
+                      <span className="yn-card-corner">{c.corner}</span>
+                    </span>
+                  ) : (
+                    <TarotCardBack />
+                  )}
+                </button>
+              );
+            })}
+          </div>
+
+          {!done && (
+            <p className="yn-progress">{t.ynProgress(revealed, count)}</p>
+          )}
+
+          {done && (
+            <div className={`yn-verdict ${yes ? "yes" : "no"}`}>
+              <div className="yn-verdict-word">{yes ? t.ynYes : t.ynNo}</div>
+              <p className="yn-verdict-tally">
+                {t.ynTally(upCount, downCount)}
+              </p>
+              <p className="yn-verdict-margin">
+                {margin === 1 ? t.ynMarginClose : t.ynMarginClear}
+              </p>
+            </div>
+          )}
+
+          <button className="reset-btn" onClick={reset} style={{ marginTop: "14px" }}>
+            {t.oneOracleAgain}
+          </button>
+        </>
+      )}
     </div>
   );
 }
@@ -9643,6 +10203,8 @@ function HexagramPanel({ lang, onBack, question, userName, canDraw, onConsume, o
   // ホロスコープの象意の解説。長いので既定は閉じる
   const [houseGuideOpen, setHouseGuideOpen] = useState(false);
   // 二者択一のAとB。空欄でも引けるようにする
+  // 占いたいこと。専用欄を持たない配置で使う
+  const [topic, setTopic] = useState("");
   const [choiceA, setChoiceA] = useState("");
   const [choiceB, setChoiceB] = useState("");
   const [hexCopied, setHexCopied] = useState(false);
@@ -9861,6 +10423,10 @@ function HexagramPanel({ lang, onBack, question, userName, canDraw, onConsume, o
               : isCeltic
                 ? (celticAsk.trim() ? `相談者が意味を知りたいと書いたこと:「${celticAsk.trim()}」\n` : "")
                   + "これはケルト十字です。十枚それぞれの位置の意味を踏まえ、現状・障害・意識と無意識・時間の流れ・周囲・結末を一つの筋として読んでください。\n\n"
+                : isTree
+                  ? `これは生命の樹（セフィロト）の配置です。十の座に加えて、大アルカナは二十二のパスに対応し、二つの座を結ぶ小径として働きます。${topic.trim() ? `相談者が気にかかっていると書いたこと:「${topic.trim()}」\n` : ""}\n悩みへの助言ではなく、その像が無意識のどこから来て、現実（マルクト）とどこで接しているかを読んでください。夢や、なぜか目が行くもの、繰り返し現れるものの意味を扱う配置です。予言はしないでください。\n\n`
+                : NEEDS_TOPIC.includes(spreadKey) && topic.trim()
+                  ? `相談者が占いたいと書いたこと:「${topic.trim()}」\n この一点について答えること。一般論で流さないこと。\n\n`
                 : isHorseshoe
                   ? `これは七枚の弧で、目標へ向かう過程のどこにいるかを読む配置です。${choiceA ? `目標は「${choiceA}」。` : ""}${choiceB ? `いま取り組んでいるのは「${choiceB}」。` : ""}\n\n⚠️ いつ叶うか、叶うかどうかは断定しないでください。示すのは、いまが準備の時なのか、山場なのか、仕上げの時なのか ―― 過程のどの段にいて、そこで何が効くかです。\n\n`
                 : isChoice
@@ -9970,6 +10536,37 @@ function HexagramPanel({ lang, onBack, question, userName, canDraw, onConsume, o
               </p>
             </div>
           )}
+          {/*
+            占いたいこと。専用の入力欄を持たない配置に出す。
+
+            何を占うのかが空のまま引くと、鑑定文は当たり障りのない
+            一般論になるしかない。言い切らせるには、
+            まず何について言い切るのかを渡す必要がある。
+
+            無料版でも出す。AIは読まないが、
+            書くこと自体が「何を知りたいのか」の整理になる。
+          */}
+          {NEEDS_TOPIC.includes(spreadKey) && (
+            <div className="hex-fields">
+              {/*
+                生命の樹だけ問いの立て方が違う。
+                この配置は22のパス（＝大アルカナ）で
+                無意識と現実の接点を読むので、悩みではなく
+                「気にかかっている像」を書いてもらう。
+              */}
+              <label htmlFor="spread-topic">{isTree ? t.treeTopicLabel : t.topicLabel}</label>
+              {/* 例示は欄の上。プレースホルダだと書き始めた瞬間に消える */}
+              <p className="hex-fields-example">{isTree ? t.treeTopicExample : t.topicExample}</p>
+              <input
+                id="spread-topic" className="hex-input" type="text" maxLength={120}
+                value={topic} onChange={(e) => setTopic(e.target.value)}
+              />
+              <p className="hex-fields-note">
+                <NoteLines text={aiEnabled ? t.topicNoteAi : t.topicNote} />
+              </p>
+            </div>
+          )}
+
           {/*
             ホースシューの入力欄。
             この配置は「いつ・どうなる」ではなく過程を読むものなので、
@@ -10636,7 +11233,7 @@ function HexagramPanel({ lang, onBack, question, userName, canDraw, onConsume, o
 
           {/* ギリシャ十字は四方の張力。四本の腕が作る菱形の歪み */}
           {spreadKey === "greekCross" && stage > 0 && (
-            <GreekTension drawn={drawn} lang={lang} openedIndices={openedIndices} />
+            <GreekTension drawn={drawn} labels={info.pos} lang={lang} openedIndices={openedIndices} />
           )}
 
           {/* ホースシューは峠。弧のどこが山かを示す */}
@@ -10646,7 +11243,7 @@ function HexagramPanel({ lang, onBack, question, userName, canDraw, onConsume, o
 
           {/* 生命の樹は三柱と稲妻 */}
           {isTree && stage > 0 && (
-            <TreeLightning drawn={drawn} lang={lang} openedIndices={openedIndices} />
+            <TreeLightning drawn={drawn} lang={lang} openedIndices={openedIndices} labels={info.pos} />
           )}
 
           {/* 二者択一は秩序と混沌の軸。二本の道の性質を並べる */}
@@ -13284,7 +13881,7 @@ const T = {
     schoolNames: { classic: "전통파", modern: "현대파", analog: "실물 분석", multi: "여럿이서" },
     schoolNotes: { classic: "확립된 배열로 읽습니다", modern: "현대의 주제에 맞춘 배열", analog: "실제 카드의 결과를 입력합니다", multi: "한 대로 여러 명이 뽑습니다" },
     soonTitle: "준비 중입니다",
-    soonBody: { modern: "다음과 같은 배열을 준비하고 있습니다。\n\n・소망 실현\n・인물 읽기\n・이달의 흐름\n・새로운 관계\n・계절의 흐름\n・직감과의 연결", analog: "직접 뽑은 실물 카드를 입력하면、해석은 하지 않고 계산과 시각화만 담당합니다。\n\n・78장에서 배치대로 입력\n・여덟 분야의 산출과 궤적\n・도감과 해설을 사전으로\n\n뽑는 것은 당신의 손입니다。앱은 세지 않는 부분만 맡습니다。", multi: "한 대의 단말을 여러 명이 돌려가며 보는 점입니다。\n\n・인원과 장수를 지정\n・차례로 뽑아 결과를 비교\n・지금 가장 운이 좋은 사람\n・관계의 잔（준비 중）" },
+    soonBody: { modern: "아래 배열을 차례로 개방합니다。그림자나 내면 아이를 다루는 것은 답을 맞히기 위한 것이 아니라, 자기 안의 이야기를 찾기 위한 배열입니다。", analog: "직접 뽑은 실물 카드를 입력하면、해석은 하지 않고 계산과 시각화만 담당합니다。\n\n・78장에서 배치대로 입력\n・여덟 분야의 산출과 궤적\n・도감과 해설을 사전으로\n\n뽑는 것은 당신의 손입니다。앱은 세지 않는 부분만 맡습니다。", multi: "한 대의 단말을 여러 명이 돌려가며 보는 점입니다。\n\n・인원과 장수를 지정\n・차례로 뽑아 결과를 비교\n・지금 가장 운이 좋은 사람\n・관계의 잔（준비 중）" },
     spreadCardUnit: "장",
     spreadNoCost: "횟수 불요",
     drawAgainFree: "다시 점 보기",
@@ -13325,6 +13922,13 @@ const T = {
     crossAxisRight: "나아감",
     crossVecRead: ["앞으로 미는 힘이 앞섭니다", "안으로 향하는 힘이 앞섭니다", "물러나는 힘이 앞섭니다", "밖으로 열리는 힘이 앞섭니다"],
     greekTenTitle: "사방의 장력",
+    greekEl: { fire: "불・의지", water: "물・감정", air: "바람・사고", earth: "땅・물질" },
+    greekArea: ["사방이 크게 열려 있습니다", "적당히 열려 있습니다", "다소 좁아져 있습니다", "상당히 좁아져 있습니다"],
+    greekCoreOpen: (x) => `「${x}」이 결과를 넓히고 있습니다`,
+    greekCoreClose: (x) => `「${x}」이 결과를 좁히고 있습니다`,
+    greekTop: (x) => `지금 가장 강하게 작용하는 것은 「${x}」입니다`,
+    greekCoreVerdictOpen: "결과의 카드가 사방을 넓히고 있습니다。움직이면 형태가 됩니다",
+    greekCoreVerdictClose: "결과의 카드가 사방을 좁히고 있습니다。지금은 넓히기보다 지키는 편이 낫습니다",
     greekTenEven: "사방이 균형을 이룹니다",
     greekTenSome: "다소 치우침이 있습니다",
     greekTenSkew: "한쪽으로 크게 치우쳤습니다",
@@ -13333,7 +13937,10 @@ const T = {
     hsPassAfter: "이미 넘었습니다",
     hsPassAt: "지금 넘는 중입니다",
     hsPassBefore: "아직 앞에 있습니다",
-    treeVisTitle: "세 기둥과 번개",
+    treeVisTitle: "세 기둥과 번개（현실로부터의 거리）",
+    treeAxisTop: "근원・무의식의 안쪽",
+    treeAxisBottom: "현실의 삶",
+    treeDepthShort: ["가장 깊음", "꽤 깊음", "얕음", "현실 쪽"],
     treePillarLeft: "준엄",
     treePillarMid: "균형",
     treePillarRight: "자비",
@@ -13344,6 +13951,31 @@ const T = {
     choiceKind: ["지키며 쌓아 올리는 길。느리지만 확실합니다", "쌓아 올려 지키는 길。확실하지만 걸음은 느립니다", "순서를 지켜 나아가는 길。손이 가지만 무너지지 않습니다", "어느 쪽에도 치우치지 않는 길。상황에 맞춰 정할 수 있습니다", "흐름에 올라타는 길。빠르지만 형태는 정해지지 않습니다", "기세로 움직이는 길。얻는 것은 빠르지만 이어질지는 모릅니다", "부수고 다시 만드는 길。얻는 것도 잃는 것도 큽니다"],
     choiceGap: ["두 길은 거의 같은 성질입니다", "두 길의 성질은 가깝습니다", "두 길은 어느 정도 성질이 다릅니다", "두 길은 성질이 크게 다릅니다", "두 길은 정반대의 성질입니다"],
     verdictTitle: "결론",
+    ynIntro: "대아르카나만 사용하며, 정위치와 역위치의 수로 답을 정합니다. 시작하면 질문과 매수는 바꿀 수 없습니다.",
+    planGrow: "육성",
+    planGeneral: "범용",
+    planDex: "도감",
+    ynQuestionLabel: "무엇을 점칠지 한 문장으로",
+    ynQuestionExample: "예: 이 일을 진행해도 될지",
+    ynLevelLabel: "신중함의 정도를 고르세요",
+    ynLevelName: { normal: "보통", careful: "신중", extra: "매우 신중" },
+    ynCardsUnit: "장",
+    ynCardHidden: "？",
+    ynProgress: (a, b) => `${a}장 중 ${b}장을 열었습니다`,
+    ynYes: "예",
+    ynNo: "아니오",
+    ynTally: (u, d) => `정위치 ${u}장・역위치 ${d}장`,
+    ynMarginClose: "근소한 차이입니다。날을 바꿔 다시 점치는 것도 방법입니다",
+    ynMarginClear: "분명한 차이입니다",
+    topicLabel: "무엇을 점칠지 한 문장으로",
+    treeTopicLabel: "마음에 걸리는 꿈이나, 자꾸 눈이 가는 것",
+    treeTopicExample: "예: 요즘 반복되는 물 꿈 / 자꾸 같은 숫자가 눈에 띈다",
+    treePathRead: (a, b, d) => `${a}와 ${b} 사이에서 현실과 이어져 있습니다。${d}`,
+    treeDepth: ["가장 깊은 곳에서 옵니다", "일상의 의식보다 훨씬 안쪽에서 옵니다", "현실의 바로 옆에서 옵니다", "거의 현실 쪽에 있습니다"],
+    treeNoPath: "이번에는 소로가 나타나지 않았습니다。그 상은 아직 자리 위에 머물러 있습니다。",
+    topicExample: "예: 지금 하는 일을 계속해야 할지",
+    topicNote: "무료판에서는 감정에 반영되지 않습니다. 무엇을 알고 싶은지 스스로 정리하기 위한 칸입니다.",
+    topicNoteAi: "여기에 쓴 한 문장에 대해 답합니다. 비워 두면 일반적인 이야기가 됩니다.",
     crossVerdict: ["앞으로 미는 힘이 앞섭니다。움직인다면 지금입니다", "안으로 향하는 힘이 앞섭니다。먼저 정돈하십시오", "물러나는 힘이 앞섭니다。지킬 때입니다", "밖으로 열리는 힘이 앞섭니다。사람들 앞에 내놓을 때입니다"],
     crossVerdictStrong: "힘이 뚜렷합니다。망설이지 말고 한 수를 두십시오",
     crossVerdictWeak: "힘이 약합니다。작게 시험하는 것부터 시작하십시오",
@@ -13358,7 +13990,8 @@ const T = {
     treeVerdictSeverity: "냉혹의 기둥으로 기울었습니다。엄격함을 늦출 여지가 있습니다",
     treeVerdictNode: (x) => `지금 가장 강한 것은 「${x}」입니다`,
     choiceVerdict: (a, ga, b, gb) => `${a}는 ${ga}、${b}는 ${gb}의 길입니다`,
-    choiceVerdictNote: "어느 쪽이 옳은지는 말하지 않습니다。성질을 보고 스스로 고르십시오",
+    choiceVerdictNote: "어느 쪽이 옳은지는 말하지 않습니다。",
+    choiceVerdictNote2: "성질을 보고 스스로 고르십시오。",
     hsGoalLabel: "목표（원하는 결과）",
     hsGoalExample: "예: 자격시험 합격",
     hsMeansLabel: "수단（지금 하고 있는 것）",
@@ -13641,7 +14274,7 @@ const T = {
     schoolNames: { classic: "Truyền thống", modern: "Hiện đại", analog: "Phân tích thực tế", multi: "Nhiều người" },
     schoolNotes: { classic: "Đọc bằng các trải bài đã định hình", modern: "Trải bài theo chủ đề hiện đại", analog: "Nhập kết quả từ bộ bài thật", multi: "Nhiều người dùng chung một máy" },
     soonTitle: "Đang chuẩn bị",
-    soonBody: { modern: "Chúng tôi đang chuẩn bị các trải bài sau。\n\n・Hiện thực hóa mong muốn\n・Đọc một con người\n・Dòng chảy của tháng\n・Mối quan hệ mới\n・Nhịp của mùa\n・Kết nối với trực giác", analog: "Nhập những lá bài thật bạn tự rút; ứng dụng không diễn giải, chỉ tính toán và hiển thị。\n\n・Nhập theo bố cục từ 78 lá\n・Tính tám lĩnh vực và vẽ quỹ đạo\n・Bộ sưu tập và chú giải như một từ điển\n\nViệc rút bài là của bạn。Ứng dụng chỉ lo phần không đếm nổi bằng tay。", multi: "Nhiều người cùng chuyền tay một chiếc máy。\n\n・Chọn số người và số lá\n・Lần lượt rút rồi so kết quả\n・Ai đang may mắn nhất lúc này\n・Chén của mối quan hệ（đang chuẩn bị）" },
+    soonBody: { modern: "Các trải bài bên dưới sẽ mở dần. Những trải bài về bóng tối hay đứa trẻ bên trong không nhằm đoán kết quả, mà để tìm ra câu chuyện bạn đang mang.", analog: "Nhập những lá bài thật bạn tự rút; ứng dụng không diễn giải, chỉ tính toán và hiển thị。\n\n・Nhập theo bố cục từ 78 lá\n・Tính tám lĩnh vực và vẽ quỹ đạo\n・Bộ sưu tập và chú giải như một từ điển\n\nViệc rút bài là của bạn。Ứng dụng chỉ lo phần không đếm nổi bằng tay。", multi: "Nhiều người cùng chuyền tay một chiếc máy。\n\n・Chọn số người và số lá\n・Lần lượt rút rồi so kết quả\n・Ai đang may mắn nhất lúc này\n・Chén của mối quan hệ（đang chuẩn bị）" },
     spreadCardUnit: "lá",
     spreadNoCost: "không tốn lượt",
     drawAgainFree: "Xem lại lần nữa",
@@ -13682,6 +14315,13 @@ const T = {
     crossAxisRight: "Tiến",
     crossVecRead: ["Lực đẩy tới chiếm ưu thế", "Lực hướng vào trong chiếm ưu thế", "Lực kéo lùi chiếm ưu thế", "Lực mở ra ngoài chiếm ưu thế"],
     greekTenTitle: "Sức căng bốn phương",
+    greekEl: { fire: "Lửa · Ý chí", water: "Nước · Cảm xúc", air: "Khí · Tư duy", earth: "Đất · Vật chất" },
+    greekArea: ["Bốn phương mở rộng", "Mở vừa phải", "Hơi thu hẹp", "Thu hẹp khá nhiều"],
+    greekCoreOpen: (x) => `「${x}」đang mở rộng kết quả`,
+    greekCoreClose: (x) => `「${x}」đang thu hẹp kết quả`,
+    greekTop: (x) => `Lực mạnh nhất lúc này là「${x}」`,
+    greekCoreVerdictOpen: "Lá kết quả mở rộng bốn phương。Cứ động, nó sẽ thành hình",
+    greekCoreVerdictClose: "Lá kết quả thu hẹp bốn phương。Lúc này giữ gìn hơn là mở rộng",
     greekTenEven: "Bốn phương cân bằng",
     greekTenSome: "Có phần lệch",
     greekTenSkew: "Lệch hẳn về một phía",
@@ -13690,7 +14330,10 @@ const T = {
     hsPassAfter: "Bạn đã vượt qua",
     hsPassAt: "Bạn đang vượt qua",
     hsPassBefore: "Vẫn còn ở phía trước",
-    treeVisTitle: "Ba trụ và Tia chớp",
+    treeVisTitle: "Ba trụ và Tia chớp (khoảng cách với đời thường)",
+    treeAxisTop: "Cội nguồn · sâu trong vô thức",
+    treeAxisBottom: "Đời sống thường ngày",
+    treeDepthShort: ["Sâu nhất", "Khá sâu", "Nông", "Gần đời thường"],
     treePillarLeft: "Nghiêm khắc",
     treePillarMid: "Cân bằng",
     treePillarRight: "Từ ái",
@@ -13701,6 +14344,31 @@ const T = {
     choiceKind: ["Con đường giữ gìn và tích lũy. Chậm, nhưng chắc.", "Con đường tích lũy và gìn giữ。Chắc chắn nhưng chậm", "Con đường theo trình tự。Tốn công nhưng khó đổ vỡ", "Con đường không nghiêng bên nào。Có thể tùy tình huống", "Con đường thuận theo dòng chảy。Nhanh nhưng chưa định hình", "Con đường đi bằng đà. Kết quả nhanh; có bền hay không thì chưa rõ.", "Con đường phá đi làm lại。Được nhiều mà mất cũng nhiều"],
     choiceGap: ["Hai con đường gần như giống nhau", "Hai con đường có tính chất gần nhau", "Hai con đường khác nhau phần nào", "Hai con đường khác nhau rõ rệt", "Hai con đường trái ngược nhau"],
     verdictTitle: "The conclusion",
+    ynIntro: "Chỉ dùng Ẩn Chính; số lá xuôi và ngược quyết định câu trả lời. Sau khi bắt đầu, không thể đổi câu hỏi hay số lá.",
+    planGrow: "Nuôi dưỡng",
+    planGeneral: "Đa dụng",
+    planDex: "Bộ sưu tập",
+    ynQuestionLabel: "Viết điều bạn muốn hỏi trong một câu",
+    ynQuestionExample: "ví dụ: có nên tiếp tục việc này không",
+    ynLevelLabel: "Chọn mức độ thận trọng",
+    ynLevelName: { normal: "Bình thường", careful: "Thận trọng", extra: "Rất thận trọng" },
+    ynCardsUnit: "lá",
+    ynCardHidden: "?",
+    ynProgress: (a, b) => `Đã mở ${b} trong ${a} lá`,
+    ynYes: "Có",
+    ynNo: "Không",
+    ynTally: (u, d) => `${u} lá xuôi · ${d} lá ngược`,
+    ynMarginClose: "Rất sát nhau. Hỏi lại vào ngày khác cũng là một cách",
+    ynMarginClear: "Sự khác biệt rõ ràng",
+    topicLabel: "Một câu về điều bạn muốn xem",
+    treeTopicLabel: "Giấc mơ, hay điều mà mắt bạn cứ quay lại nhìn",
+    treeTopicExample: "ví dụ: giấc mơ về nước lặp lại / cùng một con số cứ xuất hiện",
+    treePathRead: (a, b, d) => `Nó nối với đời thường giữa ${a} và ${b}. ${d}`,
+    treeDepth: ["Nó đến từ nơi sâu nhất", "Nó đến từ rất sâu dưới ý thức thường ngày", "Nó đến từ ngay bên cạnh đời thường", "Nó gần như nằm hẳn ở phía đời thường"],
+    treeNoPath: "Lần này không có tiểu lộ nào hiện ra. Hình ảnh ấy vẫn còn trên các tòa.",
+    topicExample: "Ví dụ: có nên tiếp tục công việc này không",
+    topicNote: "Bản miễn phí không dùng nội dung này. Đây là chỗ để bạn tự sắp xếp điều muốn biết.",
+    topicNoteAi: "Bài đọc sẽ trả lời đúng câu bạn viết ở đây. Bỏ trống thì chỉ còn những điều chung chung.",
     crossVerdict: ["The force pushing forward prevails. Now is the time to move.", "The force turning inward prevails. Set things in order first.", "The force pulling back prevails. This is a time to hold.", "The force opening outward prevails. Time to put it before others."],
     crossVerdictStrong: "The force is clear. You can act without hesitating.",
     crossVerdictWeak: "The force is faint. Begin with a small trial.",
@@ -13715,7 +14383,8 @@ const T = {
     treeVerdictSeverity: "It leans toward Coldness. There is room to soften.",
     treeVerdictNode: (x) => `The strongest right now is \u201c${x}\u201d`,
     choiceVerdict: (a, ga, b, gb) => `${a} is a road of ${ga}; ${b} is a road of ${gb}`,
-    choiceVerdictNote: "We will not say which is right. Look at the natures and choose for yourself.",
+    choiceVerdictNote: "We will not say which is right.",
+    choiceVerdictNote2: "Hãy nhìn tính chất và tự chọn.",
     hsGoalLabel: "The goal (what you want)",
     hsGoalExample: "e.g. pass the exam",
     hsMeansLabel: "The means (what you are doing)",
@@ -13998,7 +14667,7 @@ const T = {
     schoolNames: { classic: "Tradisional", modern: "Modern", analog: "Analisis nyata", multi: "Banyak orang" },
     schoolNotes: { classic: "Membaca dengan tebaran yang sudah mapan", modern: "Tebaran untuk tema masa kini", analog: "Masukkan hasil kartu sungguhan", multi: "Beberapa orang satu perangkat" },
     soonTitle: "Sedang disiapkan",
-    soonBody: { modern: "Kami sedang menyiapkan tebaran berikut。\n\n・Mewujudkan keinginan\n・Membaca seseorang\n・Arus bulan ini\n・Hubungan baru\n・Irama musim\n・Hubungan dengan intuisi", analog: "Masukkan kartu nyata yang Anda tarik sendiri; aplikasi tidak menafsirkan, hanya menghitung dan menampilkan。\n\n・Masukkan sesuai tata letak dari 78 kartu\n・Perhitungan delapan bidang dan jejak\n・Katalog dan penjelasan sebagai kamus\n\nMenarik kartu tetap tugas Anda。", multi: "Beberapa orang bergantian memakai satu perangkat。\n\n・Pilih jumlah orang dan kartu\n・Menarik bergiliran lalu membandingkan\n・Siapa yang paling beruntung kini\n・Cawan Hubungan（disiapkan）" },
+    soonBody: { modern: "Tebaran di bawah akan dibuka satu per satu. Yang menyangkut bayangan atau inner child bukan untuk menebak hasil, melainkan untuk menemukan cerita yang Anda bawa.", analog: "Masukkan kartu nyata yang Anda tarik sendiri; aplikasi tidak menafsirkan, hanya menghitung dan menampilkan。\n\n・Masukkan sesuai tata letak dari 78 kartu\n・Perhitungan delapan bidang dan jejak\n・Katalog dan penjelasan sebagai kamus\n\nMenarik kartu tetap tugas Anda。", multi: "Beberapa orang bergantian memakai satu perangkat。\n\n・Pilih jumlah orang dan kartu\n・Menarik bergiliran lalu membandingkan\n・Siapa yang paling beruntung kini\n・Cawan Hubungan（disiapkan）" },
     spreadCardUnit: "kartu",
     spreadNoCost: "tanpa kuota",
     spreadComingSoon: "segera",
@@ -14037,6 +14706,13 @@ const T = {
     crossAxisRight: "Maju",
     crossVecRead: ["Gaya yang mendorong maju lebih kuat", "Gaya yang menarik ke dalam lebih kuat", "Gaya yang menarik mundur lebih kuat", "Gaya yang membuka ke luar lebih kuat"],
     greekTenTitle: "Tegangan Empat Arah",
+    greekEl: { fire: "Api · Kehendak", water: "Air · Perasaan", air: "Udara · Pikiran", earth: "Bumi · Materi" },
+    greekArea: ["Keempatnya terbuka lebar", "Cukup terbuka", "Agak menyempit", "Cukup menyempit"],
+    greekCoreOpen: (x) => `\u201c${x}\u201d melebarkan hasilnya`,
+    greekCoreClose: (x) => `\u201c${x}\u201d menyempitkan hasilnya`,
+    greekTop: (x) => `Yang paling kuat sekarang adalah \u201c${x}\u201d`,
+    greekCoreVerdictOpen: "Kartu hasil melebarkan keempatnya. Bergeraklah, dan ia akan berbentuk",
+    greekCoreVerdictClose: "Kartu hasil menyempitkan keempatnya. Kini menjaga lebih baik daripada melebarkan",
     greekTenEven: "Keempatnya seimbang",
     greekTenSome: "Ada sedikit ketimpangan",
     greekTenSkew: "Sangat condong ke satu sisi",
@@ -14045,7 +14721,10 @@ const T = {
     hsPassAfter: "Anda sudah melewatinya",
     hsPassAt: "Anda sedang melewatinya",
     hsPassBefore: "Masih di depan",
-    treeVisTitle: "Pilar dan Petir",
+    treeVisTitle: "Pilar dan Petir (jarak dari keseharian)",
+    treeAxisTop: "Akar · alam bawah sadar",
+    treeAxisBottom: "Kehidupan sehari-hari",
+    treeDepthShort: ["Terdalam", "Cukup dalam", "Dangkal", "Dekat keseharian"],
     treePillarLeft: "Ketegasan",
     treePillarMid: "Keseimbangan",
     treePillarRight: "Belas kasih",
@@ -14056,6 +14735,31 @@ const T = {
     choiceKind: ["Jalan menjaga dan menumpuk. Lambat, tetapi pasti.", "Jalan menumpuk dan menjaga。Pasti, tetapi lambat", "Jalan yang mengikuti urutan。Merepotkan, tetapi tak mudah runtuh", "Jalan yang tak condong ke mana pun。Bisa ditentukan sesuai keadaan", "Jalan mengikuti arus。Cepat, tetapi bentuknya belum tetap", "Jalan yang digerakkan momentum. Hasil cepat; bertahan atau tidak belum tentu.", "Jalan merobohkan dan membangun ulang。Besar untung, besar pula kehilangan"],
     choiceGap: ["Kedua jalan hampir sama", "Kedua jalan bersifat serupa", "Kedua jalan agak berbeda", "Kedua jalan sangat berbeda", "Kedua jalan berlawanan sifatnya"],
     verdictTitle: "The conclusion",
+    ynIntro: "Hanya memakai Major Arcana; jumlah kartu tegak dan terbalik menentukan jawaban. Setelah dimulai, pertanyaan dan jumlah kartu tidak bisa diubah.",
+    planGrow: "Pengembangan",
+    planGeneral: "Serbaguna",
+    planDex: "Katalog",
+    ynQuestionLabel: "Dalam satu kalimat, apa yang ingin ditanyakan",
+    ynQuestionExample: "mis. apakah harus melanjutkan hal ini",
+    ynLevelLabel: "Pilih tingkat kehati-hatian",
+    ynLevelName: { normal: "Biasa", careful: "Hati-hati", extra: "Sangat hati-hati" },
+    ynCardsUnit: "kartu",
+    ynCardHidden: "?",
+    ynProgress: (a, b) => `Terbuka ${b} dari ${a}`,
+    ynYes: "Ya",
+    ynNo: "Tidak",
+    ynTally: (u, d) => `${u} tegak · ${d} terbalik`,
+    ynMarginClose: "Sangat dekat. Bertanya lagi di hari lain juga pilihan",
+    ynMarginClear: "Perbedaannya jelas",
+    topicLabel: "Satu kalimat tentang apa yang ingin diramal",
+    treeTopicLabel: "Mimpi, atau hal yang terus menarik pandangan Anda",
+    treeTopicExample: "mis. mimpi air yang berulang / angka yang sama terus muncul",
+    treePathRead: (a, b, d) => `Ia terhubung dengan keseharian di antara ${a} dan ${b}. ${d}`,
+    treeDepth: ["Datang dari tempat paling dalam", "Datang dari jauh di bawah kesadaran sehari-hari", "Datang dari sebelah keseharian", "Hampir sepenuhnya berada di sisi keseharian"],
+    treeNoPath: "Tidak ada jalur muncul kali ini. Citra itu masih berada di atas singgasananya.",
+    topicExample: "Contoh: apakah saya harus melanjutkan pekerjaan ini",
+    topicNote: "Versi gratis tidak memakainya. Ini ruang untuk menata apa yang ingin Anda ketahui.",
+    topicNoteAi: "Pembacaan akan menjawab kalimat yang Anda tulis di sini. Bila kosong, hasilnya jadi umum.",
     crossVerdict: ["The force pushing forward prevails. Now is the time to move.", "The force turning inward prevails. Set things in order first.", "The force pulling back prevails. This is a time to hold.", "The force opening outward prevails. Time to put it before others."],
     crossVerdictStrong: "The force is clear. You can act without hesitating.",
     crossVerdictWeak: "The force is faint. Begin with a small trial.",
@@ -14070,7 +14774,8 @@ const T = {
     treeVerdictSeverity: "It leans toward Coldness. There is room to soften.",
     treeVerdictNode: (x) => `The strongest right now is \u201c${x}\u201d`,
     choiceVerdict: (a, ga, b, gb) => `${a} is a road of ${ga}; ${b} is a road of ${gb}`,
-    choiceVerdictNote: "We will not say which is right. Look at the natures and choose for yourself.",
+    choiceVerdictNote: "We will not say which is right.",
+    choiceVerdictNote2: "Lihat sifatnya dan pilihlah sendiri.",
     hsGoalLabel: "The goal (what you want)",
     hsGoalExample: "e.g. pass the exam",
     hsMeansLabel: "The means (what you are doing)",
@@ -14355,7 +15060,7 @@ const T = {
     schoolNames: { classic: "Tradisional", modern: "Moden", analog: "Analisis sebenar", multi: "Ramai orang" },
     schoolNotes: { classic: "Membaca dengan tebaran yang mapan", modern: "Tebaran untuk tema masa kini", analog: "Masukkan hasil kad sebenar", multi: "Beberapa orang satu peranti" },
     soonTitle: "Sedang disediakan",
-    soonBody: { modern: "Kami sedang menyediakan tebaran berikut。\n\n・Mewujudkan hasrat\n・Membaca seseorang\n・Aliran bulan ini\n・Hubungan baharu\n・Irama musim\n・Hubungan dengan gerak hati", analog: "Masukkan kad sebenar yang anda tarik sendiri; aplikasi tidak mentafsir, hanya mengira dan memaparkan。\n\n・Masukkan mengikut susun atur daripada 78 kad\n・Pengiraan lapan bidang dan jejak\n・Katalog dan huraian sebagai kamus\n\nMenarik kad tetap kerja anda。", multi: "Beberapa orang bergilir menggunakan satu peranti。\n\n・Pilih bilangan orang dan kad\n・Menarik bergilir lalu membanding\n・Siapa paling bertuah kini\n・Cawan Hubungan（disediakan）" },
+    soonBody: { modern: "Tebaran di bawah akan dibuka satu persatu. Yang menyentuh bayangan atau inner child bukan untuk meneka hasil, tetapi untuk menemui cerita yang anda bawa.", analog: "Masukkan kad sebenar yang anda tarik sendiri; aplikasi tidak mentafsir, hanya mengira dan memaparkan。\n\n・Masukkan mengikut susun atur daripada 78 kad\n・Pengiraan lapan bidang dan jejak\n・Katalog dan huraian sebagai kamus\n\nMenarik kad tetap kerja anda。", multi: "Beberapa orang bergilir menggunakan satu peranti。\n\n・Pilih bilangan orang dan kad\n・Menarik bergilir lalu membanding\n・Siapa paling bertuah kini\n・Cawan Hubungan（disediakan）" },
     spreadCardUnit: "kad",
     spreadNoCost: "tanpa kuota",
     spreadComingSoon: "akan datang",
@@ -14394,6 +15099,13 @@ const T = {
     crossAxisRight: "Maju",
     crossVecRead: ["Daya yang mendorong ke hadapan lebih kuat", "Daya yang menarik ke dalam lebih kuat", "Daya yang menarik undur lebih kuat", "Daya yang membuka ke luar lebih kuat"],
     greekTenTitle: "Tegangan Empat Arah",
+    greekEl: { fire: "Api · Kehendak", water: "Air · Perasaan", air: "Udara · Fikiran", earth: "Bumi · Kebendaan" },
+    greekArea: ["Keempat-empatnya terbuka luas", "Cukup terbuka", "Agak menyempit", "Agak banyak menyempit"],
+    greekCoreOpen: (x) => `\u201c${x}\u201d meluaskan hasilnya`,
+    greekCoreClose: (x) => `\u201c${x}\u201d menyempitkan hasilnya`,
+    greekTop: (x) => `Yang paling kuat kini ialah \u201c${x}\u201d`,
+    greekCoreVerdictOpen: "Kad hasil meluaskan keempat-empatnya. Bergeraklah, ia akan terbentuk",
+    greekCoreVerdictClose: "Kad hasil menyempitkan keempat-empatnya. Kini menjaga lebih baik daripada meluaskan",
     greekTenEven: "Keempat-empatnya seimbang",
     greekTenSome: "Ada sedikit kepincangan",
     greekTenSkew: "Sangat condong ke satu pihak",
@@ -14402,7 +15114,10 @@ const T = {
     hsPassAfter: "Anda telah melaluinya",
     hsPassAt: "Anda sedang melaluinya",
     hsPassBefore: "Masih di hadapan",
-    treeVisTitle: "Tiang dan Kilat",
+    treeVisTitle: "Tiang dan Kilat (jarak dari harian)",
+    treeAxisTop: "Akar · bawah sedar dalam",
+    treeAxisBottom: "Kehidupan seharian",
+    treeDepthShort: ["Terdalam", "Agak dalam", "Cetek", "Dekat harian"],
     treePillarLeft: "Ketegasan",
     treePillarMid: "Keseimbangan",
     treePillarRight: "Belas kasihan",
@@ -14413,6 +15128,31 @@ const T = {
     choiceKind: ["Jalan menjaga dan mengumpul. Perlahan, tetapi pasti.", "Jalan mengumpul dan menjaga。Pasti, tetapi perlahan", "Jalan yang menurut aturan。Menyusahkan, tetapi sukar runtuh", "Jalan yang tidak condong ke mana-mana。Boleh ditentukan ikut keadaan", "Jalan mengikut arus。Pantas, tetapi bentuknya belum tetap", "Jalan yang digerakkan momentum. Hasil pantas; kekal atau tidak belum pasti.", "Jalan meruntuh dan membina semula。Besar untung, besar juga kehilangan"],
     choiceGap: ["Kedua-dua jalan hampir sama", "Kedua-dua jalan bersifat serupa", "Kedua-dua jalan agak berbeza", "Kedua-dua jalan sangat berbeza", "Kedua-dua jalan bertentangan sifatnya"],
     verdictTitle: "The conclusion",
+    ynIntro: "Hanya menggunakan Major Arcana; bilangan kad tegak dan terbalik menentukan jawapan. Selepas bermula, soalan dan bilangan kad tidak boleh diubah.",
+    planGrow: "Pembangunan",
+    planGeneral: "Serba guna",
+    planDex: "Katalog",
+    ynQuestionLabel: "Dalam satu ayat, apa yang ingin ditanya",
+    ynQuestionExample: "cth. patutkah saya teruskan perkara ini",
+    ynLevelLabel: "Pilih tahap kehati-hatian",
+    ynLevelName: { normal: "Biasa", careful: "Berhati-hati", extra: "Sangat berhati-hati" },
+    ynCardsUnit: "kad",
+    ynCardHidden: "?",
+    ynProgress: (a, b) => `Terbuka ${b} daripada ${a}`,
+    ynYes: "Ya",
+    ynNo: "Tidak",
+    ynTally: (u, d) => `${u} tegak · ${d} terbalik`,
+    ynMarginClose: "Sangat hampir. Bertanya semula pada hari lain juga satu pilihan",
+    ynMarginClear: "Perbezaannya jelas",
+    topicLabel: "Satu ayat tentang apa yang ingin ditilik",
+    treeTopicLabel: "Mimpi, atau perkara yang mata anda sentiasa kembali kepadanya",
+    treeTopicExample: "cth. mimpi air yang berulang / nombor sama muncul berkali-kali",
+    treePathRead: (a, b, d) => `Ia berhubung dengan kehidupan harian antara ${a} dan ${b}. ${d}`,
+    treeDepth: ["Datang dari tempat paling dalam", "Datang dari jauh di bawah kesedaran harian", "Datang dari sebelah kehidupan harian", "Hampir sepenuhnya di sisi harian"],
+    treeNoPath: "Tiada jalur muncul kali ini. Imej itu masih berada di atas takhtanya.",
+    topicExample: "Contoh: patutkah saya teruskan kerja ini",
+    topicNote: "Versi percuma tidak menggunakannya. Ini ruang untuk menyusun apa yang ingin anda tahu.",
+    topicNoteAi: "Bacaan akan menjawab ayat yang anda tulis di sini. Jika kosong, hasilnya jadi umum.",
     crossVerdict: ["The force pushing forward prevails. Now is the time to move.", "The force turning inward prevails. Set things in order first.", "The force pulling back prevails. This is a time to hold.", "The force opening outward prevails. Time to put it before others."],
     crossVerdictStrong: "The force is clear. You can act without hesitating.",
     crossVerdictWeak: "The force is faint. Begin with a small trial.",
@@ -14427,7 +15167,8 @@ const T = {
     treeVerdictSeverity: "It leans toward Coldness. There is room to soften.",
     treeVerdictNode: (x) => `The strongest right now is \u201c${x}\u201d`,
     choiceVerdict: (a, ga, b, gb) => `${a} is a road of ${ga}; ${b} is a road of ${gb}`,
-    choiceVerdictNote: "We will not say which is right. Look at the natures and choose for yourself.",
+    choiceVerdictNote: "We will not say which is right.",
+    choiceVerdictNote2: "Lihat sifatnya dan pilihlah sendiri.",
     hsGoalLabel: "The goal (what you want)",
     hsGoalExample: "e.g. pass the exam",
     hsMeansLabel: "The means (what you are doing)",
@@ -14713,7 +15454,7 @@ const T = {
     schoolNames: { classic: "古典派", modern: "現代派", analog: "アナログ結果分析", multi: "多人数" },
     schoolNotes: { classic: "確立された配置で読む", modern: "現代の主題に合わせた配置", analog: "手元の実物の札を入力する", multi: "一台を複数人で回す" },
     soonTitle: "準備中です",
-    soonBody: { modern: "次のような配置を用意しています。\n\n・願いの実現\n・人物を読む\n・今月の流れ\n・新しい関係\n・季節の巡り\n・直感とのつながり", analog: "ご自身で引いた実物の札を入力すると、解釈はせず、計算と視覚化だけを引き受けます。\n\n・78枚から配置どおりに入力\n・八分野の算出と軌跡\n・図鑑と解説を辞書として\n\n引くのはあなたの手です。手では数えられない部分だけを担います。", multi: "一台の端末を複数人で回して使う占いです。\n\n・人数と枚数を指定\n・順に引いて結果を比べる\n・いま最も運がよいのは誰か\n・関係の杯（準備中）" },
+    soonBody: { modern: "下の配置を順に開放していきます。影や内なる子どもを扱うものは、答えを当てるのではなく、自分の中の物語を見つけるための配置です。", analog: "ご自身で引いた実物の札を入力すると、解釈はせず、計算と視覚化だけを引き受けます。\n\n・78枚から配置どおりに入力\n・八分野の算出と軌跡\n・図鑑と解説を辞書として\n\n引くのはあなたの手です。手では数えられない部分だけを担います。", multi: "一台の端末を複数人で回して使う占いです。\n\n・人数と枚数を指定\n・順に引いて結果を比べる\n・いま最も運がよいのは誰か\n・関係の杯（準備中）" },
     spreadCardUnit: "枚",
     spreadNoCost: "回数不要",
     spreadComingSoon: "準備中",
@@ -14752,6 +15493,13 @@ const T = {
     crossAxisRight: "進む",
     crossVecRead: ["前へ押し出す力が勝っています", "内へ向かう力が勝っています", "退く力が勝っています", "外へ開く力が勝っています"],
     greekTenTitle: "四方の張力",
+    greekEl: { fire: "火・意志", water: "水・感情", air: "風・思考", earth: "地・物質" },
+    greekArea: ["四方が大きく開いています", "ほどよく開いています", "やや狭まっています", "かなり狭まっています"],
+    greekCoreOpen: (x) => `「${x}」が結果を押し広げています`,
+    greekCoreClose: (x) => `「${x}」が結果を狭めています`,
+    greekTop: (x) => `いま最も強く働いているのは「${x}」です`,
+    greekCoreVerdictOpen: "結果の札が四方を押し広げています。動けば形になります",
+    greekCoreVerdictClose: "結果の札が四方を狭めています。いまは広げるより、守るほうが利きます",
     greekTenEven: "四方が釣り合っています",
     greekTenSome: "いくらか偏りがあります",
     greekTenSkew: "一方に大きく偏っています",
@@ -14760,7 +15508,10 @@ const T = {
     hsPassAfter: "もう越えました",
     hsPassAt: "いま越えるところです",
     hsPassBefore: "まだこれからです",
-    treeVisTitle: "三柱と稲妻",
+    treeVisTitle: "三柱と稲妻（現実からの遠さ）",
+    treeAxisTop: "根源・無意識の奥",
+    treeAxisBottom: "現実の暮らし",
+    treeDepthShort: ["最も深い", "かなり深い", "浅い", "現実の側"],
     treePillarLeft: "冷酷",
     treePillarMid: "均衡",
     treePillarRight: "慈悲",
@@ -14771,6 +15522,31 @@ const T = {
     choiceKind: ["守りを固めて積み上げる道。動きは遅く、確かです", "積み上げて守る道。確かですが、歩みは遅くなります", "順を踏んで進む道。手間はかかりますが、崩れにくい道です", "どちらにも寄らない道。状況に合わせて決められます", "流れに乗る道。速く進めますが、形は定まりません", "勢いで動く道。得るものは早く、続くかは分かりません", "壊して作り直す道。得るものも、手放すものも大きい道です"],
     choiceGap: ["二つの道は、ほとんど同じ性質です", "二つの道の性質は近いようです", "二つの道は、いくらか性質が違います", "二つの道は、性質が大きく違います", "二つの道は、正反対の性質です"],
     verdictTitle: "結論",
+    ynIntro: "大アルカナだけを使い、正位置と逆位置の数で答えます。占い中は問いの内容も枚数も変えられません。",
+    planGrow: "育成",
+    planGeneral: "汎用",
+    planDex: "図鑑",
+    ynQuestionLabel: "何を占うか、一文で",
+    ynQuestionExample: "例：この話を進めてもいいか",
+    ynLevelLabel: "慎重さを選んでください",
+    ynLevelName: { normal: "普通", careful: "慎重", extra: "超慎重" },
+    ynCardsUnit: "枚",
+    ynCardHidden: "？",
+    ynProgress: (a, b) => `${a}枚中 ${b}枚を開きました`,
+    ynYes: "はい",
+    ynNo: "いいえ",
+    ynTally: (u, d) => `正位置 ${u}枚・逆位置 ${d}枚`,
+    ynMarginClose: "僅差です。もう一度、日をおいて占うのも一つの手です",
+    ynMarginClear: "はっきりとした差です",
+    topicLabel: "何を占うのかを一文で",
+    treeTopicLabel: "気にかかっている夢や、なぜか目が行くもの",
+    treeTopicExample: "例：最近くり返し見る水の夢／なぜか同じ数字が目に入る",
+    treePathRead: (a, b, d) => `${a}と${b}の間で、それは現実とつながっています。${d}`,
+    treeDepth: ["最も深いところから来ています", "日々の意識よりかなり奥から来ています", "現実のすぐ隣から来ています", "ほとんど現実の側にあります"],
+    treeNoPath: "今回は小径が現れませんでした。その像はまだ、座の上に留まっています。",
+    topicExample: "例：今の仕事を続けるべきか",
+    topicNote: "無料版では鑑定に反映されません。何を知りたいのか、自分で整理するための欄です。",
+    topicNoteAi: "ここに書いた一文について答えます。空欄だと、当たり障りのない話になります。",
     crossVerdict: ["前へ押し出す力が勝っています。動くなら今です", "内へ向かう力が勝っています。整えることが先です", "退く力が勝っています。守りに回るべき時です", "外へ開く力が勝っています。人に出す時です"],
     crossVerdictStrong: "力ははっきり出ています。迷わず一手を打てます",
     crossVerdictWeak: "力は弱めです。小さく試すところから始めなさい",
@@ -14785,7 +15561,8 @@ const T = {
     treeVerdictSeverity: "冷酷の柱に傾いています。厳しさを緩める余地があります",
     treeVerdictNode: (x) => `いま最も強いのは「${x}」です`,
     choiceVerdict: (a, ga, b, gb) => `${a}は${ga}、${b}は${gb}の道です`,
-    choiceVerdictNote: "どちらが正しいかは申し上げません。性質を見て、ご自身で選んでください",
+    choiceVerdictNote: "どちらが正しいかは申し上げません。",
+    choiceVerdictNote2: "性質を見て、ご自身で選んでください。",
     hsGoalLabel: "目標（ほしい結果）",
     hsGoalExample: "例：資格に合格する",
     hsMeansLabel: "手段（今やっていること）",
@@ -15085,7 +15862,7 @@ const T = {
     schoolNames: { classic: "古典派", modern: "現代派", analog: "實體結果分析", multi: "多人" },
     schoolNotes: { classic: "以既有的牌陣解讀", modern: "貼合當代主題的牌陣", analog: "輸入實體牌的結果", multi: "一台裝置多人輪流" },
     soonTitle: "準備中",
-    soonBody: { modern: "正在準備以下牌陣。\n\n・願望實現\n・解讀人物\n・本月的流向\n・新的關係\n・季節的循環\n・與直覺的連結", analog: "輸入您親手抽出的實體牌，本程式不作解讀，只負責計算與視覺化。\n\n・自78張中依牌陣輸入\n・八領域的計算與軌跡\n・以圖鑑與解說作為辭典\n\n抽牌是您的事，程式只承擔手算不來的部分。", multi: "多人輪流使用同一台裝置的占卜。\n\n・指定人數與張數\n・依序抽牌並比較結果\n・此刻誰的運勢最好\n・關係之杯（準備中）" },
+    soonBody: { modern: "下列牌陣將陸續開放。處理陰影或內在小孩的牌陣，不是為了猜中結果，而是為了找出自己心中的故事。", analog: "輸入您親手抽出的實體牌，本程式不作解讀，只負責計算與視覺化。\n\n・自78張中依牌陣輸入\n・八領域的計算與軌跡\n・以圖鑑與解說作為辭典\n\n抽牌是您的事，程式只承擔手算不來的部分。", multi: "多人輪流使用同一台裝置的占卜。\n\n・指定人數與張數\n・依序抽牌並比較結果\n・此刻誰的運勢最好\n・關係之杯（準備中）" },
     spreadCardUnit: "張",
     spreadNoCost: "不計次數",
     spreadComingSoon: "準備中",
@@ -15124,6 +15901,13 @@ const T = {
     crossAxisRight: "前進",
     crossVecRead: ["向前推進的力量佔優", "向內收束的力量佔優", "後退的力量佔優", "向外開展的力量佔優"],
     greekTenTitle: "四方的張力",
+    greekEl: { fire: "火・意志", water: "水・情感", air: "風・思考", earth: "地・物質" },
+    greekArea: ["四方大幅展開", "適度展開", "略為收窄", "相當收窄"],
+    greekCoreOpen: (x) => `「${x}」正在撐開結果`,
+    greekCoreClose: (x) => `「${x}」正在收窄結果`,
+    greekTop: (x) => `此刻作用最強的是「${x}」`,
+    greekCoreVerdictOpen: "結果之牌撐開了四方。行動便能成形",
+    greekCoreVerdictClose: "結果之牌收窄了四方。此時守成勝於擴張",
     greekTenEven: "四方保持均衡",
     greekTenSome: "略有偏頗",
     greekTenSkew: "明顯偏向一方",
@@ -15132,7 +15916,10 @@ const T = {
     hsPassAfter: "已經越過",
     hsPassAt: "正在越過",
     hsPassBefore: "尚未抵達",
-    treeVisTitle: "三柱與閃電",
+    treeVisTitle: "三柱與閃電（距現實的遠近）",
+    treeAxisTop: "根源・無意識深處",
+    treeAxisBottom: "現實的生活",
+    treeDepthShort: ["最深", "相當深", "較淺", "靠近現實"],
     treePillarLeft: "嚴峻",
     treePillarMid: "均衡",
     treePillarRight: "慈悲",
@@ -15143,6 +15930,31 @@ const T = {
     choiceKind: ["固守而累積之路。緩慢，卻踏實", "累積並守成之路。踏實，但步伐緩慢", "循序前進之路。費工夫，卻不易崩塌", "不偏向任一方之路。可依情況決定", "順流而行之路。走得快，但形貌未定", "乘勢而動之路。得手快，能否延續則未知", "破而後立之路。所得與所失都大"],
     choiceGap: ["兩條路幾乎相同", "兩條路的性質相近", "兩條路的性質略有不同", "兩條路的性質大不相同", "兩條路的性質恰恰相反"],
     verdictTitle: "The conclusion",
+    ynIntro: "僅使用大阿爾克那，以正位與逆位的張數決定答案。開始後無法更改問題與張數。",
+    planGrow: "養成",
+    planGeneral: "通用",
+    planDex: "圖鑑",
+    ynQuestionLabel: "請以一句話寫下想占卜的事",
+    ynQuestionExample: "例：這件事是否該繼續",
+    ynLevelLabel: "請選擇謹慎程度",
+    ynLevelName: { normal: "一般", careful: "謹慎", extra: "極謹慎" },
+    ynCardsUnit: "張",
+    ynCardHidden: "？",
+    ynProgress: (a, b) => `${a}張中已開啟${b}張`,
+    ynYes: "是",
+    ynNo: "否",
+    ynTally: (u, d) => `正位${u}張・逆位${d}張`,
+    ynMarginClose: "差距很小。改天再占卜一次也是個辦法",
+    ynMarginClear: "差距十分明顯",
+    topicLabel: "以一句話寫下想占卜的事",
+    treeTopicLabel: "掛心的夢，或不知為何總會注意到的事",
+    treeTopicExample: "例：最近反覆夢見水／總看見相同的數字",
+    treePathRead: (a, b, d) => `它在${a}與${b}之間與現實相連。${d}`,
+    treeDepth: ["來自最深之處", "來自遠比日常意識更深的地方", "來自現實的近旁", "幾乎已在現實這一側"],
+    treeNoPath: "這次未出現小徑。那個意象仍停留在座上。",
+    topicExample: "例：是否該繼續現在的工作",
+    topicNote: "免費版不會納入解讀。這是供您自行整理想知道什麼的欄位。",
+    topicNoteAi: "解讀會針對您在此寫下的這一句。若留空，內容將流於泛泛。",
     crossVerdict: ["The force pushing forward prevails. Now is the time to move.", "The force turning inward prevails. Set things in order first.", "The force pulling back prevails. This is a time to hold.", "The force opening outward prevails. Time to put it before others."],
     crossVerdictStrong: "The force is clear. You can act without hesitating.",
     crossVerdictWeak: "The force is faint. Begin with a small trial.",
@@ -15157,7 +15969,8 @@ const T = {
     treeVerdictSeverity: "It leans toward Coldness. There is room to soften.",
     treeVerdictNode: (x) => `The strongest right now is \u201c${x}\u201d`,
     choiceVerdict: (a, ga, b, gb) => `${a} is a road of ${ga}; ${b} is a road of ${gb}`,
-    choiceVerdictNote: "We will not say which is right. Look at the natures and choose for yourself.",
+    choiceVerdictNote: "We will not say which is right.",
+    choiceVerdictNote2: "請看其性質，由您自己決定。",
     hsGoalLabel: "The goal (what you want)",
     hsGoalExample: "e.g. pass the exam",
     hsMeansLabel: "The means (what you are doing)",
@@ -15442,7 +16255,7 @@ const T = {
     schoolNames: { classic: "古典派", modern: "现代派", analog: "实体结果分析", multi: "多人" },
     schoolNotes: { classic: "以既有的牌阵解读", modern: "贴合当代主题的牌阵", analog: "输入实体牌的结果", multi: "一台设备多人轮流" },
     soonTitle: "准备中",
-    soonBody: { modern: "正在准备以下牌阵。\n\n・愿望实现\n・解读人物\n・本月的流向\n・新的关系\n・季节的循环\n・与直觉的连结", analog: "输入您亲手抽出的实体牌，本程序不作解读，只负责计算与视觉化。\n\n・自78张中依牌阵输入\n・八领域的计算与轨迹\n・以图鉴与解说作为辞典\n\n抽牌是您的事，程序只承担手算不来的部分。", multi: "多人轮流使用同一台设备的占卜。\n\n・指定人数与张数\n・依序抽牌并比较结果\n・此刻谁的运势最好\n・关系之杯（准备中）" },
+    soonBody: { modern: "下列牌阵将陆续开放。处理阴影或内在小孩的牌阵，不是为了猜中结果，而是为了找出自己心中的故事。", analog: "输入您亲手抽出的实体牌，本程序不作解读，只负责计算与视觉化。\n\n・自78张中依牌阵输入\n・八领域的计算与轨迹\n・以图鉴与解说作为辞典\n\n抽牌是您的事，程序只承担手算不来的部分。", multi: "多人轮流使用同一台设备的占卜。\n\n・指定人数与张数\n・依序抽牌并比较结果\n・此刻谁的运势最好\n・关系之杯（准备中）" },
     spreadCardUnit: "张",
     spreadNoCost: "不计次数",
     spreadComingSoon: "准备中",
@@ -15481,6 +16294,13 @@ const T = {
     crossAxisRight: "前进",
     crossVecRead: ["向前推进的力量占优", "向内收束的力量占优", "后退的力量占优", "向外开展的力量占优"],
     greekTenTitle: "四方的张力",
+    greekEl: { fire: "火・意志", water: "水・情感", air: "风・思考", earth: "地・物质" },
+    greekArea: ["四方大幅展开", "适度展开", "略为收窄", "相当收窄"],
+    greekCoreOpen: (x) => `「${x}」正在撑开结果`,
+    greekCoreClose: (x) => `「${x}」正在收窄结果`,
+    greekTop: (x) => `此刻作用最强的是「${x}」`,
+    greekCoreVerdictOpen: "结果之牌撑开了四方。行动便能成形",
+    greekCoreVerdictClose: "结果之牌收窄了四方。此时守成胜于扩张",
     greekTenEven: "四方保持均衡",
     greekTenSome: "略有偏颇",
     greekTenSkew: "明显偏向一方",
@@ -15489,7 +16309,10 @@ const T = {
     hsPassAfter: "已经越过",
     hsPassAt: "正在越过",
     hsPassBefore: "尚未抵达",
-    treeVisTitle: "三柱与闪电",
+    treeVisTitle: "三柱与闪电（距现实的远近）",
+    treeAxisTop: "根源・无意识深处",
+    treeAxisBottom: "现实的生活",
+    treeDepthShort: ["最深", "相当深", "较浅", "靠近现实"],
     treePillarLeft: "严峻",
     treePillarMid: "均衡",
     treePillarRight: "慈悲",
@@ -15500,6 +16323,31 @@ const T = {
     choiceKind: ["固守而累积之路。缓慢，却踏实", "累积并守成之路。踏实，但步伐缓慢", "循序前进之路。费工夫，却不易崩塌", "不偏向任一方之路。可依情况决定", "顺流而行之路。走得快，但形貌未定", "乘势而动之路。得手快，能否延续则未知", "破而后立之路。所得与所失都大"],
     choiceGap: ["两条路几乎相同", "两条路的性质相近", "两条路的性质略有不同", "两条路的性质大不相同", "两条路的性质恰恰相反"],
     verdictTitle: "The conclusion",
+    ynIntro: "仅使用大阿尔克那，以正位与逆位的张数决定答案。开始后无法更改问题与张数。",
+    planGrow: "养成",
+    planGeneral: "通用",
+    planDex: "图鉴",
+    ynQuestionLabel: "请以一句话写下想占卜的事",
+    ynQuestionExample: "例：这件事是否该继续",
+    ynLevelLabel: "请选择谨慎程度",
+    ynLevelName: { normal: "一般", careful: "谨慎", extra: "极谨慎" },
+    ynCardsUnit: "张",
+    ynCardHidden: "？",
+    ynProgress: (a, b) => `${a}张中已开启${b}张`,
+    ynYes: "是",
+    ynNo: "否",
+    ynTally: (u, d) => `正位${u}张・逆位${d}张`,
+    ynMarginClose: "差距很小。改天再占卜一次也是个办法",
+    ynMarginClear: "差距十分明显",
+    topicLabel: "以一句话写下想占卜的事",
+    treeTopicLabel: "挂心的梦，或不知为何总会注意到的事",
+    treeTopicExample: "例：最近反复梦见水／总看见相同的数字",
+    treePathRead: (a, b, d) => `它在${a}与${b}之间与现实相连。${d}`,
+    treeDepth: ["来自最深之处", "来自远比日常意识更深的地方", "来自现实的近旁", "几乎已在现实这一侧"],
+    treeNoPath: "这次未出现小径。那个意象仍停留在座上。",
+    topicExample: "例：是否该继续现在的工作",
+    topicNote: "免费版不会纳入解读。这是供您自行整理想知道什么的栏位。",
+    topicNoteAi: "解读会针对您在此写下的这一句。若留空，内容将流于泛泛。",
     crossVerdict: ["The force pushing forward prevails. Now is the time to move.", "The force turning inward prevails. Set things in order first.", "The force pulling back prevails. This is a time to hold.", "The force opening outward prevails. Time to put it before others."],
     crossVerdictStrong: "The force is clear. You can act without hesitating.",
     crossVerdictWeak: "The force is faint. Begin with a small trial.",
@@ -15514,7 +16362,8 @@ const T = {
     treeVerdictSeverity: "It leans toward Coldness. There is room to soften.",
     treeVerdictNode: (x) => `The strongest right now is \u201c${x}\u201d`,
     choiceVerdict: (a, ga, b, gb) => `${a} is a road of ${ga}; ${b} is a road of ${gb}`,
-    choiceVerdictNote: "We will not say which is right. Look at the natures and choose for yourself.",
+    choiceVerdictNote: "We will not say which is right.",
+    choiceVerdictNote2: "请看其性质，由您自己决定。",
     hsGoalLabel: "The goal (what you want)",
     hsGoalExample: "e.g. pass the exam",
     hsMeansLabel: "The means (what you are doing)",
@@ -15799,7 +16648,7 @@ const T = {
     schoolNames: { classic: "Traditional", modern: "Modern", analog: "Physical reading", multi: "Group" },
     schoolNotes: { classic: "Read with established spreads", modern: "Spreads shaped for present-day themes", analog: "Enter cards from a real deck", multi: "Pass one device around" },
     soonTitle: "In preparation",
-    soonBody: { modern: "The following spreads are being prepared.\n\n· Manifestation\n· Reading a person\n· The month ahead\n· A new relationship\n· The turn of the season\n· Connection with intuition", analog: "Enter the cards you drew from your own deck. No interpretation \u2014 only the calculation and the picture.\n\n· Enter the layout from all 78 cards\n· Eight-field figures and the trail\n· The codex and its notes as a dictionary\n\nThe drawing stays in your hands. Only what cannot be counted by hand is ours.", multi: "One device passed around a group.\n\n· Choose how many people and how many cards\n· Draw in turn and compare\n· Who is luckiest right now\n· The Cup of Relations (in preparation)" },
+    soonBody: { modern: "The spreads below will open in turn. Those dealing with the shadow or the inner child are not for guessing outcomes, but for finding the story you carry.", analog: "Enter the cards you drew from your own deck. No interpretation \u2014 only the calculation and the picture.\n\n· Enter the layout from all 78 cards\n· Eight-field figures and the trail\n· The codex and its notes as a dictionary\n\nThe drawing stays in your hands. Only what cannot be counted by hand is ours.", multi: "One device passed around a group.\n\n· Choose how many people and how many cards\n· Draw in turn and compare\n· Who is luckiest right now\n· The Cup of Relations (in preparation)" },
     spreadCardUnit: "cards",
     spreadNoCost: "free",
     spreadComingSoon: "soon",
@@ -15838,6 +16687,13 @@ const T = {
     crossAxisRight: "Advance",
     crossVecRead: ["The force pushing forward prevails", "The force turning inward prevails", "The force pulling back prevails", "The force opening outward prevails"],
     greekTenTitle: "Tension of the Four",
+    greekEl: { fire: "Fire · Will", water: "Water · Feeling", air: "Air · Thought", earth: "Earth · Matter" },
+    greekArea: ["The four are widely open", "Reasonably open", "Somewhat narrowed", "Considerably narrowed"],
+    greekCoreOpen: (x) => `\u201c${x}\u201d is widening the outcome`,
+    greekCoreClose: (x) => `\u201c${x}\u201d is narrowing the outcome`,
+    greekTop: (x) => `The strongest force right now is \u201c${x}\u201d`,
+    greekCoreVerdictOpen: "The outcome card widens the four. Move, and it takes shape",
+    greekCoreVerdictClose: "The outcome card narrows the four. Holding serves better than widening now",
     greekTenEven: "The four are in balance",
     greekTenSome: "There is some imbalance",
     greekTenSkew: "It leans heavily to one side",
@@ -15846,7 +16702,10 @@ const T = {
     hsPassAfter: "You have crossed it",
     hsPassAt: "You are crossing it now",
     hsPassBefore: "It still lies ahead",
-    treeVisTitle: "Pillars and Lightning",
+    treeVisTitle: "Pillars and Lightning (distance from daily life)",
+    treeAxisTop: "Root · deep unconscious",
+    treeAxisBottom: "Daily life",
+    treeDepthShort: ["Deepest", "Quite deep", "Shallow", "Near daily life"],
     treePillarLeft: "Severity",
     treePillarMid: "Balance",
     treePillarRight: "Mercy",
@@ -15857,6 +16716,31 @@ const T = {
     choiceKind: ["A road of guarding and building. Slow, and sure.", "A road that builds and keeps. Sure, but slow.", "A road that follows an order. It takes effort, but it holds.", "A road leaning neither way. You can decide as things unfold.", "A road that rides the current. Fast, but the shape stays loose.", "A road driven by momentum. Quick returns; whether they last is unknown.", "A road that breaks and rebuilds. Much gained, much let go."],
     choiceGap: ["The two roads are almost the same", "The two roads are alike in nature", "The two roads differ somewhat", "The two roads differ greatly", "The two roads are opposite in nature"],
     verdictTitle: "The conclusion",
+    ynIntro: "Uses only the Major Arcana; the count of upright and reversed cards decides the answer. Once you begin, the question and card count cannot be changed.",
+    planGrow: "Growth",
+    planGeneral: "General",
+    planDex: "Codex",
+    ynQuestionLabel: "In one sentence, what you ask",
+    ynQuestionExample: "e.g. should I move forward with this",
+    ynLevelLabel: "Choose how careful to be",
+    ynLevelName: { normal: "Normal", careful: "Careful", extra: "Extra careful" },
+    ynCardsUnit: "cards",
+    ynCardHidden: "?",
+    ynProgress: (a, b) => `Opened ${b} of ${a}`,
+    ynYes: "Yes",
+    ynNo: "No",
+    ynTally: (u, d) => `${u} upright · ${d} reversed`,
+    ynMarginClose: "It is close. Asking again another day is also an option",
+    ynMarginClear: "The difference is clear",
+    topicLabel: "In one sentence, what you want read",
+    treeTopicLabel: "A dream, or something your eye keeps returning to",
+    treeTopicExample: "e.g. water dreams that keep repeating / the same number keeps appearing",
+    treePathRead: (a, b, d) => `It connects to daily life between ${a} and ${b}. ${d}`,
+    treeDepth: ["It comes from the deepest place", "It comes from well beneath everyday awareness", "It comes from just beside daily life", "It sits almost entirely on the side of the ordinary"],
+    treeNoPath: "No path appeared this time. The image is still resting on the seats themselves.",
+    topicExample: "e.g. whether to stay in this job",
+    topicNote: "The free version does not use this. It is a space to set out what you want to know.",
+    topicNoteAi: "The reading answers the sentence you write here. Leave it blank and it stays general.",
     crossVerdict: ["The force pushing forward prevails. Now is the time to move.", "The force turning inward prevails. Set things in order first.", "The force pulling back prevails. This is a time to hold.", "The force opening outward prevails. Time to put it before others."],
     crossVerdictStrong: "The force is clear. You can act without hesitating.",
     crossVerdictWeak: "The force is faint. Begin with a small trial.",
@@ -15871,7 +16755,8 @@ const T = {
     treeVerdictSeverity: "It leans toward Coldness. There is room to soften.",
     treeVerdictNode: (x) => `The strongest right now is \u201c${x}\u201d`,
     choiceVerdict: (a, ga, b, gb) => `${a} is a road of ${ga}; ${b} is a road of ${gb}`,
-    choiceVerdictNote: "We will not say which is right. Look at the natures and choose for yourself.",
+    choiceVerdictNote: "We will not say which is right.",
+    choiceVerdictNote2: "Look at the natures and choose for yourself.",
     hsGoalLabel: "The goal (what you want)",
     hsGoalExample: "e.g. pass the exam",
     hsMeansLabel: "The means (what you are doing)",
@@ -16171,7 +17056,7 @@ const T = {
     schoolNames: { classic: "Tradisyonal", modern: "Moderno", analog: "Pagsusuri ng totoo", multi: "Maraming tao" },
     schoolNotes: { classic: "Basahin sa mga itinatag na spread", modern: "Mga spread para sa kasalukuyang tema", analog: "Ipasok ang totoong baraha", multi: "Isang device na pinagsasaluhan" },
     soonTitle: "Inihahanda pa",
-    soonBody: { modern: "Inihahanda ang mga sumusunod na spread.\n\n· Pagsasakatuparan ng hangarin\n· Pagbasa sa isang tao\n· Ang buwang darating\n· Bagong relasyon\n· Pagpihit ng panahon\n· Ugnayan sa intuwisyon", analog: "Ipasok ang mga barahang hinugot mo mismo. Walang interpretasyon \u2014 pagkalkula at larawan lamang.\n\n· Ipasok ang layout mula sa 78 baraha\n· Walong larangan at ang landas\n· Ang kodeks bilang diksyunaryo\n\nSa iyo pa rin ang paghugot.", multi: "Isang device na ipinapasa sa grupo.\n\n· Piliin ang bilang ng tao at baraha\n· Salitan sa paghugot at ihambing\n· Sino ang pinakamaswerte ngayon\n· Ang Kopa ng Ugnayan (inihahanda)" },
+    soonBody: { modern: "Bubuksan ang mga spread sa ibaba nang paisa-isa. Ang mga tumatalakay sa anino o inner child ay hindi panghula ng kalalabasan, kundi paraan upang matagpuan ang kuwentong dala mo.", analog: "Ipasok ang mga barahang hinugot mo mismo. Walang interpretasyon \u2014 pagkalkula at larawan lamang.\n\n· Ipasok ang layout mula sa 78 baraha\n· Walong larangan at ang landas\n· Ang kodeks bilang diksyunaryo\n\nSa iyo pa rin ang paghugot.", multi: "Isang device na ipinapasa sa grupo.\n\n· Piliin ang bilang ng tao at baraha\n· Salitan sa paghugot at ihambing\n· Sino ang pinakamaswerte ngayon\n· Ang Kopa ng Ugnayan (inihahanda)" },
     spreadCardUnit: "baraha",
     spreadNoCost: "libre",
     spreadComingSoon: "malapit na",
@@ -16210,6 +17095,13 @@ const T = {
     crossAxisRight: "Sumulong",
     crossVecRead: ["Nananaig ang puwersang sumusulong", "Nananaig ang puwersang papaloob", "Nananaig ang puwersang umaatras", "Nananaig ang puwersang bumubukas"],
     greekTenTitle: "Tensyon ng Apat",
+    greekEl: { fire: "Apoy · Kalooban", water: "Tubig · Damdamin", air: "Hangin · Isip", earth: "Lupa · Materyal" },
+    greekArea: ["Malawak ang pagkabukas ng apat", "Katamtamang bukas", "Bahagyang makitid", "Lubhang makitid"],
+    greekCoreOpen: (x) => `Pinapalawak ng \u201c${x}\u201d ang kalalabasan`,
+    greekCoreClose: (x) => `Pinipiit ng \u201c${x}\u201d ang kalalabasan`,
+    greekTop: (x) => `Ang pinakamalakas ngayon ay \u201c${x}\u201d`,
+    greekCoreVerdictOpen: "Pinapalawak ng barahang kalalabasan ang apat. Kumilos at mabubuo ito",
+    greekCoreVerdictClose: "Pinipiit ng barahang kalalabasan ang apat. Mas mabuti ngayon ang mag-ingat",
     greekTenEven: "Balanse ang apat",
     greekTenSome: "May kaunting kawalan ng balanse",
     greekTenSkew: "Malaki ang kiling sa isang panig",
@@ -16218,7 +17110,10 @@ const T = {
     hsPassAfter: "Natawid mo na ito",
     hsPassAt: "Tinatawid mo na ngayon",
     hsPassBefore: "Nasa unahan pa ito",
-    treeVisTitle: "Mga Haligi at Kidlat",
+    treeVisTitle: "Mga Haligi at Kidlat (layo mula sa araw-araw)",
+    treeAxisTop: "Ugat · malalim na malay-tao",
+    treeAxisBottom: "Pang-araw-araw",
+    treeDepthShort: ["Pinakamalalim", "Medyo malalim", "Mababaw", "Malapit sa araw-araw"],
     treePillarLeft: "Higpit",
     treePillarMid: "Balanse",
     treePillarRight: "Awa",
@@ -16229,6 +17124,31 @@ const T = {
     choiceKind: ["Landas ng pag-iingat at pagtatayo. Mabagal, ngunit tiyak.", "Landas na nagtatayo at nag-iingat. Tiyak, ngunit mabagal.", "Landas na sumusunod sa ayos. Nakakapagod, ngunit matibay.", "Landas na hindi kumikiling. Puwedeng magpasya habang umuusad.", "Landas na sumasabay sa agos. Mabilis, ngunit walang tiyak na hugis.", "Landas na hatid ng sigla. Mabilis ang bunga; kung tatagal ay di tiyak.", "Landas na winawasak at muling itinatayo. Marami ang makukuha, marami rin ang mawawala."],
     choiceGap: ["Halos magkapareho ang dalawang daan", "Magkatulad ang dalawang daan", "Medyo magkaiba ang dalawang daan", "Malaki ang pagkakaiba ng dalawang daan", "Magkasalungat ang dalawang daan"],
     verdictTitle: "The conclusion",
+    ynIntro: "Ang Major Arcana lamang ang ginagamit; ang bilang ng upright at reversed ang nagpapasya sa sagot. Kapag nagsimula na, hindi na mababago ang tanong at bilang ng baraha.",
+    planGrow: "Paglago",
+    planGeneral: "Pangkalahatan",
+    planDex: "Kodeks",
+    ynQuestionLabel: "Sa isang pangungusap, ang itatanong mo",
+    ynQuestionExample: "hal. dapat bang ipagpatuloy ito",
+    ynLevelLabel: "Piliin ang antas ng pag-iingat",
+    ynLevelName: { normal: "Normal", careful: "Maingat", extra: "Sobrang ingat" },
+    ynCardsUnit: "baraha",
+    ynCardHidden: "?",
+    ynProgress: (a, b) => `Nabuksan ang ${b} sa ${a}`,
+    ynYes: "Oo",
+    ynNo: "Hindi",
+    ynTally: (u, d) => `${u} upright · ${d} reversed`,
+    ynMarginClose: "Malapit lang. Puwede ring magtanong ulit sa ibang araw",
+    ynMarginClear: "Malinaw ang pagkakaiba",
+    topicLabel: "Sa isang pangungusap, ang nais mong basahin",
+    treeTopicLabel: "Isang panaginip, o bagay na laging binabalikan ng mata mo",
+    treeTopicExample: "hal. paulit-ulit na panaginip tungkol sa tubig / paulit-ulit na numero",
+    treePathRead: (a, b, d) => `Nag-uugnay ito sa araw-araw sa pagitan ng ${a} at ${b}. ${d}`,
+    treeDepth: ["Nagmumula ito sa pinakamalalim", "Nagmumula ito sa malayo sa ilalim ng kamalayan", "Nagmumula ito sa katabi lang ng araw-araw", "Halos nasa panig na ito ng karaniwan"],
+    treeNoPath: "Walang lumitaw na landas ngayon. Nasa mga upuan pa rin ang imahe.",
+    topicExample: "hal. kung dapat manatili sa trabahong ito",
+    topicNote: "Hindi ito ginagamit sa libreng bersyon. Espasyo ito para malinawan kung ano ang gusto mong malaman.",
+    topicNoteAi: "Sasagutin ng pagbasa ang pangungusap na isusulat mo rito. Kung blangko, mananatili itong pangkalahatan.",
     crossVerdict: ["The force pushing forward prevails. Now is the time to move.", "The force turning inward prevails. Set things in order first.", "The force pulling back prevails. This is a time to hold.", "The force opening outward prevails. Time to put it before others."],
     crossVerdictStrong: "The force is clear. You can act without hesitating.",
     crossVerdictWeak: "The force is faint. Begin with a small trial.",
@@ -16243,7 +17163,8 @@ const T = {
     treeVerdictSeverity: "It leans toward Coldness. There is room to soften.",
     treeVerdictNode: (x) => `The strongest right now is \u201c${x}\u201d`,
     choiceVerdict: (a, ga, b, gb) => `${a} is a road of ${ga}; ${b} is a road of ${gb}`,
-    choiceVerdictNote: "We will not say which is right. Look at the natures and choose for yourself.",
+    choiceVerdictNote: "We will not say which is right.",
+    choiceVerdictNote2: "Tingnan ang kalikasan at pumili ka mismo.",
     hsGoalLabel: "The goal (what you want)",
     hsGoalExample: "e.g. pass the exam",
     hsMeansLabel: "The means (what you are doing)",
@@ -16528,7 +17449,7 @@ const T = {
     schoolNames: { classic: "สายคลาสสิก", modern: "สายร่วมสมัย", analog: "วิเคราะห์ไพ่จริง", multi: "หลายคน" },
     schoolNotes: { classic: "อ่านด้วยการวางไพ่ที่เป็นแบบแผน", modern: "การวางไพ่ตามหัวข้อร่วมสมัย", analog: "ป้อนผลจากไพ่จริง", multi: "หลายคนใช้เครื่องเดียว" },
     soonTitle: "กำลังเตรียมการ",
-    soonBody: { modern: "กำลังเตรียมการวางไพ่ต่อไปนี้。\n\n・การทำให้ความปรารถนาเป็นจริง\n・การอ่านบุคคล\n・กระแสของเดือนนี้\n・ความสัมพันธ์ใหม่\n・การหมุนเวียนของฤดูกาล\n・การเชื่อมต่อกับสัญชาตญาณ", analog: "ป้อนไพ่จริงที่คุณจั่วเอง แอปไม่ตีความ ทำเพียงการคำนวณและแสดงผล。\n\n・ป้อนตามผังจากไพ่ 78 ใบ\n・คำนวณแปดขอบเขตและเส้นทาง\n・ใช้สารานุกรมเป็นพจนานุกรม\n\nการจั่วยังเป็นของคุณ", multi: "หลายคนผลัดกันใช้เครื่องเดียว。\n\n・เลือกจำนวนคนและจำนวนไพ่\n・ผลัดกันจั่วแล้วเทียบผล\n・ตอนนี้ใครดวงดีที่สุด\n・ถ้วยแห่งความสัมพันธ์（กำลังเตรียม）" },
+    soonBody: { modern: "การวางไพ่ด้านล่างจะเปิดใช้ตามลำดับ ส่วนที่ว่าด้วยเงาหรือเด็กภายในไม่ได้มีไว้ทายผล แต่มีไว้ค้นหาเรื่องเล่าที่คุณแบกอยู่", analog: "ป้อนไพ่จริงที่คุณจั่วเอง แอปไม่ตีความ ทำเพียงการคำนวณและแสดงผล。\n\n・ป้อนตามผังจากไพ่ 78 ใบ\n・คำนวณแปดขอบเขตและเส้นทาง\n・ใช้สารานุกรมเป็นพจนานุกรม\n\nการจั่วยังเป็นของคุณ", multi: "หลายคนผลัดกันใช้เครื่องเดียว。\n\n・เลือกจำนวนคนและจำนวนไพ่\n・ผลัดกันจั่วแล้วเทียบผล\n・ตอนนี้ใครดวงดีที่สุด\n・ถ้วยแห่งความสัมพันธ์（กำลังเตรียม）" },
     spreadCardUnit: "ใบ",
     spreadNoCost: "ไม่นับครั้ง",
     spreadComingSoon: "เร็วๆ นี้",
@@ -16567,6 +17488,13 @@ const T = {
     crossAxisRight: "รุก",
     crossVecRead: ["แรงที่ผลักไปข้างหน้าเหนือกว่า", "แรงที่หันเข้าในเหนือกว่า", "แรงที่ถอยกลับเหนือกว่า", "แรงที่เปิดออกเหนือกว่า"],
     greekTenTitle: "แรงตึงสี่ทิศ",
+    greekEl: { fire: "ไฟ・เจตจำนง", water: "น้ำ・อารมณ์", air: "ลม・ความคิด", earth: "ดิน・วัตถุ" },
+    greekArea: ["ทั้งสี่ทิศเปิดกว้างมาก", "เปิดพอประมาณ", "แคบลงเล็กน้อย", "แคบลงมาก"],
+    greekCoreOpen: (x) => `「${x}」กำลังขยายผลลัพธ์`,
+    greekCoreClose: (x) => `「${x}」กำลังบีบผลลัพธ์`,
+    greekTop: (x) => `สิ่งที่ทำงานแรงที่สุดตอนนี้คือ「${x}」`,
+    greekCoreVerdictOpen: "ไพ่ผลลัพธ์กำลังขยายทั้งสี่ทิศ ลงมือแล้วจะเป็นรูปเป็นร่าง",
+    greekCoreVerdictClose: "ไพ่ผลลัพธ์กำลังบีบทั้งสี่ทิศ ตอนนี้การรักษาไว้ดีกว่าการขยาย",
     greekTenEven: "ทั้งสี่สมดุลกัน",
     greekTenSome: "มีความเอนเอียงอยู่บ้าง",
     greekTenSkew: "เอนไปด้านหนึ่งอย่างมาก",
@@ -16575,7 +17503,10 @@ const T = {
     hsPassAfter: "ข้ามมาแล้ว",
     hsPassAt: "กำลังข้ามอยู่",
     hsPassBefore: "ยังอยู่ข้างหน้า",
-    treeVisTitle: "สามเสาและสายฟ้า",
+    treeVisTitle: "สามเสาและสายฟ้า（ระยะห่างจากชีวิตจริง）",
+    treeAxisTop: "ต้นกำเนิด・ส่วนลึกของจิตใต้สำนึก",
+    treeAxisBottom: "ชีวิตประจำวัน",
+    treeDepthShort: ["ลึกที่สุด", "ค่อนข้างลึก", "ตื้น", "ใกล้ชีวิตจริง"],
     treePillarLeft: "เข้มงวด",
     treePillarMid: "สมดุล",
     treePillarRight: "เมตตา",
@@ -16586,6 +17517,31 @@ const T = {
     choiceKind: ["ทางที่ปกป้องและสั่งสม ช้าแต่แน่นอน", "ทางที่สั่งสมและรักษา แน่นอนแต่ช้า", "ทางที่เดินตามลำดับ ใช้แรงแต่ไม่พังง่าย", "ทางที่ไม่เอนไปด้านใด ตัดสินใจตามสถานการณ์ได้", "ทางที่ไหลไปตามกระแส เร็วแต่รูปยังไม่นิ่ง", "ทางที่เคลื่อนด้วยแรงส่ง ได้ผลเร็วแต่ไม่รู้ว่าจะอยู่ยาวไหม", "ทางที่ทุบแล้วสร้างใหม่ ได้มากและเสียมากพอกัน"],
     choiceGap: ["สองเส้นทางแทบเหมือนกัน", "สองเส้นทางมีลักษณะใกล้เคียงกัน", "สองเส้นทางต่างกันอยู่บ้าง", "สองเส้นทางต่างกันมาก", "สองเส้นทางตรงข้ามกัน"],
     verdictTitle: "The conclusion",
+    ynIntro: "ใช้เพียงไพ่ชุดใหญ่ จำนวนใบตั้งตรงและกลับหัวเป็นตัวตัดสินคำตอบ เมื่อเริ่มแล้วจะเปลี่ยนคำถามหรือจำนวนใบไม่ได้",
+    planGrow: "เติบโต",
+    planGeneral: "ใช้ได้ทั่วไป",
+    planDex: "สารานุกรม",
+    ynQuestionLabel: "เขียนสิ่งที่อยากถามเป็นหนึ่งประโยค",
+    ynQuestionExample: "เช่น ควรเดินหน้าเรื่องนี้ต่อไหม",
+    ynLevelLabel: "เลือกระดับความรอบคอบ",
+    ynLevelName: { normal: "ปกติ", careful: "รอบคอบ", extra: "รอบคอบมาก" },
+    ynCardsUnit: "ใบ",
+    ynCardHidden: "？",
+    ynProgress: (a, b) => `เปิดแล้ว ${b} จาก ${a} ใบ`,
+    ynYes: "ใช่",
+    ynNo: "ไม่ใช่",
+    ynTally: (u, d) => `ตั้งตรง ${u} ใบ・กลับหัว ${d} ใบ`,
+    ynMarginClose: "ใกล้เคียงกันมาก การถามใหม่ในวันอื่นก็เป็นทางเลือกหนึ่ง",
+    ynMarginClear: "ความแตกต่างชัดเจน",
+    topicLabel: "เขียนสิ่งที่อยากดูเป็นหนึ่งประโยค",
+    treeTopicLabel: "ความฝันที่ค้างคาใจ หรือสิ่งที่สายตาคุณกลับไปมองเสมอ",
+    treeTopicExample: "เช่น ฝันถึงน้ำซ้ำ ๆ / เห็นตัวเลขเดิมบ่อย ๆ",
+    treePathRead: (a, b, d) => `มันเชื่อมกับชีวิตจริงระหว่าง${a}กับ${b} ${d}`,
+    treeDepth: ["มาจากที่ลึกที่สุด", "มาจากที่ลึกกว่าจิตสำนึกประจำวันมาก", "มาจากข้าง ๆ ชีวิตจริง", "อยู่เกือบทั้งหมดในฝั่งของความจริง"],
+    treeNoPath: "ครั้งนี้ไม่มีเส้นทางปรากฏ ภาพนั้นยังคงอยู่บนที่นั่ง",
+    topicExample: "เช่น ควรทำงานนี้ต่อไหม",
+    topicNote: "รุ่นฟรีจะไม่นำไปใช้ เป็นช่องสำหรับเรียบเรียงว่าคุณอยากรู้อะไร",
+    topicNoteAi: "การอ่านจะตอบประโยคที่คุณเขียนไว้ตรงนี้ หากเว้นว่าง เนื้อหาจะกว้างเกินไป",
     crossVerdict: ["The force pushing forward prevails. Now is the time to move.", "The force turning inward prevails. Set things in order first.", "The force pulling back prevails. This is a time to hold.", "The force opening outward prevails. Time to put it before others."],
     crossVerdictStrong: "The force is clear. You can act without hesitating.",
     crossVerdictWeak: "The force is faint. Begin with a small trial.",
@@ -16600,7 +17556,8 @@ const T = {
     treeVerdictSeverity: "It leans toward Coldness. There is room to soften.",
     treeVerdictNode: (x) => `The strongest right now is \u201c${x}\u201d`,
     choiceVerdict: (a, ga, b, gb) => `${a} is a road of ${ga}; ${b} is a road of ${gb}`,
-    choiceVerdictNote: "We will not say which is right. Look at the natures and choose for yourself.",
+    choiceVerdictNote: "We will not say which is right.",
+    choiceVerdictNote2: "ดูลักษณะแล้วเลือกด้วยตัวคุณเอง",
     hsGoalLabel: "The goal (what you want)",
     hsGoalExample: "e.g. pass the exam",
     hsMeansLabel: "The means (what you are doing)",
@@ -16886,7 +17843,7 @@ const T = {
     schoolNames: { classic: "Traditionell", modern: "Modern", analog: "Analys av riktiga kort", multi: "Flera personer" },
     schoolNotes: { classic: "Läs med etablerade läggningar", modern: "Läggningar formade för nutida teman", analog: "Mata in kort från en riktig kortlek", multi: "En enhet som går laget runt" },
     soonTitle: "Under förberedelse",
-    soonBody: { modern: "Följande läggningar förbereds.\n\n· Manifestation\n· Att läsa en människa\n· Månaden framför\n· En ny relation\n· Årstidens vändning\n· Kontakt med intuitionen", analog: "Mata in korten du själv drog. Ingen tydning \u2014 endast beräkningen och bilden.\n\n· Mata in läggningen ur alla 78 kort\n· Åtta fält och spåret\n· Kodexet som ordbok\n\nDragningen förblir din.", multi: "En enhet som skickas runt i en grupp.\n\n· Välj antal personer och kort\n· Dra i tur och ordning och jämför\n· Vem har mest tur just nu\n· Relationens bägare (under förberedelse)" },
+    soonBody: { modern: "Läggningarna nedan öppnas efter hand. De som rör skuggan eller det inre barnet är inte till för att gissa utfall, utan för att finna berättelsen du bär.", analog: "Mata in korten du själv drog. Ingen tydning \u2014 endast beräkningen och bilden.\n\n· Mata in läggningen ur alla 78 kort\n· Åtta fält och spåret\n· Kodexet som ordbok\n\nDragningen förblir din.", multi: "En enhet som skickas runt i en grupp.\n\n· Välj antal personer och kort\n· Dra i tur och ordning och jämför\n· Vem har mest tur just nu\n· Relationens bägare (under förberedelse)" },
     spreadCardUnit: "kort",
     spreadNoCost: "gratis",
     spreadComingSoon: "snart",
@@ -16925,6 +17882,13 @@ const T = {
     crossAxisRight: "Framåt",
     crossVecRead: ["Kraften framåt väger tyngst", "Kraften inåt väger tyngst", "Kraften bakåt väger tyngst", "Kraften utåt väger tyngst"],
     greekTenTitle: "De fyras spänning",
+    greekEl: { fire: "Eld · Vilja", water: "Vatten · Känsla", air: "Luft · Tanke", earth: "Jord · Materia" },
+    greekArea: ["De fyra är vitt öppna", "Rimligt öppna", "Något förträngda", "Betydligt förträngda"],
+    greekCoreOpen: (x) => `\u201d${x}\u201d vidgar utfallet`,
+    greekCoreClose: (x) => `\u201d${x}\u201d förtränger utfallet`,
+    greekTop: (x) => `Den starkaste kraften just nu är \u201d${x}\u201d`,
+    greekCoreVerdictOpen: "Utfallskortet vidgar de fyra. Rör dig, så tar det form",
+    greekCoreVerdictClose: "Utfallskortet förtränger de fyra. Att hålla tjänar dig bättre än att vidga nu",
     greekTenEven: "De fyra är i balans",
     greekTenSome: "Det finns viss obalans",
     greekTenSkew: "Det lutar kraftigt åt ett håll",
@@ -16933,7 +17897,10 @@ const T = {
     hsPassAfter: "Du har passerat det",
     hsPassAt: "Du passerar det nu",
     hsPassBefore: "Det ligger ännu framför",
-    treeVisTitle: "Pelare och blixt",
+    treeVisTitle: "Pelare och blixt (avstånd från vardagen)",
+    treeAxisTop: "Rot · djupt omedvetet",
+    treeAxisBottom: "Vardagslivet",
+    treeDepthShort: ["Djupast", "Ganska djupt", "Grunt", "Nära vardagen"],
     treePillarLeft: "Stränghet",
     treePillarMid: "Balans",
     treePillarRight: "Nåd",
@@ -16944,6 +17911,31 @@ const T = {
     choiceKind: ["En väg av att vakta och bygga. Långsam, och säker.", "En väg som bygger och bevarar. Säker, men långsam.", "En väg som följer en ordning. Den kräver möda, men håller.", "En väg som inte lutar åt något håll. Du kan avgöra efter hand.", "En väg som följer strömmen. Snabb, men formen förblir lös.", "En väg driven av fart. Snabb vinst; om den håller är osäkert.", "En väg som river och bygger om. Mycket vinns, mycket släpps."],
     choiceGap: ["De två vägarna är nästan lika", "De två vägarna liknar varandra", "De två vägarna skiljer sig något", "De två vägarna skiljer sig mycket", "De två vägarna är varandras motsatser"],
     verdictTitle: "The conclusion",
+    ynIntro: "Använder endast de stora arkana; antalet upprätta och omvända kort avgör svaret. När du väl börjat kan varken frågan eller antalet kort ändras.",
+    planGrow: "Utveckling",
+    planGeneral: "Allmän",
+    planDex: "Kodex",
+    ynQuestionLabel: "Med en mening: vad du frågar",
+    ynQuestionExample: "t.ex. bör jag gå vidare med detta",
+    ynLevelLabel: "Välj hur försiktig du vill vara",
+    ynLevelName: { normal: "Normal", careful: "Försiktig", extra: "Extra försiktig" },
+    ynCardsUnit: "kort",
+    ynCardHidden: "?",
+    ynProgress: (a, b) => `Öppnade ${b} av ${a}`,
+    ynYes: "Ja",
+    ynNo: "Nej",
+    ynTally: (u, d) => `${u} upprätta · ${d} omvända`,
+    ynMarginClose: "Det är jämnt. Att fråga igen en annan dag är också ett alternativ",
+    ynMarginClear: "Skillnaden är tydlig",
+    topicLabel: "Med en mening: vad du vill få läst",
+    treeTopicLabel: "En dröm, eller något blicken hela tiden återvänder till",
+    treeTopicExample: "t.ex. återkommande drömmar om vatten / samma siffra dyker upp",
+    treePathRead: (a, b, d) => `Det möter vardagen mellan ${a} och ${b}. ${d}`,
+    treeDepth: ["Det kommer från den djupaste platsen", "Det kommer långt under det dagliga medvetandet", "Det kommer alldeles intill vardagen", "Det ligger nästan helt på vardagens sida"],
+    treeNoPath: "Ingen stig visade sig denna gång. Bilden vilar ännu på sätena.",
+    topicExample: "t.ex. om jag ska stanna kvar i jobbet",
+    topicNote: "Gratisversionen använder inte detta. Det är ett utrymme för att reda ut vad du vill veta.",
+    topicNoteAi: "Tydningen svarar på meningen du skriver här. Lämnar du den tom blir det allmänt hållet.",
     crossVerdict: ["The force pushing forward prevails. Now is the time to move.", "The force turning inward prevails. Set things in order first.", "The force pulling back prevails. This is a time to hold.", "The force opening outward prevails. Time to put it before others."],
     crossVerdictStrong: "The force is clear. You can act without hesitating.",
     crossVerdictWeak: "The force is faint. Begin with a small trial.",
@@ -16958,7 +17950,8 @@ const T = {
     treeVerdictSeverity: "It leans toward Coldness. There is room to soften.",
     treeVerdictNode: (x) => `The strongest right now is \u201c${x}\u201d`,
     choiceVerdict: (a, ga, b, gb) => `${a} is a road of ${ga}; ${b} is a road of ${gb}`,
-    choiceVerdictNote: "We will not say which is right. Look at the natures and choose for yourself.",
+    choiceVerdictNote: "We will not say which is right.",
+    choiceVerdictNote2: "Se på deras natur och välj själv.",
     hsGoalLabel: "The goal (what you want)",
     hsGoalExample: "e.g. pass the exam",
     hsMeansLabel: "The means (what you are doing)",
@@ -19099,12 +20092,26 @@ export default function TarotDraw() {
           white-space: pre; -webkit-overflow-scrolling: touch;
         }
 
+        /*
+          名前と札の行。
+          ⚠️ justify-content と flex を明示すること。
+          既定のままだと、親の指定によって札が引き伸ばされたり
+          片方だけ右端へ寄ったりする。
+        */
+        .spread-badges {
+          display: flex; align-items: center; justify-content: flex-start;
+          gap: 6px; margin-bottom: 3px; flex-wrap: wrap;
+        }
         .plan-badge {
+          flex: 0 0 auto; align-self: center;
           font-size: 9px; letter-spacing: 0.08em; padding: 2px 7px;
           border-radius: 999px; line-height: 1.5; white-space: nowrap;
           font-family: 'Cinzel', serif; font-weight: 700;
+          /* 内容ぶんの幅で止める。伸ばさない・縮めない */
+          width: auto; min-width: 0; max-width: none;
         }
-        .plan-badge.ai { color: #17102E; background: #C9A24B; }
+        /* 透明な枠を持たせて、4種類が同じ高さで並ぶようにする */
+        .plan-badge.ai { color: #17102E; background: #C9A24B; border: 1px solid transparent; }
         .plan-badge.free { color: #B9B2D4; background: rgba(169,155,201,0.16); border: 1px solid rgba(169,155,201,0.34); }
 
         .spread-item {
@@ -19897,6 +20904,56 @@ export default function TarotDraw() {
           0%, 100% { box-shadow: 0 0 18px rgba(255,255,255,0.55), 0 0 42px rgba(255,60,180,0.45); }
           50%      { box-shadow: 0 0 34px rgba(255,255,255,0.95), 0 0 86px rgba(60,200,255,0.7); }
         }
+        /* --- イエス・ノー --- */
+        .yn-intro { font-size: 11px; line-height: 1.9; color: var(--muted); margin: 0 0 16px; }
+        .yn-question-echo {
+          text-align: center; font-family: 'Shippori Mincho', serif; font-size: 13px;
+          color: var(--gold-soft); margin: 0 0 14px; letter-spacing: 0.04em;
+        }
+        .yn-level-label { font-size: 11px; color: var(--muted); margin: 14px 0 8px; text-align: center; }
+        .yn-levels { display: grid; grid-template-columns: repeat(3, 1fr); gap: 8px; margin-bottom: 16px; }
+        .yn-level {
+          padding: 10px 6px; border-radius: 10px; cursor: pointer;
+          font-family: inherit; text-align: center;
+          border: 1px solid rgba(201,162,75,0.24); background: rgba(255,255,255,0.03); color: var(--muted);
+          -webkit-tap-highlight-color: rgba(201,162,75,0.25);
+        }
+        .yn-level.on { border-color: var(--gold); background: rgba(201,162,75,0.14); color: var(--parchment); }
+        .yn-level-name { display: block; font-size: 12px; margin-bottom: 3px; }
+        .yn-level-n { display: block; font-family: 'Cinzel', serif; font-size: 13px; color: var(--gold-soft); }
+        /* 5〜9枚が1行に収まる幅にする。多いほど1枚を小さくする */
+        .yn-row { display: flex; gap: 6px; justify-content: center; flex-wrap: wrap; margin: 18px 0 10px; }
+        .yn-card {
+          width: 15%; max-width: 58px; aspect-ratio: 2 / 3; border-radius: 8px; padding: 0;
+          border: 1px solid rgba(201,162,75,0.30); cursor: pointer; overflow: hidden;
+          background: linear-gradient(152deg, #2A1F55, #1a1440 55%, #120E24);
+          -webkit-tap-highlight-color: rgba(201,162,75,0.25);
+        }
+        .yn-card:disabled { cursor: default; }
+        .yn-card.open { border-color: var(--gold); }
+        .yn-card-face {
+          position: relative; width: 100%; height: 100%;
+          display: flex; align-items: flex-start; justify-content: flex-start; padding: 4px;
+        }
+        .yn-card-face.reversed { transform: rotate(180deg); }
+        .yn-card-corner { font-family: 'Cinzel', serif; font-size: 10px; color: var(--gold-soft); }
+        /* 正逆で縁の色を変える。開いた瞬間にどちらか分かる */
+        .yn-card.up { box-shadow: inset 0 0 0 2px rgba(240,200,120,0.7); }
+        .yn-card.down { box-shadow: inset 0 0 0 2px rgba(170,120,230,0.7); }
+        .yn-progress { text-align: center; font-size: 11px; color: var(--muted); margin: 0 0 10px; }
+        .yn-verdict {
+          margin-top: 14px; padding: 20px 16px; border-radius: 12px; text-align: center;
+          border: 1px solid rgba(201,162,75,0.35);
+          background: linear-gradient(160deg, rgba(201,162,75,0.10), rgba(255,255,255,0.02));
+        }
+        .yn-verdict-word {
+          font-family: 'Shippori Mincho', serif; font-size: 30px; letter-spacing: 0.14em;
+          margin-bottom: 10px;
+        }
+        .yn-verdict.yes .yn-verdict-word { color: #FFD98A; text-shadow: 0 0 14px rgba(255,217,138,0.5); }
+        .yn-verdict.no .yn-verdict-word { color: #C89AFF; text-shadow: 0 0 14px rgba(200,154,255,0.5); }
+        .yn-verdict-tally { font-size: 12px; color: var(--parchment); margin: 0 0 6px; }
+        .yn-verdict-margin { font-size: 10.5px; color: var(--muted); margin: 0; line-height: 1.8; }
         /* --- 結論 --- */
         .verdict {
           width: 100%; max-width: 340px; margin: 12px auto 4px;
@@ -19917,6 +20974,22 @@ export default function TarotDraw() {
         }
         .verdict p:last-child { margin-bottom: 0; }
         /* --- 追加4種の視覚補完 --- */
+        .greek-el { font-size: 8.5px; fill: rgba(220,210,190,0.55); }
+        /* 面積。この図でいちばん見せたい数字 */
+        .greek-area {
+          display: flex; align-items: baseline; justify-content: center; gap: 8px; margin-top: 6px;
+        }
+        .greek-area-num {
+          font-family: 'Cinzel', serif; font-size: 22px;
+          background: linear-gradient(115deg, #FFE9A3, #F0A6D8, #9FD6F5, #A8F0BC, #FFE9A3);
+          background-size: 300% 100%;
+          -webkit-background-clip: text; background-clip: text;
+          -webkit-text-fill-color: transparent; color: transparent;
+          animation: sheenTextFlow 5.5s linear infinite;
+          filter: drop-shadow(0 0 6px rgba(255,233,163,0.35));
+        }
+        .greek-area-num u { font-size: 12px; text-decoration: none; opacity: 0.85; }
+        .greek-area-note { font-size: 10.5px; color: var(--muted); }
         .cross-vec, .greek-ten, .hs-pass, .tree-vis { width: 100%; max-width: 340px; margin: 14px auto 4px; }
         .cross-vec-title, .greek-ten-title, .hs-pass-title, .tree-vis-title {
           font-family: 'Shippori Mincho', serif; font-size: 12px;
@@ -19977,10 +21050,41 @@ export default function TarotDraw() {
         }
         /* 節点は稲妻が届いた順に灯る */
         .tree-node { animation: treeNode .5s ease-out backwards; }
+        /* 灯ったパス。稲妻が通ったあとに浮かび上がる */
+        .tree-path {
+          stroke-dasharray: 200; stroke-dashoffset: 200;
+          animation: treePath .9s cubic-bezier(.16,1,.3,1) forwards;
+        }
+        @keyframes treePath { to { stroke-dashoffset: 0; } }
         @keyframes treeNode {
           0% { opacity: 0; transform: scale(0.2); }
           70% { opacity: 1; transform: scale(1.25); }
           100% { opacity: 1; transform: scale(1); }
+        }
+        /* 上下の意味。図だけでは根源と現実の向きが分からない */
+        .tree-axis-note {
+          display: flex; justify-content: space-between;
+          font-size: 9px; color: var(--muted); margin: 0 0 6px; letter-spacing: 0.04em;
+        }
+        .tree-axis-note .up { color: rgba(220,200,255,0.8); }
+        .tree-axis-note .down { color: rgba(255,217,138,0.85); }
+        /* 灯った小径の内訳 */
+        .tree-paths { list-style: none; margin: 10px 0 0; padding: 0; display: grid; gap: 4px; }
+        .tree-paths li {
+          display: flex; flex-wrap: wrap; align-items: baseline; gap: 3px 8px;
+          padding: 6px 9px; border-radius: 6px; background: rgba(255,255,255,0.03);
+          border-left: 2px solid transparent; font-size: 10.5px;
+        }
+        .tree-paths li.good { border-left-color: rgba(255,217,138,0.8); }
+        .tree-paths li.bad { border-left-color: rgba(200,154,255,0.8); }
+        .tree-path-card { color: var(--parchment); }
+        .tree-path-card i { font-style: normal; font-size: 9px; color: var(--muted); margin-left: 4px; }
+        .tree-path-link { color: var(--gold-soft); font-size: 10px; }
+        .tree-path-link em { font-style: normal; opacity: 0.6; margin: 0 2px; }
+        .tree-path-depth {
+          margin-left: auto; font-size: 9px; color: var(--muted);
+          padding: 1px 6px; border-radius: 999px; background: rgba(255,255,255,0.06);
+          white-space: nowrap;
         }
         .tree-pillars { display: flex; gap: 8px; align-items: flex-end; flex: 0 0 auto; }
         .tree-pillar { display: flex; flex-direction: column; align-items: center; gap: 3px; }
@@ -20254,6 +21358,25 @@ export default function TarotDraw() {
         .house-guide-list span { color: var(--parchment); }
         /* --- 流派の切り替え --- */
         /* 4つあるので2列2段。横一列だと1つあたり80px前後になり説明が入らない */
+        /*
+          ⚠️ border-color だけでは枠線が出ない。
+          基本形（.plan-badge）に border が無いので、
+          .free だけ 1px の枠を持ち、こちらは持たない状態になって
+          高さが 2px ずれていた。border ごと指定すること。
+        */
+        .plan-badge.grow {
+          color: #8FE0B0; background: rgba(143,224,176,0.10);
+          border: 1px solid rgba(143,224,176,0.34);
+        }
+        .plan-badge.general {
+          color: #9FD6F5; background: rgba(159,214,245,0.10);
+          border: 1px solid rgba(159,214,245,0.34);
+        }
+        .plan-badge.dex {
+          color: #E8C58F; background: rgba(232,197,143,0.10);
+          border: 1px solid rgba(232,197,143,0.34);
+        }
+
         .school-tabs { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; margin-bottom: 14px; }
         .school-tab {
           padding: 10px 8px; border-radius: 10px; cursor: pointer;
@@ -20989,10 +22112,10 @@ export default function TarotDraw() {
           .nav-tab, .nav-tab-icon { transition: none !important; }
           .nav-tab:hover .nav-tab-icon, .nav-tab:active .nav-tab-icon { transform: none !important; }
           .lang-chip { transition: none !important; }
-          .horo-share, .horo-rank-name { animation: none !important; }
+          .horo-share, .horo-rank-name, .greek-area-num { animation: none !important; }
           .horo-sector, .cross-vec-arrow, .greek-ten-poly, .hs-pass-climb,
-          .hs-pass-ring, .tree-bolt, .tree-node { animation: none !important; }
-          .cross-vec-arrow, .hs-pass-climb, .tree-bolt { stroke-dashoffset: 0 !important; }
+          .hs-pass-ring, .tree-bolt, .tree-node, .tree-path { animation: none !important; }
+          .cross-vec-arrow, .hs-pass-climb, .tree-bolt, .tree-path { stroke-dashoffset: 0 !important; }
           .reload-btn { transition: none !important; }
           .rare-card, .rare-card::after, .rare-card::before,
           .rare-frame, .rare-mist::after, .rare-text, .holo-edge { animation: none !important; }
@@ -21136,6 +22259,11 @@ export default function TarotDraw() {
               />
             )}
 
+            {/* イエス・ノー。独立した部品なので共用パネルには乗らない */}
+            {navTab === "draw" && drawMode === "yesNo" && (
+              <YesNoPanel lang={lang} onBack={() => setDrawMode("select")} />
+            )}
+
             {navTab === "draw" && (drawMode === "oneOracle" || drawMode === "oneOracleMinor") && (
               <OneOraclePanel
                 deck={drawMode === "oneOracleMinor" ? "minor" : "major"}
@@ -21172,7 +22300,15 @@ export default function TarotDraw() {
               無料版はフォールバック文で完結し、どちらも参照しないので出さない。
               使わない入力を求めるのは、入力させておいて使わないという振る舞いになる。
             */}
-            {!isFreeDraw && (<>
+            {/*
+              問いの欄は無料版でも出す。
+
+              以前は「AIが読まない入力は出さない」として隠していたが、
+              何を占うのかが空のまま引くと、無料版の定型文も
+              相談者の頭の中も、当たり障りのないまま終わる。
+              使われないことを注記で明示すれば、
+              「入力させておいて使わない」にはならない。
+            */}
             <label htmlFor="tarot-question">{t.questionLabel}</label>
             <input
               id="tarot-question"
@@ -21183,9 +22319,8 @@ export default function TarotDraw() {
               placeholder={t.questionPlaceholder}
             />
             <p style={{ fontSize: "11px", color: "var(--muted)", margin: "-4px 0 4px", textAlign: "center", opacity: 0.85 }}>
-              {t.questionPrivacy}
+              {isFreeDraw ? t.topicNote : t.questionPrivacy}
             </p>
-            </>)}
 
             {/* パーソナライズの切り替え。過去の記録が1件でもある場合にのみ出す（初回は引き継ぐものが無いため）。
                 既定はオンで、これはゲートではなくオプトアウト用のトグル。 */}
