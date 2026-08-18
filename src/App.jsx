@@ -2972,12 +2972,12 @@ const SPREAD_I18N = {
     greekCross: { name: "ギリシャ十字", desc: "四方の力が結果をどこまで広げるかを見る。", pos: ["結果", "現状", "障害", "このまま進むと", "対策"] },
     horseshoe: { name: "ホースシュー", desc: "七枚の弧で、目標へ向かう過程のどこにいるかを見る。", pos: ["これまで積んだもの", "いまの状況", "隠れた働き", "立ちはだかるもの", "周りの人", "取るべき道", "この先に育つもの"] },
     treeOfLife: { name: "生命の樹", desc: "十のセフィロトで、精神から現実までを縦に貫く。", pos: ["根源の意志", "閃きと拡がり", "形を与える理", "慈しみと恵み", "裁きと冷徹", "調和の中心", "情熱と欲", "知性と伝達", "無意識の土台", "現実の暮らし"] },
-    reaper: { name: "死神を引くな", desc: "一人一枚。死神を引いた人が、その場の役を負う。", pos: [] },
-    turnOrder: { name: "順番を決める", desc: "一人一枚。札の格で並び順を決める。", pos: [] },
-    roleAssign: { name: "役割を決める", desc: "一人二枚。導く人・支える人・整える人を札で割り振る。", pos: [] },
-    pairMatch: { name: "相性くらべ", desc: "一人二枚。全員の組み合わせを総当たりで見る。", pos: [] },
-    luckiest: { name: "今いちばん運がいい人", desc: "一人三枚。合計の格で今日の運を競う。", pos: [] },
-    teamOmen: { name: "この集まりの兆し", desc: "一人三枚。全員の札を束ねて、集まり全体の流れを読む。", pos: [] },
+    reaper: { name: "死神を引くな", desc: "死神を引いた人が、その場の役を負う。人数と枚数は占う前に決める。", pos: [] },
+    turnOrder: { name: "順番を決める", desc: "引いた札の格で並び順を決める。人数と枚数は占う前に決める。", pos: [] },
+    roleAssign: { name: "役割を決める", desc: "導く人・支える人・整える人を、札で割り振る。人数と枚数は占う前に決める。", pos: [] },
+    pairMatch: { name: "相性くらべ", desc: "全員の組み合わせを総当たりで見る。人数と枚数は占う前に決める。", pos: [] },
+    luckiest: { name: "今いちばん運がいい人", desc: "合計の格で、いまの運を競う。人数と枚数は占う前に決める。", pos: [] },
+    teamOmen: { name: "この集まりの兆し", desc: "全員の札を束ねて、集まり全体の流れを読む。人数と枚数は占う前に決める。", pos: [] },
     shadowWork: { name: "影の統合", desc: "認めたくない側面を、欠点ではなく使えていない力として見る。", pos: ["目を背けている面", "それが生まれた事情", "日常での現れ方", "認めたときに得るもの", "統合への一歩"] },
     innerChild: { name: "内なる子ども", desc: "幼い頃に置いてきた感情に、いまの自分から声をかける。", pos: ["幼い自分の今の姿", "置き去りにした感情", "その子が伝えたいこと", "いま与えられる世話", "取り戻せる喜び"] },
     selfSabotage: { name: "自己妨害を解く", desc: "うまくいきかけると止めてしまう仕組みを見つける。", pos: ["繰り返している型", "止める直前の合図", "守ろうとしているもの", "本当の怖れ", "型を外す一手"] },
@@ -3006,12 +3006,12 @@ const SPREAD_I18N = {
     greekCross: { name: "Greek Cross", desc: "See how far the four forces widen the outcome.", pos: ["The outcome", "The present", "The obstacle", "If this continues", "The countermeasure"] },
     horseshoe: { name: "Horseshoe", desc: "Seven cards in an arc, showing where you stand in the process.", pos: ["What you have built", "The present", "Hidden influences", "What stands in the way", "Those around you", "The road to take", "What will grow from here"] },
     treeOfLife: { name: "Tree of Life", desc: "Ten sephirot, from spirit down to daily life.", pos: ["The root will", "Insight and expansion", "The law that gives form", "Mercy and bounty", "Judgement and rigour", "The centre of balance", "Passion and desire", "Intellect and speech", "The ground of the unconscious", "Daily life"] },
-    reaper: { name: "Don't Draw Death", desc: "One card each. Whoever draws Death takes the forfeit.", pos: [] },
-    turnOrder: { name: "Deciding the Order", desc: "One card each. The rank of the card sets the order.", pos: [] },
-    roleAssign: { name: "Assigning Roles", desc: "Two cards each. The cards hand out leader, support and organiser.", pos: [] },
-    pairMatch: { name: "Comparing Pairs", desc: "Two cards each. Every pairing in the group, side by side.", pos: [] },
-    luckiest: { name: "Who Is Luckiest Now", desc: "Three cards each. Compete on the total rank of the day.", pos: [] },
-    teamOmen: { name: "The Omen of This Gathering", desc: "Three cards each. All the cards together read the group's current.", pos: [] },
+    reaper: { name: "Don't Draw Death", desc: "Whoever draws Death takes the forfeit. People and cards are set before drawing.", pos: [] },
+    turnOrder: { name: "Deciding the Order", desc: "The rank of the drawn card sets the order. People and cards are set before drawing.", pos: [] },
+    roleAssign: { name: "Assigning Roles", desc: "The cards hand out leader, support and organiser. People and cards are set before drawing.", pos: [] },
+    pairMatch: { name: "Comparing Pairs", desc: "Every pairing in the group, side by side. People and cards are set before drawing.", pos: [] },
+    luckiest: { name: "Who Is Luckiest Now", desc: "Compete on total rank for who is luckiest now. People and cards are set before drawing.", pos: [] },
+    teamOmen: { name: "The Omen of This Gathering", desc: "All the cards together read the group's current. People and cards are set before drawing.", pos: [] },
     shadowWork: { name: "Shadow Integration", desc: "See the side you would rather not admit as unused power, not a flaw.", pos: ["What you look away from", "How it came about", "How it shows in daily life", "What admitting it gives you", "One step toward integration"] },
     innerChild: { name: "The Inner Child", desc: "Speak, as you are now, to the feelings you left behind.", pos: ["How the young self is now", "The feeling left behind", "What that child wants to say", "The care you can give now", "The joy you can reclaim"] },
     selfSabotage: { name: "Undoing Self-Sabotage", desc: "Find the mechanism that stops you just as things start to work.", pos: ["The pattern you repeat", "The signal just before you stop", "What it is protecting", "The real fear", "One move that breaks the pattern"] },
@@ -3563,6 +3563,13 @@ const SCHOOLS = ["classic", "modern", "analog", "multi"];
 const MODERN_SPREADS = ["manifestation", "shadowWork", "innerChild", "boundary", "selfSabotage", "character", "monthly", "newRelation", "season", "spiritGuide", "careerCross", "burnout"];
 const ANALOG_SPREADS = [];
 const MULTI_SPREADS = ["relationship", "reaper", "turnOrder", "roleAssign", "pairMatch", "luckiest", "teamOmen"];
+
+/*
+  枚数を占う前に選ぶ配置。メニューでは「?枚」と出す。
+  関係の杯だけは11枚で固定なので含めない ――
+  あれは二人の関係を読む決まった配置で、人数も枚数も動かない。
+*/
+const FLEXIBLE_COUNT = ["reaper", "turnOrder", "roleAssign", "pairMatch", "luckiest", "teamOmen"];
 const schoolOf = (key) => {
   const base = spreadBaseKey(key);
   if (MODERN_SPREADS.includes(base)) return "modern";
@@ -7334,7 +7341,15 @@ function SpreadSelect({ lang, onSelect }) {
                 flexShrink: 0, width: "38px", height: "38px", borderRadius: "999px",
                 display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center",
               }}>
-                <span style={{ fontFamily: "Cinzel, serif", fontSize: "14px", lineHeight: 1 }}>{count}</span>
+                {/*
+                  枚数。
+                  マルチプレイは人数と枚数を占う前に選ぶので、
+                  ここで数を出すと「3枚と決まっている」と読まれる。
+                  柔軟なものは「?」にする。
+                */}
+                <span style={{ fontFamily: "Cinzel, serif", fontSize: "14px", lineHeight: 1 }}>
+                  {FLEXIBLE_COUNT.includes(base) ? "?" : count}
+                </span>
                 <span style={{ fontSize: "10px", lineHeight: 1.2, opacity: 0.7 }}>{t.spreadCardUnit}</span>
               </div>
 
@@ -8072,6 +8087,63 @@ function GreekTension({ drawn, labels, lang, openedIndices }) {
  * ⚠️ 週の物語の起伏グラフとは別物。あちらは七日の値そのものを線にする。
  * こちらは弧という形に沿って、越えた／これから、の二つに分ける。
  */
+/*
+  ============================================================
+  【ホースシュー】いまいる場所
+
+  ⚠️ 2026-08 の不具合。原因を残す。
+
+  峠を弧の頂点（3）に固定したのは正しかったが、
+  そのとき「いま過程のどこにいるか」を
+  `phase = 開いた札の最後の番号` で出してしまった。
+
+  これは札を一枚も見ていない。全部開けば必ず 6 なので、
+  結論は毎回「休んで整えなさい」、図の読みは毎回「もう越えました」。
+  七枚引いても出力が一通りしかない状態だった。
+  峠を固定した時点で、この配置から札に依存する量が消えていた。
+
+  弧は 0→6 という「進み方」の一次元座標を、配置として既に持っている。
+  だから札から出すなら、その座標の上の重心が素直。
+
+    c = Σ i・power(i) / Σ power(i)
+
+  power は良い向きほど高く、難しい向きほど低い（cardPower）。
+  つまり c は「七枚のうち、力が乗っているのは弧のどのあたりか」。
+  手前に力があれば準備の時期、先に力があれば仕上げの時期。
+
+  ⚠️ c は 3 の近くに集まる（七枚の平均なので当然）。
+  等間隔に七段へ割ると真ん中ばかりになるので、
+  ホロスコープの称号と同じく実測の分位点から境界を引いている。
+  40万回で各段 14.3%。
+
+  ⚠️ 境界は cardPower の分布に依存する。
+  STAT_WEIGHTS や ORIENTATION_INVERTED_CARDS を触ったら測り直すこと。
+  ============================================================
+*/
+const HORSESHOE_PEAK = 3;
+const HORSESHOE_STAND_CUTS = {
+  1: [0.500],
+  2: [0.882, 1.122],
+  3: [1.199, 1.500, 1.804],
+  4: [1.591, 1.882, 2.118, 2.407],
+  5: [1.984, 2.273, 2.500, 2.725, 3.015],
+  6: [2.390, 2.678, 2.900, 3.100, 3.321, 3.613],
+};
+
+function horseshoeStand(drawn, openedIndices) {
+  const seen = [...openedIndices].filter((i) => i >= 0 && i < 7).sort((a, b) => a - b);
+  if (!seen.length || !drawn || !drawn.length) return null;
+  const last = seen[seen.length - 1];
+  let sw = 0, sx = 0;
+  seen.forEach((i) => { const w = cardPower(drawn[i]); sw += w; sx += i * w; });
+  // 開いた札がすべて最低値なら重心が定まらない。開いた範囲の中央に置く
+  const c = sw > 0 ? sx / sw : (seen[0] + last) / 2;
+  const cuts = HORSESHOE_STAND_CUTS[last] || [];
+  let phase = 0;
+  while (phase < cuts.length && c >= cuts[phase]) phase++;
+  return { c, phase, peak: HORSESHOE_PEAK };
+}
+
 function HorseshoePass({ drawn, labels, lang, openedIndices }) {
   const t = T[lang] || T.ja;
   const seen = [...openedIndices].sort((a, b) => a - b);
@@ -8091,9 +8163,9 @@ function HorseshoePass({ drawn, labels, lang, openedIndices }) {
     その位置は「立ちはだかるもの」＝越える対象そのもの。
     配置が持っている形と意味の両方に、頂点が既にある。
   */
-  const PEAK = 3;
-  const power = (i) => cardPower(drawn[i]);
+  const PEAK = HORSESHOE_PEAK;
   const peak = PEAK;
+  const stand = horseshoeStand(drawn, openedIndices);
   const path = (from, to) => {
     const p = [];
     for (let i = from; i <= to; i++) { const q = pt(i); p.push(`${i === from ? "M" : "L"} ${q.x.toFixed(1)} ${q.y.toFixed(1)}`); }
@@ -8130,9 +8202,25 @@ function HorseshoePass({ drawn, labels, lang, openedIndices }) {
             </g>
           );
         })}
+        {stand && (() => {
+          /*
+            いまいる場所。峠（金の輪）とは別の印で、白。
+            峠は固定、現在地は札で動く ―― 二つが別物だと形で分かるようにする。
+          */
+          const q = pt(stand.c);
+          const tx = Math.max(34, Math.min(266, q.x));
+          return (
+            <g>
+              <line x1={q.x} y1={q.y - 21} x2={q.x} y2={q.y - 9} stroke="#FFF3D0" strokeWidth="1.6" opacity="0.7" />
+              <circle cx={q.x} cy={q.y} r="6.5" fill="#FFFFFF" stroke="#FFF3D0" strokeWidth="2"
+                style={{ filter: "drop-shadow(0 0 9px rgba(255,255,255,0.85))" }} />
+              <text x={tx} y={q.y - 26} textAnchor="middle" fontSize="11" fill="#FFF3D0" opacity="0.92">{t.hsPassNow}</text>
+            </g>
+          );
+        })()}
       </svg>
       <p className="hs-pass-read">
-        {t.hsPassRead(labels[peak], last > peak ? t.hsPassAfter : last === peak ? t.hsPassAt : t.hsPassBefore)}
+        {t.hsPassRead(labels[peak], !stand ? t.hsPassBefore : stand.phase > peak ? t.hsPassAfter : stand.phase === peak ? t.hsPassAt : t.hsPassBefore)}
       </p>
     </div>
   );
@@ -8452,12 +8540,11 @@ function SpreadVerdict({ spreadKey, drawn, lang, openedIndices, extra }) {
       峠より手前なら準備、峠なら山場、越えていれば仕上げ。
     */
     const idx = [...seen].sort((a, b) => a - b);
-    // 峠は弧の頂点（4枚目＝立ちはだかるもの）。開いた札の重さで動かさない
     /*
-      峠は弧の頂点（4枚目）。そこまでが上り、そこから先が下り。
+      峠は弧の頂点（4枚目＝立ちはだかるもの）に固定。動かない。
+      動くのは「いまいる場所」のほうで、そちらは七枚の重心から出す。
 
-      段は開いた枚数ぶん、7つに分ける。
-      まとめると「準備／山場／仕上げ」のような抽象語になり、
+      段は7つ。まとめると「準備／山場／仕上げ」のような抽象語になり、
       いま何をすればよいのかが残らなかった。
       弧のどこにいるかで、やることは実際に違う。
 
@@ -8469,9 +8556,14 @@ function SpreadVerdict({ spreadKey, drawn, lang, openedIndices, extra }) {
         6  応用する
         7  休んで整える
     */
-    const PEAK = 3;
-    const last = idx[idx.length - 1];
-    const phase = last;
+    const PEAK = HORSESHOE_PEAK;
+    /*
+      ⚠️ ここを `phase = 開いた札の最後の番号` にしてはいけない。
+      全部開けば必ず 6 になり、結論が毎回「休みなさい」になる。
+      弧の重心（horseshoeStand）から出すこと。
+    */
+    const stand = horseshoeStand(drawn, idx);
+    const phase = stand ? stand.phase : 0;
     /*
       山の重さは、峠の札を開くまで分からない。
       未開のうちに「軽いようです」と書くと、
@@ -13930,18 +14022,38 @@ const SUPPORTED_LANGS = ["ja", "ko", "zh-TW", "zh-CN", "en", "tl", "th", "id", "
 const LANG_LABELS = { ja: "日本語", "zh-TW": "繁體中文", en: "English", tl: "Tagalog", th: "ภาษาไทย", id: "Bahasa Indonesia", vi: "Tiếng Việt", ko: "한국어", "zh-CN": "简体中文", ms: "Bahasa Melayu", sv: "Svenska" };
 
 // AIへの出力言語指示（プロンプトに注入する）
+/*
+  出力する言語の指定。
+
+  ⚠️ 「日本語で出力してください」だけでは足りない。
+  相談者が別の言語で書き込むと、そちらに引きずられて
+  返事の言語が変わることがある。有料の機能でそれが起きると、
+  読めない文章に金を払わせたことになる。
+
+  そこで各言語で、次の3つを必ず書く。
+    1. その言語だけで書くこと
+    2. 相談者の入力が何語でも変えないこと
+    3. 他の言語を混ぜないこと
+
+  末尾に英語の一文を添えるのは、言語の指定そのものは
+  英語で書いたほうが確実に伝わるため。指定文が
+  対象言語だけで書かれていると、その言語を弱く扱う設定のときに
+  指定ごと読み飛ばされることがある。
+*/
+const LANG_LOCK_EN = " Write the entire response in this language only. Do not switch languages even if the user writes in another language, and do not mix in any other language.";
+
 const AI_LANG_INSTRUCTION = {
-  ja: "日本語で出力してください。",
-  "zh-TW": "請使用繁體中文（台灣用語）回答。",
-  "zh-CN": "请使用简体中文回答。",
-  en: "Please respond in English.",
-  tl: "Mangyaring sumagot sa Tagalog (Filipino).",
-  th: "กรุณาตอบเป็นภาษาไทย",
-  id: "Mohon jawab dalam Bahasa Indonesia.",
-  ms: "Sila jawab dalam Bahasa Melayu.",
-  vi: "Vui lòng trả lời bằng tiếng Việt.",
-  ko: "한국어로 답변해 주세요.",
-  sv: "Var vänlig svara på svenska.",
+  ja: "日本語のみで出力してください。相談者が他の言語で書いていても、日本語以外は使わないでください。" + LANG_LOCK_EN,
+  "zh-TW": "請全程使用繁體中文（台灣用語）回答。即使提問者以其他語言書寫，也不得改用其他語言。" + LANG_LOCK_EN,
+  "zh-CN": "请全程使用简体中文回答。即使提问者以其他语言书写，也不得改用其他语言。" + LANG_LOCK_EN,
+  en: "Respond entirely in English, even if the user writes in another language." + LANG_LOCK_EN,
+  tl: "Sumagot nang buo sa Tagalog (Filipino), kahit na sumulat ang gumagamit sa ibang wika." + LANG_LOCK_EN,
+  th: "กรุณาตอบเป็นภาษาไทยทั้งหมด แม้ผู้ถามจะเขียนด้วยภาษาอื่นก็ตาม" + LANG_LOCK_EN,
+  id: "Jawablah sepenuhnya dalam Bahasa Indonesia, meskipun pengguna menulis dalam bahasa lain." + LANG_LOCK_EN,
+  ms: "Jawablah sepenuhnya dalam Bahasa Melayu, walaupun pengguna menulis dalam bahasa lain." + LANG_LOCK_EN,
+  vi: "Hãy trả lời hoàn toàn bằng tiếng Việt, ngay cả khi người dùng viết bằng ngôn ngữ khác." + LANG_LOCK_EN,
+  ko: "전부 한국어로만 답변해 주세요. 사용자가 다른 언어로 쓰더라도 한국어 이외는 사용하지 마세요." + LANG_LOCK_EN,
+  sv: "Svara helt och hållet på svenska, även om användaren skriver på ett annat språk." + LANG_LOCK_EN,
 };
 
 const T = {
@@ -14178,7 +14290,7 @@ const T = {
     horoNext: {"angles": "먼저 인생의 골격을 봅시다", "ground": "다음으로 발밑을 봅시다", "inner": "이어서 나날의 영역을", "others": "그리고 타인과의 사이를", "beyond": "마지막으로 가장 깊은 곳을", "center": "마지막으로 전체를 묶는 한 장을"},
     houseGuideTitle: "십이 하우스와 중앙 한 장의 상의",
     readGuideTitle: "읽는 법",
-    readGuide: { hexagram: "Six cards form a hexagram, with a seventh at the centre. It reads the distance between you and another.\nThe affinity gauge below is drawn from the cards on the board and reflects the present moment only.", weekly: "Seven days from the weekday you drew on.\nThe graph below has nine tabs — eight fields and the total. Swipe sideways to change field. The star ranks split the seven days by order; if three or more days tie, they lose the special ranks.", celticCross: "Ten cards light both the conscious and the unconscious. The two at the centre are a pair and always open together.\nOn the plane below, up and down is depth of mind, left and right is time. Each card opened pushes the point once, and the path it leaves is the trail.", simpleCross: "The second card crosses the first. The vertical is the situation, the horizontal is what crosses it.\nThe arrow below is those two forces added together. The third card (the way ahead) sets its colour. The faint dashes are the separate forces.", greekCross: "A core at the centre, time to the sides, depth of mind above and below.\nThe diamond below shows how hard each arm pulls. Even, and the four are in balance; distorted, and something is leaning.", horseshoe: "Seven cards arc up and back down.\nThis spread is not about when a thing will happen, but where you stand in the process. The heaviest card is the pass: gold up to it, blue beyond. The pass moves as you open more.", treeOfLife: "The sephirot of Kabbalah, with three pillars — Coldness on the left, Balance at the centre, Mercy on the right.\nThe lightning below runs from the root (1) down to daily life (10). It is the path this arrangement already carries. The bars beside it weigh each pillar.", choice: "The situation above, roads A and B below.\nOn the gauge, left is Order (building, keeping) and right is Chaos (change, risk). It does not say which is better — only what each road is like. The band at the centre is Neutral." },
+    readGuide: { hexagram: "Six cards form a hexagram, with a seventh at the centre. It reads the distance between you and another.\nThe affinity gauge below is drawn from the cards on the board and reflects the present moment only.", weekly: "Seven days from the weekday you drew on.\nThe graph below has nine tabs — eight fields and the total. Swipe sideways to change field. The star ranks split the seven days by order; if three or more days tie, they lose the special ranks.", celticCross: "Ten cards light both the conscious and the unconscious. The two at the centre are a pair and always open together.\nOn the plane below, up and down is depth of mind, left and right is time. Each card opened pushes the point once, and the path it leaves is the trail.", simpleCross: "The second card crosses the first. The vertical is the situation, the horizontal is what crosses it.\nThe arrow below is those two forces added together. The third card (the way ahead) sets its colour. The faint dashes are the separate forces.", greekCross: "A core at the centre, time to the sides, depth of mind above and below.\nThe diamond below shows how hard each arm pulls. Even, and the four are in balance; distorted, and something is leaning.", horseshoe: "Seven cards arc up and back down.\nThis spread is not about when a thing will happen, but where you stand in the process. The pass is fixed at the apex \u2014 the fourth card, what stands in the way. The white marker is where you stand now, drawn from where the weight of the seven cards falls along the arc.", treeOfLife: "The sephirot of Kabbalah, with three pillars — Coldness on the left, Balance at the centre, Mercy on the right.\nThe lightning below runs from the root (1) down to daily life (10). It is the path this arrangement already carries. The bars beside it weigh each pillar.", choice: "The situation above, roads A and B below.\nOn the gauge, left is Order (building, keeping) and right is Chaos (change, risk). It does not say which is better — only what each road is like. The band at the centre is Neutral." },
     houseGuideSoon: "각 영역의 자세한 해설은 준비 중입니다。지금은 위치의 이름만 표시합니다。",
     horoWheelTitle: "열두 영역의 부풀기",
     horoStrength: "뻗어야 할 강점",
@@ -14211,6 +14323,7 @@ const T = {
     greekTenSome: "다소 치우침이 있습니다",
     greekTenSkew: "한쪽으로 크게 치우쳤습니다",
     hsPassTitle: "고개",
+    hsPassNow: "현재 위치",
     hsPassRead: (a, b) => `${a}이 고개입니다。${b}`,
     hsPassAfter: "이미 넘었습니다",
     hsPassAt: "지금 넘는 중입니다",
@@ -14583,7 +14696,7 @@ const T = {
     horoNext: {"angles": "Trước hết hãy xem khung của đời", "ground": "Tiếp theo là nền dưới chân", "inner": "Rồi đến những ngày thường", "others": "Và khoảng giữa với người khác", "beyond": "Cuối cùng là nơi sâu nhất", "center": "Cuối cùng, lá gộp lại tất cả"},
     houseGuideTitle: "Ý nghĩa của mười hai cung và lá trung tâm",
     readGuideTitle: "Cách đọc",
-    readGuide: { hexagram: "Six cards form a hexagram, with a seventh at the centre. It reads the distance between you and another.\nThe affinity gauge below is drawn from the cards on the board and reflects the present moment only.", weekly: "Seven days from the weekday you drew on.\nThe graph below has nine tabs — eight fields and the total. Swipe sideways to change field. The star ranks split the seven days by order; if three or more days tie, they lose the special ranks.", celticCross: "Ten cards light both the conscious and the unconscious. The two at the centre are a pair and always open together.\nOn the plane below, up and down is depth of mind, left and right is time. Each card opened pushes the point once, and the path it leaves is the trail.", simpleCross: "The second card crosses the first. The vertical is the situation, the horizontal is what crosses it.\nThe arrow below is those two forces added together. The third card (the way ahead) sets its colour. The faint dashes are the separate forces.", greekCross: "A core at the centre, time to the sides, depth of mind above and below.\nThe diamond below shows how hard each arm pulls. Even, and the four are in balance; distorted, and something is leaning.", horseshoe: "Seven cards arc up and back down.\nThis spread is not about when a thing will happen, but where you stand in the process. The heaviest card is the pass: gold up to it, blue beyond. The pass moves as you open more.", treeOfLife: "The sephirot of Kabbalah, with three pillars — Coldness on the left, Balance at the centre, Mercy on the right.\nThe lightning below runs from the root (1) down to daily life (10). It is the path this arrangement already carries. The bars beside it weigh each pillar.", choice: "The situation above, roads A and B below.\nOn the gauge, left is Order (building, keeping) and right is Chaos (change, risk). It does not say which is better — only what each road is like. The band at the centre is Neutral." },
+    readGuide: { hexagram: "Six cards form a hexagram, with a seventh at the centre. It reads the distance between you and another.\nThe affinity gauge below is drawn from the cards on the board and reflects the present moment only.", weekly: "Seven days from the weekday you drew on.\nThe graph below has nine tabs — eight fields and the total. Swipe sideways to change field. The star ranks split the seven days by order; if three or more days tie, they lose the special ranks.", celticCross: "Ten cards light both the conscious and the unconscious. The two at the centre are a pair and always open together.\nOn the plane below, up and down is depth of mind, left and right is time. Each card opened pushes the point once, and the path it leaves is the trail.", simpleCross: "The second card crosses the first. The vertical is the situation, the horizontal is what crosses it.\nThe arrow below is those two forces added together. The third card (the way ahead) sets its colour. The faint dashes are the separate forces.", greekCross: "A core at the centre, time to the sides, depth of mind above and below.\nThe diamond below shows how hard each arm pulls. Even, and the four are in balance; distorted, and something is leaning.", horseshoe: "Seven cards arc up and back down.\nThis spread is not about when a thing will happen, but where you stand in the process. The pass is fixed at the apex \u2014 the fourth card, what stands in the way. The white marker is where you stand now, drawn from where the weight of the seven cards falls along the arc.", treeOfLife: "The sephirot of Kabbalah, with three pillars — Coldness on the left, Balance at the centre, Mercy on the right.\nThe lightning below runs from the root (1) down to daily life (10). It is the path this arrangement already carries. The bars beside it weigh each pillar.", choice: "The situation above, roads A and B below.\nOn the gauge, left is Order (building, keeping) and right is Chaos (change, risk). It does not say which is better — only what each road is like. The band at the centre is Neutral." },
     houseGuideSoon: "Phần giải nghĩa chi tiết đang được chuẩn bị. Hiện chỉ hiển thị tên các vị trí.",
     horoWheelTitle: "Độ nở của mười hai lĩnh vực",
     horoStrength: "Điểm mạnh nên phát huy",
@@ -14616,6 +14729,7 @@ const T = {
     greekTenSome: "Có phần lệch",
     greekTenSkew: "Lệch hẳn về một phía",
     hsPassTitle: "Đèo",
+    hsPassNow: "Vị trí hiện tại",
     hsPassRead: (a, b) => `${a} là đèo. ${b}`,
     hsPassAfter: "Bạn đã vượt qua",
     hsPassAt: "Bạn đang vượt qua",
@@ -14986,7 +15100,7 @@ const T = {
     horoNext: {"angles": "Mula-mula lihat kerangka hidup", "ground": "Berikutnya, pijakan di bawah", "inner": "Lalu wilayah keseharian", "others": "Dan jarak dengan orang lain", "beyond": "Terakhir, tempat terdalam", "center": "Terakhir, kartu yang merangkum semuanya"},
     houseGuideTitle: "Makna dua belas rumah dan kartu pusat",
     readGuideTitle: "Cara membaca",
-    readGuide: { hexagram: "Six cards form a hexagram, with a seventh at the centre. It reads the distance between you and another.\nThe affinity gauge below is drawn from the cards on the board and reflects the present moment only.", weekly: "Seven days from the weekday you drew on.\nThe graph below has nine tabs — eight fields and the total. Swipe sideways to change field. The star ranks split the seven days by order; if three or more days tie, they lose the special ranks.", celticCross: "Ten cards light both the conscious and the unconscious. The two at the centre are a pair and always open together.\nOn the plane below, up and down is depth of mind, left and right is time. Each card opened pushes the point once, and the path it leaves is the trail.", simpleCross: "The second card crosses the first. The vertical is the situation, the horizontal is what crosses it.\nThe arrow below is those two forces added together. The third card (the way ahead) sets its colour. The faint dashes are the separate forces.", greekCross: "A core at the centre, time to the sides, depth of mind above and below.\nThe diamond below shows how hard each arm pulls. Even, and the four are in balance; distorted, and something is leaning.", horseshoe: "Seven cards arc up and back down.\nThis spread is not about when a thing will happen, but where you stand in the process. The heaviest card is the pass: gold up to it, blue beyond. The pass moves as you open more.", treeOfLife: "The sephirot of Kabbalah, with three pillars — Coldness on the left, Balance at the centre, Mercy on the right.\nThe lightning below runs from the root (1) down to daily life (10). It is the path this arrangement already carries. The bars beside it weigh each pillar.", choice: "The situation above, roads A and B below.\nOn the gauge, left is Order (building, keeping) and right is Chaos (change, risk). It does not say which is better — only what each road is like. The band at the centre is Neutral." },
+    readGuide: { hexagram: "Six cards form a hexagram, with a seventh at the centre. It reads the distance between you and another.\nThe affinity gauge below is drawn from the cards on the board and reflects the present moment only.", weekly: "Seven days from the weekday you drew on.\nThe graph below has nine tabs — eight fields and the total. Swipe sideways to change field. The star ranks split the seven days by order; if three or more days tie, they lose the special ranks.", celticCross: "Ten cards light both the conscious and the unconscious. The two at the centre are a pair and always open together.\nOn the plane below, up and down is depth of mind, left and right is time. Each card opened pushes the point once, and the path it leaves is the trail.", simpleCross: "The second card crosses the first. The vertical is the situation, the horizontal is what crosses it.\nThe arrow below is those two forces added together. The third card (the way ahead) sets its colour. The faint dashes are the separate forces.", greekCross: "A core at the centre, time to the sides, depth of mind above and below.\nThe diamond below shows how hard each arm pulls. Even, and the four are in balance; distorted, and something is leaning.", horseshoe: "Seven cards arc up and back down.\nThis spread is not about when a thing will happen, but where you stand in the process. The pass is fixed at the apex \u2014 the fourth card, what stands in the way. The white marker is where you stand now, drawn from where the weight of the seven cards falls along the arc.", treeOfLife: "The sephirot of Kabbalah, with three pillars — Coldness on the left, Balance at the centre, Mercy on the right.\nThe lightning below runs from the root (1) down to daily life (10). It is the path this arrangement already carries. The bars beside it weigh each pillar.", choice: "The situation above, roads A and B below.\nOn the gauge, left is Order (building, keeping) and right is Chaos (change, risk). It does not say which is better — only what each road is like. The band at the centre is Neutral." },
     houseGuideSoon: "Penjelasan rinci sedang disiapkan. Untuk kini hanya nama posisi yang ditampilkan.",
     horoWheelTitle: "Bentangan dua belas wilayah",
     horoStrength: "Kekuatan untuk dikembangkan",
@@ -15019,6 +15133,7 @@ const T = {
     greekTenSome: "Ada sedikit ketimpangan",
     greekTenSkew: "Sangat condong ke satu sisi",
     hsPassTitle: "Puncak",
+    hsPassNow: "Posisi kini",
     hsPassRead: (a, b) => `${a} adalah puncaknya. ${b}`,
     hsPassAfter: "Anda sudah melewatinya",
     hsPassAt: "Anda sedang melewatinya",
@@ -15391,7 +15506,7 @@ const T = {
     horoNext: {"angles": "Mula-mula lihat rangka hidup", "ground": "Seterusnya, pijakan di bawah", "inner": "Kemudian wilayah harian", "others": "Dan jarak dengan orang lain", "beyond": "Akhirnya, tempat terdalam", "center": "Akhirnya, kad yang merangkum semuanya"},
     houseGuideTitle: "Makna dua belas rumah dan kad tengah",
     readGuideTitle: "Cara membaca",
-    readGuide: { hexagram: "Six cards form a hexagram, with a seventh at the centre. It reads the distance between you and another.\nThe affinity gauge below is drawn from the cards on the board and reflects the present moment only.", weekly: "Seven days from the weekday you drew on.\nThe graph below has nine tabs — eight fields and the total. Swipe sideways to change field. The star ranks split the seven days by order; if three or more days tie, they lose the special ranks.", celticCross: "Ten cards light both the conscious and the unconscious. The two at the centre are a pair and always open together.\nOn the plane below, up and down is depth of mind, left and right is time. Each card opened pushes the point once, and the path it leaves is the trail.", simpleCross: "The second card crosses the first. The vertical is the situation, the horizontal is what crosses it.\nThe arrow below is those two forces added together. The third card (the way ahead) sets its colour. The faint dashes are the separate forces.", greekCross: "A core at the centre, time to the sides, depth of mind above and below.\nThe diamond below shows how hard each arm pulls. Even, and the four are in balance; distorted, and something is leaning.", horseshoe: "Seven cards arc up and back down.\nThis spread is not about when a thing will happen, but where you stand in the process. The heaviest card is the pass: gold up to it, blue beyond. The pass moves as you open more.", treeOfLife: "The sephirot of Kabbalah, with three pillars — Coldness on the left, Balance at the centre, Mercy on the right.\nThe lightning below runs from the root (1) down to daily life (10). It is the path this arrangement already carries. The bars beside it weigh each pillar.", choice: "The situation above, roads A and B below.\nOn the gauge, left is Order (building, keeping) and right is Chaos (change, risk). It does not say which is better — only what each road is like. The band at the centre is Neutral." },
+    readGuide: { hexagram: "Six cards form a hexagram, with a seventh at the centre. It reads the distance between you and another.\nThe affinity gauge below is drawn from the cards on the board and reflects the present moment only.", weekly: "Seven days from the weekday you drew on.\nThe graph below has nine tabs — eight fields and the total. Swipe sideways to change field. The star ranks split the seven days by order; if three or more days tie, they lose the special ranks.", celticCross: "Ten cards light both the conscious and the unconscious. The two at the centre are a pair and always open together.\nOn the plane below, up and down is depth of mind, left and right is time. Each card opened pushes the point once, and the path it leaves is the trail.", simpleCross: "The second card crosses the first. The vertical is the situation, the horizontal is what crosses it.\nThe arrow below is those two forces added together. The third card (the way ahead) sets its colour. The faint dashes are the separate forces.", greekCross: "A core at the centre, time to the sides, depth of mind above and below.\nThe diamond below shows how hard each arm pulls. Even, and the four are in balance; distorted, and something is leaning.", horseshoe: "Seven cards arc up and back down.\nThis spread is not about when a thing will happen, but where you stand in the process. The pass is fixed at the apex \u2014 the fourth card, what stands in the way. The white marker is where you stand now, drawn from where the weight of the seven cards falls along the arc.", treeOfLife: "The sephirot of Kabbalah, with three pillars — Coldness on the left, Balance at the centre, Mercy on the right.\nThe lightning below runs from the root (1) down to daily life (10). It is the path this arrangement already carries. The bars beside it weigh each pillar.", choice: "The situation above, roads A and B below.\nOn the gauge, left is Order (building, keeping) and right is Chaos (change, risk). It does not say which is better — only what each road is like. The band at the centre is Neutral." },
     houseGuideSoon: "Penjelasan terperinci sedang disediakan. Buat masa ini hanya nama kedudukan dipaparkan.",
     horoWheelTitle: "Bentangan dua belas wilayah",
     horoStrength: "Kekuatan untuk dikembangkan",
@@ -15424,6 +15539,7 @@ const T = {
     greekTenSome: "Ada sedikit kepincangan",
     greekTenSkew: "Sangat condong ke satu pihak",
     hsPassTitle: "Puncak",
+    hsPassNow: "Kedudukan kini",
     hsPassRead: (a, b) => `${a} ialah puncaknya. ${b}`,
     hsPassAfter: "Anda telah melaluinya",
     hsPassAt: "Anda sedang melaluinya",
@@ -15797,7 +15913,7 @@ const T = {
     horoNext: {"angles": "まず、人生の骨格を見ましょう", "ground": "次に、足もとを見ましょう", "inner": "続いて、日々の領域を", "others": "そして、他者との間を", "beyond": "最後に、最も深いところを", "center": "最後に、すべてを束ねる一枚を"},
     houseGuideTitle: "十二のハウスと中央の一枚の象意",
     readGuideTitle: "読み方",
-    readGuide: { hexagram: "六芒星に六枚を置き、七枚目を中央に添えます。相手との距離を読む配置です。\n下の相性ゲージは、盤面の札から出した「今現在の」相性です。恒久的な判定ではありません。", weekly: "引いた日の曜日から七日ぶんを並べます。\n下の起伏グラフは八分野＋総合の九タブ。横に払うと分野が切り替わります。星の段は七日を順位で分けており、同率が三日以上並んだ日は特殊な星の資格を失います。", celticCross: "十枚で顕在意識と潜在意識の両方を照らします。中央の二枚は対なので必ず同時に開きます。\n下の平面は、上下が意識の深さ、左右が時間。開いた札が一枚ずつ点を押し、その跡が軌跡として残ります。動揺／安静は、まっすぐ進んだか行きつ戻りつしたかを示します。", simpleCross: "一枚目に二枚目が十字に重なります。縦が状況、横がそれを横切るもの。\n下の矢は、この直交する二つの力を足した向きです。三枚目（進むべき道）が矢の色を決めます。薄い破線は、それぞれの分力です。", greekCross: "中心を核として、左右に時間、上下に意識の深さを取ります。\n下の菱形は、四本の腕がどれだけ強く引いているかの形です。整っていれば四方が釣り合い、歪んでいればどこかに偏りがあります。中心の丸は核の札です。", horseshoe: "七枚が弧を描き、上って下ります。\nこの配置は「いつ叶うか」ではなく、いま過程のどこにいるかを見るものです。下の図は最も重い札を峠とし、そこまでを金（上り）、その先を青（下り）に塗り分けます。開くたびに峠は動きます。", treeOfLife: "カバラのセフィロトの配置です。三本の柱を持ちます ―― 左が冷酷、中央が均衡、右が慈悲。\n下の稲妻は、根源（1）から現実（10）へ力が降りる順路です。カバラで「稲妻の閃き」と呼ばれるもので、この配置が元から持っています。横の縦棒は三本の柱それぞれの重みです。", choice: "上に現在の状況、下にAとBの二本の道を並べます。\n下のゲージは、左が秩序（積み上げ・維持）、右が混沌（変化・賭け）。どちらが良いかを示すものではなく、道の性質だけを示します。中央の帯は中庸で、どちらにも寄っていない状態です。" },
+    readGuide: { hexagram: "六芒星に六枚を置き、七枚目を中央に添えます。相手との距離を読む配置です。\n下の相性ゲージは、盤面の札から出した「今現在の」相性です。恒久的な判定ではありません。", weekly: "引いた日の曜日から七日ぶんを並べます。\n下の起伏グラフは八分野＋総合の九タブ。横に払うと分野が切り替わります。星の段は七日を順位で分けており、同率が三日以上並んだ日は特殊な星の資格を失います。", celticCross: "十枚で顕在意識と潜在意識の両方を照らします。中央の二枚は対なので必ず同時に開きます。\n下の平面は、上下が意識の深さ、左右が時間。開いた札が一枚ずつ点を押し、その跡が軌跡として残ります。動揺／安静は、まっすぐ進んだか行きつ戻りつしたかを示します。", simpleCross: "一枚目に二枚目が十字に重なります。縦が状況、横がそれを横切るもの。\n下の矢は、この直交する二つの力を足した向きです。三枚目（進むべき道）が矢の色を決めます。薄い破線は、それぞれの分力です。", greekCross: "中心を核として、左右に時間、上下に意識の深さを取ります。\n下の菱形は、四本の腕がどれだけ強く引いているかの形です。整っていれば四方が釣り合い、歪んでいればどこかに偏りがあります。中心の丸は核の札です。", horseshoe: "七枚が弧を描き、上って下ります。\nこの配置は「いつ叶うか」ではなく、いま過程のどこにいるかを見るものです。峠は弧の頂点（四枚目＝立ちはだかるもの）に固定で、動きません。白い印が「いまいる場所」で、七枚の力が弧のどこに寄っているかから出しています。印が峠より手前なら準備の時期、先なら仕上げの時期です。", treeOfLife: "カバラのセフィロトの配置です。三本の柱を持ちます ―― 左が冷酷、中央が均衡、右が慈悲。\n下の稲妻は、根源（1）から現実（10）へ力が降りる順路です。カバラで「稲妻の閃き」と呼ばれるもので、この配置が元から持っています。横の縦棒は三本の柱それぞれの重みです。", choice: "上に現在の状況、下にAとBの二本の道を並べます。\n下のゲージは、左が秩序（積み上げ・維持）、右が混沌（変化・賭け）。どちらが良いかを示すものではなく、道の性質だけを示します。中央の帯は中庸で、どちらにも寄っていない状態です。" },
     houseGuideSoon: "各領域の詳しい解説は準備中です。今は位置の名前だけを表示しています。",
     horoWheelTitle: "十二領域のふくらみ",
     horoStrength: "伸ばすべき長所",
@@ -15830,6 +15946,7 @@ const T = {
     greekTenSome: "いくらか偏りがあります",
     greekTenSkew: "一方に大きく偏っています",
     hsPassTitle: "峠",
+    hsPassNow: "いまいる場所",
     hsPassRead: (a, b) => `${a}が峠です。${b}`,
     hsPassAfter: "もう越えました",
     hsPassAt: "いま越えるところです",
@@ -16241,7 +16358,7 @@ const T = {
     horoNext: {"angles": "先看人生的骨架", "ground": "接著看腳下的基礎", "inner": "再看日常的領域", "others": "然後是與他人之間", "beyond": "最後看最深之處", "center": "最後，看束起全體的一張"},
     houseGuideTitle: "十二宮與中央一張的象意",
     readGuideTitle: "讀法",
-    readGuide: { hexagram: "Six cards form a hexagram, with a seventh at the centre. It reads the distance between you and another.\nThe affinity gauge below is drawn from the cards on the board and reflects the present moment only.", weekly: "Seven days from the weekday you drew on.\nThe graph below has nine tabs — eight fields and the total. Swipe sideways to change field. The star ranks split the seven days by order; if three or more days tie, they lose the special ranks.", celticCross: "Ten cards light both the conscious and the unconscious. The two at the centre are a pair and always open together.\nOn the plane below, up and down is depth of mind, left and right is time. Each card opened pushes the point once, and the path it leaves is the trail.", simpleCross: "The second card crosses the first. The vertical is the situation, the horizontal is what crosses it.\nThe arrow below is those two forces added together. The third card (the way ahead) sets its colour. The faint dashes are the separate forces.", greekCross: "A core at the centre, time to the sides, depth of mind above and below.\nThe diamond below shows how hard each arm pulls. Even, and the four are in balance; distorted, and something is leaning.", horseshoe: "Seven cards arc up and back down.\nThis spread is not about when a thing will happen, but where you stand in the process. The heaviest card is the pass: gold up to it, blue beyond. The pass moves as you open more.", treeOfLife: "The sephirot of Kabbalah, with three pillars — Coldness on the left, Balance at the centre, Mercy on the right.\nThe lightning below runs from the root (1) down to daily life (10). It is the path this arrangement already carries. The bars beside it weigh each pillar.", choice: "The situation above, roads A and B below.\nOn the gauge, left is Order (building, keeping) and right is Chaos (change, risk). It does not say which is better — only what each road is like. The band at the centre is Neutral." },
+    readGuide: { hexagram: "Six cards form a hexagram, with a seventh at the centre. It reads the distance between you and another.\nThe affinity gauge below is drawn from the cards on the board and reflects the present moment only.", weekly: "Seven days from the weekday you drew on.\nThe graph below has nine tabs — eight fields and the total. Swipe sideways to change field. The star ranks split the seven days by order; if three or more days tie, they lose the special ranks.", celticCross: "Ten cards light both the conscious and the unconscious. The two at the centre are a pair and always open together.\nOn the plane below, up and down is depth of mind, left and right is time. Each card opened pushes the point once, and the path it leaves is the trail.", simpleCross: "The second card crosses the first. The vertical is the situation, the horizontal is what crosses it.\nThe arrow below is those two forces added together. The third card (the way ahead) sets its colour. The faint dashes are the separate forces.", greekCross: "A core at the centre, time to the sides, depth of mind above and below.\nThe diamond below shows how hard each arm pulls. Even, and the four are in balance; distorted, and something is leaning.", horseshoe: "Seven cards arc up and back down.\nThis spread is not about when a thing will happen, but where you stand in the process. The pass is fixed at the apex \u2014 the fourth card, what stands in the way. The white marker is where you stand now, drawn from where the weight of the seven cards falls along the arc.", treeOfLife: "The sephirot of Kabbalah, with three pillars — Coldness on the left, Balance at the centre, Mercy on the right.\nThe lightning below runs from the root (1) down to daily life (10). It is the path this arrangement already carries. The bars beside it weigh each pillar.", choice: "The situation above, roads A and B below.\nOn the gauge, left is Order (building, keeping) and right is Chaos (change, risk). It does not say which is better — only what each road is like. The band at the centre is Neutral." },
     houseGuideSoon: "各領域的詳細解說準備中。目前僅顯示位置名稱。",
     horoWheelTitle: "十二領域的起伏",
     horoStrength: "應當發揮的長處",
@@ -16274,6 +16391,7 @@ const T = {
     greekTenSome: "略有偏頗",
     greekTenSkew: "明顯偏向一方",
     hsPassTitle: "山口",
+    hsPassNow: "目前所在",
     hsPassRead: (a, b) => `${a}是山口。${b}`,
     hsPassAfter: "已經越過",
     hsPassAt: "正在越過",
@@ -16646,7 +16764,7 @@ const T = {
     horoNext: {"angles": "先看人生的骨架", "ground": "接着看脚下的基础", "inner": "再看日常的领域", "others": "然后是与他人之间", "beyond": "最后看最深之处", "center": "最后，看束起全体的一张"},
     houseGuideTitle: "十二宫与中央一张的象意",
     readGuideTitle: "读法",
-    readGuide: { hexagram: "Six cards form a hexagram, with a seventh at the centre. It reads the distance between you and another.\nThe affinity gauge below is drawn from the cards on the board and reflects the present moment only.", weekly: "Seven days from the weekday you drew on.\nThe graph below has nine tabs — eight fields and the total. Swipe sideways to change field. The star ranks split the seven days by order; if three or more days tie, they lose the special ranks.", celticCross: "Ten cards light both the conscious and the unconscious. The two at the centre are a pair and always open together.\nOn the plane below, up and down is depth of mind, left and right is time. Each card opened pushes the point once, and the path it leaves is the trail.", simpleCross: "The second card crosses the first. The vertical is the situation, the horizontal is what crosses it.\nThe arrow below is those two forces added together. The third card (the way ahead) sets its colour. The faint dashes are the separate forces.", greekCross: "A core at the centre, time to the sides, depth of mind above and below.\nThe diamond below shows how hard each arm pulls. Even, and the four are in balance; distorted, and something is leaning.", horseshoe: "Seven cards arc up and back down.\nThis spread is not about when a thing will happen, but where you stand in the process. The heaviest card is the pass: gold up to it, blue beyond. The pass moves as you open more.", treeOfLife: "The sephirot of Kabbalah, with three pillars — Coldness on the left, Balance at the centre, Mercy on the right.\nThe lightning below runs from the root (1) down to daily life (10). It is the path this arrangement already carries. The bars beside it weigh each pillar.", choice: "The situation above, roads A and B below.\nOn the gauge, left is Order (building, keeping) and right is Chaos (change, risk). It does not say which is better — only what each road is like. The band at the centre is Neutral." },
+    readGuide: { hexagram: "Six cards form a hexagram, with a seventh at the centre. It reads the distance between you and another.\nThe affinity gauge below is drawn from the cards on the board and reflects the present moment only.", weekly: "Seven days from the weekday you drew on.\nThe graph below has nine tabs — eight fields and the total. Swipe sideways to change field. The star ranks split the seven days by order; if three or more days tie, they lose the special ranks.", celticCross: "Ten cards light both the conscious and the unconscious. The two at the centre are a pair and always open together.\nOn the plane below, up and down is depth of mind, left and right is time. Each card opened pushes the point once, and the path it leaves is the trail.", simpleCross: "The second card crosses the first. The vertical is the situation, the horizontal is what crosses it.\nThe arrow below is those two forces added together. The third card (the way ahead) sets its colour. The faint dashes are the separate forces.", greekCross: "A core at the centre, time to the sides, depth of mind above and below.\nThe diamond below shows how hard each arm pulls. Even, and the four are in balance; distorted, and something is leaning.", horseshoe: "Seven cards arc up and back down.\nThis spread is not about when a thing will happen, but where you stand in the process. The pass is fixed at the apex \u2014 the fourth card, what stands in the way. The white marker is where you stand now, drawn from where the weight of the seven cards falls along the arc.", treeOfLife: "The sephirot of Kabbalah, with three pillars — Coldness on the left, Balance at the centre, Mercy on the right.\nThe lightning below runs from the root (1) down to daily life (10). It is the path this arrangement already carries. The bars beside it weigh each pillar.", choice: "The situation above, roads A and B below.\nOn the gauge, left is Order (building, keeping) and right is Chaos (change, risk). It does not say which is better — only what each road is like. The band at the centre is Neutral." },
     houseGuideSoon: "各领域的详细解说准备中。目前仅显示位置名称。",
     horoWheelTitle: "十二领域的起伏",
     horoStrength: "应当发挥的长处",
@@ -16679,6 +16797,7 @@ const T = {
     greekTenSome: "略有偏颇",
     greekTenSkew: "明显偏向一方",
     hsPassTitle: "山口",
+    hsPassNow: "目前所在",
     hsPassRead: (a, b) => `${a}是山口。${b}`,
     hsPassAfter: "已经越过",
     hsPassAt: "正在越过",
@@ -17051,7 +17170,7 @@ const T = {
     horoNext: {"angles": "First, the frame of a life", "ground": "Next, the ground beneath", "inner": "Then the everyday realms", "others": "And the space between people", "beyond": "Last, the deepest place", "center": "Last, the card that binds it all"},
     houseGuideTitle: "What the twelve houses and the centre card mean",
     readGuideTitle: "How to read",
-    readGuide: { hexagram: "Six cards form a hexagram, with a seventh at the centre. It reads the distance between you and another.\nThe affinity gauge below is drawn from the cards on the board and reflects the present moment only.", weekly: "Seven days from the weekday you drew on.\nThe graph below has nine tabs — eight fields and the total. Swipe sideways to change field. The star ranks split the seven days by order; if three or more days tie, they lose the special ranks.", celticCross: "Ten cards light both the conscious and the unconscious. The two at the centre are a pair and always open together.\nOn the plane below, up and down is depth of mind, left and right is time. Each card opened pushes the point once, and the path it leaves is the trail.", simpleCross: "The second card crosses the first. The vertical is the situation, the horizontal is what crosses it.\nThe arrow below is those two forces added together. The third card (the way ahead) sets its colour. The faint dashes are the separate forces.", greekCross: "A core at the centre, time to the sides, depth of mind above and below.\nThe diamond below shows how hard each arm pulls. Even, and the four are in balance; distorted, and something is leaning.", horseshoe: "Seven cards arc up and back down.\nThis spread is not about when a thing will happen, but where you stand in the process. The heaviest card is the pass: gold up to it, blue beyond. The pass moves as you open more.", treeOfLife: "The sephirot of Kabbalah, with three pillars — Coldness on the left, Balance at the centre, Mercy on the right.\nThe lightning below runs from the root (1) down to daily life (10). It is the path this arrangement already carries. The bars beside it weigh each pillar.", choice: "The situation above, roads A and B below.\nOn the gauge, left is Order (building, keeping) and right is Chaos (change, risk). It does not say which is better — only what each road is like. The band at the centre is Neutral." },
+    readGuide: { hexagram: "Six cards form a hexagram, with a seventh at the centre. It reads the distance between you and another.\nThe affinity gauge below is drawn from the cards on the board and reflects the present moment only.", weekly: "Seven days from the weekday you drew on.\nThe graph below has nine tabs — eight fields and the total. Swipe sideways to change field. The star ranks split the seven days by order; if three or more days tie, they lose the special ranks.", celticCross: "Ten cards light both the conscious and the unconscious. The two at the centre are a pair and always open together.\nOn the plane below, up and down is depth of mind, left and right is time. Each card opened pushes the point once, and the path it leaves is the trail.", simpleCross: "The second card crosses the first. The vertical is the situation, the horizontal is what crosses it.\nThe arrow below is those two forces added together. The third card (the way ahead) sets its colour. The faint dashes are the separate forces.", greekCross: "A core at the centre, time to the sides, depth of mind above and below.\nThe diamond below shows how hard each arm pulls. Even, and the four are in balance; distorted, and something is leaning.", horseshoe: "Seven cards arc up and back down.\nThis spread is not about when a thing will happen, but where you stand in the process. The pass is fixed at the apex \u2014 the fourth card, what stands in the way. The white marker is where you stand now, drawn from where the weight of the seven cards falls along the arc.", treeOfLife: "The sephirot of Kabbalah, with three pillars — Coldness on the left, Balance at the centre, Mercy on the right.\nThe lightning below runs from the root (1) down to daily life (10). It is the path this arrangement already carries. The bars beside it weigh each pillar.", choice: "The situation above, roads A and B below.\nOn the gauge, left is Order (building, keeping) and right is Chaos (change, risk). It does not say which is better — only what each road is like. The band at the centre is Neutral." },
     houseGuideSoon: "Detailed notes for each area are in preparation. For now only the position names are shown.",
     horoWheelTitle: "The swell of the twelve realms",
     horoStrength: "A strength to extend",
@@ -17084,6 +17203,7 @@ const T = {
     greekTenSome: "There is some imbalance",
     greekTenSkew: "It leans heavily to one side",
     hsPassTitle: "The Pass",
+    hsPassNow: "You are here",
     hsPassRead: (a, b) => `${a} is the pass. ${b}`,
     hsPassAfter: "You have crossed it",
     hsPassAt: "You are crossing it now",
@@ -17495,7 +17615,7 @@ const T = {
     horoNext: {"angles": "Una, ang balangkas ng buhay", "ground": "Susunod, ang lupa sa ilalim", "inner": "Tapos ang pang-araw-araw", "others": "At ang pagitan ng mga tao", "beyond": "Huli, ang pinakamalalim", "center": "Huli, ang barahang bumubuklod sa lahat"},
     houseGuideTitle: "Ang kahulugan ng labindalawang bahay at ang gitnang baraha",
     readGuideTitle: "Paano basahin",
-    readGuide: { hexagram: "Six cards form a hexagram, with a seventh at the centre. It reads the distance between you and another.\nThe affinity gauge below is drawn from the cards on the board and reflects the present moment only.", weekly: "Seven days from the weekday you drew on.\nThe graph below has nine tabs — eight fields and the total. Swipe sideways to change field. The star ranks split the seven days by order; if three or more days tie, they lose the special ranks.", celticCross: "Ten cards light both the conscious and the unconscious. The two at the centre are a pair and always open together.\nOn the plane below, up and down is depth of mind, left and right is time. Each card opened pushes the point once, and the path it leaves is the trail.", simpleCross: "The second card crosses the first. The vertical is the situation, the horizontal is what crosses it.\nThe arrow below is those two forces added together. The third card (the way ahead) sets its colour. The faint dashes are the separate forces.", greekCross: "A core at the centre, time to the sides, depth of mind above and below.\nThe diamond below shows how hard each arm pulls. Even, and the four are in balance; distorted, and something is leaning.", horseshoe: "Seven cards arc up and back down.\nThis spread is not about when a thing will happen, but where you stand in the process. The heaviest card is the pass: gold up to it, blue beyond. The pass moves as you open more.", treeOfLife: "The sephirot of Kabbalah, with three pillars — Coldness on the left, Balance at the centre, Mercy on the right.\nThe lightning below runs from the root (1) down to daily life (10). It is the path this arrangement already carries. The bars beside it weigh each pillar.", choice: "The situation above, roads A and B below.\nOn the gauge, left is Order (building, keeping) and right is Chaos (change, risk). It does not say which is better — only what each road is like. The band at the centre is Neutral." },
+    readGuide: { hexagram: "Six cards form a hexagram, with a seventh at the centre. It reads the distance between you and another.\nThe affinity gauge below is drawn from the cards on the board and reflects the present moment only.", weekly: "Seven days from the weekday you drew on.\nThe graph below has nine tabs — eight fields and the total. Swipe sideways to change field. The star ranks split the seven days by order; if three or more days tie, they lose the special ranks.", celticCross: "Ten cards light both the conscious and the unconscious. The two at the centre are a pair and always open together.\nOn the plane below, up and down is depth of mind, left and right is time. Each card opened pushes the point once, and the path it leaves is the trail.", simpleCross: "The second card crosses the first. The vertical is the situation, the horizontal is what crosses it.\nThe arrow below is those two forces added together. The third card (the way ahead) sets its colour. The faint dashes are the separate forces.", greekCross: "A core at the centre, time to the sides, depth of mind above and below.\nThe diamond below shows how hard each arm pulls. Even, and the four are in balance; distorted, and something is leaning.", horseshoe: "Seven cards arc up and back down.\nThis spread is not about when a thing will happen, but where you stand in the process. The pass is fixed at the apex \u2014 the fourth card, what stands in the way. The white marker is where you stand now, drawn from where the weight of the seven cards falls along the arc.", treeOfLife: "The sephirot of Kabbalah, with three pillars — Coldness on the left, Balance at the centre, Mercy on the right.\nThe lightning below runs from the root (1) down to daily life (10). It is the path this arrangement already carries. The bars beside it weigh each pillar.", choice: "The situation above, roads A and B below.\nOn the gauge, left is Order (building, keeping) and right is Chaos (change, risk). It does not say which is better — only what each road is like. The band at the centre is Neutral." },
     houseGuideSoon: "Inihahanda pa ang detalyadong paliwanag. Sa ngayon ay ang pangalan lamang ng posisyon ang ipinapakita.",
     horoWheelTitle: "Ang laki ng labindalawang larangan",
     horoStrength: "Lakas na dapat palawigin",
@@ -17528,6 +17648,7 @@ const T = {
     greekTenSome: "May kaunting kawalan ng balanse",
     greekTenSkew: "Malaki ang kiling sa isang panig",
     hsPassTitle: "Ang Tuktok",
+    hsPassNow: "Nandito ka",
     hsPassRead: (a, b) => `${a} ang tuktok. ${b}`,
     hsPassAfter: "Natawid mo na ito",
     hsPassAt: "Tinatawid mo na ngayon",
@@ -17900,7 +18021,7 @@ const T = {
     horoNext: {"angles": "ก่อนอื่น มาดูโครงของชีวิต", "ground": "ต่อไป ดูพื้นใต้เท้า", "inner": "จากนั้น ดูขอบเขตประจำวัน", "others": "และช่องว่างระหว่างผู้คน", "beyond": "สุดท้าย ที่ลึกที่สุด", "center": "สุดท้าย ไพ่ที่รวบรวมทั้งหมด"},
     houseGuideTitle: "ความหมายของสิบสองเรือนและไพ่ใบกลาง",
     readGuideTitle: "วิธีอ่าน",
-    readGuide: { hexagram: "Six cards form a hexagram, with a seventh at the centre. It reads the distance between you and another.\nThe affinity gauge below is drawn from the cards on the board and reflects the present moment only.", weekly: "Seven days from the weekday you drew on.\nThe graph below has nine tabs — eight fields and the total. Swipe sideways to change field. The star ranks split the seven days by order; if three or more days tie, they lose the special ranks.", celticCross: "Ten cards light both the conscious and the unconscious. The two at the centre are a pair and always open together.\nOn the plane below, up and down is depth of mind, left and right is time. Each card opened pushes the point once, and the path it leaves is the trail.", simpleCross: "The second card crosses the first. The vertical is the situation, the horizontal is what crosses it.\nThe arrow below is those two forces added together. The third card (the way ahead) sets its colour. The faint dashes are the separate forces.", greekCross: "A core at the centre, time to the sides, depth of mind above and below.\nThe diamond below shows how hard each arm pulls. Even, and the four are in balance; distorted, and something is leaning.", horseshoe: "Seven cards arc up and back down.\nThis spread is not about when a thing will happen, but where you stand in the process. The heaviest card is the pass: gold up to it, blue beyond. The pass moves as you open more.", treeOfLife: "The sephirot of Kabbalah, with three pillars — Coldness on the left, Balance at the centre, Mercy on the right.\nThe lightning below runs from the root (1) down to daily life (10). It is the path this arrangement already carries. The bars beside it weigh each pillar.", choice: "The situation above, roads A and B below.\nOn the gauge, left is Order (building, keeping) and right is Chaos (change, risk). It does not say which is better — only what each road is like. The band at the centre is Neutral." },
+    readGuide: { hexagram: "Six cards form a hexagram, with a seventh at the centre. It reads the distance between you and another.\nThe affinity gauge below is drawn from the cards on the board and reflects the present moment only.", weekly: "Seven days from the weekday you drew on.\nThe graph below has nine tabs — eight fields and the total. Swipe sideways to change field. The star ranks split the seven days by order; if three or more days tie, they lose the special ranks.", celticCross: "Ten cards light both the conscious and the unconscious. The two at the centre are a pair and always open together.\nOn the plane below, up and down is depth of mind, left and right is time. Each card opened pushes the point once, and the path it leaves is the trail.", simpleCross: "The second card crosses the first. The vertical is the situation, the horizontal is what crosses it.\nThe arrow below is those two forces added together. The third card (the way ahead) sets its colour. The faint dashes are the separate forces.", greekCross: "A core at the centre, time to the sides, depth of mind above and below.\nThe diamond below shows how hard each arm pulls. Even, and the four are in balance; distorted, and something is leaning.", horseshoe: "Seven cards arc up and back down.\nThis spread is not about when a thing will happen, but where you stand in the process. The pass is fixed at the apex \u2014 the fourth card, what stands in the way. The white marker is where you stand now, drawn from where the weight of the seven cards falls along the arc.", treeOfLife: "The sephirot of Kabbalah, with three pillars — Coldness on the left, Balance at the centre, Mercy on the right.\nThe lightning below runs from the root (1) down to daily life (10). It is the path this arrangement already carries. The bars beside it weigh each pillar.", choice: "The situation above, roads A and B below.\nOn the gauge, left is Order (building, keeping) and right is Chaos (change, risk). It does not say which is better — only what each road is like. The band at the centre is Neutral." },
     houseGuideSoon: "คำอธิบายโดยละเอียดกำลังเตรียมการ ขณะนี้แสดงเพียงชื่อตำแหน่ง",
     horoWheelTitle: "ความกว้างของสิบสองขอบเขต",
     horoStrength: "จุดแข็งที่ควรขยาย",
@@ -17933,6 +18054,7 @@ const T = {
     greekTenSome: "มีความเอนเอียงอยู่บ้าง",
     greekTenSkew: "เอนไปด้านหนึ่งอย่างมาก",
     hsPassTitle: "ช่องเขา",
+    hsPassNow: "ตำแหน่งตอนนี้",
     hsPassRead: (a, b) => `${a}คือช่องเขา ${b}`,
     hsPassAfter: "ข้ามมาแล้ว",
     hsPassAt: "กำลังข้ามอยู่",
@@ -18306,7 +18428,7 @@ const T = {
     horoNext: {"angles": "Först, livets stomme", "ground": "Sedan marken under", "inner": "Därefter vardagens områden", "others": "Och rummet mellan människor", "beyond": "Till sist, den djupaste platsen", "center": "Till sist, kortet som binder allt"},
     houseGuideTitle: "Vad de tolv husen och mittkortet betyder",
     readGuideTitle: "Så läser du",
-    readGuide: { hexagram: "Six cards form a hexagram, with a seventh at the centre. It reads the distance between you and another.\nThe affinity gauge below is drawn from the cards on the board and reflects the present moment only.", weekly: "Seven days from the weekday you drew on.\nThe graph below has nine tabs — eight fields and the total. Swipe sideways to change field. The star ranks split the seven days by order; if three or more days tie, they lose the special ranks.", celticCross: "Ten cards light both the conscious and the unconscious. The two at the centre are a pair and always open together.\nOn the plane below, up and down is depth of mind, left and right is time. Each card opened pushes the point once, and the path it leaves is the trail.", simpleCross: "The second card crosses the first. The vertical is the situation, the horizontal is what crosses it.\nThe arrow below is those two forces added together. The third card (the way ahead) sets its colour. The faint dashes are the separate forces.", greekCross: "A core at the centre, time to the sides, depth of mind above and below.\nThe diamond below shows how hard each arm pulls. Even, and the four are in balance; distorted, and something is leaning.", horseshoe: "Seven cards arc up and back down.\nThis spread is not about when a thing will happen, but where you stand in the process. The heaviest card is the pass: gold up to it, blue beyond. The pass moves as you open more.", treeOfLife: "The sephirot of Kabbalah, with three pillars — Coldness on the left, Balance at the centre, Mercy on the right.\nThe lightning below runs from the root (1) down to daily life (10). It is the path this arrangement already carries. The bars beside it weigh each pillar.", choice: "The situation above, roads A and B below.\nOn the gauge, left is Order (building, keeping) and right is Chaos (change, risk). It does not say which is better — only what each road is like. The band at the centre is Neutral." },
+    readGuide: { hexagram: "Six cards form a hexagram, with a seventh at the centre. It reads the distance between you and another.\nThe affinity gauge below is drawn from the cards on the board and reflects the present moment only.", weekly: "Seven days from the weekday you drew on.\nThe graph below has nine tabs — eight fields and the total. Swipe sideways to change field. The star ranks split the seven days by order; if three or more days tie, they lose the special ranks.", celticCross: "Ten cards light both the conscious and the unconscious. The two at the centre are a pair and always open together.\nOn the plane below, up and down is depth of mind, left and right is time. Each card opened pushes the point once, and the path it leaves is the trail.", simpleCross: "The second card crosses the first. The vertical is the situation, the horizontal is what crosses it.\nThe arrow below is those two forces added together. The third card (the way ahead) sets its colour. The faint dashes are the separate forces.", greekCross: "A core at the centre, time to the sides, depth of mind above and below.\nThe diamond below shows how hard each arm pulls. Even, and the four are in balance; distorted, and something is leaning.", horseshoe: "Seven cards arc up and back down.\nThis spread is not about when a thing will happen, but where you stand in the process. The pass is fixed at the apex \u2014 the fourth card, what stands in the way. The white marker is where you stand now, drawn from where the weight of the seven cards falls along the arc.", treeOfLife: "The sephirot of Kabbalah, with three pillars — Coldness on the left, Balance at the centre, Mercy on the right.\nThe lightning below runs from the root (1) down to daily life (10). It is the path this arrangement already carries. The bars beside it weigh each pillar.", choice: "The situation above, roads A and B below.\nOn the gauge, left is Order (building, keeping) and right is Chaos (change, risk). It does not say which is better — only what each road is like. The band at the centre is Neutral." },
     houseGuideSoon: "Utförliga noter för varje område förbereds. Just nu visas endast positionernas namn.",
     horoWheelTitle: "De tolv områdenas svall",
     horoStrength: "En styrka att bygga på",
@@ -18339,6 +18461,7 @@ const T = {
     greekTenSome: "Det finns viss obalans",
     greekTenSkew: "Det lutar kraftigt åt ett håll",
     hsPassTitle: "Passet",
+    hsPassNow: "Du är här",
     hsPassRead: (a, b) => `${a} är passet. ${b}`,
     hsPassAfter: "Du har passerat det",
     hsPassAt: "Du passerar det nu",
