@@ -7951,7 +7951,15 @@ function CrossVector({ drawn, lang, openedIndices }) {
   広いほどよい ―― 四方の力が結果を大きく開いた状態になる。
 */
 /* 元素の色。火＝紅、水＝青、風＝白緑、地＝黄土 */
-const EL_COLOR = { wands: "#FF8A5C", cups: "#5CB8FF", swords: "#B9F0D8", pentacles: "#E0B860" };
+/* 四方の色。元素の伝統色（赤・青・緑・黄） */
+const HISHI_COLOR = { wands: "#FF8A5C", cups: "#5CB8FF", swords: "#B9F0D8", pentacles: "#E0B860" };
+/*
+  等高線の段。
+  一枚の三角で塗ると「どこまで伸びているか」しか出ないが、
+  段に分けると、中心から外へどう落ちていくかが読める。
+  外側ほど薄く、中心ほど濃い ―― 地形図と同じ向き。
+*/
+const GREEK_CONTOURS = [0.28, 0.46, 0.64, 0.82, 1];
 
 /** 札が、ある元素の性質をどれだけ持つか（0〜1） */
 function elementAffinity(card, suitKey) {
@@ -8014,18 +8022,30 @@ function GreekTension({ drawn, labels, lang, openedIndices }) {
               .map((p) => p.join(",")).join(" ")} />
         ))}
         {/*
-          四方を元素の色で塗り分ける。
-          単色だと「どの方角が伸びているか」しか読めないが、
-          色が付くと、どの元素が張っているかが一目で分かる。
-          三角を4枚に分けて塗るのは、凧形を1枚で塗ると
-          色を混ぜられないため。
+          四方を元素の色で、等高線のように段で塗る。
+
+          ⚠️ 三角1枚で塗ると、外縁の位置しか出ない。
+          段に分けると重なりが濃度になり、中心から外へ落ちていく形が読める。
+          段の境目は、その腕自身の長さの割合なので、
+          歪んだ菱形では等高線も歪む ―― 地形図と同じ。
         */}
-        {pts.map((p, i) => {
-          const nx = pts[(i + 1) % 4];
+        {GREEK_CONTOURS.map((lv, li) => {
+          const lp = pts.map((p) => ({ x: C + (p.x - C) * lv, y: C + (p.y - C) * lv }));
           return (
-            <polygon key={`f${i}`}
-              points={`${C},${C} ${p.x.toFixed(1)},${p.y.toFixed(1)} ${nx.x.toFixed(1)},${nx.y.toFixed(1)}`}
-              fill={EL_COLOR[ARMS[i].suit]} opacity="0.30" className="greek-ten-poly" />
+            <g key={`lv${li}`} className="greek-ten-poly">
+              {lp.map((p, i) => {
+                const nx = lp[(i + 1) % 4];
+                return (
+                  <polygon key={`f${li}_${i}`}
+                    points={`${C},${C} ${p.x.toFixed(1)},${p.y.toFixed(1)} ${nx.x.toFixed(1)},${nx.y.toFixed(1)}`}
+                    fill={HISHI_COLOR[ARMS[i].suit]} opacity="0.13" />
+                );
+              })}
+              {/* 等高線そのもの。細く、外側ほど薄く */}
+              <polygon points={lp.map((p) => `${p.x.toFixed(1)},${p.y.toFixed(1)}`).join(" ")}
+                fill="none" stroke="rgba(255,235,190,0.42)" strokeWidth="0.6"
+                opacity={0.35 + li * 0.13} />
+            </g>
           );
         })}
         <polygon points={poly} fill="none" stroke="rgba(255,235,190,0.9)" strokeWidth="1.6"
@@ -8033,21 +8053,21 @@ function GreekTension({ drawn, labels, lang, openedIndices }) {
         {/* 中心から各頂点への腕。元素の色で引く */}
         {pts.map((p, i) => (
           <line key={`a${i}`} x1={C} y1={C} x2={p.x} y2={p.y}
-            stroke={EL_COLOR[ARMS[i].suit]} strokeWidth="1.6" opacity="0.75" />
+            stroke={HISHI_COLOR[ARMS[i].suit]} strokeWidth="1.6" opacity="0.75" />
         ))}
         {pts.map((p, i) => {
           const open = seen.has(ARMS[i].idx);
-          const col = EL_COLOR[ARMS[i].suit];
+          const col = HISHI_COLOR[ARMS[i].suit];
           return <circle key={i} cx={p.x} cy={p.y} r={open ? 6 : 3}
             fill={open ? col : "rgba(255,255,255,0.15)"}
             stroke={open ? "rgba(255,255,255,0.8)" : "none"} strokeWidth="1"
             style={open ? { filter: `drop-shadow(0 0 7px ${col})` } : undefined} />;
         })}
         {/* 元素の名前も同じ色で置く。軸と語が色でつながる */}
-        <text x={C} y="12" className="greek-el" fill={EL_COLOR.wands} textAnchor="middle">{t.greekEl.fire}</text>
-        <text x={W - 3} y={C + 4} className="greek-el" fill={EL_COLOR.cups} textAnchor="end">{t.greekEl.water}</text>
-        <text x={C} y={W - 3} className="greek-el" fill={EL_COLOR.swords} textAnchor="middle">{t.greekEl.air}</text>
-        <text x="3" y={C + 4} className="greek-el" fill={EL_COLOR.pentacles} textAnchor="start">{t.greekEl.earth}</text>
+        <text x={C} y="12" className="greek-el" fill={HISHI_COLOR.wands} textAnchor="middle">{t.greekEl.fire}</text>
+        <text x={W - 3} y={C + 4} className="greek-el" fill={HISHI_COLOR.cups} textAnchor="end">{t.greekEl.water}</text>
+        <text x={C} y={W - 3} className="greek-el" fill={HISHI_COLOR.swords} textAnchor="middle">{t.greekEl.air}</text>
+        <text x="3" y={C + 4} className="greek-el" fill={HISHI_COLOR.pentacles} textAnchor="start">{t.greekEl.earth}</text>
         {core && (
           <circle cx={C} cy={C} r="10" fill="rgba(16,10,30,0.9)"
             stroke={coreGood ? "#FFD98A" : "#C89AFF"} strokeWidth="2" />
@@ -8141,18 +8161,99 @@ function horseshoeStand(drawn, openedIndices) {
   const cuts = HORSESHOE_STAND_CUTS[last] || [];
   let phase = 0;
   while (phase < cuts.length && c >= cuts[phase]) phase++;
-  return { c, phase, peak: HORSESHOE_PEAK };
+  /*
+    図に打つ位置。
+
+    ⚠️ 生の重心 c をそのまま座標に使ってはいけない。
+    c は 3 の近くに集まるので、分位点で段に割ったあとの phase と、
+    c を弧の上に置いた見た目の位置が食い違う。
+    実際、3番目の点のあたりに印が出ているのに文言は1段目、
+    ということが起きていた。
+
+    段の中での位置を [phase-0.5, phase+0.5] に写す。
+    こうすると印にいちばん近い点が必ず phase になり、
+    点の名前と文言が一致する。
+  */
+  const lo = phase > 0 ? cuts[phase - 1] : null;
+  const hi = phase < cuts.length ? cuts[phase] : null;
+  const span = cuts.length > 1 ? Math.abs(cuts[cuts.length - 1] - cuts[0]) / cuts.length : 0.5;
+  const a = lo !== null ? lo : (hi !== null ? hi - span : c - 0.5);
+  const b = hi !== null ? hi : (lo !== null ? lo + span : c + 0.5);
+  const frac = b > a ? Math.max(0, Math.min(1, (c - a) / (b - a))) : 0.5;
+  const norm = Math.max(0, Math.min(last, phase - 0.5 + frac));
+  return { c, norm, phase, peak: HORSESHOE_PEAK };
 }
+
+/*
+  点の名前を弧の外に置く。
+
+  ⚠️ 峠（頂点）だけが目立っていたので、そこを現在地だと読まれていた。
+  七つの点に名前が付いていれば、印がどの点に立っているかが直接読める。
+
+  ⚠️ 文字を切らないこと。一行に詰める単位数の上限だけ決めて、
+  溢れたら行を足す（捨てない）。全角は2、半角は1で数える。
+*/
+function hsWrapLabel(text, budget = 13, maxLines = 4) {
+  const str = String(text || "").trim();
+  if (!str) return [];
+  const cw = (ch) => (ch.charCodeAt(0) > 0x2e7f ? 2 : 1);
+  const spaced = /\s/.test(str);
+  const units = spaced ? str.split(/\s+/) : Array.from(str);
+  const lines = [];
+  let cur = "", curW = 0;
+  for (const u of units) {
+    const uw = Array.from(u).reduce((acc, ch) => acc + cw(ch), 0) + (spaced && cur ? 1 : 0);
+    if (cur && curW + uw > budget && lines.length < maxLines - 1) {
+      lines.push(cur); cur = u; curW = uw;
+    } else {
+      cur = cur ? (spaced ? `${cur} ${u}` : cur + u) : u;
+      curW += uw;
+    }
+  }
+  if (cur) lines.push(cur);
+  return lines;
+}
+
+/*
+  視覚補完の線の色。ホロそのもの ―― 虹の傾斜を一枚貼る。
+
+  ⚠️ ここを単色（水色）にしたのは間違いだった。
+  「単色」は「線ごとに色を変えない」という意味であって、
+  「ホロをやめて青にする」ではない。
+  線ごとに別の色を割り当てるのではなく、
+  図の全部が同じ一枚の虹を透かして見えるようにする。
+
+  gradientUnits は userSpaceOnUse。
+  これを既定（objectBoundingBox）にすると、線ごとに
+  その線の外接矩形で虹が引き直され、結局「線ごとに別の色」に戻る。
+
+  色は .holo-card::after と同じ四色（桃・水・緑・黄）。
+  片方だけ変えると、ホロを引いたときの札と図で色が食い違う。
+*/
+const HOLO_STOPS = [
+  ["0%", "#FF3CB4"], ["22%", "#3CC8FF"], ["44%", "#78FF8C"],
+  ["66%", "#FFDC3C"], ["88%", "#FF3CB4"], ["100%", "#3CC8FF"],
+];
+const HOLO_GLOW = "drop-shadow(0 0 3px rgba(190,230,255,0.85))";
+const HS_LINE = "url(#hsHoloGrad)";
+const HS_HOLO = [HS_LINE, HS_LINE, HS_LINE, HS_LINE];
+// 鬣。細い線を10本、同じ虹を透かす
+const HS_MANE = Array(10).fill(HS_LINE);
 
 function HorseshoePass({ drawn, labels, lang, openedIndices }) {
   const t = T[lang] || T.ja;
   const seen = [...openedIndices].sort((a, b) => a - b);
   if (!seen.length) return null;
-  const W = 300, H = 190;
-  // 盤面と同じ弧の上に点を置く
+  /*
+    ⚠️ 図を広げたのは、七つの点に名前を置くため。
+    300幅のままだと名前が互いに重なるか、端で切れる。
+    弧を内側に寄せ（R=112）、名前は弧の外側（R+16）に置く。
+  */
+  const W = 428, H = 256, CX = 214, CY = 210, R = 112;
+  const ang = (i) => Math.PI - (Math.PI * i) / 6;
   const pt = (i) => {
-    const a = Math.PI - (Math.PI * i) / 6;
-    return { x: 150 + Math.cos(a) * 128, y: 168 - Math.sin(a) * 128 };
+    const a = ang(i);
+    return { x: CX + Math.cos(a) * R, y: CY - Math.sin(a) * R };
   };
   /*
     峠は弧の頂点、つまり4枚目に固定する。
@@ -8162,59 +8263,172 @@ function HorseshoePass({ drawn, labels, lang, openedIndices }) {
     弧の頂点は幾何として3番（0起算）に決まっているし、
     その位置は「立ちはだかるもの」＝越える対象そのもの。
     配置が持っている形と意味の両方に、頂点が既にある。
+
+    ⚠️ ただし峠を強調しすぎない。金の輪を回していたら、
+    そこが現在地だと読まれた。目立たせるのは現在地のほう。
   */
   const PEAK = HORSESHOE_PEAK;
   const peak = PEAK;
   const stand = horseshoeStand(drawn, openedIndices);
-  const path = (from, to) => {
+  /*
+    弧を細かく標本化して引く。
+    ⚠️ 以前は7つの点を直線で結んでいたので、弧ではなく七角形になっていた。
+    off は半径のずらし ―― 細い線を何本かずらして重ねると、
+    1本を太くするより密に見える。
+  */
+  const path = (from, to, off = 0) => {
     const p = [];
-    for (let i = from; i <= to; i++) { const q = pt(i); p.push(`${i === from ? "M" : "L"} ${q.x.toFixed(1)} ${q.y.toFixed(1)}`); }
+    const STEP = 0.06;
+    for (let i = from; i <= to + 1e-9; i += STEP) {
+      const a = ang(Math.min(i, to));
+      const r = R + off;
+      p.push(`${p.length ? "L" : "M"} ${(CX + Math.cos(a) * r).toFixed(1)} ${(CY - Math.sin(a) * r).toFixed(1)}`);
+    }
     return p.join(" ");
   };
   const last = seen[seen.length - 1];
   const peakOpen = seen.includes(PEAK);
+  // 山越えの七点。無い言語は英語に落とす（数が合わないときも英語）
+  const stageNames = (t.hsStages && t.hsStages.length === 7) ? t.hsStages : T.en.hsStages;
   return (
     <div className="hs-pass">
       <div className="hs-pass-title sheen-text">{t.hsPassTitle}</div>
       <svg viewBox={`0 0 ${W} ${H}`} className="hs-pass-svg" role="img" aria-label={t.hsPassTitle}>
-        {/* 道筋。薄い線で全体を先に見せる */}
-        <path d={path(0, 6)} fill="none" stroke="rgba(201,162,75,0.16)" strokeWidth="2" />
+        <defs>
+          <linearGradient id="hsHoloGrad" gradientUnits="userSpaceOnUse" x1="0" y1={H} x2={W} y2="0">
+            {HOLO_STOPS.map(([off, col]) => <stop key={off} offset={off} stopColor={col} />)}
+          </linearGradient>
+        </defs>
+        {/*
+          道筋。ホロ色の単色で、細い線を何本かずらして重ねる。
+          太い1本より、細い数本のほうが密に見える。
+
+          ⚠️ 上りと下りの区別は捨てていない。単色にしたので、
+          峠までを実線、その先を細かい破線にした。色ではなく形で分ける。
+        */}
+        {[-1.6, -0.55, 0.55, 1.6].map((off, k) => (
+          <path key={`base${k}`} d={path(0, 6, off)} fill="none"
+            stroke={HS_HOLO[k]} strokeWidth="0.55" opacity="0.16" />
+        ))}
         {/* 上り。峠まで。峠に届いていなければ、開いたところまで */}
-        <path d={path(0, Math.min(peak, last))} fill="none" stroke="#FFD98A" strokeWidth="3.2"
-          className="hs-pass-climb" style={{ filter: "drop-shadow(0 0 6px rgba(255,217,138,0.6))" }} />
+        {[-1.5, -0.5, 0.5, 1.5].map((off, k) => (
+          <path key={`up${k}`} d={path(0, Math.min(peak, last), off)} fill="none"
+            stroke={HS_LINE} strokeWidth="0.85" className="hs-pass-climb" opacity="0.9"
+            style={{ animationDelay: `${k * 0.06}s`, filter: HOLO_GLOW }} />
+        ))}
         {/* 下り。峠から先で、既に開いた分だけ */}
-        {last > peak && (
-          <path d={path(peak, last)} fill="none" stroke="#9FD6F5" strokeWidth="3.2"
-            style={{ filter: "drop-shadow(0 0 6px rgba(159,214,245,0.55))" }} />
-        )}
+        {last > peak && [-1.5, -0.5, 0.5, 1.5].map((off, k) => (
+          <path key={`dn${k}`} d={path(peak, last, off)} fill="none"
+            stroke={HS_LINE} strokeWidth="0.85" opacity="0.85" strokeDasharray="3 3"
+            style={{ filter: HOLO_GLOW }} />
+        ))}
+        {/*
+          七つの点の名前。弧の外側に置く。
+
+          ⚠️ 札の位置名（これまで積んだもの／いまの状況／…）を使ってはいけない。
+          頂点だけを「峠」と呼びながら、他の六点は札の位置名で呼んでいたので、
+          二つの呼び名が同じ点の上で滑っていた。
+          この図は山越えの比喩なので、七点とも山越えの言葉で揃える。
+          札の位置名は盤面のほうに出ているので、ここで繰り返す必要もない。
+
+          いま立っている点は白、峠は金、それ以外は沈める。
+          ⚠️ 頂点（3）だけは行を上へ積む。下へ積むと弧に重なる。
+        */}
+        {stageNames.map((name, i) => {
+          const a = ang(i);
+          const lx = CX + Math.cos(a) * (R + 16);
+          const ly = CY - Math.sin(a) * (R + 16);
+          const anchor = Math.cos(a) < -0.25 ? "end" : Math.cos(a) > 0.25 ? "start" : "middle";
+          const lines = hsWrapLabel(name);
+          const up = i === PEAK;
+          const here = stand && stand.phase === i;
+          const isPeakName = i === PEAK;
+          return (
+            <text key={`nm${i}`} x={lx.toFixed(1)} textAnchor={anchor} className="hs-pt-name"
+              fill={here ? "#FFFFFF" : isPeakName ? "#FFD98A" : "rgba(226,214,240,0.5)"}
+              style={{ fontWeight: here || isPeakName ? 700 : 400 }}>
+              {lines.map((ln, j) => (
+                <tspan key={j} x={lx.toFixed(1)}
+                  y={(up ? ly - (lines.length - 1 - j) * 11 - 2 : ly + 4 + j * 11).toFixed(1)}>{ln}</tspan>
+              ))}
+            </text>
+          );
+        })}
         {seen.map((i) => {
           const q = pt(i);
           const isPeak = i === peak && peakOpen;
           const g = isGoodOrientation(drawn[i], drawn[i].reversed);
+          /*
+            峠は中空の小さな輪。回る輪はやめた（現在地と取り違えられる）。
+            ⚠️ 「峠」という字は、七点の名前のほうが金で出している。
+            ここに二重に書くと、同じ語が同じ場所に二つ出る。
+            名前が付いていない印は必ずもう一方と取り違えられるが、
+            名前は一箇所にだけ置く。
+          */
           return (
             <g key={i}>
-              <circle cx={q.x} cy={q.y} r={isPeak ? 8 : 5}
-                fill={isPeak ? "#FFF3D0" : g ? "#FFD98A" : "#C89AFF"}
-                stroke={isPeak ? "#FFD98A" : "none"} strokeWidth="2"
-                style={{ filter: isPeak ? "drop-shadow(0 0 10px #FFD98A)" : "none" }} />
-              {isPeak && <circle cx={q.x} cy={q.y} r="13" fill="none" stroke="#FFD98A" strokeWidth="1.5"
-                className="hs-pass-ring" opacity="0.8" />}
+              <circle cx={q.x} cy={q.y} r={isPeak ? 6.5 : 3.8}
+                fill={isPeak ? "none" : g ? "#FFD98A" : "#C89AFF"}
+                stroke={isPeak ? "#FFD98A" : "none"} strokeWidth="1.1"
+                style={{ filter: isPeak ? "drop-shadow(0 0 5px rgba(255,217,138,0.7))" : "none" }} />
             </g>
           );
         })}
         {stand && (() => {
           /*
-            いまいる場所。峠（金の輪）とは別の印で、白。
-            峠は固定、現在地は札で動く ―― 二つが別物だと形で分かるようにする。
+            いまいる場所。矢が弧の上を進み、後ろに鬣を引く。
+
+            ⚠️ 打つのは stand.norm。生の重心 c ではない。
+            c を使うと、印の位置と結論の文言が食い違う（horseshoeStand を参照）。
+
+            ⚠️ 鬣は弧の後方（添字の小さい側）にだけ引く。
+            前に伸ばすと「これから通る道」に見えて、予言になる。
           */
-          const q = pt(stand.c);
-          const tx = Math.max(34, Math.min(266, q.x));
+          const q = pt(stand.norm);
+          const a0 = ang(stand.norm);
+          // 接線の向き。x = CX+R cos a, y = CY-R sin a を i で微分すると (sin a, cos a)
+          const head = (Math.atan2(Math.cos(a0), Math.sin(a0)) * 180) / Math.PI;
+          const tx = Math.max(40, Math.min(W - 40, q.x));
+          const MANE = HS_MANE;
+          const strand = (k) => {
+            const spread = (k - (MANE.length - 1) / 2) * 1.5;
+            const pts = [];
+            for (let sIdx = 0; sIdx <= 18; sIdx++) {
+              const u = sIdx / 18;            // 0＝矢の根元、1＝鬣の先
+              const i = stand.norm - 1.95 * u;
+              if (i < 0) break;
+              const a = ang(i);
+              const wob = Math.sin(u * Math.PI * 2.6 + k * 0.55) * (1.2 + u * 4.2);
+              const r = R + spread * (0.35 + u) + wob;
+              pts.push(`${(CX + Math.cos(a) * r).toFixed(1)} ${(CY - Math.sin(a) * r).toFixed(1)}`);
+            }
+            return pts.length > 1 ? `M ${pts.join(" L ")}` : null;
+          };
           return (
             <g>
-              <line x1={q.x} y1={q.y - 21} x2={q.x} y2={q.y - 9} stroke="#FFF3D0" strokeWidth="1.6" opacity="0.7" />
-              <circle cx={q.x} cy={q.y} r="6.5" fill="#FFFFFF" stroke="#FFF3D0" strokeWidth="2"
-                style={{ filter: "drop-shadow(0 0 9px rgba(255,255,255,0.85))" }} />
-              <text x={tx} y={q.y - 26} textAnchor="middle" fontSize="11" fill="#FFF3D0" opacity="0.92">{t.hsPassNow}</text>
+              {MANE.map((col, k) => {
+                const d = strand(k);
+                if (!d) return null;
+                return (
+                  <path key={`mane${k}`} d={d} fill="none" stroke={col} strokeWidth="0.9"
+                    strokeLinecap="round" opacity="0.9" className="hs-mane"
+                    style={{ animationDelay: `${k * 0.05}s`, filter: HOLO_GLOW }} />
+                );
+              })}
+              {/* 現在地の輪。峠から移してある ―― 動くほうを目立たせる */}
+              <circle cx={q.x} cy={q.y} r="13" fill="none" stroke="#FFFFFF" strokeWidth="1"
+                className="hs-pass-ring" opacity="0.9" />
+              <g transform={`translate(${q.x.toFixed(1)} ${q.y.toFixed(1)}) rotate(${head.toFixed(1)})`}>
+                <polygon points="13,0 -7.5,5.8 -7.5,-5.8" fill="#FFFFFF" stroke="#FFF3D0" strokeWidth="1"
+                  strokeLinejoin="round" style={{ filter: "drop-shadow(0 0 9px rgba(255,255,255,0.95))" }} />
+              </g>
+              {/*
+                ⚠️ 「いまいる場所」は矢じりの下に置く。
+                上に置いていたら、弧の上のほう＝峠の側を指しているように読まれた。
+                矢の真下なら、指しているものが矢じり以外にない。
+              */}
+              <text x={tx} y={(q.y + 17).toFixed(1)} textAnchor="middle" className="hs-now-label"
+                fill="#FFFFFF">{t.hsPassNow}</text>
             </g>
           );
         })()}
@@ -8298,6 +8512,30 @@ function pathOfCard(card) {
   return MAJOR_PATHS[parseInt(rankStr, 10)] || null;
 }
 
+/*
+  柱を走る稲妻。
+
+  この配置の稲妻（1→10）は既にあるが、あれは「順路」であって天候ではない。
+  柱そのものが放電しているように見せると、三本が立っていることが
+  図を見た瞬間に伝わる ―― 薄い直線1本では柱だと分からなかった。
+
+  ⚠️ 折れ方に Math.random を使わない。
+  再描画のたびに形が変わり、開封のたびに稲妻が別物になる。
+  固定の折れ表を柱ごとにずらして使う。
+*/
+const PILLAR_JAG = [0, 5.5, -4.5, 7, -6, 3.5, -7, 5, -3.5, 4.5, -2, 0];
+function pillarBoltPath(x, y0, y1, seed) {
+  const n = PILLAR_JAG.length - 1;
+  let d = "";
+  for (let i = 0; i <= n; i++) {
+    const y = y0 + ((y1 - y0) * i) / n;
+    const edge = i === 0 || i === n;
+    const jx = x + (edge ? 0 : PILLAR_JAG[(i + seed * 4) % PILLAR_JAG.length]);
+    d += `${i ? "L" : "M"} ${jx.toFixed(1)} ${y.toFixed(1)} `;
+  }
+  return d.trim();
+}
+
 function TreeLightning({ drawn, lang, openedIndices, labels = [] }) {
   const t = T[lang] || T.ja;
   // 押して開いている小径。1本ずつしか開かない（並べると読む量が増える）
@@ -8338,6 +8576,24 @@ function TreeLightning({ drawn, lang, openedIndices, labels = [] }) {
             <line key={i} x1={(x / 100) * W} y1="10" x2={(x / 100) * W} y2={H - 10}
               stroke="rgba(201,162,75,0.10)" strokeWidth="1" />
           ))}
+          {/*
+            柱の背後を走る稲妻。重い柱ほど強く光る。
+            拍は 4.8秒（家の拍）で、柱ごとに 1.6秒ずらす。
+            ⚠️ 節点や小径より先に置く。後ろに敷かないと札が読めなくなる。
+          */}
+          {[["left", 24], ["middle", 50], ["right", 76]].map(([k, xp], i) => {
+            const share = total > 0 ? pil[k] / total : 1 / 3;
+            const x = (xp / 100) * W;
+            const d = pillarBoltPath(x, 10, H - 10, i);
+            return (
+              <g key={`pb${i}`} className="tree-pillar-bolt" style={{ animationDelay: `${i * 1.6}s` }}>
+                <path d={d} fill="none" stroke="#9FD6F5" strokeWidth="4.5" strokeLinejoin="round"
+                  opacity={0.10 + share * 0.32} />
+                <path d={d} fill="none" stroke="#EAF7FF" strokeWidth="1.3" strokeLinejoin="round"
+                  opacity={0.30 + share * 0.65} />
+              </g>
+            );
+          })}
           {/*
             22のパス。まず全部を薄く敷く。
             この形が二十二本で結ばれていること自体が、
@@ -10163,12 +10419,195 @@ function WeekRhythm({ drawn, lang, labels, openedCount }) {
   );
 }
 
-function AffinityGauge({ value, label }) {
+/*
+  相性のハートを、虹の風が囲む。
+
+  ハートだけだと満ちる高さしか出ておらず、
+  同じ％なら盤面が違っても同じ絵になっていた。
+  風は盤面から出す ―― 何が同じで何が違うのかを、％の外側に置く。
+
+    渦の向き   未来が現在より強ければ外へ広がる。弱ければ内へ巻く
+    巻きの強さ 現在と未来の差。離れているほど渦が深い
+    速さ      現在と未来の力の平均。強いほど速い（4.0〜9.0秒）
+    乱れ      周囲の状況が弱いほど波打つ。対策が効いていると鎮まる
+
+  ⚠️ 位置の添字はヘキサグラム（0過去 1現在 2未来 3対策 4周囲）に合わせている。
+  この部品はスリーカード（0過去 1現在 2未来）からも呼ばれる。
+  1 と 2 はどちらの配置にもあるが、3・4 は無い。
+  無いときは中庸（0.5）に倒すこと ―― undefined を power に渡すと NaN になる。
+*/
+/*
+  相性のハートを、天気が囲む。
+
+  渦だけだと「強い／弱い」の一次元しか出ていなかった。
+  天気なら、追い風・向かい風という向きの話と、
+  晴・曇・雨・雪という明るさの話を、同じ絵の中で別々に持てる。
+
+  【六つの決め方】
+    追い風  未来が現在より 0.55 以上強い
+    向かい風 現在が未来より 0.55 以上強い
+    晴      上の二つに当たらず、盤面の力の平均が 0.55 以上
+    雪      同じく 0.30 以下（いちばん冷える）
+    雨      同じく 0.42 以下
+    曇      それ以外
+
+  ⚠️ しきい値は実測から。7枚で
+     曇24.1 / 雨20.8 / 追い風16.5 / 向かい風16.5 / 晴13.1 / 雪9.0（％）。
+     cardPower の分布に依存するので、STAT_WEIGHTS を触ったら測り直すこと。
+
+  ⚠️ この部品はスリーカード（3枚）からも呼ばれる。
+     1（現在）と 2（未来）はどちらの配置にもあるが、それ以外は無い。
+     平均は「開いている札だけ」で取ること。
+
+  色はホースシューと同じホロの傾斜（affHoloGrad）。
+  線の太さと動きだけで六つを描き分ける。
+*/
+function affinityWeather(drawn) {
+  const list = (Array.isArray(drawn) ? drawn : []).filter(Boolean);
+  if (!list.length) return { kind: "cloud", speed: 6.0 };
+  const p = list.map((c) => cardPower(c));
+  const now = p.length > 1 ? p[1] : 0.5;
+  const future = p.length > 2 ? p[2] : 0.5;
+  const d = future - now;
+  const b = p.reduce((a, x) => a + x, 0) / p.length;
+  const kind =
+    d >= 0.55 ? "tail" :
+    d <= -0.55 ? "head" :
+    b >= 0.55 ? "sun" :
+    b <= 0.30 ? "snow" :
+    b <= 0.42 ? "rain" : "cloud";
+  // 荒れているほど速く、穏やかなほどゆっくり
+  const speed = 3.4 + (1 - Math.min(1, Math.abs(d) * 0.7 + b * 0.6)) * 5.2;
+  return { kind, speed, d, b };
+}
+
+/* 雲。三つの膨らみの輪郭だけ。塗らないのは、線の図に合わせるため */
+const AFF_CLOUD_D = "M 3 15 a 5.5 5.5 0 0 1 1.6 -10.6 a 7.6 7.6 0 0 1 13.6 -2.6 a 6 6 0 0 1 9.6 5.2 a 5 5 0 0 1 -1.6 8 Z";
+
+function WeatherHalo({ kind, speed }) {
+  const C = "url(#affHoloGrad)";
+  const glow = { filter: HOLO_GLOW };
+  if (kind === "sun") {
+    // 晴。細い光条が回り、外輪が静かに脈打つ
+    return (
+      <g>
+        <circle cx="48" cy="48" r="31" fill="none" stroke={C} strokeWidth="0.7"
+          strokeDasharray="2 6" opacity="0.4" className="aff-pulse" style={glow} />
+        <g className="aff-spin" style={{ animation: `affSpin ${(speed * 7).toFixed(1)}s linear infinite` }}>
+          {Array.from({ length: 12 }, (_, k) => {
+            const a = (k / 12) * Math.PI * 2;
+            const r0 = 34, r1 = k % 2 ? 40 : 45;
+            return (
+              <line key={k} x1={(48 + Math.cos(a) * r0).toFixed(1)} y1={(48 + Math.sin(a) * r0).toFixed(1)}
+                x2={(48 + Math.cos(a) * r1).toFixed(1)} y2={(48 + Math.sin(a) * r1).toFixed(1)}
+                stroke={C} strokeWidth="0.9" strokeLinecap="round" opacity="0.75" style={glow} />
+            );
+          })}
+        </g>
+      </g>
+    );
+  }
+  if (kind === "cloud") {
+    // 曇。三つの雲がそれぞれ違う速さで横に流れる
+    return (
+      <g>
+        {[[4, 12, 0.95, 0], [50, 34, 1.15, 0.9], [10, 66, 0.8, 1.8]].map(([x, y, sc, dl], k) => (
+          <g key={k} className="aff-drift"
+            style={{ animation: `affDrift ${(speed * 1.5 + k).toFixed(1)}s ease-in-out ${dl}s infinite` }}>
+            <g transform={`translate(${x} ${y}) scale(${sc})`}>
+              <path d={AFF_CLOUD_D} fill="none" stroke={C} strokeWidth="1.1"
+                strokeLinejoin="round" opacity={0.45 + k * 0.12} style={glow} />
+            </g>
+          </g>
+        ))}
+      </g>
+    );
+  }
+  if (kind === "rain") {
+    // 雨。雲を一つ置いてから降らせる。雲が無いと「ただの斜線」に見える
+    return (
+      <g>
+        <g transform="translate(30 4) scale(1.05)">
+          <path d={AFF_CLOUD_D} fill="none" stroke={C} strokeWidth="1.1"
+            strokeLinejoin="round" opacity="0.55" style={glow} />
+        </g>
+        {Array.from({ length: 15 }, (_, k) => {
+          const x = 6 + (k % 5) * 21 + (k % 3) * 4;
+          const y = 26 + Math.floor(k / 5) * 22;
+          return (
+            <line key={k} x1={x} y1={y} x2={x + 2.4} y2={y + 8} stroke={C} strokeWidth="0.9"
+              strokeLinecap="round" opacity="0.8" className="aff-rain"
+              style={{ animation: `affRain ${(speed * 0.28).toFixed(2)}s linear ${(k * 0.11).toFixed(2)}s infinite`, ...glow }} />
+          );
+        })}
+      </g>
+    );
+  }
+  if (kind === "snow") {
+    // 雪。六方の結晶を小さく、ゆっくり
+    return (
+      <g>
+        {Array.from({ length: 10 }, (_, k) => {
+          const x = 8 + (k % 5) * 20 + (k % 2) * 6;
+          const y = 10 + Math.floor(k / 5) * 34 + (k % 3) * 7;
+          return (
+            <g key={k} className="aff-snow"
+              style={{ animation: `affSnow ${(speed * 1.1).toFixed(2)}s linear ${(k * 0.42).toFixed(2)}s infinite` }}>
+              <g transform={`translate(${x} ${y})`}>
+                {[0, 60, 120].map((deg) => (
+                  <line key={deg} x1="-3.4" y1="0" x2="3.4" y2="0" stroke={C} strokeWidth="0.75"
+                    strokeLinecap="round" transform={`rotate(${deg})`} opacity="0.85" style={glow} />
+                ))}
+              </g>
+            </g>
+          );
+        })}
+      </g>
+    );
+  }
+  /*
+    追い風／向かい風。
+    ⚠️ 向かい風は左右を反転させるだけ。線の形を別に書くと、
+    二つが「別の絵」になって、同じ風の裏表に見えなくなる。
+  */
+  const flip = kind === "head";
+  return (
+    <g transform={flip ? "translate(96 0) scale(-1 1)" : undefined}>
+      {[[10, 14, 62], [4, 30, 82], [16, 48, 70], [2, 66, 86], [14, 82, 58]].map(([x, y, len], k) => (
+        <path key={k} d={`M ${x} ${y} q ${len * 0.5} ${-4 - k} ${len} 0`} fill="none" stroke={C}
+          strokeWidth="1" strokeLinecap="round" opacity="0.8" className="aff-flow"
+          style={{ animation: `affFlow ${(speed * 0.42).toFixed(2)}s linear ${(k * 0.13).toFixed(2)}s infinite`, ...glow }} />
+      ))}
+      {[[72, 34], [80, 62]].map(([x, y], k) => (
+        <polyline key={`c${k}`} points={`${x - 6},${y - 6} ${x},${y} ${x - 6},${y + 6}`} fill="none"
+          stroke={C} strokeWidth="1.3" strokeLinecap="round" strokeLinejoin="round"
+          opacity="0.9" className="aff-pulse"
+          style={{ animation: `affPulse ${(speed * 0.5).toFixed(2)}s ease-in-out ${(k * 0.25).toFixed(2)}s infinite`, ...glow }} />
+      ))}
+    </g>
+  );
+}
+
+function AffinityGauge({ value, label, drawn }) {
+  const wx = affinityWeather(drawn);
   return (
     <div className="affinity-wrap">
       <span className="affinity-label">{label}</span>
       <div className="affinity-row">
         <div className="affinity-heart">
+          {/*
+            天気。ハートより後ろに敷く。
+            ⚠️ animation は shorthand 1本で渡す。
+            秒数を JSX で組み立てないと、CSS 側の値に固定されてしまう。
+          */}
+          <svg viewBox="0 0 96 96" className="aff-sky-svg" aria-hidden="true">
+            <defs>
+              <linearGradient id="affHoloGrad" gradientUnits="userSpaceOnUse" x1="0" y1="96" x2="96" y2="0">
+                {HOLO_STOPS.map(([off, col]) => <stop key={off} offset={off} stopColor={col} />)}
+              </linearGradient>
+            </defs>
+            <WeatherHalo kind={wx.kind} speed={wx.speed} />
+          </svg>
           <svg viewBox="0 0 32 29" width="46" height="42" aria-hidden="true">
             <defs>
               <clipPath id="heartClip">
@@ -11636,6 +12075,7 @@ function HexagramPanel({ lang, onBack, question, userName, canDraw, onConsume, o
           {isLast && !isWeekly && !isCeltic && !isHoro && !isChoice && !EXTRA_STAGES[spreadKey] && (
             <AffinityGauge
               value={hexagramAffinity(drawn)}
+              drawn={drawn}
               /* 入力された関係を見出しに返す。無料版でも入力が働く場所になる */
               label={relation.trim() ? `${t.affinityLabel}｜${relation.trim()}` : t.affinityLabel}
             />
@@ -14324,6 +14764,7 @@ const T = {
     greekTenSkew: "한쪽으로 크게 치우쳤습니다",
     hsPassTitle: "고개",
     hsPassNow: "현재 위치",
+    hsStages: ["산기슭", "들머리", "중턱", "고개", "내리막", "마을이 보임", "도착"],
     hsPassRead: (a, b) => `${a}이 고개입니다。${b}`,
     hsPassAfter: "이미 넘었습니다",
     hsPassAt: "지금 넘는 중입니다",
@@ -14730,6 +15171,7 @@ const T = {
     greekTenSkew: "Lệch hẳn về một phía",
     hsPassTitle: "Đèo",
     hsPassNow: "Vị trí hiện tại",
+    hsStages: ["Chân núi", "Cửa rừng", "Lưng chừng", "Đèo", "Xuống dốc", "Thấy bản làng", "Về tới nơi"],
     hsPassRead: (a, b) => `${a} là đèo. ${b}`,
     hsPassAfter: "Bạn đã vượt qua",
     hsPassAt: "Bạn đang vượt qua",
@@ -15134,6 +15576,7 @@ const T = {
     greekTenSkew: "Sangat condong ke satu sisi",
     hsPassTitle: "Puncak",
     hsPassNow: "Posisi kini",
+    hsStages: ["Kaki bukit", "Awal jalur", "Lereng tengah", "Puncak", "Turunan", "Desa terlihat", "Tiba"],
     hsPassRead: (a, b) => `${a} adalah puncaknya. ${b}`,
     hsPassAfter: "Anda sudah melewatinya",
     hsPassAt: "Anda sedang melewatinya",
@@ -15540,6 +15983,7 @@ const T = {
     greekTenSkew: "Sangat condong ke satu pihak",
     hsPassTitle: "Puncak",
     hsPassNow: "Kedudukan kini",
+    hsStages: ["Kaki bukit", "Mula denai", "Lereng tengah", "Puncak", "Turunan", "Kampung kelihatan", "Tiba"],
     hsPassRead: (a, b) => `${a} ialah puncaknya. ${b}`,
     hsPassAfter: "Anda telah melaluinya",
     hsPassAt: "Anda sedang melaluinya",
@@ -15947,6 +16391,7 @@ const T = {
     greekTenSkew: "一方に大きく偏っています",
     hsPassTitle: "峠",
     hsPassNow: "いまいる場所",
+    hsStages: ["麓", "登り口", "中腹", "峠", "下り坂", "里が見える", "帰り着く"],
     hsPassRead: (a, b) => `${a}が峠です。${b}`,
     hsPassAfter: "もう越えました",
     hsPassAt: "いま越えるところです",
@@ -16392,6 +16837,7 @@ const T = {
     greekTenSkew: "明顯偏向一方",
     hsPassTitle: "山口",
     hsPassNow: "目前所在",
+    hsStages: ["山腳", "登山口", "半山腰", "山口", "下坡", "望見村落", "抵達"],
     hsPassRead: (a, b) => `${a}是山口。${b}`,
     hsPassAfter: "已經越過",
     hsPassAt: "正在越過",
@@ -16798,6 +17244,7 @@ const T = {
     greekTenSkew: "明显偏向一方",
     hsPassTitle: "山口",
     hsPassNow: "目前所在",
+    hsStages: ["山脚", "登山口", "半山腰", "山口", "下坡", "望见村落", "抵达"],
     hsPassRead: (a, b) => `${a}是山口。${b}`,
     hsPassAfter: "已经越过",
     hsPassAt: "正在越过",
@@ -17204,6 +17651,7 @@ const T = {
     greekTenSkew: "It leans heavily to one side",
     hsPassTitle: "The Pass",
     hsPassNow: "You are here",
+    hsStages: ["The foot", "Trailhead", "Midslope", "The Pass", "Descent", "Valley in sight", "Arrival"],
     hsPassRead: (a, b) => `${a} is the pass. ${b}`,
     hsPassAfter: "You have crossed it",
     hsPassAt: "You are crossing it now",
@@ -17649,6 +18097,7 @@ const T = {
     greekTenSkew: "Malaki ang kiling sa isang panig",
     hsPassTitle: "Ang Tuktok",
     hsPassNow: "Nandito ka",
+    hsStages: ["Paanan", "Simula ng landas", "Gitnang dalisdis", "Tuktok", "Paglusong", "Tanaw na ang nayon", "Dating"],
     hsPassRead: (a, b) => `${a} ang tuktok. ${b}`,
     hsPassAfter: "Natawid mo na ito",
     hsPassAt: "Tinatawid mo na ngayon",
@@ -18055,6 +18504,7 @@ const T = {
     greekTenSkew: "เอนไปด้านหนึ่งอย่างมาก",
     hsPassTitle: "ช่องเขา",
     hsPassNow: "ตำแหน่งตอนนี้",
+    hsStages: ["เชิงเขา", "ปากทาง", "กลางเขา", "ช่องเขา", "ทางลง", "เห็นหมู่บ้าน", "ถึงที่หมาย"],
     hsPassRead: (a, b) => `${a}คือช่องเขา ${b}`,
     hsPassAfter: "ข้ามมาแล้ว",
     hsPassAt: "กำลังข้ามอยู่",
@@ -18462,6 +18912,7 @@ const T = {
     greekTenSkew: "Det lutar kraftigt åt ett håll",
     hsPassTitle: "Passet",
     hsPassNow: "Du är här",
+    hsStages: ["Bergsfoten", "Ledens början", "Halvvägs upp", "Passet", "Nedstigningen", "Byn i sikte", "Framme"],
     hsPassRead: (a, b) => `${a} är passet. ${b}`,
     hsPassAfter: "Du har passerat det",
     hsPassAt: "Du passerar det nu",
@@ -19261,14 +19712,9 @@ export default function TarotDraw() {
     setReading2("");
     setReading2Loading(false);
     setReading3("");
-    setDeepDiveUnlocked(false);
     setDeepDiveQA([]);
-    setDeepDiveCurrentQuestion(null);
     setDeepDiveLoading(false);
-    setDeepDiveReading("");
-    setDeepDiveReadingLoading(false);
-    setShowDeepDiveGate(false);
-    setDeepDiveGateCode("");
+    setDeepDiveInput(""); // ⚠️ 前回の書きかけを次の鑑定へ持ち越さない
     setReading3Loading(false);
     setCopied(false);
     setUserOrientationChoice(null);
@@ -19297,14 +19743,9 @@ export default function TarotDraw() {
     setReading2("");
     setReading2Loading(false);
     setReading3("");
-    setDeepDiveUnlocked(false);
     setDeepDiveQA([]);
-    setDeepDiveCurrentQuestion(null);
     setDeepDiveLoading(false);
-    setDeepDiveReading("");
-    setDeepDiveReadingLoading(false);
-    setShowDeepDiveGate(false);
-    setDeepDiveGateCode("");
+    setDeepDiveInput(""); // ⚠️ 前回の書きかけを次の鑑定へ持ち越さない
     setReading3Loading(false);
     setCopied(false);
     setUserOrientationChoice(null);
@@ -19347,14 +19788,9 @@ export default function TarotDraw() {
     setReading2("");
     setReading2Loading(false);
     setReading3("");
-    setDeepDiveUnlocked(false);
     setDeepDiveQA([]);
-    setDeepDiveCurrentQuestion(null);
     setDeepDiveLoading(false);
-    setDeepDiveReading("");
-    setDeepDiveReadingLoading(false);
-    setShowDeepDiveGate(false);
-    setDeepDiveGateCode("");
+    setDeepDiveInput(""); // ⚠️ 前回の書きかけを次の鑑定へ持ち越さない
     setReading3Loading(false);
     setUserOrientationChoice(null);
     setPhase("minor-spread");
@@ -19460,9 +19896,6 @@ export default function TarotDraw() {
       setReading2(pendingSession.reading2);
       setReading3(pendingSession.reading3 || "");
       setDeepDiveQA(pendingSession.deepDiveQA || []);
-      if (pendingSession.deepDiveQA && pendingSession.deepDiveQA.length > 0) {
-        setDeepDiveUnlocked(true); // 対話ループを既に通過していたなら、ゲートは再度要求しない
-      }
       setPhase("major-revealed");
     } else {
       // 小アルカナまでの状態を復元する
@@ -19748,7 +20181,6 @@ export default function TarotDraw() {
     setReading2(parsed.reading2);
     setReading3(parsed.reading3);
     setDeepDiveQA(parsed.deepDiveQA);
-    if (parsed.deepDiveQA.length > 0) setDeepDiveUnlocked(true); // 対話ループを既に通過していたなら、ゲートは再度要求しない
     setRevealStage(3);
     setReachInfo(null);
     setPhase("major-revealed"); // 保存されたデータには鑑定文が全部含まれているため、最終結果までそのまま復元できる
@@ -20499,6 +20931,11 @@ export default function TarotDraw() {
         .celtic-core-glow {
           transition: cx .6s cubic-bezier(.3,.9,.3,1), cy .6s cubic-bezier(.3,.9,.3,1);
           animation: wrBlinkGold 2.2s ease-in-out infinite;
+        }
+        /* ⚠️ 参照だけあって定義が無かった。心の重心は光っていなかった */
+        @keyframes wrBlinkGold {
+          0%, 100% { opacity: 0.30; }
+          50%      { opacity: 0.85; }
         }
         @media (prefers-reduced-motion: reduce) {
           .celtic-trail, .celtic-core, .celtic-core-glow { animation: none !important; transition: none !important; }
@@ -21664,7 +22101,11 @@ export default function TarotDraw() {
           animation: hsDraw 1s cubic-bezier(.16,1,.3,1) forwards;
         }
         @keyframes hsDraw { to { stroke-dashoffset: 0; } }
-        /* 峠の輪が広がる */
+        /* 七つの点の名前。図の中の文字なので px ではなく viewBox 座標に載る */
+        .hs-pt-name { font-size: 10px; letter-spacing: 0.02em; }
+        .hs-now-label { font-size: 11.5px; letter-spacing: 0.06em; font-weight: 700; }
+        .hs-peak-label { font-size: 10px; letter-spacing: 0.06em; opacity: 0.85; }
+        /* 現在地の輪が広がる */
         .hs-pass-ring {
           transform-box: fill-box; transform-origin: center;
           animation: hsRing 1.8s ease-out infinite;
@@ -21673,6 +22114,16 @@ export default function TarotDraw() {
           0% { transform: scale(0.6); opacity: 0.9; }
           100% { transform: scale(1.6); opacity: 0; }
         }
+        /*
+          鬣。破線を流して、閃光が後ろへ抜けていくように見せる。
+          ⚠️ 6本それぞれに animation を書くと、インラインの animationDelay が
+          効かなくなる。クラス側は shorthand 1本だけにして、遅延だけ JSX で渡す。
+        */
+        .hs-mane {
+          stroke-dasharray: 7 11;
+          animation: hsMane 1.1s linear infinite;
+        }
+        @keyframes hsMane { to { stroke-dashoffset: -18; } }
         /* 生命の樹 */
         /* 図は幅いっぱい。柱と取り合わせない */
         .tree-vis-body { width: 100%; }
@@ -21689,6 +22140,22 @@ export default function TarotDraw() {
           0% { stroke-dashoffset: 700; opacity: 1; }
           60% { stroke-dashoffset: 0; opacity: 1; }
           100% { stroke-dashoffset: 0; opacity: 0.35; }
+        }
+        /*
+          柱の放電。ほとんどの時間は消えていて、一瞬だけ二度光る。
+          ⚠️ 出しっぱなしにすると図の主役が柱になり、札の位置が読めない。
+        */
+        .tree-pillar-bolt {
+          opacity: 0;
+          animation: treePillarBolt 4.8s linear infinite;
+        }
+        @keyframes treePillarBolt {
+          0%, 57% { opacity: 0; }
+          59%  { opacity: 1; }
+          62%  { opacity: 0.12; }
+          65%  { opacity: 0.8; }
+          71%  { opacity: 0; }
+          100% { opacity: 0; }
         }
         /* 節点は稲妻が届いた順に灯る */
         .tree-node { animation: treeNode .5s ease-out backwards; }
@@ -22356,26 +22823,17 @@ export default function TarotDraw() {
           100% { transform: rotate(360deg); }
         }
         /*
-          【ホロの引き】
-          レアが「普段は中くらい、一瞬だけ最大」なのに対して、
-          ホロは「普段は最大、一瞬だけ引く」。上下を逆にした対。
+          【ホロの引き】について。
 
-          常に最大のままだと、強さが基準になって強く見えなくなる。
-          一度引いてから戻ることで、戻った瞬間の最大が改めて最大として読まれる。
+          ⚠️ ここには「@keyframes の頭を失った断片」が二つ残っていた。
+          83% から始まる規則が、名前も 0% も無いまま素で置かれていて、
+          CSS としては壊れていた（ブラウザが読み飛ばして復帰していただけ）。
+          参照する側も既に無かったので、断片ごと消してある。
 
-          引き切らないのが要点。0.30 まで落とすとレアの下地（0.55）より
-          薄くなり、その一瞬だけホロがレアより地味に見える。
-          0.42 で止めれば、引いている最中でもレアを下回らない。
-
-          落ちるのも戻るのも速く、底で少しだけ留める（呼吸の「吸う」に相当）。
-          ゆっくり落とすと、ただ暗くなったようにしか見えない。
+          明るいホロの引きは .holo-card の holoSweep / holoRing が担っていて、
+          暗いホロの引きは darkHoloBandEbb / darkRingEbb にある。
+          ここに三つ目を足すときは、必ず @keyframes の名前から書くこと。
         */
-                  83%       { opacity: 0.46; }
-          89%, 100% { opacity: 1; }
-        }
-                  83%       { opacity: 0.20; }
-          89%, 100% { opacity: 0.55; }
-        }
         /* 文字も原色寄りにして、光量を上げる */
         .holo-text {
           background: linear-gradient(100deg,
@@ -22707,7 +23165,47 @@ export default function TarotDraw() {
           color: var(--gold); opacity: 0.9;
         }
         .affinity-row { display: flex; align-items: center; gap: 14px; }
-        .affinity-heart { position: relative; width: 46px; height: 42px; }
+        /*
+          ハートの器を風のぶんまで広げる。
+          ⚠️ 46×42 のまま風を絶対配置すると、％の数字に重なる。
+          器を96角にして、中でハートを中央に置く。
+        */
+        .affinity-heart {
+          position: relative; width: 96px; height: 96px;
+          display: flex; align-items: center; justify-content: center;
+        }
+        .aff-sky-svg {
+          position: absolute; inset: 0; width: 96px; height: 96px;
+          pointer-events: none;
+        }
+        /*
+          天気。六つとも同じホロ色なので、動きだけで描き分ける。
+          ⚠️ 回転する要素には transform-box:fill-box を付けること。
+          付けないと SVG の原点（左上）を軸に回り、画面外へ飛ぶ。
+        */
+        .aff-spin { transform-box: view-box; transform-origin: 48px 48px; }
+        @keyframes affSpin { to { transform: rotate(360deg); } }
+        .aff-flow { stroke-dasharray: 12 20; }
+        @keyframes affFlow { to { stroke-dashoffset: -32; } }
+        @keyframes affDrift {
+          0%, 100% { transform: translateX(-4px); }
+          50%      { transform: translateX(4px); }
+        }
+        @keyframes affRain {
+          0%   { transform: translate(0, -12px); opacity: 0; }
+          18%  { opacity: 0.85; }
+          100% { transform: translate(3px, 14px); opacity: 0; }
+        }
+        .aff-snow { transform-box: fill-box; transform-origin: center; }
+        @keyframes affSnow {
+          0%   { transform: translate(0, -10px) rotate(0deg); opacity: 0; }
+          20%  { opacity: 0.9; }
+          100% { transform: translate(5px, 16px) rotate(140deg); opacity: 0; }
+        }
+        @keyframes affPulse {
+          0%, 100% { opacity: 0.45; }
+          50%      { opacity: 1; }
+        }
         .affinity-value {
           font-family: 'Cinzel', serif; font-size: 26px; color: var(--gold-soft);
           letter-spacing: 0.02em; line-height: 1;
@@ -22796,7 +23294,10 @@ export default function TarotDraw() {
           .lang-chip { transition: none !important; }
           .horo-share, .horo-rank-name, .greek-area-num { animation: none !important; }
           .horo-sector, .cross-vec-arrow, .greek-ten-poly, .hs-pass-climb,
-          .hs-pass-ring, .tree-bolt, .tree-node, .tree-path, .cv-ripple { animation: none !important; }
+          .hs-pass-ring, .tree-bolt, .tree-node, .tree-path, .cv-ripple,
+          .hs-mane, .tree-pillar-bolt,
+          .aff-spin, .aff-flow, .aff-drift, .aff-rain, .aff-snow, .aff-pulse { animation: none !important; }
+          .tree-pillar-bolt { opacity: 0.22 !important; }
           .cross-vec-arrow, .hs-pass-climb, .tree-bolt, .tree-path { stroke-dashoffset: 0 !important; }
           .reload-btn { transition: none !important; }
           .rare-card, .rare-card::after, .rare-card::before,
