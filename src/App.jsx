@@ -3056,14 +3056,26 @@ const SPREADS = {
     key: "treeOfLife",
     deck: "full",
     count: 10,
+    /*
+      ⚠️ 上下がはみ出していた。
+
+      札は幅15%・縦横比130:194なので、高さは盤面の約7.9%ぶん。
+      その半分（3.9%）が中心から上下へ出る。
+      いちばん上が y=6、いちばん下が y=93 だったので、
+      上は 2.1% ぶん枠の外、下は 0.9%＋位置ラベルのぶん外へ出ていた。
+
+      上下に余白が残るよう 8〜91 に詰め、
+      縦横比も 1:1.42 から 1:1.50 へ伸ばした。
+      形（左右の柱と中央柱の比）は変えていない。
+    */
     layout: [
-      { x: 50, y: 6 },
-      { x: 76, y: 20 }, { x: 24, y: 20 },
+      { x: 50, y: 8 },
+      { x: 76, y: 21 }, { x: 24, y: 21 },
       { x: 76, y: 40 }, { x: 24, y: 40 },
       { x: 50, y: 50 },
-      { x: 76, y: 66 }, { x: 24, y: 66 },
-      { x: 50, y: 77 },
-      { x: 50, y: 93 },
+      { x: 76, y: 65 }, { x: 24, y: 65 },
+      { x: 50, y: 76 },
+      { x: 50, y: 91 },
     ],
   },
   // ⑥ 10枚。タロットで最も有名。本格派の象徴
@@ -7857,7 +7869,16 @@ function SpreadSelect({ lang, onSelect }) {
                 役割が違うものを左右に離すと、見比べずに読める。
                 78枚の配置では何も出ないので、印があること自体が目印になる。
               */}
-              <DeckMarks spec={SPREADS[base] && SPREADS[base].deck} lang={lang} />
+              {/*
+                ⚠️ 山札の印は現代派だけに出す。
+                古典派でも山札を絞っている配置はある（ワンオラクル＝大アルカナ、
+                プチワンオラクル＝小アルカナ）が、あちらは型として知られていて、
+                絞ってあること自体が売りではない。全部に付けると印の意味が薄まる。
+                現代派では山札が配置の主張そのものなので、そこにだけ置く。
+              */}
+              {MODERN_SPREADS.includes(base) && (
+                <DeckMarks spec={SPREADS[base] && SPREADS[base].deck} lang={lang} />
+              )}
             </button>
           );
         })}
@@ -8325,10 +8346,17 @@ function CrossVector({ drawn, lang, openedIndices }) {
   const col = good ? "#FFD98A" : "#C89AFF";
   // 方角を言葉にする。矢の向きだけでは何を意味するか読めない
   const deg = ((ang * 180) / Math.PI + 360) % 360;
+  /*
+    ⚠️ 象限の番号と dirKey は同じ規則で数えていること。
+    象限は 0=右上、1=左上、2=左下、3=右下（角度が90度ずつ増える向き）。
+    dirKey もそれに合わせてある。片方だけ変えると、
+    矢と光る領域が別の場所を指す。
+  */
   const dirKey = deg < 45 || deg >= 315 ? 0 : deg < 135 ? 1 : deg < 225 ? 2 : 3;
   return (
     <div className="cross-vec">
       <div className="cross-vec-title sheen-text">{t.crossVecTitle}</div>
+      <div className="vis-plate">
       <svg viewBox={`0 0 ${W} ${W}`} className="cross-vec-svg" role="img" aria-label={t.crossVecTitle}>
         <defs>
           <marker id="cv-head" viewBox="0 0 10 10" refX="8" refY="5" markerWidth="5" markerHeight="5" orient="auto">
@@ -8340,11 +8368,26 @@ function CrossVector({ drawn, lang, openedIndices }) {
           どちらへ向いたかが「上下左右」ではなく
           「どの領域か」として読めるようにする。
         */}
-        {[[0, "#FFD98A"], [1, "#B9F0D8"], [2, "#C89AFF"], [3, "#FF9AC4"]].map(([q, col]) => {
+        {/*
+          ⚠️ 四つとも同じ濃さで塗ると、どこへ向いたかが矢だけの情報になる。
+          矢が入った象限だけを濃くして、縁も光らせる。
+          「攻めている領域」が地の明るさで読めるようにする。
+          残る三つは今までどおり、ほとんど見えない濃さに置く。
+        */}
+        {[[0, "#FFD98A"], [1, "#B9F0D8"], [2, "#C89AFF"], [3, "#FF9AC4"]].map(([q, qc]) => {
           const a0 = (Math.PI / 2) * q, a1 = a0 + Math.PI / 2;
           const p = (a) => `${(C + Math.cos(a) * R).toFixed(1)} ${(C - Math.sin(a) * R).toFixed(1)}`;
-          return <path key={q} d={`M ${C} ${C} L ${p(a0)} A ${R} ${R} 0 0 0 ${p(a1)} Z`}
-            fill={col} opacity="0.07" />;
+          const d = `M ${C} ${C} L ${p(a0)} A ${R} ${R} 0 0 0 ${p(a1)} Z`;
+          const live = q === dirKey;
+          return (
+            <g key={q}>
+              <path d={d} fill={qc} opacity={live ? 0.26 : 0.05} className={live ? "cv-live" : undefined} />
+              {live && (
+                <path d={d} fill="none" stroke={qc} strokeWidth="1.4" opacity="0.75"
+                  style={{ filter: `drop-shadow(0 0 7px ${qc})` }} />
+              )}
+            </g>
+          );
         })}
         {[1, 0.66, 0.33].map((k, i) => (
           <circle key={i} cx={C} cy={C} r={R * k} fill="none"
@@ -8393,6 +8436,7 @@ function CrossVector({ drawn, lang, openedIndices }) {
         <text x="4" y={C + 4} className="cross-vec-ax" textAnchor="start">{t.crossAxisLeft}</text>
         <text x={W - 4} y={C + 4} className="cross-vec-ax" textAnchor="end">{t.crossAxisRight}</text>
       </svg>
+      </div>
       <p className="cross-vec-read">{t.crossVecRead[dirKey]}</p>
     </div>
   );
@@ -8492,6 +8536,7 @@ function GreekTension({ drawn, labels, lang, openedIndices }) {
   return (
     <div className="greek-ten">
       <div className="greek-ten-title sheen-text">{t.greekTenTitle}</div>
+      <div className="vis-plate">
       <svg viewBox={`0 0 ${W} ${W}`} className="greek-ten-svg" role="img" aria-label={t.greekTenTitle}>
         {[0.4, 0.7, 1].map((k, i) => (
           <polygon key={i} fill="none" stroke="rgba(201,162,75,0.12)" strokeWidth="1"
@@ -8573,6 +8618,7 @@ function GreekTension({ drawn, labels, lang, openedIndices }) {
             stroke={coreGood ? "#FFD98A" : "#C89AFF"} strokeWidth="2" />
         )}
       </svg>
+      </div>
       {/* 面積。広いほどよい、という向きを数字と言葉の両方で出す */}
       <div className="greek-area">
         <span className="greek-area-num">{pct}<u>%</u></span>
@@ -8977,6 +9023,7 @@ function HorseshoePass({ drawn, labels, lang, openedIndices }) {
   return (
     <div className="hs-pass">
       <div className="hs-pass-title sheen-text">{t.hsPassTitle}</div>
+      <div className="vis-plate">
       <svg viewBox={`0 0 ${W} ${H}`} className="hs-pass-svg" role="img" aria-label={t.hsPassTitle}>
         <defs>
           {/*
@@ -9144,6 +9191,7 @@ function HorseshoePass({ drawn, labels, lang, openedIndices }) {
           );
         })()}
       </svg>
+      </div>
       <p className="hs-pass-read">
         {t.hsPassRead(labels[peak], !stand ? t.hsPassBefore : stand.phase > peak ? t.hsPassAfter : stand.phase === peak ? t.hsPassAt : t.hsPassBefore)}
       </p>
@@ -9299,7 +9347,7 @@ function TreeLightning({ drawn, lang, openedIndices, labels = [] }) {
   return (
     <div className="tree-vis">
       <div className="tree-vis-title sheen-text">{t.treeVisTitle}</div>
-      <div className="tree-vis-body">
+      <div className="tree-vis-body vis-plate tree">
         <svg viewBox={`0 0 ${W} ${H}`} className="tree-vis-svg" role="img" aria-label={t.treeVisTitle}>
           {/*
             上下の意味を、稲妻の始点と終点に添える。
@@ -9401,7 +9449,7 @@ function TreeLightning({ drawn, lang, openedIndices, labels = [] }) {
       */}
       {/* 柱の見出し。無いと図の下端の「現実の暮らし」が棒の見出しに読まれる */}
       <div className="tree-pillars-title sheen-text">{t.treePillarsTitle}</div>
-      <div className="tree-pillars">
+      <div className="tree-pillars vis-plate">
         {[["left", t.treePillarLeft], ["middle", t.treePillarMid], ["right", t.treePillarRight]].map(([k, label]) => (
           <div key={k} className="tree-pillar">
             <span className="tree-pillar-name">{label}</span>
@@ -9474,6 +9522,12 @@ function TreeLightning({ drawn, lang, openedIndices, labels = [] }) {
         {(() => {
           const mid = pil.middle / total;
           if (Math.abs(lean) < 0.35) {
+            /*
+              ⚠️ 中央柱が厚いことを「どちらへも踏み出せていない」と書いていた。
+              中央は均衡の柱で、左（冷酷）へ踏み出すという読みは成り立たない。
+              厚い＝様子見が過ぎて押しが足りない、薄い＝その都度振り切れていて
+              判断の置きどころが無い、という読みに直してある。
+            */
             if (mid >= 0.46) return t.treeMidHigh;
             if (mid <= 0.24) return t.treeMidLow;
             return t.treeBalanced;
@@ -9931,20 +9985,32 @@ function ChoiceAxis({ drawn, labelA, labelB, lang, openedIndices }) {
         目盛りが中央に来たときに「どちらでもない」なのか
         「まだ決まっていない」なのか読めなかった。
       */}
-      <div className="choice-zones" aria-hidden="true">
-        <span className="law">{t.choiceLaw}</span>
-        <span className="neutral">{t.choiceNeutral}</span>
-        <span className="chaos">{t.choiceChaos}</span>
-      </div>
       {rows.map((r) => (
-        <div key={r.cls} className="choice-axis-block">
-          <div className="choice-axis-row">
+        /*
+          道ごとに枠で囲う。
+
+          ⚠️ 以前は名前・呼び名・目盛りを一行に並べていた。
+          名前の枠が4.6em固定だったので「一つ目の道」が「一つ目…」と切れ、
+          区分の見出し（光・中庸・闇）は名前ぶんしか字下げしていなかったので、
+          呼び名の5.2emぶん帯とずれていた。
+
+          名前を独立した行に上げ、帯を枠いっぱいに広げる。
+          こうすると字下げの計算そのものが要らなくなり、ずれようがない。
+          二つの枠が同じ形で並ぶので、見比べるのも楽になる。
+        */
+        <div key={r.cls} className={`choice-card ${r.cls}`}>
+          <div className="choice-card-head">
             <span className={`choice-axis-name ${r.cls}`}>{r.label}</span>
-            {/* どの区分に入ったかを語で出す。位置だけでは名前が分からない */}
-            {/* 七段の呼び名。三区分だけでは強弱が読めない */}
             {r.v !== null && (
               <span className={`choice-zone-tag ${zoneOf(r.v)}`}>{t.choiceGrade[gradeOf(r.v)]}</span>
             )}
+          </div>
+          {/* 区分の見出し。帯のすぐ上、同じ幅に置く */}
+          <div className="choice-zones" aria-hidden="true">
+            <span className="law">{t.choiceLaw}</span>
+            <span className="neutral">{t.choiceNeutral}</span>
+            <span className="chaos">{t.choiceChaos}</span>
+          </div>
             {/*
               秩序と混沌を、色だけでなく形で描く。
 
@@ -9959,34 +10025,47 @@ function ChoiceAxis({ drawn, labelA, labelB, lang, openedIndices }) {
             <div className="choice-axis-track">
               <svg viewBox="0 0 240 30" className="choice-track-svg" preserveAspectRatio="none" aria-hidden="true">
                 <defs>
+                  {/*
+                    秩序は光（明るい黄）、混沌は闇（紫）、中庸は黄緑。
+                    ⚠️ 以前は水色と橙で、どちらも「色違い」でしかなかった。
+                    光と闇なら、明るさそのものが軸の意味になる。
+                  */}
                   <linearGradient id={`ct-${r.cls}`} x1="0" y1="0" x2="1" y2="0">
-                    <stop offset="0%" stopColor="#6FB4E8" stopOpacity="0.42" />
-                    <stop offset="42%" stopColor="#6FB4E8" stopOpacity="0.10" />
-                    <stop offset="58%" stopColor="#E8A87C" stopOpacity="0.10" />
-                    <stop offset="100%" stopColor="#E8A87C" stopOpacity="0.42" />
+                    <stop offset="0%" stopColor="#FFD95C" stopOpacity="0.50" />
+                    <stop offset="38%" stopColor="#FFD95C" stopOpacity="0.10" />
+                    <stop offset="46%" stopColor="#B8D96A" stopOpacity="0.16" />
+                    <stop offset="54%" stopColor="#B8D96A" stopOpacity="0.16" />
+                    <stop offset="62%" stopColor="#8A5CD6" stopOpacity="0.10" />
+                    <stop offset="100%" stopColor="#8A5CD6" stopOpacity="0.50" />
                   </linearGradient>
                 </defs>
                 <rect x="0" y="4" width="240" height="22" rx="4" fill={`url(#ct-${r.cls})`} />
                 {/* 秩序の側。等間隔・等高の格子 */}
                 {[0, 1, 2, 3, 4, 5, 6, 7].map((k) => (
                   <line key={`o${k}`} x1={6 + k * 12} y1="9" x2={6 + k * 12} y2="21"
-                    stroke="#8FC7E8" strokeWidth="1" opacity={0.62 - k * 0.055} />
+                    stroke="#FFE58A" strokeWidth="1" opacity={0.72 - k * 0.07} />
                 ))}
                 {/* 混沌の側。長さも角度も揃わない破片 */}
                 {CHAOS_SHARDS.map((c, k) => (
                   <line key={`c${k}`} x1={138 + c.x} y1={15 - c.h} x2={138 + c.x + c.t} y2={15 + c.h}
-                    stroke="#E8A87C" strokeWidth="1" opacity={0.20 + k * 0.045} />
+                    stroke="#C89AFF" strokeWidth="1" opacity={0.22 + k * 0.05} />
                 ))}
                 {/* 中庸の窓。ここだけ地を消して、どちらの形も無い場所にする */}
-                <rect x="102" y="4" width="36" height="22" fill="rgba(10,8,22,0.55)" />
-                <line x1="102" y1="4" x2="102" y2="26" stroke="rgba(201,162,75,0.45)" strokeWidth="1" />
-                <line x1="138" y1="4" x2="138" y2="26" stroke="rgba(201,162,75,0.45)" strokeWidth="1" />
+                {/*
+                  中庸の窓。
+                  ⚠️ 幅は 42.5%〜57.5%（v = ±0.15）。zoneOf の境界と同じ数にすること。
+                  240 の座標では 102〜138。片方だけ動かすと、
+                  「中庸」と出ているのに目盛りが窓の外、という状態になる。
+                */}
+                <rect x="102" y="4" width="36" height="22" fill="rgba(10,8,22,0.5)" />
+                <rect x="102" y="4" width="36" height="22" fill="#B8D96A" opacity="0.14" />
+                <line x1="102" y1="4" x2="102" y2="26" stroke="rgba(184,217,106,0.6)" strokeWidth="1" />
+                <line x1="138" y1="4" x2="138" y2="26" stroke="rgba(184,217,106,0.6)" strokeWidth="1" />
               </svg>
               {r.v !== null && (
                 <i className={`pin ${r.cls} ${zoneOf(r.v)}`} style={{ left: `${pos(r.v)}%` }} aria-hidden="true" />
               )}
             </div>
-          </div>
           {/*
             その道が何をする道かを一行で書く。
             目盛りの位置だけでは「守る側に寄っている」までしか伝わらず、
@@ -12460,7 +12539,7 @@ function HexagramPanel({ lang, onBack, question, userName, canDraw, onConsume, o
           <div className="hex-carpet" style={{
             position: "relative", width: "100%", maxWidth: "340px",
             // 円配置は正方形に近い。縦に余ると札が相対的に小さく、上下の余白も非対称になる
-            aspectRatio: isTree ? "1 / 1.42" : isHorseshoe ? "1 / 0.82"
+            aspectRatio: isTree ? "1 / 1.50" : isHorseshoe ? "1 / 0.82"
               : spreadKey === "simpleCross" ? "1 / 1.20" : spreadKey === "greekCross" ? "1 / 1.00"
               : isWeekly ? "1 / 1.31" : isCeltic ? "1 / 1.05" : isHoro ? "1 / 1.02" : isChoice ? "1 / 1.10" : "1 / 1.15",
           }}>
@@ -15672,7 +15751,7 @@ const T = {
     greekTenSkew: "한쪽으로 크게 치우쳤습니다",
     hsPassTitle: "고개",
     hsPassNow: "현재 위치",
-    hsStages: ["산기슭", "들머리", "중턱", "고개", "내리막", "마을이 보임", "도착"],
+    hsStages: ["산기슭", "들머리", "된비알", "고개", "내리막", "마을 불빛", "문 앞"],
     moonWheelTitle: "달의 고리",
     moonAt: (n) => `지금은 「${n}」 언저리입니다.`,
     moonFlat: "네 국면이 팽팽합니다. 아직 어느 쪽이라 할 수 없습니다.",
@@ -15730,8 +15809,8 @@ const T = {
     treePathRead: (a, b, d) => `${a}와 ${b} 사이에서 현실과 이어져 있습니다。${d}`,
     treeDepth: ["물으신 것은 무의식의 가장 깊은 곳에서 옵니다", "물으신 것은 일상의 의식보다 훨씬 안쪽에 뿌리를 두고 있습니다", "물으신 것은 생활 바로 옆에서 일어나는 일과 이어져 있습니다", "물으신 것은 가까운 일에 움직여진 것일 뿐일지도 모릅니다"],
     treePillarsTitle: "세 기둥의 무게",
-    treeMidHigh: "세 기둥은 균형을 이루지만 중앙이 너무 높습니다。어느 쪽으로도 내딛지 못했습니다",
-    treeMidLow: "세 기둥은 균형을 이루지만 중앙이 얇습니다。양극으로 지나치게 흔들리고 있습니다",
+    treeMidHigh: "세 기둥은 균형을 이루지만 중앙이 너무 두껍습니다。지켜보기만 하고 있어, 밀고 나가는 힘이 모자랍니다",
+    treeMidLow: "세 기둥은 균형을 이루지만 중앙이 얇습니다。그때그때 양극으로 크게 흔들려, 판단이 자리를 잡지 못했습니다",
     treeNoPath: "이번에는 소로가 나타나지 않았습니다。그 상은 아직 자리 위에 머물러 있습니다。",
     topicExample: "예: 지금 하는 일을 계속해야 할지",
     topicNote: "무료판에서는 감정에 반영되지 않습니다. 무엇을 알고 싶은지 스스로 정리하기 위한 칸입니다.",
@@ -16087,7 +16166,7 @@ const T = {
     greekTenSkew: "Lệch hẳn về một phía",
     hsPassTitle: "Đèo",
     hsPassNow: "Vị trí hiện tại",
-    hsStages: ["Chân núi", "Cửa rừng", "Lưng chừng", "Đèo", "Xuống dốc", "Thấy bản làng", "Về tới nơi"],
+    hsStages: ["Chân núi", "Cửa rừng", "Dốc đứng", "Đèo", "Xuống dốc", "Ánh đèn bản", "Trước cửa"],
     moonWheelTitle: "Vòng trăng",
     moonAt: (n) => `Hiện đang gần "${n}".`,
     moonFlat: "Bốn pha ngang sức. Chưa nghiêng về pha nào.",
@@ -16145,8 +16224,8 @@ const T = {
     treePathRead: (a, b, d) => `Nó nối với đời thường giữa ${a} và ${b}. ${d}`,
     treeDepth: ["Điều bạn hỏi đến từ nơi sâu nhất của vô thức", "Điều bạn hỏi có gốc rễ sâu dưới ý thức thường ngày", "Điều bạn hỏi gắn với việc đang xảy ra ngay bên cạnh đời sống", "Điều bạn hỏi có lẽ chỉ bị lay động bởi những việc gần kề"],
     treePillarsTitle: "Sức nặng của ba trụ",
-    treeMidHigh: "Ba trụ cân bằng, nhưng phần giữa quá cao。Bạn chưa bước về phía nào",
-    treeMidLow: "Ba trụ cân bằng, nhưng phần giữa quá mỏng。Bạn đang lắc quá mạnh về hai cực",
+    treeMidHigh: "Ba trụ cân bằng, nhưng phần giữa quá dày。Bạn chỉ đang quan sát; còn thiếu sức đẩy tới",
+    treeMidLow: "Ba trụ cân bằng, nhưng phần giữa quá mỏng。Bạn nghiêng hẳn về hai cực tùy lúc; chưa có chỗ đứng ổn định",
     treeNoPath: "Lần này không có tiểu lộ nào hiện ra. Hình ảnh ấy vẫn còn trên các tòa.",
     topicExample: "Ví dụ: có nên tiếp tục công việc này không",
     topicNote: "Bản miễn phí không dùng nội dung này. Đây là chỗ để bạn tự sắp xếp điều muốn biết.",
@@ -16500,7 +16579,7 @@ const T = {
     greekTenSkew: "Sangat condong ke satu sisi",
     hsPassTitle: "Puncak",
     hsPassNow: "Posisi kini",
-    hsStages: ["Kaki bukit", "Awal jalur", "Lereng tengah", "Puncak", "Turunan", "Desa terlihat", "Tiba"],
+    hsStages: ["Kaki bukit", "Awal jalur", "Tanjakan", "Puncak", "Turunan", "Lampu desa", "Depan pintu"],
     moonWheelTitle: "Roda Bulan",
     moonAt: (n) => `Kini berada di sekitar "${n}".`,
     moonFlat: "Keempat fase seimbang. Belum condong ke mana pun.",
@@ -16558,8 +16637,8 @@ const T = {
     treePathRead: (a, b, d) => `Ia terhubung dengan keseharian di antara ${a} dan ${b}. ${d}`,
     treeDepth: ["Yang Anda tanyakan datang dari tempat terdalam alam bawah sadar", "Yang Anda tanyakan berakar jauh di bawah kesadaran sehari-hari", "Yang Anda tanyakan terkait dengan hal yang terjadi tepat di samping keseharian", "Yang Anda tanyakan mungkin hanya digerakkan oleh hal-hal di sekitar"],
     treePillarsTitle: "Bobot ketiga pilar",
-    treeMidHigh: "Ketiga pilar seimbang, tetapi pusatnya terlalu tinggi. Anda belum melangkah ke mana pun",
-    treeMidLow: "Ketiga pilar seimbang, tetapi pusatnya tipis. Anda terlalu berayun ke dua kutub",
+    treeMidHigh: "Ketiga pilar seimbang, tetapi pusatnya terlalu tebal. Anda hanya mengamati; dorongan untuk maju masih kurang",
+    treeMidLow: "Ketiga pilar seimbang, tetapi pusatnya tipis. Anda berayun jauh ke dua kutub sesuai keadaan; pijakan Anda belum tetap",
     treeNoPath: "Tidak ada jalur muncul kali ini. Citra itu masih berada di atas singgasananya.",
     topicExample: "Contoh: apakah saya harus melanjutkan pekerjaan ini",
     topicNote: "Versi gratis tidak memakainya. Ini ruang untuk menata apa yang ingin Anda ketahui.",
@@ -16915,7 +16994,7 @@ const T = {
     greekTenSkew: "Sangat condong ke satu pihak",
     hsPassTitle: "Puncak",
     hsPassNow: "Kedudukan kini",
-    hsStages: ["Kaki bukit", "Mula denai", "Lereng tengah", "Puncak", "Turunan", "Kampung kelihatan", "Tiba"],
+    hsStages: ["Kaki bukit", "Mula denai", "Mendaki curam", "Puncak", "Turunan", "Lampu kampung", "Depan pintu"],
     moonWheelTitle: "Roda Bulan",
     moonAt: (n) => `Kini berada sekitar "${n}".`,
     moonFlat: "Keempat-empat fasa seimbang. Belum condong ke mana-mana.",
@@ -16973,8 +17052,8 @@ const T = {
     treePathRead: (a, b, d) => `Ia berhubung dengan kehidupan harian antara ${a} dan ${b}. ${d}`,
     treeDepth: ["Yang anda tanyakan datang dari tempat terdalam bawah sedar", "Yang anda tanyakan berakar jauh di bawah kesedaran harian", "Yang anda tanyakan berkait dengan perkara yang berlaku tepat di sebelah kehidupan harian", "Yang anda tanyakan mungkin hanya digerakkan oleh perkara berdekatan"],
     treePillarsTitle: "Berat ketiga-tiga tiang",
-    treeMidHigh: "Ketiga-tiga tiang seimbang, tetapi pusatnya terlalu tinggi. Anda belum melangkah ke mana-mana",
-    treeMidLow: "Ketiga-tiga tiang seimbang, tetapi pusatnya nipis. Anda terlalu berayun ke dua hujung",
+    treeMidHigh: "Ketiga-tiga tiang seimbang, tetapi pusatnya terlalu tebal. Anda hanya memerhati; dorongan untuk maju masih kurang",
+    treeMidLow: "Ketiga-tiga tiang seimbang, tetapi pusatnya nipis. Anda berayun jauh ke dua hujung mengikut keadaan; pendirian anda belum tetap",
     treeNoPath: "Tiada jalur muncul kali ini. Imej itu masih berada di atas takhtanya.",
     topicExample: "Contoh: patutkah saya teruskan kerja ini",
     topicNote: "Versi percuma tidak menggunakannya. Ini ruang untuk menyusun apa yang ingin anda tahu.",
@@ -17331,7 +17410,7 @@ const T = {
     greekTenSkew: "一方に大きく偏っています",
     hsPassTitle: "峠",
     hsPassNow: "いまいる場所",
-    hsStages: ["麓", "登り口", "中腹", "峠", "下り坂", "里が見える", "帰り着く"],
+    hsStages: ["麓", "登り口", "急坂", "峠", "下り", "里の灯り", "戸口"],
     moonWheelTitle: "月の輪",
     moonAt: (n) => `いまは「${n}」のあたりです。`,
     moonFlat: "四相が拮抗しています。まだどの相とも言えません。",
@@ -17413,8 +17492,8 @@ const T = {
     treePathRead: (a, b, d) => `${a}と${b}の間で、それは現実とつながっています。${d}`,
     treeDepth: ["尋ねられたことは、無意識のいちばん深いところから来ています", "尋ねられたことは、日々の意識よりずっと奥に根を持っています", "尋ねられたことは、暮らしのすぐ隣で起きていることと結びついています", "尋ねられたことは、身近な出来事に動かされているだけかもしれません"],
     treePillarsTitle: "三柱の重み",
-    treeMidHigh: "三本の柱は釣り合っていますが、中央が高すぎます。どちらへも踏み出せていません",
-    treeMidLow: "三本の柱は釣り合っていますが、中央が薄いようです。両極へ振れすぎています",
+    treeMidHigh: "三本の柱は釣り合っていますが、中央が厚すぎます。様子を見るばかりで、押し進める力が足りていません",
+    treeMidLow: "三本の柱は釣り合っていますが、中央が薄いようです。その都度どちらかに振り切れていて、判断の置きどころが定まっていません",
     treeNoPath: "今回は小径が現れませんでした。その像はまだ、座の上に留まっています。",
     topicExample: "例：今の仕事を続けるべきか",
     topicNote: "無料版では鑑定に反映されません。何を知りたいのか、自分で整理するための欄です。",
@@ -17785,7 +17864,7 @@ const T = {
     greekTenSkew: "明顯偏向一方",
     hsPassTitle: "山口",
     hsPassNow: "目前所在",
-    hsStages: ["山腳", "登山口", "半山腰", "山口", "下坡", "望見村落", "抵達"],
+    hsStages: ["山腳", "登山口", "陡坡", "山口", "下坡", "村落燈火", "門前"],
     moonWheelTitle: "月之輪",
     moonAt: (n) => `現在大約在「${n}」附近。`,
     moonFlat: "四相勢均力敵，尚無法歸於任一相。",
@@ -17843,8 +17922,8 @@ const T = {
     treePathRead: (a, b, d) => `它在${a}與${b}之間與現實相連。${d}`,
     treeDepth: ["您所問的，來自無意識最深之處", "您所問的，根扎在遠比日常意識更深的地方", "您所問的，與生活近旁正在發生的事相連", "您所問的，或許只是被身邊的事所牽動"],
     treePillarsTitle: "三柱的分量",
-    treeMidHigh: "三柱雖然均衡，但中央過高。您尚未向任何一邊邁出",
-    treeMidLow: "三柱雖然均衡，但中央過薄。您正向兩極擺盪過度",
+    treeMidHigh: "三柱雖然均衡，但中央過厚。您只是在觀望，推進的力道不足",
+    treeMidLow: "三柱雖然均衡，但中央過薄。您每次都倒向其中一邊，判斷尚無落腳之處",
     treeNoPath: "這次未出現小徑。那個意象仍停留在座上。",
     topicExample: "例：是否該繼續現在的工作",
     topicNote: "免費版不會納入解讀。這是供您自行整理想知道什麼的欄位。",
@@ -18200,7 +18279,7 @@ const T = {
     greekTenSkew: "明显偏向一方",
     hsPassTitle: "山口",
     hsPassNow: "目前所在",
-    hsStages: ["山脚", "登山口", "半山腰", "山口", "下坡", "望见村落", "抵达"],
+    hsStages: ["山脚", "登山口", "陡坡", "山口", "下坡", "村落灯火", "门前"],
     moonWheelTitle: "月之轮",
     moonAt: (n) => `现在大约在「${n}」附近。`,
     moonFlat: "四相势均力敌，尚无法归于任一相。",
@@ -18258,8 +18337,8 @@ const T = {
     treePathRead: (a, b, d) => `它在${a}与${b}之间与现实相连。${d}`,
     treeDepth: ["您所问的，来自无意识最深之处", "您所问的，根扎在远比日常意识更深的地方", "您所问的，与生活近旁正在发生的事相连", "您所问的，或许只是被身边的事所牵动"],
     treePillarsTitle: "三柱的分量",
-    treeMidHigh: "三柱虽然均衡，但中央过高。您尚未向任何一边迈出",
-    treeMidLow: "三柱虽然均衡，但中央过薄。您正向两极摆荡过度",
+    treeMidHigh: "三柱虽然均衡，但中央过厚。您只是在观望，推进的力道不足",
+    treeMidLow: "三柱虽然均衡，但中央过薄。您每次都倒向其中一边，判断尚无落脚之处",
     treeNoPath: "这次未出现小径。那个意象仍停留在座上。",
     topicExample: "例：是否该继续现在的工作",
     topicNote: "免费版不会纳入解读。这是供您自行整理想知道什么的栏位。",
@@ -18615,7 +18694,7 @@ const T = {
     greekTenSkew: "It leans heavily to one side",
     hsPassTitle: "The Pass",
     hsPassNow: "You are here",
-    hsStages: ["The foot", "Trailhead", "Midslope", "The Pass", "Descent", "Valley in sight", "Arrival"],
+    hsStages: ["The foot", "Trailhead", "The steep", "The Pass", "Descent", "Village lights", "The doorstep"],
     moonWheelTitle: "The Wheel",
     moonAt: (n) => `You are near "${n}".`,
     moonFlat: "The four phases are evenly matched. No one phase holds yet.",
@@ -18697,8 +18776,8 @@ const T = {
     treePathRead: (a, b, d) => `It connects to daily life between ${a} and ${b}. ${d}`,
     treeDepth: ["What you asked comes from the deepest place in the unconscious", "What you asked has roots well beneath everyday awareness", "What you asked is tied to something happening right beside your daily life", "What you asked may simply be moved by things close at hand"],
     treePillarsTitle: "Weight of the three pillars",
-    treeMidHigh: "The three pillars are even, but the centre is too high. You have not stepped either way",
-    treeMidLow: "The three pillars are even, but the centre is thin. You are swinging to both extremes",
+    treeMidHigh: "The three pillars are even, but the centre is too thick. You are watching and waiting; the push to move is missing",
+    treeMidLow: "The three pillars are even, but the centre is thin. You swing all the way to one side each time; your judgement has no settled place to stand",
     treeNoPath: "No path appeared this time. The image is still resting on the seats themselves.",
     topicExample: "e.g. whether to stay in this job",
     topicNote: "The free version does not use this. It is a space to set out what you want to know.",
@@ -19069,7 +19148,7 @@ const T = {
     greekTenSkew: "Malaki ang kiling sa isang panig",
     hsPassTitle: "Ang Tuktok",
     hsPassNow: "Nandito ka",
-    hsStages: ["Paanan", "Simula ng landas", "Gitnang dalisdis", "Tuktok", "Paglusong", "Tanaw na ang nayon", "Dating"],
+    hsStages: ["Paanan", "Simula ng landas", "Matarik", "Tuktok", "Paglusong", "Ilaw ng nayon", "Sa pintuan"],
     moonWheelTitle: "Gulong ng Buwan",
     moonAt: (n) => `Nasa paligid ka ng "${n}".`,
     moonFlat: "Patas ang apat na yugto. Wala pang nangingibabaw.",
@@ -19127,8 +19206,8 @@ const T = {
     treePathRead: (a, b, d) => `Nag-uugnay ito sa araw-araw sa pagitan ng ${a} at ${b}. ${d}`,
     treeDepth: ["Ang itinanong mo ay nagmumula sa pinakamalalim ng kamalayan", "Ang itinanong mo ay may ugat na malalim sa ilalim ng pang-araw-araw", "Ang itinanong mo ay nakaugnay sa nangyayari mismo sa tabi ng buhay mo", "Ang itinanong mo ay maaaring gumagalaw lamang dahil sa mga bagay na malapit"],
     treePillarsTitle: "Bigat ng tatlong haligi",
-    treeMidHigh: "Pantay ang tatlong haligi, ngunit masyadong mataas ang gitna. Hindi ka pa humahakbang sa kahit saan",
-    treeMidLow: "Pantay ang tatlong haligi, ngunit manipis ang gitna. Sobra ang pag-ugoy mo sa dalawang dulo",
+    treeMidHigh: "Pantay ang tatlong haligi, ngunit masyadong makapal ang gitna. Nagmamasid ka lang; kulang ang tulak upang umusad",
+    treeMidLow: "Pantay ang tatlong haligi, ngunit manipis ang gitna. Bawat pagkakataon ay bumabaling ka nang husto sa isang panig; wala pang tiyak na kinatatayuan ang pasya mo",
     treeNoPath: "Walang lumitaw na landas ngayon. Nasa mga upuan pa rin ang imahe.",
     topicExample: "hal. kung dapat manatili sa trabahong ito",
     topicNote: "Hindi ito ginagamit sa libreng bersyon. Espasyo ito para malinawan kung ano ang gusto mong malaman.",
@@ -19484,7 +19563,7 @@ const T = {
     greekTenSkew: "เอนไปด้านหนึ่งอย่างมาก",
     hsPassTitle: "ช่องเขา",
     hsPassNow: "ตำแหน่งตอนนี้",
-    hsStages: ["เชิงเขา", "ปากทาง", "กลางเขา", "ช่องเขา", "ทางลง", "เห็นหมู่บ้าน", "ถึงที่หมาย"],
+    hsStages: ["เชิงเขา", "ปากทาง", "ทางชัน", "ช่องเขา", "ทางลง", "แสงไฟหมู่บ้าน", "หน้าประตู"],
     moonWheelTitle: "วงล้อดวงจันทร์",
     moonAt: (n) => `ตอนนี้อยู่ราว ๆ "${n}"`,
     moonFlat: "ทั้งสี่ระยะสูสีกัน ยังบอกไม่ได้ว่าอยู่ระยะใด",
@@ -19542,8 +19621,8 @@ const T = {
     treePathRead: (a, b, d) => `มันเชื่อมกับชีวิตจริงระหว่าง${a}กับ${b} ${d}`,
     treeDepth: ["สิ่งที่คุณถามมาจากส่วนที่ลึกที่สุดของจิตใต้สำนึก", "สิ่งที่คุณถามมีรากอยู่ลึกกว่าจิตสำนึกประจำวันมาก", "สิ่งที่คุณถามเชื่อมกับเรื่องที่เกิดขึ้นข้าง ๆ ชีวิตประจำวัน", "สิ่งที่คุณถามอาจเพียงถูกขับด้วยเรื่องใกล้ตัว"],
     treePillarsTitle: "น้ำหนักของสามเสา",
-    treeMidHigh: "สามเสาสมดุลกัน แต่ตรงกลางสูงเกินไป คุณยังไม่ก้าวไปทางใดเลย",
-    treeMidLow: "สามเสาสมดุลกัน แต่ตรงกลางบางเกินไป คุณแกว่งไปสองขั้วมากเกินไป",
+    treeMidHigh: "สามเสาสมดุลกัน แต่ตรงกลางหนาเกินไป คุณเอาแต่รอดู ยังขาดแรงผลักให้เดินหน้า",
+    treeMidLow: "สามเสาสมดุลกัน แต่ตรงกลางบางเกินไป คุณเทไปสุดทางฝั่งใดฝั่งหนึ่งทุกครั้ง การตัดสินยังไม่มีที่ยืนที่แน่นอน",
     treeNoPath: "ครั้งนี้ไม่มีเส้นทางปรากฏ ภาพนั้นยังคงอยู่บนที่นั่ง",
     topicExample: "เช่น ควรทำงานนี้ต่อไหม",
     topicNote: "รุ่นฟรีจะไม่นำไปใช้ เป็นช่องสำหรับเรียบเรียงว่าคุณอยากรู้อะไร",
@@ -19900,7 +19979,7 @@ const T = {
     greekTenSkew: "Det lutar kraftigt åt ett håll",
     hsPassTitle: "Passet",
     hsPassNow: "Du är här",
-    hsStages: ["Bergsfoten", "Ledens början", "Halvvägs upp", "Passet", "Nedstigningen", "Byn i sikte", "Framme"],
+    hsStages: ["Bergsfoten", "Ledens början", "Branten", "Passet", "Nedstigningen", "Byns ljus", "Vid dörren"],
     moonWheelTitle: "Månhjulet",
     moonAt: (n) => `Du är nära ”${n}”.`,
     moonFlat: "De fyra faserna väger jämnt. Ingen fas håller ännu.",
@@ -19958,8 +20037,8 @@ const T = {
     treePathRead: (a, b, d) => `Det möter vardagen mellan ${a} och ${b}. ${d}`,
     treeDepth: ["Det du frågade kommer från den djupaste platsen i det omedvetna", "Det du frågade har rötter långt under det dagliga medvetandet", "Det du frågade hänger ihop med något som sker alldeles intill vardagen", "Det du frågade rörs kanske bara av sådant som ligger nära till hands"],
     treePillarsTitle: "De tre pelarnas tyngd",
-    treeMidHigh: "De tre pelarna är jämna, men mitten är för hög. Du har inte tagit steget åt något håll",
-    treeMidLow: "De tre pelarna är jämna, men mitten är tunn. Du svänger för långt åt båda hållen",
+    treeMidHigh: "De tre pelarna är jämna, men mitten är för tjock. Du avvaktar; kraften att driva på saknas",
+    treeMidLow: "De tre pelarna är jämna, men mitten är tunn. Du svänger hela vägen åt ena hållet varje gång; ditt omdöme har ingen fast plats att stå på",
     treeNoPath: "Ingen stig visade sig denna gång. Bilden vilar ännu på sätena.",
     topicExample: "t.ex. om jag ska stanna kvar i jobbet",
     topicNote: "Gratisversionen använder inte detta. Det är ett utrymme för att reda ut vad du vill veta.",
@@ -23079,6 +23158,48 @@ export default function TarotDraw() {
         .greek-area-note { font-size: 10.5px; color: var(--muted); display: flex; flex-direction: column; gap: 2px; }
         .greek-area-note b { font-weight: 400; color: var(--gold-soft); font-size: 11px; }
         .cross-vec, .greek-ten, .hs-pass, .tree-vis { width: 100%; max-width: 340px; margin: 14px auto 4px; }
+        /*
+          図の地。
+
+          ⚠️ これまで図は本文と同じ背景の上に直接置かれていて、
+          「文章の途中に線が引いてある」ようにしか見えなかった。
+          枠と地を持たせると、そこだけ別の面になり、図として立つ。
+
+          ⚠️ 地は暗いほうへ。明るくすると図の線より地のほうが目立つ。
+        */
+        .vis-plate {
+          position: relative; border-radius: 14px; overflow: hidden;
+          background:
+            radial-gradient(120% 80% at 50% 0%, rgba(120,160,255,0.10), transparent 62%),
+            linear-gradient(180deg, rgba(14,11,30,0.82), rgba(24,18,52,0.62));
+          border: 1px solid rgba(201,162,75,0.18);
+          box-shadow: inset 0 0 34px rgba(0,0,0,0.45);
+          padding: 8px 8px 4px;
+        }
+        /*
+          生命の樹の地。天から地へ落ちる縦の光を一本、ゆっくり流す。
+          稲妻が「事件」なら、こちらは「そこに電位があること」を示す常態。
+          ⚠️ 稲妻より暗くすること。地が主役になると柱が読めない。
+        */
+        .vis-plate.tree::before {
+          content: ""; position: absolute; inset: -20% -10%;
+          background:
+            radial-gradient(60% 34% at 50% 4%, rgba(150,200,255,0.16), transparent 70%),
+            radial-gradient(48% 26% at 50% 98%, rgba(201,162,75,0.12), transparent 70%);
+          pointer-events: none;
+        }
+        .vis-plate.tree::after {
+          content: ""; position: absolute; left: 0; right: 0; top: -40%; height: 40%;
+          background: linear-gradient(180deg, transparent, rgba(160,205,255,0.13), transparent);
+          animation: treeVeil 7.2s linear infinite;
+          pointer-events: none;
+        }
+        @keyframes treeVeil {
+          0%   { transform: translateY(0); opacity: 0; }
+          12%  { opacity: 1; }
+          88%  { opacity: 1; }
+          100% { transform: translateY(350%); opacity: 0; }
+        }
         .cross-vec-title, .greek-ten-title, .hs-pass-title, .tree-vis-title {
           font-family: 'Shippori Mincho', serif; font-size: 12px;
           letter-spacing: 0.14em; text-align: center; margin-bottom: 8px;
@@ -23094,6 +23215,12 @@ export default function TarotDraw() {
         .cv-ripple {
           transform-box: fill-box; transform-origin: center;
           animation: cvRipple 2s ease-out infinite;
+        }
+        /* 攻めている領域だけ、ゆっくり息をする */
+        .cv-live { animation: cvLive 3.2s ease-in-out infinite; }
+        @keyframes cvLive {
+          0%, 100% { opacity: 0.18; }
+          50%      { opacity: 0.34; }
         }
         @keyframes cvRipple {
           0%   { transform: scale(0.5); opacity: 0.9; }
@@ -23247,7 +23374,7 @@ export default function TarotDraw() {
           letter-spacing: 0.12em; text-align: center; margin: 14px 0 7px;
         }
         .tree-path.sel { animation: none; stroke-dashoffset: 0; }
-        .tree-pillars { display: grid; gap: 5px; margin-top: 0; }
+        .tree-pillars { display: grid; gap: 6px; margin-top: 8px; }
         .tree-pillar { display: flex; align-items: center; gap: 8px; }
         .tree-pillar-bar {
           flex: 1; height: 10px; border-radius: 5px;
@@ -23269,15 +23396,31 @@ export default function TarotDraw() {
           letter-spacing: 0.14em; text-align: center; margin-bottom: 10px;
         }
         /* 秩序は寒色、混沌は暖色。どちらが良いという色にはしない */
-        .choice-axis-block { margin-bottom: 12px; }
+        /*
+          ⚠️ 字下げを持たせないこと。
+          帯と同じ幅の中に置いてあるので、区分の見出しは帯と必ず揃う。
+          以前は帯だけが名前と呼び名のぶん右にずれていて、
+          「中庸」の字が帯の中庸の窓と一致していなかった。
+        */
         .choice-zones {
           display: grid; grid-template-columns: 42.5% 15% 42.5%;
-          margin: 0 0 6px; padding-left: calc(4.6em + 6px);
+          margin: 0 0 4px;
           font-size: 9.5px; letter-spacing: 0.06em; text-align: center;
         }
-        .choice-zones .law { color: #8FC7E8; text-align: left; }
-        .choice-zones .neutral { color: rgba(220,210,190,0.75); }
-        .choice-zones .chaos { color: #E8A87C; text-align: right; }
+        .choice-zones .law { color: #FFD95C; text-align: left; }
+        .choice-zones .neutral { color: #B8D96A; }
+        .choice-zones .chaos { color: #B98CFF; text-align: right; }
+        /* 道ごとの枠。二つを同じ形で並べて見比べる */
+        .choice-card {
+          border-radius: 12px; padding: 10px 12px 8px; margin-bottom: 10px;
+          background: linear-gradient(180deg, rgba(14,11,30,0.72), rgba(24,18,52,0.5));
+          border: 1px solid rgba(201,162,75,0.20);
+          box-shadow: inset 0 0 26px rgba(0,0,0,0.4);
+        }
+        .choice-card-head {
+          display: flex; align-items: center; justify-content: space-between;
+          gap: 8px; margin-bottom: 7px;
+        }
         /* 帯の地。格子と破片はここに描く */
         .choice-track-svg {
           position: absolute; inset: -5px 0; width: 100%; height: 30px;
@@ -23293,19 +23436,23 @@ export default function TarotDraw() {
           font-size: 9px; padding: 1px 4px; border-radius: 999px;
           letter-spacing: 0.02em; white-space: nowrap; overflow: hidden;
         }
-        .choice-zone-tag.law { color: #8FC7E8; background: rgba(143,199,232,0.14); }
-        .choice-zone-tag.neutral { color: rgba(220,210,190,0.9); background: rgba(255,255,255,0.10); }
-        .choice-zone-tag.chaos { color: #E8A87C; background: rgba(232,168,124,0.14); }
-        .choice-axis-row { display: flex; align-items: center; gap: 6px; }
+        .choice-zone-tag.law { color: #FFD95C; background: rgba(255,217,92,0.14); }
+        .choice-zone-tag.neutral { color: #B8D96A; background: rgba(184,217,106,0.14); }
+        .choice-zone-tag.chaos { color: #B98CFF; background: rgba(138,92,214,0.18); }
         /* 道の性質。目盛りの真下に置き、字下げで目盛りと揃える */
         .choice-axis-kind {
-          margin: 5px 0 0; padding-left: calc(4.6em + 6px);
-          font-size: 10.5px; line-height: 1.7;
+          margin: 7px 0 0; font-size: 10.5px; line-height: 1.7;
         }
         .choice-axis-kind.a { color: var(--gold-soft); }
         .choice-axis-kind.b { color: #B9D4DA; }
+        /*
+          ⚠️ 幅を固定しないこと。4.6em に切っていたので
+          「一つ目の道」が「一つ目…」になっていた。
+          行を独立させたので、切る理由が無くなっている。
+        */
         .choice-axis-name {
-          flex: 0 0 4.6em; font-size: 10px; text-align: right;
+          flex: 1 1 auto; min-width: 0; font-size: 11px; text-align: left;
+          font-family: 'Shippori Mincho', serif;
           overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
         }
         .choice-axis-name.a { color: var(--gold-soft); }
@@ -23320,13 +23467,13 @@ export default function TarotDraw() {
           border-radius: 2px; z-index: 2;
         }
         .choice-axis-track .pin.law {
-          background: #BFE6FF; box-shadow: 0 0 10px rgba(120,200,255,0.95), 0 0 22px rgba(120,200,255,0.5);
+          background: #FFF0A8; box-shadow: 0 0 10px rgba(255,217,92,0.95), 0 0 24px rgba(255,217,92,0.55);
         }
         .choice-axis-track .pin.chaos {
-          background: #FFC48F; box-shadow: 0 0 10px rgba(255,150,80,0.95), 0 0 22px rgba(255,150,80,0.5);
+          background: #C89AFF; box-shadow: 0 0 10px rgba(138,92,214,0.95), 0 0 24px rgba(138,92,214,0.6);
         }
         .choice-axis-track .pin.neutral {
-          background: #FFF3D0; box-shadow: 0 0 10px rgba(255,240,200,0.9), 0 0 20px rgba(255,240,200,0.45);
+          background: #D6F09A; box-shadow: 0 0 10px rgba(184,217,106,0.9), 0 0 22px rgba(184,217,106,0.5);
         }
         /* 地はSVGが描くので、枠は器だけ。高さを取って図として立たせる */
         .choice-axis-track {
@@ -24353,7 +24500,7 @@ export default function TarotDraw() {
           .horo-share, .horo-rank-name, .greek-area-num { animation: none !important; }
           .horo-sector, .cross-vec-arrow, .greek-ten-poly, .hs-pass-climb,
           .hs-pass-ring, .tree-bolt, .tree-node, .tree-path, .cv-ripple,
-          .reading-head-hit,
+          .reading-head-hit, .cv-live, .vis-plate.tree::after,
           .hs-mane, .tree-pillar-bolt,
           .aff-spin, .aff-flow, .aff-drift, .aff-rain, .aff-snow, .aff-pulse { animation: none !important; }
           .tree-pillar-bolt { opacity: 0.22 !important; }
