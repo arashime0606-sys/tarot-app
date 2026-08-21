@@ -308,53 +308,68 @@ const MAJOR_ROMAN = [
   "0", "I", "II", "III", "IV", "V", "VI", "VII", "VIII", "IX",
   "X", "XI", "XII", "XIII", "XIV", "XV", "XVI", "XVII", "XVIII", "XIX", "XX", "XXI",
 ];
+/*
+  大アルカナのキーワード。
+
+  ⚠️ 極性は ORIENTATION_INVERTED_CARDS と必ず一致させること。
+  死神13・悪魔15・塔16・月18 は「正位置が凶、逆位置が吉」の四枚。
+  ところが韓国語・ベトナム語・インドネシア語・マレー語の表では、
+  塔の正位置が「解放・偽りの崩壊」、逆位置が「崩壊・混乱」と、
+  そっくり逆に書かれていた。
+  ★の符号・図鑑の暗い版・ホロスコープの長所／課題は
+  isGoodOrientation を見ているので、
+  「凶と採点しながら吉の語を並べる」状態になっていた。
+
+  ⚠️ 語数は日本語と英語だけ 4→7 に増やしてある。
+  他9言語は4語のまま（未消化。増やすときは極性を崩さないこと）。
+*/
 const MAJOR_UP = [
-  "冒険心・可能性・無邪気な始まり・自由な魂",
-  "知性・はじまり・意志力・創造の才",
-  "洞察力・直感力・秘められた知恵・静かな神秘",
-  "母性・豊かさ・実り・官能的な喜び",
-  "リーダーシップ・プライド・秩序・確立された権威",
-  "社交性・誠実・伝統・精神的指導",
-  "共感・安心・選択・調和ある結びつき",
-  "野望・克服・意志の勝利・自己統制",
-  "信念・忍耐・内なる強さ・優しい支配力",
-  "内観・思慮深い・孤独な探求・導きの光",
-  "好転・チャンス到来・巡り合わせ・運命の転機",
-  "正当性・バランス・因果応報・公正な裁き",
-  "忍耐・献身的・視点の転換・自己犠牲",
-  "方向転換・運命・変容・終わりと再生",
-  "平和的解決・柔軟性・調和・中庸の美徳",
-  "本能・快楽主義・執着・誘惑への屈服",
-  "浄化・葛藤・突然の啓示・崩壊からの覚醒",
-  "可能性・才能・希望・静かな癒し",
-  "見えない敵・用心・幻惑・潜在意識の揺らぎ",
-  "成果・解決・活力・屈託のない成功",
-  "意識改革・復活・召命・過去からの解放",
-  "統合・最高地点への到達・完成・全体性の実現",
+  "冒険心・可能性・無邪気な始まり・自由な魂・型にはまらない・身軽さ・直感に従う",
+  "知性・はじまり・意志力・創造の才・手際のよさ・言葉が通る・道具が揃う",
+  "洞察力・直感力・秘められた知恵・静かな神秘・清らかさ・沈黙の理解・学びの深まり",
+  "母性・豊かさ・実り・官能的な喜び・包容力・育てる力・美への感度",
+  "リーダーシップ・プライド・秩序・確立された権威・責任を負う・現実的な統率・揺るがぬ基盤",
+  "社交性・誠実・伝統・精神的指導・信頼・守るべき規範・良き助言者",
+  "共感・安心・選択・調和ある結びつき・惹かれ合う・素直な気持ち・二人の合意",
+  "野望・克服・意志の勝利・自己統制・前進・勢い・決断の速さ",
+  "信念・忍耐・内なる強さ・優しい支配力・落ち着き・粘り・恐れを手なずける",
+  "内観・思慮深い・孤独な探求・導きの光・熟慮・経験の蓄積・静かな助言",
+  "好転・チャンス到来・巡り合わせ・運命の転機・時流に乗る・潮目・偶然の一致",
+  "正当性・バランス・因果応報・公正な裁き・契約・筋を通す・冷静な判断",
+  "忍耐・献身的・視点の転換・自己犠牲・待つ時間・修行・見方を変える",
+  "終わり・別離・断絶・避けられない幕引き・喪失・清算・後戻りできない変化",
+  "平和的解決・柔軟性・調和・中庸の美徳・節度・混ぜ合わせる・程よい加減",
+  "本能・快楽主義・執着・誘惑への屈服・依存・断ち切れない鎖・自己欺瞞",
+  "突然の崩壊・予期せぬ衝撃・破局・足場が崩れる・強制的な終了・避けようのない一撃・積み上げの瓦解",
+  "可能性・才能・希望・静かな癒し・展望・澄んだ気持ち・救い",
+  "見えない敵・用心・幻惑・潜在意識の揺らぎ・不安・曖昧さ・偽り",
+  "成果・解決・活力・屈託のない成功・祝福・明るさ・素直な喜び",
+  "意識改革・復活・召命・過去からの解放・再会・知らせ・やり直しの機会",
+  "統合・最高地点への到達・完成・全体性の実現・円満・卒業・満ち足りる",
 ];
 const MAJOR_REV = [
-  "空回り・怠ける・無謀・計画性の欠如",
-  "優柔不断・無計画・力の誤用・自信過剰",
-  "情緒不安定・偏見・秘密・表面的な理解",
-  "不仲・欠如・過保護・停滞した依存",
-  "強引・空回り・支配・権威の濫用",
-  "不道徳・無慈悲・形式主義・反抗",
-  "違和感・気まぐれ・不調和・誤った選択",
-  "空回り・独りよがり・方向性の喪失・暴走",
-  "挫ける・依存・自信の欠如・弱さの露呈",
-  "闇雲さ・閉じこもる・孤立・頑なさ",
-  "翻弄・悪いタイミング・悪循環・停滞する運",
-  "不正・矛盾・不公平・責任回避",
-  "不自由・間違った視点・無駄な犠牲・執着",
-  "思いきれない・堂々巡り・変化への抵抗・恐れ",
-  "事なかれ主義・節度がない・過剰・自制の欠如",
-  "解放・断ち切る・束縛の自覚・脱出の兆し",
-  "混乱・ショックな気持ち・危機の回避・延命",
-  "停滞・期待はずれ・失望・自信の喪失",
-  "徐々に好転・次第に落ち着く・不安の解消・真実の発覚",
-  "立場を失う・トラブル・一時的な停滞・過信",
-  "混乱・後悔・優柔不断・機会の逸失",
-  "不完全燃焼・行き詰り・未完成・目標の見直し",
+  "空回り・怠ける・無謀・計画性の欠如・その場しのぎ・約束の反故・現実からの逃避",
+  "優柔不断・無計画・力の誤用・自信過剰・口先だけ・準備不足・小細工",
+  "情緒不安定・偏見・秘密・表面的な理解・神経質・思い込み・閉ざした心",
+  "不仲・欠如・過保護・停滞した依存・浪費・怠惰・満たされなさ",
+  "強引・空回り・支配・権威の濫用・頑固・力任せ・面子へのこだわり",
+  "不道徳・無慈悲・形式主義・反抗・お節介・建前・信用の失墜",
+  "違和感・気まぐれ・不調和・誤った選択・迷い・浮つき・すれ違い",
+  "独りよがり・方向性の喪失・暴走・焦り・力の空費・停車・強引な突破",
+  "挫ける・依存・自信の欠如・弱さの露呈・短気・自己嫌悪・投げやり",
+  "闇雲さ・閉じこもる・孤立・頑なさ・疑心・現実離れ・助言の拒絶",
+  "翻弄・悪いタイミング・悪循環・停滞する運・機を逸する・見込み違い・巻き戻し",
+  "不正・矛盾・不公平・責任回避・偏り・言い逃れ・法外な要求",
+  "不自由・間違った視点・無駄な犠牲・執着・徒労・見返りを求める・自縄自縛",
+  "再生・再出発・区切りのあとの回復・立ち直り・過去の整理・新しい段取り・再び動き出す",
+  "事なかれ主義・節度がない・過剰・自制の欠如・ちぐはぐ・浪費・混ぜすぎ",
+  "解放・断ち切る・束縛の自覚・脱出の兆し・依存からの回復・目が覚める・縁を切る",
+  "崩壊を免れる・被害が小さく済む・持ちこたえる・衝撃の緩和・立て直しの余地・崩れる前に気づく・危機の先送り",
+  "停滞・期待はずれ・失望・自信の喪失・高望み・目標の見失い・冷めた気持ち",
+  "徐々に好転・次第に落ち着く・不安の解消・真実の発覚・霧が晴れる・誤解が解ける・眠りから覚める",
+  "立場を失う・トラブル・一時的な停滞・過信・空元気・虚栄・喜びの遅れ",
+  "混乱・後悔・優柔不断・機会の逸失・過去への執着・呼び戻せない・決断の先送り",
+  "不完全燃焼・行き詰り・未完成・目標の見直し・あと一歩・惰性・区切りのつかなさ",
 ];
 
 // 大アルカナ キーワードの多言語対応（順序はMAJOR_UP/REVと同一・22枚）
@@ -373,12 +388,12 @@ const MAJOR_UP_I18N = {
     "좋은 변화・기회의 도래・전환점・운명의 흐름",
     "진실・균형・공정한 판단・책임",
     "인내・헌신・새로운 시각・기다림의 각오",
-    "방향 전환・운명・필요한 끝맺음・재생",
+    "끝・이별・단절・피할 수 없는 마무리",
     "평온・조화・절제・알맞은 어우러짐",
-    "강렬한 이끌림・욕망・세속의 인연・솔직한 본능",
-    "급격한 변혁・해방・거짓의 붕괴・충격",
+    "본능・쾌락에의 탐닉・집착・유혹에 굴복",
+    "갑작스러운 붕괴・예기치 못한 충격・파국・발밑이 무너짐",
     "희망・치유・이상・먼 곳의 빛",
-    "상상력・예민함・무의식의 세계・아련한 매혹",
+    "보이지 않는 적・경계・현혹・무의식의 흔들림",
     "성공・생명력・밝은 기쁨・인정받음",
     "각성・부름・재평가・용서",
     "완성・온전함・성취・우주의 조화",
@@ -397,12 +412,12 @@ const MAJOR_UP_I18N = {
     "Chuyển biến tốt lành・cơ hội đến・bước ngoặt・dòng chảy số phận",
     "Sự thật・cân bằng・phán quyết công minh・trách nhiệm",
     "Lòng kiên nhẫn・sự hiến dâng・góc nhìn mới・sẵn lòng chờ đợi",
-    "Chuyển hướng・định mệnh・kết thúc cần thiết・tái sinh",
+    "Kết thúc・chia lìa・đứt đoạn・hồi kết không tránh được",
     "Sự bình yên・hài hòa・tự chủ・pha trộn vừa vặn",
-    "Sức hút mãnh liệt・khát khao・ràng buộc trần tục・bản năng chân thật",
-    "Biến động bất ngờ・giải phóng・sụp đổ của điều giả tạo・cú sốc",
+    "Bản năng・sa vào khoái lạc・chấp niệm・khuất phục cám dỗ",
+    "Sụp đổ đột ngột・cú sốc bất ngờ・tan vỡ・nền móng lở ra",
     "Hy vọng・chữa lành・lý tưởng・ánh sáng nơi xa",
-    "Trí tưởng tượng・sự nhạy cảm・thế giới vô thức・vẻ quyến rũ mơ hồ",
+    "Kẻ địch không thấy・đề phòng・mê hoặc・vô thức chao đảo",
     "Thành công・sức sống・niềm vui rạng rỡ・sự công nhận",
     "Sự thức tỉnh・tiếng gọi・đánh giá lại・tha thứ",
     "Sự hoàn tất・trọn vẹn・thành tựu・hài hòa của vũ trụ",
@@ -421,12 +436,12 @@ const MAJOR_UP_I18N = {
     "Perubahan baik・datangnya peluang・titik balik・arus nasib",
     "Kebenaran・keseimbangan・keputusan adil・tanggung jawab",
     "Kesabaran・pengabdian・sudut pandang baru・kerelaan menunggu",
-    "Perubahan arah・takdir・akhir yang perlu・kelahiran kembali",
+    "Akhir・perpisahan・pemutusan・penutup yang tak terhindarkan",
     "Kedamaian・keselarasan・pengendalian diri・perpaduan yang pas",
-    "Daya tarik kuat・hasrat・ikatan duniawi・naluri yang jujur",
-    "Perombakan mendadak・pembebasan・runtuhnya yang palsu・kejutan",
+    "Naluri・tenggelam dalam kenikmatan・kelekatan・menyerah pada godaan",
+    "Keruntuhan mendadak・guncangan tak terduga・kehancuran・pijakan yang runtuh",
     "Harapan・penyembuhan・cita-cita・cahaya di kejauhan",
-    "Daya khayal・kepekaan・dunia bawah sadar・pesona yang samar",
+    "Musuh yang tak terlihat・kewaspadaan・tipuan・alam bawah sadar yang goyah",
     "Keberhasilan・vitalitas・kegembiraan terang・pengakuan",
     "Kebangkitan・panggilan・penilaian ulang・pengampunan",
     "Penyelesaian・keutuhan・pencapaian・harmoni semesta",
@@ -445,12 +460,12 @@ const MAJOR_UP_I18N = {
     "Perubahan baik・datangnya peluang・titik balik・arus nasib",
     "Kebenaran・keseimbangan・keputusan adil・tanggung jawab",
     "Kesabaran・pengabdian・sudut pandang baru・kerelaan menunggu",
-    "Perubahan arah・takdir・akhir yang perlu・kelahiran kembali",
+    "Pengakhiran・perpisahan・pemutusan・penamat yang tak dapat dielak",
     "Kedamaian・keselarasan・pengendalian diri・perpaduan yang pas",
-    "Daya tarik kuat・hasrat・ikatan duniawi・naluri yang jujur",
-    "Perombakan mendadak・pembebasan・runtuhnya yang palsu・kejutan",
+    "Naluri・hanyut dalam keseronokan・kelekatan・tunduk pada godaan",
+    "Keruntuhan mendadak・kejutan tak diduga・kemusnahan・pijakan yang runtuh",
     "Harapan・penyembuhan・cita-cita・cahaya di kejauhan",
-    "Daya khayal・kepekaan・dunia bawah sadar・pesona yang samar",
+    "Musuh yang tak kelihatan・berjaga-jaga・pukauan・bawah sedar yang goyah",
     "Keberhasilan・vitalitas・kegembiraan terang・pengakuan",
     "Kebangkitan・panggilan・penilaian semula・pengampunan",
     "Penyelesaian・keutuhan・pencapaian・harmoni semesta",
@@ -469,10 +484,10 @@ const MAJOR_UP_I18N = {
     "好轉・機會來臨・機緣際會・命運的轉機",
     "正當性・平衡・因果報應・公正的裁決",
     "忍耐・奉獻・視角的轉換・自我犧牲",
-    "轉向・命運・蛻變・終結與重生",
+    "終結・離別・斷絕・無法迴避的落幕",
     "和平的解決方案・柔軟性・和諧・中庸之美",
     "本能・享樂主義・執著・向誘惑屈服",
-    "淨化・衝突・突發的啟示・崩解後的覺醒",
+    "突然的崩塌・意料之外的衝擊・破局・立足之處崩解",
     "可能性・才能・希望・靜謐的療癒",
     "看不見的敵人・謹慎・迷惑・潛意識的動搖",
     "成果・解決・活力・無憂無慮的成功",
@@ -493,10 +508,10 @@ const MAJOR_UP_I18N = {
     "好转・机会来临・机缘际会・命运的转机",
     "正当性・平衡・因果报应・公正的裁决",
     "忍耐・奉献・视角的转换・自我牺牲",
-    "转向・命运・蜕变・终结与重生",
+    "终结・离别・断绝・无法回避的落幕",
     "和平的解决方案・柔软性・和谐・中庸之美",
     "本能・享乐主义・执着・向诱惑屈服",
-    "净化・冲突・突发的启示・崩解后的觉醒",
+    "突然的崩塌・意料之外的冲击・破局・立足之处崩解",
     "可能性・才能・希望・静谧的疗愈",
     "看不见的敌人・谨慎・迷惑・潜意识的动摇",
     "成果・解决・活力・无忧无虑的成功",
@@ -504,28 +519,28 @@ const MAJOR_UP_I18N = {
     "集成・抵达最高点・完成・全体性的实现",
   ],
   en: [
-    "Adventure · possibility · innocent beginnings · a free spirit",
-    "Intellect · new beginnings · willpower · creative talent",
-    "Insight · intuition · hidden wisdom · quiet mystery",
-    "Motherhood · abundance · fruitfulness · sensual joy",
-    "Leadership · pride · order · established authority",
-    "Sociability · sincerity · tradition · spiritual guidance",
-    "Empathy · reassurance · choice · harmonious bonds",
-    "Ambition · overcoming odds · triumph of will · self-mastery",
-    "Conviction · patience · inner strength · gentle control",
-    "Introspection · thoughtfulness · solitary quest · guiding light",
-    "A turn for the better · opportunity · fateful encounters · a turning point",
-    "Fairness · balance · cause and effect · impartial judgment",
-    "Patience · devotion · a shift in perspective · self-sacrifice",
-    "A change of direction · destiny · transformation · endings and rebirth",
-    "Peaceful resolution · flexibility · harmony · the virtue of moderation",
-    "Instinct · hedonism · attachment · yielding to temptation",
-    "Purification · conflict · sudden revelation · awakening from collapse",
-    "Possibility · talent · hope · quiet healing",
-    "An unseen threat · caution · illusion · stirrings of the subconscious",
-    "Achievement · resolution · vitality · effortless success",
-    "A shift in consciousness · revival · a calling · release from the past",
-    "Integration · reaching the highest point · completion · wholeness realized",
+    "Adventure · possibility · innocent beginnings · a free spirit · unbound by form · travelling light · following instinct",
+    "Intellect · new beginnings · willpower · creative talent · deftness · words that land · the tools are at hand",
+    "Insight · intuition · hidden wisdom · quiet mystery · purity · understanding without speech · study deepening",
+    "Motherhood · abundance · fruitfulness · sensual joy · capacity to hold · the power to nurture · an eye for beauty",
+    "Leadership · pride · order · established authority · taking responsibility · practical command · unshakeable ground",
+    "Sociability · sincerity · tradition · spiritual guidance · trust · a standard worth keeping · a good adviser",
+    "Empathy · reassurance · choice · harmonious bonds · mutual attraction · honest feeling · agreement between two",
+    "Ambition · overcoming odds · triumph of will · self-mastery · advance · momentum · deciding quickly",
+    "Conviction · patience · inner strength · gentle control · composure · staying power · taming what you fear",
+    "Introspection · thoughtfulness · solitary quest · guiding light · deliberation · accumulated experience · quiet counsel",
+    "A turn for the better · opportunity · fateful encounters · a turning point · catching the current · the tide shifting · meaningful coincidence",
+    "Fairness · balance · cause and effect · impartial judgment · contracts · keeping things straight · cool assessment",
+    "Patience · devotion · a shift in perspective · self-sacrifice · time spent waiting · discipline · seeing it another way",
+    "An ending · parting · severance · a close that cannot be avoided · loss · settling accounts · change with no way back",
+    "Peaceful resolution · flexibility · harmony · the virtue of moderation · restraint · blending · the right measure",
+    "Instinct · hedonism · attachment · yielding to temptation · dependence · a chain that will not break · self-deception",
+    "Sudden collapse · an unforeseen blow · rupture · the footing gives way · a forced ending · a strike you cannot dodge · what was built comes apart",
+    "Possibility · talent · hope · quiet healing · a clear view · a settled mind · relief",
+    "An unseen threat · caution · illusion · stirrings of the subconscious · unease · vagueness · falsehood",
+    "Achievement · resolution · vitality · effortless success · blessing · brightness · plain gladness",
+    "A shift in consciousness · revival · a calling · release from the past · reunion · word arriving · a chance to begin again",
+    "Integration · reaching the highest point · completion · wholeness realised · fullness · graduating · being satisfied",
   ],
   tl: [
     "Adventure · posibilidad · inosenteng simula · malayang kaluluwa",
@@ -541,12 +556,12 @@ const MAJOR_UP_I18N = {
     "Pagbabago sa mabuti · pagkakataon · mapalad na pagtatagpo · punto ng pagbabago",
     "Katarungan · balanse · sanhi at bunga · walang kinikilingang paghatol",
     "Pasensya · debosyon · pagbabago ng pananaw · sakripisyo sa sarili",
-    "Pagbabago ng direksyon · kapalaran · pagbabagong-anyo · katapusan at muling pagsilang",
+    "Katapusan · paghihiwalay · pagkaputol · wakas na hindi maiiwasan",
     "Mapayapang paglutas · kakayahang umangkop · pagkakaisa · birtud ng katamtaman",
-    "Instinct · paghahangad ng ligaya · pagkakabit · pagsuko sa tukso",
-    "Paglilinis · tunggalian · biglaang paghahayag · paggising mula sa pagbagsak",
+    "Instinct · paglubog sa layaw · pagkakabit · pagsuko sa tukso",
+    "Biglaang pagbagsak · hindi inaasahang dagok · pagkawasak · pagguho ng tinatayuan",
     "Posibilidad · talento · pag-asa · tahimik na paggaling",
-    "Hindi nakikitang banta · pag-iingat · ilusyon · pagbabago sa subconscious",
+    "Hindi nakikitang banta · pag-iingat · ilusyon · pag-alog ng subconscious",
     "Tagumpay · resolusyon · sigla · walang-pagod na tagumpay",
     "Pagbabago ng kamalayan · muling pagsilang · panawagan · paglaya mula sa nakaraan",
     "Integrasyon · pag-abot sa pinakamataas na punto · pagkumpleto · kabuuang naisakatuparan",
@@ -565,12 +580,12 @@ const MAJOR_UP_I18N = {
     "การเปลี่ยนแปลงในทางที่ดีขึ้น · โอกาส · การพบเจอที่ลิขิตไว้ · จุดเปลี่ยน",
     "ความยุติธรรม · ความสมดุล · เหตุและผล · การตัดสินอย่างเป็นธรรม",
     "ความอดทน · การอุทิศตน · การเปลี่ยนมุมมอง · การเสียสละตนเอง",
-    "การเปลี่ยนทิศทาง · ชะตากรรม · การเปลี่ยนแปลง · จุดจบและการเกิดใหม่",
+    "จุดจบ · การพลัดพราก · การตัดขาด · การปิดฉากที่เลี่ยงไม่ได้",
     "การแก้ปัญหาอย่างสันติ · ความยืดหยุ่น · ความกลมกลืน · คุณธรรมแห่งความพอดี",
-    "สัญชาตญาณ · การแสวงหาความสุข · ความยึดติด · การยอมจำนนต่อสิ่งยั่วยวน",
-    "การชำระล้าง · ความขัดแย้ง · การเปิดเผยอย่างฉับพลัน · การตื่นรู้จากความล่มสลาย",
+    "สัญชาตญาณ · จมอยู่กับความสุขสบาย · ความยึดติด · ยอมแพ้ต่อสิ่งล่อใจ",
+    "การพังทลายฉับพลัน · แรงกระแทกที่ไม่คาดคิด · ความล่มสลาย · พื้นที่ยืนพังลง",
     "ความเป็นไปได้ · พรสวรรค์ · ความหวัง · การเยียวยาอย่างเงียบสงบ",
-    "ศัตรูที่มองไม่เห็น · ความระมัดระวัง · ภาพลวงตา · ความสั่นไหวของจิตใต้สำนึก",
+    "ศัตรูที่มองไม่เห็น · ความระแวดระวัง · ภาพลวง · จิตใต้สำนึกที่สั่นคลอน",
     "ความสำเร็จ · การแก้ไข · พลังชีวิต · ความสำเร็จอย่างไร้กังวล",
     "การเปลี่ยนแปลงทางจิตสำนึก · การฟื้นคืน · การเรียกร้อง · การปลดปล่อยจากอดีต",
     "การผสานรวม · การไปถึงจุดสูงสุด · ความสมบูรณ์ · การบรรลุความเป็นองค์รวม",
@@ -592,12 +607,12 @@ const MAJOR_REV_I18N = {
     "상황에 휘둘림・나쁜 시기・놓친 기회・후퇴",
     "불공정・대립・편향・책임의 회피",
     "속박감・잘못된 시각・헛된 희생・막다른 길",
-    "놓지 못함・제자리걸음・변화의 거부・정체",
+    "재생・재출발・매듭 뒤의 회복・다시 움직이기 시작함",
     "불균형・과잉・어긋남・바닥난 인내",
-    "얽매임・중독・유혹・구속하는 관계",
-    "붕괴・혼란・갑작스러운 상실・예기치 못한 타격",
+    "해방・끊어냄・속박의 자각・탈출의 조짐",
+    "붕괴를 면함・피해가 작게 그침・버텨냄・무너지기 전에 알아차림",
     "희망 상실・실망・빛바랜 이상・자기 의심",
-    "불안・혼미・기만・감춰진 진실",
+    "점차 호전・차차 가라앉음・불안의 해소・진실의 드러남",
     "미뤄진 성공・소진・교만・사그라든 열정",
     "과거에 대한 후회・부름의 거부・그릇된 판단・주저함",
     "미완성・공허함・뒤처짐・닫히지 않은 원",
@@ -616,12 +631,12 @@ const MAJOR_REV_I18N = {
     "Bị hoàn cảnh xoay vần・thời điểm xấu・cơ hội vuột mất・thụt lùi",
     "Bất công・xung đột・thiên vị・trốn tránh trách nhiệm",
     "Cảm giác bị trói buộc・góc nhìn sai lệch・hy sinh vô nghĩa・bế tắc",
-    "Không nỡ buông bỏ・luẩn quẩn・chối bỏ đổi thay・đình trệ",
+    "Tái sinh・khởi đầu lại・hồi phục sau khi khép lại・bắt đầu chuyển động",
     "Mất cân bằng・thái quá・không tương hợp・cạn kiệt kiên nhẫn",
-    "Bị trói buộc・nghiện ngập・cám dỗ・mối quan hệ giam cầm",
-    "Sụp đổ・hỗn loạn・mất mát đột ngột・đòn giáng bất ngờ",
+    "Giải phóng・cắt đứt・nhận ra ràng buộc・dấu hiệu thoát ra",
+    "Tránh được sụp đổ・thiệt hại nhỏ・trụ lại được・nhận ra trước khi đổ",
     "Mất hy vọng・thất vọng・lý tưởng phai nhạt・hoài nghi bản thân",
-    "Lo âu・hoang mang・dối trá・sự thật bị che giấu",
+    "Dần khá lên・dần lắng xuống・lo âu tan đi・sự thật lộ ra",
     "Thành công bị trì hoãn・kiệt sức・kiêu ngạo・nhiệt huyết lụi tàn",
     "Nuối tiếc quá khứ・chối bỏ tiếng gọi・phán đoán sai・chần chừ",
     "Còn dang dở・cảm giác trống rỗng・bị bỏ lại・vòng tròn chưa khép",
@@ -640,12 +655,12 @@ const MAJOR_REV_I18N = {
     "Dipermainkan keadaan・waktu yang buruk・peluang terlewat・kemunduran",
     "Ketidakadilan・pertentangan・berat sebelah・lari dari tanggung jawab",
     "Rasa terkekang・sudut pandang keliru・pengorbanan sia-sia・kebuntuan",
-    "Tak sanggup melepas・berputar-putar・menolak perubahan・kemandekan",
+    "Kelahiran kembali・memulai lagi・pulih setelah penutup・mulai bergerak lagi",
     "Ketidakseimbangan・berlebihan・ketidakcocokan・kesabaran yang habis",
-    "Terikat・kecanduan・godaan・hubungan yang membelenggu",
-    "Keruntuhan・kekacauan・kehilangan mendadak・pukulan tak terduga",
+    "Pembebasan・memutus・sadar akan belenggu・tanda-tanda lepas",
+    "Luput dari keruntuhan・kerusakan kecil saja・bertahan・sadar sebelum runtuh",
     "Kehilangan harapan・kekecewaan・cita-cita yang pudar・keraguan diri",
-    "Kecemasan・kebingungan・muslihat・kebenaran yang tersembunyi",
+    "Membaik perlahan・mereda・kecemasan surut・kebenaran tersingkap",
     "Tertundanya keberhasilan・kelelahan・kesombongan・semangat yang meredup",
     "Menyesali masa lalu・menolak panggilan・penilaian yang keliru・keengganan",
     "Belum selesai・rasa hampa・ketertinggalan・lingkaran yang belum tertutup",
@@ -664,12 +679,12 @@ const MAJOR_REV_I18N = {
     "Dipermainkan keadaan・waktu yang buruk・peluang terlewat・kemunduran",
     "Ketidakadilan・pertentangan・berat sebelah・lari dari tanggung jawab",
     "Rasa terkekang・sudut pandang keliru・pengorbanan sia-sia・kebuntuan",
-    "Tak mampu melepas・berputar-putar・menolak perubahan・kemandekan",
+    "Kelahiran semula・bermula semula・pulih selepas penamat・mula bergerak lagi",
     "Ketidakseimbangan・berlebihan・ketidakcocokan・kesabaran yang habis",
-    "Terikat・kecanduan・godaan・hubungan yang membelenggu",
-    "Keruntuhan・kekacauan・kehilangan mendadak・pukulan tak terduga",
+    "Pembebasan・memutuskan・sedar akan belenggu・tanda terlepas",
+    "Terlepas daripada keruntuhan・kerosakan kecil sahaja・bertahan・sedar sebelum runtuh",
     "Kehilangan harapan・kekecewaan・cita-cita yang pudar・keraguan diri",
-    "Kecemasan・kebingungan・muslihat・kebenaran yang tersembunyi",
+    "Beransur baik・makin reda・kerisauan surut・kebenaran terdedah",
     "Tertundanya keberhasilan・kelelahan・kesombongan・semangat yang meredup",
     "Menyesali masa lalu・menolak panggilan・penilaian yang keliru・keengganan",
     "Belum selesai・rasa hampa・ketertinggalan・lingkaran yang belum tertutup",
@@ -688,10 +703,10 @@ const MAJOR_REV_I18N = {
     "被玩弄・時機不佳・惡性循環・運勢停滯",
     "不公・矛盾・不公平・逃避責任",
     "不自由・錯誤的觀點・徒勞的犧牲・執著",
-    "無法下定決心・原地打轉・抗拒改變・恐懼",
+    "重生・重新出發・落幕後的復原・再次動起來",
     "得過且過・毫無節制・過度・缺乏自制",
     "解放・斬斷・意識到束縛・脫離的跡象",
-    "混亂・受到打擊的心情・危機的迴避・苟延殘喘",
+    "免於崩塌・損害有限・撐住了・在崩解前察覺",
     "停滯・事與願違・失望・喪失信心",
     "逐漸好轉・漸漸平靜・不安的消解・真相大白",
     "失去立場・麻煩・暫時的停滯・過度自信",
@@ -712,10 +727,10 @@ const MAJOR_REV_I18N = {
     "被玩弄・时机不佳・恶性循环・运势停滞",
     "不公・矛盾・不公平・逃避责任",
     "不自由・错误的观点・徒劳的牺牲・执着",
-    "无法下定决心・原地打转・抗拒改变・恐惧",
+    "重生・重新出发・落幕后的复原・再次动起来",
     "得过且过・毫无节制・过度・缺乏自制",
     "解放・斩断・意识到束缚・脱离的迹象",
-    "混乱・受到打击的心情・危机的回避・苟延残喘",
+    "免于崩塌・损害有限・撑住了・在崩解前察觉",
     "停滞・事与愿违・失望・丧失信心",
     "逐渐好转・渐渐平静・不安的消解・真相大白",
     "失去立场・麻烦・暂时的停滞・过度自信",
@@ -723,28 +738,28 @@ const MAJOR_REV_I18N = {
     "未竟全功・停滞不前・尚未完成・重新查看目标",
   ],
   en: [
-    "Spinning your wheels · laziness · recklessness · lack of planning",
-    "Indecision · lack of planning · misuse of power · overconfidence",
-    "Emotional instability · bias · secrecy · a shallow understanding",
-    "Discord · deprivation · overprotection · stagnant dependence",
-    "Forcefulness · going in circles · domination · abuse of authority",
-    "Immorality · cruelty · rigid formalism · rebellion",
-    "A sense of unease · fickleness · discord · a wrong choice",
-    "Spinning your wheels · self-righteousness · loss of direction · running out of control",
-    "Discouragement · dependence · lack of confidence · exposed weakness",
-    "Blind stubbornness · withdrawal · isolation · rigidity",
-    "Being tossed around · bad timing · a vicious cycle · stalled fortune",
-    "Injustice · contradiction · unfairness · avoiding responsibility",
-    "A lack of freedom · a mistaken perspective · needless sacrifice · attachment",
-    "Inability to let go · going in circles · resistance to change · fear",
-    "Complacency · lack of moderation · excess · loss of self-control",
-    "Liberation · cutting ties · awareness of restraint · signs of escape",
-    "Confusion · shock · avoiding a crisis · a temporary reprieve",
-    "Stagnation · disappointment · loss of hope · loss of confidence",
-    "Gradual improvement · settling down · easing anxiety · truth coming to light",
-    "Losing one's footing · trouble · a temporary lull · overconfidence",
-    "Confusion · regret · indecision · a missed opportunity",
-    "Falling short · being stuck · incompleteness · reconsidering your goals",
+    "Spinning in place · idleness · recklessness · no plan · patching things over · promises broken · fleeing what is real",
+    "Indecision · no plan · misuse of power · overconfidence · all talk · unprepared · petty tricks",
+    "Emotional instability · prejudice · secrecy · shallow understanding · nerves · fixed assumptions · a closed heart",
+    "Discord · lack · smothering · stalled dependence · waste · sloth · never feeling filled",
+    "Force · spinning in place · domination · abuse of authority · stubbornness · pushing by strength · guarding face",
+    "Impropriety · unkindness · empty formality · defiance · meddling · pretence · trust lost",
+    "Unease · caprice · discord · the wrong choice · wavering · a roving eye · missing each other",
+    "Self-absorption · losing direction · running out of control · haste · effort spent for nothing · stalling · forcing through",
+    "Faltering · dependence · loss of confidence · weakness exposed · a short temper · self-disgust · giving up",
+    "Blindness · shutting oneself in · isolation · rigidity · suspicion · drifting from reality · refusing advice",
+    "Being tossed about · bad timing · a vicious circle · stalled luck · missing the moment · misjudged prospects · sliding back",
+    "Injustice · contradiction · unfairness · dodging responsibility · bias · excuses · unreasonable demands",
+    "Constraint · the wrong vantage · sacrifice for nothing · attachment · wasted effort · expecting return · bound by your own rope",
+    "Rebirth · setting out again · recovery after a close · getting back up · putting the past in order · a new arrangement · moving once more",
+    "Avoiding trouble at any cost · no restraint · excess · lack of self-control · mismatch · waste · mixing too much",
+    "Release · cutting free · seeing the bind · signs of escape · recovering from dependence · waking up · ending a tie",
+    "The collapse is avoided · damage stays small · holding together · the blow softened · room to rebuild · noticing before it falls · the crisis deferred",
+    "Stagnation · falling short of hope · disappointment · loss of confidence · aiming too high · losing the goal · feeling gone cold",
+    "Gradual improvement · settling down · unease lifting · truth coming out · the fog clearing · a misunderstanding undone · waking from sleep",
+    "Losing standing · trouble · a passing halt · overconfidence · forced cheer · vanity · joy delayed",
+    "Confusion · regret · indecision · a chance let go · clinging to the past · what cannot be called back · putting off the decision",
+    "Burning out short · a dead end · unfinished · rethinking the goal · one step short · going through the motions · never quite closing",
   ],
   tl: [
     "Nag-aaksaya ng oras · katamaran · kawalang-ingat · kakulangan sa pagpaplano",
@@ -760,10 +775,10 @@ const MAJOR_REV_I18N = {
     "Nadala ng agos · maling panahon · masamang siklo · natigil na kapalaran",
     "Kawalang-katarungan · kontradiksyon · hindi pagkakapantay-pantay · pag-iwas sa responsibilidad",
     "Kakulangan sa kalayaan · maling pananaw · walang-saysay na sakripisyo · pagkakabit",
-    "Hindi mapakawalan · umiikot lang · paglaban sa pagbabago · takot",
+    "Muling pagsilang · panibagong simula · paggaling pagkatapos ng wakas · muling paggalaw",
     "Kampante · kakulangan sa pagpipigil · labis · nawalan ng kontrol sa sarili",
     "Kalayaan · pagputol ng ugnayan · kamalayan sa paghihigpit · palatandaan ng pagtakas",
-    "Pagkalito · pagkabigla · pag-iwas sa krisis · pansamantalang ginhawa",
+    "Naiwasan ang pagbagsak · maliit lang ang pinsala · nakatagal · napansin bago gumuho",
     "Katamlayan · pagkabigo · nawalan ng pag-asa · nawalan ng tiwala sa sarili",
     "Unti-unting paggaling · unti-unting kumakalma · nawawalang pagkabalisa · katotohanang lumalabas",
     "Nawalan ng tuntungan · gulo · pansamantalang katahimikan · sobrang tiwala sa sarili",
@@ -784,12 +799,12 @@ const MAJOR_REV_I18N = {
     "การถูกพัดพา · จังหวะเวลาที่ไม่ดี · วงจรอุบาทว์ · โชคชะตาที่หยุดนิ่ง",
     "ความอยุติธรรม · ความขัดแย้งในตัวเอง · ความไม่เป็นธรรม · การหลีกเลี่ยงความรับผิดชอบ",
     "การขาดอิสรภาพ · มุมมองที่ผิดพลาด · การเสียสละที่ไร้ประโยชน์ · ความยึดติด",
-    "ไม่สามารถปล่อยวางได้ · การวนเวียนอยู่กับที่ · การต่อต้านการเปลี่ยนแปลง · ความกลัว",
+    "การเกิดใหม่ · การเริ่มต้นอีกครั้ง · การฟื้นตัวหลังปิดฉาก · เริ่มขยับอีกครั้ง",
     "ความพึงพอใจในตนเองเกินไป · ขาดความพอดี · ความเกินพอดี · การสูญเสียการควบคุมตนเอง",
-    "การปลดปล่อย · การตัดขาด · การตระหนักถึงข้อจำกัด · สัญญาณของการหลุดพ้น",
-    "ความสับสน · ความตกใจ · การหลีกเลี่ยงวิกฤต · การผ่อนคลายชั่วคราว",
+    "การปลดปล่อย · การตัดขาด · รู้ตัวว่าถูกพันธนาการ · เค้าลางของการหลุดพ้น",
+    "รอดพ้นจากการพังทลาย · ความเสียหายน้อย · ประคองไว้ได้ · รู้ตัวก่อนจะพัง",
     "ความหยุดนิ่ง · ความผิดหวัง · การสูญเสียความหวัง · การสูญเสียความมั่นใจในตนเอง",
-    "การดีขึ้นทีละน้อย · ความสงบที่ค่อยๆ กลับมา · ความวิตกกังวลที่คลี่คลาย · ความจริงที่ปรากฏ",
+    "ค่อย ๆ ดีขึ้น · ค่อย ๆ สงบลง · ความกังวลคลี่คลาย · ความจริงปรากฏ",
     "การสูญเสียหลักยึด · ความวุ่นวาย · ช่วงพักชั่วคราว · ความมั่นใจเกินไป",
     "ความสับสน · ความเสียใจ · ความลังเลใจ · โอกาสที่พลาดไป",
     "ยังไม่สำเร็จ · ติดขัด · ยังไม่เสร็จสมบูรณ์ · การทบทวนเป้าหมายใหม่",
@@ -2411,6 +2426,38 @@ function orientationToneClass(card, reversed) {
   return isGoodOrientation(card, reversed) ? "up" : "rev";
 }
 
+/*
+  ============================================================
+  【ホロスコープに限った三枚の扱い】
+
+  死神・悪魔・塔。
+  この三枚は、一枚を読む場では「終わりと再生」「執着の自覚」
+  「壊れることで通る道」と読める。実際、他の配置ではそう読ませている。
+
+  ⚠️ しかしホロスコープは違う。
+  十二の領域に一枚ずつ配って、人生全体をひと目で見る配置なので、
+  「家庭と基盤に塔」は、そこが崩れているという以外の読み方が無い。
+  再生の物語は、時間の幅がある一枚引きだから成り立つのであって、
+  領域の現状を指す場では成り立たない。
+
+  だからここに限り、正逆どちらも課題として扱う。
+  重さだけを分ける ―― 正位置は逃げ場のない大凶、逆位置は
+  まだ小さいうちの凶。逆位置を「解消」と読ませないのは、
+  この三枚に限っては、逆でも消えてはいないため。
+
+  ⚠️ この上書きが効くのは HoroWheel の中だけ。
+  isGoodOrientation そのものには触れない。触ると、
+  21箇所すべて（週の物語の閾値、星の符号、図鑑の暗い版の判定…）が動く。
+  ============================================================
+*/
+const HORO_DIRE = new Set(["major-13", "major-15", "major-16"]);
+const isHoroDire = (card) => !!card && HORO_DIRE.has(String(card.id));
+/* ホロスコープでの吉凶。三枚だけ、正逆によらず課題に倒す */
+function isGoodInHoroscope(card, reversed) {
+  if (isHoroDire(card)) return false;
+  return isGoodOrientation(card, reversed);
+}
+
 /**
  * 【カーソル追従の傾き】
  * ポインタ位置に応じてカードを数度だけ傾ける。
@@ -2469,6 +2516,33 @@ function breakBySentence(text) {
     .replace(/。(?!$)/g, "。\n")            // 日本語・中国語の句点
     .replace(/\.\s+(?=[A-Z])/g, ".\n")      // 英語などの文末ピリオド
     .replace(/\n+$/g, "");
+}
+
+/* 文で改行し、そのうえで読点でも折り返せるようにする */
+function breakNaturally(text) {
+  return breakByClause(breakBySentence(text));
+}
+
+/*
+  読点と句点の直後にだけ、折り返してよい場所を置く。
+
+  ⚠️ CSS だけでは解けない。
+  .ai-reading p は word-break: keep-all なので、日本語の連なりは
+  どこでも折り返せない扱いになる。すると overflow-wrap の側が働いて、
+  行に入り切らないときだけ「どこでもいいから」折り返す。
+  結果、句読点とは無関係な位置で切れていた。
+
+  ゼロ幅空白（U+200B）を句読点の直後だけに置くと、
+  折り返してよい場所がそこだけになる。
+  一区切りが行より長いときは overflow-wrap: anywhere が受け止める。
+
+  ⚠️ ・（中黒）には入れないこと。
+  noBreakAroundDot が逆に「ここで切るな」を入れている場所なので、
+  両方かけると打ち消し合う。
+*/
+function breakByClause(text) {
+  if (!text) return text;
+  return String(text).replace(/([、。！？，])(?![\s\u200B])/g, "$1\u200B");
 }
 
 function noBreakAroundDot(text) {
@@ -3685,10 +3759,26 @@ function rollOneOracleHolo(drawn) {
  * majorCard のような { card, reversed } の入れ子ではないので注意。
  */
 function buildOneOracleReading(drawn, lang) {
-  const idx = parseInt(String(drawn.id).split("-")[1]);
+  const [suit, rankStr] = String(drawn.id).split("-");
+  const idx = parseInt(rankStr, 10);
   const name = getCardName(drawn, lang);
   const o = orientationLabel(drawn.reversed, lang);
-  const kw = noBreakAroundDot(majorKeyword(idx, drawn.reversed, lang));
+  /*
+    ⚠️ 小アルカナに majorKeyword を使ってはいけない。
+
+    ここは長らく、山札に関係なく majorKeyword(idx, ...) を呼んでいた。
+    idx は札の番号なので、貨幣の10（pentacles-9）なら major-9＝隠者、
+    貨幣の8（pentacles-7）なら major-7＝戦車のキーワードが出ていた。
+    プチワンオラクルの鑑定文は、ずっと別の札の言葉を並べていたことになる。
+
+    ⚠️ 小アルカナの日本語は表を持たない。元データ（card.up / card.rev）
+    から直接出すのが元々の設計なので、必ず渡すこと。
+  */
+  const kw = noBreakAroundDot(
+    suit === "major"
+      ? majorKeyword(idx, drawn.reversed, lang)
+      : minorKeyword(suit, idx, drawn.reversed, lang, drawn.up, drawn.rev)
+  );
   const fn = ONE_ORACLE_TEMPLATES[lang] || ONE_ORACLE_TEMPLATES.en || ONE_ORACLE_TEMPLATES.ja;
   return fn(name, o, kw);
 }
@@ -8329,6 +8419,53 @@ function cardPower(card) {
  * ⚠️ 二枚が直交していない配置には移せない。
  * 十字という形が、そのままベクトルの足し算になっている配置だけ。
  */
+/*
+  ============================================================
+  【四つの獣】シンプル・クロスの、光っていない領域
+
+  矢が入った象限だけが光る。残りの三つ（原点付近なら四つ）は
+  空いたままで、そこが図のいちばん広い面積を占めていた。
+
+  そこへ小さなドット絵を置く。動物は方角に合わせてある。
+
+    右（進む）  馬 ―― 前へ走るもの
+    上（内へ）  梟 ―― 内を見るもの、夜に目が利くもの
+    左（退く）  蟹 ―― 横へ、後ろへ下がれるもの
+    下（外へ）  魚 ―― 外側の、深いほうへ潜るもの
+
+  ⚠️ 光っている領域には出さない。
+  そこは矢が指している場所なので、他のものを置くと矢が読めなくなる。
+  獣は「まだ動いていない方角」の印である。
+
+  ⚠️ 点の位置に乱数を使わない。再描画のたびに絵が変わると、
+  盤面が同じなのに違う図に見える。
+  ============================================================
+*/
+const BEAST_DOTS = {
+  // 馬。首を上げて前脚を上げた形（右向き）
+  horse: [[0,2],[1,1],[2,1],[3,2],[4,2],[5,2],[6,2],[2,0],[3,0],[6,3],[5,3],[2,3],[1,3],[6,4],[2,4],[4,3]],
+  // 梟。まるい体と二つの目、耳の房
+  owl:   [[1,0],[5,0],[2,1],[3,1],[4,1],[1,2],[2,2],[4,2],[5,2],[1,3],[2,3],[3,3],[4,3],[5,3],[2,4],[4,4],[3,2]],
+  // 蟹。左右の鋏と甲羅
+  crab:  [[0,1],[1,0],[1,2],[2,2],[3,2],[4,2],[5,2],[6,0],[6,2],[5,1],[2,3],[3,3],[4,3],[1,3],[5,3],[2,1],[4,1]],
+  // 魚。尾びれと胴（下向きに泳ぐ）
+  fish:  [[3,0],[2,1],[4,1],[2,2],[3,2],[4,2],[2,3],[3,3],[4,3],[3,4],[1,4],[5,4],[3,1],[2,4],[4,4]],
+};
+const BEAST_BY_DIR = ["horse", "owl", "crab", "fish"];   // 右・上・左・下
+
+function BeastDots({ kind, cx, cy, grad, delay = 0 }) {
+  const dots = BEAST_DOTS[kind] || BEAST_DOTS.horse;
+  const S = 2.6;                       // 点の間隔。これ以上詰めると絵にならない
+  return (
+    <g className="cv-beast" style={{ animation: `cvBeast 5.2s ease-in-out ${delay.toFixed(1)}s infinite` }}>
+      {dots.map(([x, y], k) => (
+        <circle key={k} cx={(cx + x * S).toFixed(1)} cy={(cy + y * S).toFixed(1)} r="1.05"
+          fill={grad} opacity="0.85" />
+      ))}
+    </g>
+  );
+}
+
 function CrossVector({ drawn, lang, openedIndices }) {
   const t = T[lang] || T.ja;
   const seen = new Set(openedIndices);
@@ -8347,18 +8484,45 @@ function CrossVector({ drawn, lang, openedIndices }) {
   // 方角を言葉にする。矢の向きだけでは何を意味するか読めない
   const deg = ((ang * 180) / Math.PI + 360) % 360;
   /*
-    ⚠️ 象限の番号と dirKey は同じ規則で数えていること。
-    象限は 0=右上、1=左上、2=左下、3=右下（角度が90度ずつ増える向き）。
-    dirKey もそれに合わせてある。片方だけ変えると、
-    矢と光る領域が別の場所を指す。
+    ⚠️ dirKey（方角の名前）と dirSector（幾何の象限）は別物。混同しないこと。
+
+      dirKey    右・上・左・下のどれに近いか。±45度の帯で数える
+      dirSector 0〜90度、90〜180度…という90度きざみの象限
+
+    たとえば63度は、名前としては「上（内へ）」だが、
+    幾何としては右上の象限（0番）にある。
+    ここを取り違えていたため、矢が右上を向いているのに
+    左上の領域が光る、という状態になっていた。
+    文言は dirKey、塗るのは dirSector。
   */
   const dirKey = deg < 45 || deg >= 315 ? 0 : deg < 135 ? 1 : deg < 225 ? 2 : 3;
+  const dirSector = Math.floor(deg / 90) % 4;
+  /*
+    矢がほとんど伸びない回。
+
+    二枚が逆を向いて打ち消し合うと、合力が原点付近に留まる。
+    このとき向きを読むのは無意味なので、領域を光らせず、
+    結論も「どちらとも言えない」側の文にする。
+
+    ⚠️ しきい値は実測から。30万回で len < 0.15 が12.0%。
+    ここを 0.20 まで上げると18.6%になり、五回に一回が
+    「読めません」で終わる。それは figures としては多すぎる。
+  */
+  const CV_WEAK = 0.15;
+  const weak = len < CV_WEAK;
+  const gid = `cv${Math.round(deg)}${Math.round(len * 100)}`;
   return (
     <div className="cross-vec">
       <div className="cross-vec-title sheen-text">{t.crossVecTitle}</div>
       <div className="vis-plate">
       <svg viewBox={`0 0 ${W} ${W}`} className="cross-vec-svg" role="img" aria-label={t.crossVecTitle}>
         <defs>
+          {/* 獣の色。ホロの傾斜を流す（天気・鬣・ケルトの落ちものと同じ語彙） */}
+          <linearGradient id={`${gid}holo`} gradientUnits="userSpaceOnUse" x1={-W} y1={W} x2="0" y2="0">
+            {HOLO_STOPS.map(([off, c]) => <stop key={off} offset={off} stopColor={c} />)}
+            <animateTransform attributeName="gradientTransform" type="translate"
+              from="0 0" to={`${W} 0`} dur="3.1s" repeatCount="indefinite" />
+          </linearGradient>
           <marker id="cv-head" viewBox="0 0 10 10" refX="8" refY="5" markerWidth="5" markerHeight="5" orient="auto">
             <path d="M0 0 L10 5 L0 10 z" fill={col} />
           </marker>
@@ -8378,7 +8542,7 @@ function CrossVector({ drawn, lang, openedIndices }) {
           const a0 = (Math.PI / 2) * q, a1 = a0 + Math.PI / 2;
           const p = (a) => `${(C + Math.cos(a) * R).toFixed(1)} ${(C - Math.sin(a) * R).toFixed(1)}`;
           const d = `M ${C} ${C} L ${p(a0)} A ${R} ${R} 0 0 0 ${p(a1)} Z`;
-          const live = q === dirKey;
+          const live = !weak && q === dirSector;
           return (
             <g key={q}>
               <path d={d} fill={qc} opacity={live ? 0.26 : 0.05} className={live ? "cv-live" : undefined} />
@@ -8407,6 +8571,19 @@ function CrossVector({ drawn, lang, openedIndices }) {
           markerEnd="url(#cv-head)" className="cross-vec-arrow"
           style={{ filter: `drop-shadow(0 0 6px ${col})` }} />
         <circle cx={C} cy={C} r="5" fill={col} style={{ filter: `drop-shadow(0 0 6px ${col})` }} />
+        {/*
+          獣。光っていない象限に置く。
+          ⚠️ 中心にも外縁にも寄せないこと。中心は矢の根元、外縁には軸名がある。
+          半径のちょうど中ほど、象限の対角線上なら、どちらにも当たらない。
+        */}
+        {[0, 1, 2, 3].map((q) => {
+          if (!weak && q === dirSector) return null;      // 光っている領域には出さない
+          const ad = (Math.PI / 2) * q + Math.PI / 4;      // 象限の対角線
+          const bx = C + Math.cos(ad) * R * 0.52 - 9;
+          const by = C - Math.sin(ad) * R * 0.52 - 6;
+          return <BeastDots key={`b${q}`} kind={BEAST_BY_DIR[q]} cx={bx} cy={by}
+            grad={`url(#${gid}holo)`} delay={q * 0.7} />;
+        })}
         {/*
           合力の長さを数字でも出す。矢の長短だけでは強弱が測れない。
 
@@ -8437,7 +8614,7 @@ function CrossVector({ drawn, lang, openedIndices }) {
         <text x={W - 4} y={C + 4} className="cross-vec-ax" textAnchor="end">{t.crossAxisRight}</text>
       </svg>
       </div>
-      <p className="cross-vec-read">{t.crossVecRead[dirKey]}</p>
+      <p className="cross-vec-read">{weak ? t.crossVecWeak : t.crossVecRead[dirKey]}</p>
     </div>
   );
 }
@@ -8473,8 +8650,104 @@ function CrossVector({ drawn, lang, openedIndices }) {
   広いほどよい ―― 四方の力が結果を大きく開いた状態になる。
 */
 /* 元素の色。火＝紅、水＝青、風＝白緑、地＝黄土 */
-/* 四方の色。元素の伝統色（赤・青・緑・黄） */
-const HISHI_COLOR = { wands: "#FF8A5C", cups: "#5CB8FF", swords: "#B9F0D8", pentacles: "#E0B860" };
+/*
+  ============================================================
+  【ギリシャ十字】四元素の色と季節
+
+  色は四元素の伝統色。ここには根拠がある ―― 黄金の夜明け団以降、
+  火＝赤、風＝黄、水＝青、地＝緑で広く定着している配色をそのまま使う。
+  ⚠️ この四色を使うのは「点」だけ。腕ごとに面を塗り分けない。
+
+  【なぜ面を塗り分けないか】
+  腕ごとに色を変えていたが、四方が同時に色を持つと、
+  どの色が何を意味するのかは凡例を見ないと分からない。
+  そのうえ隣り合う色が混ざって濁り、面積の大小のほうが読めなくなっていた。
+
+  面は「季節」で表す。いちばん伸びている腕の元素を一つ選び、
+  その季節の色を薄く全面に敷いて、中に季節のドット絵を降らせる。
+  一枚の面に一つの季節。だから凡例が要らない。
+
+    火＝赤＝夏   風＝黄＝春   水＝青＝冬   地＝緑＝秋
+
+  この対応も発明ではない。四元素と四季の結び付けは古典的で、
+  春分・夏至・秋分・冬至の四分点にそれぞれ風・火・地・水を当てる。
+  ============================================================
+*/
+const ELEMENT_COLOR = { wands: "#FF6B5C", swords: "#FFD95C", cups: "#5CB8FF", pentacles: "#7ED07E" };
+const ELEMENT_SEASON = { wands: "summer", swords: "spring", cups: "winter", pentacles: "autumn" };
+/* 旧名。腕の点の色として使い続ける */
+const HISHI_COLOR = ELEMENT_COLOR;
+
+/*
+  季節のドット絵。ヘキサグラムの天気と同じ作り方で、
+  面の中だけに降らせる（clipPath で菱形に切る）。
+
+  ⚠️ 位置に乱数を使わない。再描画のたびに降り方が変わると、
+  盤面が同じなのに図が違って見える。固定の表から作る。
+  ⚠️ 薄くすること。地が主役になると、等高線と点が読めなくなる。
+*/
+const SEASON_MOTES = [
+  { x: 14, y: 8, d: 0.0 }, { x: 46, y: 3, d: 1.7 }, { x: 78, y: 11, d: 0.6 },
+  { x: 110, y: 5, d: 2.4 }, { x: 142, y: 9, d: 1.1 }, { x: 174, y: 4, d: 3.0 },
+  { x: 206, y: 12, d: 0.3 }, { x: 30, y: 6, d: 2.1 }, { x: 62, y: 14, d: 1.4 },
+  { x: 94, y: 2, d: 3.4 }, { x: 126, y: 13, d: 0.9 }, { x: 158, y: 7, d: 2.7 },
+  { x: 190, y: 3, d: 1.9 }, { x: 222, y: 10, d: 0.5 },
+];
+
+function SeasonField({ season, color, dur }) {
+  if (season === "summer") {
+    /* 夏。降るのではなく、地から陽炎が昇る */
+    return (
+      <g>
+        {SEASON_MOTES.map((m, k) => (
+          <line key={k} x1={m.x} y1="250" x2={m.x + 3} y2="238" stroke={color} strokeWidth="1.4"
+            strokeLinecap="round" opacity="0.5" className="season-rise"
+            style={{ animation: `seasonRise ${(dur * 1.5).toFixed(1)}s linear ${m.d.toFixed(1)}s infinite` }} />
+        ))}
+      </g>
+    );
+  }
+  if (season === "spring") {
+    /* 春。花びらが横へ流れながら落ちる */
+    return (
+      <g>
+        {SEASON_MOTES.map((m, k) => (
+          <ellipse key={k} cx={m.x} cy={m.y} rx="2.6" ry="1.5" fill={color} opacity="0.55"
+            className="season-fall"
+            style={{ animation: `seasonPetal ${(dur * 1.9).toFixed(1)}s linear ${m.d.toFixed(1)}s infinite` }} />
+        ))}
+      </g>
+    );
+  }
+  if (season === "autumn") {
+    /* 秋。木の葉が回りながら落ちる */
+    return (
+      <g>
+        {SEASON_MOTES.map((m, k) => (
+          <path key={k} d={`M ${m.x} ${m.y} q 3 -3 6 0 q -3 3 -6 0 Z`} fill={color} opacity="0.6"
+            className="season-fall"
+            style={{ animation: `seasonLeaf ${(dur * 2.2).toFixed(1)}s linear ${m.d.toFixed(1)}s infinite` }} />
+        ))}
+      </g>
+    );
+  }
+  /* 冬。雪。六方の結晶を小さく、いちばんゆっくり */
+  return (
+    <g>
+      {SEASON_MOTES.map((m, k) => (
+        <g key={k} className="season-fall"
+          style={{ animation: `seasonSnow ${(dur * 2.6).toFixed(1)}s linear ${m.d.toFixed(1)}s infinite` }}>
+          <g transform={`translate(${m.x} ${m.y})`}>
+            {[0, 60, 120].map((deg) => (
+              <line key={deg} x1="-2.6" y1="0" x2="2.6" y2="0" stroke={color} strokeWidth="0.8"
+                strokeLinecap="round" transform={`rotate(${deg})`} opacity="0.7" />
+            ))}
+          </g>
+        </g>
+      ))}
+    </g>
+  );
+}
 /*
   等高線の段。
   一枚の三角で塗ると「どこまで伸びているか」しか出ないが、
@@ -8511,6 +8784,8 @@ function GreekTension({ drawn, labels, lang, openedIndices }) {
   ];
   if (!ARMS.some((a) => seen.has(a.idx))) return null;
   const W = 250, C = 125, R = 96, MIN = 24;
+  /* 一枚も開いていないときに倒す先。無季節の状態を作らない */
+  const LEAD_FALLBACK = "pentacles";
 
   // 中央の倍率。良い向きなら広げ、そうでなければ狭める
   const core = seen.has(0) ? drawn[0] : null;
@@ -8528,6 +8803,17 @@ function GreekTension({ drawn, labels, lang, openedIndices }) {
     { x: C, y: C + v[2] }, { x: C - v[3], y: C },
   ];
   const poly = pts.map((p) => `${p.x.toFixed(1)},${p.y.toFixed(1)}`).join(" ");
+  /*
+    面の色と季節は、いちばん伸びている腕ひとつで決まる。
+    ⚠️ 引き分けは ARMS の順（火・水・風・地）で先勝ち。
+    毎回同じ規則で決めていれば、同じ盤面で季節が揺れることはない。
+    ⚠️ 一枚も開いていないときは地（秋）に倒す。無季節の状態を作らない。
+  */
+  let leadIdx = 0;
+  v.forEach((x, i) => { if (x > v[leadIdx]) leadIdx = i; });
+  const leadSuit = seen.has(ARMS[leadIdx].idx) ? ARMS[leadIdx].suit : LEAD_FALLBACK;
+  const leadColor = ELEMENT_COLOR[leadSuit];
+  const leadSeason = ELEMENT_SEASON[leadSuit];
   // 面積。とりうる最大に対する割合で出す
   const area = ((v[0] + v[2]) * (v[1] + v[3])) / 2;
   const areaMax = ((R + R) * (R + R)) / 2;
@@ -8545,68 +8831,68 @@ function GreekTension({ drawn, labels, lang, openedIndices }) {
               .map((p) => p.join(",")).join(" ")} />
         ))}
         {/*
-          四方を元素の色で、等高線のように段で塗る。
+          面。優位な元素の一色だけを薄く敷き、その中に季節を降らせる。
 
-          ⚠️ 三角1枚で塗ると、外縁の位置しか出ない。
-          段に分けると重なりが濃度になり、中心から外へ落ちていく形が読める。
-          段の境目は、その腕自身の長さの割合なので、
-          歪んだ菱形では等高線も歪む ―― 地形図と同じ。
+          ⚠️ 腕ごとに塗り分けないこと。
+          四色が同時に面を持つと、どの色が何かは凡例なしでは読めず、
+          隣り合う色が混ざって濁り、面積の大小のほうが見えなくなる。
+          一枚の面に一つの季節なら、凡例が要らない。
         */}
+        <defs>
+          <clipPath id="greekField">
+            <polygon points={poly} />
+          </clipPath>
+        </defs>
+        <g clipPath="url(#greekField)">
+          <polygon points={poly} fill={leadColor} opacity="0.13" />
+          <SeasonField season={leadSeason} color={leadColor} dur={3.4} />
+        </g>
         {GREEK_CONTOURS.map((lv, li) => {
           const lp = pts.map((p) => ({ x: C + (p.x - C) * lv, y: C + (p.y - C) * lv }));
           const inner = li / (GREEK_CONTOURS.length - 1);   // 0=外側 1=中心側
           return (
             <g key={`lv${li}`} className="greek-ten-poly">
-              {lp.map((p, i) => {
-                const nx = lp[(i + 1) % 4];
-                return (
-                  <polygon key={`f${li}_${i}`}
-                    points={`${C},${C} ${p.x.toFixed(1)},${p.y.toFixed(1)} ${nx.x.toFixed(1)},${nx.y.toFixed(1)}`}
-                    fill={HISHI_COLOR[ARMS[i].suit]} opacity={0.10 + inner * 0.14} />
-                );
-              })}
               {/*
-                等高線。
-
-                ⚠️ 灰白の細線を五本重ねただけでは、地形図というより方眼紙に見えた。
-                線そのものを元素の色で光らせる ―― 一本の等高線が、
-                四方で色を変えながら一周する形にする（腕ごとに区切って引く）。
-                中心へ向かうほど濃く、太くする。落ちていく向きが線の強さで出る。
+                等高線。色は持たせない。
+                ⚠️ 四色で引くと、面を塗り分けていたときと同じ濁りが線で起きる。
+                色を担うのは四方の点だけ、と決めてある。
               */}
               {lp.map((p, i) => {
                 const nx = lp[(i + 1) % 4];
-                const col = HISHI_COLOR[ARMS[i].suit];
                 return (
                   <line key={`e${li}_${i}`}
                     x1={p.x.toFixed(1)} y1={p.y.toFixed(1)} x2={nx.x.toFixed(1)} y2={nx.y.toFixed(1)}
-                    stroke={col} strokeWidth={0.6 + inner * 1.1} strokeLinecap="round"
-                    opacity={0.35 + inner * 0.55}
-                    style={{ filter: `drop-shadow(0 0 ${(2 + inner * 4).toFixed(1)}px ${col})` }} />
+                    stroke="rgba(255,240,205,0.9)" strokeWidth={0.5 + inner * 0.9} strokeLinecap="round"
+                    opacity={0.24 + inner * 0.46}
+                    style={{ filter: `drop-shadow(0 0 ${(1.5 + inner * 3).toFixed(1)}px rgba(255,240,205,0.5))` }} />
                 );
               })}
-              {/* 稜線の頂点。等高線が折れる場所を光らせると、腕の伸びが数えられる */}
-              {li === GREEK_CONTOURS.length - 1 && lp.map((p, i) => (
-                <circle key={`v${i}`} cx={p.x.toFixed(1)} cy={p.y.toFixed(1)} r="2.6"
-                  fill={HISHI_COLOR[ARMS[i].suit]}
-                  style={{ filter: `drop-shadow(0 0 6px ${HISHI_COLOR[ARMS[i].suit]})` }} />
-              ))}
             </g>
           );
         })}
         <polygon points={poly} fill="none" stroke="rgba(255,235,190,0.9)" strokeWidth="1.6"
           className="greek-ten-poly" style={{ filter: "drop-shadow(0 0 8px rgba(255,220,150,0.45))" }} />
-        {/* 中心から各頂点への腕。元素の色で引く */}
+        {/*
+          中心から各頂点への腕。
+          ⚠️ ここも色を落とす。面が季節、点が元素、と決めたので、
+          腕まで四色にすると三重になって、どれが基準か分からなくなる。
+        */}
         {pts.map((p, i) => (
           <line key={`a${i}`} x1={C} y1={C} x2={p.x} y2={p.y}
-            stroke={HISHI_COLOR[ARMS[i].suit]} strokeWidth="1.6" opacity="0.75" />
+            stroke="rgba(255,240,205,0.55)" strokeWidth="1.1" opacity="0.6" />
         ))}
+        {/*
+          四方の点。この図で四色を持つのはここだけ。
+          火＝赤、風＝黄、水＝青、地＝緑。
+          面は季節が担い、線は中立、点が元素を示す ―― 役割を三つに分けてある。
+        */}
         {pts.map((p, i) => {
           const open = seen.has(ARMS[i].idx);
-          const col = HISHI_COLOR[ARMS[i].suit];
-          return <circle key={i} cx={p.x} cy={p.y} r={open ? 6 : 3}
+          const col = ELEMENT_COLOR[ARMS[i].suit];
+          return <circle key={i} cx={p.x} cy={p.y} r={open ? 6.5 : 3}
             fill={open ? col : "rgba(255,255,255,0.15)"}
-            stroke={open ? "rgba(255,255,255,0.8)" : "none"} strokeWidth="1"
-            style={open ? { filter: `drop-shadow(0 0 7px ${col})` } : undefined} />;
+            stroke={open ? "rgba(18,15,36,0.85)" : "none"} strokeWidth="1.2"
+            style={open ? { filter: `drop-shadow(0 0 8px ${col})` } : undefined} />;
         })}
         {/* 元素の名前も同じ色で置く。軸と語が色でつながる */}
         <text x={C} y="12" className="greek-el" fill={HISHI_COLOR.wands} textAnchor="middle">{t.greekEl.fire}</text>
@@ -9264,6 +9550,140 @@ const MAJOR_PATHS = [
 */
 const SEPHIRA_DEPTH = [6, 5, 5, 4, 4, 3, 2, 2, 1, 0];
 
+/*
+  ============================================================
+  【天から地までの導通】
+
+  出た大アルカナが灯した小径だけを辿って、
+  ケテル（0・根源の意志）からマルクト（9・現実の暮らし）まで
+  行き着けるかどうか。
+
+  実測（40万回）
+    いま導通している        0.75%  ≒ 1/134
+    あと一本で導通する      14.0%  ≒ 1/7
+    どちらでもない          85.2%
+
+  1/134 は、レア（1/6）よりもホロ（1/64）よりも遠い。
+  だからここは、出たときに全部持っていってよい。
+
+  ⚠️ 導通の判定に「大アルカナが何枚出たか」を使わないこと。
+  7枚出ても繋がらない盤面はあるし、4枚で繋がる盤面もある。
+  実測でも4枚のうち1.0%、7枚でも16.6%しか繋がっていない。
+  枚数は導通の代理にならない。
+  ============================================================
+*/
+function treeSpine(litPaths) {
+  const adj = Array.from({ length: 10 }, () => []);
+  litPaths.forEach(([a, b]) => { adj[a].push(b); adj[b].push(a); });
+  // 最短の道を返す。複数あるときは上から順に見つかったもの
+  const prev = Array(10).fill(-1);
+  const seen = new Set([0]);
+  const queue = [0];
+  while (queue.length) {
+    const v = queue.shift();
+    if (v === 9) break;
+    for (const w of adj[v]) if (!seen.has(w)) { seen.add(w); prev[w] = v; queue.push(w); }
+  }
+  if (!seen.has(9)) return null;
+  const route = [9];
+  while (route[0] !== 0) route.unshift(prev[route[0]]);
+  return route;
+}
+
+/*
+  架橋。あと一本あれば天から地まで繋がる、その一本。
+
+  ⚠️ 候補が複数あることがある（実測で 61.5% が1本、23.8% が2本）。
+  全部並べると助言が散るので、いちばん現実に近い小径を選ぶ
+  ―― マルクトからの深さが浅いほうが、明日できることに近い。
+*/
+function treeBridges(litMajorIdx) {
+  const lit = litMajorIdx.map((k) => MAJOR_PATHS[k]).filter(Boolean);
+  if (treeSpine(lit)) return [];                    // 既に繋がっている
+  const out = [];
+  for (let k = 0; k < MAJOR_PATHS.length; k++) {
+    if (litMajorIdx.includes(k)) continue;
+    if (treeSpine([...lit, MAJOR_PATHS[k]])) out.push(k);
+  }
+  out.sort((a, b) => {
+    const da = (SEPHIRA_DEPTH[MAJOR_PATHS[a][0]] + SEPHIRA_DEPTH[MAJOR_PATHS[a][1]]) / 2;
+    const db = (SEPHIRA_DEPTH[MAJOR_PATHS[b][0]] + SEPHIRA_DEPTH[MAJOR_PATHS[b][1]]) / 2;
+    return da - db || a - b;
+  });
+  return out;
+}
+
+/*
+  架橋の助言。22の小径それぞれに一つ。
+
+  ⚠️ その札の意味の解説ではない。「その一本が架かっていない」という
+  盤面の事実に対して、何をすれば架かるかを書く。命令形。
+  ⚠️ 出るのは全体の14%（1/7）。頻度が高いので、大げさに書かない。
+  ⚠️ 日本語と英語のみ。他9言語は出ない（キーが無ければ描かない作り）。
+*/
+const TREE_BRIDGE_ADVICE = {
+  ja: [
+    "根源と閃きの間が空いています。思いついたことを、その日のうちに人へ話しなさい。",
+    "根源と理の間が空いています。やりたいことを、締切と分量のある形に書き直しなさい。",
+    "根源と中心の間が空いています。誰にも見せない本音を、一行だけ書き出しなさい。",
+    "閃きと理の間が空いています。思いつきを一つ選び、それ以外を今日は捨てなさい。",
+    "閃きと中心の間が空いています。頭にあるものを、手を動かして形にしなさい。",
+    "閃きと恵みの間が空いています。人に与えられるものを一つ決め、先に渡しなさい。",
+    "理と中心の間が空いています。守っている決まりの理由を、一つずつ確かめなさい。",
+    "理と冷徹の間が空いています。曖昧にしてきた線を、はっきり引きなさい。",
+    "恵みと冷徹の間が空いています。甘くしている相手に、一度だけ厳しく伝えなさい。",
+    "恵みと中心の間が空いています。与えた分を数えず、要るところへ回しなさい。",
+    "恵みと欲の間が空いています。欲しいものを一つ、堂々と口にしなさい。",
+    "冷徹と中心の間が空いています。切ると決めたものを、期限を切って手放しなさい。",
+    "冷徹と伝達の間が空いています。断る理由を、飾らずに短く言いなさい。",
+    "中心と欲の間が空いています。楽しみのための予定を、今週のうちに入れなさい。",
+    "中心と土台の間が空いています。眠りと食事の時刻を、今日から一定にしなさい。",
+    "中心と伝達の間が空いています。言えずにいることを、相手に直接伝えなさい。",
+    "欲と伝達の間が空いています。やりたい理由を、人に説明できる言葉にしなさい。",
+    "欲と土台の間が空いています。続けたいことを、一日五分の習慣に落としなさい。",
+    "欲と暮らしの間が空いています。欲しいものの値段を、実際に調べなさい。",
+    "伝達と土台の間が空いています。決めたことを、紙か画面に書いて残しなさい。",
+    "伝達と暮らしの間が空いています。頼みごとを、今日のうちに一件だけしなさい。",
+    "土台と暮らしの間が空いています。思っているだけの一件を、今日の予定に入れなさい。",
+  ],
+  en: [
+    "The gap is between the root and the spark. Tell someone your idea before the day ends.",
+    "The gap is between the root and the law. Rewrite what you want with a deadline and a size.",
+    "The gap is between the root and the centre. Write one honest line no one will read.",
+    "The gap is between the spark and the law. Pick one idea and drop the rest today.",
+    "The gap is between the spark and the centre. Make something with your hands, not your head.",
+    "The gap is between bounty and the spark. Decide one thing you can give, and give it first.",
+    "The gap is between the law and the centre. Check, one by one, why each rule you keep exists.",
+    "The gap is between the law and rigour. Draw the line you have been leaving vague.",
+    "The gap is between bounty and rigour. Say one hard thing to the person you keep sparing.",
+    "The gap is between bounty and the centre. Stop counting what you gave; send it where it is needed.",
+    "The gap is between bounty and desire. Say out loud, without apology, one thing you want.",
+    "The gap is between rigour and the centre. Put a date on what you decided to cut, and let it go.",
+    "The gap is between rigour and speech. Give your refusal plainly and briefly.",
+    "The gap is between the centre and desire. Put something you enjoy into this week's calendar.",
+    "The gap is between the centre and the ground. Fix your sleeping and eating hours from today.",
+    "The gap is between the centre and speech. Say the thing directly, to the person concerned.",
+    "The gap is between desire and speech. Put your reason into words another person could follow.",
+    "The gap is between desire and the ground. Reduce what you want to continue to five minutes a day.",
+    "The gap is between desire and daily life. Look up what the thing you want actually costs.",
+    "The gap is between speech and the ground. Write down what you decided, on paper or screen.",
+    "The gap is between speech and daily life. Ask one person for one thing today.",
+    "The gap is between the ground and daily life. Put the thing you keep meaning to do into today.",
+  ],
+};
+
+/* 盤面から、灯っている大アルカナの番号を拾う */
+function litMajorsOf(drawn, openedIndices) {
+  const out = [];
+  [...openedIndices].forEach((i) => {
+    const c = drawn && drawn[i];
+    if (!c) return;
+    const sp = String(c.id).split("-");
+    if (sp[0] === "major") out.push(parseInt(sp[1], 10));
+  });
+  return out.filter((n) => !Number.isNaN(n));
+}
+
 /** 大アルカナならパスを返す。小アルカナは null */
 function pathOfCard(card) {
   const [suit, rankStr] = String(card.id).split("-");
@@ -9323,6 +9743,10 @@ function pillarForkPaths(x, y0, y1, seed) {
 }
 
 function TreeLightning({ drawn, lang, openedIndices, labels = [] }) {
+  const litMajors = litMajorsOf(drawn, openedIndices);
+  const spine = treeSpine(litMajors.map((k) => MAJOR_PATHS[k]).filter(Boolean));
+  const bridgeList = spine ? [] : treeBridges(litMajors);
+  const bridge = bridgeList.length ? bridgeList[0] : null;
   const t = T[lang] || T.ja;
   // 押して開いている小径。1本ずつしか開かない（並べると読む量が増える）
   const [openPath, setOpenPath] = useState(null);
@@ -9347,8 +9771,15 @@ function TreeLightning({ drawn, lang, openedIndices, labels = [] }) {
   return (
     <div className="tree-vis">
       <div className="tree-vis-title sheen-text">{t.treeVisTitle}</div>
-      <div className="tree-vis-body vis-plate tree">
+      <div className={`tree-vis-body vis-plate tree${spine ? " spine-live" : ""}`}>
         <svg viewBox={`0 0 ${W} ${H}`} className="tree-vis-svg" role="img" aria-label={t.treeVisTitle}>
+          <defs>
+            <linearGradient id="treeSpineGrad" gradientUnits="userSpaceOnUse" x1={-W} y1={H} x2="0" y2="0">
+              {HOLO_STOPS.map(([off, col]) => <stop key={off} offset={off} stopColor={col} />)}
+              <animateTransform attributeName="gradientTransform" type="translate"
+                from="0 0" to={`${W} 0`} dur="1.9s" repeatCount="indefinite" />
+            </linearGradient>
+          </defs>
           {/*
             上下の意味を、稲妻の始点と終点に添える。
             ⚠️ 図の外に横並びで置くと、柱の棒まで含めた幅に広がり、
@@ -9424,6 +9855,41 @@ function TreeLightning({ drawn, lang, openedIndices, labels = [] }) {
               className={`tree-path${sel ? " sel" : ""}`}
               style={{ filter: `drop-shadow(0 0 ${sel ? 12 : 5}px ${col})`, animationDelay: `${i * 0.08}s` }} />;
           })}
+          {/*
+            天から地まで通った道。1/134。
+
+            ⚠️ 既存の稲妻（1→10 の順路）とは別物。
+            あちらは常に同じ形で、配置の説明でしかない。
+            こちらは今回の盤面が実際に作った道なので、毎回形が違う。
+            だから、こちらだけを主役にする。
+          */}
+          {spine && (() => {
+            const d = spine.map((n, k) => `${k ? "L" : "M"} ${pt(n).x} ${pt(n).y}`).join(" ");
+            return (
+              <g className="tree-spine">
+                <path d={d} fill="none" stroke="url(#treeSpineGrad)" strokeWidth="14"
+                  strokeLinejoin="round" strokeLinecap="round" opacity="0.30"
+                  style={{ filter: "blur(6px)" }} />
+                <path d={d} fill="none" stroke="url(#treeSpineGrad)" strokeWidth="5"
+                  strokeLinejoin="round" strokeLinecap="round" opacity="0.85" />
+                <path d={d} fill="none" stroke="#FFFFFF" strokeWidth="1.8"
+                  strokeLinejoin="round" strokeLinecap="round" className="tree-spine-run"
+                  style={{ filter: "drop-shadow(0 0 7px #FFFFFF)" }} />
+              </g>
+            );
+          })()}
+          {/*
+            架橋。あと一本で通る小径を、点線の幽霊として置く。
+            ⚠️ 灯っている小径と同じ描き方にしないこと。
+            出ていない札を、出たかのように見せることになる。
+          */}
+          {!spine && bridge !== null && (() => {
+            const [a, b] = MAJOR_PATHS[bridge];
+            const p1 = pt(a), p2 = pt(b);
+            return <line x1={p1.x} y1={p1.y} x2={p2.x} y2={p2.y}
+              stroke="#7CF5FF" strokeWidth="1.6" strokeDasharray="3 5" strokeLinecap="round"
+              className="tree-bridge" opacity="0.75" />;
+          })()}
           {/* 稲妻。上から下へ走る */}
           <path d={bolt} fill="none" stroke="rgba(255,240,200,0.25)" strokeWidth="1.5" />
           <path d={bolt} fill="none" stroke="#FFF3D0" strokeWidth="2.6" strokeLinecap="round"
@@ -9447,6 +9913,18 @@ function TreeLightning({ drawn, lang, openedIndices, labels = [] }) {
         ⚠️ 縦棒を横に並べると、図と棒で幅を取り合って
         樹が潰れる。実際に潰れた。
       */}
+      {/*
+        導通と架橋の一行。図のすぐ下に置く。
+        ⚠️ 架橋の助言は日英のみ。無い言語では札の名前だけを出す。
+      */}
+      {spine ? (
+        <p className="tree-spine-read">{t.treeSpineDone}</p>
+      ) : bridge !== null ? (
+        <p className="tree-bridge-read">
+          <span className="tree-bridge-card">{getCardName(MAJOR_LIST[bridge], lang)}</span>
+          {(TREE_BRIDGE_ADVICE[lang] || TREE_BRIDGE_ADVICE.en)[bridge]}
+        </p>
+      ) : null}
       {/* 柱の見出し。無いと図の下端の「現実の暮らし」が棒の見出しに読まれる */}
       <div className="tree-pillars-title sheen-text">{t.treePillarsTitle}</div>
       <div className="tree-pillars vis-plate">
@@ -9519,20 +9997,21 @@ function TreeLightning({ drawn, lang, openedIndices, labels = [] }) {
         高すぎれば動きが足りず、低すぎれば動きが先走っている。
       */}
       <p className="tree-vis-read">
+        {/*
+          ⚠️ 傾き（冷酷／慈悲）と中央の厚みは、別のことを測っている。
+          「傾きが小さいときだけ中央を見る」と入れ子にしていたので、
+          片方へ傾いた盤面では中央の話が一度も出なかった。
+          二文を並べる。結論側（SpreadVerdict）も同じ形にしてある。
+
+          ⚠️ 中央が厚い＝様子見が過ぎて押しが足りない、
+          薄い＝その都度振り切れていて判断の置きどころが無い。
+          中央は均衡の柱なので「左へ踏み出せていない」という読みは成り立たない。
+        */}
         {(() => {
           const mid = pil.middle / total;
-          if (Math.abs(lean) < 0.35) {
-            /*
-              ⚠️ 中央柱が厚いことを「どちらへも踏み出せていない」と書いていた。
-              中央は均衡の柱で、左（冷酷）へ踏み出すという読みは成り立たない。
-              厚い＝様子見が過ぎて押しが足りない、薄い＝その都度振り切れていて
-              判断の置きどころが無い、という読みに直してある。
-            */
-            if (mid >= 0.46) return t.treeMidHigh;
-            if (mid <= 0.24) return t.treeMidLow;
-            return t.treeBalanced;
-          }
-          return lean > 0 ? t.treeMercy : t.treeSeverity;
+          const a = Math.abs(lean) < 0.35 ? t.treeBalanced : lean > 0 ? t.treeMercy : t.treeSeverity;
+          const b = mid >= 0.46 ? t.treeMidHigh : mid <= 0.24 ? t.treeMidLow : t.treeMidEven;
+          return `${a}。${b}`;
         })()}
       </p>
     </div>
@@ -9660,22 +10139,44 @@ function SpreadVerdict({ spreadKey, drawn, lang, openedIndices, extra }) {
     });
     const posLabels = extra && extra.labels ? extra.labels : [];
     title = t.verdictTitle;
+    /*
+      ⚠️ 柱の傾き（冷酷／慈悲）と中央の厚み（消極／過剰）は、別のことを測っている。
+      以前は「傾きが小さいときだけ中央を見る」という入れ子にしていたので、
+      片方へ傾いている盤面では中央の話が一度も出なかった。
+      二つを独立した行にする。
+    */
+    const mid = M / (R + L + M || 1);
+    /*
+      ⚠️ 深さは「最も深い小径」ではなく、灯った小径の平均で測る。
+      最大値で測っていたので、上のほうの小径が一本混ざるだけで
+      「無意識のいちばん深いところ」になり、実測で59%がそれ、
+      上二段の合計で88%が「深い」と出ていた。ほとんど常に出る文は情報ではない。
+      平均に変え、境界は実測の四分位（40万回）に置いた。
+        2.50 / 3.17 / 3.75 → 各段 27.0 / 20.9 / 31.3 / 20.8％
+    */
+    const depthMean = paths.length
+      ? paths.reduce((a, x) => a + (SEPHIRA_DEPTH[x.p[0]] + SEPHIRA_DEPTH[x.p[1]]) / 2, 0) / paths.length
+      : null;
+    const depthBand = depthMean === null ? 3
+      : depthMean >= 3.75 ? 0 : depthMean >= 3.167 ? 1 : depthMean >= 2.5 ? 2 : 3;
+    const litMajors = litMajorsOf(drawn, openedIndices);
+    const spine = treeSpine(litMajors.map((k) => MAJOR_PATHS[k]).filter(Boolean));
+    const bridgeList = spine ? [] : treeBridges(litMajors);
     lines = [
-      (() => {
-        const mid = M / (R + L + M || 1);
-        if (Math.abs(lean) < 0.35) {
-          if (mid >= 0.46) return t.treeMidHigh;
-          if (mid <= 0.24) return t.treeMidLow;
-          return t.treeVerdictBalanced;
-        }
-        return lean > 0 ? t.treeVerdictMercy : t.treeVerdictSeverity;
-      })(),
+      Math.abs(lean) < 0.35 ? t.treeVerdictBalanced
+        : lean > 0 ? t.treeVerdictMercy : t.treeVerdictSeverity,
+      mid >= 0.46 ? t.treeMidHigh : mid <= 0.24 ? t.treeMidLow : t.treeMidEven,
       t.treeVerdictNode(posLabels[top] || ""),
       deepest
-        ? t.treePathRead(posLabels[deepest.p[0]] || "", posLabels[deepest.p[1]] || "",
-            t.treeDepth[deepest.d >= 4.5 ? 0 : deepest.d >= 3 ? 1 : deepest.d >= 1.5 ? 2 : 3])
+        ? t.treePathRead(posLabels[deepest.p[0]] || "", posLabels[deepest.p[1]] || "", t.treeDepth[depthBand])
         : t.treeNoPath,
     ];
+    if (spine) {
+      lines.push(t.treeSpineDone);
+    } else if (bridgeList.length) {
+      const k = bridgeList[0];
+      lines.push(`${getCardName(MAJOR_LIST[k], lang)}　${(TREE_BRIDGE_ADVICE[lang] || TREE_BRIDGE_ADVICE.en)[k]}`);
+    }
   }
 
   if (spreadKey === "choice" && has(1, 2, 3, 4)) {
@@ -10162,7 +10663,8 @@ function HoroscopeWheel({ drawn, labels, lang, openedCount }) {
       if (!d) return null;
       const sc = calcStats({ card: d, reversed: d.reversed }, [], true).scores;
       const total = sc.reduce((a, b) => a + b, 0) / sc.length;
-      const good = isGoodOrientation(d, d.reversed);
+      const good = isGoodInHoroscope(d, d.reversed);
+      const dire = isHoroDire(d);
       const [suit, rankStr] = String(d.id).split("-");
       const rank = parseInt(rankStr, 10);
       const kw = suit === "major"
@@ -10174,8 +10676,21 @@ function HoroscopeWheel({ drawn, labels, lang, openedCount }) {
         足し算にすると寄与度の差が総合値の差に埋もれる。
       */
       const k = Math.max(0, Math.min(1, (total - 2.95) / (4.55 - 2.95)));
-      const weight = (0.35 + k * 0.65) * contributionOf(d);
-      return { i, total, good, card: d, kw, weight, isMajor: suit === "major" };
+      /*
+        ⚠️ 三枚は面積も上書きする。
+
+        課題として扱うだけでは足りない。占有率が小さいと
+        「かすかな澱み」と出て、いちばん重い札がいちばん軽い扱いになる。
+        正位置は最上帯（宿命の重石）へ、逆位置は最下帯（かすかな澱み）へ
+        落ち着くように、総合値ではなく固定の重みで置く。
+
+        値は実測から。12領域の占有率は平均8.33%で、
+        帯の境界は 4.34 / 5.34 / 7.23 / 8.45 / 9.71 / 12.14。
+      */
+      const weight = dire
+        ? contributionOf(d) * (d.reversed ? 0.16 : 1.55)
+        : (0.35 + k * 0.65) * contributionOf(d);
+      return { i, total, good, dire, card: d, kw, weight, isMajor: suit === "major" };
     });
   }, [drawn, lang]);
 
@@ -10389,7 +10904,11 @@ function HoroscopeWheel({ drawn, labels, lang, openedCount }) {
                   <span className={`horo-rank-card${d.reversed ? " rev" : ""}`}>
                     {getCardName(d, lang)}
                     {c.isMajor && <b className="hex-major-tag">{t.majorTag}</b>}
-                    <i className={`orientation ${orientationToneClass(d, d.reversed)}`}>
+                    {/*
+                      ⚠️ 向きの色も上書きする。
+                      課題と書いてある行で、向きの札だけが金だと矛盾して見える。
+                    */}
+                    <i className={`orientation ${c.good ? "up" : "rev"}`}>
                       {orientationLabel(d.reversed, lang)}
                     </i>
                   </span>
@@ -10656,6 +11175,12 @@ function CelticPlane({ drawn, openedIndices, lang, isLast }) {
             <stop offset="0.74" stopColor="#E8C24E" />
             <stop offset="1" stopColor="#E8607A" />
           </linearGradient>
+          {/* 落ちものの色。ホロの傾斜を流す（天気・鬣と同じ語彙） */}
+          <linearGradient id={`${gid}holo`} gradientUnits="userSpaceOnUse" x1={-W} y1={H} x2="0" y2="0">
+            {HOLO_STOPS.map(([off, c]) => <stop key={off} offset={off} stopColor={c} />)}
+            <animateTransform attributeName="gradientTransform" type="translate"
+              from="0 0" to={`${W} 0`} dur="2.9s" repeatCount="indefinite" />
+          </linearGradient>
           <radialGradient id={`${gid}glow`}>
             <stop offset="0" stopColor="rgba(255,143,160,0.6)" />
             <stop offset="1" stopColor="rgba(255,143,160,0)" />
@@ -10674,9 +11199,17 @@ function CelticPlane({ drawn, openedIndices, lang, isLast }) {
         <text className="celtic-axis-label" x={C - R - 4} y={C - 6} textAnchor="start">{t.celticAxis.left}</text>
         <text className="celtic-axis-label" x={C + R + 4} y={C - 6} textAnchor="end">{t.celticAxis.right}</text>
 
-        {/* 前回までの到達点 */}
+        {/*
+          前回までの到達点。
+
+          ⚠️ 地の色（--muted）で r=3、しかも透明度0.08から、では見えない。
+          背景と同じ色の小さな点は、置いていないのと変わらない。
+          ホロの傾斜で塗り、大きさも上げる。古いものほど薄いという順序は保つ。
+        */}
         {trace.map((p, k) => (
-          <circle key={`tr${k}`} cx={p.x} cy={p.y} r="3" fill="var(--muted)" opacity={0.08 + 0.09 * k} />
+          <circle key={`tr${k}`} cx={p.x} cy={p.y} r={3.4 + k * 0.5}
+            fill={`url(#${gid}holo)`} opacity={0.32 + 0.13 * k}
+            style={{ filter: "drop-shadow(0 0 4px rgba(160,220,255,0.55))" }} />
         ))}
 
         {/*
@@ -12171,9 +12704,36 @@ function HexagramPanel({ lang, onBack, question, userName, canDraw, onConsume, o
 
   // その段階までに開いたカードの添字をすべて集める
   const openedIndices = STAGES.slice(0, stage).flatMap((st) => st.indices);
+  /*
+    次に開く札。
+
+    ⚠️ 伏せた札が並んでいれば、人は必ず札のほうを押す。
+    ボタンでしか進めない作りだと、押しても何も起きない時間が
+    毎回発生する（そのあいだ「壊れている」と読まれる）。
+    次の段に含まれる札を、そのまま開封の当たり判定にする。
+
+    ⚠️ 当たり判定のある札だけを光らせること。
+    全部の伏せ札が同じ見た目のまま一部だけ押せると、
+    どれが押せるのか総当たりで探させることになる。
+  */
+
   // 週の山（最も総合値が高い日）。光の強さを変えるために先に求めておく
   const weeklyPeak = isWeekly && drawn ? weekPeaks(drawn).peak : -1;
   const isLast = stage >= STAGES.length;
+  /*
+    次に開く札。
+
+    ⚠️ 伏せた札が並んでいれば、人は必ず札のほうを押す。
+    ボタンでしか進めない作りだと、押しても何も起きない時間が
+    毎回発生する（そのあいだ「壊れている」と読まれる）。
+    次の段に含まれる札を、そのまま開封の当たり判定にする。
+
+    ⚠️ 当たり判定のある札だけを光らせること。
+    全部の伏せ札が同じ見た目で一部だけ押せると、
+    どれが押せるのかを総当たりで探させることになる。
+  */
+  const nextIndices = (!isLast && dealt >= spread.count && !revealLock && STAGES[stage])
+    ? STAGES[stage].indices : [];
 
   return (
     <div style={{ width: "100%", maxWidth: "440px", margin: "0 auto", display: "flex", flexDirection: "column", alignItems: "center", gap: "16px" }}>
@@ -12615,22 +13175,35 @@ function HexagramPanel({ lang, onBack, question, userName, canDraw, onConsume, o
                       押せるのは最終段だけ。それ以外では指の形も変えない
                       ―― 押せそうに見えて何も起きないのが、いちばん悪い。
                     */
-                    cursor: isLast ? "pointer" : "default",
+                    cursor: isLast || nextIndices.includes(i) ? "pointer" : "default",
                   }}
                   /*
-                    札を押すと、形式的な結果のその札の段落へ飛ぶ。
+                    札を押したときの働きは、段によって変わる。
+                      最終段  … 形式的な結果の、その札の段落へ飛ぶ
+                      それ以外… 次の段に含まれる札なら、その段を開く
 
-                    ⚠️ めくる操作を奪わないこと。段の途中では isLast が false なので
-                    jumpToFormal は即座に戻る。めくりは別のボタンが持っている。
-                    ⚠️ role/tabIndex を付けて、指以外からも辿れるようにする。
+                    ⚠️ 両方を同じ onClick に置くこと。
+                    別々のハンドラを重ねると、最終段で「開く」も走って
+                    stage が範囲外へ進む。
+                    ⚠️ 押せない札には何も付けない。押せそうで動かない札を作らない。
                   */
-                  onClick={isLast ? () => jumpToFormal(i) : undefined}
-                  onKeyDown={isLast ? (e) => {
-                    if (e.key === "Enter" || e.key === " ") { e.preventDefault(); jumpToFormal(i); }
+                  onClick={
+                    isLast ? () => jumpToFormal(i)
+                    : nextIndices.includes(i) ? advanceStage
+                    : undefined
+                  }
+                  onKeyDown={(isLast || nextIndices.includes(i)) ? (e) => {
+                    if (e.key !== "Enter" && e.key !== " ") return;
+                    e.preventDefault();
+                    if (isLast) jumpToFormal(i); else advanceStage();
                   } : undefined}
-                  role={isLast ? "button" : undefined}
-                  tabIndex={isLast && i < dealt ? 0 : undefined}
-                  aria-label={isLast ? t.hexJumpAria(info.pos[i]) : undefined}
+                  role={(isLast || nextIndices.includes(i)) ? "button" : undefined}
+                  tabIndex={(isLast && i < dealt) || nextIndices.includes(i) ? 0 : undefined}
+                  aria-label={
+                    isLast ? t.hexJumpAria(info.pos[i])
+                    : nextIndices.includes(i) ? t.hexOpenAria(info.pos[i])
+                    : undefined
+                  }
                 >
                   {/*
                     出現の回転はこの内側の要素が担う。
@@ -12638,7 +13211,7 @@ function HexagramPanel({ lang, onBack, question, userName, canDraw, onConsume, o
                     アニメーションの transform を当てると中央合わせごと消えて、
                     左上から飛んでくる。配置・出現・めくりで要素を分ける。
                   */}
-                  <div style={{
+                  <div className={nextIndices.includes(i) ? "hex-card-next" : undefined} style={{
                     perspective: "700px", width: "100%", aspectRatio: "130 / 194",
                     animation: i < dealt ? "cardDealIn .5s cubic-bezier(.2,.85,.25,1)" : "none",
                   }}>
@@ -13204,6 +13777,219 @@ function ChestIcon({ open }) {
       {open && <circle cx="20" cy="15" r="6" fill="currentColor" opacity="0.28" />}
     </svg>
   );
+}
+
+/*
+  ============================================================
+  【札の事典】ワンオラクル／プチワンオラクルで読む四つの欄
+
+    物語       その札に何が描かれているか（絵の記述。解釈を混ぜない）
+    世界観     その札が扱っているのは人生のどの層か
+    解釈の指針  どう読むか。読み違えやすい方向を先に潰す
+    イメージ    具体的な名詞を並べる。ここだけ厚く書く
+    あてはめの例 実際の相談に当てて、次の一手まで落とす
+    注意       少数説。そう読む立場もある、という別の取り方
+
+  ⚠️ 分量の配り方に意図がある。
+  物語・世界観・指針・例は短く保つこと。短いほど読み手の側に
+  当てはめる余地が残り、辞書として使える。
+  逆にイメージだけは長く書く。具体的な名詞は数に比例して像を増やすので、
+  ここを削ると札の手ざわりが消える。
+
+  ⚠️ 注意（少数説）は、このアプリの採点と食い違う立場も正直に書く。
+  食い違うときは、どちらを採っているかを明記すること
+  （例：吊られた男の逆位置を解放と読む立場は広いが、採点は取っていない）。
+
+  ⚠️ ここは「辞書」であって鑑定文ではない。
+  引いた人に向けた言葉（あなたは〜）を書かない。
+  札そのものの説明として書き、読み手が自分で当てはめる。
+
+  ⚠️ 極性は MAJOR_UP / MAJOR_REV と ORIENTATION_INVERTED_CARDS に従う。
+  死神13・悪魔15・塔16・月18 は正位置が凶、逆位置が吉。
+  ここで「変容」「必要な破壊」と柔らかく言い換えると、
+  キーワードや★の採点と食い違う。
+
+  ⚠️ いまは日本語のみ、78枚すべて（大アルカナ22＋小アルカナ56）。
+  無い言語では、この欄そのものを出さない（空欄を作らない）。
+
+  【残りを書くときの分量の見積もり】
+    大アルカナ22枚×正逆×4欄 ＝ 176件 ＝ 約6,600字（この実装ぶん）
+    78枚まで広げると 624件 ＝ 約23,000字
+    11言語まで広げると 約25万字。単一ファイルには載せきれないので、
+    全札×全言語をやるなら、事典だけ別ファイルへ分けて遅延読み込みにすること。
+  ============================================================
+*/
+const CARD_LORE = {
+  ja: {
+    up: {
+    "major-0": { story: "荒野の崖のふちを、若者が空を見上げて歩いている。足元は見ていない。犬が吠えて危険を知らせているが、当人は聞いていない。荷物は棒の先に括った小さな包みひとつ。", world: "まだ何にも属していない層。肩書きも実績も持たないかわりに、誰の期待にも縛られていない。物語の始まる前の、白紙の地点。", guide: "「無謀」と読むか「自由」と読むかは、周りの札が決める。単独で出たなら、まだ決まっていないという事実そのものが答え。何者かになる前だから何にでもなれる、と読む。", image: "崖から一歩踏み出した足の裏。まだ地面がある。結び目のほどけかけた風呂敷、片方だけ泥のついた靴、ポケットに入れっぱなしの片道切符。空き家の鍵を返した帰り道、家具のない部屋に射す朝の光、まだ名前を決めていないファイル。誰も知らない街で降りた駅の改札、駅員に道を尋ねる声、地図アプリを開かずに歩いてみる十分間。犬の吠え声、風の匂い、まだ何も書かれていない履歴書の職歴欄。", apply: "転職を迷う人に出たなら、経験の無さを欠点として数えている状態。未経験だから応募できない、ではなく、未経験だから枠が広い、と置き直す局面。", caution: "番号を0ではなく22番目に置き、旅の終わりとして読む数え方もある。その立場では「何も持たない」は未熟ではなく、全部を通過して手放した状態を指す。" },
+    "major-1": { story: "若者が片手を天へ、片手を地へ向けて立つ。机の上には棒・杯・剣・貨幣の四つが揃い、頭上には無限を示す印が浮かぶ。", world: "始めることそのものが力になる層。材料と技術は既に手元にあり、あとは着手だけが残っている。", guide: "「才能がある」ではなく「使える状態にある」と読む。持っていることと使うことは違い、この札が指しているのは後者。", image: "机に並んだ四つの道具に手が届く距離。カッターの新しい刃、まっさらな作業台、電源の入ったばかりの機械の低い音。名刺を刷る前の版下、初回の打ち合わせで開いたノートの一ページ目、送信前の下書きフォルダ。工具箱の蓋を開けた瞬間の油の匂い、指に馴染んだペン、ひと通り揃った材料。舞台の袖で待つ数十秒、幕が上がる直前の照明、口の中の乾き。", apply: "企画が通らないと悩む人に出たなら、案が足りないのではなく、出す回数が足りていない。今週のうちに一件、実際に提出する段階。", caution: "手品師と訳す立場では、才能ではなく口先の巧さを先に読む。相手の説明が上手すぎるときの警告として使う向きもある。" },
+    "major-2": { story: "白と黒の柱の間に、女性が巻物を膝に置いて座る。背後は薄い帳で仕切られ、その向こうは見えない。", world: "言葉にする前の層。理屈で詰める段階ではなく、まだ形にならない感覚が正しさを持っている場面。", guide: "「分かっている」ではなく「気づいている」と読む。急いで説明をつけないこと。この札は、まだ答えを出すなと言っている。", image: "帳の向こうから漏れる薄明かり。図書室の閉架、まだ開いていない封筒、既読を付けずに残したメッセージ。夜更けの台所で立ったまま飲む水、電話を切ったあとの数秒の静けさ、言いかけてやめた言葉。診断結果を待つ待合室の椅子、頁を開かないままの手帳、鍵のかかった引き出し。相手の表情のわずかな変化、理由の説明できない胸騒ぎ、まだ誰にも話していない予感。", apply: "相手の態度が変わったと感じる人に出たなら、その違和感は当たっている。ただし問い詰める時期ではなく、もう少し見ている段階。", caution: "知性の札としてではなく、生理や周期の札として読む向きがある。体調や月ごとの波を尋ねる場では、そちらを先に見る。" },
+    "major-3": { story: "実りの野を背に、女性がゆったりと椅子に身を預ける。麦は既に育ち、川は絶えず流れている。", world: "育てて、実らせる層。生み出す力そのものよりも、育つ場所を用意する力が問われる。", guide: "豊かさを「手に入る」ではなく「育っている」と読む。今すぐ取り上げるのではなく、熟すまで置いておく判断が要る。", image: "よく育った麦の穂の重み。土のついた指、水を張った鉢、伸びすぎた鉢植えの根。台所に立ち込める煮込みの匂い、大きな鍋、人数ぶん揃った器。誰かの寝顔、洗い上がったシーツ、日の当たる縁側。育ってきた新人が自分の判断で動いた日、収穫まであと二週間の畑、熟すのを待つ果実の色。手渡す前の贈り物、包装紙、まだ言っていない褒め言葉。", apply: "部下が伸びないと悩む人に出たなら、指導が足りないのではなく、手を出しすぎている。任せて待つ側へ回る局面。", caution: "豊かさではなく「妊娠・出産そのもの」を指す具体的な読みが伝統的にある。時期を占う場面では、比喩ではなく実際の出来事として扱われることがある。" },
+    "major-4": { story: "石の玉座に、装いを整えた人物が正面を向いて座る。背後は険しい山、足元は揺るがない。", world: "秩序をつくる層。誰かが決めなければ動かないものを、決める役目が回ってきている。", guide: "「支配」ではなく「引き受ける」と読む。権威は与えられるものではなく、責任を取ると宣言した者に付いてくる。", image: "石の座面の冷たさ。判を押した書類の束、社印、決裁欄の空白。会議室の一番奥の椅子、机に置かれた予算表、締切の日付が入ったカレンダー。工事の看板、区画の杭、地図に引かれた境界線。責任者として名前を書く欄、電話を代わる瞬間、「私が決めます」と言い切ったあとの静けさ。整った書棚、揃った背表紙、動かない基礎。", apply: "揉めている場に出たなら、正しさを競う段階は終わっている。誰が決めるかを先に決める場面。", caution: "父親そのもの、あるいは年上の男性を指す人物札として読む立場がある。抽象的な権威ではなく、特定の誰かを探す使い方。" },
+    "major-5": { story: "壇上の人物が二人の従者へ手を差し伸べ、教えを渡している。鍵が二つ、足元に置かれている。", world: "受け継がれてきたものの層。個人の思いつきではなく、多くの人が試して残った型が力を持つ。", guide: "「古い」ではなく「確かめられている」と読む。型を破るのは、型を通ったあとの話。", image: "受け継がれた鍵の重さ。年季の入った道具、書き込みだらけの教本、代々使われてきた木の机。式次第の紙、決まった順序、繰り返されてきた挨拶。師の手元をじっと見る時間、同じ動作の百回目、覚えるまで直される角度。神社の玉砂利、教室の黒板、稽古場の床。就業規則の冊子、引き継ぎのノート、前任者の残した注意書き。", apply: "独立を考える人に出たなら、まだ組織の中で学べるものが残っている。師にあたる人へ、具体的に一つ質問する段階。", caution: "結婚式そのものを指す札として使う向きがある。恋愛の問いでは、精神性ではなく式や親族の承認を読む立場。" },
+    "major-6": { story: "二人の人物が向かい合い、その上に大きな存在が両手を広げている。背後には実のなる木と、燃える木。", world: "惹かれ合う層。損得ではなく、心が動いたかどうかで決まる。", guide: "恋愛だけの札ではない。「どちらを選ぶか」ではなく「どちらに心が向いているか」を示す。理屈で選び直そうとしない。", image: "目が合った一瞬。差し出された手のひら、並んで歩く歩幅の合い方、同じ場面で笑った声。二通の内定通知を並べた机、封を切る手、先に読んだほうの封筒。実のなる木と燃える木、選ばなかった道の先、置いてきた選択肢。名前を呼ばれて振り向いた角度、電話に出るまでの一秒、返信を打ち直した回数。", apply: "二つの内定で迷う人に出たなら、条件の比較はもう終わっている。最初に嬉しかったほうが答え。", caution: "二人の関係ではなく「三角関係」を読む立場がある。人物が三人描かれていることを重く見る流派。" },
+    "major-7": { story: "鎧の人物が戦車に立ち、白と黒の獣が車を引く。手綱は無く、意志だけで進んでいる。", world: "押し切る層。事情はどうあれ、進む決断をした者だけが前へ出られる。", guide: "「勝つ」ではなく「進む」と読む。相反する力を抑え込んだまま走っている状態なので、止まると崩れる。", image: "手綱を持たない手。走り出した車の窓、後ろへ流れる景色、開けたままの窓から入る風。日程を先に押さえた予定表、押印済みの発注書、もう戻せない申し込み。二頭の獣が別々を向いても進む車輪、砂利を噛むタイヤ、傾いた車体。集合時刻の五分前、点呼、出発の合図。", apply: "交渉が長引く人に出たなら、条件を詰め切る前に日程を切る段階。動かしながら整える。", caution: "乗り物・移動そのものを指す具体的な札として使う向きがある。引越や車の購入を尋ねる場では、そちらを先に取る。" },
+    "major-8": { story: "女性が獅子の口へ静かに手を添える。力ずくではなく、頭上には無限の印。", world: "抑え込むのではなく手なずける層。恐れも欲も、消さずに扱う。", guide: "「我慢」と読まない。押さえつけるのではなく、相手（あるいは自分の衝動）と付き合う技術の話。", image: "獣の口に添えた手のひらの温度。犬の首に回した腕、暴れる子を抱きとめる腕の力加減、押さえつけずに支える距離。怒鳴らずに言い切った一言、深く吸って吐いた息、握った拳を開くまでの数秒。手綱の緩め方、乗り手の重心、荒れた馬の耳の向き。長い交渉の三時間目、席を立たずに座り続けた時間、湯呑みの中の冷めた茶。", apply: "怒りを抑えている人に出たなら、抑えるのをやめて、何に怒っているかを言葉にする段階。", caution: "マルセイユ版では番号が11で、正義と入れ替わる。番号の順序で物語を読む場合、この二枚の位置が変わる点に注意。" },
+    "major-9": { story: "灯りを掲げた老人が、雪の峰にひとり立つ。灯りは足元しか照らさない。", world: "ひとりで考える層。人に聞いても答えが出ない種類の問いを抱えている。", guide: "「孤独」ではなく「必要な距離」と読む。閉じこもりと区別すること。戻ってくる前提の離脱かどうかが分かれ目。", image: "足元しか照らさない灯り。雪を踏む音、白い息、手袋の中の指。深夜の作業机、卓上の一灯、他の部屋の消えた電気。ひとりで入った定食屋、誰とも話さなかった一日、電源を切った携帯。山小屋の窓、遠くの町の明かり、下りるための地図。読み返した古いノート、書き足した余白、まだ誰にも見せていない結論。", apply: "人間関係に疲れた人に出たなら、切るのではなく、一度予定を空ける段階。", caution: "年配者・専門家そのものを指す人物札として読む立場がある。「誰に相談すべきか」の問いでは、内省ではなく人を探す。" },
+    "major-10": { story: "輪が回り、四隅に四つの生き物が書物を開く。輪の上下では、乗っている者が入れ替わる。", world: "自分の力の外で動く層。努力とは別の理由で流れが変わる。", guide: "「幸運」ではなく「変わり目」と読む。上げ潮なら乗る、引き潮なら備える。留まる選択肢は無い。", image: "回り始めた輪の重み。改札を通る人の流れ、乗り換えのホーム、発車ベル。異動の内示、名簿の並び替え、席替えの朝。潮の匂い、引いていく波、砂に残った線。届いた一通のメール、予定になかった電話、たまたま隣に座った人。抽選の封筒、当たりの通知、外れた年の記憶。", apply: "転勤や異動の話が出た人に出たなら、断る理由を探すより、乗った先で何を得るかを数える段階。", caution: "時期を読む札として、一年・一巡りという期間そのものを指す使い方がある。抽象的な運ではなく、暦の話として取る立場。" },
+    "major-11": { story: "剣と天秤を持った人物が、正面を向いて座る。目は隠されていない。", world: "帳尻が合う層。良くも悪くも、やってきたことの結果が返ってくる。", guide: "「正しさ」ではなく「釣り合い」と読む。自分の言い分が通るかではなく、貸し借りがどうなっているか。", image: "天秤の皿が止まる位置。契約書の署名欄、割り印、条項の但し書き。領収書の束、帳簿の残高、貸したまま返っていない金額。裁判所の廊下、番号を呼ぶ声、提出期限。言った言わないを確かめる録音、日付の入ったメール、証拠として残した写真。返した本、返ってきた本、まだ返していない借り。", apply: "契約でもめている人に出たなら、感情の話をやめて、書面に何と書いてあるかを確認する段階。", caution: "マルセイユ版では番号が8。また、裁判・契約そのものを指す実務的な札として読む向きもある。" },
+    "major-12": { story: "男が片足を吊られ、逆さまに垂れている。顔は苦しげでなく、頭の後ろには光が差す。", world: "動けない層。ただし、その不自由は自分が選んだもの。", guide: "「損」ではなく「見方が変わる時間」と読む。抜け出そうともがくより、その姿勢のまま見えるものを取る。", image: "吊られたまま見る逆さまの景色。動かない待ち時間、点滴のしずく、病室の天井。研修中の名札、まだ担当を持たない机、見学だけの一日。海外で言葉が通じない一週間、注文できずに指さした写真、通訳を待つ間。長い会議の後ろの席、発言しないまま取ったメモ、後から効いてくる観察。", apply: "望まない部署にいる人に出たなら、異動を願い出るより、そこでしか見えない全体像を掴む段階。", caution: "自ら選んだ試練ではなく、単に「金銭的な行き詰まり」を指す実利的な読みがある。逆さに吊られた姿を、財布を振られている図として見る立場。" },
+    "major-13": { story: "骸骨の騎士が進み、王も子どもも等しく倒れている。遠くには昇る朝日と二本の塔。", world: "終わる層。惜しむかどうかに関わらず、区切りがつく。", guide: "「変容」と柔らかく言い換えない。まず終わりであり、再生はその後の話。この札に「まだ続けられる」と読ませないこと。", image: "倒れた王冠が地面に転がる音。解約の手続き、鍵の返却、机の引き出しを空にする作業。最終出社日の挨拶、名札を外す、名簿から名前が消える。葬儀の受付、遺品の整理、着なくなった服の袋。閉店の貼り紙、シャッター、電気の止まった看板。もう鳴らない番号、届かないメール、返ってこない返事。", apply: "続けるか迷っている人に出たなら、答えは終わり。畳み方を考える段階であって、延命の工夫をする場面ではない。", caution: "番号13を単なる区切りと見て、悪い札ではないとする立場が広く行われている。ただしこのアプリは、正位置を凶として採点している。" },
+    "major-14": { story: "天使が二つの杯の間で水を注ぎ移す。片足は水に、片足は地に置かれている。", world: "混ぜ合わせる層。極端のどちらでもない配合を探している。", guide: "「我慢して中間を取る」ではない。二つの違うものを、時間をかけて馴染ませる作業のこと。", image: "二つの杯を行き来する水の細い線。薄める、足す、味を見る。湯と水を混ぜる指先、ちょうどいい温度、鍋の火加減。予定表に入れた休息の時間、仕事と家庭の配分、週ごとに直す割り振り。絵の具を混ぜる皿、中間色、何度も試した比率。歩幅を相手に合わせる速度、二人で持つ荷物の重心。", apply: "仕事と家庭が両立しない人に出たなら、どちらかを削る話ではなく、配分を毎週決め直す仕組みを作る段階。", caution: "天使ではなく「季節の巡り」を読む立場がある。時期を尋ねる場では、一年の四分の一という期間として取ることがある。" },
+    "major-15": { story: "角のある存在が台に座り、その下で二人が鎖につながれている。鎖は緩く、外そうと思えば外れる。", world: "抜けられるのに抜けない層。縛っているのは相手ではなく、手放したくない何か。", guide: "「悪」ではなく「執着」と読む。鎖が緩いことが要点で、続いているのは選び続けているから。", image: "外そうと思えば外れる鎖の緩さ。夜中に開くアプリ、伸ばした指、消せない履歴。冷蔵庫の前に立つ時間、封を切った箱、明日からと言った回数。返信を待つ画面、既読の付かないメッセージ、それでも待つ夜。金の匂い、契約の甘い条件、断れなかった誘い。手放したくない立場、失いたくない関係、認めたくない依存。", apply: "やめられない関係にいる人に出たなら、相手を責める段階ではない。何を惜しんで続けているかを一つ書き出す場面。", caution: "性愛そのもの、あるいは強い肉体的な結びつきを指す札として読む向きがある。関係の問いでは、善悪ではなく強度を見る立場。" },
+    "major-16": { story: "塔に雷が落ち、冠が吹き飛び、二人が落ちていく。", world: "崩れる層。積み上げたものが、こちらの都合と関係なく壊れる。", guide: "「必要な破壊」と美化しない。まず被害であり、意味づけは落ち着いてからでよい。", image: "雷が落ちた瞬間の白。割れたガラス、床に散った書類、鳴り続ける警報。倒産の通知、差し押さえの紙、閉まったままのシャッター。診断名を告げられた診察室、崩れた予定表、白紙になった来月。落ちた冠、外れた足場、地面までの距離。電話が鳴った時刻、それを聞いた場所、その日の天気。", apply: "計画が白紙になった人に出たなら、立て直しの前に、失ったものを正確に数える段階。", caution: "塔を「刑務所」「病院」など、出られない建物そのものとして読む具体的な立場がある。また、雷を天啓と取る古い読みもある。" },
+    "major-17": { story: "女性が水辺で二つの壺から水を注ぐ。頭上には大きな星と七つの小さな星。", world: "静かに回復する層。派手な出来事は起きないが、確実に水位が戻る。", guide: "「願いが叶う」ではなく「見通しが立つ」と読む。まだ手にしていないが、方向が見えている状態。", image: "水面に落ちる細い水の筋。夜明け前の空、東の薄明かり、まだ人の出ていない道。よく眠れた朝、温かい汁物、久しぶりに開けた窓。回復期の散歩、無理のない距離、途中で座ったベンチ。手当てを終えた傷、乾いた包帯、薄くなった痕。遠くの灯台、方角の分かる星、進む先の見当。", apply: "疲れ切っていた人に出たなら、無理に動く段階ではない。眠りと食事を整えるだけで足りる時期。", caution: "希望ではなく「露出・裸」を読む立場がある。隠していたものが人目に触れる、という具体的な意味で使う向き。" },
+    "major-18": { story: "月の下、犬と狼が吠え、水辺から甲殻の生き物が這い出す。道は二本の塔の間を抜けていく。", world: "はっきりしない層。事実と不安の区別がつかなくなっている。", guide: "「危険」と断じない。見えていないだけで、実害が出ているとは限らない。ただし決断には向かない。", image: "月明かりに伸びる二つの影。霧の出た道、輪郭のぼやけた建物、足元しか見えない歩幅。既読の付かない画面、返事の遅れ、増えていく推測。夢の途中で覚めた明け方、思い出せない内容、残った不安。水面の下の動き、揺れる影、正体の分からない音。診断のつかない不調、原因不明の疲れ、検査結果の待ち時間。", apply: "相手の気持ちが分からない人に出たなら、推測を重ねる段階ではない。確かめるか、保留する場面。", caution: "母親・水・海に関わる具体的な事柄を指す札として読む立場がある。不安ではなく、生活の中の水回りや周期を見る使い方。" },
+    "major-19": { story: "大きな太陽の下、子どもが裸馬に乗る。背後には向日葵と壁。", world: "隠すもののない層。話がそのまま通り、裏を読む必要がない。", guide: "「成功」より「明るみに出る」と読む。良いことも、隠していたことも、等しく見える状態。", image: "真上から降る光の熱。洗濯物の乾く匂い、影の短さ、汗ばんだ首筋。人前で話し終えた直後の拍手、こわばりの取れた肩、素直に出た笑い。合格通知、公開された結果、隠す必要のない事実。子どもの走る速さ、日焼けした腕、飲み干した水。開け放した窓、風の通る部屋、明るい台所。", apply: "人前で話す機会が来た人に出たなら、飾らずに事実を並べるだけで足りる段階。", caution: "子ども・出産・男児を指す人物札として読む向きがある。抽象的な成功ではなく、家族の出来事として取る立場。" },
+    "major-20": { story: "天使のラッパが鳴り、棺から人々が立ち上がって両手を広げる。", world: "呼ばれる層。自分から始めるのではなく、外から声が掛かる。", guide: "「復活」を漠然と読まない。過去に置いてきた具体的な一件が、もう一度机の上に載る、という意味。", image: "遠くから届くラッパの音。着信履歴に残った古い番号、十年ぶりの名前、同窓会の案内。押し入れから出てきた箱、当時のノート、書きかけの原稿。訂正の連絡、やり直しの機会、再審査の通知。名前を呼ばれて立ち上がる瞬間、返事をする声、席を立つ音。閉じた案件の再開、掘り返した資料、もう一度並べた選択肢。", apply: "疎遠だった人から連絡が来た人に出たなら、避ける段階ではない。一度は会って話を聞く場面。", caution: "「知らせ」そのものを指す実務的な札として使う向きがある。合否・審査結果・判決など、外から来る通知として読む立場。" },
+    "major-21": { story: "花輪の中で人物が舞い、四隅に四つの生き物が控える。", world: "ひと巡りが終わる層。次の話はまだ始まっていない。", guide: "「完成」で止めない。終わったという事実と、次が空白であるという事実は同時に来る。", image: "花輪の中で止まる足。修了証の紙、卒業式の椅子、返した制服。引き渡しの鍵、完成検査、施主の署名。最終回の原稿、あとがき、奥付の日付。長い旅の最後の駅、荷ほどき、洗濯機を回す音。打ち上げの席、労いの言葉、次の話がまだ出ていない静けさ。", apply: "目標を達成した人に出たなら、次を急いで決める段階ではない。終わったことを人に伝えて、区切りを外へ出す場面。", caution: "完成ではなく「外国・遠方」を指す札として読む立場がある。海外や遠隔地に関わる問いでは、場所の話として取ることがある。" },
+    "wands-0": { story: "雲間から現れた手が、芽吹いた棒を一本差し出している。遠くには城と川。", world: "火が点いた層。まだ何も形になっていないが、やる気だけは確かにある。", guide: "「成功する」ではなく「始まった」と読む。持続については何も言っていない。点火と燃焼は別。", image: "マッチを擦った瞬間の匂い。買ったばかりのノートの一頁目、握った鉛筆、まだ何も書かれていない見出し。企画書のタイトルだけ決まった夜、検索履歴に並んだ調べもの、深夜に送った「やってみたい」の一言。芽の出た枝の緑、切り口の湿り、伸びる方向。ドメインを取った日、屋号を考えた紙、口に出して読んでみた名前。誰にも言っていない構想、胸の中の熱、まだ冷めていない温度。", apply: "やりたいことが定まらない人に出たなら、選ぶ段階ではない。今週のうちに一つ、実際に手を出してみる場面。", caution: "妊娠・男児の誕生を指す具体的な札として読む伝統的な立場がある。棒を生命の象徴と取る向き。" },
+    "wands-1": { story: "城壁の上で、地球儀を手にした人物が遠くを見ている。棒の一本は壁に固定され、もう一本を握っている。", world: "見渡す層。手元は既に固まっていて、次にどこへ伸ばすかを考えている。", guide: "「迷い」と読まない。選べないのではなく、選べる位置に立っている。決めるのはこれから。", image: "地図を広げた机。物件情報の一覧、家賃の欄、通勤時間の比較。二社の事業計画書、並べた数字、まだどちらにも返事をしていない状態。城壁から見える平野、境界線、自分の領地の端。世界地図を回す指、行ったことのない国名、取っていないパスポート。既にある店と、出そうか迷っている二号店。売上が安定した年、次の投資先、動かせる資金の額。", apply: "現状に不満のない人に出たなら、無理に変える段階ではない。次の候補を三つ書き出すだけでよい場面。", caution: "「支配」の札として、領地や事業の所有そのものを読む立場がある。心境ではなく持ち物を見る向き。" },
+    "wands-2": { story: "崖の上に立つ人物が、三本の棒の間から海を眺めている。船が沖を進んでいる。", world: "送り出した層。手を離れたものが、外で動いている。", guide: "「これから広がる」ではなく「もう出した」と読む。待つことが仕事になっている局面。", image: "港を出ていく船。投函した封筒、送信済みの見積書、返事待ちの三日目。委託した先からの進捗連絡、他人の手が動いている時間、口を出したくなる指。輸出の伝票、通関の書類、届く先の住所。応募した会社の選考期間、面接後の一週間、鳴らない電話。育てて送り出した部下、初めての一人立ち、報告を待つ夕方。", apply: "頼んだ仕事が気になる人に出たなら、確認を入れる段階ではない。期限まで手を出さないと決める場面。", caution: "貿易・海外との取引そのものを指す実務的な札として使う立場がある。船を比喩ではなく貨物として取る。" },
+    "wands-3": { story: "四本の棒に花輪が渡され、その向こうで人々が手を挙げている。奥には城。", world: "迎えられる層。ひと区切りがつき、その場所に居場所がある。", guide: "「完成」ではなく「一区切り」と読む。祝ってよいが、次があることは変わらない。", image: "門に渡した花輪。竣工の日のテープ、鍵の引き渡し、写真を撮る位置。引っ越し先で最初に開けた段ボール、電気が点いた瞬間、湯を沸かす音。結婚式の受付、席次表、名前を呼ぶ声。契約成立の握手、印を押した瞬間、乾杯のグラス。実家の玄関、開いた扉、迎える顔。区切りの打ち上げ、労いの言葉、明日からの話をまだしていない席。", apply: "頑張り続けている人に出たなら、次を積む段階ではない。今週のうちに人と食事をする場面。", caution: "結婚・新居そのものを指す札として読む立場が広く行われている。時期を占う場では、式や引越として取る。" },
+    "wands-4": { story: "五人が棒を振り上げ、それぞれ別の方を向いて競り合っている。誰も倒れていない。", world: "ぶつかる層。ただし、まだ壊し合ってはいない。", guide: "「争い」と重く読まない。決着ではなく稽古。ここで削られた角は、後で効いてくる。", image: "稽古場の竹刀の音。会議で割れた意見、机を挟んだ二人、書き直された案。相見積もりの三社、並んだ金額、選ばれなかった二社。プレゼンの順番待ち、控室の空気、他社の資料。兄弟の言い合い、同期の成績表、掲示された順位。ぶつかって初めて出てきた本音、遠慮を外した一言、そのあとの気まずさと発見。", apply: "反対されて落ち込んだ人に出たなら、引く段階ではない。相手の言い分を一つ取り入れて出し直す場面。", caution: "「見せかけの争い」と読み、実害は無いとする立場がある。誰も倒れていないことを重く見る向き。" },
+    "wands-5": { story: "月桂冠をかぶった人物が馬に乗り、周りの人々が棒を掲げて歓迎している。", world: "認められる層。結果が名前とともに人に伝わっている。", guide: "「有頂天になるな」と説教しない。素直に受け取ってよい局面。ただし、これは通過点。", image: "凱旋の馬上。表彰状の紙質、名前の読み上げ、拍手の長さ。掲示された合格者番号、指でなぞる列、自分の番号。紹介記事の見出し、掲載誌、送った家族。昇進の辞令、新しい名刺、席の移動。「あの件よかったね」という一言、廊下ですれ違いざま、覚えていてくれたこと。祝われる側の照れ、握手の回数、帰り道の軽さ。", apply: "評価を素直に受け取れない人に出たなら、謙遜する段階ではない。「ありがとうございます」だけ言う場面。", caution: "「他人の勝利」を読む立場がある。祝われているのは自分ではなく、周りの誰かだという取り方。" },
+    "wands-6": { story: "高台に立つ人物が一本の棒で身を守り、下から六本の棒が突き上げられている。", world: "守る層。攻める側ではなく、既に持っているものを保つ側にいる。", guide: "「劣勢」ではなく「高所にいる」と読む。数では負けているが、位置では勝っている。", image: "坂の上から見下ろす角度。既存客からの継続契約、後発の類似サービス、値下げ攻勢。守っている仕様、変えない方針、押される理由。当番の引き継ぎ、慣れた手順、新しいやり方の提案。担当を外されそうな会議、根拠の資料、示せる実績。夜勤明けの粘り、あと二時間、切れそうな集中。足場の高さ、崩れていない地面、伸ばされた手の数。", apply: "後発に押されている人に出たなら、真似する段階ではない。自分の強みを一つだけ言い切る場面。", caution: "「一人で戦っている」ことを孤立と読む立場がある。優位ではなく、援軍のなさを先に見る向き。" },
+    "wands-7": { story: "八本の棒が空を斜めに飛んでいる。人物は描かれていない。", world: "速く動く層。止められないし、止める理由もない。", guide: "「良い知らせ」と限定しない。速いという一点だけが示されている。中身は他の札が決める。", image: "空を切る棒の音。連続して鳴る通知、返信の速さ、その日のうちに決まった日程。届いた合否、押した送信、折り返しの電話。空港の出発掲示板、繰り上がった便、走る通路。工程が一気に進んだ週、埋まった予定、短くなった納期。矢の飛ぶ角度、着地点、まだ地面に刺さっていない状態。動き出した話、噂の速さ、耳に入るまでの時間。", apply: "話が急に動いた人に出たなら、慎重に構える段階ではない。今日のうちに返事をする場面。", caution: "「恋文」「求愛」を指す札として読む古い立場がある。飛ぶ棒を、届く便りとして取る。" },
+    "wands-8": { story: "包帯を巻いた人物が棒に寄りかかり、背後の八本を警戒している。", world: "耐える層。既に傷を負っていて、それでも立っている。", guide: "「もう限界」と読まない。まだ持っている。ただし、警戒を解けない状態が続いている。", image: "巻き直した包帯。連投明けの朝、残っている疲労、それでも出す手。トラブルの後の再発防止策、増えたチェック項目、疑い深くなった目。締切前の最後の三日、削った睡眠、切らしていない集中。柵の残り一本、握った手、まだ倒れていない体勢。前の職場で受けた扱い、身についた身構え、初対面での距離の取り方。負けていない、という一点だけの確かさ。", apply: "疲れ切っている人に出たなら、休む理由を探す段階ではない。あと一つだけ終わらせて、そこで止める場面。", caution: "傷ではなく「経験」を読む立場がある。包帯を、負傷ではなく身につけた守りとして取る向き。" },
+    "wands-9": { story: "十本の棒を抱えた人物が、前が見えないまま歩いている。町はもう近い。", world: "抱えすぎる層。運べてはいるが、そのぶん何も見えていない。", guide: "「頑張っている」と褒めて終えない。この札は、降ろせるものがあると言っている。正位置は負担の側。", image: "腕いっぱいの荷物。開けていないメールの件数、山になった書類、自分にしか分からない引き継ぎ。頼まれて断らなかった仕事、その積み重ね、今週の残業時間。持ち帰った鞄の重さ、玄関で下ろす音、翌朝また持つ手。誰にも渡していない鍵、代われる人のいない当番、休めない理由。前が見えない視界、あと少しの距離、それでも下ろさない腕。", apply: "抱え込んでいる人に出たなら、効率を上げる段階ではない。誰か一人に一件だけ渡す場面。", caution: "逆位置ではなく正位置を「達成の直前」と肯定に読む立場がある。町が近いことを重く見る取り方。" },
+    "wands-10": { story: "若者が棒を立てて、その先をじっと見上げている。背後は荒野。", world: "興味の湧いた層。まだ何者でもないが、目が向いている。", guide: "「未熟」と切らない。熱があること自体が資源。技術は後から付く。", image: "見上げる角度。体験入部の一日、借りた道具、初めて触った感触。開いた入門書、付箋の少なさ、読み終わっていない章。届いた案内、応募要項、締切の日付。誰かの仕事を横で見た午後、質問した三つ、覚えたての用語。荒野の一本道、まだ足跡のない砂、伸ばした棒の影。届いた知らせ、開ける封筒、まだ知らない中身。", apply: "興味はあるが動けない人に出たなら、調べる段階は終わっている。体験や見学を一件、日付で押さえる場面。", caution: "人物札として、実際の若者や子どもを指すと読む立場がある。心境ではなく、その人を探す使い方。" },
+    "wands-11": { story: "鎧の若者が跳ねる馬に乗り、棒を掲げて駆け出そうとしている。背後は砂漠。", world: "飛び出す層。準備が整う前に、体が先に動いている。", guide: "「無謀」と決めつけない。速さが要る局面もある。ただし帰りの算段は誰も立てていない。", image: "跳ね上がる前脚。決めた翌週の引越、まだ決まっていない転職先、解約した部屋。買った航空券、片道、宿は着いてから。飛び込みの営業、名刺の束、当てのない訪問。始めた副業、初月の売上、足りない運転資金。砂を蹴る蹄、上がる砂煙、後ろへ流れる景色。「行きます」と言った瞬間の空気、周りの顔、引き返せなくなった感じ。", apply: "勢いで決めた人に出たなら、止める段階ではない。戻る条件を一つだけ決めておく場面。", caution: "引越・転居そのものを指す札として読む立場が広く行われている。時期の問いでは移動として取る。" },
+    "wands-12": { story: "向日葵と黒猫を伴い、女性が正面を向いて座る。棒はまっすぐ立っている。", world: "人が集まる層。押していないのに、向こうから寄ってくる。", guide: "「明るい人」と単純化しない。裏に回った気配（黒猫）まで含めて見ている強さの札。", image: "正面を向いた姿勢。相談を持ちかけられる回数、名前を覚えられている速さ、紹介で来た客。開いた玄関、置かれた花、日の当たる部屋。人の輪の中心、笑い声、話しかけやすい距離。断るときの言い方、角の立たない一言、それでも通した線。誰かの陰口を聞いても顔に出さない表情、黒猫の目、見えている範囲の広さ。手入れされた庭、伸びた向日葵、水をやる時間。", apply: "人望はあるのに成果に結びつかない人に出たなら、能力の問題ではない。頼み事を口に出す場面。", caution: "人物札として、年上の女性や配偶者を指すと読む立場がある。抽象的な資質ではなく特定の誰かを見る。" },
+    "wands-13": { story: "玉座の人物が棒を握り、体をやや横へ向けている。獅子と蜥蜴の意匠。", world: "旗を立てる層。方向を示し、それに人が付いてくる。", guide: "「支配」ではなく「先頭」と読む。命じているのではなく、先に進んでいるから付いてくる。", image: "掲げた旗の高さ。朝礼で言い切った方針、迷いのない語尾、動き出した現場。決裁のはやさ、任せた範囲、細かく聞かない姿勢。創業者の名前が付いた社名、掲げた理念、貼り出した言葉。無理を通した交渉、責任を取ると言った場面、後ろの人数。獅子の意匠、腰かけた角度、いつでも立てる体勢。長く続いた店、常連、代替わりの話。", apply: "人が付いてこないと感じる人に出たなら、説明を増やす段階ではない。自分が先に一つやって見せる場面。", caution: "人物札として、既婚の男性や経営者を指すと読む立場がある。性質ではなく立場から探す使い方。" },
+    "cups-0": { story: "雲間の手が杯を差し出し、そこから五筋の水が溢れている。下では蓮が浮かび、白い鳩が降りてくる。", world: "満ちはじめる層。感情が動き出していて、まだ行き先は決まっていない。", guide: "「恋愛が始まる」に限定しない。心が動いたという一点だけ。相手の有無は別の札が言う。", image: "溢れて縁を伝う水。久しぶりに素直に笑えた日、その理由の分からなさ、帰り道の足取り。もらった手紙の封、開ける前の重み、指の震え。生まれたばかりの赤ん坊の重さ、抱いたときの体温、腕の角度。飲みかけの茶の湯気、湯呑みの縁、両手で包む温かさ。誰かの名前を思い出した瞬間、胸のあたりの動き、言葉にならない感じ。雨上がりの匂い、濡れた土、光る葉。", apply: "気持ちが動いたのに動けない人に出たなら、確かめる段階ではない。感じたことを一行だけ書き留める場面。", caution: "妊娠・出産を指す具体的な札として読む伝統的な立場がある。杯を器＝胎と取る向き。" },
+    "cups-1": { story: "男女が向かい合って杯を交わす。上には翼のある獅子と、絡み合う二匹の蛇。", world: "対等に向き合う層。片方が上ということがない。", guide: "「両想い」に限定しない。友人でも仕事でも成り立つ。要点は、交換が釣り合っていること。", image: "差し出された二つの杯の高さが同じ。握手の力加減、目線の高さ、椅子の距離。共同名義の契約書、並んだ二つの署名、同じ日付。往復した連絡の回数、返す速さの近さ、送る文の長さ。二人で決めた分担表、半分ずつの家事、揉めなかった理由。杯の縁が触れた音、乾杯、飲み干す速度。相手の名前を口にするときの声の調子。", apply: "関係を進めたい人に出たなら、気持ちを大きくする段階ではない。相手にも同じだけ渡せているかを数える場面。", caution: "婚約・契約そのものを指す実務的な札として読む立場がある。感情ではなく取り決めを見る。" },
+    "cups-2": { story: "三人が杯を掲げて輪になっている。足元には収穫した果実。", world: "分け合う層。ひとりでは成り立たない喜び。", guide: "「祝い事」と限定しない。苦労を共にした相手がいる、という事実のほうが本体。", image: "掲げた三つの杯が触れる音。打ち上げの席、割り勘の計算、誰かが多く出した分。同期と飲んだ夜、話した愚痴、笑った時間。収穫した葡萄、籠の重さ、分けた数。出産の報告、届いた祝いの品、送り返した礼状。円になった椅子、真ん中の空間、誰の席でもない場所。名前を呼び合う距離、肩に置かれた手、帰り際の「また」。", apply: "一人で抱えている人に出たなら、解決する段階ではない。同じ立場の人に一度話す場面。", caution: "出産の祝い、あるいは女性三人による助力を指す人物札として読む立場がある。" },
+    "cups-3": { story: "木の下で腕を組む人物。目の前に三つの杯があり、四つ目が雲間から差し出されているが見ていない。", world: "満たされているのに動かない層。差し出されたものに気づいていない。", guide: "「贅沢な悩み」と断じない。飽きは、消耗の別の形。正位置は停滞の側。", image: "腕を組んだ姿勢。並んだ三つの杯、どれも減っていない、口をつけていない。届いた誘いの通知、既読、返していない返事。同じ道の通勤、同じ店の昼食、同じ席。悪くない給料、悪くない人間関係、それでも上がらない気分。木陰の涼しさ、動かない空気、傾いた午後の光。四つ目の杯、伸ばされた手、見ていない目。", apply: "退屈している人に出たなら、大きく変える段階ではない。断り続けていた誘いを一つ受ける場面。", caution: "逆位置ではなく正位置を「深い内省」と肯定に読む立場が広く行われている。このアプリは停滞の側で採点している。" },
+    "cups-4": { story: "黒衣の人物がうつむき、三つの杯が倒れている。背後に二つが立ったまま残っている。", world: "こぼれた層。失ったものだけが見えている。", guide: "「まだ二つ残っている」と急いで慰めない。まず、こぼれたことを認める札。正位置は喪失の側。", image: "倒れた杯から流れ出た水の跡。石畳の染み、乾いていく縁、拾わない杯。届かなかった連絡、消した下書き、送れなかった言葉。葬儀の帰り道、黒い服、外した数珠。落ちた選考の通知、開いた文面、閉じた画面。橋の向こうの家、まだ帰れない距離、背中の丸まり。残った二つの杯、視界の外、振り返っていない背中。", apply: "失ったばかりの人に出たなら、前を向く段階ではない。今日は何もしないと決める場面。", caution: "背後の二つの杯を重く見て、正位置でも「まだ残っている」と肯定に読む立場がある。" },
+    "cups-5": { story: "庭で子どもが花の入った杯を差し出している。古い屋敷と、通り過ぎる衛兵。", world: "戻ってくる層。過ぎたものが、いま役に立つ形で顔を出す。", guide: "「過去に囚われる」と読まない。正位置は、過去が贈り物として届く側。", image: "花を挿した杯。実家の押し入れ、出てきたアルバム、写真の裏の日付。同級生からの連絡、変わっていない口調、変わった近況。子どもの頃に住んだ町の匂い、変わった商店街、残っていた坂。もらったお下がり、まだ使える道具、教わった手順。庭の花壇、毎年咲く花、植えた人。差し出す小さな手、受け取る手、その高さの差。", apply: "行き詰まっている人に出たなら、新しい方法を探す段階ではない。昔うまくいったやり方を一つ戻す場面。", caution: "実際の子ども、あるいは幼馴染や兄弟そのものを指す人物札として読む立場がある。" },
+    "cups-6": { story: "雲の中に七つの杯が浮かび、城・宝・蛇・顔・花輪・竜・布に包まれた光が入っている。人物は影。", world: "選択肢が多すぎる層。どれも手に取っていない。", guide: "「夢を見るな」と切らない。ただし、この札は全部が雲の上にあると言っている。正位置は幻の側。", image: "雲の上に並んだ七つ。開いたままの十七のタブ、比較サイト、決めていない機種。始めたい副業の候補、書き出した一覧、着手ゼロ。見たドラマの主人公の生活、想像した自分、実際の預金残高。深夜の理想の設計図、翌朝の現実味、消したメモ。布に包まれた光、中身の見えなさ、開けていない包み。どれも本物に見える距離、近づかない足。", apply: "選べない人に出たなら、比較する段階ではない。一つを選んで、他を今日消す場面。", caution: "正位置を「豊かな想像力」と肯定に読む立場が広く行われている。このアプリは幻の側で採点している。" },
+    "cups-7": { story: "人物が八つの杯に背を向け、杖をついて山へ登っていく。月が欠けている。", world: "置いていく層。悪くないものを、それでも手放す。", guide: "「逃避」と読まない。積み上げたものがあるからこそ、離れる決断に重みがある。", image: "背を向けた背中。整えた八つの杯、崩していない積み上げ、そのまま置いていく。円満退職の日、引き継ぎの完了、渡した鍵。長く住んだ部屋の解約、揃った家具、置いていく本棚。良くしてくれた人への挨拶、言えなかった理由、伝えた言葉。夜道の杖、月の欠け、山の高さ。振り返らずに歩いた距離、後ろの明かり、遠ざかる音。", apply: "続けるか迷っている人に出たなら、比べる段階ではない。離れる日を決めて、そこまで丁寧にやる場面。", caution: "「引越」「転職」など、実際に場所を移すことを指す札として読む立場がある。" },
+    "cups-8": { story: "満足げな人物が腕を組んで座り、後ろの台に九つの杯が並んでいる。", world: "望みが叶った層。自分の欲しかったものが、実際に手元にある。", guide: "「傲慢」と説教しない。この札は素直に受け取ってよい。ただし、並んだ杯は自分のためのもの。", image: "並んだ九つの杯。買った家の玄関、鍵の重み、名義の書類。念願の道具、届いた箱、開ける前の時間。貯めた額の通帳、桁の数、確かめる指。招いた客、用意した料理、褒められた味。腕を組んだ姿勢、満ちた腹、傾いた椅子。「これが欲しかった」と口に出した瞬間、静かな部屋、誰も見ていない笑み。", apply: "満たされたのに落ち着かない人に出たなら、次を探す段階ではない。今あるものを一つ数え上げる場面。", caution: "「願いが叶う札」として、望みの内容を問わず吉と断じる古い立場がある。物質的な満足に限る読みも。" },
+    "cups-9": { story: "虹の下で家族が手を広げ、子どもが踊っている。十の杯が空に架かる。", world: "整った層。個人ではなく、まとまり全体が満ちている。", guide: "「幸福」で止めない。この札が示すのは、当たり前になっていて気づかれない側の充足。", image: "虹の弧。夕食の食卓、いつもの席、変わらない献立。玄関に並んだ靴の数、揃った傘、脱ぎ散らかった上着。休日の午後の音、テレビの音量、誰かの寝息。写真に写らなかった日常、撮り忘れた年、それでも続いた時間。子どもの背丈の印、柱の傷、日付。「おかえり」の声、返す「ただいま」、その速さ。", apply: "満たされているのに不安な人に出たなら、備える段階ではない。今あることを誰かに口に出して伝える場面。", caution: "結婚・家庭そのものを指す札として読む立場が広く行われている。時期の問いでは家庭の出来事として取る。" },
+    "cups-10": { story: "若者が杯を掲げると、その中から魚が顔を出している。", world: "思いがけず湧く層。用意していなかったものが来る。", guide: "「幼い」と切らない。受け取る力があること自体が資質。突飛な思いつきを潰さない。", image: "杯から顔を出した魚。夢で見た場面、朝に残った断片、書き留めた三行。ふと浮かんだ企画、会議で言ってみた一言、意外な反応。届いた誘いの手紙、開けた封筒、思ってもみなかった名前。子どもの言った言葉、大人が気づかなかった視点、笑ったあとの沈黙。海の色、揺れる水面、光る鱗。名付けていない感情、まだ形のない好意。", apply: "思いつきを言えずにいる人に出たなら、練り上げる段階ではない。誰か一人に話してみる場面。", caution: "人物札として、実際の子どもや年下の相手を指すと読む立場がある。また、妊娠の知らせと取る向きも。" },
+    "cups-11": { story: "鎧の若者が白馬に乗り、杯を差し出しながらゆっくり進んでいる。川が流れている。", world: "差し出す層。急がず、しかし確かに近づいてくる。", guide: "「理想主義」と揶揄しない。速さではなく、向きが定まっていることが本体。", image: "差し出された杯の高さ。渡した手紙、封の糊、選んだ便箋。招待状の文面、書き直した回数、投函した日。ゆっくり歩く白馬、川の浅瀬、蹄の音。「話がある」と切り出した場面、選んだ店、予約の時間。プロポーズの言葉、指輪の箱、開ける角度。花を持って行った日、包み、渡すまでの数歩。", apply: "気持ちを伝えたい人に出たなら、機を待つ段階ではない。日付を決めて、形にして渡す場面。", caution: "人物札として、求婚者や誘いをかけてくる相手そのものを指すと読む立場がある。" },
+    "cups-12": { story: "波打ち際の玉座に座る女性が、蓋つきの豪奢な杯をじっと見ている。", world: "受け止める層。相手の感情を、自分のものと混ぜずに扱える。", guide: "「優しい人」と単純化しない。蓋が付いているのが要点で、開ける相手を選んでいる。", image: "蓋の閉じた杯。相談を最後まで聞いた時間、口を挟まなかった長さ、うなずきの間隔。泣いている人の隣、渡した紙、何も言わなかった数分。波打ち際、寄せては返す音、濡れない足元。人の話を覚えている精度、名前、去年言っていたこと。自分の話をしない距離、聞かれても答える範囲、閉じた蓋。誰にも言わないと決めた一件、その重さ。", apply: "人の相談ばかり受けている人に出たなら、線を引く段階ではない。自分の話を一つだけする場面。", caution: "人物札として、母親や年上の女性を指すと読む立場がある。また、霊感の強い人物と取る向きも。" },
+    "cups-13": { story: "荒れた海の中、玉座の人物が杯を持って静かに座っている。魚と船が背後に見える。", world: "揺れの中で保つ層。波は収まっていないが、こちらが揺れていない。", guide: "「動じない」を冷たさと取り違えない。感じてはいる。そのうえで表に出していない。", image: "荒波の中の水平な玉座。怒鳴られている場での声の高さ、変わらない語尾、そのあとの対応。事故の一報を受けた瞬間、指示の順序、震えていない手。長い介護の年数、変わらない起床時刻、続けた食事。人の失敗を責めなかった場面、代わりに動いた手、後で言った一言。海の色、傾かない椅子、握った杯。深いところの静かさ、表面の波。", apply: "感情に振り回されている人に出たなら、抑え込む段階ではない。感じたことは認めたうえで、返事だけ落ち着かせる場面。", caution: "人物札として、医療・法律・相談業に就く年上の男性を指すと読む立場がある。" },
+    "swords-0": { story: "雲間の手が剣を一振り立てて握り、切先に王冠と枝が架かっている。下には荒れた山。", world: "はっきりする層。曖昧だったものに、言葉と輪郭が与えられる。", guide: "「正しい答えが出た」ではなく「言い切れる形になった」と読む。切れ味は、向ける先を選ばない。", image: "抜いた刃の白さ。会議で最初に言語化された一言、書き換えられた議事録、揃った認識。診断名が付いた日、名前のある不調、調べられる対象になった安心。契約書の但し書きを見つけた指、赤い線、修正の依頼。もつれた紐に入れた鋏、切った音、ほどけた両端。深夜に書き上げた企画書の一行目、削った修飾、残った主語と述語。「つまりこういうことです」と言えた瞬間、相手の頷き、進み出した話。", apply: "話がまとまらない人に出たなら、資料を増やす段階ではない。論点を一文で書き切る場面。", caution: "手術・出産など、刃物が関わる医療の出来事を指す具体的な札として読む立場がある。" },
+    "swords-1": { story: "目隠しをした人物が二振りの剣を胸の前で交差させ、月の出た海を背に座っている。", world: "決めない層。二つの力が釣り合って、動きが止まっている。", guide: "「優柔不断」と責めない。見ないことで保っている均衡がある。ただし、目隠しは自分で着けている。", image: "胸の前で交差した刃。開かない封筒、机の端、三日目。確認していない残高、見ていない通知、消した赤い印。相手に聞けばすぐ済む一件、聞かない理由、続く推測。夜の海、動かない水面、遠い月。二つの求人票、同じ重さ、決めない週末。目隠しの布、外せる結び目、外さない手。「どちらでもいい」と言ったときの声。", apply: "決めきれない人に出たなら、情報を集める段階ではない。目を開けるために、一つだけ確認する場面。", caution: "「休戦」「一時的な和解」を指す札として読む立場がある。膠着ではなく取り決めと見る向き。" },
+    "swords-2": { story: "心臓に三本の剣が刺さり、その上を雨雲が覆っている。人物は描かれていない。", world: "刺さった層。既に起きてしまっていて、避ける段階を過ぎている。", guide: "「乗り越えよう」と急がない。正位置は痛みそのものの側。意味づけは後から来る。", image: "雨の音。読んでしまったメッセージ、消せない文面、既読の残り方。言われた一言、その言い方、覚えている抑揚。知らされなかった事実、他人から聞いた経緯、後からつながる符合。診察室の説明、聞こえていた言葉、書けなかったメモ。三本の刃、抜けない角度、止まらない出血。誰にも言っていない日付、覚えている天気。", apply: "傷ついたばかりの人に出たなら、意味を探す段階ではない。今日は判断を一つもしないと決める場面。", caution: "三角関係そのものを指す札として読む立場が広く行われている。剣の本数を人数と取る向き。" },
+    "swords-3": { story: "騎士の像が横たわり、上の壁に三本、下に一本の剣。ステンドグラスの光。", world: "止まる層。倒れたのではなく、横になっている。", guide: "「怠け」ではない。回復は作業。何もしないことが、この局面では仕事にあたる。", image: "横たわった石像の静けさ。休職の初日、鳴らない通知、長く寝た朝。病室の天井、点滴の速度、面会のない午後。有給を取った平日、開いていない鞄、消した目覚まし。壁に納めた三本の剣、下の一本、抜いていない状態。ステンドグラスの色、床に落ちた光、動かない埃。「今週は何もしない」と決めた紙、貼った場所、守った日数。", apply: "疲れ切っている人に出たなら、計画を立てる段階ではない。予定を空けて、何も入れない場面。", caution: "入院・療養そのものを指す具体的な札として読む立場がある。石像を寝台と取る読み。" },
+    "swords-4": { story: "勝った人物が剣を集め、去っていく二人が背を向けて肩を落としている。", world: "勝ってしまった層。取ったが、後に残るものがある。", guide: "「勝利」と読まない。正位置は代償の側。何を得て何を失ったかを、両方数える。", image: "拾い集めた三本の剣。言い負かした後の静けさ、相手の背中、誰も見ていない勝ち。通した企画、削られた他人の案、その人の顔。正論の切れ味、返せなかった相手、後の距離。値切って通した価格、下請けの表情、次から来ない見積。荒れた空、去る二人、風の音。「自分は間違っていない」という言葉、その回数。", apply: "言い負かした人に出たなら、追撃する段階ではない。相手の面目が立つ一言を足す場面。", caution: "「必要な勝利」と肯定に読む立場がある。犠牲を払ってでも取るべきときがある、という取り方。" },
+    "swords-5": { story: "小舟に乗った人物と子ども、六本の剣。船頭が棹を差し、水面は穏やか。", world: "移る層。荷物は積んだまま、場所だけを変える。", guide: "「解決」ではなく「移動」と読む。剣は一本も置いていかない。持ったまま静かな水域へ行く。", image: "棹の入る水の音。引越の朝、積んだ段ボール、置いていかない本。転職先の初出社、持ち込んだやり方、変わらない癖。実家を出た日、駅までの道、振り返らなかった角。穏やかな水面、後ろの波立ち、前の静けさ。子どもの背中、連れて行くもの、置いていけない事情。新しい住所の書き方、慣れない郵便番号。", apply: "環境を変えたい人に出たなら、自分を変える段階ではない。場所や相手を一つ変える場面。", caution: "「水路での移動」「海外への渡航」を指す具体的な札として読む立場がある。" },
+    "swords-6": { story: "人物が五本の剣を抱えて足音を忍ばせ、二本を陣に残して去っていく。", world: "抜け目なくやる層。全部は取らず、必要な分だけ持っていく。", guide: "「卑怯」と断じない。ただし、隠していること自体は事実。表に出せるやり方かを自分で確かめる。", image: "忍ばせた足音。誰にも言わずに進めた準備、開いた口座、書いた履歴書。有給の理由、伏せた面接、揃えた日程。二本残した剣、全部は取らない加減、後で気づかれる分。裏で取った言質、録音した打ち合わせ、使わずに済んだ証拠。振り返った角度、遠い陣、こちらを見ていない人影。言わない選択、嘘ではない範囲、その線。", apply: "こっそり進めている人に出たなら、隠し通す段階ではない。誰に、いつ話すかを決めておく場面。", caution: "「盗難」「持ち逃げ」そのものを指す札として読む古い立場がある。比喩ではなく被害として取る。" },
+    "swords-7": { story: "布で目と体を縛られた人物が、八本の剣に囲まれて立っている。足元はぬかるみ。", world: "動けないと思っている層。縄は緩く、剣は隙間だらけ。", guide: "「囚われている」で終えない。この札の要点は、縛っているものの正体が思い込みだという一点。", image: "緩んだ縄の結び目。「無理だ」と言った理由、その根拠、確かめていない事実。年齢を理由に諦めた応募、募集要項の実際の記載、読んでいない一行。相手が怒ると決めつけた予想、実際の反応、聞いてみた結果。囲む剣の間隔、通れる幅、動かない足。ぬかるみ、汚れる裾、それでも歩ける地面。誰にも止められていないのに止まっている自分。", apply: "行き詰まりを感じる人に出たなら、突破する段階ではない。できない理由を一つ、事実か確かめる場面。", caution: "「他人からの束縛」と読む立場もある。このアプリは、縄を自分で締めている側で採点している。" },
+    "swords-8": { story: "寝台の上で人物が顔を覆って起き上がり、壁に九本の剣が並んでいる。", world: "夜に膨らむ層。実害より、頭の中のほうが大きい。", guide: "「気にしすぎ」と切らない。ただし、この札は夜の札。朝の同じ問題とは大きさが違う。", image: "闇の中で開いた目。午前三時の天井、消えない考え、寝返りの回数。送ったメールの文面、思い出す語尾、確かめられない相手の受け取り方。明日の予定表、想像した最悪、実際の確率。九本の剣、壁の高さ、届かない距離。手のひらで覆った顔、汗ばんだ首、乾いた喉。朝になって思い出したときの、大きさの違い。", apply: "夜に不安が膨らむ人に出たなら、考え抜く段階ではない。書き出して、判断は朝まで持ち越す場面。", caution: "「流産・喪失」を指す具体的な札として読む伝統的な立場がある。時期を占う場では出来事として取る。" },
+    "swords-9": { story: "十本の剣が背に刺さり、人物が倒れている。空の端が明るくなりはじめている。", world: "底に着いた層。これ以上悪くなる余地がない。", guide: "「絶望」で止めない。この札は正位置が吉の側。落ちきったからこそ、次は上がる。", image: "地平線の白み。倒産の翌朝、鳴らない電話、静かな事務所。全部話した後の脱力、隠すものがなくなった軽さ、次の一手。断られ続けた末の最後の一社、失うものの無さ、素直に出た本音。刺さった十本、もう増えない数、痛みの底。夜明け前の色、明るくなる端、まだ動かない体。「もうこれ以上はない」と口に出した瞬間。", apply: "どん底にいる人に出たなら、立て直す段階ではない。落ちきったことを認めて、明日の予定を一つ入れる場面。", caution: "「最悪の事態」と否定に読む立場が広く行われている。このアプリは、底を打った側を吉として採点している。" },
+    "swords-10": { story: "若者が剣を構え、風の吹く丘で四方を見回している。", world: "気づく層。まだ何も起きていないが、感知している。", guide: "「経験不足」と切らない。早く気づく力は、それ自体が武器。ただし確かめるまでは推測。", image: "風に鳴る草。届いた短い連絡、行間、確かめたい一点。会議の空気の変化、誰かの言い直し、飲み込まれた言葉。数字の違和感、桁の並び、遡った履歴。丘の上の視界、四方の地平、動く雲。構えた剣、まだ振っていない腕、力の入り方。「なんとなくおかしい」と言った日、その後の展開。", apply: "違和感を持っている人に出たなら、確信を待つ段階ではない。事実を一つだけ照合する場面。", caution: "人物札として、口の達者な若者や情報を運ぶ人を指すと読む立場がある。" },
+    "swords-11": { story: "騎士が剣を掲げ、馬を全速力で走らせている。風が強く吹いている。", world: "突っ込む層。速さで押し切る。止まり方は誰も用意していない。", guide: "「無鉄砲」と決めない。速さが要る局面はある。ただし、この馬は止まり方を知らない。", image: "風を切る音。即決した返事、その日のうちの契約、押した印。乗り込んだ交渉、用意した一枚、切った札。反論を最後まで聞かずに出した結論、通った速さ、残った不満。全速力の蹄、飛ぶ砂、傾いた体。「今すぐやります」と言った瞬間、周りの静止、無視した速度。後で効いてくる詰めの甘さ。", apply: "急いで押し切りたい人に出たなら、止まる段階ではない。ただし、後戻りの手順だけ書いておく場面。", caution: "人物札として、急に現れて急に去る相手を指すと読む立場がある。" },
+    "swords-12": { story: "玉座の女性が剣を垂直に立て、片手を差し伸べている。空には一羽の鳥。", world: "見通す層。情に流されず、事実で切る。", guide: "「冷たい」と読み違えない。差し伸べた手のほうが本体。厳しさは、相手を子ども扱いしないこと。", image: "垂直に立った刃。はっきり言われた指摘、その正確さ、後で効いた助言。曖昧な依頼を断った一言、代わりに示した条件、残った信頼。人の話の矛盾を見抜く速さ、指摘しない選択、必要なときだけ言う姿勢。一羽の鳥、澄んだ空、遠くまでの視界。差し伸べた手、握るかどうかの選択、待つ姿勢。経験した喪失、それを語らない静けさ。", apply: "厳しいことを言うべき人に出たなら、遠回しにする段階ではない。事実だけを短く伝える場面。", caution: "人物札として、未亡人や独身の年上女性を指すと読む伝統的な立場がある。" },
+    "swords-13": { story: "玉座の人物が剣をやや傾けて持ち、正面を向いて座る。空には雲と鳥。", world: "裁く層。私情を挟まず、基準で決める。", guide: "「権威」ではなく「基準」と読む。この人は自分の好みを判断に混ぜない。", image: "傾いた刃の角度。示された判断基準、書かれた条文、参照した先例。人事評価の面談、根拠の提示、感情の入らない語り。会議で下した結論、反対者への説明、後の一貫性。玉座の高さ、揺れない座り方、正面を向いた目。「規則ではこうです」という一言、その後に足された配慮。長く同じ基準で通した年月、それが作った信用。", apply: "判断を求められている人に出たなら、みんなの意見を聞く段階ではない。基準を先に示して決める場面。", caution: "人物札として、法律・医療・軍に関わる年上の男性を指すと読む立場がある。" },
+    "pentacles-0": { story: "雲間の手が大きな貨幣を差し出している。下には手入れされた庭と、垣根に開いた門。", world: "土がある層。まだ何も育っていないが、蒔ける場所が手元にある。", guide: "「儲かる」ではなく「元手ができた」と読む。育てるかどうかは別の話。", image: "手のひらに載った硬貨の重さ。振り込まれた初回の入金、通帳の一行、日付。借りられた場所、鍵、開けたときの匂い。もらった一株、届いた証書、しまった引き出し。開墾していない畑の土、握ると崩れる湿り、まだ蒔いていない種。開業届の控え、押された受理印、屋号の欄。紹介された取引先、初回の名刺、まだ一度も請求していない状態。門の向こうの山、道、歩いていない距離。", apply: "始める元手が要ると思っている人に出たなら、貯める段階ではない。既に持っているものを一つ数える場面。", caution: "金銭そのもの、あるいは遺産・臨時収入を指す具体的な札として読む立場が広く行われている。" },
+    "pentacles-1": { story: "人物が二枚の貨幣を無限の帯で結んで操り、背後の海には二艘の船が波に揺れている。", world: "回している層。増えても減ってもいないが、止まってもいない。", guide: "「不安定」と読まない。揺れながら保つことは技術。ただし、手を止めた瞬間に落ちる。", image: "二枚を持ち替える指。二つの仕事の掛け持ち、時間割、移動の三十分。今月の家賃と来月の支払い、口座間の振替、締日。副業の売上と本業の給料、確定申告の欄、按分の割合。波に揺れる船、傾く甲板、沈まない船体。同時に進む三件、優先の付け替え、その日の判断。無限の帯、繋がった二枚、離せない関係。", apply: "手一杯の人に出たなら、増やす段階ではない。今の回し方を書き出して、順番だけ決める場面。", caution: "「兼業」「二重生活」を指す具体的な札として読む立場がある。心境ではなく状態を見る向き。" },
+    "pentacles-2": { story: "職人が大聖堂の壁に彫っている。設計者と修道士が図面を持って立っている。", world: "組んで作る層。腕・図面・出資が別々の人にある。", guide: "「協力」で終わらせない。この札は、自分がどの役を持っているかを問う。三役は交換できない。", image: "石を打つ鑿の音。図面の縮尺、書き込まれた寸法、朱の訂正。現場の足場、上げた材、渡した工具。担当割の表、名前、それぞれの得意。試作の一号、直した箇所、二号の精度。評価された仕事、次の依頼、指名。壁の高さ、まだ途中の彫刻、完成予定の日付。誰かに任せた工程、上がってきた出来、想定との差。", apply: "一人で抱えている人に出たなら、頑張る段階ではない。図面か腕か金か、足りない一役を人に頼む場面。", caution: "「見習い」「弟子入り」を指す札として読む立場がある。三人のうち職人を若手と取る向き。" },
+    "pentacles-3": { story: "王冠に貨幣を載せた人物が、両腕で一枚を抱え、両足で二枚を踏んでいる。背後は街。", world: "握って離さない層。守りは固いが、動きもない。", guide: "「けち」と断じない。守るべき時期はある。ただし、この姿勢では新しいものが入る隙間もない。", image: "抱え込んだ腕の角度。動かさない預金、金利、変えない口座。使っていない部屋、置いたままの家具、捨てられない箱。断った誘い、理由の薄さ、守った予定。踏みつけた二枚、離れない足、動けない姿勢。手放さなかった株、下がった値、それでも持っている理由。名義、権利、書き換えていない書類。背後の街の音、届かない距離。", apply: "守りに入っている人に出たなら、増やす段階ではない。使っていないものを一つ手放す場面。", caution: "正位置を「安定」と全面的に肯定に読む立場が広く行われている。このアプリは執着の側も込みで採点している。" },
+    "pentacles-4": { story: "雪の中、二人が明かりの灯った窓の下を歩いている。片方は松葉杖。", world: "外にいる層。中に入る手立てが見えていない。", guide: "「貧困」に限定しない。要点は、助けが窓のすぐ内側にあるのに気づいていないこと。正位置は困窮の側。", image: "雪を踏む音。残高の桁、引き落としの日付、足りない額。窓から漏れる明かり、中の声、届かない距離。頼れる相手の名前、連絡先、押さない発信ボタン。松葉杖、痛む側の足、歩く速さ。支援の窓口、開いている時間、知らなかった制度。「大丈夫です」と言った回数、実際の状態。凍った歩道、滑る靴底、まだ先の距離。", apply: "困っている人に出たなら、我慢する段階ではない。頼れる相手か窓口を一つ調べる場面。", caution: "「病気」「怪我」を指す具体的な札として読む立場がある。松葉杖を比喩ではなく症状と取る向き。" },
+    "pentacles-5": { story: "天秤を持つ人物が、跪く二人へ貨幣を渡している。", world: "行き来する層。与える側と受け取る側がはっきりしている。", guide: "「善意」で片付けない。天秤を持っているのは渡す側。ここには量を決める権限がある。", image: "天秤の傾き。渡した金額、決めた基準、言わなかった理由。おごった食事、断らせなかった言い方、次の回。貸した金、書いた借用書、書かなかった関係。寄付の領収書、控除の欄、動機。教えた技術、覚えた速さ、独立の日。跪いた手、受け取る角度、目線の高さの差。返ってこないと分かって渡した分。", apply: "誰かを助けたい人に出たなら、多く渡す段階ではない。相手が返せる形にする場面。", caution: "渡す側ではなく「受け取る側」に自分を置いて読む立場がある。援助を受ける札としての使い方。" },
+    "pentacles-6": { story: "農夫が鍬に寄りかかり、実った七枚の貨幣を眺めている。", world: "待つ層。手は打ち終わっていて、実るまでの時間だけが残っている。", guide: "「停滞」と読まない。ここでの仕事は評価と見直し。手を出すことではない。", image: "鍬に置いた両手。仕込んだ広告、走っている期間、日々の数字。撒いた種、出た芽、揃わない育ち。積立の残高、年数、複利の効き方。手入れの回数、間引いた枝、残した実。眺める時間、判断しない日、次の手入れの日付。実りの色づき、まだ早い硬さ、収穫予定。「今は動かない」と決めた理由。", apply: "結果が出ない人に出たなら、やり方を変える段階ではない。見直す日付を決めて、それまで触らない場面。", caution: "「収穫の失敗」「不作」を正位置で読む立場もある。実りが少ないことを重く見る向き。" },
+    "pentacles-7": { story: "職人が槌を振るい、彫り上げた貨幣を並べて掛けている。", world: "積む層。同じ作業の繰り返しが、確かに腕になっている。", guide: "「地味」と軽んじない。この札は、量が質に変わる過程そのもの。", image: "槌の音の間隔。一枚目と八枚目の出来の差、並べた順、見比べる目。毎日の練習時間、記録した回数、続いた日数。作業台、削り屑、揃った工具。八時間の集中、休憩の位置、腰の痛み。並べて掛けた成果、数、見せていない相手。覚えた手順、考えなくても動く指、身についた速さ。まだ誰も知らない上達。", apply: "成果が見えない人に出たなら、方法を探す段階ではない。回数を記録して、今日の一回をやる場面。", caution: "「見習い期間」「修業」そのものを指す札として読む立場がある。期間の長さを問う場で使う。" },
+    "pentacles-8": { story: "庭に立つ女性が手袋の上に鷹を止まらせ、九枚の貨幣に囲まれている。", world: "自分の力で立っている層。誰かに養われていない豊かさ。", guide: "「贅沢」と読まない。要点は、この庭を自分で作ったという一点。飼い慣らした鷹は自制の象徴。", image: "手袋に載った鷹の重み。自分名義の部屋、支払った家賃、誰にも聞かない決定。整えた庭、剪定した枝、選んだ花。一人で食べる夕食、選んだ器、丁寧な支度。断れる立場、断った仕事、失わなかった収入。九枚の貨幣、囲む位置、自分で並べた配置。頭巾をかぶせた鷹、放つ判断、戻る合図。誰にも言わない自立の年数。", apply: "一人でいることに引け目がある人に出たなら、埋める段階ではない。自分で作った部分を数える場面。", caution: "「独身」「一人暮らし」を指す具体的な札として読む立場がある。豊かさより状態を見る向き。" },
+    "pentacles-9": { story: "門の内側で老人と犬、若い夫婦と子ども、十枚の貨幣が並ぶ。紋章の旗。", world: "受け継がれる層。個人ではなく、時間をまたいだまとまりの豊かさ。", guide: "「金持ち」と読まない。この札は、次へ渡る形になっているかを見ている。", image: "門の紋章。名義の書き換え、登記、司法書士の机。祖父の道具、まだ使える刃、研ぎ方。三代続いた屋号、暖簾、変えなかった味。教わったやり方、教える側になった年、覚えの悪い相手。犬の年齢、老人の椅子、子どもの走る音。相続の書類、分けた割合、揉めなかった理由。積み上がった十枚、誰のものでもある状態。", apply: "自分の代で終わると感じている人に出たなら、増やす段階ではない。誰かに一つ教える場面。", caution: "「結婚」「相続」「不動産」を指す実務的な札として読む立場が広く行われている。" },
+    "pentacles-10": { story: "若者が両手で貨幣を掲げ、じっと見つめている。足元は緑の野。", world: "学びはじめる層。まだ何も成していないが、続ける構えがある。", guide: "「未熟」と切らない。この札の資質は、地道さを退屈と思わないこと。", image: "両手で持った一枚。開いた教科書、書き込み、付箋の位置。申し込んだ講座、初日の緊張、取ったノート。始めた家計簿、三日目、続いている記録。掲げた貨幣、見つめる目、まだ使わない手。集めた資料、読んだ順、分からなかった用語。「まずは一年」と決めた日、カレンダーの印。届いた合格通知、次の教材。", apply: "何から始めるか迷う人に出たなら、選ぶ段階ではない。一年続ける前提で一つ決める場面。", caution: "人物札として、学生や見習いそのものを指すと読む立場がある。また、金銭の知らせと取る向きも。" },
+    "pentacles-11": { story: "重い馬に乗った騎士が、貨幣を掲げて畑の前に止まっている。", world: "動かない速さの層。遅いが、確実に前へ出ている。", guide: "「鈍い」と読まない。この騎士は止まらない。速さではなく、途切れなさが本体。", image: "重い馬の歩幅。毎日同じ時刻の作業、変わらない手順、積み上がった日数。納期を守った回数、遅れなかった年、信用の中身。地味な巡回、点検表、押した判。掲げた貨幣、動かない腕、揺れない姿勢。耕された畑の畝、まっすぐな線、端まで同じ深さ。派手な成果のなさ、それでも減らない依頼。頼まれごとを断らない理由。", apply: "成果が地味だと感じる人に出たなら、目立つ段階ではない。今の頻度をあと三か月続ける場面。", caution: "人物札として、実直だが面白みのない相手を指すと読む立場がある。結婚相手を占う場で使われる。" },
+    "pentacles-12": { story: "玉座の女性が貨幣を膝に抱え、豊かな庭と兎に囲まれている。", world: "養う層。自分と周りの生活を、実際に回している。", guide: "「母性」と一言でまとめない。要点は、現実の手配ができること。感情ではなく段取り。", image: "膝に載せた貨幣の重み。冷蔵庫の中身、献立の順、使い切る計算。家計の内訳、削った費目、残した楽しみ。誰かの通院の付き添い、予約の電話、持ち物の準備。庭の手入れ、季節の花、跳ねる兎。人の体調に気づく速さ、出した薬、言わない心配。回っている生活、破綻しない仕組み、目立たない手配。", apply: "家のことで手一杯の人に出たなら、効率を上げる段階ではない。回している事実を一つ人に伝える場面。", caution: "人物札として、母親や実務に長けた年上の女性を指すと読む立場がある。" },
+    "pentacles-13": { story: "葡萄の意匠の玉座に、貨幣を持った人物が座る。背後は城と実った葡萄畑。", world: "築き上げた層。時間をかけて作られた土台の上にいる。", guide: "「成功者」で止めない。この人は今も畑を見ている。維持は、達成とは別の労力。", image: "玉座の葡萄の彫り。決算書の数字、続いた黒字の年数、蓄えた分。城の外壁、修繕の履歴、次の工事。持っている物件、入居率、更新の月。任せた部下、育った年月、渡した権限。実った葡萄畑、収穫の人手、来年の仕込み。動じない座り方、握った貨幣、足の置き方。長く同じ場所にいることの重み。", apply: "安定している人に出たなら、守る段階ではない。維持に掛かっている手間を一つ人に渡す場面。", caution: "人物札として、経営者や資産家の男性を指すと読む立場がある。性質ではなく立場から探す使い方。" },
+    },
+    rev: {
+    "major-0": { story: "同じ崖のふちだが、空を見上げたまま足を踏み外そうとしている。犬の声は今度こそ警告として鳴っている。", world: "始めることが軽さではなく雑さになる層。自由の裏側。", guide: "「やめておけ」ではなく「支度が抜けている」と読む。行くこと自体は否定されていない。抜けているのは日程と金額。", image: "踏み外した足が空を掻く。中身を確かめずに出た旅行鞄、財布を忘れた改札、充電の切れた携帯。契約書を読まずに押した判、金額欄の空白、後から届いた請求。深夜に書いた退職願、翌朝の後悔、送信済みフォルダ。犬が吠え続けている、聞こえているのに止まらない足、崖のふちの砂が崩れる音。", apply: "勢いで辞表を出そうとしている人に出たなら、決意ではなく、次の当てと生活費の月数を先に紙に書く段階。", caution: "逆位置でも「無邪気さが守ってくれる」と肯定に読む立場がある。0という番号を、傷つかない位置として扱う流派。" },
+    "major-1": { story: "四つの道具は机の上にあるが、手は動いていない。掲げた腕の意味が失われている。", world: "できるはずのことが着手されない層。準備が目的にすり替わる。", guide: "「無能」ではなく「未着手」と読む。腕の問題ではなく、始めていないという一点。", image: "新品のまま置かれた道具。開封していない教材、封の切られていない参考書、埃をかぶった機材。買っただけのカメラ、登録しただけの会員証、始めていない口座。「準備が整ったら」と言った日から数えた月数、更新されていないブログ、下書きのまま残った十七通。名刺の肩書きと、実際に手がけた件数の差。", apply: "資格の勉強を続けている人に出たなら、次の教材ではなく、実際の応募を一件やる段階。", caution: "逆位置を「準備が整った」と読む向きもある。動いていないのではなく、動く直前だという解釈。" },
+    "major-2": { story: "帳の向こうを覗こうとして、身を乗り出している。巻物は開かれたまま読まれていない。", world: "感じ取ったものを、思い込みへ固めてしまう層。直感が働いていないのではなく、直感の先で検算を省いている。", guide: "「直感が外れる」ではなく「直感を検算していない」と読む。確かめる手間を省いている。", image: "読まずに閉じた巻物。相手の一言から組み立てた長い推測、証拠のない確信、聞かずに決めた結論。既読を付けない選択、返さない理由の後付け、増える解釈。占い結果を三つ並べて都合のいいものを選ぶ手、確かめれば済む一本の電話、かけない指。夜中に何度も読み返す短い文面。", apply: "相手が冷たいと感じている人に出たなら、その解釈のまま行動しない段階。事実を一つだけ確認する場面。", caution: "逆位置を「秘密が明かされる」と読む立場がある。閉じていたものが開く、という反対向きの読み。" },
+    "major-3": { story: "実った麦が刈られないまま倒れている。与えることが、抱え込みに変わっている。", world: "育てる力が、離せなさへ転じる層。与えることそのものは変わらず、量と手放し時だけが狂っている。", guide: "「愛情が足りない」ではなく「手を出しすぎている」と読む。過不足のうち、たいてい過のほう。", image: "刈られないまま倒れた麦。冷蔵庫の奥で忘れられた保存容器、賞味期限、捨てられない箱。手を出しすぎた子どもの宿題、代わりに書いた答え、伸びなかった力。連絡の頻度、返信を待つ時間、心配という名前の監視。買い足した食材、使い切らない調味料、増えていく在庫。", apply: "子や部下の心配が尽きない人に出たなら、口を出す回数を数えて、半分に減らす段階。", caution: "逆位置を「出産の遅れ」「不妊」など、身体の具体的な事柄として読む伝統的な立場がある。" },
+    "major-4": { story: "玉座は高いが、山は険しいままで誰も登ってこない。命令だけが空を切る。", world: "決める力が、通らなくなる層。決定の中身ではなく、決め方への信用が落ちている。", guide: "「威厳がない」ではなく「筋を通していない」と読む。従わせようとするほど遠ざかる。", image: "届かない号令。空席の並んだ会議室、返事のないメール、既読だけが増える連絡。役職の書かれた名刺と、実際に動く人数の差。「言ったはずだ」という言葉、記録のない指示、食い違う認識。守られない規則、貼り直された注意書き、誰も見ていない掲示板。声を大きくするほど遠のく距離。", apply: "言うことを聞いてもらえない人に出たなら、指示を強める段階ではない。自分が先に一つ守る場面。", caution: "逆位置を「父からの解放」と読む向きがある。抑えつけていたものが弱まる、という肯定的な取り方。" },
+    "major-5": { story: "教えは形だけ残り、鍵は足元に置かれたまま誰も拾わない。", world: "型が中身を失う層。守ること自体が目的になり、何のための決まりだったかが誰にも言えなくなっている。", guide: "「伝統が悪い」ではなく「意味を確かめていない」と読む。守っている理由を言えるかどうか。", image: "誰も拾わない鍵。理由の説明できない慣例、続いている理由が誰にも言えない行事、形だけ残った回覧。判の並んだ稟議書、実質を見ない承認、通すためだけの体裁。読み上げられるだけの安全標語、記入だけの点検表、確認しない確認欄。前任者に聞けないまま引き継いだ手順。", apply: "社内の慣習に疲れている人に出たなら、反発する段階ではない。なぜそうなったかを一つ調べる場面。", caution: "逆位置を「型破り」「新しいやり方の許可」と肯定に読む立場が広く行われている。" },
+    "major-6": { story: "二人は向かい合っているが、視線が合っていない。上の存在は手を広げたままでいる。", world: "心の向きが定まらない層。選べないのではなく、選ばずにいる状態が続いている。", guide: "「別れ」と即断しない。決めきれていない状態そのものが示されている。", image: "合わない視線。二つの予定を両方入れた手帳、どちらにも半端な返事、保留のまま過ぎた期限。並べたままの二通の求人票、どちらも読み返さない夜、決めない代償。連絡の間隔、返信の温度差、会う回数の減り方。決めきれないまま失った枠、埋まった募集、閉じた受付。", apply: "どちらとも決められない人に出たなら、両方を保留にしている代償を数える段階。", caution: "逆位置を「一人でいることを選ぶ」と読む向きがある。失恋ではなく、自分に戻る選択として。" },
+    "major-7": { story: "二頭の獣が別々の方へ引き、車は前へ進まない。立っている姿勢だけが変わらない。", world: "力が相殺されている層。動いていないのではなく、二つの方向へ同じだけ動いている。", guide: "「失敗」ではなく「同時にやりすぎ」と読む。方向が二つある。", image: "別々を向いた二頭。同時に走らせた三つの案件、どれも七割、締切の重なった週。アクセルとブレーキを同時に踏む足、空回りするタイヤ、焦げた匂い。行き先を決めずに出た車、通り過ぎた分岐、戻る燃料。予定表の隙間のなさ、移動時間、着いた頃には終わっている会議。", apply: "何もかも中途半端な人に出たなら、増やす段階ではない。今週は一つに絞る場面。", caution: "逆位置を「移動の中止」「乗り物の故障」など、具体的な出来事として読む立場がある。" },
+    "major-8": { story: "獅子から手を離し、距離を取っている。噛まれてはいないが、手なずけてもいない。", world: "扱いきれずに逃げている層。まだ向き合えないのか、向き合う時期ではないのか、そこが分かれ目になる。", guide: "「弱い」と読まない。まだ向き合う時期ではない、という読み方もできる。逃げと待ちの区別を自分でつける。", image: "獣から離した手。避けている相手の名前、通らない廊下、時間をずらした出社。返せていない連絡、開かないままの通知、後回しの一覧。「今は無理」と言った回数、次に会う日を決めない別れ方、曖昧な保留。手前で引き返した道、覗いただけの扉、触れずに置いた話題。", apply: "苦手な相手を避けている人に出たなら、いつまで避けるかだけ決める段階。", caution: "逆位置を「本能に従う」と肯定に読む向きがある。抑えるのをやめる、という反対向きの解釈。" },
+    "major-9": { story: "灯りを消して洞に籠もっている。外の声は届いているが、答えていない。", world: "距離を取ることが、断絶に変わる層。離れた理由は正しくても、戻る道が細くなっている。", guide: "「孤独」ではなく「戻る気があるか」と読む。この札は、期限を決めろと言っている。", image: "灯りを消した洞。三か月ぶりの外出、伸びた髪、開けていない郵便受け。着信履歴の件数、返さない理由、返しにくくなる時間。届いた誘い、断り文句、増える既読。開いたままの本の同じ頁、進まない考え、狭くなる部屋。誰かの心配、それを重いと感じる自分。", apply: "連絡を返せずにいる人に出たなら、長い返事を書く段階ではない。一行で今の状況だけ返す場面。", caution: "逆位置を「引きこもりから出る」と読む立場がある。籠もりが終わる合図として取る向き。" },
+    "major-10": { story: "輪が逆に回り、下にいた者が上へ、上にいた者が下へ落ちる。", world: "流れに逆らっている層。やり方が悪いのではなく、いま押している方向が潮と逆になっている。", guide: "「不運」ではなく「時期が違う」と読む。同じ手が、別の時なら通る。", image: "逆に回る輪。出す時期を外した企画、通らない稟議、翌年に通った同じ案。売り時を過ぎた在庫、値下がりの通知、持ち続けた理由。乗り遅れた便、閉まった改札、次まで四十分。流れに逆らって漕ぐ腕、進まない距離、消える体力。", apply: "何度出しても通らない人に出たなら、内容を直す段階ではない。出す時期を三か月ずらす場面。", caution: "逆位置に「一巡遅れる」という時期の読みを当てる立場がある。悪いのではなく、次の回に回るという意味。" },
+    "major-11": { story: "天秤が傾いたまま止まり、剣は下ろされている。", world: "帳尻が合っていない層。片側だけを見れば不当だが、天秤には両側が載っている。", guide: "「不当な扱い」だけを読まない。こちらが払っていないぶんも同じ天秤に載っている。", image: "傾いたまま止まる天秤。片方だけ数えた貸し、忘れている借り、記憶の食い違い。読まずに交わした契約、後から効く但し書き、想定外の負担。長引く話し合い、決まらない配分、増える議事録。「不公平だ」という言葉、その根拠、相手側の言い分。", apply: "割に合わないと感じる人に出たなら、相手を責める前に、貸しと借りを両方書き出す段階。", caution: "逆位置を「和解」「示談」と読む向きがある。白黒をつけないことを、失敗ではなく解決として取る立場。" },
+    "major-12": { story: "吊られたまま、もがいて縄を締めている。光は差したままだが、見ていない。", world: "耐えることが目的化する層。得るもののあった不自由が、いつのまにか続けるだけのものになっている。", guide: "「報われない」ではなく「その我慢は要らない」と読む。降りる選択肢が消えているだけ。", image: "締まっていく縄。辞めない理由を並べたメモ、そのどれもが他人の都合、自分の欄の空白。続けた年数、失った選択肢、狭くなった転職市場。「あと一年」と言った回数、更新された契約、変わらない条件。もがくほど食い込む縄、動かない天井、見ていない光。", apply: "辞められない人に出たなら、続ける理由を並べる段階ではない。降りた場合に何が起きるかを具体的に書く場面。", caution: "逆位置を「解放される」「降りられる」と肯定に読む立場が広く行われている。このアプリは採点上そちらを取っていない。" },
+    "major-13": { story: "骸骨の騎士が去り、倒れていた者が起き上がる。朝日は既に塔の上にある。", world: "終わったあとの層。区切りは既に過ぎていて、まだ終わっていないと思っているのは本人だけ。", guide: "「まだ終わっていない」ではなく「もう終わっている」と読む。区切りは済み、動き出せる。", image: "起き上がる者の背中。空にした部屋、届いた新しい鍵、まだ何も置いていない床。喪明けの食事、久しぶりの外食、味の戻る感覚。整理し終えた遺品、残した一つ、しまった箱。閉店後に届いた次の話、名刺の刷り直し、書き直した経歴。朝日の高さ、影の向き、動き出す足。", apply: "喪失から時間が経った人に出たなら、忘れる段階ではない。次の予定を一件入れる場面。", caution: "逆位置を「終われない」「引きずる」と否定に読む立場もある。このアプリは再生の側を採用している。" },
+    "major-14": { story: "二つの杯から水が溢れ、混ざらずにこぼれている。", world: "配合を誤る層。過剰と不足のどちらかで、どちらかは盤面の他の札が決める。", guide: "「やりすぎ」と「足りない」の両方を含む。どちらかは盤面の他の札が決める。", image: "溢れてこぼれる水。三食のうち二食が同じもの、深夜の間食、崩れた就寝時刻。全部を整えようとした計画表、三日で破綻、放置された記録。足りない睡眠と、多すぎる予定、合わない配分。混ぜすぎて濁った色、戻せない比率、捨てる皿。", apply: "生活が崩れている人に出たなら、全部を整える段階ではない。就寝時刻だけを一つ固定する場面。", caution: "逆位置を「試行錯誤の途中」と肯定に読む向きがある。混ざりきらないのは、まだ混ぜている最中だという解釈。" },
+    "major-15": { story: "鎖が外れ、二人が台から離れていく。角のある存在は座ったままでいる。", world: "抜け出す層。鎖が緩いことに気づいたところまでで、実際に離れるのはこれから。", guide: "「悪から解放される」と大きく読まない。気づいた、というところまで。実際に離れるのはこれから。", image: "外れた鎖を持つ手。解約ボタンを押した画面、確認のメール、届いた最終請求。アプリを消した端末、空いた画面の一枠、指が向かう癖。距離を置くと決めた日、送らなかった連絡、過ぎた三日。まだ台の上に座っている存在、離れた歩数、振り返る回数。", apply: "依存に気づいた人に出たなら、断ち切る宣言をする段階ではない。距離を一段だけ空ける場面。", caution: "逆位置を「さらに深い依存」と否定に読む立場もある。鎖が見えなくなるだけだ、という読み。" },
+    "major-16": { story: "雷は落ちたが、塔は傾いたまま持ちこたえている。落ちかけた者が縁を掴んでいる。", world: "崩れ切らずに済む層。守られたのではなく、たまたま持ちこたえている。", guide: "「回避した」で安心しない。持ちこたえているだけで、亀裂は入っている。", image: "傾いたまま立つ塔。ひび割れた壁、応急の支え、貼られた張り紙。何とか間に合った納品、無理を通した工程、残った疲労。落ちかけて掴んだ縁、擦りむいた手、握力の残り。点検を先延ばしにした箇所、次に来る揺れ、まだ直していない基礎。", apply: "危機を乗り切った人に出たなら、元に戻す段階ではない。壊れかけた箇所を先に補修する場面。", caution: "逆位置を「じわじわと崩れる」と、正位置より悪く読む立場がある。一撃で済まないぶん長引く、という解釈。" },
+    "major-17": { story: "壺は空で、水は注がれていない。星は出ているが、見上げる者がいない。", world: "回復が止まっている層。気持ちの問題ではなく、体力と睡眠の問題であることが多い。", guide: "「希望がない」ではなく「休めていない」と読む。この札は、期待の話ではなく体力の話。", image: "空の壺。閉じた窓、点いたままの照明、乱れた就寝時刻。冷めた食事、抜けた食欲、体重の増減。目標を立て直した回数、続かない計画、新しく買った手帳。星は出ているが見上げていない夜、天気予報の確認だけ、外に出ない一日。", apply: "やる気が出ない人に出たなら、目標を立て直す段階ではない。休む日を一日決める場面。", caution: "逆位置を「現実を見る」と肯定に読む向きがある。夢から覚めることを、失望ではなく着地として取る立場。" },
+    "major-18": { story: "月が傾き、水辺の生き物が退いていく。二本の塔の間の道が見えてくる。", world: "霧が晴れる層。見えてくるものが良い形とは限らないが、少なくとも輪郭は出る。", guide: "「不安が消える」ではなく「輪郭が出る」と読む。良い形とは限らないが、見えるようにはなる。", image: "退いていく水。開示された記録、届いた検査結果、判明した原因。誤解の解けた一通、謝罪の言葉、戻った連絡の頻度。霧の切れ間、見えてきた道、二本の塔の間隔。眠りから覚めた明け方、はっきりした頭、書き出せる不安。", apply: "疑いを抱えていた人に出たなら、まだ問い詰める段階ではない。事実が出るまで数日置く場面。", caution: "逆位置を「不安が長引く」と否定に読む立場もある。月が隠れるだけで、夜は続いているという読み。" },
+    "major-19": { story: "太陽は雲に隠れ、子どもは馬から降りている。向日葵は壁の向こうを向いている。", world: "明るさが届かない層。無いのではなく、届いていない。", guide: "「不幸」ではなく「遅れ」と読む。出るはずのものが、まだ出ていない。", image: "雲に隠れた太陽。誰にも届いていない成果、埋もれた報告書、開かれない添付。頑張ったのに触れられない場面、名前の出ない議事録、他の人の手柄。空元気の返事、無理に上げた声、帰り道の疲れ。壁の向こうを向いた向日葵、届かない光、遅れて来る評価。", apply: "評価されないと感じる人に出たなら、成果を並べ直す段階ではない。誰に届いていないのかを一人特定する場面。", caution: "逆位置を「派手さが収まる」と肯定に読む向きがある。目立たないことを、落ち着きとして取る立場。" },
+    "major-20": { story: "ラッパは鳴っているが、棺の蓋が閉じたままになっている。", world: "呼ばれても応じない層。まだ鳴っているが、応じる期限は近づいている。", guide: "「機会を逃した」と断じない。まだ鳴っている。応じる期限が近い、という読み方をする。", image: "閉じたままの棺の蓋。読まずに置いた通知、期限の書かれた封筒、今日で三日目。折り返していない電話、消えない着信、増える気まずさ。「考えます」と言った日付、その後の沈黙、相手の予定。鳴り続けるラッパ、聞こえている音、動かない手。", apply: "返事を保留している人に出たなら、考える段階ではない。今週中に可否だけ返す場面。", caution: "逆位置を「過去を手放す」と肯定に読む立場がある。呼ばれても行かない選択を、決別として評価する向き。" },
+    "major-21": { story: "花輪の一部がほどけ、舞いが止まっている。四隅の生き物は控えたままでいる。", world: "あと一歩で閉じない層。九割は済んでいて、残っているのは大きさではなく手数の問題。", guide: "「失敗」ではなく「未完」と読む。九割まで来ている。", image: "ほどけた花輪。九割で止まった原稿、書いていないあとがき、開かないファイル。残った一件の請求、出していない書類、片付かない机。「だいたい終わった」という言葉、実際の残作業、締めない理由。返していない鍵、外していない名札、閉じていない口座。", apply: "長く続けたものが片付かない人に出たなら、大きく直す段階ではない。残りの一件を今日終わらせる場面。", caution: "逆位置を「次の旅の始まり」と読む立場がある。閉じないのは、もう次が始まっているからだという解釈。" },
+    "wands-0": { story: "差し出された棒が握られないまま、芽が萎れかけている。", world: "火が点かない層。やる気そのものが出てこない。", guide: "「才能がない」ではなく「着火していない」と読む。火種の問題であって、薪の問題ではない。", image: "湿ったマッチ。開いたままの資料、進まないカーソル、三十分で閉じたファイル。買ったきりの参考書、崩れていない付箋、背表紙の折り目のなさ。「明日から」と言った日の数、更新の止まった記録、放置した下書き。芽の先の茶色、乾いた土、やっていない水やり。誘われて断った回数、理由の薄さ、その後の静けさ。", apply: "何も始められない人に出たなら、意志の問題にしない場面。まず睡眠と食事を三日整える。", caution: "逆位置を「まだ時期ではない」と肯定に読む立場がある。停滞ではなく待機として取る向き。" },
+    "wands-1": { story: "地球儀を持ったまま動かない。壁の棒も、握った棒も、そのまま。", world: "見渡したまま止まる層。選択肢は見えているが、手が出ない。", guide: "「決断力がない」で終わらせない。多くは、決めた後の面倒を先に見すぎている。", image: "広げたまま畳まない地図。三か月開いている求人サイト、保存した物件、問い合わせていない番号。比較表の完成度、増えた行、減らない候補。見に行っていない現地、読んでいない口コミ、聞いていない人の話。城壁の上の同じ位置、変わらない景色、風の向き。「まだ情報が足りない」という言葉、その回数、実際に足りている情報量。", apply: "調べ続けている人に出たなら、比較を増やす段階ではない。今週中に一つ、現地を見る場面。", caution: "逆位置を「計画の練り直し」と肯定に読む立場がある。止まっているのではなく直しているという解釈。" },
+    "wands-2": { story: "船が戻ってこない。崖の上から見える海に、何も浮かんでいない。", world: "送り出したものが返ってこない層。手を離れているので、こちらからは何も足せない。", guide: "「失敗」と決めない。遅れているのか、届いていないのか、区別がついていない状態。", image: "音沙汰のない相手。返事のない見積、二週間、催促の下書き。委託先の進捗報告、来ない連絡、確認しづらい空気。発送済みの表示、動かない追跡番号、問い合わせ窓口の待ち時間。沖の水平線、何も見えない朝、双眼鏡。応募した会社、選考中のまま、他社の締切。任せた部下、見えない手元、口を出したい衝動。", apply: "返事が来ない人に出たなら、待ち続ける段階ではない。期限を切って一度だけ確認する場面。", caution: "逆位置を「帰還」と読む立場がある。出た船が戻ってくる、という反対向きの取り方。" },
+    "wands-3": { story: "花輪の片側がほどけ、迎える人の姿が減っている。", world: "居場所が薄くなる層。区切りはついているのに、それを分かち合う相手がいない。", guide: "「孤立」と大きく読まない。区切りを祝わないまま次へ行っている、という程度のことが多い。", image: "誰も来なかった打ち上げ。予定を合わせられなかった連絡、流れた食事会、送らなかった招待。引っ越したまま挨拶していない隣、開けていない段ボール、置き場所の決まらない家具。実家に帰らなかった年、電話の頻度、話す内容の薄さ。式を挙げなかった二人、報告だけの葉書、写真のなさ。区切りを飛ばした年度、そのまま始まった四月。", apply: "節目を流している人に出たなら、次の準備をする段階ではない。終わったことを誰か一人に報告する場面。", caution: "逆位置でも意味はほぼ変わらないとする立場が広く行われている。祝いの札は倒れても祝いだという読み。" },
+    "wands-4": { story: "五本の棒が絡まって動かない。振り上げた腕がそのまま止まっている。", world: "ぶつかりが実らない層。削り合ってはいるが、そこから何も出てきていない。", guide: "「争いが収まる」と肯定に読まない。競り合いが、意地の張り合いへ変わっている。", image: "結論の出ない会議の四時間目。同じ主張の三巡目、変わらない資料、疲れた顔。誰も譲らない配分、止まった稟議、遅れる全体。掲示板の言い合い、増える引用、減る読み手。兄弟の言い分、親の仲裁、蒸し返される昔の話。絡んだ棒、抜けない手、下ろせない腕。勝ち負けだけが残った関係、内容の忘却。", apply: "議論が長引いている人に出たなら、説得を続ける段階ではない。決め方だけを先に決める場面。", caution: "逆位置を「争いの終結」と肯定に読む立場がある。棒が下ろされた図として取る向き。" },
+    "wands-5": { story: "馬上の人物から冠が落ち、周りの棒が下がっている。", world: "認められない層。成果が無いのではなく、成果と評価がつながっていない。", guide: "「実力不足」と直結させない。届いていないだけのことが多い。誰に見えていないかを先に見る。", image: "掲示されない名前。報告書の中の自分の役割、書かれなかった一行、他人の名前で出た成果。頑張った年の評価面談、平均という評価、根拠の薄い説明。SNSに上げた仕事、伸びない反応、時間帯。祝われなかった昇進、伝えなかった家族、一人で飲んだ夜。落ちた冠、拾う手、埃。誰かの「知らなかった」という一言。", apply: "評価されない人に出たなら、成果を増やす段階ではない。誰に届いていないかを一人特定する場面。", caution: "逆位置を「内輪だけの評価」と読む立場がある。外には届いていないが、身内は見ているという取り方。" },
+    "wands-6": { story: "高台の足場が崩れ、下からの棒が届きはじめている。", world: "守り切れない層。位置の有利が、数の差に追いつかれてきている。", guide: "「負ける」と断じない。守る対象を絞れば持つ。全部を守ろうとしていることが問題。", image: "崩れる足元の砂。値下げに応じた日、下がった単価、戻らない相場。守っていた仕様の廃止、移った顧客、残った在庫。反論の途中で出た溜息、増えた沈黙、押し切られた結論。夜勤明けの三日目、切れた集中、間違えた入力。手放した担当、引き継ぎの書類、寂しさと安堵。持ちきれない範囲、選べていない優先順位。", apply: "押されている人に出たなら、全部を守る段階ではない。捨てる一つを今日決める場面。", caution: "逆位置を「降りる決断」と肯定に読む立場がある。守りをやめること自体を前進と見る向き。" },
+    "wands-7": { story: "八本の棒が空中で止まっている。地面には届いていない。", world: "速さが失われる層。動いていないのではなく、動いたものが着地していない。", guide: "「止まった」と読むより「宙に浮いている」と読む。届いていないだけで、消えてはいない。", image: "送ったのに読まれていないメール。迷惑フォルダ、誤った宛先、届いていない添付。予定が二転三転した週、確定しない日程、押さえたままの会場。乗り継ぎの遅延、動かない掲示板、伸びる待ち時間。書きかけの返信、消した文面、送らなかった一通。空中の棒、落ちない矢、着地点のなさ。急いだぶんだけ増えた手戻り。", apply: "急いで空回りしている人に出たなら、速度を上げる段階ではない。一件ずつ着地を確認する場面。", caution: "逆位置を「愛の便りが届かない」と、恋文の札の裏として読む古い立場がある。" },
+    "wands-8": { story: "包帯の人物が棒に背を向け、柵が倒れかけている。", world: "持ちこたえられない層。守り続ける力よりも、守る理由のほうが先に尽きかけている。", guide: "「弱った」と読むだけで終えない。守り続ける理由が消えている場合もある。降りる判断を含む。", image: "外した包帯の下の傷。休職の相談、書いた診断書、出せていない届。連投の五日目、間違いの増え方、確認の抜け。もう戻らない顧客、閉じた案件、続けている理由の薄さ。倒れかけた柵、支える気力、そこまでして守るものの中身。頑固に変えなかったやり方、変えられた周り、取り残された手順。", apply: "限界の人に出たなら、粘る段階ではない。今日の予定を一つ消す場面。", caution: "逆位置を「戦いの終わり」と読む立場がある。柵を下ろしてよくなった、という取り方。" },
+    "wands-9": { story: "抱えていた棒が腕から落ち、前が見えるようになる。", world: "降ろせる層。抱えていたものが腕から離れ、前が見えるようになる。", guide: "「投げ出し」と否定に読まない。手放したぶん、初めて先が見える。正位置の重さの反対側。", image: "腕から落ちた荷物。断った依頼、初めて言った「できません」、その後の静けさ。渡した引き継ぎ書、教えた手順、代わりに動いた人。退会した会、辞めた当番、空いた木曜の夜。開いた視界、見えた町並み、残りの距離。軽くなった鞄、帰り道の速さ、寄り道した店。減った件数、増えた睡眠、戻ってきた集中。", apply: "抱えすぎていた人に出たなら、効率化する段階ではない。一件を正式に断る場面。", caution: "逆位置を「責任放棄」と否定に読む立場もある。このアプリは、降ろせることを吉として採点している。" },
+    "wands-10": { story: "若者が棒から目を離し、別の方を見ている。棒は傾いている。", world: "熱が続かない層。火が消えたのではなく、次の火に移っている。", guide: "「飽きっぽい」で片付けない。その熱は本物だったが、次の熱が来ただけ。続ける仕組みが無い。", image: "三日で止まった記録。増えた登録、減った利用、放置したアカウント。買った道具の数、使った回数、置き場所。言い出した企画、担当を決めないまま、消えた議題。傾いた棒、外れた視線、別の方角。届いた知らせを人に言い触らした後の展開、話の膨らみ、事実との差。", apply: "続かない人に出たなら、意志を鍛える段階ではない。曜日と時刻を一つ固定する場面。", caution: "人物札として、落ち着きのない若者そのものを指すと読む立場がある。" },
+    "wands-11": { story: "馬が急に止まり、乗り手が前へつんのめっている。", world: "勢いが裏目に出る層。速さそのものではなく、戻り道の無さが効いてくる。", guide: "「無謀の報い」と説教しない。速すぎたのではなく、戻る道を用意していなかった。", image: "急停止した馬。決めた翌週の後悔、解約できない契約、払った手付。飛び込みで断られた回数、残った名刺、下がった気力。始めた副業の三か月目、初期費用、まだ黒字でない収支。引越先の生活費、想定との差、削る費目。つんのめった上体、掴めない手綱、砂に着いた手。言ってしまった「行きます」、引けない場面、周りの目。", apply: "勢いで動いて詰まった人に出たなら、戻る段階ではない。撤退の条件だけ書いて、その日まで続ける場面。", caution: "逆位置を「引越の中止」「移動の延期」と、具体的な出来事として読む立場がある。" },
+    "wands-12": { story: "向日葵がうつむき、黒猫が背を向けている。", world: "余裕が切れる層。人柄が変わったのではなく、余白が無くなっている。", guide: "「嫉妬深い」と決めない。余裕が消えると、同じ人が同じことをしても違って見える。", image: "見えてしまう他人の成果。開いたSNS、比べた相手、閉じた画面。頼まれごとを断れずに引き受けた分、減った自分の時間、出た苛立ち。表情に出た日、相手の戸惑い、後の気まずさ。うつむいた向日葵、水の切れた鉢、やっていない手入れ。背を向けた黒猫、見えなくなった気配、勘の鈍り。誰にも相談していない疲れ。", apply: "苛立ちが出ている人に出たなら、人を直す段階ではない。自分の予定を一つ空ける場面。", caution: "人物札として、感情の起伏の大きい年上の女性を指すと読む立場がある。" },
+    "wands-13": { story: "玉座から身を乗り出し、棒を振り下ろそうとしている。", world: "押し通す層。強さの出し方が、統率ではなく圧に寄っている。", guide: "「暴君」と断じない。多くは焦りから来ている。速さが目的化していないかを見る。", image: "振り下ろされた腕。会議で遮った発言、通した結論、下がった発言量。決めた方針の三度目の変更、振り回された現場、追いつかない手。「俺が言った通りだ」という一言、その根拠、他の見方。任せると言って口を出した回数、細かい指摘、育たない人。乗り出した上体、傾いた玉座、離れていく獅子。数字だけを見た判断、抜けた事情。", apply: "強く言ってしまった人に出たなら、方針を通す段階ではない。一人に一言だけ詫びる場面。", caution: "人物札として、独断的な上司や父親を指すと読む立場がある。性質ではなく人を探す使い方。" },
+    "cups-0": { story: "差し出された杯が傾き、水がこぼれ落ちている。鳩は降りてこない。", world: "満ちない層。気持ちが動いているのに、行き場がなく漏れていく。", guide: "「愛されない」と読まない。受け取る側の器の問題であることも多い。まず注ぎ口を見る。", image: "こぼれた水の跡。言えなかった好意、消した下書き、送信しなかった一通。褒められても入ってこない感じ、返した「いえいえ」、後の空虚。人に尽くした一年、返ってこない反応、数えている自分。空の杯を持つ手、傾いた角度、床の染み。誰かに会った後の疲れ、帰りの電車、無音のイヤホン。感情の置き場のなさ、泣けない夜。", apply: "気持ちが空回りしている人に出たなら、相手を変える段階ではない。自分が満ちる予定を一つ入れる場面。", caution: "逆位置を「これから満ちる」と肯定に読む立場がある。器が用意された段階として取る向き。" },
+    "cups-1": { story: "差し出された二つの杯の高さが揃わず、片方だけが前に出ている。", world: "釣り合いが崩れる層。関係そのものより、どちらが多く払っているかが問題になっている。", guide: "「破局」と決めない。多くは、傾きが続いているだけ。どちら側が多く出しているかを見る。", image: "連絡の頻度の差。送った数と返った数、既読までの時間、文の長さの差。誘うのがいつも同じ側、決めるのも同じ側、疲れているのも同じ側。分担表の実態、やっている人、やっていない人。並ばない二つの署名、片方だけの名義、後から知った条件。触れない杯の縁、乾杯の空振り、目を合わせない一瞬。", apply: "関係が重いと感じる人に出たなら、我慢を続ける段階ではない。負担の差を一つだけ言葉にする場面。", caution: "逆位置を「離婚・婚約破棄」と具体的な出来事として読む立場がある。" },
+    "cups-2": { story: "輪が崩れ、掲げた杯が下がっている。果実が転がっている。", world: "分け合えない層。集まりは残っているが、集まる理由のほうが先に消えている。", guide: "「友情の終わり」と大きく読まない。集まる理由が消えただけ、という場合が多い。", image: "流れた集まり。合わない日程、返らない返事、立ち消えた話。飲み会の後の割り勘、金額の差、言えなかった不満。同じ話の繰り返し、笑えない冗談、時計を見る回数。三人のうち二人が親しくなった構図、抜けた輪、後から知る予定。転がった果実、拾わない手、床の汚れ。付き合いの惰性、断る口実、次はないという予感。", apply: "付き合いに疲れた人に出たなら、切る段階ではない。次の一回だけ断る場面。", caution: "逆位置を「妊娠に関わる不調」と身体の事柄として読む伝統的な立場がある。" },
+    "cups-3": { story: "腕を組んでいた人物が顔を上げ、差し出された四つ目の杯を見ている。", world: "気づく層。まだ動いていないが、差し出されていたものが視界に入った。", guide: "「まだ動いていない」と厳しく読まない。見えたこと自体が変化。正位置の停滞の反対側。", image: "顔を上げた角度。断り続けていた誘いを受けた日、久しぶりの外出、思ったより楽しかった時間。転職サイトを開いた夜、久しぶりの検索、保存した三件。同じ道を変えた通勤、寄った店、新しい昼食。四つ目の杯、伸ばした手、指が触れた縁。「そういえば」と言った瞬間、思い出した名前、送った連絡。木陰から出た足、日差し、眩しさ。", apply: "退屈を抜け出したい人に出たなら、大きく変える段階ではない。目に入った誘いに一つ乗る場面。", caution: "逆位置を「新しい機会を掴む」と強く肯定に読む立場が広く行われている。" },
+    "cups-4": { story: "倒れた杯が起こされ、背後の二つに手が伸びている。", world: "残りを見る層。失ったものの勘定が済み、手元にあるものへ目が向く。", guide: "「立ち直った」と急がない。見えたところまで。持ち上げるのはこれから。", image: "起こした杯の底に残った水。整理し終えた遺品、残した一つ、しまった箱。連絡を再開した相手、短い文面、返ってきた既読。落ちた選考の翌週、直した履歴書、送った次の一社。橋を渡った足、向こう岸、家の明かり。「もういいや」と言えた瞬間、力の抜け方、その後の眠り。乾いた石畳、消えた染み、残った二つ。", apply: "喪失から立ち直りかけた人に出たなら、無理に前を向く段階ではない。残っているものを一つ数える場面。", caution: "逆位置を「立ち直り」ではなく「まだ引きずる」と否定に読む立場もある。" },
+    "cups-5": { story: "差し出された花の杯が受け取られず、子どもが背を向けている。", world: "戻れない層。懐かしさは消えていないが、当時のやり方はもう効かない。", guide: "「過去に囚われる」と読む立場が多いが、「過去が使えなくなった」と読むほうが当たることが多い。", image: "変わってしまった実家の町。取り壊された家、新しい建物、思い出せない曲がり角。連絡を取った同級生、噛み合わない話、途切れた会話。昔うまくいったやり方、今は通じない手順、直せない癖。押し入れの箱、湿ったアルバム、剥がれた写真。差し出された花、受け取らない手、背中。「あの頃はよかった」という言葉、その後の沈黙。", apply: "昔に戻りたい人に出たなら、思い出を辿る段階ではない。今の条件で一つ作り直す場面。", caution: "逆位置を「過去との決別」と肯定に読む立場がある。前を向く札として取る向き。" },
+    "cups-6": { story: "雲が晴れ、七つの杯のうち一つだけが地面に降りている。", world: "絞れる層。雲の上にあった選択肢のうち、一つだけが地面に降りている。", guide: "「夢が覚める」と否定に読まない。一つが実物になったという札。正位置の幻の反対側。", image: "地面に置かれた一つの杯。閉じた十六のタブ、残した一つ、押した申し込み。決めた機種、届いた箱、開けた日。始めた副業の初日、小さな売上、実際の手取り。消したメモ、残した一行、貼った付箋。雲の切れ間、見えた地面、足の裏の感触。「これにします」と言った瞬間、相手の返事、動き出した話。", apply: "選べずにいた人に出たなら、迷う段階は終わっている。決めた一つに今日手を付ける場面。", caution: "逆位置を「幻滅」と否定に読む立場もある。このアプリは、絞れた側を吉として採点している。" },
+    "cups-7": { story: "背を向けた人物が振り返り、八つの杯の方へ足を戻している。", world: "離れ切れない層。去る理由も戻る理由もあり、決めずにいる時間だけが延びている。", guide: "「未練」と切らない。戻る判断が正しいこともある。ただし、決めずに揺れている時間が一番高くつく。", image: "振り返った角度。出した退職願、引き止められた面談、条件の提示。解約を保留した部屋、更新料、来月の家賃。「やっぱり」と言った回数、周りの顔、下がった信用。整えたままの八つの杯、崩れていない積み上げ、戻れる余地。月の欠け、進んでいない山道、同じ場所の足跡。決めていない期限、延びる判断、減る選択肢。", apply: "去るか残るか迷っている人に出たなら、比べる段階ではない。判断の期限を今日決める場面。", caution: "逆位置を「留まる決断」と肯定に読む立場がある。戻ることを失敗と見ない向き。" },
+    "cups-8": { story: "九つの杯のうち幾つかが空になり、人物の腕が解けている。", world: "満ちたはずが足りない層。手に入れたものと、欲しかったものがずれている。", guide: "「強欲」と責めない。手に入れたものと、欲しかったものがずれていた、という札。", image: "空になった杯。買った後の物、置き場所、使わない日数。上がった給料、増えた支出、変わらない不安。手に入れた肩書き、増えた会議、減った時間。招いた客が帰った後の部屋、洗い物、静けさ。解けた腕、崩れた姿勢、傾いた椅子。「これが欲しかったはずだ」という言葉、その後の間。", apply: "手に入れたのに満たされない人に出たなら、次を買う段階ではない。何が欲しかったのかを一行書く場面。", caution: "逆位置を「見栄・虚飾」と読む立場がある。持っているものが借り物だという取り方。" },
+    "cups-9": { story: "虹が薄れ、家族の手が下がっている。杯の並びに隙間がある。", world: "まとまりが緩む層。壊れてはいないが、全員が別々のほうを向いている。", guide: "「家庭崩壊」と大きく読まない。全員が別々を向いている、という程度のことが多い。", image: "揃わない夕食の時刻。冷めた皿、ラップ、後から食べる音。別々の部屋、閉じた扉、聞こえるテレビ。返さない「ただいま」、聞こえていた距離、返す気力。予定の合わない休日、それぞれの外出、空いた居間。薄れた虹、下がった手、隙間の空いた並び。写真を撮らなくなった年、更新されない棚。", apply: "家の中が静かすぎる人に出たなら、話し合う段階ではない。同じ時刻に一度食卓へ着く場面。", caution: "逆位置を「家庭内の不和」と具体的に読む立場が広く行われている。" },
+    "cups-10": { story: "杯から魚が消え、若者が中を覗き込んでいる。", world: "湧かない層。感じていないのではなく、感じたものを言葉にしない癖がついている。", guide: "「感受性が鈍った」と決めない。多くは、思いついても言わない癖がついている。", image: "空の杯を覗く目。書き留めなかった思いつき、翌日の忘却、思い出せない断片。会議で言わなかった案、後で誰かが言った同じ案、拍手。夢を見なくなった期間、浅い眠り、鳴る目覚まし。届いた誘い、返さない返事、消えた話。揺れない水面、光らない鱗、静かな海。感じているのに名前を付けない癖、飲み込んだ言葉。", apply: "何も浮かばない人に出たなら、絞り出す段階ではない。思いついた順に三つ書いて、直さない場面。", caution: "人物札として、感情の起伏の激しい年下の相手を指すと読む立場がある。" },
+    "cups-11": { story: "白馬が歩みを止め、差し出した杯が下がっている。川は流れたまま。", world: "届かない層。気持ちはあるが、渡す形にも渡す先にもなっていない。", guide: "「振られた」と決めない。渡す形になっていない、渡す先が違う、という場合も含む。", image: "下がった杯。書いたまま出していない手紙、引き出し、日付。「今度」と言った回数、決まらない日程、流れた約束。用意した言葉、選んだ店、行かなかった夜。返事のない告白、続く日常、気まずさの薄まり方。止まった蹄、乾いた川、進まない距離。理想の伝え方を探しているうちに過ぎた季節。", apply: "伝えられずにいる人に出たなら、言い方を練る段階ではない。日付を決めて渡す場面。", caution: "人物札として、口先だけの相手や浮気心を指すと読む立場がある。" },
+    "cups-12": { story: "蓋が開いたまま置かれ、波が玉座の足元まで来ている。", world: "混ざってしまう層。人の感情を、自分のものとして引き受けすぎている。", guide: "「感情的」と責めない。人の感情を自分のものとして引き受けすぎている状態。", image: "開いたままの蓋。相談を受けた後の疲れ、眠れない夜、自分のことのように考えた時間。人の不機嫌に反応する速さ、顔色を見る癖、先回りの謝罪。断れなかった頼まれごと、増えた件数、減った自分の予定。足元まで来た波、濡れた裾、動かない椅子。誰にも言えない愚痴、溜まった量、こぼれた先。", apply: "人の感情に飲まれている人に出たなら、我慢する段階ではない。今日は誰の相談も受けないと決める場面。", caution: "人物札として、依存的な母親や情に流されやすい女性を指すと読む立場がある。" },
+    "cups-13": { story: "玉座が傾き、波が高くなっている。杯の中身が揺れている。", world: "揺れが表に出る層。長く抑えていたものが、こらえきれずに漏れている。", guide: "「未熟」と断じない。長く抑えていたものが漏れているだけ、という場合が多い。", image: "傾いた玉座。抑えていた声が出た瞬間、相手の驚き、その後の沈黙。長く続いた我慢、限界の日、些細なきっかけ。飲んだ量、話した内容、翌朝の記憶。人前で見せた涙、拭った手、言った言い訳。高くなった波、濡れた玉座、揺れる杯。冷静なはずの人が変わったと言われた日、その理由を言えない事情。", apply: "抑えが利かない人に出たなら、律する段階ではない。何を我慢していたかを一つ書き出す場面。", caution: "人物札として、感情を操作してくる年上の男性を指すと読む立場がある。" },
+    "swords-0": { story: "差し出された剣の刃が欠け、王冠が傾いている。", world: "切れない層。言葉にしようとするたび、かえって混ざっていく。", guide: "「頭が回らない」で終えない。多くは、切る場所を間違えている。刃ではなく狙いの問題。", image: "書き直した三度目の文面。長くなる説明、増える但し書き、伝わらない主旨。会議で使った専門語、伝わらなかった相手の顔、聞き返されなかった沈黙。正論で押した結果、閉じた口、動かない人。欠けた刃、引っかかる断面、裂けた紙。「要するに」の後に続いた三分、まとまらない結論。詰めた論理、抜けた前提、後で崩れた土台。", apply: "説明が通らない人に出たなら、言葉を足す段階ではない。主語と述語だけの一文に削る場面。", caution: "逆位置を「暴力・過剰な力」と読む立場がある。刃の向きが自分や他人へ向く、という取り方。" },
+    "swords-1": { story: "交差した剣が下ろされ、目隠しが外れかけている。", world: "均衡が崩れる層。見なかったことで保っていた釣り合いが、見た瞬間に崩れる。", guide: "「決断できた」と急がない。見えたことで、保っていた釣り合いが崩れる側面もある。", image: "外れかけた布。開けた封筒、書かれていた数字、動悸。確かめた事実、思っていたのと違う内容、次の判断。相手に聞いた一言、返ってきた答え、その後の空気。下ろした剣、痺れた腕、置き場所。決めなければならなくなった状況、期限、逃げ場のなさ。見えてしまった以上、戻れない位置。", apply: "見て見ぬふりをしていた人に出たなら、まだ決める段階ではない。事実を確認するだけの場面。", caution: "逆位置を「秘密の露見」と読む立場がある。目隠しが外れることを、事実の暴露と取る向き。" },
+    "swords-2": { story: "刺さった三本の剣が抜かれ、雨雲が薄れはじめている。", world: "痛みが引く層。刺さっていたものは抜けたが、傷そのものは残っている。", guide: "「もう平気」と読まない。抜いたところまで。傷は残っているし、天気は曇りのまま。", image: "抜いた刃の跡。久しぶりに眠れた夜、浅い眠り、それでも朝が来た感覚。思い出す回数の減り方、一日一度、三日に一度。話せるようになった経緯、聞いてくれた相手、途中で止まった声。薄れる雨雲、切れ間、まだ濡れた地面。消さずに残したメッセージ、開かないフォルダ、忘れていない日付。「もういい」と言えた瞬間の温度。", apply: "傷が薄れてきた人に出たなら、忘れる段階ではない。まだ痛むことを認めたまま予定を入れる場面。", caution: "逆位置を「痛みが長引く」と否定に読む立場もある。このアプリは、抜けた側を吉として採点している。" },
+    "swords-3": { story: "石像が起き上がり、壁の剣が一本抜かれている。", world: "動き出す層。休みが足りたのか、足りないまま起きたのか、そこが分かれ目になる。", guide: "「休みが終わった」と急かさない。この札は、休みが足りなかった場合にも出る。どちらかを見極める。", image: "起き上がった体。復職の初日、半分の業務量、早めの帰宅。久しぶりに開いた鞄、埃、入れ替えた中身。動かした体、鈍い筋肉、翌日の痛み。抜いた一本の剣、残った三本、まだ壁の中。「そろそろ」と言った日、周りの反応、自分の実感との差。休み明けの初回、思ったより疲れた午後。", apply: "復帰しようとしている人に出たなら、全部戻す段階ではない。半分から始める場面。", caution: "逆位置を「無理な復帰」と否定に読む立場がある。起き上がるのが早すぎるという読み。" },
+    "swords-4": { story: "集めた剣が落ち、去っていく二人が振り返っている。", world: "勝ちが返ってくる層。あのとき削った相手が、いまの窓口になっている。", guide: "「因果応報」と重く読まない。多くは、あのとき削った相手が今の窓口になっている、という程度。", image: "落ちた剣。かつて言い負かした相手からの見積、丁寧な文面、通らない交渉。減った紹介、来ない相談、静かな受信箱。正しかったはずの主張、残った悪評、訂正できない伝わり方。振り返る二人、遠い距離、目が合わない角度。「あのときのこと」と切り出された場面、覚えていない自分、覚えている相手。謝る機会の逸失。", apply: "過去の勝ちが響いている人に出たなら、弁明する段階ではない。今の相手に丁寧にやる場面。", caution: "逆位置を「和解」と肯定に読む立場がある。剣を落とすことを、争いの終わりと取る向き。" },
+    "swords-5": { story: "小舟が岸に着かず、水面が波立っている。剣が揺れている。", world: "移れない層。場所は変わったのに、持ち込んだものが同じなので景色が変わらない。", guide: "「逃げられない」と読まない。移ってはいるが、持ち込んだものが同じなので同じ景色になっている。", image: "変わらない景色。転職して三か月、似た人間関係、同じ悩み。引越した部屋、置き方まで同じ家具、変わらない生活。距離を置いた相手、別の場所の似た相手、繰り返す構図。波立つ水面、進まない舟、濡れる荷物。持ち込んだ剣、下ろさなかった理由、重さ。「今度こそ」と思った回数、その結果。", apply: "環境を変えても同じになる人に出たなら、また移る段階ではない。持ち込んでいるものを一つ下ろす場面。", caution: "逆位置を「移動の中止」「渡航の延期」と、具体的な出来事として読む立場がある。" },
+    "swords-6": { story: "抱えた剣が落ち、忍ばせた足音が止まっている。", world: "露見する層。隠していたことが出る。自分から言う決断をした場合も、ここに入る。", guide: "「ばれた」と限定しない。自分から言う決断をした場合も、この向きに出る。", image: "落ちた剣の音。見られていた画面、後ろの気配、閉じるのが遅れた指。転職活動が伝わった経緯、誰か経由、伏せていた期間。自分から打ち明けた日、選んだ場所、切り出した一言目。残していた二本の剣、意味を失った加減、全部が出た状態。相手の反応、想像との差、続いた会話。隠す労力の総量、無くなった軽さ。", apply: "隠していたことが出そうな人に出たなら、取り繕う段階ではない。自分から先に言う場面。", caution: "逆位置を「返却」「自首」と読む立場がある。持ち出したものを戻す側として取る向き。" },
+    "swords-7": { story: "縄がほどけ、囲む剣の外へ足が出ている。", world: "出られる層。縛っていたものが思い込みだったと分かる。歩くのはこれから。", guide: "「解決した」と大きく読まない。縛りが思い込みだったと分かっただけ。歩くのはこれから。", image: "ほどけた布。読み直した募集要項、書いてあった実際の条件、通った応募。聞いてみた結果、あっさりした返事、拍子抜け。「できない」と思っていた作業、やってみた三十分、終わった事実。剣の隙間、通った幅、汚れた裾。外に出た足、ぬかるみ、それでも進む方向。誰も止めていなかったという発見。", apply: "動けずにいた人に出たなら、準備する段階ではない。今日その一歩を実際にやる場面。", caution: "逆位置を「さらに深い束縛」と否定に読む立場もある。このアプリは、出られる側を吉としている。" },
+    "swords-8": { story: "顔を覆っていた手が下り、窓の外が明るくなっている。", world: "朝が来る層。不安の大きさが元に戻る。問題そのものは同じ場所にある。", guide: "「不安が消えた」と読まない。大きさが戻っただけ。問題そのものは同じ場所にある。", image: "下ろした手。眠れた朝、思い出した昨夜の考え、その小ささ。書き出した不安の一覧、実際に起きた数、ゼロ。人に話した内容、返ってきた「そんなことか」、笑えた自分。壁の九本、動かない剣、届かない位置のまま。明るくなった窓、鳥の声、湯を沸かす音。夜に決めなかった判断、朝の結論との差。", apply: "夜の不安が薄れた人に出たなら、油断する段階ではない。夜に決めない習慣を続ける場面。", caution: "逆位置を「不安が現実になる」と否定に読む立場もある。このアプリは、朝が来る側を吉としている。" },
+    "swords-9": { story: "刺さった十本の剣がそのままで、空の明るみが差していない。", world: "底が続く層。落ちきってはいるが、上向くまでに時間がかかっている。", guide: "「終わった」と決めない。正位置が底打ちなら、こちらは底が長引く側。時間の問題として扱う。", image: "明けない空。片付いていない案件、増える催促、開かない封筒。立て直しの計画、三度目の練り直し、進まない実行。周りの励まし、届かない距離、返す気力のなさ。刺さったままの十本、抜く順番、決まらない一本目。夜の長さ、同じ時刻の目覚め、変わらない天井。「まだ続くのか」という言葉、その回数。", apply: "底が長引いている人に出たなら、大きく動く段階ではない。今日できる一件だけ片付ける場面。", caution: "逆位置を「回復の始まり」と肯定に読む立場が広く行われている。このアプリは逆に取っている。" },
+    "swords-10": { story: "若者が剣を下ろし、風のない丘で背を向けている。", world: "見落とす層。感じ取れていないのではなく、確かめる手間を省いている。", guide: "「鈍い」と決めない。多くは、感じてはいるが確かめる手間を省いている。", image: "止まった風。流した違和感、確かめなかった数字、後で出た差異。読み飛ばした一行、書いてあった条件、後の請求。噂を鵜呑みにした判断、出所、事実との距離。下ろした剣、緩んだ構え、背中。四方を見ていない視線、一方向、死角。「気のせいだと思った」という言葉、その後の展開。", apply: "見落としがあった人に出たなら、責める段階ではない。確認の手順を一つだけ増やす場面。", caution: "人物札として、噂話を運ぶ人や監視してくる相手を指すと読む立場がある。" },
+    "swords-11": { story: "馬が急に向きを変え、掲げた剣が下がっている。", world: "空回りする層。速さは残っているのに、向きが一つに定まっていない。", guide: "「失敗」と読まない。速さは残っているが、向きが定まっていない。方向の問題。", image: "向きを変えた馬。三度変えた方針、追いつかない周り、増えた手戻り。即決した契約の見直し、違約金、掛かった手間。勢いで送った長文、翌朝の後悔、削除できない既読。下がった剣、緩んだ手綱、乱れた足並み。焦って詰めた日程、抜けた確認、出た不備。「急がば回れ」と言われた場面、そのときの返事。", apply: "焦って動いている人に出たなら、速度を上げる段階ではない。行き先を一つに決める場面。", caution: "人物札として、口が達者で当てにならない相手を指すと読む立場がある。" },
+    "swords-12": { story: "剣が傾き、差し伸べた手が引かれている。空の鳥が見えない。", world: "切りすぎる層。鋭さが、判断ではなく防御として使われている。", guide: "「意地悪」と決めない。多くは、傷ついた側が防御として鋭さを使っている。", image: "引かれた手。言った正論、黙った相手、その後の距離。指摘の回数、正確さ、減った相談。人を試す言い方、返ってこない本音、確かめられない好意。傾いた刃、当たった角度、浅い傷。見えない鳥、曇った空、狭い視界。「私は正しい」という言葉、その裏の疲れ。誰にも話していない過去。", apply: "人に厳しくなっている人に出たなら、直す段階ではない。今日は指摘を一つ飲み込む場面。", caution: "人物札として、批判的な年上の女性や、離別を経験した女性を指すと読む立場がある。" },
+    "swords-13": { story: "玉座から身を乗り出し、剣を横に振ろうとしている。", world: "基準がぶれる層。決まりそのものではなく、その当てはめ方が場当たりになっている。", guide: "「横暴」と決めない。基準そのものではなく、適用が場当たりになっている場合が多い。", image: "振られた刃。人によって変わる判断、去年と違う運用、説明されない例外。「今回は特別」の回数、積み重なった前例、崩れた線。感情の入った評価、根拠の後付け、納得しない相手。乗り出した上体、傾いた玉座、遠のいた鳥。屁理屈で通した結論、反論できない立場、下がった士気。以前は一貫していたという記憶。", apply: "判断が揺れている人に出たなら、決め直す段階ではない。前回どう決めたかを確認する場面。", caution: "人物札として、権力を私的に使う男性や、厳格すぎる父親を指すと読む立場がある。" },
+    "pentacles-0": { story: "差し出された貨幣が落ち、門が閉じている。庭の手入れが途切れている。", world: "元手が減る層。蒔ける場所が、思っていたより小さいと分かる。", guide: "「金が無い」に限定しない。あると思っていた前提が崩れた、という札。まず現状の数え直し。", image: "落ちた硬貨の転がる音。想定と違った初期費用、追加の見積、削った項目。使えなかった補助金、要件の一行、締切の日付。借りるはずだった場所、断られた理由、探し直す手間。閉じた門、伸びた雑草、手入れの途切れ。口座の残高、見ないでいた期間、確認した数字。「あるつもりだった」という言葉、実際の額。", apply: "元手が足りない人に出たなら、諦める段階ではない。今ある額で始められる最小の形を書く場面。", caution: "逆位置を「金銭の損失」と具体的に読む立場が広く行われている。比喩ではなく額として取る向き。" },
+    "pentacles-1": { story: "二枚を結ぶ帯が切れ、片方が落ちている。船が大きく傾いている。", world: "回し切れない層。数が一つ多く、どれかが必ず落ちる。", guide: "「破綻」と決めない。多くは、掛け持ちの数が一つ多いだけ。落とす一枚を選べば戻る。", image: "落ちた一枚。忘れた支払い、届いた督促、延滞の記載。ダブルブッキング、詫びの連絡、下がった信用。三つ目に引き受けた仕事、削った睡眠、増えたミス。切れた帯、掴めない指、転がる貨幣。傾いた船、こぼれる荷、掴まる手。同時に持てる数、超えた分、気づいた時期。", apply: "掛け持ちが破綻しかけている人に出たなら、頑張る段階ではない。一つ落とす先を今日決める場面。", caution: "逆位置を「借金の膨張」と読む立場がある。回せなくなることを負債として取る向き。" },
+    "pentacles-2": { story: "足場が外され、図面と職人がばらばらに立っている。", world: "噛み合わない層。腕・図面・出資のどれかが欠けているか、重なっている。", guide: "「相手が悪い」と読まない。三役のどれかが欠けているか、重なっている。役の割り当てを見る。", image: "外された足場。届かない図面、変わった仕様、伝わらない変更。二人が同じ工程をやっていた日、無駄になった手間、言わなかった不満。腕はあるが金がない状態、金はあるが人がいない状態。打たれない鑿、止まった壁、途中の彫刻。名前の書かれていない担当表、誰の仕事か分からない項目。上がってきた出来、直しの回数。", apply: "組んだ仕事が進まない人に出たなら、急かす段階ではない。誰がどの役かを紙に書く場面。", caution: "逆位置を「手抜き工事」「粗悪品」と、成果物の質として読む立場がある。" },
+    "pentacles-3": { story: "抱えていた貨幣が腕から落ち、踏んでいた二枚が離れている。", world: "手放す層。握力が緩んだぶん、動けるようにもなっている。", guide: "「損失」と決めない。握力が緩んだだけで、それは動けるようになったということでもある。", image: "腕から落ちた貨幣。解約した保険、戻った分、減った固定費。処分した家具、空いた部屋、広くなった床。手放した株、確定した損、消えた気掛かり。離れた足、動く関節、久しぶりの歩幅。使っていなかった権利、失効の通知、思ったより小さい痛み。「持っていなくても平気だった」という発見。", apply: "何かを失った人に出たなら、取り返す段階ではない。それが無い生活を一週間やってみる場面。", caution: "逆位置を「執着からの解放」と肯定に読む立場が広く行われている。このアプリもその側で採点している。" },
+    "pentacles-4": { story: "雪がやみ、窓の下の二人が扉のほうを見ている。", world: "中が見える層。助けの在り処が分かる。叩くのはこれから。", guide: "「救われた」と急がない。扉に気づいたところまで。叩くのはこれから。", image: "やんだ雪。調べた支援制度、書いた申請書、必要な書類の一覧。相談した相手、返ってきた反応、想像との差。分割払いの交渉、応じた窓口、決まった額。扉の位置、鳴らす呼び鈴、押す指。松葉杖の置き場所、座った椅子、暖かい室内。「言えばよかった」という一言、その後の変化。", apply: "助けを求めかけている人に出たなら、完璧に説明する段階ではない。困っていると一言だけ伝える場面。", caution: "逆位置を「困窮が長引く」と否定に読む立場もある。このアプリは、扉が見える側を吉としている。" },
+    "pentacles-5": { story: "天秤が傾き、渡す手が引かれている。跪いた二人のうち一人が去っていく。", world: "見返りが絡む層。渡す側の権限が、いつのまにか条件に変わっている。", guide: "「不公平」と一言で切らない。渡す側の権限が、いつのまにか条件になっている。", image: "傾いた天秤。貸した金の話が出る回数、遠回しな言い方、相手の顔。おごった分の暗黙の期待、断られた誘い、生じた気まずさ。援助の条件、増えた口出し、狭まる相手の選択。引かれた手、届かない距離、去る背中。「あれだけしてやったのに」という言葉、その後の関係。返せない側の負い目。", apply: "助けたのに報われないと感じる人に出たなら、責める段階ではない。見返りを期待していた分を認める場面。", caution: "逆位置を「借金の踏み倒し」「施しの拒絶」と具体的に読む立場がある。" },
+    "pentacles-6": { story: "実った貨幣が落ち、農夫が背を向けている。", world: "待ちきれない層。収穫が早すぎたか、手入れをやめたか、どちらかが起きている。", guide: "「無駄になった」と決めない。多くは、収穫が早すぎたか、手入れをやめたか。どちらかを見る。", image: "落ちた実。三か月で止めた広告、途中の数字、見なかった翌月。解約した積立、戻った額、失った年数。まだ早い収穫、硬い実、味の薄さ。放り出した鍬、伸びた雑草、荒れた畝。「効果がない」と判断した日、その根拠、実際の期間。他人の成果、比べた時期、焦り。", apply: "続けられない人に出たなら、やめる段階ではない。判断の期日を決めて、そこまでは触らない場面。", caution: "逆位置を「投資の失敗」と具体的に読む立場がある。心境ではなく損失として取る向き。" },
+    "pentacles-7": { story: "槌が置かれ、彫りかけの貨幣が並んでいる。手が止まっている。", world: "積めない層。量が効かなくなっているのに、同じ回数を重ねている。", guide: "「怠け」と決めない。量をこなす段階が終わっているのに、気づいていない場合も含む。", image: "置かれた槌。同じ作業の百回目、変わらない出来、上がらない精度。続かなくなった記録、空白の日、開かないアプリ。作業台の埃、乾いた道具、片付いていない削り屑。彫りかけの一枚、途中の線、戻らない手。「意味があるのか」という問い、その頻度。上手くなったのに評価されない状態、量ではない何か。", apply: "続けても伸びない人に出たなら、量を増やす段階ではない。やり方を一つだけ変える場面。", caution: "逆位置を「転職・方向転換」と肯定に読む立場がある。積む対象を変える時期という取り方。" },
+    "pentacles-8": { story: "鷹が飛び去り、庭の手入れが乱れている。", world: "自立が揺らぐ層。支えていたものが減り、生活の形を変える時期に来ている。", guide: "「孤独」と読まない。多くは、支えていたものが減っただけ。生活の形が変わる局面。", image: "空の手袋。減った収入、変えた家賃、探す部屋。整えていた庭、伸びた枝、やらない剪定。断れなくなった仕事、下げた単価、増えた時間。飛び去った鷹、戻らない距離、空いた腕。一人で食べる食事の簡素化、コンビニ、洗わない器。誰かに頼ろうとして飲み込んだ言葉。", apply: "一人で回らなくなった人に出たなら、耐える段階ではない。生活の形を一つ小さくする場面。", caution: "逆位置を「見せかけの豊かさ」と読む立場がある。庭が借り物だという取り方。" },
+    "pentacles-9": { story: "紋章の旗がほどけ、門の内側の人々が別々を向いている。", world: "受け継がれない層。渡すものはあるのに、渡る形になっていない。", guide: "「家族の不和」に限定しない。渡すはずのものが、渡る形になっていない、という札。", image: "ほどけた旗。誰も継がなかった屋号、閉めた店、外した看板。相続の話し合い、平行線、増える書類。祖父の道具、使い方の分からない刃、しまった箱。名義のままの土地、掛かる税、決まらない扱い。別々を向いた顔、揃わない予定、来ない正月。教えなかった手順、聞かなかった側、失われた年月。", apply: "受け渡しが止まっている人に出たなら、話し合う段階ではない。一つだけ書き残す場面。", caution: "逆位置を「相続争い」「家の断絶」と具体的に読む立場が広く行われている。" },
+    "pentacles-10": { story: "掲げた貨幣が下がり、若者が別の方を見ている。", world: "続かない層。向いていないのではなく、始め方の刻みが大きすぎる。", guide: "「向いていない」と決めない。多くは、始め方が大きすぎた。刻みが合っていない。", image: "下がった手。買った教材の未使用ページ、栞の位置、三十ページ目。始めた家計簿、四日目の空白、開かないアプリ。申し込んだ講座、行かなかった三回目、返金なし。緑の野、歩いていない距離、同じ場所の足跡。「まずは一年」と言った日、経った月数、進んだ量。他のことに移った関心、また買った新しい教材。", apply: "続かない人に出たなら、決意を固める段階ではない。一日五分に刻み直す場面。", caution: "人物札として、勉強の続かない若者そのものを指すと読む立場がある。" },
+    "pentacles-11": { story: "馬が止まり、掲げた貨幣が傾いている。畑の畝が乱れている。", world: "止まる層。同じ手順を続けすぎて、いまの状況と合わなくなっている。", guide: "「怠慢」と決めない。同じ手順を続けすぎて、合わなくなっている場合が多い。", image: "止まった蹄。守っていた納期の初めての遅れ、詫びの連絡、相手の反応。変えなかった手順、変わった状況、噛み合わない結果。点検表の形骸化、押すだけの判、見ていない項目。乱れた畝、深さの違い、途中で曲がった線。傾いた貨幣、緩んだ腕、下がった姿勢。「いつも通り」が通じなくなった日。", apply: "同じやり方が通らなくなった人に出たなら、根性で戻す段階ではない。手順を一つ現状に合わせる場面。", caution: "人物札として、退屈で融通の利かない相手を指すと読む立場がある。" },
+    "pentacles-12": { story: "膝の貨幣が落ち、庭の花が枯れかけている。兎が姿を消している。", world: "回らなくなる層。気持ちではなく、段取りをする人の手が足りていない。", guide: "「愛情不足」と読まない。段取りの限界。手配する人の手が足りていない。", image: "落ちた貨幣。空の冷蔵庫、間に合わせの夕食、洗い物の山。忘れた予約、掛け直す電話、詫び。家計の穴、後回しの支払い、督促のはがき。枯れかけた花、水やりの間隔、伸びた雑草。誰かの体調の変化、気づけなかった日、後の自責。自分の通院、延ばした予約、放置した不調。", apply: "家のことが回らない人に出たなら、頑張る段階ではない。一つだけ外注するか諦める場面。", caution: "人物札として、世話を焼きすぎる女性や、金銭に細かい相手を指すと読む立場がある。" },
+    "pentacles-13": { story: "玉座が傾き、葡萄の実が落ちている。城の壁に亀裂。", world: "土台が緩む層。維持の手間を先送りにした分が、目に見える形で出ている。", guide: "「没落」と大きく読まない。多くは、維持の手間を先送りにした結果。修繕の話。", image: "落ちた葡萄。先延ばした修繕、広がった亀裂、上がった見積。数字だけ見た判断、抜けた現場の事情、離れた人。任せきりの部門、久しぶりに見た実態、想定との差。傾いた玉座、握り直す手、揺れる座面。続いた黒字の終わり、初めての赤、原因の分からなさ。動かさなかった資産、下がった価値。", apply: "維持が重くなっている人に出たなら、広げる段階ではない。傷んでいる一箇所を先に直す場面。", caution: "人物札として、金銭に固執する男性や、旧弊な経営者を指すと読む立場がある。" },
+    },
+  },
+};
+
+/* その札・その向きの事典を引く。無ければ null（欄ごと出さない） */
+function cardLore(card, reversed, lang) {
+  const tbl = CARD_LORE[lang];
+  if (!tbl || !card) return null;
+  const side = reversed ? tbl.rev : tbl.up;
+  return (side && side[String(card.id)]) || null;
 }
 
 function OneOraclePanel({ lang, onBack, onHoloConsumed, deck = "major", onCollect }) {
@@ -13777,7 +14563,7 @@ function OneOraclePanel({ lang, onBack, onHoloConsumed, deck = "major", onCollec
             <div className="ai-label">
               <Sparkles size={12} /> <span className={holo ? "holo-text" : "sheen-text"}>{info.pos[0]}</span>
             </div>
-            <p className={`${holo ? "holo-text" : rare ? "rare-text" : "sheen-text"}${(holo || rare) && !isGoodOrientation(card, card.reversed) ? " dark" : ""}`}>{buildOneOracleReading(card, lang)}</p>
+            <p className={`${holo ? "holo-text" : rare ? "rare-text" : "sheen-text"}${(holo || rare) && !isGoodOrientation(card, card.reversed) ? " dark" : ""}`}>{breakNaturally(buildOneOracleReading(card, lang))}</p>
           </div>
 
           {developerNote({ card, reversed: card.reversed }, lang) && (
@@ -13785,6 +14571,42 @@ function OneOraclePanel({ lang, onBack, onHoloConsumed, deck = "major", onCollec
               {breakBySentence(developerNote({ card, reversed: card.reversed }, lang))}
             </p>
           )}
+
+          {/*
+            札の事典。四欄それぞれを「示されたもの」と同じ枠にする。
+
+            ⚠️ 折りたたみに畳まないこと。
+            畳むと、鑑定文が本編で事典が付録という上下ができる。
+            辞書として使ってもらうなら、同じ形・同じ光で並べる必要がある。
+
+            ⚠️ 光り方（holo / rare / dark）は鑑定文と同じ判定を使う。
+            片方だけ虹色でもう片方が地味だと、同格には見えない。
+            ⚠️ 事典が無い札・無い言語では、枠ごと出さない。
+          */}
+          {(() => {
+            const lore = cardLore(card, card.reversed, lang);
+            if (!lore) return null;
+            const dark = (holo || rare) && !isGoodOrientation(card, card.reversed);
+            const glow = `${holo ? "holo-text" : rare ? "rare-text" : "sheen-text"}${dark ? " dark" : ""}`;
+            /*
+              ⚠️ 順序を変えないこと。
+              指針のあとにイメージ、例のあとに注意。
+              イメージを例より後ろに置くと、具体例を読んだあとの目で像を見ることになり、
+              せっかく広げた解釈の幅がその例に縛られる。
+              注意（少数説）は最後。先に置くと、本筋より例外が強く残る。
+            */
+            return [["story", t.loreStory], ["world", t.loreWorld], ["guide", t.loreGuide],
+              ["image", t.loreImage], ["apply", t.loreApply], ["caution", t.loreCaution]].map(([k, label]) => (
+              lore[k] ? (
+                <div key={k} className="ai-reading" style={{ marginTop: "2px" }}>
+                  <div className="ai-label">
+                    <Sparkles size={12} /> <span className={holo ? "holo-text" : "sheen-text"}>{label}</span>
+                  </div>
+                  <p className={glow}>{breakNaturally(lore[k])}</p>
+                </div>
+              ) : null
+            ));
+          })()}
 
           <div style={{ display: "flex", flexDirection: "column", alignItems: "center", gap: "10px" }}>
             {uses.remaining > 0 ? (
@@ -15737,6 +16559,7 @@ const T = {
     crossAxisLeft: "물러남",
     crossAxisRight: "나아감",
     crossVecRead: ["앞으로 미는 힘이 앞섭니다", "안으로 향하는 힘이 앞섭니다", "물러나는 힘이 앞섭니다", "밖으로 열리는 힘이 앞섭니다"],
+    crossVecWeak: "두 힘이 서로 상쇄되어 어느 쪽으로도 움직이지 않습니다。지금은 방향을 정할 때가 아니라, 한쪽 힘을 먼저 키울 때입니다",
     greekTenTitle: "사방의 장력",
     greekEl: { fire: "불・의지", water: "물・감정", air: "바람・사고", earth: "땅・물질" },
     greekAreaUnit: "펼침",
@@ -15809,8 +16632,10 @@ const T = {
     treePathRead: (a, b, d) => `${a}와 ${b} 사이에서 현실과 이어져 있습니다。${d}`,
     treeDepth: ["물으신 것은 무의식의 가장 깊은 곳에서 옵니다", "물으신 것은 일상의 의식보다 훨씬 안쪽에 뿌리를 두고 있습니다", "물으신 것은 생활 바로 옆에서 일어나는 일과 이어져 있습니다", "물으신 것은 가까운 일에 움직여진 것일 뿐일지도 모릅니다"],
     treePillarsTitle: "세 기둥의 무게",
-    treeMidHigh: "세 기둥은 균형을 이루지만 중앙이 너무 두껍습니다。지켜보기만 하고 있어, 밀고 나가는 힘이 모자랍니다",
-    treeMidLow: "세 기둥은 균형을 이루지만 중앙이 얇습니다。그때그때 양극으로 크게 흔들려, 판단이 자리를 잡지 못했습니다",
+    treeMidHigh: "중앙 기둥이 너무 두껍습니다。지켜보기만 하고 있어, 밀고 나가는 힘이 모자랍니다",
+    treeMidLow: "중앙 기둥이 너무 얇습니다。그때그때 양극으로 크게 흔들려, 판단이 자리를 잡지 못했습니다",
+    treeMidEven: "중앙 기둥의 두께는 알맞습니다。밀고 나감과 관망의 배분은 지금 이대로면 충분합니다",
+    treeSpineDone: "천상에서 지상까지 길이 하나로 이어졌습니다。생각하는 것과 살아가며 하는 일이 지금 같은 선 위에 있습니다",
     treeNoPath: "이번에는 소로가 나타나지 않았습니다。그 상은 아직 자리 위에 머물러 있습니다。",
     topicExample: "예: 지금 하는 일을 계속해야 할지",
     topicNote: "무료판에서는 감정에 반영되지 않습니다. 무엇을 알고 싶은지 스스로 정리하기 위한 칸입니다.",
@@ -15870,6 +16695,14 @@ const T = {
     weekHandNote: {"allUpright": "일곱 장 모두 좋은 방향. 거스를 것이 없다.", "allReversed": "좋은 방향이 한 장도 없다. 모든 것이 뒤집힌다.", "destiny": "숫자가 넷 이상 이어진다. 길이 정해져 있다.", "onecolorDeep": "같은 구간에 여섯 장. 한 단계로 물든다.", "upheaval": "후반 카드가 다섯 이상. 큰 주제가 겹친다.", "fortune": "좋은 방향이 아닌 카드가 단 한 장.", "misfortune": "좋은 방향인 카드가 단 한 장.", "flame": "초반 카드가 다섯 이상. 시작의 기운이 짙다.", "tide": "중반 카드가 다섯 이상. 물결의 한복판에 있다.", "trial": "죽음·악마·탑이 셋 이상. 무거운 주제가 늘어선다.", "harvest": "연인·별·태양·세계가 셋 이상. 빛의 카드가 모인다.", "bond": "인운이 가장 높다. 사람이 운을 데려온다.", "money": "금운이 가장 높다. 들고 나는 것이 움직인다.", "heart": "감정이 가장 높다. 안쪽이 분주하다.", "spirit": "기력이 가장 높다. 몸이 먼저 움직인다.", "craft": "일이 가장 높다. 손을 쓴 만큼 나아간다.", "turning": "변화가 가장 높다. 한자리에 머물지 않는다.", "dash": "행동이 가장 높다. 망설이기 전에 발이 나간다.", "blessing": "가호가 가장 높다. 지켜지는 이레.", "inward": "좋은 방향이 둘 이하. 밖보다 안이 움직인다.", "fair": "좋은 방향이 다섯 이상. 흐름을 거스르지 않아도 된다.", "mixed": "눈에 띄는 치우침이 없는 이레."},
     hexFormalLabel: "형식적 결과",
     hexJumpAria: (p) => `${p} 결과로 이동`,
+    hexOpenAria: (p) => `${p} 열기`,
+    loreTitle: "이 카드에 대하여",
+    loreStory: "그림",
+    loreWorld: "다루는 층",
+    loreGuide: "읽는 지침",
+    loreImage: "이미지",
+    loreApply: "적용 예",
+    loreCaution: "유의",
     hexAiLabel: "AI 해석",
     hexRetry: "다시 시도하기",
     hexPickPrompt: (n, pos) => `「${pos}」의 카드를 골라주세요 (남은 ${n}장)`,
@@ -16152,6 +16985,7 @@ const T = {
     crossAxisLeft: "Lùi",
     crossAxisRight: "Tiến",
     crossVecRead: ["Lực đẩy tới chiếm ưu thế", "Lực hướng vào trong chiếm ưu thế", "Lực kéo lùi chiếm ưu thế", "Lực mở ra ngoài chiếm ưu thế"],
+    crossVecWeak: "Hai lực triệt tiêu nhau, không nghiêng về bên nào。Đây chưa phải lúc chọn hướng, mà là lúc bồi thêm cho một bên trước",
     greekTenTitle: "Sức căng bốn phương",
     greekEl: { fire: "Lửa · Ý chí", water: "Nước · Cảm xúc", air: "Khí · Tư duy", earth: "Đất · Vật chất" },
     greekAreaUnit: "Độ mở",
@@ -16224,8 +17058,10 @@ const T = {
     treePathRead: (a, b, d) => `Nó nối với đời thường giữa ${a} và ${b}. ${d}`,
     treeDepth: ["Điều bạn hỏi đến từ nơi sâu nhất của vô thức", "Điều bạn hỏi có gốc rễ sâu dưới ý thức thường ngày", "Điều bạn hỏi gắn với việc đang xảy ra ngay bên cạnh đời sống", "Điều bạn hỏi có lẽ chỉ bị lay động bởi những việc gần kề"],
     treePillarsTitle: "Sức nặng của ba trụ",
-    treeMidHigh: "Ba trụ cân bằng, nhưng phần giữa quá dày。Bạn chỉ đang quan sát; còn thiếu sức đẩy tới",
-    treeMidLow: "Ba trụ cân bằng, nhưng phần giữa quá mỏng。Bạn nghiêng hẳn về hai cực tùy lúc; chưa có chỗ đứng ổn định",
+    treeMidHigh: "Trụ giữa quá dày。Bạn chỉ đang quan sát; còn thiếu sức đẩy tới",
+    treeMidLow: "Trụ giữa quá mỏng。Bạn nghiêng hẳn về một phía mỗi lần; phán đoán chưa có chỗ đứng",
+    treeMidEven: "Trụ giữa dày vừa phải。Cách bạn chia giữa tiến tới và chờ xem, giữ như hiện tại là đủ",
+    treeSpineDone: "Một con đường đã nối liền từ trên xuống dưới。Điều bạn nghĩ và điều bạn làm mỗi ngày đang nằm trên cùng một đường",
     treeNoPath: "Lần này không có tiểu lộ nào hiện ra. Hình ảnh ấy vẫn còn trên các tòa.",
     topicExample: "Ví dụ: có nên tiếp tục công việc này không",
     topicNote: "Bản miễn phí không dùng nội dung này. Đây là chỗ để bạn tự sắp xếp điều muốn biết.",
@@ -16285,6 +17121,14 @@ const T = {
     weekHandNote: {"allUpright": "Cả bảy lá ở chiều thuận của chúng. Không gì cản lại.", "allReversed": "Không lá nào ở chiều thuận. Mọi thứ lộ mặt kia.", "destiny": "Bốn số trở lên nối tiếp nhau. Một con đường đã định.", "onecolorDeep": "Sáu lá cùng một đoạn. Cả tuần dừng ở một chặng.", "upheaval": "Từ năm lá thuộc đoạn cuối. Những chủ đề lớn chồng lên nhau.", "fortune": "Chỉ một lá rơi vào chiều nghịch.", "misfortune": "Chỉ một lá rơi vào chiều thuận.", "flame": "Từ năm lá thuộc đoạn đầu. Mùi của khởi đầu rất đậm.", "tide": "Từ năm lá thuộc đoạn giữa. Bạn đang giữa con sóng.", "trial": "Từ ba lá Tử Thần, Ác Quỷ, Tòa Tháp. Những chủ đề nặng xếp hàng.", "harvest": "Từ ba lá Tình Nhân, Ngôi Sao, Mặt Trời, Thế Giới. Những lá của ánh sáng tụ lại.", "bond": "Vận người cao nhất. Người mang vận đến.", "money": "Vận tiền cao nhất. Thu và chi đều động.", "heart": "Cảm xúc cao nhất. Bên trong bận rộn.", "spirit": "Sinh lực cao nhất. Thân đi trước ý.", "craft": "Công việc cao nhất. Làm bao nhiêu tiến bấy nhiêu.", "turning": "Biến động cao nhất. Không đứng yên một chỗ.", "dash": "Hành động cao nhất. Chân bước trước khi kịp phân vân.", "blessing": "Sự che chở cao nhất. Bạn được giữ gìn.", "inward": "Hai lá trở xuống ở chiều thuận. Cái động nằm bên trong.", "fair": "Từ năm lá ở chiều thuận. Không cần ngược dòng.", "mixed": "Không có thiên lệch rõ rệt."},
     hexFormalLabel: "Kết quả cơ bản",
     hexJumpAria: (p) => `Đến kết quả của ${p}`,
+    hexOpenAria: (p) => `Mở ${p}`,
+    loreTitle: "Về lá bài này",
+    loreStory: "Khung cảnh",
+    loreWorld: "Tầng nó thuộc về",
+    loreGuide: "Chỉ dẫn cách đọc",
+    loreImage: "Hình ảnh",
+    loreApply: "Ví dụ áp dụng",
+    loreCaution: "Cách đọc thiểu số",
     hexAiLabel: "Luận giải AI",
     hexRetry: "Thử lại",
     hexPickPrompt: (n, pos) => `Chọn lá bài cho "${pos}" (còn ${n} lá)`,
@@ -16565,6 +17409,7 @@ const T = {
     crossAxisLeft: "Mundur",
     crossAxisRight: "Maju",
     crossVecRead: ["Gaya yang mendorong maju lebih kuat", "Gaya yang menarik ke dalam lebih kuat", "Gaya yang menarik mundur lebih kuat", "Gaya yang membuka ke luar lebih kuat"],
+    crossVecWeak: "Kedua daya saling meniadakan; tidak ada yang bergerak ke mana pun. Ini bukan saatnya memilih arah, melainkan menguatkan salah satu sisi lebih dulu",
     greekTenTitle: "Tegangan Empat Arah",
     greekEl: { fire: "Api · Kehendak", water: "Air · Perasaan", air: "Udara · Pikiran", earth: "Bumi · Materi" },
     greekAreaUnit: "Bentangan",
@@ -16637,8 +17482,10 @@ const T = {
     treePathRead: (a, b, d) => `Ia terhubung dengan keseharian di antara ${a} dan ${b}. ${d}`,
     treeDepth: ["Yang Anda tanyakan datang dari tempat terdalam alam bawah sadar", "Yang Anda tanyakan berakar jauh di bawah kesadaran sehari-hari", "Yang Anda tanyakan terkait dengan hal yang terjadi tepat di samping keseharian", "Yang Anda tanyakan mungkin hanya digerakkan oleh hal-hal di sekitar"],
     treePillarsTitle: "Bobot ketiga pilar",
-    treeMidHigh: "Ketiga pilar seimbang, tetapi pusatnya terlalu tebal. Anda hanya mengamati; dorongan untuk maju masih kurang",
-    treeMidLow: "Ketiga pilar seimbang, tetapi pusatnya tipis. Anda berayun jauh ke dua kutub sesuai keadaan; pijakan Anda belum tetap",
+    treeMidHigh: "Pilar tengah terlalu tebal. Anda hanya mengamati; dorongan untuk maju masih kurang",
+    treeMidLow: "Pilar tengah terlalu tipis. Anda berayun jauh ke satu sisi setiap kali; pijakan penilaian Anda belum tetap",
+    treeMidEven: "Ketebalan pilar tengah pas. Pembagian antara maju dan menunggu cukup seperti sekarang",
+    treeSpineDone: "Satu jalan kini terhubung dari atas hingga bawah. Yang Anda pikirkan dan yang Anda jalani berada pada garis yang sama",
     treeNoPath: "Tidak ada jalur muncul kali ini. Citra itu masih berada di atas singgasananya.",
     topicExample: "Contoh: apakah saya harus melanjutkan pekerjaan ini",
     topicNote: "Versi gratis tidak memakainya. Ini ruang untuk menata apa yang ingin Anda ketahui.",
@@ -16698,6 +17545,14 @@ const T = {
     weekHandNote: {"allUpright": "Ketujuhnya dalam arah yang baik. Tak ada yang menahan.", "allReversed": "Tak satu pun dalam arah yang baik. Semuanya memperlihatkan sisi lain.", "destiny": "Empat angka atau lebih berurutan. Jalannya sudah tertata.", "onecolorDeep": "Enam kartu dari satu rentang. Sepekan berhenti di satu tahap.", "upheaval": "Lima kartu akhir atau lebih. Tema besar bertumpuk.", "fortune": "Hanya satu kartu yang jatuh ke arah keliru.", "misfortune": "Hanya satu kartu yang jatuh ke arah benar.", "flame": "Lima kartu awal atau lebih. Aroma permulaan terasa kuat.", "tide": "Lima kartu tengah atau lebih. Kamu di tengah gelombang.", "trial": "Tiga atau lebih dari Kematian, Iblis, Menara. Tema berat berjajar.", "harvest": "Tiga atau lebih dari Kekasih, Bintang, Matahari, Dunia. Kartu cahaya berkumpul.", "bond": "Keberuntungan orang tertinggi. Orang membawa rezekimu.", "money": "Rezeki tertinggi. Pemasukan dan pengeluaran bergerak.", "heart": "Perasaan tertinggi. Bagian dalam sibuk.", "spirit": "Tenaga tertinggi. Tubuh bergerak lebih dulu.", "craft": "Kerja tertinggi. Maju sebanyak yang kamu kerjakan.", "turning": "Perubahan tertinggi. Tak ada yang diam.", "dash": "Tindakan tertinggi. Kaki melangkah sebelum ragu.", "blessing": "Perlindungan tertinggi. Kamu dijaga.", "inward": "Dua atau kurang dalam arah baik. Yang bergerak ada di dalam.", "fair": "Lima atau lebih dalam arah baik. Tak perlu melawan arus.", "mixed": "Tidak ada kecenderungan yang menonjol."},
     hexFormalLabel: "Hasil dasar",
     hexJumpAria: (p) => `Ke hasil ${p}`,
+    hexOpenAria: (p) => `Buka ${p}`,
+    loreTitle: "Tentang kartu ini",
+    loreStory: "Gambaran",
+    loreWorld: "Lapisan yang dibahas",
+    loreGuide: "Panduan membaca",
+    loreImage: "Citra",
+    loreApply: "Contoh penerapan",
+    loreCaution: "Bacaan minoritas",
     hexAiLabel: "Bacaan AI",
     hexRetry: "Coba lagi",
     hexPickPrompt: (n, pos) => `Pilih kartu untuk "${pos}" (sisa ${n})`,
@@ -16980,6 +17835,7 @@ const T = {
     crossAxisLeft: "Berundur",
     crossAxisRight: "Maju",
     crossVecRead: ["Daya yang mendorong ke hadapan lebih kuat", "Daya yang menarik ke dalam lebih kuat", "Daya yang menarik undur lebih kuat", "Daya yang membuka ke luar lebih kuat"],
+    crossVecWeak: "Kedua-dua daya saling membatalkan; tiada yang bergerak ke mana-mana. Ini bukan masa memilih arah, tetapi masa menguatkan satu pihak dahulu",
     greekTenTitle: "Tegangan Empat Arah",
     greekEl: { fire: "Api · Kehendak", water: "Air · Perasaan", air: "Udara · Fikiran", earth: "Bumi · Kebendaan" },
     greekAreaUnit: "Bentangan",
@@ -17052,8 +17908,10 @@ const T = {
     treePathRead: (a, b, d) => `Ia berhubung dengan kehidupan harian antara ${a} dan ${b}. ${d}`,
     treeDepth: ["Yang anda tanyakan datang dari tempat terdalam bawah sedar", "Yang anda tanyakan berakar jauh di bawah kesedaran harian", "Yang anda tanyakan berkait dengan perkara yang berlaku tepat di sebelah kehidupan harian", "Yang anda tanyakan mungkin hanya digerakkan oleh perkara berdekatan"],
     treePillarsTitle: "Berat ketiga-tiga tiang",
-    treeMidHigh: "Ketiga-tiga tiang seimbang, tetapi pusatnya terlalu tebal. Anda hanya memerhati; dorongan untuk maju masih kurang",
-    treeMidLow: "Ketiga-tiga tiang seimbang, tetapi pusatnya nipis. Anda berayun jauh ke dua hujung mengikut keadaan; pendirian anda belum tetap",
+    treeMidHigh: "Tiang tengah terlalu tebal. Anda hanya memerhati; dorongan untuk maju masih kurang",
+    treeMidLow: "Tiang tengah terlalu nipis. Anda berayun jauh ke satu pihak setiap kali; pendirian anda belum tetap",
+    treeMidEven: "Ketebalan tiang tengah memadai. Pembahagian antara maju dan menunggu cukup seperti sekarang",
+    treeSpineDone: "Satu jalan kini bersambung dari atas ke bawah. Apa yang anda fikir dan apa yang anda lakukan berada pada garis yang sama",
     treeNoPath: "Tiada jalur muncul kali ini. Imej itu masih berada di atas takhtanya.",
     topicExample: "Contoh: patutkah saya teruskan kerja ini",
     topicNote: "Versi percuma tidak menggunakannya. Ini ruang untuk menyusun apa yang ingin anda tahu.",
@@ -17113,6 +17971,14 @@ const T = {
     weekHandNote: {"allUpright": "Ketujuh-tujuhnya dalam arah yang baik. Tiada yang menghalang.", "allReversed": "Tiada satu pun dalam arah yang baik. Semua menunjukkan sisi lain.", "destiny": "Empat nombor atau lebih berturutan. Jalannya sudah tersusun.", "onecolorDeep": "Enam kad daripada satu julat. Seminggu berhenti pada satu tahap.", "upheaval": "Lima kad akhir atau lebih. Tema besar bertindih.", "fortune": "Hanya satu kad jatuh ke arah salah.", "misfortune": "Hanya satu kad jatuh ke arah betul.", "flame": "Lima kad awal atau lebih. Bau permulaan terasa kuat.", "tide": "Lima kad tengah atau lebih. Anda di tengah ombak.", "trial": "Tiga atau lebih daripada Maut, Syaitan, Menara. Tema berat berbaris.", "harvest": "Tiga atau lebih daripada Kekasih, Bintang, Matahari, Dunia. Kad cahaya berkumpul.", "bond": "Tuah orang tertinggi. Orang membawa rezeki anda.", "money": "Rezeki tertinggi. Masuk dan keluar bergerak.", "heart": "Perasaan tertinggi. Bahagian dalam sibuk.", "spirit": "Tenaga tertinggi. Badan bergerak dahulu.", "craft": "Kerja tertinggi. Maju sebanyak yang anda usahakan.", "turning": "Perubahan tertinggi. Tiada yang kekal diam.", "dash": "Tindakan tertinggi. Kaki melangkah sebelum ragu.", "blessing": "Perlindungan tertinggi. Anda dipelihara.", "inward": "Dua atau kurang dalam arah baik. Yang bergerak ada di dalam.", "fair": "Lima atau lebih dalam arah baik. Tak perlu melawan arus.", "mixed": "Tiada kecenderungan yang ketara."},
     hexFormalLabel: "Keputusan asas",
     hexJumpAria: (p) => `Ke keputusan ${p}`,
+    hexOpenAria: (p) => `Buka ${p}`,
+    loreTitle: "Tentang kad ini",
+    loreStory: "Gambaran",
+    loreWorld: "Lapisan yang dibincang",
+    loreGuide: "Panduan membaca",
+    loreImage: "Citra",
+    loreApply: "Contoh penerapan",
+    loreCaution: "Bacaan minoriti",
     hexAiLabel: "Bacaan AI",
     hexRetry: "Cuba lagi",
     hexPickPrompt: (n, pos) => `Pilih kad untuk "${pos}" (tinggal ${n})`,
@@ -17396,6 +18262,7 @@ const T = {
     crossAxisLeft: "退く",
     crossAxisRight: "進む",
     crossVecRead: ["前へ押し出す力が勝っています", "内へ向かう力が勝っています", "退く力が勝っています", "外へ開く力が勝っています"],
+    crossVecWeak: "二つの力が打ち消し合っていて、どちらへも動いていません。いまは向きを決める時期ではなく、片方の力を先に増やす時期です",
     greekTenTitle: "四方の張力",
     greekEl: { fire: "火・意志", water: "水・感情", air: "風・思考", earth: "地・物質" },
     greekAreaUnit: "広がり",
@@ -17492,8 +18359,10 @@ const T = {
     treePathRead: (a, b, d) => `${a}と${b}の間で、それは現実とつながっています。${d}`,
     treeDepth: ["尋ねられたことは、無意識のいちばん深いところから来ています", "尋ねられたことは、日々の意識よりずっと奥に根を持っています", "尋ねられたことは、暮らしのすぐ隣で起きていることと結びついています", "尋ねられたことは、身近な出来事に動かされているだけかもしれません"],
     treePillarsTitle: "三柱の重み",
-    treeMidHigh: "三本の柱は釣り合っていますが、中央が厚すぎます。様子を見るばかりで、押し進める力が足りていません",
-    treeMidLow: "三本の柱は釣り合っていますが、中央が薄いようです。その都度どちらかに振り切れていて、判断の置きどころが定まっていません",
+    treeMidHigh: "中央の柱が厚すぎます。様子を見るばかりで、押し進める力が足りていません",
+    treeMidLow: "中央の柱が薄すぎます。その都度どちらかに振り切れていて、判断の置きどころが定まっていません",
+    treeMidEven: "中央の柱は厚みが釣り合っています。踏み込みと様子見の配分は、いまのままで足ります",
+    treeSpineDone: "天から地まで、道がひとつに通りました。考えていることと、暮らしでやっていることが、いま同じ一本の上にあります",
     treeNoPath: "今回は小径が現れませんでした。その像はまだ、座の上に留まっています。",
     topicExample: "例：今の仕事を続けるべきか",
     topicNote: "無料版では鑑定に反映されません。何を知りたいのか、自分で整理するための欄です。",
@@ -17568,6 +18437,14 @@ const T = {
     weekHandNote: {"allUpright": "七枚すべてが良い向き。抗うものが無い七日。", "allReversed": "良い向きが一枚も無い。すべてが裏返る七日。", "destiny": "数が四つ以上連なる。道筋が定まっている。", "onecolorDeep": "同じ帯に六枚。週が一つの段階に染まる。", "upheaval": "終盤の札が五枚以上。大きな主題が重なる。", "fortune": "良い向きでない札が一枚だけ。", "misfortune": "良い向きの札が一枚だけ。", "flame": "序盤の札が五枚以上。始まりの気配が濃い。", "tide": "中盤の札が五枚以上。満ち引きの只中にある。", "trial": "死神・悪魔・塔が三枚以上。重い主題が並ぶ。", "harvest": "恋人たち・星・太陽・世界が三枚以上。光の札が集まる。", "bond": "人運が最も高い。人が運を運んでくる。", "money": "金運が最も高い。入りと出が動く。", "heart": "感情が最も高い。内側が忙しい七日。", "spirit": "気力が最も高い。身体が先に動く。", "craft": "仕事が最も高い。手を動かした分だけ進む。", "turning": "変化が最も高い。同じ場所に留まらない。", "dash": "行動が最も高い。迷う前に足が出る。", "blessing": "加護が最も高い。守られている七日。", "inward": "良い向きが二枚以下。外より内が動く。", "fair": "良い向きが五枚以上。流れに逆らわずに済む。", "mixed": "目立った偏りのない七日。"},
     hexFormalLabel: "形式的な結果",
     hexJumpAria: (p) => `${p}の結果へ移動`,
+    hexOpenAria: (p) => `${p}を開く`,
+    loreTitle: "この札について",
+    loreStory: "物語",
+    loreWorld: "世界観",
+    loreGuide: "解釈の指針",
+    loreImage: "イメージ",
+    loreApply: "あてはめの例",
+    loreCaution: "注意",
     hexAiLabel: "AI鑑定",
     hexRetry: "AI鑑定をもう一度試す",
     hexPickPrompt: (n, pos) => `「${pos}」のカードを選んでください（残り${n}枚）`,
@@ -17850,6 +18727,7 @@ const T = {
     crossAxisLeft: "後退",
     crossAxisRight: "前進",
     crossVecRead: ["向前推進的力量佔優", "向內收束的力量佔優", "後退的力量佔優", "向外開展的力量佔優"],
+    crossVecWeak: "兩股力量互相抵消，哪一邊都沒有動。此刻不是決定方向的時候，而是先讓其中一邊變強的時候",
     greekTenTitle: "四方的張力",
     greekEl: { fire: "火・意志", water: "水・情感", air: "風・思考", earth: "地・物質" },
     greekAreaUnit: "展開",
@@ -17922,8 +18800,10 @@ const T = {
     treePathRead: (a, b, d) => `它在${a}與${b}之間與現實相連。${d}`,
     treeDepth: ["您所問的，來自無意識最深之處", "您所問的，根扎在遠比日常意識更深的地方", "您所問的，與生活近旁正在發生的事相連", "您所問的，或許只是被身邊的事所牽動"],
     treePillarsTitle: "三柱的分量",
-    treeMidHigh: "三柱雖然均衡，但中央過厚。您只是在觀望，推進的力道不足",
-    treeMidLow: "三柱雖然均衡，但中央過薄。您每次都倒向其中一邊，判斷尚無落腳之處",
+    treeMidHigh: "中央柱過厚。您只是在觀望，推進的力道不足",
+    treeMidLow: "中央柱過薄。您每次都倒向其中一邊，判斷尚無落腳之處",
+    treeMidEven: "中央柱厚薄適中。推進與觀望的分配，維持現狀即可",
+    treeSpineDone: "自天而地，路已連成一條。所思與所行，此刻在同一條線上",
     treeNoPath: "這次未出現小徑。那個意象仍停留在座上。",
     topicExample: "例：是否該繼續現在的工作",
     topicNote: "免費版不會納入解讀。這是供您自行整理想知道什麼的欄位。",
@@ -17983,6 +18863,14 @@ const T = {
     weekHandNote: {"allUpright": "七張全為好的方向。無物相抗。", "allReversed": "沒有一張是好的方向。一切翻轉。", "destiny": "數字連續四張以上。道路已然成形。", "onecolorDeep": "同一段落六張。整週染上一個階段。", "upheaval": "後段的牌五張以上。大主題層層疊起。", "fortune": "只有一張落在不好的方向。", "misfortune": "只有一張落在好的方向。", "flame": "前段的牌五張以上。開端的氣息濃厚。", "tide": "中段的牌五張以上。正處於漲落之中。", "trial": "死神・惡魔・高塔三張以上。沉重的主題並列。", "harvest": "戀人・星星・太陽・世界三張以上。光之牌聚集。", "bond": "人運最高。是人帶來運。", "money": "財運最高。收與支都在動。", "heart": "情感最高。內在忙碌的七天。", "spirit": "氣力最高。身體先於念頭。", "craft": "工作最高。動手多少就前進多少。", "turning": "變化最高。不會停在原地。", "dash": "行動最高。猶豫之前腳已邁出。", "blessing": "守護最高。被護持的七天。", "inward": "好的方向兩張以下。動的是內在。", "fair": "好的方向五張以上。不必逆流而行。", "mixed": "沒有明顯偏向的七天。"},
     hexFormalLabel: "形式上的結果",
     hexJumpAria: (p) => `前往「${p}」的結果`,
+    hexOpenAria: (p) => `翻開「${p}」`,
+    loreTitle: "關於這張牌",
+    loreStory: "畫面",
+    loreWorld: "所屬層面",
+    loreGuide: "解讀指引",
+    loreImage: "意象",
+    loreApply: "套用範例",
+    loreCaution: "另一種說法",
     hexAiLabel: "AI解讀",
     hexRetry: "再試一次",
     hexPickPrompt: (n, pos) => `請選出「${pos}」的牌（還剩 ${n} 張）`,
@@ -18265,6 +19153,7 @@ const T = {
     crossAxisLeft: "后退",
     crossAxisRight: "前进",
     crossVecRead: ["向前推进的力量占优", "向内收束的力量占优", "后退的力量占优", "向外开展的力量占优"],
+    crossVecWeak: "两股力量互相抵消，哪一边都没有动。此刻不是决定方向的时候，而是先让其中一边变强的时候",
     greekTenTitle: "四方的张力",
     greekEl: { fire: "火・意志", water: "水・情感", air: "风・思考", earth: "地・物质" },
     greekAreaUnit: "展开",
@@ -18337,8 +19226,10 @@ const T = {
     treePathRead: (a, b, d) => `它在${a}与${b}之间与现实相连。${d}`,
     treeDepth: ["您所问的，来自无意识最深之处", "您所问的，根扎在远比日常意识更深的地方", "您所问的，与生活近旁正在发生的事相连", "您所问的，或许只是被身边的事所牵动"],
     treePillarsTitle: "三柱的分量",
-    treeMidHigh: "三柱虽然均衡，但中央过厚。您只是在观望，推进的力道不足",
-    treeMidLow: "三柱虽然均衡，但中央过薄。您每次都倒向其中一边，判断尚无落脚之处",
+    treeMidHigh: "中央柱过厚。您只是在观望，推进的力道不足",
+    treeMidLow: "中央柱过薄。您每次都倒向其中一边，判断尚无落脚之处",
+    treeMidEven: "中央柱厚薄适中。推进与观望的分配，维持现状即可",
+    treeSpineDone: "自天而地，路已连成一条。所思与所行，此刻在同一条线上",
     treeNoPath: "这次未出现小径。那个意象仍停留在座上。",
     topicExample: "例：是否该继续现在的工作",
     topicNote: "免费版不会纳入解读。这是供您自行整理想知道什么的栏位。",
@@ -18398,6 +19289,14 @@ const T = {
     weekHandNote: {"allUpright": "七张全为好的方向。无物相抗。", "allReversed": "没有一张是好的方向。一切翻转。", "destiny": "数字连续四张以上。道路已然成形。", "onecolorDeep": "同一段落六张。整周染上一个阶段。", "upheaval": "后段的牌五张以上。大主题层层叠起。", "fortune": "只有一张落在不好的方向。", "misfortune": "只有一张落在好的方向。", "flame": "前段的牌五张以上。开端的气息浓厚。", "tide": "中段的牌五张以上。正处于涨落之中。", "trial": "死神・恶魔・高塔三张以上。沉重的主题并列。", "harvest": "恋人・星星・太阳・世界三张以上。光之牌聚集。", "bond": "人运最高。是人带来运。", "money": "财运最高。收与支都在动。", "heart": "情感最高。内在忙碌的七天。", "spirit": "气力最高。身体先于念头。", "craft": "工作最高。动手多少就前进多少。", "turning": "变化最高。不会停在原地。", "dash": "行动最高。犹豫之前脚已迈出。", "blessing": "守护最高。被护持的七天。", "inward": "好的方向两张以下。动的是内在。", "fair": "好的方向五张以上。不必逆流而行。", "mixed": "没有明显偏向的七天。"},
     hexFormalLabel: "形式上的结果",
     hexJumpAria: (p) => `前往「${p}」的结果`,
+    hexOpenAria: (p) => `翻开「${p}」`,
+    loreTitle: "关于这张牌",
+    loreStory: "画面",
+    loreWorld: "所属层面",
+    loreGuide: "解读指引",
+    loreImage: "意象",
+    loreApply: "套用范例",
+    loreCaution: "另一种说法",
     hexAiLabel: "AI解读",
     hexRetry: "再试一次",
     hexPickPrompt: (n, pos) => `请选出「${pos}」的牌（还剩 ${n} 张）`,
@@ -18680,6 +19579,7 @@ const T = {
     crossAxisLeft: "Retreat",
     crossAxisRight: "Advance",
     crossVecRead: ["The force pushing forward prevails", "The force turning inward prevails", "The force pulling back prevails", "The force opening outward prevails"],
+    crossVecWeak: "The two forces cancel out; nothing is moving either way. This is not the moment to choose a direction, but to build up one side first.",
     greekTenTitle: "Tension of the Four",
     greekEl: { fire: "Fire · Will", water: "Water · Feeling", air: "Air · Thought", earth: "Earth · Matter" },
     greekAreaUnit: "Spread",
@@ -18776,8 +19676,10 @@ const T = {
     treePathRead: (a, b, d) => `It connects to daily life between ${a} and ${b}. ${d}`,
     treeDepth: ["What you asked comes from the deepest place in the unconscious", "What you asked has roots well beneath everyday awareness", "What you asked is tied to something happening right beside your daily life", "What you asked may simply be moved by things close at hand"],
     treePillarsTitle: "Weight of the three pillars",
-    treeMidHigh: "The three pillars are even, but the centre is too thick. You are watching and waiting; the push to move is missing",
-    treeMidLow: "The three pillars are even, but the centre is thin. You swing all the way to one side each time; your judgement has no settled place to stand",
+    treeMidHigh: "The middle pillar is too thick. You are watching and waiting; the push to move is missing",
+    treeMidLow: "The middle pillar is too thin. You swing all the way to one side each time; your judgement has no settled place to stand",
+    treeMidEven: "The middle pillar holds a fair thickness. Your balance of pushing and waiting is enough as it stands",
+    treeSpineDone: "A single road now runs from the crown to the ground. What you think and what you do daily stand on the same line.",
     treeNoPath: "No path appeared this time. The image is still resting on the seats themselves.",
     topicExample: "e.g. whether to stay in this job",
     topicNote: "The free version does not use this. It is a space to set out what you want to know.",
@@ -18852,6 +19754,14 @@ const T = {
     weekHandNote: {"allUpright": "All seven in their good orientation. Nothing pushes back.", "allReversed": "Not one card in its good orientation. Everything shows its other face.", "destiny": "Four or more numbers run in sequence. A path is already set.", "onecolorDeep": "Six cards from one band. The week settles into a single stage.", "upheaval": "Five or more late cards. Large themes stack up.", "fortune": "Only one card falls the wrong way.", "misfortune": "Only one card falls the right way.", "flame": "Five or more early cards. The scent of beginnings is strong.", "tide": "Five or more middle cards. You are in the swell of it.", "trial": "Three or more of Death, the Devil, the Tower. Heavy themes line up.", "harvest": "Three or more of the Lovers, the Star, the Sun, the World. The bright cards gather.", "bond": "People runs highest. Others carry your luck.", "money": "Money runs highest. What comes in and goes out moves.", "heart": "Emotion runs highest. It is busy inside.", "spirit": "Energy runs highest. The body moves first.", "craft": "Work runs highest. You advance by the hand.", "turning": "Change runs highest. Nothing stays put.", "dash": "Action runs highest. Your feet move before you decide.", "blessing": "Blessing runs highest. You are held.", "inward": "Two or fewer in good orientation. What moves is inside.", "fair": "Five or more in good orientation. You need not fight the current.", "mixed": "No pronounced leaning this week."},
     hexFormalLabel: "Formal result",
     hexJumpAria: (p) => `Go to the result for ${p}`,
+    hexOpenAria: (p) => `Open ${p}`,
+    loreTitle: "About this card",
+    loreStory: "The scene",
+    loreWorld: "Where it belongs",
+    loreGuide: "How to read it",
+    loreImage: "Images",
+    loreApply: "Worked example",
+    loreCaution: "A minority reading",
     hexAiLabel: "AI reading",
     hexRetry: "Try the AI reading again",
     hexPickPrompt: (n, pos) => `Choose the card for "${pos}" (${n} left)`,
@@ -19134,6 +20044,7 @@ const T = {
     crossAxisLeft: "Umatras",
     crossAxisRight: "Sumulong",
     crossVecRead: ["Nananaig ang puwersang sumusulong", "Nananaig ang puwersang papaloob", "Nananaig ang puwersang umaatras", "Nananaig ang puwersang bumubukas"],
+    crossVecWeak: "Nagkakansela ang dalawang puwersa; walang gumagalaw sa alinmang panig. Hindi ito ang sandali para pumili ng direksyon, kundi para palakasin muna ang isang panig",
     greekTenTitle: "Tensyon ng Apat",
     greekEl: { fire: "Apoy · Kalooban", water: "Tubig · Damdamin", air: "Hangin · Isip", earth: "Lupa · Materyal" },
     greekAreaUnit: "Lawak",
@@ -19206,8 +20117,10 @@ const T = {
     treePathRead: (a, b, d) => `Nag-uugnay ito sa araw-araw sa pagitan ng ${a} at ${b}. ${d}`,
     treeDepth: ["Ang itinanong mo ay nagmumula sa pinakamalalim ng kamalayan", "Ang itinanong mo ay may ugat na malalim sa ilalim ng pang-araw-araw", "Ang itinanong mo ay nakaugnay sa nangyayari mismo sa tabi ng buhay mo", "Ang itinanong mo ay maaaring gumagalaw lamang dahil sa mga bagay na malapit"],
     treePillarsTitle: "Bigat ng tatlong haligi",
-    treeMidHigh: "Pantay ang tatlong haligi, ngunit masyadong makapal ang gitna. Nagmamasid ka lang; kulang ang tulak upang umusad",
-    treeMidLow: "Pantay ang tatlong haligi, ngunit manipis ang gitna. Bawat pagkakataon ay bumabaling ka nang husto sa isang panig; wala pang tiyak na kinatatayuan ang pasya mo",
+    treeMidHigh: "Masyadong makapal ang gitnang haligi. Nagmamasid ka lang; kulang ang tulak upang umusad",
+    treeMidLow: "Masyadong manipis ang gitnang haligi. Bawat pagkakataon ay bumabaling ka nang husto sa isang panig; wala pang tiyak na kinatatayuan ang pasya mo",
+    treeMidEven: "Tama lang ang kapal ng gitnang haligi. Sapat na ang hatian mo ngayon sa pag-usad at paghihintay",
+    treeSpineDone: "May isang daang tuloy-tuloy mula itaas hanggang ibaba. Ang iniisip mo at ang ginagawa mo araw-araw ay nasa iisang linya na",
     treeNoPath: "Walang lumitaw na landas ngayon. Nasa mga upuan pa rin ang imahe.",
     topicExample: "hal. kung dapat manatili sa trabahong ito",
     topicNote: "Hindi ito ginagamit sa libreng bersyon. Espasyo ito para malinawan kung ano ang gusto mong malaman.",
@@ -19267,6 +20180,14 @@ const T = {
     weekHandNote: {"allUpright": "Lahat ng pito ay nasa mabuting tayo. Walang humahadlang.", "allReversed": "Walang isa mang nasa mabuting tayo. Lahat ay nagpapakita ng kabilang mukha.", "destiny": "Apat o higit na bilang ang magkakasunod. May nakatakdang landas.", "onecolorDeep": "Anim na baraha mula sa isang yugto. Iisang yugto ang buong linggo.", "upheaval": "Lima o higit na huling baraha. Nagsasalansan ang malalaking tema.", "fortune": "Iisang baraha lang ang bumagsak nang mali.", "misfortune": "Iisang baraha lang ang bumagsak nang tama.", "flame": "Lima o higit na unang baraha. Malakas ang amoy ng simula.", "tide": "Lima o higit na gitnang baraha. Nasa gitna ka ng alon.", "trial": "Tatlo o higit sa Kamatayan, Diyablo, Tore. Nakahanay ang mabibigat na tema.", "harvest": "Tatlo o higit sa Magkasintahan, Bituin, Araw, Mundo. Nagtitipon ang mga baraha ng liwanag.", "bond": "Pinakamataas ang kapwa. Ang tao ang nagdadala ng suwerte.", "money": "Pinakamataas ang pera. Gumagalaw ang pasok at labas.", "heart": "Pinakamataas ang damdamin. Abala sa loob.", "spirit": "Pinakamataas ang sigla. Nauuna ang katawan.", "craft": "Pinakamataas ang trabaho. Umuusad ayon sa kamay mo.", "turning": "Pinakamataas ang pagbabago. Walang nananatili.", "dash": "Pinakamataas ang kilos. Nauuna ang paa sa pasya.", "blessing": "Pinakamataas ang biyaya. Ikaw ay iningatan.", "inward": "Dalawa o kulang ang nasa mabuting tayo. Nasa loob ang gumagalaw.", "fair": "Lima o higit ang nasa mabuting tayo. Hindi mo kailangang lumaban.", "mixed": "Walang malinaw na hilig ngayong linggo."},
     hexFormalLabel: "Pormal na resulta",
     hexJumpAria: (p) => `Pumunta sa resulta ng ${p}`,
+    hexOpenAria: (p) => `Buksan ang ${p}`,
+    loreTitle: "Tungkol sa baraha",
+    loreStory: "Ang eksena",
+    loreWorld: "Saang antas ito",
+    loreGuide: "Gabay sa pagbasa",
+    loreImage: "Mga imahe",
+    loreApply: "Halimbawang paggamit",
+    loreCaution: "Ibang basa",
     hexAiLabel: "AI reading",
     hexRetry: "Subukan ulit",
     hexPickPrompt: (n, pos) => `Piliin ang baraha para sa "${pos}" (${n} pa)`,
@@ -19549,6 +20470,7 @@ const T = {
     crossAxisLeft: "ถอย",
     crossAxisRight: "รุก",
     crossVecRead: ["แรงที่ผลักไปข้างหน้าเหนือกว่า", "แรงที่หันเข้าในเหนือกว่า", "แรงที่ถอยกลับเหนือกว่า", "แรงที่เปิดออกเหนือกว่า"],
+    crossVecWeak: "แรงสองด้านหักล้างกัน ไม่มีฝ่ายใดขยับ ตอนนี้ยังไม่ใช่เวลาเลือกทิศทาง แต่เป็นเวลาเสริมด้านใดด้านหนึ่งให้แข็งขึ้นก่อน",
     greekTenTitle: "แรงตึงสี่ทิศ",
     greekEl: { fire: "ไฟ・เจตจำนง", water: "น้ำ・อารมณ์", air: "ลม・ความคิด", earth: "ดิน・วัตถุ" },
     greekAreaUnit: "การแผ่",
@@ -19621,8 +20543,10 @@ const T = {
     treePathRead: (a, b, d) => `มันเชื่อมกับชีวิตจริงระหว่าง${a}กับ${b} ${d}`,
     treeDepth: ["สิ่งที่คุณถามมาจากส่วนที่ลึกที่สุดของจิตใต้สำนึก", "สิ่งที่คุณถามมีรากอยู่ลึกกว่าจิตสำนึกประจำวันมาก", "สิ่งที่คุณถามเชื่อมกับเรื่องที่เกิดขึ้นข้าง ๆ ชีวิตประจำวัน", "สิ่งที่คุณถามอาจเพียงถูกขับด้วยเรื่องใกล้ตัว"],
     treePillarsTitle: "น้ำหนักของสามเสา",
-    treeMidHigh: "สามเสาสมดุลกัน แต่ตรงกลางหนาเกินไป คุณเอาแต่รอดู ยังขาดแรงผลักให้เดินหน้า",
-    treeMidLow: "สามเสาสมดุลกัน แต่ตรงกลางบางเกินไป คุณเทไปสุดทางฝั่งใดฝั่งหนึ่งทุกครั้ง การตัดสินยังไม่มีที่ยืนที่แน่นอน",
+    treeMidHigh: "เสากลางหนาเกินไป คุณเอาแต่รอดู ยังขาดแรงผลักให้เดินหน้า",
+    treeMidLow: "เสากลางบางเกินไป คุณเทไปสุดทางฝั่งใดฝั่งหนึ่งทุกครั้ง การตัดสินยังไม่มีที่ยืน",
+    treeMidEven: "เสากลางหนาพอดี การแบ่งระหว่างเดินหน้ากับรอดู เท่านี้ก็พอแล้ว",
+    treeSpineDone: "มีเส้นทางหนึ่งเชื่อมจากเบื้องบนถึงเบื้องล่างแล้ว สิ่งที่คุณคิดกับสิ่งที่คุณทำในแต่ละวัน อยู่บนเส้นเดียวกัน",
     treeNoPath: "ครั้งนี้ไม่มีเส้นทางปรากฏ ภาพนั้นยังคงอยู่บนที่นั่ง",
     topicExample: "เช่น ควรทำงานนี้ต่อไหม",
     topicNote: "รุ่นฟรีจะไม่นำไปใช้ เป็นช่องสำหรับเรียบเรียงว่าคุณอยากรู้อะไร",
@@ -19682,6 +20606,14 @@ const T = {
     weekHandNote: {"allUpright": "ทั้งเจ็ดใบอยู่ในทิศทางที่ดี ไม่มีสิ่งใดขวาง", "allReversed": "ไม่มีสักใบที่อยู่ในทิศทางที่ดี ทุกอย่างพลิกด้าน", "destiny": "ตัวเลขเรียงต่อกันสี่ใบขึ้นไป เส้นทางถูกวางไว้แล้ว", "onecolorDeep": "ไพ่จากช่วงเดียวกันหกใบ ทั้งสัปดาห์อยู่ในขั้นเดียว", "upheaval": "ไพ่ช่วงท้ายห้าใบขึ้นไป ประเด็นใหญ่ซ้อนทับกัน", "fortune": "มีเพียงใบเดียวที่ทิศทางไม่ดี", "misfortune": "มีเพียงใบเดียวที่ทิศทางดี", "flame": "ไพ่ช่วงต้นห้าใบขึ้นไป กลิ่นอายของการเริ่มต้นเข้มข้น", "tide": "ไพ่ช่วงกลางห้าใบขึ้นไป อยู่กลางคลื่นพอดี", "trial": "ความตาย ปีศาจ หอคอย สามใบขึ้นไป ประเด็นหนักเรียงราย", "harvest": "คู่รัก ดารา ดวงอาทิตย์ โลก สามใบขึ้นไป ไพ่แห่งแสงมารวมกัน", "bond": "ดวงคนสูงที่สุด ผู้คนนำโชคมาให้", "money": "ดวงเงินสูงที่สุด รายรับรายจ่ายเคลื่อนไหว", "heart": "อารมณ์สูงที่สุด ภายในวุ่นวาย", "spirit": "พลังสูงที่สุด ร่างกายเคลื่อนก่อนความคิด", "craft": "การงานสูงที่สุด ลงมือเท่าไรก็ก้าวหน้าเท่านั้น", "turning": "ความเปลี่ยนแปลงสูงที่สุด ไม่หยุดอยู่กับที่", "dash": "การกระทำสูงที่สุด เท้าออกก่อนจะลังเล", "blessing": "การคุ้มครองสูงที่สุด เจ็ดวันที่ถูกปกป้อง", "inward": "ทิศทางที่ดีสองใบหรือน้อยกว่า สิ่งที่เคลื่อนอยู่ภายใน", "fair": "ทิศทางที่ดีห้าใบขึ้นไป ไม่ต้องฝืนกระแส", "mixed": "ไม่มีความเอนเอียงที่ชัดเจน"},
     hexFormalLabel: "ผลลัพธ์พื้นฐาน",
     hexJumpAria: (p) => `ไปที่ผลของ ${p}`,
+    hexOpenAria: (p) => `เปิด ${p}`,
+    loreTitle: "เกี่ยวกับไพ่ใบนี้",
+    loreStory: "ภาพบนไพ่",
+    loreWorld: "ชั้นที่ไพ่พูดถึง",
+    loreGuide: "แนวทางการอ่าน",
+    loreImage: "ภาพในใจ",
+    loreApply: "ตัวอย่างการนำไปใช้",
+    loreCaution: "อีกแนวการอ่าน",
     hexAiLabel: "คำทำนายจาก AI",
     hexRetry: "ลองอีกครั้ง",
     hexPickPrompt: (n, pos) => `เลือกไพ่สำหรับ "${pos}" (เหลืออีก ${n} ใบ)`,
@@ -19965,6 +20897,7 @@ const T = {
     crossAxisLeft: "Reträtt",
     crossAxisRight: "Framåt",
     crossVecRead: ["Kraften framåt väger tyngst", "Kraften inåt väger tyngst", "Kraften bakåt väger tyngst", "Kraften utåt väger tyngst"],
+    crossVecWeak: "De två krafterna tar ut varandra; ingenting rör sig åt något håll. Det här är inte stunden att välja riktning, utan att först bygga upp den ena sidan.",
     greekTenTitle: "De fyras spänning",
     greekEl: { fire: "Eld · Vilja", water: "Vatten · Känsla", air: "Luft · Tanke", earth: "Jord · Materia" },
     greekAreaUnit: "Öppning",
@@ -20037,8 +20970,10 @@ const T = {
     treePathRead: (a, b, d) => `Det möter vardagen mellan ${a} och ${b}. ${d}`,
     treeDepth: ["Det du frågade kommer från den djupaste platsen i det omedvetna", "Det du frågade har rötter långt under det dagliga medvetandet", "Det du frågade hänger ihop med något som sker alldeles intill vardagen", "Det du frågade rörs kanske bara av sådant som ligger nära till hands"],
     treePillarsTitle: "De tre pelarnas tyngd",
-    treeMidHigh: "De tre pelarna är jämna, men mitten är för tjock. Du avvaktar; kraften att driva på saknas",
-    treeMidLow: "De tre pelarna är jämna, men mitten är tunn. Du svänger hela vägen åt ena hållet varje gång; ditt omdöme har ingen fast plats att stå på",
+    treeMidHigh: "Mittpelaren är för tjock. Du avvaktar; kraften att driva på saknas",
+    treeMidLow: "Mittpelaren är för tunn. Du svänger hela vägen åt ena hållet varje gång; ditt omdöme har ingen fast plats att stå på",
+    treeMidEven: "Mittpelaren har lagom tjocklek. Din fördelning mellan att driva på och avvakta räcker som den är",
+    treeSpineDone: "En enda väg löper nu från kronan till marken. Det du tänker och det du gör dagligen står på samma linje.",
     treeNoPath: "Ingen stig visade sig denna gång. Bilden vilar ännu på sätena.",
     topicExample: "t.ex. om jag ska stanna kvar i jobbet",
     topicNote: "Gratisversionen använder inte detta. Det är ett utrymme för att reda ut vad du vill veta.",
@@ -20098,6 +21033,14 @@ const T = {
     weekHandNote: {"allUpright": "Alla sju i sin goda riktning. Ingenting står emot.", "allReversed": "Inte ett enda kort i sin goda riktning. Allt visar sin andra sida.", "destiny": "Fyra eller fler tal i följd. En väg är redan lagd.", "onecolorDeep": "Sex kort ur samma band. Veckan stannar i ett enda skede.", "upheaval": "Fem eller fler sena kort. Stora teman staplas på varandra.", "fortune": "Bara ett kort faller åt fel håll.", "misfortune": "Bara ett kort faller åt rätt håll.", "flame": "Fem eller fler tidiga kort. Doften av begynnelse är stark.", "tide": "Fem eller fler mittkort. Du är mitt i svallet.", "trial": "Tre eller fler av Döden, Djävulen, Tornet. Tunga teman ställer upp sig.", "harvest": "Tre eller fler av Älskande, Stjärnan, Solen, Världen. Ljusets kort samlas.", "bond": "Människor väger tyngst. Andra bär din tur.", "money": "Pengar väger tyngst. Det som kommer in och går ut rör sig.", "heart": "Känslan väger tyngst. Det är fullt av liv inuti.", "spirit": "Energin väger tyngst. Kroppen rör sig först.", "craft": "Arbetet väger tyngst. Du kommer framåt med händerna.", "turning": "Förändringen väger tyngst. Ingenting står stilla.", "dash": "Handlingen väger tyngst. Fötterna går före beslutet.", "blessing": "Beskyddet väger tyngst. Du hålls uppe.", "inward": "Två eller färre i god riktning. Det som rör sig finns inuti.", "fair": "Fem eller fler i god riktning. Du slipper kämpa emot.", "mixed": "Ingen tydlig lutning denna vecka."},
     hexFormalLabel: "Grundresultat",
     hexJumpAria: (p) => `Gå till resultatet för ${p}`,
+    hexOpenAria: (p) => `Öppna ${p}`,
+    loreTitle: "Om detta kort",
+    loreStory: "Scenen",
+    loreWorld: "Vilket skikt",
+    loreGuide: "Så läser du det",
+    loreImage: "Bilder",
+    loreApply: "Tillämpat exempel",
+    loreCaution: "En avvikande läsning",
     hexAiLabel: "AI-tydning",
     hexRetry: "Försök med AI-tydningen igen",
     hexPickPrompt: (n, pos) => `Välj kortet för ”${pos}” (${n} kvar)`,
@@ -22506,7 +23449,13 @@ export default function TarotDraw() {
         .ai-reading.final-judgment { border-color: rgba(231, 207, 153, 0.55); background: linear-gradient(160deg, rgba(60,45,110,0.7), rgba(24,18,48,0.7)); }
         .ai-label { display: flex; align-items: center; gap: 6px; font-family: 'Cinzel', serif; font-size: 10px; letter-spacing: 0.14em; color: var(--gold); margin-bottom: 10px; min-height: 34px; }
         .ai-label > span { flex: 1 1 auto; line-height: 1.5; }
-        .ai-reading p { font-size: 13px; line-height: 1.85; color: var(--parchment); margin: 0; white-space: pre-line; word-break: keep-all; overflow-wrap: break-word; }
+        /*
+          ⚠️ overflow-wrap は break-word ではなく anywhere。
+          break-word は「行頭に置いてもなお入らない語」しか割らないので、
+          keep-all と組み合わせると、長い一文が枠から溢れることがある。
+          折り返してよい場所は breakByClause が句読点だけに置いている。
+        */
+        .ai-reading p { font-size: 13px; line-height: 1.85; color: var(--parchment); margin: 0; white-space: pre-line; word-break: keep-all; overflow-wrap: anywhere; }
         .loading-dots { display: inline-flex; gap: 4px; margin-left: 6px; vertical-align: middle; }
         .loading-dots span { width: 5px; height: 5px; border-radius: 50%; background: var(--gold); display: inline-block; animation: dotPulse 1.1s ease-in-out infinite; }
         .loading-dots span:nth-child(2) { animation-delay: .15s; }
@@ -23188,6 +24137,56 @@ export default function TarotDraw() {
             radial-gradient(48% 26% at 50% 98%, rgba(201,162,75,0.12), transparent 70%);
           pointer-events: none;
         }
+        /*
+          天から地まで通ったときの地。
+          ⚠️ 常態（tree::before / ::after）はそのまま残して、上に重ねる。
+          消してしまうと、通った回だけ地が薄くなって逆に地味になる。
+        */
+        .vis-plate.spine-live {
+          border-color: rgba(255,255,255,0.55);
+          box-shadow: inset 0 0 40px rgba(0,0,0,0.4), 0 0 26px rgba(120,200,255,0.30);
+          animation: spinePlate 2.4s ease-in-out infinite;
+        }
+        @keyframes spinePlate {
+          0%, 100% { box-shadow: inset 0 0 40px rgba(0,0,0,0.4), 0 0 18px rgba(255,60,180,0.22); }
+          33%      { box-shadow: inset 0 0 40px rgba(0,0,0,0.4), 0 0 30px rgba(60,200,255,0.40); }
+          66%      { box-shadow: inset 0 0 40px rgba(0,0,0,0.4), 0 0 30px rgba(120,255,140,0.34); }
+        }
+        /* 通った道を白い火が走る */
+        .tree-spine-run {
+          stroke-dasharray: 16 200;
+          animation: spineRun 1.6s cubic-bezier(.35,0,.65,1) infinite;
+        }
+        @keyframes spineRun { to { stroke-dashoffset: -216; } }
+        /* 架橋の幽霊。灯った小径と違って、流れて消える */
+        .tree-bridge {
+          stroke-dasharray: 3 5;
+          animation: treeBridge 1.4s linear infinite;
+        }
+        @keyframes treeBridge { to { stroke-dashoffset: -16; } }
+        /*
+          次に開く札。押せることを、光で示す。
+          ⚠️ animation の shorthand をここで持つので、
+          この要素に別のインライン animation を足さないこと（出現の回転は親が持っている）。
+          ⚠️ 強くしすぎない。伏せ札が主役になると、既に開いた札が読まれなくなる。
+        */
+        .hex-card-next { animation: hexNext 2.2s ease-in-out infinite; border-radius: 8px; }
+        @keyframes hexNext {
+          0%, 100% { filter: drop-shadow(0 0 3px rgba(201,162,75,0.45)); }
+          50%      { filter: drop-shadow(0 0 11px rgba(255,235,180,0.95)); }
+        }
+        .tree-spine-read {
+          margin: 8px 0 0; font-size: 11.5px; line-height: 1.75; text-align: center;
+          font-family: 'Shippori Mincho', serif; letter-spacing: 0.04em;
+          color: #FFFFFF; text-shadow: 0 0 10px rgba(120,200,255,0.75);
+        }
+        .tree-bridge-read {
+          margin: 8px 0 0; font-size: 11px; line-height: 1.8; color: var(--muted);
+        }
+        .tree-bridge-card {
+          color: #7CF5FF; font-family: 'Shippori Mincho', serif;
+          margin-right: 6px; text-shadow: 0 0 8px rgba(124,245,255,0.6);
+        }
         .vis-plate.tree::after {
           content: ""; position: absolute; left: 0; right: 0; top: -40%; height: 40%;
           background: linear-gradient(180deg, transparent, rgba(160,205,255,0.13), transparent);
@@ -23215,6 +24214,16 @@ export default function TarotDraw() {
         .cv-ripple {
           transform-box: fill-box; transform-origin: center;
           animation: cvRipple 2s ease-out infinite;
+        }
+        /*
+          獣。ゆっくり上下に揺れるだけ。
+          ⚠️ 速く動かさないこと。光っている領域より目立つと、
+          「まだ動いていない方角」の印という位置づけが崩れる。
+        */
+        .cv-beast { transform-box: fill-box; transform-origin: center; }
+        @keyframes cvBeast {
+          0%, 100% { transform: translateY(0); opacity: 0.55; }
+          50%      { transform: translateY(-3px); opacity: 0.95; }
         }
         /* 攻めている領域だけ、ゆっくり息をする */
         .cv-live { animation: cvLive 3.2s ease-in-out infinite; }
@@ -24407,6 +25416,32 @@ export default function TarotDraw() {
           20%  { opacity: 0.9; }
           100% { transform: translate(5px, 16px) rotate(140deg); opacity: 0; }
         }
+        /*
+          季節のドット絵。ギリシャ十字の面の中だけで動く。
+          ⚠️ 面は clipPath で切ってあるので、枠の外へは出ない。
+          ⚠️ transform-box を付けないと、SVG の原点を軸に回って画面外へ飛ぶ。
+        */
+        .season-fall, .season-rise { transform-box: fill-box; transform-origin: center; }
+        @keyframes seasonPetal {
+          0%   { transform: translate(0, -14px) rotate(0deg); opacity: 0; }
+          14%  { opacity: 0.75; }
+          100% { transform: translate(26px, 260px) rotate(220deg); opacity: 0; }
+        }
+        @keyframes seasonLeaf {
+          0%   { transform: translate(0, -14px) rotate(0deg); opacity: 0; }
+          12%  { opacity: 0.8; }
+          100% { transform: translate(-34px, 264px) rotate(420deg); opacity: 0; }
+        }
+        @keyframes seasonSnow {
+          0%   { transform: translate(0, -12px) rotate(0deg); opacity: 0; }
+          16%  { opacity: 0.85; }
+          100% { transform: translate(14px, 262px) rotate(160deg); opacity: 0; }
+        }
+        @keyframes seasonRise {
+          0%   { transform: translate(0, 0) scaleY(1); opacity: 0; }
+          18%  { opacity: 0.7; }
+          100% { transform: translate(-10px, -252px) scaleY(1.6); opacity: 0; }
+        }
         @keyframes affPulse {
           0%, 100% { opacity: 0.45; }
           50%      { opacity: 1; }
@@ -24501,6 +25536,8 @@ export default function TarotDraw() {
           .horo-sector, .cross-vec-arrow, .greek-ten-poly, .hs-pass-climb,
           .hs-pass-ring, .tree-bolt, .tree-node, .tree-path, .cv-ripple,
           .reading-head-hit, .cv-live, .vis-plate.tree::after,
+          .vis-plate.spine-live, .tree-spine-run, .tree-bridge, .hex-card-next,
+          .season-fall, .season-rise, .cv-beast,
           .hs-mane, .tree-pillar-bolt,
           .aff-spin, .aff-flow, .aff-drift, .aff-rain, .aff-snow, .aff-pulse { animation: none !important; }
           .tree-pillar-bolt { opacity: 0.22 !important; }
