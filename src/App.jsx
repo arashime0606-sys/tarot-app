@@ -8673,8 +8673,18 @@ function CrossVector({ drawn, lang, openedIndices }) {
   春分・夏至・秋分・冬至の四分点にそれぞれ風・火・地・水を当てる。
   ============================================================
 */
-const ELEMENT_COLOR = { wands: "#FF6B5C", swords: "#FFD95C", cups: "#5CB8FF", pentacles: "#7ED07E" };
-const ELEMENT_SEASON = { wands: "summer", swords: "spring", cups: "winter", pentacles: "autumn" };
+const ELEMENT_COLOR = { wands: "#FF6B5C", pentacles: "#FFD95C", cups: "#5CB8FF", swords: "#7ED07E" };
+/*
+  ⚠️ 季節ではなく元素そのものを描く。
+
+  四季を当てていたが、対応を一段はさむぶん、図と絵が合っているかを
+  見る側が検算しなければならなかった（黄色い面に雪が降る、など）。
+  元素の名前は図の四隅に既に書いてあるので、絵もそのまま元素にする。
+
+    火＝下から吹き上がる炎   地＝降ってくる岩
+    風＝流れる風             水＝落ちる雪
+*/
+const ELEMENT_FX = { wands: "flame", swords: "wind", cups: "snow", pentacles: "rock" };
 /* 旧名。腕の点の色として使い続ける */
 const HISHI_COLOR = ELEMENT_COLOR;
 
@@ -8694,53 +8704,214 @@ const SEASON_MOTES = [
   { x: 190, y: 3, d: 1.9 }, { x: 222, y: 10, d: 0.5 },
 ];
 
-function SeasonField({ season, color, dur }) {
-  if (season === "summer") {
-    /* 夏。降るのではなく、地から陽炎が昇る */
+/*
+  ============================================================
+  【表紙の空】タイトル画面の全面に降るもの
+
+  ヘキサグラムの天気と同じ語彙を、画面いっぱいに広げる。
+
+  ⚠️ 毎回同じでは飾りにならず、毎描画で変わると落ち着かない。
+  開いたときに一度だけ選び、その回のあいだは変えない。
+
+  ⚠️ 濃くしないこと。ここは文字を読む画面なので、
+  空が主役になった時点で失敗になる。粒は22までに抑える。
+
+  ⚠️ pointer-events を切ること。全面に敷くので、
+  切り忘れるとタイトルのボタンが一つも押せなくなる。
+  ============================================================
+*/
+const SKY_KINDS = ["snow", "rain", "wind", "leaf", "fluff", "petal", "ember", "star"];
+
+/*
+  ⚠️ 拡大しないこと。ここで二度失敗している。
+
+  一度目 viewBox="0 0 100 100" ＋ preserveAspectRatio="none"
+         縦横を別々に伸ばすので、線の太さまで歪んで雨が横に潰れた。
+  二度目 viewBox="0 0 390 760" ＋ slice
+         縦横比は保たれるが、画面が広いと丸ごと2倍に拡大される。
+         44の長さの風が90pxの帯になり、虹色の芋虫が這う絵になった。
+
+  正しくは、拡大も縮小もしないこと。
+  外側の svg から viewBox を外すと、利用者座標＝CSSピクセルになる。
+  位置だけを％で散らしたいので、粒ごとに入れ子の svg を置いて
+  x/y を％で指定し、中身は原点付近に実寸で描く。
+  これでヘキサグラムの天気と寸分たがわぬ大きさになる。
+
+  ⚠️ 大きく見せたいときに寸法を上げない。数を増やす。
+*/
+const SKY_N = 96;
+const SKY_MOTES = Array.from({ length: SKY_N }, (_, k) => ({
+  x: (k * 137.508) % 100,                    // 黄金角。並ばずに散る
+  y: (k * 61.803) % 100,
+  d: (k * 0.31) % 13,
+  s: 0.75 + ((k * 0.37) % 1) * 0.7,
+}));
+/* 雲。雨と雪のときだけ、上のほうに数枚 */
+const SKY_CLOUDS = [
+  { x: 8, y: 7, s: 1.4, d: 0 }, { x: 56, y: 3, s: 1.8, d: 5 },
+  { x: 30, y: 17, s: 1.1, d: 9 }, { x: 72, y: 12, s: 1.5, d: 3 },
+];
+
+function TitleSky({ kind }) {
+  const C = "url(#skyHolo)";
+  const clouded = kind === "rain" || kind === "snow";
+  const shape = (k, m) => {
+    if (kind === "rain") {
+      // ヘキサグラムと同寸。長さ8、太さ0.9
+      return <line x1="0" y1="0" x2="2.4" y2="8" stroke={C} strokeWidth="0.9" strokeLinecap="round" opacity="0.6" />;
+    }
+    if (kind === "wind") {
+      // ⚠️ 長さは44まで。これ以上伸ばすと線ではなく帯に見える
+      return <path d="M 0 0 q 11 -3 22 0 q 11 3 22 0" fill="none" stroke={C}
+        strokeWidth="0.9" strokeLinecap="round" opacity="0.45" />;
+    }
+    if (kind === "leaf") {
+      // 葉。風に吹かれて横へ飛ぶ。縦より横に長い形にすると葉に見える
+      const w = 4.2 * m.s, h = 2.2 * m.s;
+      return <path d={`M ${-w} 0 q ${w} ${-h} ${w * 2} 0 q ${-w} ${h} ${-w * 2} 0 Z`}
+        fill={C} opacity="0.5" />;
+    }
+    if (kind === "fluff") {
+      // 綿毛。芯から放射状の毛。斜め下から上へ舞い上がる
+      return (
+        <g opacity="0.5">
+          <circle cx="0" cy="0" r="0.7" fill={C} />
+          {[0, 45, 90, 135, 180, 225, 270, 315].map((deg) => (
+            <line key={deg} x1="0" y1="0" x2={(3.2 * m.s).toFixed(2)} y2="0"
+              stroke={C} strokeWidth="0.45" strokeLinecap="round" transform={`rotate(${deg})`} />
+          ))}
+        </g>
+      );
+    }
+    if (kind === "petal") {
+      return <ellipse cx="0" cy="0" rx={(2.6 * m.s).toFixed(2)} ry={(1.5 * m.s).toFixed(2)} fill={C} opacity="0.5" />;
+    }
+    if (kind === "ember") {
+      return <circle cx="0" cy="0" r={(1.3 * m.s).toFixed(2)} fill={C} opacity="0.55" />;
+    }
+    if (kind === "star") {
+      const a = (3.2 * m.s).toFixed(2);
+      return (
+        <g>
+          <line x1={`-${a}`} y1="0" x2={a} y2="0" stroke={C} strokeWidth="0.7" strokeLinecap="round" />
+          <line x1="0" y1={`-${a}`} x2="0" y2={a} stroke={C} strokeWidth="0.7" strokeLinecap="round" />
+        </g>
+      );
+    }
+    /* 雪。ヘキサグラムと同じ六方の結晶（腕3.4・太さ0.75） */
     return (
-      <g>
-        {SEASON_MOTES.map((m, k) => (
-          <line key={k} x1={m.x} y1="250" x2={m.x + 3} y2="238" stroke={color} strokeWidth="1.4"
-            strokeLinecap="round" opacity="0.5" className="season-rise"
-            style={{ animation: `seasonRise ${(dur * 1.5).toFixed(1)}s linear ${m.d.toFixed(1)}s infinite` }} />
+      <g transform={`scale(${m.s.toFixed(2)})`}>
+        {[0, 60, 120].map((deg) => (
+          <line key={deg} x1="-3.4" y1="0" x2="3.4" y2="0" stroke={C} strokeWidth="0.75"
+            strokeLinecap="round" transform={`rotate(${deg})`} opacity="0.75" />
         ))}
       </g>
     );
-  }
-  if (season === "spring") {
-    /* 春。花びらが横へ流れながら落ちる */
+  };
+  const cls = kind === "ember" || kind === "fluff" ? "sky-rise"
+    : kind === "wind" || kind === "leaf" ? "sky-blow"
+    : kind === "star" ? "sky-twinkle"
+    : kind === "rain" ? "sky-drop" : "sky-drift";
+  return (
+    <svg className="title-sky" aria-hidden="true">
+      <defs>
+        <linearGradient id="skyHolo" gradientUnits="userSpaceOnUse" x1="-320" y1="600" x2="0" y2="0">
+          {HOLO_STOPS.map(([off, c]) => <stop key={off} offset={off} stopColor={c} />)}
+          <animateTransform attributeName="gradientTransform" type="translate"
+            from="0 0" to="320 0" dur="11s" repeatCount="indefinite" />
+        </linearGradient>
+      </defs>
+      {/*
+        雲。降るものには、降ってくる元が要る。
+        ⚠️ ヘキサグラムの雨で雲を一つ置いたのと同じ理由。無いとただの斜線になる。
+      */}
+      {clouded && SKY_CLOUDS.map((c, k) => (
+        <svg key={`c${k}`} x={`${c.x}%`} y={`${c.y}%`} overflow="visible">
+          <g className="sky-cloud" style={{ animationDelay: `${c.d}s` }}>
+            <g transform={`scale(${c.s})`}>
+              <path d={AFF_CLOUD_D} fill="none" stroke={C} strokeWidth="1.1"
+                strokeLinejoin="round" opacity="0.4" />
+            </g>
+          </g>
+        </svg>
+      ))}
+      {SKY_MOTES.map((m, k) => (
+        <svg key={k} x={`${m.x.toFixed(2)}%`} y={`${m.y.toFixed(2)}%`} overflow="visible">
+          <g className={cls}
+            style={{ animationDelay: `${m.d.toFixed(1)}s`, animationDuration: `${(13 + (k % 7) * 3).toFixed(1)}s` }}>
+            {shape(k, m)}
+          </g>
+        </svg>
+      ))}
+    </svg>
+  );
+}
+
+function ElementField({ fx, color, dur }) {
+  if (fx === "flame") {
+    /*
+      火。下から吹き上がる。
+      ⚠️ 立ち昇る線ではなく、舌の形にすること。
+      細い線を上げるだけだと湯気に見えて、火に見えなかった。
+    */
     return (
       <g>
-        {SEASON_MOTES.map((m, k) => (
-          <ellipse key={k} cx={m.x} cy={m.y} rx="2.6" ry="1.5" fill={color} opacity="0.55"
-            className="season-fall"
-            style={{ animation: `seasonPetal ${(dur * 1.9).toFixed(1)}s linear ${m.d.toFixed(1)}s infinite` }} />
-        ))}
+        {SEASON_MOTES.map((m, k) => {
+          const w = 4 + (k % 3) * 1.6;
+          const h = 26 + (k % 4) * 9;
+          const d = `M ${m.x} 252 C ${m.x - w} ${252 - h * 0.5}, ${m.x + w} ${252 - h * 0.7}, ${m.x} ${252 - h}`
+            + ` C ${m.x - w * 0.7} ${252 - h * 0.6}, ${m.x + w * 0.7} ${252 - h * 0.4}, ${m.x} 252 Z`;
+          return (
+            <path key={k} d={d} fill={color} opacity="0.5" className="el-flame"
+              style={{ animation: `elFlame ${(dur * 0.62).toFixed(2)}s ease-out ${m.d.toFixed(1)}s infinite` }} />
+          );
+        })}
       </g>
     );
   }
-  if (season === "autumn") {
-    /* 秋。木の葉が回りながら落ちる */
+  if (fx === "wind") {
+    /* 風。横に流れる。太さの違う筋を、速さを変えて流す */
     return (
       <g>
-        {SEASON_MOTES.map((m, k) => (
-          <path key={k} d={`M ${m.x} ${m.y} q 3 -3 6 0 q -3 3 -6 0 Z`} fill={color} opacity="0.6"
-            className="season-fall"
-            style={{ animation: `seasonLeaf ${(dur * 2.2).toFixed(1)}s linear ${m.d.toFixed(1)}s infinite` }} />
-        ))}
+        {SEASON_MOTES.map((m, k) => {
+          const y = 12 + ((k * 37) % 230);
+          const len = 30 + (k % 4) * 22;
+          return (
+            <path key={k} d={`M -${len} ${y} q ${len * 0.5} ${-5 - (k % 3) * 3} ${len} 0`}
+              fill="none" stroke={color} strokeWidth={0.9 + (k % 3) * 0.4} strokeLinecap="round"
+              opacity="0.55" className="el-wind"
+              style={{ animation: `elWind ${(dur * (0.9 + (k % 4) * 0.22)).toFixed(2)}s linear ${m.d.toFixed(1)}s infinite` }} />
+          );
+        })}
       </g>
     );
   }
-  /* 冬。雪。六方の結晶を小さく、いちばんゆっくり */
+  if (fx === "rock") {
+    /* 地。角のある岩が回りながら落ちる。丸くしないこと（それは雹に見える） */
+    return (
+      <g>
+        {SEASON_MOTES.map((m, k) => {
+          const r = 2.4 + (k % 3) * 1.3;
+          const d = `M ${m.x} ${m.y - r} L ${m.x + r} ${m.y - r * 0.2} L ${m.x + r * 0.6} ${m.y + r}`
+            + ` L ${m.x - r * 0.7} ${m.y + r * 0.8} L ${m.x - r} ${m.y - r * 0.3} Z`;
+          return (
+            <path key={k} d={d} fill={color} opacity="0.6" className="el-fall"
+              style={{ animation: `elRock ${(dur * 1.5).toFixed(2)}s linear ${m.d.toFixed(1)}s infinite` }} />
+          );
+        })}
+      </g>
+    );
+  }
+  /* 水。雪。六方の結晶を小さく、いちばんゆっくり */
   return (
     <g>
       {SEASON_MOTES.map((m, k) => (
-        <g key={k} className="season-fall"
-          style={{ animation: `seasonSnow ${(dur * 2.6).toFixed(1)}s linear ${m.d.toFixed(1)}s infinite` }}>
+        <g key={k} className="el-fall"
+          style={{ animation: `elSnow ${(dur * 2.6).toFixed(1)}s linear ${m.d.toFixed(1)}s infinite` }}>
           <g transform={`translate(${m.x} ${m.y})`}>
             {[0, 60, 120].map((deg) => (
               <line key={deg} x1="-2.6" y1="0" x2="2.6" y2="0" stroke={color} strokeWidth="0.8"
-                strokeLinecap="round" transform={`rotate(${deg})`} opacity="0.7" />
+                strokeLinecap="round" transform={`rotate(${deg})`} opacity="0.75" />
             ))}
           </g>
         </g>
@@ -8813,7 +8984,7 @@ function GreekTension({ drawn, labels, lang, openedIndices }) {
   v.forEach((x, i) => { if (x > v[leadIdx]) leadIdx = i; });
   const leadSuit = seen.has(ARMS[leadIdx].idx) ? ARMS[leadIdx].suit : LEAD_FALLBACK;
   const leadColor = ELEMENT_COLOR[leadSuit];
-  const leadSeason = ELEMENT_SEASON[leadSuit];
+  const leadFx = ELEMENT_FX[leadSuit];
   // 面積。とりうる最大に対する割合で出す
   const area = ((v[0] + v[2]) * (v[1] + v[3])) / 2;
   const areaMax = ((R + R) * (R + R)) / 2;
@@ -8845,7 +9016,7 @@ function GreekTension({ drawn, labels, lang, openedIndices }) {
         </defs>
         <g clipPath="url(#greekField)">
           <polygon points={poly} fill={leadColor} opacity="0.13" />
-          <SeasonField season={leadSeason} color={leadColor} dur={3.4} />
+          <ElementField fx={leadFx} color={leadColor} dur={3.4} />
         </g>
         {GREEK_CONTOURS.map((lv, li) => {
           const lp = pts.map((p) => ({ x: C + (p.x - C) * lv, y: C + (p.y - C) * lv }));
@@ -8854,17 +9025,18 @@ function GreekTension({ drawn, labels, lang, openedIndices }) {
             <g key={`lv${li}`} className="greek-ten-poly">
               {/*
                 等高線。色は持たせない。
-                ⚠️ 四色で引くと、面を塗り分けていたときと同じ濁りが線で起きる。
-                色を担うのは四方の点だけ、と決めてある。
+                ⚠️ 腕ごとに四色で引かないこと。面を塗り分けていたときと同じ濁りが起きる。
+                線は面と同じ「優位な元素の一色」にする。
+                青い雪が降っている面に黄色い線、のような食い違いをなくすため。
               */}
               {lp.map((p, i) => {
                 const nx = lp[(i + 1) % 4];
                 return (
                   <line key={`e${li}_${i}`}
                     x1={p.x.toFixed(1)} y1={p.y.toFixed(1)} x2={nx.x.toFixed(1)} y2={nx.y.toFixed(1)}
-                    stroke="rgba(255,240,205,0.9)" strokeWidth={0.5 + inner * 0.9} strokeLinecap="round"
-                    opacity={0.24 + inner * 0.46}
-                    style={{ filter: `drop-shadow(0 0 ${(1.5 + inner * 3).toFixed(1)}px rgba(255,240,205,0.5))` }} />
+                    stroke={leadColor} strokeWidth={0.5 + inner * 0.9} strokeLinecap="round"
+                    opacity={0.22 + inner * 0.44}
+                    style={{ filter: `drop-shadow(0 0 ${(1.5 + inner * 3).toFixed(1)}px ${leadColor})` }} />
                 );
               })}
             </g>
@@ -8874,17 +9046,18 @@ function GreekTension({ drawn, labels, lang, openedIndices }) {
           className="greek-ten-poly" style={{ filter: "drop-shadow(0 0 8px rgba(255,220,150,0.45))" }} />
         {/*
           中心から各頂点への腕。
-          ⚠️ ここも色を落とす。面が季節、点が元素、と決めたので、
-          腕まで四色にすると三重になって、どれが基準か分からなくなる。
+          ⚠️ 腕ごとに色を変えないこと。面・線は優位な元素の一色、
+          四色を持つのは四方の点だけ、という役割分担にしてある。
         */}
         {pts.map((p, i) => (
           <line key={`a${i}`} x1={C} y1={C} x2={p.x} y2={p.y}
-            stroke="rgba(255,240,205,0.55)" strokeWidth="1.1" opacity="0.6" />
+            stroke={leadColor} strokeWidth="1.1" opacity="0.45" />
         ))}
         {/*
           四方の点。この図で四色を持つのはここだけ。
           火＝赤、風＝黄、水＝青、地＝緑。
-          面は季節が担い、線は中立、点が元素を示す ―― 役割を三つに分けてある。
+          面と線は「いま優位な元素」の一色、点は四つの元素すべて。
+          どこが強いかは面と線、何が並んでいるかは点、と役割を分けてある。
         */}
         {pts.map((p, i) => {
           const open = seen.has(ARMS[i].idx);
@@ -21136,6 +21309,12 @@ export default function TarotDraw() {
   const [navTab, setNavTab] = useState("draw"); // ボトムナビで選択中の画面
   const [recordsTab, setRecordsTab] = useState("last"); // 記録タブ内のサブタブ
   const [spreadLog, setSpreadLog] = useState(() => loadSpreadLog()); // 全配置ぶんの軽い台帳
+  /*
+    表紙に降るもの。開いたときに一度だけ選ぶ。
+    ⚠️ useState の初期化関数を使うこと。本体で Math.random を呼ぶと、
+    再描画のたびに空が変わって落ち着かない。
+  */
+  const [skyKind] = useState(() => SKY_KINDS[Math.floor(Math.random() * SKY_KINDS.length)]);
 
   /*
     ホロ図鑑の取得状況。{ "major-0": { up: true, rev: false }, ... }
@@ -22396,6 +22575,18 @@ export default function TarotDraw() {
     <div className={`tarot-root${phase === "idle" && mode === "normal" && drawMode === "select" ? " has-bottom-nav" : ""}`}>
       {/* 裏面の意匠。ここで1回だけ定義し、各カードは <use> で参照する */}
       <TarotCardBackDefs />
+      {/*
+        表紙の空。タイトル画面のあいだだけ全面に敷く。
+        ⚠️ 占っている最中には出さない。盤面の演出と重なると、
+        どちらが結果でどちらが飾りか分からなくなる。
+      */}
+      {/*
+        ⚠️ phase だけで判定しない。
+        配置を選んだ後も phase は "idle" のままなので、
+        鑑定の画面にまで空が降り続ける。
+        表紙と配置選びのあいだ（drawMode が select）だけに限る。
+      */}
+      {phase === "idle" && (mode === "select" || drawMode === "select") && <TitleSky kind={skyKind} />}
       <style>{`
         @import url('https://fonts.googleapis.com/css2?family=Shippori+Mincho:wght@400;500;600;700;800&family=Noto+Sans+JP:wght@300;400;500;700&family=Cinzel:wght@500;600&display=swap');
 
@@ -22459,6 +22650,97 @@ export default function TarotDraw() {
              ただしコンテンツが短いとカードが間延びするので、最小高さを詰める */
           min-height: 0;
         }
+        /*
+          表紙の空。
+          ⚠️ pointer-events: none を外さないこと。全面に敷いているので、
+          外すとタイトルのボタンが一つも押せなくなる。
+          ⚠️ z-index は 0。内容側（header や controls）は position を持つので、
+          ここを上げると文字の上に空が乗る。
+        */
+        /*
+          ⚠️ viewBox を付けないこと。付けた瞬間に拡大縮小が始まる。
+          外さずに大きさを合わせようとして二度失敗している。
+          利用者座標＝CSSピクセルのまま使い、位置だけを入れ子の svg の
+          x/y（％）で散らす。
+        */
+        .title-sky {
+          position: absolute; inset: 0; width: 100%; height: 100%;
+          pointer-events: none; z-index: 0; opacity: 0.5;
+          overflow: hidden;
+        }
+        /*
+          ⚠️ 文字の上に空を降らせないこと。
+
+          .title-sky は絶対配置なので、position を持たない静的な要素より
+          後ろに置いたつもりでも前へ出る。文字が霞んで読みにくくなっていた。
+          内容側を position: relative にして、空より上の層へ引き上げる。
+          文字そのものの透明度は一切触らない ―― 読みにくさは重なりの問題で、
+          薄さの問題ではない。
+        */
+        .tarot-root > header,
+        .tarot-root > .controls,
+        .tarot-root > footer,
+        .tarot-root > nav,
+        .tarot-root > .bottom-nav {
+          position: relative; z-index: 1;
+        }
+        /* 雲はゆっくり横へ流れる。降るものより遅くすること */
+        .sky-cloud {
+          animation: skyCloud 46s linear infinite;
+          transform-box: view-box;
+        }
+        @keyframes skyCloud {
+          0%   { transform: translateX(-120px); opacity: 0; }
+          10%  { opacity: 1; }
+          90%  { opacity: 1; }
+          100% { transform: translateX(760px); opacity: 0; }
+        }
+        .sky-drop, .sky-drift, .sky-rise, .sky-blow, .sky-twinkle {
+          animation-iteration-count: infinite; animation-timing-function: linear;
+          transform-box: view-box;
+        }
+        /*
+          ⚠️ 移動量は px で書くこと。
+          入れ子の svg は自分の幅を持たないので、％の移動が効かない
+          （効いたとしても粒の大きさに対する％になり、ほとんど動かない）。
+          画面を渡り切る距離を実寸で与える。
+        */
+        @keyframes skyFall {
+          0%   { transform: translate(0, -60px); opacity: 0; }
+          10%  { opacity: 1; }
+          90%  { opacity: 1; }
+          100% { transform: translate(30px, 900px); opacity: 0; }
+        }
+        @keyframes skyDrift {
+          0%   { transform: translate(0, -60px); opacity: 0; }
+          12%  { opacity: 1; }
+          88%  { opacity: 1; }
+          100% { transform: translate(70px, 900px); opacity: 0; }
+        }
+        /* 火の粉と綿毛。斜め下から上へ舞い上がる */
+        @keyframes skyRise {
+          0%   { transform: translate(0, 60px); opacity: 0; }
+          16%  { opacity: 1; }
+          82%  { opacity: 1; }
+          100% { transform: translate(-90px, -900px); opacity: 0; }
+        }
+        /* 風と葉。横へ抜ける。少しだけ上下に振れる */
+        @keyframes skyBlow {
+          0%   { transform: translate(-140px, 0); opacity: 0; }
+          14%  { opacity: 1; }
+          50%  { transform: translate(340px, -18px); }
+          86%  { opacity: 1; }
+          100% { transform: translate(840px, 8px); opacity: 0; }
+        }
+        @keyframes skyTwinkle {
+          0%, 100% { opacity: 0.15; transform: scale(0.7); }
+          50%      { opacity: 1; transform: scale(1.25); }
+        }
+        .sky-drop { animation-name: skyFall; }
+        .sky-drift { animation-name: skyDrift; }
+        .sky-rise { animation-name: skyRise; }
+        .sky-blow { animation-name: skyBlow; }
+        .sky-twinkle { animation-name: skyTwinkle; animation-timing-function: ease-in-out; }
         /*
           背景の星。濃さの調整はこの opacity 一箇所で行う。
           演出側の星と混ざらないよう、背景は丸い点のみ・無アニメーションに保つ。
@@ -25421,26 +25703,32 @@ export default function TarotDraw() {
           ⚠️ 面は clipPath で切ってあるので、枠の外へは出ない。
           ⚠️ transform-box を付けないと、SVG の原点を軸に回って画面外へ飛ぶ。
         */
-        .season-fall, .season-rise { transform-box: fill-box; transform-origin: center; }
-        @keyframes seasonPetal {
-          0%   { transform: translate(0, -14px) rotate(0deg); opacity: 0; }
-          14%  { opacity: 0.75; }
-          100% { transform: translate(26px, 260px) rotate(220deg); opacity: 0; }
+        .el-fall, .el-flame, .el-wind { transform-box: fill-box; transform-origin: center; }
+        /* 火。根元は動かさず、上だけ揺らして伸び縮みさせる */
+        .el-flame { transform-origin: bottom; }
+        @keyframes elFlame {
+          0%   { transform: scaleY(0.35) scaleX(1.1); opacity: 0; }
+          22%  { opacity: 0.65; }
+          55%  { transform: scaleY(1.15) scaleX(0.85); opacity: 0.5; }
+          100% { transform: scaleY(0.5) scaleX(1.2); opacity: 0; }
         }
-        @keyframes seasonLeaf {
+        /* 風。左から右へ抜ける */
+        @keyframes elWind {
+          0%   { transform: translateX(0); opacity: 0; }
+          15%  { opacity: 0.6; }
+          85%  { opacity: 0.6; }
+          100% { transform: translateX(330px); opacity: 0; }
+        }
+        /* 岩。ほぼ真下へ、少しだけ回りながら落ちる */
+        @keyframes elRock {
           0%   { transform: translate(0, -14px) rotate(0deg); opacity: 0; }
           12%  { opacity: 0.8; }
-          100% { transform: translate(-34px, 264px) rotate(420deg); opacity: 0; }
+          100% { transform: translate(-8px, 266px) rotate(190deg); opacity: 0; }
         }
-        @keyframes seasonSnow {
+        @keyframes elSnow {
           0%   { transform: translate(0, -12px) rotate(0deg); opacity: 0; }
           16%  { opacity: 0.85; }
           100% { transform: translate(14px, 262px) rotate(160deg); opacity: 0; }
-        }
-        @keyframes seasonRise {
-          0%   { transform: translate(0, 0) scaleY(1); opacity: 0; }
-          18%  { opacity: 0.7; }
-          100% { transform: translate(-10px, -252px) scaleY(1.6); opacity: 0; }
         }
         @keyframes affPulse {
           0%, 100% { opacity: 0.45; }
@@ -25537,7 +25825,8 @@ export default function TarotDraw() {
           .hs-pass-ring, .tree-bolt, .tree-node, .tree-path, .cv-ripple,
           .reading-head-hit, .cv-live, .vis-plate.tree::after,
           .vis-plate.spine-live, .tree-spine-run, .tree-bridge, .hex-card-next,
-          .season-fall, .season-rise, .cv-beast,
+          .el-fall, .el-flame, .el-wind, .cv-beast,
+          .sky-drop, .sky-drift, .sky-rise, .sky-blow, .sky-twinkle, .sky-cloud,
           .hs-mane, .tree-pillar-bolt,
           .aff-spin, .aff-flow, .aff-drift, .aff-rain, .aff-snow, .aff-pulse { animation: none !important; }
           .tree-pillar-bolt { opacity: 0.22 !important; }
