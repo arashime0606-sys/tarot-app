@@ -8760,6 +8760,8 @@ function pickSkyKind() {
   return "starry";
 }
 
+/* ホロの四色。傾斜ではなく、粒ごとに直接塗るための並び */
+const SKY_PALETTE = ["#FF3CB4", "#3CC8FF", "#78FF8C", "#FFDC3C"];
 const SKY_COUNT = { animal: 20, fish: 26, ufo: 14, cloudy: 34 };
 const SKY_DEFAULT_N = 220;
 const skyMotes = (n) => Array.from({ length: n }, (_, k) => ({
@@ -8794,19 +8796,46 @@ function starPoints(r) {
   return p.join(" ");
 }
 
-function TitleSky({ kind }) {
-  const C = "url(#skyHolo)";
+/*
+  ⚠️ 空の色に、面をまたぐグラデーションを使わないこと。
+
+  【何が起きていたか】
+  粒は一つずつ入れ子の svg に入れていて、その中では原点付近に描かれる。
+  userSpaceOnUse の傾斜は「参照する要素の座標系」で解決されるので、
+  どの粒も同じ場所（原点）の色を引く ―― つまり全部が同じ色になる。
+  画面ではそれが最後の停止色、水色一色として出る。
+
+  PCで虹に見えていたのは animateTransform（SMIL）が傾斜を横へ流していて、
+  原点の色が時間で入れ替わっていたから。
+  iOS Safari は gradientTransform への SMIL を動かさないことがあり、
+  そこでは流れが止まって水色のまま固まる。
+  文字のホロは CSS の background-clip なので、こちらは無関係に動く。
+
+  【直し方】
+  粒ごとに、ホロの四色のどれかを直接塗る。傾斜も SMIL も使わない。
+  そのうえで層全体に CSS の hue-rotate をかけて色を巡らせる。
+  CSS アニメーションと filter はどの端末でも動く。
+*/
+function TitleSky({ kind, dim = false }) {
   const clouded = kind === "rain" || kind === "snow";
-  const motes = skyMotes(SKY_COUNT[kind] || SKY_DEFAULT_N);
+  const baseN = SKY_COUNT[kind] || SKY_DEFAULT_N;
+  /* 盤面の裏に敷くときは半分に減らす。主役は札のほうなので */
+  const motes = skyMotes(dim ? Math.max(8, Math.round(baseN / 2)) : baseN);
+  /*
+    ⚠️ HOLO_STOPS から拾わないこと。あれは傾斜の停止点なので
+    同じ色が二度入っている（0%と88%が桃、22%と100%が水）。
+    添字で拾うと二色しか出ない。四色の並びを別に持つ。
+  */
+  const colorAt = (k) => SKY_PALETTE[k % SKY_PALETTE.length];
   /* ドット絵を実寸で。点の間隔2.2px。これ以上詰めると絵にならない */
-  const dotArt = (dots, op) => (
+  const dotArt = (dots, op, C) => (
     <g opacity={op}>
       {dots.map(([x, y], i) => (
         <circle key={i} cx={(x * 2.2).toFixed(1)} cy={(y * 2.2).toFixed(1)} r="0.95" fill={C} />
       ))}
     </g>
   );
-  const shape = (k, m) => {
+  const shape = (k, m, C) => {
     if (kind === "rain") {
       return <line x1="0" y1="0" x2="2.4" y2="8" stroke={C} strokeWidth="0.9" strokeLinecap="round" opacity="0.6" />;
     }
@@ -8855,9 +8884,9 @@ function TitleSky({ kind }) {
         </g>
       );
     }
-    if (kind === "ufo") return dotArt(SKY_UFO_DOTS, 0.6);
-    if (kind === "animal") return dotArt(BEAST_DOTS[SKY_ANIMALS[k % SKY_ANIMALS.length]], 0.55);
-    if (kind === "fish") return dotArt(BEAST_DOTS.fish, 0.55);
+    if (kind === "ufo") return dotArt(SKY_UFO_DOTS, 0.6, C);
+    if (kind === "animal") return dotArt(BEAST_DOTS[SKY_ANIMALS[k % SKY_ANIMALS.length]], 0.55, C);
+    if (kind === "fish") return dotArt(BEAST_DOTS.fish, 0.55, C);
     if (kind === "petal") {
       return <ellipse cx="0" cy="0" rx={(2.6 * m.s).toFixed(2)} ry={(1.5 * m.s).toFixed(2)} fill={C} opacity="0.5" />;
     }
@@ -8880,19 +8909,14 @@ function TitleSky({ kind }) {
     : kind === "fish" ? "sky-swim"
     : kind === "rain" ? "sky-drop" : "sky-drift";
   return (
-    <svg className="title-sky" aria-hidden="true">
-      <defs>
-        <linearGradient id="skyHolo" gradientUnits="userSpaceOnUse" x1="-320" y1="600" x2="0" y2="0">
-          {HOLO_STOPS.map(([off, c]) => <stop key={off} offset={off} stopColor={c} />)}
-          <animateTransform attributeName="gradientTransform" type="translate"
-            from="0 0" to="320 0" dur="11s" repeatCount="indefinite" />
-        </linearGradient>
-      </defs>
+    <svg className={`title-sky${dim ? " dim" : ""}`} aria-hidden="true">
       {/*
         天体。右上に据える。降るものと違って動かさない。
         ⚠️ 動かすと「大きな粒」に見えて、空の主が二つになる。
       */}
-      {(kind === "starry" || kind === "clear") && (
+      {(kind === "starry" || kind === "clear") && (() => {
+        const C = SKY_PALETTE[3];
+        return (
         <svg x="84%" y="7%" overflow="visible">
           <g className="sky-orb">
             {kind === "starry" ? (
@@ -8912,12 +8936,13 @@ function TitleSky({ kind }) {
             )}
           </g>
         </svg>
-      )}
+        );
+      })()}
       {clouded && SKY_CLOUDS.map((c, k) => (
         <svg key={`c${k}`} x={`${c.x}%`} y={`${c.y}%`} overflow="visible">
           <g className="sky-cloud" style={{ animationDelay: `${c.d}s` }}>
             <g transform={`scale(${c.s})`}>
-              <path d={AFF_CLOUD_D} fill="none" stroke={C} strokeWidth="1.1"
+              <path d={AFF_CLOUD_D} fill="none" stroke={colorAt(k)} strokeWidth="1.1"
                 strokeLinejoin="round" opacity="0.4" />
             </g>
           </g>
@@ -8927,7 +8952,7 @@ function TitleSky({ kind }) {
         <svg key={k} x={`${m.x.toFixed(2)}%`} y={`${m.y.toFixed(2)}%`} overflow="visible">
           <g className={cls}
             style={{ animationDelay: `${m.d.toFixed(1)}s`, animationDuration: `${(13 + (k % 7) * 3).toFixed(1)}s` }}>
-            {shape(k, m)}
+            {shape(k, m, colorAt(k))}
           </g>
         </svg>
       ))}
@@ -22664,17 +22689,14 @@ export default function TarotDraw() {
       {/* 裏面の意匠。ここで1回だけ定義し、各カードは <use> で参照する */}
       <TarotCardBackDefs />
       {/*
-        表紙の空。タイトル画面のあいだだけ全面に敷く。
-        ⚠️ 占っている最中には出さない。盤面の演出と重なると、
-        どちらが結果でどちらが飾りか分からなくなる。
+        空。表紙・配置選びでは濃く、占っているあいだは薄く敷く。
+
+        ⚠️ 盤面の裏では必ず dim にすること。
+        表紙と同じ濃さのまま札の後ろへ回すと、どれが結果で
+        どれが飾りか分からなくなる。粒の数も半分に落としてある。
       */}
-      {/*
-        ⚠️ phase だけで判定しない。
-        配置を選んだ後も phase は "idle" のままなので、
-        鑑定の画面にまで空が降り続ける。
-        表紙と配置選びのあいだ（drawMode が select）だけに限る。
-      */}
-      {phase === "idle" && (mode === "select" || drawMode === "select") && <TitleSky kind={skyKind} />}
+      <TitleSky kind={skyKind}
+        dim={!(phase === "idle" && (mode === "select" || drawMode === "select"))} />
       <style>{`
         @import url('https://fonts.googleapis.com/css2?family=Shippori+Mincho:wght@400;500;600;700;800&family=Noto+Sans+JP:wght@300;400;500;700&family=Cinzel:wght@500;600&display=swap');
 
@@ -22755,7 +22777,21 @@ export default function TarotDraw() {
           position: absolute; inset: 0; width: 100%; height: 100%;
           pointer-events: none; z-index: 0; opacity: 0.5;
           overflow: hidden;
+          /*
+            ホロの巡り。
+            ⚠️ SVGの傾斜＋SMILでやってはいけない（iOSで止まって単色になる）。
+            粒は四色のどれかで塗っておき、層ごと色相を回す。
+            CSS の filter アニメーションはどの端末でも動く。
+          */
+          animation: skyHue 24s linear infinite;
+          will-change: filter;
         }
+        @keyframes skyHue {
+          0%   { filter: hue-rotate(0deg); }
+          100% { filter: hue-rotate(360deg); }
+        }
+        /* 盤面の裏に敷くとき。札より前に出ないよう、はっきり落とす */
+        .title-sky.dim { opacity: 0.22; }
         /*
           ⚠️ 文字の上に空を降らせないこと。
 
@@ -25934,6 +25970,7 @@ export default function TarotDraw() {
           .reading-head-hit, .cv-live, .vis-plate.tree::after,
           .vis-plate.spine-live, .tree-spine-run, .tree-bridge, .hex-card-next,
           .el-fall, .el-flame, .el-wind, .cv-beast,
+          .title-sky,
           .sky-drop, .sky-drift, .sky-rise, .sky-blow, .sky-cloud, .sky-swim, .sky-orb,
           .hs-mane, .tree-pillar-bolt,
           .aff-spin, .aff-flow, .aff-drift, .aff-rain, .aff-snow, .aff-pulse { animation: none !important; }
