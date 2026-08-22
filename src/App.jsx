@@ -8735,13 +8735,13 @@ const SEASON_MOTES = [
   雨・晴・星だけが見えないという状態になった。
   ============================================================
 */
-const SKY_KINDS = ["rain", "snow", "clear", "star", "petal", "thunder", "maple", "leaf", "ufo"];
+const SKY_KINDS = ["rain", "snow", "heavysnow", "clear", "star", "petal", "thunder", "maple", "ufo"];
 /*
   出やすさ。八つの落ちものは同じ、円盤だけ薄く。
   ⚠️ 円盤が毎回出ると、占いの表紙ではなく遊びの画面になる。
 */
 const SKY_WEIGHTS = {
-  rain: 5, snow: 5, clear: 5, star: 5, petal: 5, thunder: 5, maple: 5, leaf: 5,
+  rain: 5, snow: 5, heavysnow: 5, clear: 5, star: 5, petal: 5, thunder: 5, maple: 5,
   ufo: 2,
 };
 function pickSkyKind() {
@@ -8753,7 +8753,12 @@ function pickSkyKind() {
 
 /* ホロの四色。傾斜ではなく、粒ごとに直接塗るための並び */
 const SKY_PALETTE = ["#FF3CB4", "#3CC8FF", "#78FF8C", "#FFDC3C"];
-const SKY_COUNT = { ufo: 16 };
+/*
+  大雪は一粒が34個の線でできているので、数を増やしすぎると要素が一万を超える。
+  ⚠️ 340体で1万1千。スマホで重くなる。
+  一粒が大きく密なので、150体でも画面は埋まる。
+*/
+const SKY_COUNT = { ufo: 16, heavysnow: 150 };
 const SKY_DEFAULT_N = 220;
 const skyMotes = (n) => Array.from({ length: n }, (_, k) => ({
   x: (k * 137.508) % 100,                    // 黄金角。並ばずに散る
@@ -8787,7 +8792,7 @@ function starPoints(r) {
 }
 
 function TitleSky({ kind, dim = false }) {
-  const clouded = kind === "rain" || kind === "snow";
+  const clouded = kind === "rain" || kind === "snow" || kind === "heavysnow";
   const baseN = SKY_COUNT[kind] || SKY_DEFAULT_N;
   /* 盤面の裏に敷くときは半分に減らす。主役は札のほうなので */
   const motes = skyMotes(dim ? Math.max(8, Math.round(baseN / 2)) : baseN);
@@ -8855,13 +8860,37 @@ function TitleSky({ kind, dim = false }) {
         </g>
       );
     }
-    if (kind === "leaf") {
-      /* 葉。風に流れる。横に長い形にすると葉に見える */
+    if (kind === "heavysnow") {
+      /*
+        大雪。雪の結晶を作り込む。
+
+        ⚠️ 「雪」は触らない。あちらは腕三本の素朴な形のままにしておく。
+        こちらは六方の腕それぞれに枝を二対と、先端の小さな結晶、
+        中心の六角を足す。同じ大きさのまま密度だけが上がるので、
+        並んだときに「同じものの濃い版」ではなく別の降り方に見える。
+      */
       return (
-        <g opacity="0.75">
-          <path d={`M ${-R} 0 q ${R} ${-R * 0.62} ${R * 2} 0 q ${-R} ${R * 0.62} ${-R * 2} 0 Z`} fill={C} />
-          <line x1={(-R * 0.8).toFixed(2)} y1="0" x2={(R * 0.8).toFixed(2)} y2="0"
-            stroke="rgba(18,15,36,0.5)" strokeWidth="0.4" />
+        <g opacity="0.85">
+          {[0, 60, 120].map((deg) => (
+            <line key={`m${deg}`} x1={-R} y1="0" x2={R} y2="0" stroke={C} strokeWidth={LW}
+              strokeLinecap="round" transform={`rotate(${deg})`} />
+          ))}
+          {[0, 60, 120, 180, 240, 300].map((deg) => (
+            <g key={`b${deg}`} transform={`rotate(${deg})`}>
+              {/* 枝。腕の途中から二対 */}
+              <line x1={(R * 0.42).toFixed(2)} y1="0" x2={(R * 0.68).toFixed(2)} y2={(-R * 0.26).toFixed(2)}
+                stroke={C} strokeWidth={LW * 0.8} strokeLinecap="round" />
+              <line x1={(R * 0.42).toFixed(2)} y1="0" x2={(R * 0.68).toFixed(2)} y2={(R * 0.26).toFixed(2)}
+                stroke={C} strokeWidth={LW * 0.8} strokeLinecap="round" />
+              {/* 先端の粒 */}
+              <circle cx={R.toFixed(2)} cy="0" r={(LW * 0.75).toFixed(2)} fill={C} />
+            </g>
+          ))}
+          {/* 中心の六角 */}
+          <polygon points={Array.from({ length: 6 }, (_, i) => {
+            const a = (Math.PI / 3) * i;
+            return `${(Math.cos(a) * R * 0.2).toFixed(2)},${(Math.sin(a) * R * 0.2).toFixed(2)}`;
+          }).join(" ")} fill="none" stroke={C} strokeWidth={LW * 0.7} />
         </g>
       );
     }
