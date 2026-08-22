@@ -3223,8 +3223,8 @@ const SPREADS = {
 const SPREAD_I18N = {
   ja: {
     yesNo: { name: "イエス・ノー", desc: "質問に対して、はい・いいえで答える。" },
-    oneOracle: { name: "ワンオラクル", desc: "大アルカナ１枚だけで占う最も簡素な占い方式", pos: ["示されたもの"] },
-    oneOracleMinor: { name: "プチワンオラクル", desc: "小アルカナ１枚で本日の運勢情報を読み取る方式", pos: ["示されたもの"] },
+    oneOracle: { name: "ワンオラクル", desc: "大アルカナ22枚から一枚だけを引く、最も簡素な占い方。図鑑の収集と経験値は、この方式でだけ進みます。", pos: ["示されたもの"] },
+    oneOracleMinor: { name: "プチワンオラクル", desc: "小アルカナ56枚から一枚を引き、今日の身の回りを具体的に読みます。図鑑の収集と経験値は、この方式でも進みます。", pos: ["示されたもの"] },
     three: { name: "スリーカード", desc: "過去から未来への流れを三枚で追う。はじめの一歩に。", pos: ["過去", "現在", "未来"] },
     hexagram: { name: "ヘキサグラム", desc: "自分と相手の間にある距離を読む。人との相性や恋愛に。", pos: ["過去", "現在", "未来", "対策", "周囲の状況", "相手の気持ち", "最終結果"] },
     weekly: { name: "週の物語", desc: "七日それぞれの調子を追う。心身の起伏を知りたいときに。", pos: ["1日目", "2日目", "3日目", "4日目", "5日目", "6日目", "7日目"] },
@@ -13000,19 +13000,6 @@ function HexagramPanel({ lang, onBack, question, userName, canDraw, onConsume, o
 
   // その段階までに開いたカードの添字をすべて集める
   const openedIndices = STAGES.slice(0, stage).flatMap((st) => st.indices);
-  /*
-    次に開く札。
-
-    ⚠️ 伏せた札が並んでいれば、人は必ず札のほうを押す。
-    ボタンでしか進めない作りだと、押しても何も起きない時間が
-    毎回発生する（そのあいだ「壊れている」と読まれる）。
-    次の段に含まれる札を、そのまま開封の当たり判定にする。
-
-    ⚠️ 当たり判定のある札だけを光らせること。
-    全部の伏せ札が同じ見た目のまま一部だけ押せると、
-    どれが押せるのか総当たりで探させることになる。
-  */
-
   // 週の山（最も総合値が高い日）。光の強さを変えるために先に求めておく
   const weeklyPeak = isWeekly && drawn ? weekPeaks(drawn).peak : -1;
   const isLast = stage >= STAGES.length;
@@ -16832,7 +16819,7 @@ const T = {
     weekRhythmOf: (n) => `${n}의 기복`,
     celticStageTitle: {"core": "현재와 장애", "axis": "의식과 무의식", "time": "과거와 가까운 미래", "self": "당신 자신", "around": "주변 환경", "hope": "희망과 불안", "final": "최종 결과"},
     horoStageTitle: {"angles": "네 개의 축", "ground": "소유와 배움", "inner": "창조와 일상", "others": "관계와 탐구", "beyond": "인연과 그 안쪽", "center": "중앙의 한 장"},
-    horoNext: {"angles": "먼저 인생의 골격을 봅시다", "ground": "다음으로 발밑을 봅시다", "inner": "이어서 나날의 영역을", "others": "그리고 타인과의 사이를", "beyond": "마지막으로 가장 깊은 곳을", "center": "마지막으로 전체를 묶는 한 장을"},
+    horoNext: {"angles": "먼저 인생의 골격을 봅시다", "ground": "다음으로 발밑을 봅시다", "inner": "이어서 나날의 영역을 봅시다", "others": "그리고 타인과의 사이를 봅시다", "beyond": "마지막으로 가장 깊은 곳을 봅시다", "center": "마지막으로 전체를 묶는 한 장을 봅시다"},
     houseGuideTitle: "십이 하우스와 중앙 한 장의 상의",
     readGuideTitle: "읽는 법",
     readGuide: { hexagram: "Six cards form a hexagram, with a seventh at the centre. It reads the distance between you and another.\nThe affinity gauge below is drawn from the cards on the board and reflects the present moment only.", weekly: "Seven days from the weekday you drew on.\nThe graph below has nine tabs — eight fields and the total. Swipe sideways to change field. The star ranks split the seven days by order; if three or more days tie, they lose the special ranks.", celticCross: "Ten cards light both the conscious and the unconscious. The two at the centre are a pair and always open together.\nOn the plane below, up and down is depth of mind, left and right is time. Each card opened pushes the point once, and the path it leaves is the trail.", simpleCross: "The second card crosses the first. The vertical is the situation, the horizontal is what crosses it.\nThe arrow below is those two forces added together. The third card (the way ahead) sets its colour. The faint dashes are the separate forces.", greekCross: "A core at the centre, time to the sides, depth of mind above and below.\nThe diamond below shows how hard each arm pulls. Even, and the four are in balance; distorted, and something is leaning.", horseshoe: "Seven cards arc up and back down.\nThis spread is not about when a thing will happen, but where you stand in the process. The pass is fixed at the apex \u2014 the fourth card, what stands in the way. The white marker is where you stand now, drawn from where the weight of the seven cards falls along the arc.", treeOfLife: "The sephirot of Kabbalah, with three pillars — Coldness on the left, Balance at the centre, Mercy on the right.\nThe lightning below runs from the root (1) down to daily life (10). It is the path this arrangement already carries. The bars beside it weigh each pillar.", choice: "The situation above, roads A and B below.\nOn the gauge, left is Order (building, keeping) and right is Chaos (change, risk). It does not say which is better — only what each road is like. The band at the centre is Neutral." },
@@ -16963,8 +16950,8 @@ const T = {
     choiceNote: "무료판에서는 감정에 반영되지 않습니다. 두 가지를 나란히 적어 보는 칸입니다.",
     choiceNoteAi: "적은 내용은 감정의 무게에 반영됩니다. 어느 쪽이 옳은지는 말하지 않습니다.",
     choiceStageTitle: { "now": "현재의 자리", "pathA": "A의 길", "pathB": "B의 길" },
-    choiceNext: { "now": "먼저 지금 있는 곳을", "pathA": "다음은 A의 길을", "pathB": "마지막으로 B의 길을" },
-    celticNext: {"core": "먼저, 지금 향하고 있는 방향을 봅시다", "axis": "다음으로, 마음의 안팎을 봅시다", "time": "이어서, 시간의 흐름을 봅시다", "self": "그럼, 당신 자신을 봅시다", "around": "다음은 주변 환경입니다", "hope": "그리고 희망과 불안을", "final": "마지막으로, 결말을 봅시다"},
+    choiceNext: { "now": "먼저, 지금 있는 곳을 봅시다", "pathA": "다음은, A의 길을 봅시다", "pathB": "마지막으로, B의 길을 봅시다" },
+    celticNext: {"core": "먼저, 지금 향하고 있는 방향을 봅시다", "axis": "다음으로, 마음의 안팎을 봅시다", "time": "이어서, 시간의 흐름을 봅시다", "self": "그럼, 당신 자신을 봅시다", "around": "다음은, 주변 환경을 봅시다", "hope": "그리고, 희망과 불안을 봅시다", "final": "마지막으로, 결말을 봅시다"},
     celticPlaneTitle: "마음의 무게중심",
     autoPickOrder: "자동으로 고르기",
     autoPickRandom: "맡기기",
@@ -18535,7 +18522,7 @@ const T = {
     weekRhythmOf: (n) => `${n}の起伏`,
     celticStageTitle: {"core": "現在と障害", "axis": "意識と無意識", "time": "過去と近い未来", "self": "あなた自身", "around": "周囲の環境", "hope": "希望と不安", "final": "最終結果"},
     horoStageTitle: {"angles": "四つの軸", "ground": "所有と学び", "inner": "創造と務め", "others": "関わりと探求", "beyond": "縁と、その奥", "center": "中央の一枚"},
-    horoNext: {"angles": "まず、人生の骨格を見ましょう", "ground": "次に、足もとを見ましょう", "inner": "続いて、日々の領域を", "others": "そして、他者との間を", "beyond": "最後に、最も深いところを", "center": "最後に、すべてを束ねる一枚を"},
+    horoNext: {"angles": "まず、人生の骨格を見ましょう", "ground": "次に、足もとを見ましょう", "inner": "続いて、日々の領域を見ましょう", "others": "そして、他者との間を見ましょう", "beyond": "最後に、最も深いところを見ましょう", "center": "最後に、すべてを束ねる一枚を見ましょう"},
     houseGuideTitle: "十二のハウスと中央の一枚の象意",
     readGuideTitle: "読み方",
     readGuide: { hexagram: "六芒星に六枚を置き、七枚目を中央に添えます。相手との距離を読む配置です。\n下の相性ゲージは、盤面の札から出した「今現在の」相性です。恒久的な判定ではありません。", weekly: "引いた日の曜日から七日ぶんを並べます。\n下の起伏グラフは八分野＋総合の九タブ。横に払うと分野が切り替わります。星の段は七日を順位で分けており、同率が三日以上並んだ日は特殊な星の資格を失います。", celticCross: "十枚で顕在意識と潜在意識の両方を照らします。中央の二枚は対なので必ず同時に開きます。\n下の平面は、上下が意識の深さ、左右が時間。開いた札が一枚ずつ点を押し、その跡が軌跡として残ります。動揺／安静は、まっすぐ進んだか行きつ戻りつしたかを示します。", simpleCross: "一枚目に二枚目が十字に重なります。縦が状況、横がそれを横切るもの。\n下の矢は、この直交する二つの力を足した向きです。三枚目（進むべき道）が矢の色を決めます。薄い破線は、それぞれの分力です。", greekCross: "中心を核として、左右に時間、上下に意識の深さを取ります。\n下の菱形は、四本の腕がどれだけ強く引いているかの形です。整っていれば四方が釣り合い、歪んでいればどこかに偏りがあります。中心の丸は核の札です。", horseshoe: "七枚が弧を描き、上って下ります。\nこの配置は「いつ叶うか」ではなく、いま過程のどこにいるかを見るものです。峠は弧の頂点（四枚目＝立ちはだかるもの）に固定で、動きません。白い印が「いまいる場所」で、七枚の力が弧のどこに寄っているかから出しています。印が峠より手前なら準備の時期、先なら仕上げの時期です。", treeOfLife: "カバラのセフィロトの配置です。三本の柱を持ちます ―― 左が冷酷、中央が均衡、右が慈悲。\n下の稲妻は、根源（1）から現実（10）へ力が降りる順路です。カバラで「稲妻の閃き」と呼ばれるもので、この配置が元から持っています。横の縦棒は三本の柱それぞれの重みです。", choice: "上に現在の状況、下にAとBの二本の道を並べます。\n下のゲージは、左が秩序（積み上げ・維持）、右が混沌（変化・賭け）。どちらが良いかを示すものではなく、道の性質だけを示します。中央の帯は中庸で、どちらにも寄っていない状態です。" },
@@ -18690,7 +18677,7 @@ const T = {
     choiceNote: "無料版では鑑定に反映されません。二つを書き並べて、自分で整理するための欄です。",
     choiceNoteAi: "書いた内容は鑑定の重心に反映されます。どちらが正しいかは申し上げません。",
     choiceStageTitle: { "now": "いまの立ち位置", "pathA": "Aの道", "pathB": "Bの道" },
-    choiceNext: { "now": "まず、いまいる場所を", "pathA": "次に、Aの道を", "pathB": "最後に、Bの道を" },
+    choiceNext: { "now": "まず、いまいる場所を見ましょう", "pathA": "次に、Aの道を見ましょう", "pathB": "最後に、Bの道を見ましょう" },
     houseKeywords: [
       "自分自身、決断の癖、体質と容姿、第一印象、生まれ持った気質、人生への構え、物事の始め方",
       "金運、物質運、才能、価値観、快適性に関する感度、五感（味覚、声、嗅覚、視覚、聴覚の良し悪し）、所有欲",
@@ -18706,7 +18693,7 @@ const T = {
       "因縁と前世、霊性、潜在意識、秘密、孤独と隠遁、癒しと療養、隠れた敵、手放し",
       "全体の総合、いま最も必要な助言、十二の領域を束ねる一枚",
     ],
-    celticNext: {"core": "まず、いま向いている方向を見ましょう", "axis": "次に、心の内と外を見ましょう", "time": "では、時の流れを見ましょう", "self": "ここから、あなた自身を見ましょう", "around": "次は、周囲の環境を", "hope": "そして、希望と不安を", "final": "最後に、結末を見ましょう"},
+    celticNext: {"core": "まず、いま向いている方向を見ましょう", "axis": "次に、心の内と外を見ましょう", "time": "では、時の流れを見ましょう", "self": "ここから、あなた自身を見ましょう", "around": "次は、周囲の環境を見ましょう", "hope": "そして、希望と不安を見ましょう", "final": "最後に、結末を見ましょう"},
     celticPlaneTitle: "心の重心",
     autoPickOrder: "自動で選ぶ",
     autoPickRandom: "おまかせ",
@@ -20023,7 +20010,7 @@ const T = {
       "Secrets, the unconscious, solitude, healing and rest, hidden adversaries, sacrifice, letting go",
       "The whole, the counsel most needed now, the card that binds the twelve",
     ],
-    celticNext: {"core": "First, let us see the way you are facing", "axis": "Next, the inside and outside of your mind", "time": "Now, the flow of time", "self": "From here, let us see you yourself", "around": "Next, your surroundings", "hope": "Then, your hopes and fears", "final": "Finally, let us see the outcome"},
+    celticNext: {"core": "First, the way you are facing", "axis": "Next, the inside and outside of your mind", "time": "Now, the flow of time", "self": "From here, you yourself", "around": "Next, your surroundings", "hope": "Then, your hopes and fears", "final": "Finally, the outcome"},
     celticPlaneTitle: "The centre of your mind",
     autoPickOrder: "Pick in order",
     autoPickRandom: "Leave it to chance",
