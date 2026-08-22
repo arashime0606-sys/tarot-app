@@ -8720,41 +8720,57 @@ const SEASON_MOTES = [
   切り忘れるとタイトルのボタンが一つも押せなくなる。
   ============================================================
 */
-const SKY_KINDS = ["snow", "rain", "wind", "leaf", "fluff", "petal", "ember", "star", "ufo", "animal", "fish"];
-
 /*
+  ============================================================
+  【表紙の空】
+
   ⚠️ 拡大しないこと。ここで二度失敗している。
-
-  一度目 viewBox="0 0 100 100" ＋ preserveAspectRatio="none"
-         縦横を別々に伸ばすので、線の太さまで歪んで雨が横に潰れた。
-  二度目 viewBox="0 0 390 760" ＋ slice
-         縦横比は保たれるが、画面が広いと丸ごと2倍に拡大される。
-         44の長さの風が90pxの帯になり、虹色の芋虫が這う絵になった。
-
-  正しくは、拡大も縮小もしないこと。
+    一度目 viewBox 0-100 ＋ preserveAspectRatio="none"
+           縦横を別々に伸ばすので線の太さまで歪み、雨が横に潰れた。
+    二度目 viewBox 390×760 ＋ slice
+           縦横比は保たれるが、画面が広いと丸ごと2倍に拡大され、
+           長さ44の風が90pxの帯になって虹色の芋虫になった。
   外側の svg から viewBox を外すと、利用者座標＝CSSピクセルになる。
-  位置だけを％で散らしたいので、粒ごとに入れ子の svg を置いて
-  x/y を％で指定し、中身は原点付近に実寸で描く。
-  これでヘキサグラムの天気と寸分たがわぬ大きさになる。
+  位置だけを％で散らし、中身は原点付近に実寸で描く。
+  大きく見せたいときは寸法を上げず、数を増やす。
 
-  ⚠️ 大きく見せたいときに寸法を上げない。数を増やす。
+  ⚠️ 移動距離を長くしないこと。三度目の失敗。
+  -140px から 840px まで流していたので、粒は生涯のほとんどを
+  起点のはるか右で過ごす。結果、画面の右半分にしか出なかった。
+  移動は起点を中心に前後へ振る（±220px程度）。
+  端で消えて端から現れる分は、両端の透明度で隠れる。
+  ============================================================
 */
-
+const SKY_KINDS = ["starry", "clear", "cloudy", "snow", "rain",
+  "wind", "leaf", "petal", "fluff", "ember", "ufo", "animal", "fish"];
 /*
-  数は種類ごとに変える。
-  ⚠️ ドット絵の種類（動物・魚・円盤）は一体が十数個の点でできている。
-  他と同じ220体にすると三千を超える要素が並び、表紙が重くなる。
-  絵が大きいぶん、少なくても画面は埋まる。
+  出やすさ。天気らしいものを厚く、飛び道具を薄く。
+  ⚠️ 円盤や動物が毎回出ると、占いの表紙ではなく遊びの画面になる。
+  三種あわせて8%弱に抑える。
 */
-const SKY_COUNT = { animal: 22, fish: 30, ufo: 16 };
+const SKY_WEIGHTS = {
+  starry: 5, clear: 5, cloudy: 5, snow: 5, rain: 5,
+  wind: 2, leaf: 2, petal: 2, fluff: 2, ember: 2,
+  ufo: 1, animal: 1, fish: 1,
+};
+function pickSkyKind() {
+  const total = SKY_KINDS.reduce((a, k) => a + (SKY_WEIGHTS[k] || 1), 0);
+  let r = Math.random() * total;
+  for (const k of SKY_KINDS) { r -= SKY_WEIGHTS[k] || 1; if (r < 0) return k; }
+  return "starry";
+}
+
+const SKY_COUNT = { animal: 20, fish: 26, ufo: 14, cloudy: 34 };
 const SKY_DEFAULT_N = 220;
 const skyMotes = (n) => Array.from({ length: n }, (_, k) => ({
   x: (k * 137.508) % 100,                    // 黄金角。並ばずに散る
   y: (k * 61.803) % 100,
   d: (k * 0.31) % 13,
   s: 0.75 + ((k * 0.37) % 1) * 0.7,
+  /* 雪の大粒。7つに1つだけ大きくする。全部を大きくすると牡丹雪になる */
+  big: k % 7 === 3,
 }));
-/* 雲。雨と雪のときだけ、上のほうに数枚 */
+/* 雨と雪の雲。上のほうに数枚 */
 const SKY_CLOUDS = [
   { x: 8, y: 7, s: 1.4, d: 0 }, { x: 56, y: 3, s: 1.8, d: 5 },
   { x: 30, y: 17, s: 1.1, d: 9 }, { x: 72, y: 12, s: 1.5, d: 3 },
@@ -8767,11 +8783,22 @@ const SKY_UFO_DOTS = [
 ];
 const SKY_ANIMALS = ["horse", "owl", "crab"];
 
+/* 五芒星。★は塗り、☆は線。r は外接円の半径 */
+function starPoints(r) {
+  const p = [];
+  for (let i = 0; i < 10; i++) {
+    const rad = i % 2 ? r * 0.42 : r;
+    const a = (Math.PI / 5) * i - Math.PI / 2;
+    p.push(`${(Math.cos(a) * rad).toFixed(2)},${(Math.sin(a) * rad).toFixed(2)}`);
+  }
+  return p.join(" ");
+}
+
 function TitleSky({ kind }) {
   const C = "url(#skyHolo)";
   const clouded = kind === "rain" || kind === "snow";
   const motes = skyMotes(SKY_COUNT[kind] || SKY_DEFAULT_N);
-  /* ドット絵を実寸で描く。点の間隔2.2px。これ以上詰めると絵にならない */
+  /* ドット絵を実寸で。点の間隔2.2px。これ以上詰めると絵にならない */
   const dotArt = (dots, op) => (
     <g opacity={op}>
       {dots.map(([x, y], i) => (
@@ -8781,7 +8808,6 @@ function TitleSky({ kind }) {
   );
   const shape = (k, m) => {
     if (kind === "rain") {
-      // ヘキサグラムと同寸。長さ8、太さ0.9
       return <line x1="0" y1="0" x2="2.4" y2="8" stroke={C} strokeWidth="0.9" strokeLinecap="round" opacity="0.6" />;
     }
     if (kind === "wind") {
@@ -8804,6 +8830,31 @@ function TitleSky({ kind }) {
         </g>
       );
     }
+    if (kind === "cloudy") {
+      /* 曇。降らせるものが無いので、雲そのものを漂わせる */
+      return (
+        <g transform={`scale(${(0.8 + m.s * 0.6).toFixed(2)})`}>
+          <path d={AFF_CLOUD_D} fill="none" stroke={C} strokeWidth="1.1"
+            strokeLinejoin="round" opacity="0.42" />
+        </g>
+      );
+    }
+    if (kind === "starry") {
+      /* ⚠️ 十字ではなく星の形にすること。★と☆を混ぜる */
+      const r = (3.4 * m.s).toFixed(2);
+      return k % 3 === 0
+        ? <polygon points={starPoints(+r)} fill="none" stroke={C} strokeWidth="0.6" opacity="0.6" />
+        : <polygon points={starPoints(+r)} fill={C} opacity="0.55" />;
+    }
+    if (kind === "clear") {
+      /* 晴。きらめき。四方に伸びる細い光条 */
+      const a = (3.6 * m.s).toFixed(2);
+      return (
+        <g opacity="0.55">
+          <path d={`M 0 -${a} Q 0.5 -0.5 ${a} 0 Q 0.5 0.5 0 ${a} Q -0.5 0.5 -${a} 0 Q -0.5 -0.5 0 -${a} Z`} fill={C} />
+        </g>
+      );
+    }
     if (kind === "ufo") return dotArt(SKY_UFO_DOTS, 0.6);
     if (kind === "animal") return dotArt(BEAST_DOTS[SKY_ANIMALS[k % SKY_ANIMALS.length]], 0.55);
     if (kind === "fish") return dotArt(BEAST_DOTS.fish, 0.55);
@@ -8813,18 +8864,10 @@ function TitleSky({ kind }) {
     if (kind === "ember") {
       return <circle cx="0" cy="0" r={(1.3 * m.s).toFixed(2)} fill={C} opacity="0.55" />;
     }
-    if (kind === "star") {
-      const a = (3.2 * m.s).toFixed(2);
-      return (
-        <g>
-          <line x1={`-${a}`} y1="0" x2={a} y2="0" stroke={C} strokeWidth="0.7" strokeLinecap="round" />
-          <line x1="0" y1={`-${a}`} x2="0" y2={a} stroke={C} strokeWidth="0.7" strokeLinecap="round" />
-        </g>
-      );
-    }
-    /* 雪。ヘキサグラムと同じ六方の結晶（腕3.4・太さ0.75） */
+    /* 雪。ヘキサグラムと同じ結晶。7つに1つを大粒にする */
+    const sc = (m.s * (m.big ? 2.1 : 1)).toFixed(2);
     return (
-      <g transform={`scale(${m.s.toFixed(2)})`}>
+      <g transform={`scale(${sc})`}>
         {[0, 60, 120].map((deg) => (
           <line key={deg} x1="-3.4" y1="0" x2="3.4" y2="0" stroke={C} strokeWidth="0.75"
             strokeLinecap="round" transform={`rotate(${deg})`} opacity="0.75" />
@@ -8832,14 +8875,9 @@ function TitleSky({ kind }) {
       </g>
     );
   };
-  /*
-    動きの割り当て。
-    円盤と動物は横へ、魚は水中なのでゆっくり漂う、綿毛と火の粉は上へ。
-  */
   const cls = kind === "ember" || kind === "fluff" ? "sky-rise"
-    : kind === "wind" || kind === "leaf" || kind === "ufo" || kind === "animal" ? "sky-blow"
+    : kind === "wind" || kind === "leaf" || kind === "ufo" || kind === "animal" || kind === "cloudy" ? "sky-blow"
     : kind === "fish" ? "sky-swim"
-    : kind === "star" ? "sky-twinkle"
     : kind === "rain" ? "sky-drop" : "sky-drift";
   return (
     <svg className="title-sky" aria-hidden="true">
@@ -8851,9 +8889,30 @@ function TitleSky({ kind }) {
         </linearGradient>
       </defs>
       {/*
-        雲。降るものには、降ってくる元が要る。
-        ⚠️ ヘキサグラムの雨で雲を一つ置いたのと同じ理由。無いとただの斜線になる。
+        天体。右上に据える。降るものと違って動かさない。
+        ⚠️ 動かすと「大きな粒」に見えて、空の主が二つになる。
       */}
+      {(kind === "starry" || kind === "clear") && (
+        <svg x="84%" y="7%" overflow="visible">
+          <g className="sky-orb">
+            {kind === "starry" ? (
+              /* 三日月。丸を二つ重ねて欠けさせる */
+              <path d="M 0 -13 A 13 13 0 1 0 0 13 A 10.5 10.5 0 1 1 0 -13 Z"
+                fill={C} opacity="0.55" />
+            ) : (
+              <g>
+                <circle cx="0" cy="0" r="9" fill={C} opacity="0.5" />
+                {Array.from({ length: 12 }, (_, i) => {
+                  const a = (Math.PI / 6) * i;
+                  return <line key={i} x1={(Math.cos(a) * 12).toFixed(1)} y1={(Math.sin(a) * 12).toFixed(1)}
+                    x2={(Math.cos(a) * 17).toFixed(1)} y2={(Math.sin(a) * 17).toFixed(1)}
+                    stroke={C} strokeWidth="1" strokeLinecap="round" opacity="0.45" />;
+                })}
+              </g>
+            )}
+          </g>
+        </svg>
+      )}
       {clouded && SKY_CLOUDS.map((c, k) => (
         <svg key={`c${k}`} x={`${c.x}%`} y={`${c.y}%`} overflow="visible">
           <g className="sky-cloud" style={{ animationDelay: `${c.d}s` }}>
@@ -21343,7 +21402,7 @@ export default function TarotDraw() {
     ⚠️ useState の初期化関数を使うこと。本体で Math.random を呼ぶと、
     再描画のたびに空が変わって落ち着かない。
   */
-  const [skyKind] = useState(() => SKY_KINDS[Math.floor(Math.random() * SKY_KINDS.length)]);
+  const [skyKind] = useState(pickSkyKind);
 
   /*
     ホロ図鑑の取得状況。{ "major-0": { up: true, rev: false }, ... }
@@ -22719,12 +22778,18 @@ export default function TarotDraw() {
           transform-box: view-box;
         }
         @keyframes skyCloud {
-          0%   { transform: translateX(-120px); opacity: 0; }
-          10%  { opacity: 1; }
-          90%  { opacity: 1; }
-          100% { transform: translateX(760px); opacity: 0; }
+          0%   { transform: translateX(-160px); opacity: 0; }
+          12%  { opacity: 1; }
+          88%  { opacity: 1; }
+          100% { transform: translateX(160px); opacity: 0; }
         }
-        .sky-drop, .sky-drift, .sky-rise, .sky-blow, .sky-twinkle {
+        /* 天体。動かさず、息だけさせる */
+        .sky-orb { animation: skyOrb 7.5s ease-in-out infinite; }
+        @keyframes skyOrb {
+          0%, 100% { opacity: 0.75; }
+          50%      { opacity: 1; }
+        }
+        .sky-drop, .sky-drift, .sky-rise, .sky-blow, .sky-swim {
           animation-iteration-count: infinite; animation-timing-function: linear;
           transform-box: view-box;
         }
@@ -22734,51 +22799,55 @@ export default function TarotDraw() {
           （効いたとしても粒の大きさに対する％になり、ほとんど動かない）。
           画面を渡り切る距離を実寸で与える。
         */
+        /*
+          ⚠️ 移動距離を長くしないこと。
+
+          -140px から 840px まで流していたので、粒は生涯のほとんどを
+          起点のはるか右で過ごし、画面の右半分にしか現れなかった。
+          いまは起点を中心に前後へ振っている。
+          粒が220あるので、一つの移動が短くても流れは途切れない。
+          端の不連続は、両端の透明度が隠す。
+        */
         @keyframes skyFall {
-          0%   { transform: translate(0, -60px); opacity: 0; }
-          10%  { opacity: 1; }
-          90%  { opacity: 1; }
-          100% { transform: translate(30px, 900px); opacity: 0; }
+          0%   { transform: translate(-8px, -130px); opacity: 0; }
+          14%  { opacity: 1; }
+          86%  { opacity: 1; }
+          100% { transform: translate(12px, 130px); opacity: 0; }
         }
         @keyframes skyDrift {
-          0%   { transform: translate(0, -60px); opacity: 0; }
-          12%  { opacity: 1; }
-          88%  { opacity: 1; }
-          100% { transform: translate(70px, 900px); opacity: 0; }
+          0%   { transform: translate(-26px, -130px); opacity: 0; }
+          16%  { opacity: 1; }
+          84%  { opacity: 1; }
+          100% { transform: translate(26px, 130px); opacity: 0; }
         }
         /* 火の粉と綿毛。斜め下から上へ舞い上がる */
         @keyframes skyRise {
-          0%   { transform: translate(0, 60px); opacity: 0; }
-          16%  { opacity: 1; }
+          0%   { transform: translate(22px, 130px); opacity: 0; }
+          18%  { opacity: 1; }
           82%  { opacity: 1; }
-          100% { transform: translate(-90px, -900px); opacity: 0; }
+          100% { transform: translate(-22px, -130px); opacity: 0; }
         }
-        /* 風と葉。横へ抜ける。少しだけ上下に振れる */
+        /* 風・葉・雲・円盤・動物。横へ流れる。少しだけ上下に振れる */
         @keyframes skyBlow {
-          0%   { transform: translate(-140px, 0); opacity: 0; }
-          14%  { opacity: 1; }
-          50%  { transform: translate(340px, -18px); }
-          86%  { opacity: 1; }
-          100% { transform: translate(840px, 8px); opacity: 0; }
-        }
-        @keyframes skyTwinkle {
-          0%, 100% { opacity: 0.15; transform: scale(0.7); }
-          50%      { opacity: 1; transform: scale(1.25); }
+          0%   { transform: translate(-190px, 0); opacity: 0; }
+          16%  { opacity: 1; }
+          50%  { transform: translate(0, -14px); }
+          84%  { opacity: 1; }
+          100% { transform: translate(190px, 6px); opacity: 0; }
         }
         .sky-drop { animation-name: skyFall; }
         .sky-drift { animation-name: skyDrift; }
         .sky-rise { animation-name: skyRise; }
         .sky-blow { animation-name: skyBlow; }
-        .sky-twinkle { animation-name: skyTwinkle; animation-timing-function: ease-in-out; }
         /* 魚。水中なので横切らず、ゆっくり漂って向きを変える */
         .sky-swim { animation-name: skySwim; animation-timing-function: ease-in-out; }
         @keyframes skySwim {
-          0%   { transform: translate(-40px, 0); opacity: 0; }
+          0%   { transform: translate(-150px, 0); opacity: 0; }
           15%  { opacity: 1; }
-          40%  { transform: translate(120px, -26px); }
-          70%  { transform: translate(260px, 14px); }
+          40%  { transform: translate(-50px, -22px); }
+          70%  { transform: translate(60px, 12px); }
           85%  { opacity: 1; }
-          100% { transform: translate(420px, -8px); opacity: 0; }
+          100% { transform: translate(150px, -6px); opacity: 0; }
         }
         /*
           背景の星。濃さの調整はこの opacity 一箇所で行う。
@@ -25865,7 +25934,7 @@ export default function TarotDraw() {
           .reading-head-hit, .cv-live, .vis-plate.tree::after,
           .vis-plate.spine-live, .tree-spine-run, .tree-bridge, .hex-card-next,
           .el-fall, .el-flame, .el-wind, .cv-beast,
-          .sky-drop, .sky-drift, .sky-rise, .sky-blow, .sky-twinkle, .sky-cloud, .sky-swim,
+          .sky-drop, .sky-drift, .sky-rise, .sky-blow, .sky-cloud, .sky-swim, .sky-orb,
           .hs-mane, .tree-pillar-bolt,
           .aff-spin, .aff-flow, .aff-drift, .aff-rain, .aff-snow, .aff-pulse { animation: none !important; }
           .tree-pillar-bolt { opacity: 0.22 !important; }
