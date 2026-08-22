@@ -8720,7 +8720,7 @@ const SEASON_MOTES = [
   切り忘れるとタイトルのボタンが一つも押せなくなる。
   ============================================================
 */
-const SKY_KINDS = ["snow", "rain", "wind", "leaf", "fluff", "petal", "ember", "star"];
+const SKY_KINDS = ["snow", "rain", "wind", "leaf", "fluff", "petal", "ember", "star", "ufo", "animal", "fish"];
 
 /*
   ⚠️ 拡大しないこと。ここで二度失敗している。
@@ -8739,8 +8739,16 @@ const SKY_KINDS = ["snow", "rain", "wind", "leaf", "fluff", "petal", "ember", "s
 
   ⚠️ 大きく見せたいときに寸法を上げない。数を増やす。
 */
-const SKY_N = 96;
-const SKY_MOTES = Array.from({ length: SKY_N }, (_, k) => ({
+
+/*
+  数は種類ごとに変える。
+  ⚠️ ドット絵の種類（動物・魚・円盤）は一体が十数個の点でできている。
+  他と同じ220体にすると三千を超える要素が並び、表紙が重くなる。
+  絵が大きいぶん、少なくても画面は埋まる。
+*/
+const SKY_COUNT = { animal: 22, fish: 30, ufo: 16 };
+const SKY_DEFAULT_N = 220;
+const skyMotes = (n) => Array.from({ length: n }, (_, k) => ({
   x: (k * 137.508) % 100,                    // 黄金角。並ばずに散る
   y: (k * 61.803) % 100,
   d: (k * 0.31) % 13,
@@ -8751,10 +8759,26 @@ const SKY_CLOUDS = [
   { x: 8, y: 7, s: 1.4, d: 0 }, { x: 56, y: 3, s: 1.8, d: 5 },
   { x: 30, y: 17, s: 1.1, d: 9 }, { x: 72, y: 12, s: 1.5, d: 3 },
 ];
+/* 円盤。ドット絵。下部の三点は灯り */
+const SKY_UFO_DOTS = [
+  [2,0],[3,0],[4,0],[1,1],[2,1],[3,1],[4,1],[5,1],
+  [0,2],[1,2],[2,2],[3,2],[4,2],[5,2],[6,2],
+  [1,3],[3,3],[5,3],
+];
+const SKY_ANIMALS = ["horse", "owl", "crab"];
 
 function TitleSky({ kind }) {
   const C = "url(#skyHolo)";
   const clouded = kind === "rain" || kind === "snow";
+  const motes = skyMotes(SKY_COUNT[kind] || SKY_DEFAULT_N);
+  /* ドット絵を実寸で描く。点の間隔2.2px。これ以上詰めると絵にならない */
+  const dotArt = (dots, op) => (
+    <g opacity={op}>
+      {dots.map(([x, y], i) => (
+        <circle key={i} cx={(x * 2.2).toFixed(1)} cy={(y * 2.2).toFixed(1)} r="0.95" fill={C} />
+      ))}
+    </g>
+  );
   const shape = (k, m) => {
     if (kind === "rain") {
       // ヘキサグラムと同寸。長さ8、太さ0.9
@@ -8766,13 +8790,10 @@ function TitleSky({ kind }) {
         strokeWidth="0.9" strokeLinecap="round" opacity="0.45" />;
     }
     if (kind === "leaf") {
-      // 葉。風に吹かれて横へ飛ぶ。縦より横に長い形にすると葉に見える
       const w = 4.2 * m.s, h = 2.2 * m.s;
-      return <path d={`M ${-w} 0 q ${w} ${-h} ${w * 2} 0 q ${-w} ${h} ${-w * 2} 0 Z`}
-        fill={C} opacity="0.5" />;
+      return <path d={`M ${-w} 0 q ${w} ${-h} ${w * 2} 0 q ${-w} ${h} ${-w * 2} 0 Z`} fill={C} opacity="0.5" />;
     }
     if (kind === "fluff") {
-      // 綿毛。芯から放射状の毛。斜め下から上へ舞い上がる
       return (
         <g opacity="0.5">
           <circle cx="0" cy="0" r="0.7" fill={C} />
@@ -8783,6 +8804,9 @@ function TitleSky({ kind }) {
         </g>
       );
     }
+    if (kind === "ufo") return dotArt(SKY_UFO_DOTS, 0.6);
+    if (kind === "animal") return dotArt(BEAST_DOTS[SKY_ANIMALS[k % SKY_ANIMALS.length]], 0.55);
+    if (kind === "fish") return dotArt(BEAST_DOTS.fish, 0.55);
     if (kind === "petal") {
       return <ellipse cx="0" cy="0" rx={(2.6 * m.s).toFixed(2)} ry={(1.5 * m.s).toFixed(2)} fill={C} opacity="0.5" />;
     }
@@ -8808,8 +8832,13 @@ function TitleSky({ kind }) {
       </g>
     );
   };
+  /*
+    動きの割り当て。
+    円盤と動物は横へ、魚は水中なのでゆっくり漂う、綿毛と火の粉は上へ。
+  */
   const cls = kind === "ember" || kind === "fluff" ? "sky-rise"
-    : kind === "wind" || kind === "leaf" ? "sky-blow"
+    : kind === "wind" || kind === "leaf" || kind === "ufo" || kind === "animal" ? "sky-blow"
+    : kind === "fish" ? "sky-swim"
     : kind === "star" ? "sky-twinkle"
     : kind === "rain" ? "sky-drop" : "sky-drift";
   return (
@@ -8835,7 +8864,7 @@ function TitleSky({ kind }) {
           </g>
         </svg>
       ))}
-      {SKY_MOTES.map((m, k) => (
+      {motes.map((m, k) => (
         <svg key={k} x={`${m.x.toFixed(2)}%`} y={`${m.y.toFixed(2)}%`} overflow="visible">
           <g className={cls}
             style={{ animationDelay: `${m.d.toFixed(1)}s`, animationDuration: `${(13 + (k % 7) * 3).toFixed(1)}s` }}>
@@ -22741,6 +22770,16 @@ export default function TarotDraw() {
         .sky-rise { animation-name: skyRise; }
         .sky-blow { animation-name: skyBlow; }
         .sky-twinkle { animation-name: skyTwinkle; animation-timing-function: ease-in-out; }
+        /* 魚。水中なので横切らず、ゆっくり漂って向きを変える */
+        .sky-swim { animation-name: skySwim; animation-timing-function: ease-in-out; }
+        @keyframes skySwim {
+          0%   { transform: translate(-40px, 0); opacity: 0; }
+          15%  { opacity: 1; }
+          40%  { transform: translate(120px, -26px); }
+          70%  { transform: translate(260px, 14px); }
+          85%  { opacity: 1; }
+          100% { transform: translate(420px, -8px); opacity: 0; }
+        }
         /*
           背景の星。濃さの調整はこの opacity 一箇所で行う。
           演出側の星と混ざらないよう、背景は丸い点のみ・無アニメーションに保つ。
@@ -25826,7 +25865,7 @@ export default function TarotDraw() {
           .reading-head-hit, .cv-live, .vis-plate.tree::after,
           .vis-plate.spine-live, .tree-spine-run, .tree-bridge, .hex-card-next,
           .el-fall, .el-flame, .el-wind, .cv-beast,
-          .sky-drop, .sky-drift, .sky-rise, .sky-blow, .sky-twinkle, .sky-cloud,
+          .sky-drop, .sky-drift, .sky-rise, .sky-blow, .sky-twinkle, .sky-cloud, .sky-swim,
           .hs-mane, .tree-pillar-bolt,
           .aff-spin, .aff-flow, .aff-drift, .aff-rain, .aff-snow, .aff-pulse { animation: none !important; }
           .tree-pillar-bolt { opacity: 0.22 !important; }
