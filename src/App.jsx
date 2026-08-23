@@ -3072,7 +3072,7 @@ const SPREADS = {
     「自分の問題なのか、時期の問題なのか」という問いのときだけ意味を持つ。
     大アルカナ＝自分では動かせない側、聖杯＝自分の感情の側。
     ⚠️ 喪失や別れを扱う。開放するときは、影・内なる子どもと同じ
-    診断禁止の指示（MODERN_AI_NOTE）を必ず添えること。
+    診断禁止の指示（SPREAD_AI_NOTE）を必ず添えること。
   */
   stillHurts:    { key: "stillHurts",    deck: ["major", "cups"], count: 4,
     layout: [{ x: 50, y: 14 }, { x: 22, y: 46 }, { x: 78, y: 46 }, { x: 50, y: 82 }] },
@@ -3214,7 +3214,77 @@ const SPREADS = {
       return pts;
     })(),
   },
+  /*
+    ダビデスター。六芒星に6枚を置き、前世を読む。
+    位置は太陽系の6天体。並べる順は伝統どおり
+    「中心の一番上 → 左上 → 左下 → 右下 → 右上 → 中心の一番下」。
+
+    ⚠️ ヘキサグラムと図形は同じだが、別の配置として扱うこと。
+    あちらは7枚で自分と相手の距離を読む。こちらは6枚で前世を読む。
+    中央の1枚が無いのが構造上の違いで、だから六芒星が閉じて見える。
+
+    ★ 六芒星は二つの三角が重なった形で、天体の割り振りがその二つと
+      一致する。これは後付けではなく、伝統的な配置順から自然に出る。
+
+        上向きの三角  頂点・左下・右下 = 太陽・金星・木星
+                      （光体と二つの吉星。前世で「与えた」側）
+        下向きの三角  底・左上・右上   = 月・土星・火星
+                      （光体と二つの凶星。前世で「受けた」側）
+
+      開封をこの三角ごとに区切ると、三角が閉じるたびに線が光る。
+      配置が元々持っている構造を、そのまま演出にできる。
+  */
+  davidStar: {
+    key: "davidStar",
+    deck: "full",
+    count: 6,
+    layout: [
+      { x: 50, y: 15 },                      // 0 太陽 頂点
+      { x: 20.6, y: 32.5 },                  // 1 月   左上
+      { x: 20.6, y: 67.5 },                  // 2 金星 左下
+      { x: 79.4, y: 67.5 },                  // 3 木星 右下
+      { x: 79.4, y: 32.5 },                  // 4 土星 右上
+      { x: 50, y: 85 },                      // 5 火星 底
+    ],
+  },
+  /*
+    ゾディアック。13枚。
+
+    ⚠️ 配置はホロスコープと完全に同じ。だが読むものが違う。
+    ホロスコープは12ハウス（人生の領域）で「いまどうなっているか」を見る。
+    ゾディアックは12星座（資質）で「眠っている力をどう起こすか」を見る。
+    同じ円でも、問いが現状把握と能力開発に分かれている。
+
+    ★ 12星座にはそれぞれ対応する大アルカナがある（ZODIAC_MAJOR）。
+      その位置に対応する札そのものが出たら「その力は既に足りている」と読む。
+      これが伝統的なこの配置の勘所なので、共鳴として図に出す。
+  */
+  zodiac: {
+    key: "zodiac",
+    deck: "full",
+    count: 13,
+    layout: (() => {
+      /* ⚠️ ホロスコープと同じ式を使う。座標を書き写すと片方だけ直る事故が起きる */
+      const pts = [];
+      for (let i = 0; i < 12; i++) {
+        const a = Math.PI + (Math.PI * 2 * i) / 12;
+        pts.push({ x: 50 + Math.cos(a) * 38, y: 50 - Math.sin(a) * 38 });
+      }
+      pts.push({ x: 50, y: 50, center: true });
+      return pts;
+    })(),
+  },
 };
+
+/*
+  12星座に対応する大アルカナの番号（ゴールデン・ドーン系の標準対応）。
+  牡羊=皇帝4 牡牛=法王5 双子=恋人6 蟹=戦車7 獅子=力8 乙女=隠者9
+  天秤=正義11 蠍=死神13 射手=節制14 山羊=悪魔15 水瓶=星17 魚=月18
+
+  ⚠️ 力=8 / 正義=11 はライダー版の番号。マルセイユ版は入れ替わる。
+  このアプリはライダー版の並びなので、こちらで固定する。
+*/
+const ZODIAC_MAJOR = [4, 5, 6, 7, 8, 9, 11, 13, 14, 15, 17, 18];
 /**
  * スプレッドの名称・説明・各位置の意味。
  * 位置ラベルの数は SPREADS の count と必ず一致させること
@@ -3231,6 +3301,8 @@ const SPREAD_I18N = {
     choice: { name: "二者択一", desc: "二つの道を並べて、比べて選ぶ。", pos: ["現在の状況", "Aを選んだ場合", "Aの結果", "Bを選んだ場合", "Bの結果"] },
     celticCross: { name: "ケルト十字", desc: "十枚で顕在意識と潜在意識の両方を照らす。深く掘りたいときに。", pos: ["現在の意識の方向", "障害となるもの", "顕在意識", "潜在意識", "過去", "近い未来", "あなた自身", "周囲の環境", "希望と不安", "最終結果"] },
     relationship: { name: "関係の杯", desc: "二人の関係を、両側から読む。", pos: ["あなたの状況", "相手の状況", "あなたの願い", "相手の願い", "あなたの不安", "相手の不安", "二人の現在", "障害", "可能性", "あなたの取るべき道", "二人の行く先"] },
+    davidStar: { name: "ダビデスター", desc: "六芒星に六枚。六つの天体を手がかりに、前世と今の繋がりを読む。", pos: ["太陽｜前世の記憶", "月｜前世の感情", "金星｜前世の愛情", "木星｜前世の善行", "土星｜前世の試練", "火星｜前世の出来事"] },
+    zodiac: { name: "ゾディアック", desc: "十二星座の資質で、眠っている力をどう起こすかを見る。", pos: ["牡羊座｜先陣を切る力", "牡牛座｜味わい保つ力", "双子座｜伝え繋ぐ力", "蟹座｜育み守る力", "獅子座｜表し放つ力", "乙女座｜整え支える力", "天秤座｜釣り合わせる力", "蠍座｜深く関わる力", "射手座｜遠くを見る力", "山羊座｜積み上げる力", "水瓶座｜組み替える力", "魚座｜溶け合う力", "いま最も伸びる力"] },
     horoscope: { name: "ホロスコープ", desc: "十二の領域と中央の一枚で、現状の人生を見渡す。", pos: ["決断と自分", "財産と五感", "学習と交流", "家庭と基盤", "恋愛と子供", "労働と健康", "関係と契約", "挫折と承継", "挑戦と探究", "天職と地位", "仲間と理想", "因縁と霊性", "現状の人生に対する総合とアドバイス"] },
     simpleCross: { name: "シンプル・クロス", desc: "二枚で状況と障害を、一枚で進む道を見る。", pos: ["現在の状況", "横切るもの", "進むべき道"] },
     greekCross: { name: "ギリシャ十字", desc: "四方の力が結果をどこまで広げるかを見る。", pos: ["結果", "現状", "障害", "このまま進むと", "対策"] },
@@ -3276,6 +3348,8 @@ const SPREAD_I18N = {
     choice: { name: "Two Paths", desc: "Set two roads side by side, and choose.", pos: ["Where you stand", "If you choose A", "Result of A", "If you choose B", "Result of B"] },
     celticCross: { name: "Celtic Cross", desc: "Ten cards lighting both the conscious and the unconscious. For digging deep.", pos: ["Where your mind is turned", "What crosses it", "Conscious mind", "Unconscious mind", "The past", "The near future", "Yourself", "Your surroundings", "Hopes and fears", "The outcome"] },
     relationship: { name: "Cup of Relationship", desc: "Reading a bond from both sides.", pos: ["Your situation", "Their situation", "Your wish", "Their wish", "Your fear", "Their fear", "Where you are now", "The obstacle", "What is possible", "Your path", "Where you are heading"] },
+    davidStar: { name: "Star of David", desc: "Six cards on a hexagram. Six planets as the way into a past life and its hold on this one.", pos: ["Sun | Memory of the past life", "Moon | Feeling of the past life", "Venus | Love of the past life", "Jupiter | Good done in the past life", "Saturn | Trial of the past life", "Mars | Events of the past life"] },
+    zodiac: { name: "Zodiac Spread", desc: "Twelve signs as twelve capacities, and how to wake the ones still sleeping.", pos: ["Aries | Power to lead the charge", "Taurus | Power to savour and hold", "Gemini | Power to carry and connect", "Cancer | Power to nurture and guard", "Leo | Power to show and radiate", "Virgo | Power to order and support", "Libra | Power to balance", "Scorpio | Power to go deep", "Sagittarius | Power to see far", "Capricorn | Power to build up", "Aquarius | Power to reconfigure", "Pisces | Power to merge", "The capacity that grows most now"] },
     horoscope: { name: "Horoscope Spread", desc: "Survey your life as it stands across twelve realms and one card at the centre.", pos: ["Decision and Self", "Property and the Senses", "Learning and Exchange", "Home and Foundation", "Love and Children", "Work and Health", "Relations and Contracts", "Setback and Succession", "Challenge and Inquiry", "Vocation and Standing", "Companions and Ideals", "Karma and Spirit", "The Whole and the Counsel for Life as It Stands"] },
     simpleCross: { name: "Simple Cross", desc: "Two cards for the situation and its obstacle, one for the way ahead.", pos: ["The present situation", "What crosses it", "The way to go"] },
     greekCross: { name: "Greek Cross", desc: "See how far the four forces widen the outcome.", pos: ["The outcome", "The present", "The obstacle", "If this continues", "The countermeasure"] },
@@ -3800,7 +3874,7 @@ function spreadInfo(key, lang) {
   無料版は有料版のすぐ下に置く。離して並べると別物に見え、
   「同じ占いの、鑑定文の出どころが違う版」だと伝わらない。
 */
-const SPREAD_ORDER = ["yesNo", "oneOracle", "oneOracleMinor", "three", "threeFree", "hexagram", "hexagramFree", "weekly", "weeklyFree", "celticCross", "celticCrossFree", "simpleCross", "simpleCrossFree", "greekCross", "greekCrossFree", "horseshoe", "horseshoeFree", "horoscope", "horoscopeFree", "treeOfLife", "treeOfLifeFree", "choice", "choiceFree", "relationship",
+const SPREAD_ORDER = ["yesNo", "oneOracle", "oneOracleMinor", "three", "threeFree", "davidStar", "davidStarFree", "hexagram", "hexagramFree", "weekly", "weeklyFree", "celticCross", "celticCrossFree", "simpleCross", "simpleCrossFree", "greekCross", "greekCrossFree", "horseshoe", "horseshoeFree", "horoscope", "horoscopeFree", "zodiac", "zodiacFree", "treeOfLife", "treeOfLifeFree", "choice", "choiceFree", "relationship",
   // ⚠️ 同じ配置の有料版と無料版は必ず隣同士に置くこと
   /*
     ⚠️ 現代派に無料版（〜Free）を作らないこと。
@@ -3920,7 +3994,15 @@ const SPREAD_READY = { yesNo: true, oneOracle: true, oneOracleMinor: true, three
   // 現代派（開放済み）
   shadowWork: true, innerChild: true, burnout: true,
   // 開放（第二陣）
-  moonPhase: true, headAndHeart: true };
+  moonPhase: true, headAndHeart: true,
+  // 古典派の追加。無料版も対で置く（古典派は必ず対にする）
+  davidStar: true, davidStarFree: true, zodiac: true, zodiacFree: true,
+  // 開放（第三陣）
+  boundary: true, selfSabotage: true, loopOfThought: true, somatic: true,
+  // 開放（第四陣）
+  driveAndGround: true, loveAndLiving: true, stillHurts: true, safePerson: true, undecided: true,
+  // 開放（第五陣）現代派を全部開ける
+  manifestation: true, comparison: true, moneyMind: true, careerCross: true, character: true, newRelation: true, monthly: true, season: true, spiritGuide: true };
 
 /** そのスプレッドがAIを使うか。使わないものは回数を消費しない */
 const SPREAD_USES_AI = { oneOracle: false, oneOracleMinor: false, three: true, threeFree: false, hexagram: true, hexagramFree: false, weekly: true, weeklyFree: false, choice: true, choiceFree: false, celticCross: true, celticCrossFree: false, relationship: true, horoscope: true, horoscopeFree: false,
@@ -3928,7 +4010,14 @@ const SPREAD_USES_AI = { oneOracle: false, oneOracleMinor: false, three: true, t
   horseshoe: true, horseshoeFree: false, treeOfLife: true, treeOfLifeFree: false,
   // 現代派はAI鑑定のみ。無料版を持たない
   shadowWork: true, innerChild: true, burnout: true,
-  moonPhase: true, headAndHeart: true };
+  moonPhase: true, headAndHeart: true,
+  boundary: true, selfSabotage: true, loopOfThought: true, somatic: true,
+  driveAndGround: true, loveAndLiving: true, stillHurts: true, safePerson: true, undecided: true,
+  // 古典派だがAI鑑定を持つ。位置名が問いになっていて、定型文では答えにならない
+  davidStar: true, zodiac: true,
+  // 無料版はAIを使わない（古典派の他の無料版と同じ扱い）
+  davidStarFree: false, zodiacFree: false,
+  manifestation: true, comparison: true, moneyMind: true, careerCross: true, character: true, newRelation: true, monthly: true, season: true, spiritGuide: true };
 
 const POSITION_LABELS = ["過去", "現在", "未来"];
 const PHASE_ORDER = ["idle", "major-spread", "major-confirm", "major-resolving", "minor-spread", "minor-confirm", "minor-resolving", "minor-revealed", "major-revealed"];
@@ -4427,7 +4516,90 @@ const MODERN_OUTPUT_CONTRACT = `
 - ⚠️ 医療・投薬・法的手続きの判断はしないこと。それが要る話だと盤面が示しているなら、そう述べるにとどめ、内容には踏み込まない。
 - 長くなってよい。ただし、長さは具体で埋めること。同じことの言い換えで伸ばさない。`;
 
-const MODERN_AI_NOTE = {
+/*
+  ============================================================
+  配置ごとの入力例
+
+  ⚠️ 現代派だけの表ではない。古典派でも、位置名そのものが問いになっている
+  配置（ダビデスター・ゾディアック）はここに例示を持つ。
+
+  ⚠️ 現代派はAI鑑定しかない。つまり相談者が書いた一文が、
+  出力の質をほぼ決める。にもかかわらず入力欄の例示が
+  全配置で「例：来月の恋愛運が知りたい」の一種類だった。
+  境界線や自己妨害を選んだ人にこれを見せると、
+  この配置が何を聞く場所なのかが伝わらないまま空欄で引かれる。
+
+  ⚠️ 例示は必ず「その配置でしか出てこない具体」にすること。
+  「悩みを書いてください」のような汎用文に戻さない。
+  汎用文なら既定の例示と同じで、置く意味がない。
+
+  ⚠️ 未訳の言語は既定（t.questionPlaceholder）へ落とす。
+  ここを11言語に広げると、一つ抜けたところで欄が空白になる。
+  ============================================================
+*/
+const SPREAD_TOPIC_I18N = {
+  ja: {
+    davidStar:      { hint: "前世の何を知りたいかを書いてください", ph: "例：初対面なのに懐かしい人がいる" },
+    zodiac:         { hint: "どの力を伸ばしたいかを書いてください", ph: "例：人前で話す度胸をつけたい" },
+    shadowWork:     { hint: "認めたくない自分の面を書いてください", ph: "例：人の成功を素直に喜べない" },
+    innerChild:     { hint: "幼い頃に置いてきた感情を書いてください", ph: "例：親の前でいい子でいるのが癖になっている" },
+    burnout:        { hint: "いま何にすり減っているかを書いてください", ph: "例：仕事は嫌いじゃないのに朝起きられない" },
+    boundary:       { hint: "誰にどこまで踏み込まれているかを書いてください", ph: "例：親が私の予定を勝手に決める" },
+    selfSabotage:   { hint: "うまくいきかけると何をしてしまうかを書いてください", ph: "例：評価されると急に連絡を返さなくなる" },
+    loopOfThought:  { hint: "何度も回っている考えを書いてください", ph: "例：三年前に言われた一言が今も頭から離れない" },
+    somatic:        { hint: "身体のどこがどうなっているかを書いてください", ph: "例：夕方になると肩が固まって息が浅い" },
+    moonPhase:      { hint: "いま何が満ちて何が欠けているかを書いてください", ph: "例：始めたことが途中で止まりがち" },
+    headAndHeart:   { hint: "頭と心で食い違っていることを書いてください", ph: "例：条件はいいのに気が進まない転職の話" },
+    driveAndGround: { hint: "やりたいことと現実の差を書いてください", ph: "例：独立したいが貯金が半年分しかない" },
+    loveAndLiving:  { hint: "気持ちと暮らしのどこが折り合わないかを書いてください", ph: "例：好きだが生活の時間帯が合わない" },
+    stillHurts:     { hint: "まだ痛むことを書いてください", ph: "例：二年経つのに同じ曲で立ち止まる" },
+    safePerson:     { hint: "相手のどの振る舞いが気になるかを書いてください", ph: "例：優しいのに約束だけ守られない" },
+    undecided:      { hint: "何を決めきれずにいるかを書いてください", ph: "例：辞めるか残るか半年決められない" },
+    manifestation:  { hint: "叶えたいことを書いてください", ph: "例：来年までに自分の店を持ちたい" },
+    comparison:     { hint: "誰と比べてしまうかを書いてください", ph: "例：同期の昇進を見るたび胃が重くなる" },
+    moneyMind:      { hint: "お金でどこに引っかかるかを書いてください", ph: "例：使うたびに罪悪感が出る" },
+    careerCross:    { hint: "いまどの分かれ道にいるかを書いてください", ph: "例：現場に残るか管理側へ行くか" },
+    character:      { hint: "その人のどこを知りたいかを書いてください", ph: "例：新しい上司がどういう人か掴めない" },
+    newRelation:    { hint: "始まったばかりの関係について書いてください", ph: "例：先月から話すようになった相手との距離感" },
+    monthly:        { hint: "今月どう過ごしたいかを書いてください", ph: "例：今月は転職活動に集中したい" },
+    season:         { hint: "いまどの段階にいる感じかを書いてください", ph: "例：種まきの時期なのか刈り取り時なのか分からない" },
+    spiritGuide:    { hint: "勘が働かなくなった場面を書いてください", ph: "例：以前は分かった潮目が読めなくなった" },
+  },
+  en: {
+    davidStar:      { hint: "Write what you want to know about a past life", ph: "e.g. Someone I just met feels familiar" },
+    zodiac:         { hint: "Write which capacity you want to grow", ph: "e.g. I want the nerve to speak in public" },
+    shadowWork:     { hint: "Write the side of yourself you would rather not admit", ph: "e.g. I cannot be glad for other people's wins" },
+    innerChild:     { hint: "Write a feeling you left behind in childhood", ph: "e.g. Being the good child is still a reflex" },
+    burnout:        { hint: "Write what is wearing you down", ph: "e.g. I don't hate the job but I can't get up" },
+    boundary:       { hint: "Write who crosses which line", ph: "e.g. My parent fills my calendar without asking" },
+    selfSabotage:   { hint: "Write what you do when things start going well", ph: "e.g. I go quiet the moment I'm praised" },
+    loopOfThought:  { hint: "Write the thought that keeps circling", ph: "e.g. One remark from three years ago still runs" },
+    somatic:        { hint: "Write where in your body, and how", ph: "e.g. Shoulders lock up by evening, breath goes shallow" },
+    moonPhase:      { hint: "Write what is full and what is missing now", ph: "e.g. I start things and stall halfway" },
+    headAndHeart:   { hint: "Write where head and heart disagree", ph: "e.g. The offer is good but I don't want it" },
+    driveAndGround: { hint: "Write the gap between wish and footing", ph: "e.g. I want to go solo with six months saved" },
+    loveAndLiving:  { hint: "Write where feeling and daily life clash", ph: "e.g. I care for them but our hours never meet" },
+    stillHurts:     { hint: "Write what still aches", ph: "e.g. Two years on, one song still stops me" },
+    safePerson:     { hint: "Write which behaviour worries you", ph: "e.g. Kind, but never keeps a promise" },
+    undecided:      { hint: "Write what you cannot decide", ph: "e.g. Stay or leave, six months undecided" },
+    manifestation:  { hint: "Write what you want to make real", ph: "e.g. My own shop by next year" },
+    comparison:     { hint: "Write who you keep measuring against", ph: "e.g. My peer's promotion sits heavy every time" },
+    moneyMind:      { hint: "Write where money catches you", ph: "e.g. Guilt every time I spend" },
+    careerCross:    { hint: "Write which fork you are at", ph: "e.g. Stay hands-on or move into management" },
+    character:      { hint: "Write what you want to understand about them", ph: "e.g. I can't read my new manager" },
+    newRelation:    { hint: "Write about the relationship just starting", ph: "e.g. Someone I started talking to last month" },
+    monthly:        { hint: "Write how you want this month to go", ph: "e.g. I want to focus on the job search" },
+    season:         { hint: "Write which stage this feels like", ph: "e.g. Unsure if it's sowing or reaping time" },
+    spiritGuide:    { hint: "Write where your instinct stopped working", ph: "e.g. I used to read the turn and now I can't" },
+  },
+};
+/** その配置に合った入力例。無ければ null（呼び側が既定へ落とす） */
+function spreadTopicHint(spreadKey, lang) {
+  const tbl = SPREAD_TOPIC_I18N[lang] || SPREAD_TOPIC_I18N.en;
+  return (tbl && tbl[spreadKey]) || null;
+}
+
+const SPREAD_AI_NOTE = {
   shadowWork: (topic) =>
     `これは影の統合の配置です。${topic && topic.trim() ? `相談者が書いたこと:「${topic.trim()}」\n` : ""}
 影とは欠点のことではなく、本人が自分に許していないために使えていない力のことです。
@@ -4451,6 +4623,154 @@ const MODERN_AI_NOTE = {
 ⚠️ どちらが正しいかを決めないこと。頭が正解で心が未熟、という書き方も、その逆もしないこと。
 食い違いは欠陥ではなく、二つが別々の事情を見ているために起きます。何を見ているのかを両方書いてください。
 四枚目は「どちらから動かすか」です。片方を捨てる話にせず、先に手を付ける側を一つ挙げてください。\n`,
+  manifestation: (topic) =>
+    `これは願いの実現の配置です。${topic && topic.trim() ? `相談者が書いたこと:「${topic.trim()}」\n` : ""}
+望みを言葉にし、妨げと資源を並べて道筋にする配置です。
+⚠️ 叶う・叶わないを宣告しないこと。六枚目は「実現へ向かう力」であって、結果ではありません。
+⚠️ 引き寄せや願えば叶うという枠組みで書かないこと。四枚目の「手放すべきもの」と五枚目の「具体的な一歩」を、実際に手が届く大きさで書いてください。
+一枚目が本人の言う望みと食い違って見える場合も、本人の望みを否定しないこと。別の側面が出ていると述べるにとどめること。\n`,
+  careerCross: (topic) =>
+    `これはキャリアの岐路の配置です。${topic && topic.trim() ? `相談者が書いたこと:「${topic.trim()}」\n` : ""}
+仕事の選択を、適性と現実の両面から見ます。
+⚠️ 転職しろ・留まれ、という決定を書かないこと。選ぶのは相談者です。
+⚠️ 特定の職種や業界を勧めないこと。札から職業を言い当てることはできません。
+⚠️ 年収や採用の見通しといった数字を書かないこと。
+六枚目は、半年後にどう感じていそうかという手応えであって、成否の予言ではありません。三枚目の「足りていないもの」は、埋め方まで書いてください。\n`,
+  moneyMind: (topic) =>
+    `これはお金と価値観の配置です。${topic && topic.trim() ? `相談者が書いたこと:「${topic.trim()}」\n` : ""}
+金運ではなく、お金に対する自分の構えを見ます。
+⚠️ 金運の吉凶、儲かる・損するを書かないこと。この配置は運を見ていません。
+⚠️ 具体的な投資先・金融商品・借入の判断に踏み込まないこと。
+⚠️ 節約や倹約を道徳として説かないこと。二枚目の「身についた場所」は、責めずに述べてください。
+五枚目は、構えを一つだけ変えるとしたらどこか、を具体的な行動として書いてください。\n`,
+  comparison: (topic) =>
+    `これは比べるのをやめるの配置です。${topic && topic.trim() ? `相談者が書いたこと:「${topic.trim()}」\n` : ""}
+誰と比べているのかを、比べたまま見る配置です。
+⚠️ 比べている相手を貶めることで慰めないこと。相手の評価はこの配置の仕事ではありません。
+⚠️ 「比べなくていい」で終わらせないこと。相談者はそれを知っています。二枚目で、比べることで何を埋めようとしているかを述べてください。
+⚠️ 三枚目を安っぽい長所の列挙にしないこと。相手からは見えない持ち物を、具体的に一つか二つ挙げてください。
+四枚目は、画面を閉じたあとに実際にできることとして書いてください。\n`,
+  character: (topic) =>
+    `これは人物を読むの配置です。${topic && topic.trim() ? `相談者が書いたこと:「${topic.trim()}」\n` : ""}
+ひとりの人となりを、長所と短所の両面から見ます。
+⚠️ 良い人・悪い人という判定を出さないこと。長所と短所は同じ性質の別の面として書いてください。
+⚠️ その人の過去や事情を札から言い当てないこと。病名・性格の障害名を出さないこと。
+⚠️ 相談者にその人との付き合い方を指図しないこと（縁を切れ、近づけ、など）。
+四枚目「いま最も気にしていること」は推測であることが伝わる書き方にしてください。五枚目は、関わることで相談者の側に何が育つかを書いてください。\n`,
+  newRelation: (topic) =>
+    `これは新しい関係の配置です。${topic && topic.trim() ? `相談者が書いたこと:「${topic.trim()}」\n` : ""}
+始まったばかりの間柄を、双方の持ち込みから読みます。
+⚠️ 相手の気持ちを断定しないこと。二枚目は相手が関係に持ち込んでいるものであって、相手の本心の暴露ではありません。
+⚠️ 続く・続かないを宣告しないこと。運命の相手という枠組みも使わないこと。
+⚠️ 相手を変える方法として書かないこと。六枚目の「育てる方法」は、相談者の側でできることに限ってください。
+三枚目（自分が持ち込むもの）は、欠点の指摘にせず、そこにある期待や癖として述べてください。\n`,
+  monthly: (topic) =>
+    `これは今月の流れの配置です。${topic && topic.trim() ? `相談者が書いたこと:「${topic.trim()}」\n` : ""}
+ひと月を、主題と機会と障害で見渡します。
+⚠️ 何日に何が起きるという日付の断定をしないこと。この配置に日付の情報はありません。
+⚠️ 「注意すべきこと」を不吉な予告として書かないこと。備えとして書いてください。
+⚠️ 月の吉凶を総括で言い切らないこと。強く出ている位置がどこかを述べるにとどめること。
+六枚目「取るべき行動」は、今月のうちに実際にできることとして書いてください。七枚目は、その行動の帰結として自然に導いてください。\n`,
+  season: (topic) =>
+    `これは季節の巡りの配置です。${topic && topic.trim() ? `相談者が書いたこと:「${topic.trim()}」\n` : ""}
+三月ほどの周期を、種と収穫で捉えます。
+⚠️ 実際の暦の季節と混同しないこと。ここでの季節は段階の比喩です。何月にどうなるとは書かないこと。
+⚠️ 四枚目「影に置いたもの」を切り捨てるべきものとして扱わないこと。いま光を当てていないだけのものです。
+五枚目「収穫できるもの」は、既に手元にあるものとして書いてください。これから手に入るものの予告にしないこと。\n`,
+  spiritGuide: (topic) =>
+    `これは直感とのつながりの配置です。${topic && topic.trim() ? `相談者が書いたこと:「${topic.trim()}」\n` : ""}
+勘の通り道が、いまどれだけ開いているかを見ます。
+⚠️ 霊感がある・ないという能力の判定をしないこと。見ているのは、いまの通りやすさだけです。
+⚠️ 守護霊・前世・故人からのメッセージとして書かないこと。亡くなった人の言葉を代弁しないこと。
+⚠️ 直感に従えば正しい、という書き方をしないこと。直感は材料の一つで、判断そのものではありません。
+⚠️ 医療・金銭・進路の判断を直感に委ねるよう促さないこと。
+四枚目「つながりを強める方法」は、静かな時間の取り方や記録の付け方といった、実際にできる形で書いてください。\n`,
+  davidStar: (topic) =>
+    `これはダビデスターの配置です。${topic && topic.trim() ? `相談者が書いたこと:「${topic.trim()}」\n` : ""}
+六芒星の六つの頂点に、太陽・月・金星・木星・土星・火星を割り当て、前世と現世の繋がりを読みます。
+
+⚠️ 前世を事実として断定しないこと。国名・時代・職業・血縁・死因を言い当てないこと。
+「〜だったようです」ではなく、「〜という像が浮かびます」のように、読み取りであることが分かる書き方をしてください。
+⚠️ 実在の人物・事件を前世として名指ししないこと。
+⚠️ 現世の不調や不運を前世のせいにしないこと。因果応報として説教しないこと。
+⚠️ 供養・祈祷・浄化といった、金銭や儀式を要する行為を勧めないこと。
+⚠️ 亡くなった人の言葉を代弁しないこと。
+
+六芒星は二つの三角が重なった形で、天体の割り振りがそこに一致します。
+太陽・金星・木星（頂点・左下・右下）は前世で与えた側、月・土星・火星（底・左上・右上）は受けた側です。
+この二つを対比させて、最後は必ず現世でいま使えるものに着地させてください。
+前世の話で終わらせず、それが今日の相談者の何に繋がるかを書くこと。\n`,
+  zodiac: (topic) =>
+    `これはゾディアックの配置です。${topic && topic.trim() ? `相談者が書いたこと:「${topic.trim()}」\n` : ""}
+十二星座を十二の資質として並べ、眠っている力をどう起こすかを読みます。
+
+⚠️ ホロスコープの配置と混同しないこと。あちらは十二ハウスで現状を見ます。
+こちらは資質そのものを見て、伸ばし方を書く配置です。運勢の良し悪しを書かないこと。
+⚠️ 相談者の生年月日や星座を推測しないこと。この配置は出生図を使いません。
+⚠️ 足りない資質を欠点として並べないこと。まだ起きていないだけとして扱ってください。
+⚠️ 十二すべてを均等に伸ばせと書かないこと。実行できない助言になります。
+
+十二星座には対応する大アルカナがあります（牡羊＝皇帝、牡牛＝法王、双子＝恋人、蟹＝戦車、獅子＝力、乙女＝隠者、天秤＝正義、蠍＝死神、射手＝節制、山羊＝悪魔、水瓶＝星、魚＝月）。
+その位置に対応する札そのものが出ていたら、その力は既に足りていると読み、伸ばすのではなく使う話にしてください。
+十三枚目は「いま最も伸びる力」です。十二のうち一つに絞り、今週できることを具体的に一つ書いてください。\n`,
+  driveAndGround: (topic) =>
+    `これはやる気と地面の配置です。${topic && topic.trim() ? `相談者が書いたこと:「${topic.trim()}」\n` : ""}
+棒14枚と貨幣14枚だけを使い、やりたい気持ちと、実際に立っている地面のずれを見ます。
+⚠️ どちらが正しいかを決めないこと。地面が足りないから諦めろ、とも、気持ちがあるなら飛べ、とも書かないこと。
+⚠️ 全部が棒と貨幣であることに意味はありません。そう配っただけです。
+四枚目は「先に手を付ける側」です。片方を捨てる話にせず、境目でできる一手を挙げてください。\n`,
+  loveAndLiving: (topic) =>
+    `これは好きと暮らしの配置です。${topic && topic.trim() ? `相談者が書いたこと:「${topic.trim()}」\n` : ""}
+聖杯14枚と貨幣14枚だけを使い、気持ちの向く先と、生活が要ることの折り合いを見ます。
+⚠️ 気持ちを取るか生活を取るかの二択にしないこと。折り合いを見る配置です。
+⚠️ 相手や家族の人格を評価しないこと。扱うのは相談者の側の配分です。
+四枚目は、どちらを先に動かすかです。もう片方を諦める話にしないでください。\n`,
+  stillHurts: (topic) =>
+    `これはまだ痛むのはの配置です。${topic && topic.trim() ? `相談者が書いたこと:「${topic.trim()}」\n` : ""}
+大アルカナと聖杯だけを使い、残っている痛みが自分の側にあるのか、時間の側にあるのかを分けます。
+⚠️ いつ癒えるという時期の断定をしないこと。
+⚠️ 「もう忘れましょう」「前を向きましょう」と促さないこと。痛みが残っていること自体を問題として扱わないでください。
+⚠️ 相手や別れの経緯を札から言い当てないこと。何があったかは書かない。
+四枚目は、今日できる手当てとして具体的に書いてください。${MODERN_NO_DIAGNOSIS}\n`,
+  safePerson: (topic) =>
+    `これはこの人は安全かの配置です。${topic && topic.trim() ? `相談者が書いたこと:「${topic.trim()}」\n` : ""}
+小アルカナ56枚だけを使い、相手の振る舞いを日々の具体だけで見ます。
+⚠️ 大アルカナを外してあるのは、「運命の人」「宿命の相手」という読みを構造的に出せなくするためです。相手を運命として語らないこと。
+⚠️ 相手を危険人物だと断定しないこと。人格ではなく、起きている振る舞いだけを扱ってください。
+⚠️ 逆に「大丈夫です」と保証もしないこと。安全の判断は相談者がします。
+⚠️ 身の危険をうかがわせる内容が書かれている場合は、札の読みとは別に、信頼できる人や相談窓口に繋がることを妨げないでください。
+五枚目は、近づく前に自分で確かめられることとして、具体的に書いてください。\n`,
+  undecided: (topic) =>
+    `これは決めきれないの配置です。${topic && topic.trim() ? `相談者が書いたこと:「${topic.trim()}」\n` : ""}
+どちらを選ぶかではなく、選べないこと自体を見る配置です。
+⚠️ どちらの選択肢が良いかを書かないこと。それは二者択一の配置の仕事で、ここでは選択肢を並べてすらいません。
+⚠️ 「早く決めましょう」と急かさないこと。二枚目で必ず、決めずにいることで何が守られているかを述べてください。
+四枚目の期限は、相談者が自分で置けるものとして提案にとどめること。
+五枚目は、決めるために足りない情報や条件を、実際に取りにいける形で書いてください。\n`,
+  boundary: (topic) =>
+    `これは境界線の配置です。${topic && topic.trim() ? `相談者が書いたこと:「${topic.trim()}」\n` : ""}
+どこまでが自分の領分かを引き直すための配置です。
+⚠️ 相手を悪者として断定しないこと。相手の人格ではなく、起きている振る舞いだけを扱ってください。
+⚠️ 「縁を切る」「離れる」を最初の一手として勧めないこと。それができる状況なら相談者は既にしています。
+四枚目は必ず、実際に口に出せる長さの言葉として書いてください。丁寧すぎて伝わらない言い方にしないこと。${MODERN_NO_DIAGNOSIS}\n`,
+  selfSabotage: (topic) =>
+    `これは自己妨害を解く配置です。${topic && topic.trim() ? `相談者が書いたこと:「${topic.trim()}」\n` : ""}
+うまくいきかけると自分で止めてしまう仕組みを見る配置です。
+⚠️ 意志が弱い、甘えている、という方向へ寄せないこと。止める働きは何かを守るために出来ています。三枚目で必ず、それが何を守ってきたのかを述べてください。
+⚠️ 幼少期や家庭に原因を求めて断定しないこと。
+五枚目は、次に同じ合図が出たときに実際に取れる一手として書いてください。${MODERN_NO_DIAGNOSIS}\n`,
+  loopOfThought: (topic) =>
+    `これは堂々巡りの配置です。${topic && topic.trim() ? `相談者が書いたこと:「${topic.trim()}」\n` : ""}
+剣14枚だけを使い、同じ考えが回り続けている状態を、思考の中だけで細かく見ます。
+⚠️ 全部が剣であることに意味はありません。山札を剣に絞っているだけなので、「剣ばかりで厳しい盤面」と読まないこと。
+⚠️ 「考えすぎです」で終わらせないこと。相談者はそれを知っています。
+三枚目は、輪を切るために今日できる具体的な一手として書いてください（書き出す、期限を切る、人に一言言う、など実行できる大きさで）。${MODERN_NO_DIAGNOSIS}\n`,
+  somatic: (topic) =>
+    `これは体からの声の配置です。${topic && topic.trim() ? `相談者が書いたこと:「${topic.trim()}」\n` : ""}
+小アルカナ56枚だけを使い、頭より先に身体が言っていることを聞きます。
+⚠️ これは診察ではありません。症状名・病名・原因の断定を絶対にしないこと。痛みや不調が続いているなら、札の読みとは別に、医療にかかることを妨げないでください。
+⚠️ 「気の持ちよう」「ストレスのせい」で片付けないこと。
+札のスートは身体の場所に対応します（剣＝頭、聖杯＝胸、棒＝腹、貨幣＝脚）。四枚目は、今日できる手当てとして具体的に書いてください。${MODERN_NO_DIAGNOSIS}\n`,
   burnout: (topic) =>
     `これは消耗からの回復の配置です。${topic && topic.trim() ? `相談者が書いたこと:「${topic.trim()}」\n` : ""}
 四枚は、すり減っているもの・消耗の源・いま降ろしてよいもの・回復のはじめ方です。
@@ -4504,6 +4824,205 @@ const BURNOUT_STAGES = [
   { key: "worn",   indices: [0, 1] },  // すり減っているもの・消耗の源
   { key: "drop",   indices: [2] },     // いま降ろしてよいもの
   { key: "back",   indices: [3] },     // 回復のはじめ方
+];
+
+/*
+  境界線。4枚。
+  ⚠️ 「越えられている線」と「越えさせている理由」を必ず一緒に開く。
+  片方だけ先に出すと、線を越えられた話か、越えさせた自分の話か、
+  どちらか一方の責めになる。両方置いてから読む。
+*/
+/*
+  二領域の対（やる気と地面・好きと暮らし）。4枚。
+  ⚠️ 対の二枚は必ず同時に開く。片方を先に見せると、
+  もう片方がその答え合わせとして読まれ、突き合わせにならない。
+*/
+/*
+  推進と抵抗の四種。段は「いまの地点 → 引き戻す側 → 前へ出す側 → 着地」。
+  ⚠️ 引き戻す側を先に開くこと。前へ出す側を先に見せると、
+  そのあとの妨げが「せっかくの流れを壊すもの」として読まれる。
+  妨げは先に置いてから、それでも押せる分を見る。
+*/
+const MANIFEST_STAGES = [
+  { key: "wish",  indices: [0] },        // 本当に望んでいるもの
+  { key: "block", indices: [1, 3] },     // 妨げているもの・手放すべきもの
+  { key: "have",  indices: [2, 4] },     // 持っている資源・具体的な一歩
+  { key: "force", indices: [5] },        // 実現へ向かう力
+];
+const CAREER_STAGES = [
+  { key: "stand", indices: [0] },        // いまの立ち位置
+  { key: "lack",  indices: [2, 3] },     // 足りていないもの・外から来る流れ
+  { key: "have",  indices: [1, 4] },     // 持っている強み・選べる道
+  { key: "later", indices: [5] },        // 半年後の手応え
+];
+const MONEY_STAGES = [
+  { key: "stance", indices: [0] },       // お金に対する構え
+  { key: "root",   indices: [1, 2] },    // 身についた場所・無理が出ている使い方
+  { key: "worth",  indices: [3] },       // 払って惜しくないもの
+  { key: "change", indices: [4] },       // 構えを一つ変えるなら
+];
+/*
+  比べるのをやめる。4枚。
+  ⚠️ 「誰と比べているのか」と「埋めようとしているもの」を同時に開く。
+  相手だけ先に出すと、その人への評価が始まってしまう。
+  この配置が見るのは相手ではなく、比べている側の欠けである。
+*/
+const COMPARISON_STAGES = [
+  { key: "whom",  indices: [0, 1] },
+  { key: "yours", indices: [2] },        // 相手からは見えないあなたの持ち物
+  { key: "close", indices: [3] },        // 画面を閉じたあとにすること
+];
+/*
+  今月の流れ。7枚。⚠️ 「取るべき行動」と「月末に残るもの」を分ける。
+  一緒に出すと、行動が結果の説明になってしまう。
+*/
+const MONTHLY_STAGES = [
+  { key: "theme",  indices: [0] },
+  { key: "chance", indices: [1, 2] },    // 隠れた好機・越える障害
+  { key: "grow",   indices: [3, 4] },    // 伸びる部分・注意すべきこと
+  { key: "act",    indices: [5] },
+  { key: "left",   indices: [6] },
+];
+const SEASON_STAGES = [
+  { key: "now",     indices: [0] },      // いまの勢い
+  { key: "seed",    indices: [1] },      // これから育てる種
+  { key: "lightdark", indices: [2, 3] }, // 光を当てる領域・影に置いたもの
+  { key: "reap",    indices: [4] },      // 収穫できるもの
+];
+/*
+  人物を読む。5枚。
+  ⚠️ 長所と短所は必ず同じ段で開く。片方だけ先に出すと、
+  そこで人物像が決まってしまい、もう一方が例外として読まれる。
+*/
+const CHARACTER_STAGES = [
+  { key: "who",   indices: [0] },
+  { key: "faces", indices: [1, 2] },     // 最大の長所・最大の短所
+  { key: "care",  indices: [3] },        // いま最も気にしていること
+  { key: "gain",  indices: [4] },        // 関わることで得るもの
+];
+/*
+  新しい関係。6枚。
+  ⚠️ 相手が持ち込むものと自分が持ち込むものを同時に開く。
+  相手を先に見せると、自分の持ち込みがその反応として読まれる。
+*/
+const NEW_RELATION_STAGES = [
+  { key: "ground", indices: [0] },       // 関係の土台
+  { key: "bring",  indices: [1, 2] },    // 相手が持ち込む・自分が持ち込む
+  { key: "issue",  indices: [3, 4] },    // いまの課題・秘めた可能性
+  { key: "grow",   indices: [5] },       // 育てる方法
+];
+/*
+  直感とのつながり。7枚。
+  ⚠️ 「邪魔しているもの」を最後にしない。
+  最後は「果たしている役割」で終える ―― 塞がりで終わる配置にしないため。
+*/
+const SPIRIT_STAGES = [
+  { key: "open",  indices: [0, 1] },     // 開き具合・受け取ろうとしているもの
+  { key: "block", indices: [2, 5] },     // 現状の見え方・邪魔しているもの
+  { key: "boost", indices: [3, 4] },     // 強める方法・いま必要な導き
+  { key: "role",  indices: [6] },        // 果たしている役割
+];
+
+/*
+  ダビデスター。
+  ★ 三角が閉じる瞬間を作るために、開く順を伝統の置き順ではなく
+    三角の構成でまとめる。太陽を単独で先に出し、金星・木星で
+    上向きが閉じ、月・土星のあと火星で下向きが閉じて六芒星が完成する。
+
+  ⚠️ 最後は必ず火星（前世の出来事）にすること。ここで下向きが閉じる。
+  順を変えると、完成の瞬間が途中に来て演出が死ぬ。
+*/
+const DAVID_STAR_STAGES = [
+  { key: "sun",     indices: [0] },        // 太陽・前世の記憶
+  { key: "upTri",   indices: [2, 3] },     // 金星・木星 → 上向きの三角が閉じる
+  { key: "moonSat", indices: [1, 4] },     // 月・土星
+  { key: "mars",    indices: [5] },        // 火星 → 下向きが閉じ、六芒星が完成
+];
+/*
+  ゾディアック。
+  ⚠️ 四区分（火・地・風・水）ごとに開く。星座の並びそのものが
+    三つ飛ばしで元素を巡る構造になっているので、後付けではない。
+    牡羊(0)・獅子(4)・射手(8) が火、牡牛(1)・乙女(5)・山羊(9) が地、という具合。
+  ⚠️ 中央（12枚目）は最後に単独で。十二を見渡したあとに置く一枚なので。
+*/
+const ZODIAC_STAGES = [
+  { key: "fire",   indices: [0, 4, 8] },
+  { key: "earth",  indices: [1, 5, 9] },
+  { key: "air",    indices: [2, 6, 10] },
+  { key: "water",  indices: [3, 7, 11] },
+  { key: "centre", indices: [12] },
+];
+
+const PAIR_STAGES = [
+  { key: "both", indices: [0, 1] },
+  { key: "gap",  indices: [2] },
+  { key: "move", indices: [3] },
+];
+/*
+  まだ痛むのは。4枚、大アルカナと聖杯。
+  ⚠️ 0番（いま残っている痛み）を単独で最初に開く。
+  対と一緒に出すと、痛みが即座にどちらかの責任として割り振られる。
+*/
+const STILL_HURTS_STAGES = [
+  { key: "pain",  indices: [0] },
+  { key: "sides", indices: [1, 2] },
+  { key: "care",  indices: [3] },
+];
+/*
+  この人は安全か。5枚、小アルカナだけ。
+  ⚠️ 「見ないふりをしている合図」を単独の段にしない。
+  一枚だけで開くと、その札が相手の判決として読まれる。
+*/
+const SAFE_PERSON_STAGES = [
+  { key: "shown", indices: [0, 1] },
+  { key: "gap",   indices: [2, 3] },
+  { key: "check", indices: [4] },
+];
+/*
+  決めきれない。5枚。
+  ⚠️ 最後は「決めるために足りない一つ」で終える。
+  期限（3番）で終えると、急かして終わる配置になる。
+*/
+const UNDECIDED_STAGES = [
+  { key: "why",     indices: [0, 1] },
+  { key: "cost",    indices: [2, 3] },
+  { key: "missing", indices: [4] },
+];
+
+const BOUNDARY_STAGES = [
+  { key: "crossed", indices: [0, 1] },   // 越えられている線・越えさせている理由
+  { key: "redraw",  indices: [2] },      // 引き直したあとの姿
+  { key: "words",   indices: [3] },      // 伝えるときの言葉
+];
+/*
+  自己妨害。5枚。
+  ⚠️ 「本当の怖れ」を最後の段に入れないこと。
+  最後は必ず外す一手で終える。怖れで終わると、
+  痛いところを指して終わる配置になる。
+*/
+const SABOTAGE_STAGES = [
+  { key: "pattern", indices: [0, 1] },   // 繰り返している型・止める直前の合図
+  { key: "guard",   indices: [2, 3] },   // 守ろうとしているもの・本当の怖れ
+  { key: "break",   indices: [4] },      // 型を外す一手
+];
+/*
+  堂々巡り。3枚、剣だけ。
+  ⚠️ 一枚ずつ開く。まとめて開くと、回っている感じが出ない。
+*/
+const LOOP_STAGES = [
+  { key: "turning", indices: [0] },
+  { key: "fuel",    indices: [1] },
+  { key: "cut",     indices: [2] },
+];
+/*
+  体からの声。4枚、小アルカナだけ。
+  ⚠️ 手当て（3枚目）を独立させる。熱と一緒に出すと、
+  痛みと処方が同じ段に並んで、処方が薄まる。
+*/
+const SOMATIC_STAGES = [
+  { key: "heat",  indices: [0, 1] },     // 熱を持っている場所・溜まっている感情
+  { key: "head",  indices: [2] },        // 頭が休めない理由
+  { key: "care",  indices: [3] },        // 身体が求めている手当て
 ];
 
 const SIMPLE_CROSS_STAGES = [
@@ -4699,6 +5218,20 @@ function buildHexagramPrompt(results, question, langInstruction, recallBlock = "
     引きから読めることと、こちらが決めたことを混ぜない。
   */
   const isModern = MODERN_SPREADS.includes(spreadKey);
+  /*
+    ⚠️ SPREAD_AI_NOTE（旧 MODERN_AI_NOTE）は長らく定義されているだけで、どこからも呼ばれていなかった。
+    影・内なる子ども・消耗を開放した時点で「診断禁止の指示を必ず添えること」と
+    自分で書いてある（SPREADS の注記）のに、その指示が一度もプロンプトへ届いていない。
+    病名を書かない・過去の出来事を断定しない・専門家に頼ることを否定しない、が
+    全部抜けた状態で配信していたことになる。ここで繋ぐ。
+  */
+  /*
+    ⚠️ isModern で絞らないこと。ダビデスター（前世）やゾディアック（能力開発）は
+    古典派だが、書かせてはいけないことがある配置なので注記が要る。
+    「現代派だから注記」ではなく「注記のある配置には必ず添える」が正しい。
+  */
+  const spreadNote = SPREAD_AI_NOTE[spreadKey]
+    ? SPREAD_AI_NOTE[spreadKey](question) : "";
   const deckSpec = (SPREADS[spreadKey] || {}).deck || "full";
   const suitKeys = deckSuitKeys(deckSpec);
   const hasMajor = deckHasMajor(deckSpec);
@@ -4736,6 +5269,7 @@ ${majorNote}
 小アルカナは、日々の具体的な出来事や、相談者が手を触れられる範囲を示す。
 どの位置にどちらが出たかで、その領域が「動かしにくいもの」か
 「自分で動かせるもの」かが変わる。そこを読み分けること。
+${spreadNote ? `\n【この配置で守ること】\n${spreadNote}` : ""}
 
 ${spreadKey === "hexagram" ? `【読み方の順序】
 ① まず「過去→現在→未来」を時間の流れとして読むこと。
@@ -7843,8 +8377,27 @@ function SpreadSelect({ lang, onSelect }) {
             <span className="school-note">{t.schoolNotes[k]}</span>
           </button>
         ))}
+        {/*
+          クイズ。
+          ⚠️ SCHOOLS には入れない。あれは配置の分類で、schoolOf() が引く表でもある。
+          クイズは配置ではないので、混ぜると配置一覧の絞り込みが壊れる。
+          見出しは QUIZ_I18N から引く ―― T.schoolNames を11言語ぶん触らずに済む。
+        */}
+        <button
+          type="button"
+          className={`school-tab${school === "quiz" ? " on" : ""}`}
+          onClick={() => setSchool("quiz")}
+          aria-pressed={school === "quiz"}
+        >
+          <span className="school-name">{quizT(lang).title}</span>
+          <span className="school-note">{quizT(lang).tabNote}</span>
+        </button>
       </div>
 
+      {school === "quiz" ? (
+        <QuizPanel lang={lang} onBack={() => setSchool("classic")} />
+      ) : (
+      <>
       <p style={{ fontSize: "11px", color: "var(--muted)", textAlign: "center", margin: "0 0 16px", lineHeight: 1.8 }}>
         {t.spreadSelectHint}
       </p>
@@ -7973,6 +8526,8 @@ function SpreadSelect({ lang, onSelect }) {
           );
         })}
       </div>
+      </>
+      )}
     </div>
   );
 }
@@ -8735,13 +9290,15 @@ const SEASON_MOTES = [
   雨・晴・星だけが見えないという状態になった。
   ============================================================
 */
-const SKY_KINDS = ["rain", "snow", "heavysnow", "clear", "star", "petal", "thunder", "maple", "ufo"];
+const SKY_KINDS = ["rain", "snow", "heavysnow", "blizzard", "clear", "star", "petal", "thunder", "maple", "ufo"];
 /*
   出やすさ。八つの落ちものは同じ、円盤だけ薄く。
   ⚠️ 円盤が毎回出ると、占いの表紙ではなく遊びの画面になる。
 */
 const SKY_WEIGHTS = {
   rain: 5, snow: 5, heavysnow: 5, clear: 5, star: 5, petal: 5, thunder: 5, maple: 5,
+  /* 超大雪。夜のビルと月まで出る特別な空なので、他より薄く */
+  blizzard: 3,
   ufo: 2,
 };
 function pickSkyKind() {
@@ -8758,7 +9315,11 @@ const SKY_PALETTE = ["#FF3CB4", "#3CC8FF", "#78FF8C", "#FFDC3C"];
   ⚠️ 340体で1万1千。スマホで重くなる。
   一粒が大きく密なので、150体でも画面は埋まる。
 */
-const SKY_COUNT = { ufo: 16, heavysnow: 150 };
+/*
+  ⚠️ 超大雪は一粒が大雪よりさらに細かく、加えて三段階の大きさがある。
+  大粒は要素数も面積も大きいので、大雪より減らす。110体で画面は埋まる。
+*/
+const SKY_COUNT = { ufo: 16, heavysnow: 150, blizzard: 110 };
 const SKY_DEFAULT_N = 220;
 const skyMotes = (n) => Array.from({ length: n }, (_, k) => ({
   x: (k * 137.508) % 100,                    // 黄金角。並ばずに散る
@@ -8767,7 +9328,38 @@ const skyMotes = (n) => Array.from({ length: n }, (_, k) => ({
   s: 0.75 + ((k * 0.37) % 1) * 0.7,
   /* 大粒。7つに1つ。全部を大きくすると牡丹雪になる */
   big: k % 7 === 3,
+  /*
+    超大雪だけが使う三段階。小:中:大 をおよそ 5:3:1 にする。
+    ⚠️ 等分にしないこと。大が三分の一もあると、粒の大小ではなく
+    「大きい雪と小さい雪の二種類が降っている」ように見える。
+    自然な降り方は、小さいものが圧倒的に多い。
+  */
+  tier: (k % 9) < 5 ? 0 : (k % 9) < 8 ? 1 : 2,
 }));
+
+/*
+  夜のビル。四角だけで組む。位置も大きさも固定で、動かさない。
+  ⚠️ 降るものと同じ動きを付けないこと。動く背景が二層になると、
+  どちらを見ればいいのか分からなくなる。ビルは止まっているから奥に見える。
+
+    x  左端（画面幅に対する％）
+    w  幅（px）
+    h  高さ（px）
+    c  窓の列数
+    r  窓の行数
+    lit 灯りが点いている窓の間引き（この数で割り切れる窓だけ光る）
+*/
+const SKY_BUILDINGS = [
+  { x: 2,  w: 34, h: 96,  c: 3, r: 6,  lit: 3 },
+  { x: 13, w: 26, h: 148, c: 2, r: 9,  lit: 4 },
+  { x: 23, w: 44, h: 74,  c: 4, r: 4,  lit: 2 },
+  { x: 36, w: 30, h: 190, c: 3, r: 12, lit: 5 },
+  { x: 48, w: 38, h: 118, c: 3, r: 7,  lit: 3 },
+  { x: 60, w: 24, h: 164, c: 2, r: 10, lit: 4 },
+  { x: 69, w: 46, h: 88,  c: 4, r: 5,  lit: 3 },
+  { x: 82, w: 28, h: 138, c: 2, r: 8,  lit: 4 },
+  { x: 91, w: 36, h: 106, c: 3, r: 6,  lit: 2 },
+];
 /* 雨と雪の雲。上のほうに数枚 */
 const SKY_CLOUDS = [
   { x: 8, y: 7, s: 1.4, d: 0 }, { x: 56, y: 3, s: 1.8, d: 5 },
@@ -8792,7 +9384,7 @@ function starPoints(r) {
 }
 
 function TitleSky({ kind, dim = false }) {
-  const clouded = kind === "rain" || kind === "snow" || kind === "heavysnow";
+  const clouded = kind === "rain" || kind === "snow" || kind === "heavysnow" || kind === "blizzard";
   const baseN = SKY_COUNT[kind] || SKY_DEFAULT_N;
   /* 盤面の裏に敷くときは半分に減らす。主役は札のほうなので */
   const motes = skyMotes(dim ? Math.max(8, Math.round(baseN / 2)) : baseN);
@@ -8894,6 +9486,73 @@ function TitleSky({ kind, dim = false }) {
         </g>
       );
     }
+    if (kind === "blizzard") {
+      /*
+        超大雪の結晶。
+
+        ⚠️ 大雪（heavysnow）は触らない。あちらは腕に枝二対の形で完成している。
+        こちらは枝を三対に増やし、枝の先に小枝を付け、中心に六角を二重に置く。
+        段が三つあるので、大きい粒ほど細部が見え、小さい粒は骨格だけが残る。
+
+        ⚠️ 小さい段で細部まで描かないこと。潰れて白い点になり、
+        「三段階ある」ではなく「大きいのと汚い点」に見える。
+      */
+      const tier = m.tier || 0;
+      return (
+        <g opacity={0.9 - tier * 0.06}>
+          {/* 骨格。どの段でも描く */}
+          {[0, 60, 120].map((deg) => (
+            <line key={`m${deg}`} x1={-R} y1="0" x2={R} y2="0" stroke={C} strokeWidth={LW}
+              strokeLinecap="round" transform={`rotate(${deg})`} />
+          ))}
+          {[0, 60, 120, 180, 240, 300].map((deg) => (
+            <g key={`b${deg}`} transform={`rotate(${deg})`}>
+              {/* 枝。中と大は三対、小は一対だけ */}
+              {(tier >= 1 ? [0.34, 0.56, 0.76] : [0.56]).map((f, bi) => {
+                const len = R * (0.2 - bi * 0.03);
+                return (
+                  <g key={f}>
+                    <line x1={(R * f).toFixed(2)} y1="0"
+                      x2={(R * f + len * 0.9).toFixed(2)} y2={(-len).toFixed(2)}
+                      stroke={C} strokeWidth={LW * 0.75} strokeLinecap="round" />
+                    <line x1={(R * f).toFixed(2)} y1="0"
+                      x2={(R * f + len * 0.9).toFixed(2)} y2={len.toFixed(2)}
+                      stroke={C} strokeWidth={LW * 0.75} strokeLinecap="round" />
+                  </g>
+                );
+              })}
+              {/* 小枝。大の段だけ。ここが模様の効きどころ */}
+              {tier >= 2 && [0.34, 0.56].map((f) => (
+                <g key={`s${f}`}>
+                  <line x1={(R * f + R * 0.1).toFixed(2)} y1={(-R * 0.11).toFixed(2)}
+                    x2={(R * f + R * 0.17).toFixed(2)} y2={(-R * 0.2).toFixed(2)}
+                    stroke={C} strokeWidth={LW * 0.5} strokeLinecap="round" />
+                  <line x1={(R * f + R * 0.1).toFixed(2)} y1={(R * 0.11).toFixed(2)}
+                    x2={(R * f + R * 0.17).toFixed(2)} y2={(R * 0.2).toFixed(2)}
+                    stroke={C} strokeWidth={LW * 0.5} strokeLinecap="round" />
+                </g>
+              ))}
+              {/* 先端。大は結晶、中と小は粒 */}
+              {tier >= 2 ? (
+                <polygon points={Array.from({ length: 6 }, (_, i) => {
+                  const a2 = (Math.PI / 3) * i;
+                  return `${(R + Math.cos(a2) * R * 0.11).toFixed(2)},${(Math.sin(a2) * R * 0.11).toFixed(2)}`;
+                }).join(" ")} fill="none" stroke={C} strokeWidth={LW * 0.55} />
+              ) : (
+                <circle cx={R.toFixed(2)} cy="0" r={(LW * (tier ? 0.8 : 0.6)).toFixed(2)} fill={C} />
+              )}
+            </g>
+          ))}
+          {/* 中心。大は二重の六角、中は一つ、小は無し */}
+          {tier >= 1 && [0.22, 0.12].slice(0, tier >= 2 ? 2 : 1).map((f) => (
+            <polygon key={f} points={Array.from({ length: 6 }, (_, i) => {
+              const a2 = (Math.PI / 3) * i;
+              return `${(Math.cos(a2) * R * f).toFixed(2)},${(Math.sin(a2) * R * f).toFixed(2)}`;
+            }).join(" ")} fill="none" stroke={C} strokeWidth={LW * 0.65} />
+          ))}
+        </g>
+      );
+    }
     if (kind === "ufo") {
       /* 円盤。特殊。点の間隔2.6pxで、他より一回り大きい */
       return (
@@ -8922,12 +9581,12 @@ function TitleSky({ kind, dim = false }) {
         天体。右上に据える。降るものと違って動かさない。
         ⚠️ 動かすと「大きな粒」に見えて、空の主が二つになる。
       */}
-      {(kind === "star" || kind === "clear") && (() => {
+      {(kind === "star" || kind === "clear" || kind === "blizzard") && (() => {
         const C = SKY_PALETTE[3];
         return (
           <svg x="84%" y="7%" overflow="visible">
             <g className="sky-orb">
-              {kind === "star" ? (
+              {kind === "star" || kind === "blizzard" ? (
                 /* 三日月。丸を二つ重ねて欠けさせる */
                 <path d="M 0 -13 A 13 13 0 1 0 0 13 A 10.5 10.5 0 1 1 0 -13 Z" fill={C} opacity="0.55" />
               ) : (
@@ -8955,12 +9614,51 @@ function TitleSky({ kind, dim = false }) {
           </g>
         </svg>
       ))}
+      {/*
+        夜のビル。超大雪のときだけ。四角だけで組む。
+
+        ⚠️ 画面の下端に貼り付けること。y="100%" の入れ子svgを基準にして、
+        矩形は負の y へ伸ばす。高さを％で持つと、縦長の端末で
+        ビルだけが引き伸ばされて別物になる。
+        ⚠️ 動かさない。降るものと同じ動きを付けると層が二つとも動いて、
+        どこを見ればいいのか分からなくなる。止まっているから奥に見える。
+        ⚠️ 落ちものより前に描く。あとに描くと雪がビルの裏へ回る。
+      */}
+      {kind === "blizzard" && SKY_BUILDINGS.map((b, bi) => (
+        <svg key={`bl${bi}`} x={`${b.x}%`} y="100%" overflow="visible">
+          <g opacity="0.5">
+            {/* 躯体 */}
+            <rect x={-b.w / 2} y={-b.h} width={b.w} height={b.h}
+              fill="rgba(9,7,18,0.92)" stroke="rgba(150,140,190,0.35)" strokeWidth="0.8" />
+            {/* 窓。四角だけ。灯りは間引いて点ける */}
+            {Array.from({ length: b.c * b.r }, (_, wi) => {
+              const col = wi % b.c, row = Math.floor(wi / b.c);
+              const gapX = b.w / (b.c + 1), gapY = b.h / (b.r + 1);
+              const on = (wi + bi) % b.lit === 0;
+              return (
+                <rect key={wi}
+                  x={(-b.w / 2 + gapX * (col + 1) - 3).toFixed(1)}
+                  y={(-b.h + gapY * (row + 1) - 3).toFixed(1)}
+                  width="6" height="6"
+                  fill={on ? SKY_PALETTE[(bi + wi) % SKY_PALETTE.length] : "rgba(60,55,80,0.5)"}
+                  opacity={on ? 0.55 : 0.3} />
+              );
+            })}
+          </g>
+        </svg>
+      ))}
       {motes.map((m, k) => (
         <svg key={k} x={`${m.x.toFixed(2)}%`} y={`${m.y.toFixed(2)}%`} overflow="visible">
           <g className={cls}
             style={{ animationDelay: `${m.d.toFixed(1)}s`, animationDuration: `${(13 + (k % 7) * 3).toFixed(1)}s` }}>
             {/* 大小はここ一箇所で決める。種類ごとに作り分けない */}
-            <g transform={`scale(${(m.s * (m.big ? 2.1 : 1)).toFixed(2)})`}>
+            {/*
+              ⚠️ 超大雪だけは三段階（0.7 / 1.25 / 2.3）を使う。
+                 big の二段階と混ぜると四段階になり、粒の大きさが読めなくなる。
+            */}
+            <g transform={`scale(${(m.s * (kind === "blizzard"
+              ? [0.7, 1.25, 2.3][m.tier || 0]
+              : (m.big ? 2.1 : 1))).toFixed(2)})`}>
               {shape(k, m, colorAt(k))}
             </g>
           </g>
@@ -9549,6 +10247,2088 @@ function HeadHeartRope({ drawn, lang, openedIndices }) {
       </svg>
       <p className="hs-pass-read">{t.ropeRead[st.step]}</p>
     </div>
+  );
+}
+
+/* ============================================================
+   現代派の視覚補完
+
+   ⚠️ どれも「配置が元から持っている構造」だけを図にしている。
+   影は 見る側3枚 対 統合側2枚、境界線は 押す1枚 対 引き直す2枚 ――
+   位置の分かれ方がそのまま図の二極になっている配置だけを採った。
+   分かれていない配置に無理に図を付けると、意味を後付けすることになる。
+
+   ⚠️ 五段の境目はすべて実測（各30万回、各帯がちょうど20%）。
+   等間隔に切ると真ん中の帯ばかり出て、図が動かなくなる。
+
+   ⚠️ 現代派の文言は MODERN_VIS_I18N に固めてある。
+   T に足すと10言語ぶん散らばり、一つ抜けたところで落ちる。
+   ここは未訳を英語へ落とす（spreadInfo と同じ方針）。
+   ============================================================ */
+const MODERN_VIS_I18N = {
+  ja: {
+    dsTitle: "六芒星",
+    dsGive: "▲ 与えた側",
+    dsTake: "▼ 受けた側",
+    dsOpen: "まだ三角が閉じていません。",
+    dsHalf: "片方の三角が閉じました。",
+    dsHalfUp: (s) => ["上向きの三角が閉じました。与えた側の光はまだ弱いままです。",
+      "上向きの三角が閉じました。与えた側がうっすら灯っています。",
+      "上向きの三角が閉じました。与えた側が半ば光っています。",
+      "上向きの三角が閉じました。与えた側がはっきり光っています。",
+      "上向きの三角が閉じました。与えた側が強く輝いています。"][s],
+    dsHalfDown: (s) => ["下向きの三角が閉じました。受けた側は軽いままです。",
+      "下向きの三角が閉じました。受けた側がわずかに沈んでいます。",
+      "下向きの三角が閉じました。受けた側が半ばくすんでいます。",
+      "下向きの三角が閉じました。受けた側が濃くくすんでいます。",
+      "下向きの三角が閉じました。受けた側が深く沈んでいます。"][s],
+    dsTri: (u, d) => `（与えた側の輝き ${u + 1}／5、受けた側の沈み ${d + 1}／5）`,
+    dsRead: [
+      "受けた側のほうが重く出ています。前世で背負ったものが、いまも効いています。",
+      "与えた側と受けた側が釣り合っています。",
+      "与えた側のほうが重く出ています。前世で手渡したものが、いまの土台になっています。",
+    ],
+    zoTitle: "十二の資質",
+    zoPeak: (s) => `いま最も前に出ているのは「${s}」`,
+    zoUnopened: "（未開封）",
+    zoResonate: (s) => `${s}に共鳴が出ています。この力は既に足りています。伸ばすより、使う番です。`,
+    driveTitle: "坂のどこまで",
+    driveRead: [
+      "引き戻す力のほうがはるかに勝っています。まだ動き出していません。",
+      "引き戻す力が勝っています。",
+      "押す力と引き戻す力が拮抗しています。",
+      "押す力が勝っています。",
+      "強く押せています。抵抗より前に出る力のほうが大きい状態です。",
+    ],
+    drivePush: "前へ出す側", driveHold: "引き戻す側",
+    flowTitle: "流れの帯",
+    flowRead: [
+      "越える側の札のほうが強く出ています。",
+      "越える側がやや勝っています。",
+      "伸びる側と越える側が拮抗しています。",
+      "伸びる側がやや勝っています。",
+      "伸びる側の札が強く出ています。",
+    ],
+    flowPeak: (s) => `いちばん強いのは「${s}」`,
+    orbTitle: "明暗の取り分",
+    orbRead: [
+      "短所の側が大きく出ています。",
+      "短所の側がやや勝っています。",
+      "長所と短所が同じくらい出ています。",
+      "長所の側がやや勝っています。",
+      "長所の側が大きく出ています。",
+    ],
+    orbLight: "長所の側", orbShade: "短所の側",
+    chanTitle: "通り道の開き",
+    chanRead: [
+      "塞がっています。邪魔しているもののほうが強い状態です。",
+      "細く、途中で止まっています。",
+      "開きと詰まりが拮抗しています。",
+      "通っています。",
+      "大きく開いています。受け取りやすい状態です。",
+    ],
+    chanIn: "受け取ろうとしているもの", chanOut: "いまの自分",
+    pairTitle: "二つの側の釣り合い",
+    pairRead: [
+      (a, b) => `${b}のほうが重く出ています。`,
+      (a, b) => `${a}と${b}が釣り合っています。`,
+      (a, b) => `${a}のほうが重く出ています。`,
+    ],
+    pairMover: (s) => `先に手を付けるなら「${s}」の側`,
+    safeTitle: "見えている輪と、内側の芯",
+    safeRead: [
+      "見えている振る舞いと、見ないでいる合図が大きく食い違っています。",
+      "食い違いが出ています。",
+      "食い違いと一致が拮抗しています。",
+      "おおむね一致しています。",
+      "見えているものと内側が揃っています。",
+    ],
+    safeOuter: "日ごろ見えている振る舞い", safeInner: "見ないでいる合図",
+    undecTitle: "振り子の振れ",
+    undecRead: [
+      "止まっています。決めに向かう力より、決めずにいる利のほうが勝っています。",
+      "ほとんど振れていません。",
+      "動きかけては戻る状態です。",
+      "振れはじめています。",
+      "大きく振れています。決められる状態にあります。",
+    ],
+    undecHold: "決めずにいて守れるもの", undecPush: "決めに向かう力",
+    shadowTitle: "影の重なり",
+    shadowRead: [
+      "影がまだ本体から離れています。見ている段階です。",
+      "近づいてはいますが、重なってはいません。",
+      "半分ほど重なっています。",
+      "大きく重なっています。使える力に変わりはじめています。",
+      "ほぼ重なっています。欠点として切り離す必要はもうありません。",
+    ],
+    shadowBody: "いまの自分", shadowCast: "影",
+    childTitle: "灯りの距離",
+    childRead: [
+      "遠くにいます。まだ声は届いていません。",
+      "こちらを向きましたが、距離はあります。",
+      "半ばまで来ています。",
+      "すぐそこまで来ています。",
+      "並びました。同じ灯りで照らせています。",
+    ],
+    childNow: "いまの自分", childYoung: "幼い自分", childBridge: "声が届いています",
+    emberTitle: "荷と残り火",
+    emberRead: [
+      "降ろせる量より荷のほうがずっと重い状態です。",
+      "荷のほうが勝っています。",
+      "荷と降ろせる量が拮抗しています。",
+      "降ろせる量のほうが勝っています。",
+      "いま降ろせば、火はすぐ戻ります。",
+    ],
+    emberLoad: "荷", emberFire: "残り火",
+    boundTitle: "線の張り",
+    boundRead: [
+      "線が深く押し込まれています。",
+      "押されている側です。",
+      "押す力と引き直す力が拮抗しています。",
+      "引き直す側が勝っています。",
+      "線がまっすぐ張り直っています。",
+    ],
+    boundIn: "越えてくる側", boundOut: "自分の領分",
+    sabTitle: "型の輪",
+    sabRead: [
+      "輪が閉じています。外す手がまだ届いていません。",
+      "わずかに欠けていますが、回り続けます。",
+      "切れ目が入りました。",
+      "大きく開いています。",
+      "輪として成り立っていません。ここで止まります。",
+    ],
+    sabSignal: "止める直前の合図",
+    loopTitle: "渦のほどけ",
+    loopRead: [
+      "きつく巻いています。同じところを回っています。",
+      "まだ巻きが強い状態です。",
+      "巻きと解けが拮抗しています。",
+      "外へ解けはじめています。",
+      "ほとんど解けています。輪から出られます。",
+    ],
+    bodyTitle: "熱の在り処",
+    bodyRead: [
+      "熱より手当てのほうが勝っています。",
+      "手当てが追いついています。",
+      "熱と手当てが拮抗しています。",
+      "熱のほうが勝っています。",
+      "熱が強く、手当てが追いついていません。",
+    ],
+    bodyZone: ["頭", "胸", "腹", "脚"],
+  },
+  en: {
+    dsTitle: "The Hexagram",
+    dsGive: "▲ Given",
+    dsTake: "▼ Received",
+    dsOpen: "Neither triangle has closed yet.",
+    dsHalf: "One triangle has closed.",
+    dsHalfUp: (s) => ["The upward triangle closed. The giving side is still dim.",
+      "The upward triangle closed. The giving side is faintly lit.",
+      "The upward triangle closed. The giving side is half alight.",
+      "The upward triangle closed. The giving side shines clearly.",
+      "The upward triangle closed. The giving side blazes."][s],
+    dsHalfDown: (s) => ["The downward triangle closed. The receiving side stays light.",
+      "The downward triangle closed. The receiving side dims a little.",
+      "The downward triangle closed. The receiving side is half clouded.",
+      "The downward triangle closed. The receiving side is heavily clouded.",
+      "The downward triangle closed. The receiving side sits deep in shadow."][s],
+    dsTri: (u, d) => ` (giving ${u + 1}/5, receiving ${d + 1}/5)`,
+    dsRead: [
+      "What was received weighs heavier. What you carried then still tells.",
+      "What was given and what was received are in balance.",
+      "What was given weighs heavier. What you handed over then is the ground you stand on.",
+    ],
+    zoTitle: "The Twelve Capacities",
+    zoPeak: (s) => `Most forward right now: "${s}"`,
+    zoUnopened: "（未開封）",
+    zoUnopened: " (not yet opened)",
+    zoResonate: (s) => `Resonance at ${s}. That capacity is already there. Use it rather than grow it.`,
+    driveTitle: "How Far Up the Slope",
+    driveRead: [
+      "What pulls back is far stronger. It has not started moving.",
+      "What pulls back has the upper hand.",
+      "Push and pull are evenly matched.",
+      "The push has the upper hand.",
+      "Pushing strongly. The forward force exceeds the resistance.",
+    ],
+    drivePush: "What pushes forward", driveHold: "What pulls back",
+    flowTitle: "Band of the Flow",
+    flowRead: [
+      "The cards to get past come out stronger.",
+      "The side to get past is slightly ahead.",
+      "Growth and obstacle are evenly matched.",
+      "The growing side is slightly ahead.",
+      "The growing side comes out strong.",
+    ],
+    flowPeak: (s) => `Strongest: "${s}"`,
+    orbTitle: "Share of Light and Shade",
+    orbRead: [
+      "The shadow side shows much larger.",
+      "The shadow side is slightly ahead.",
+      "Strength and fault show about equally.",
+      "The strength side is slightly ahead.",
+      "The strength side shows much larger.",
+    ],
+    orbLight: "Strength", orbShade: "Fault",
+    chanTitle: "Opening of the Channel",
+    chanRead: [
+      "Blocked. What obstructs is stronger.",
+      "Narrow, and it stops partway.",
+      "Opening and blockage are evenly matched.",
+      "It is flowing.",
+      "Wide open. Easy to receive right now.",
+    ],
+    chanIn: "What you reach for", chanOut: "You now",
+    pairTitle: "Balance of the Two Sides",
+    pairRead: [
+      (a, b) => `${b} weighs heavier.`,
+      (a, b) => `${a} and ${b} are in balance.`,
+      (a, b) => `${a} weighs heavier.`,
+    ],
+    pairMover: (s) => `Start from the side of "${s}"`,
+    safeTitle: "The Outer Ring and the Core",
+    safeRead: [
+      "What is shown and what you look away from diverge sharply.",
+      "A divergence is showing.",
+      "Divergence and alignment are evenly matched.",
+      "They largely align.",
+      "What is shown and what lies inside line up.",
+    ],
+    safeOuter: "Conduct you can see", safeInner: "The signal you look away from",
+    undecTitle: "Swing of the Pendulum",
+    undecRead: [
+      "Stopped. What not deciding protects outweighs the push to decide.",
+      "Barely swinging.",
+      "It starts to move, then returns.",
+      "It is beginning to swing.",
+      "Swinging widely. You are in a state to decide.",
+    ],
+    undecHold: "What not deciding protects", undecPush: "The push to decide",
+    shadowTitle: "Overlap of the Shadow",
+    shadowRead: [
+      "The shadow still stands apart. You are at the looking stage.",
+      "It has come closer, but does not yet overlap.",
+      "About half overlaps.",
+      "Largely overlapping. It is turning into usable force.",
+      "Almost fully overlapping. There is no longer a flaw to cut away.",
+    ],
+    shadowBody: "You now", shadowCast: "Shadow",
+    childTitle: "Distance of the Lamps",
+    childRead: [
+      "Far off. The voice has not reached yet.",
+      "It has turned toward you, but the distance holds.",
+      "It has come halfway.",
+      "It is very close now.",
+      "Side by side, lit by the same lamp.",
+    ],
+    childNow: "You now", childYoung: "Young self", childBridge: "The voice reaches",
+    emberTitle: "The Load and the Ember",
+    emberRead: [
+      "The load far outweighs what can be set down.",
+      "The load has the upper hand.",
+      "Load and release are evenly matched.",
+      "What can be set down has the upper hand.",
+      "Set it down now and the fire returns at once.",
+    ],
+    emberLoad: "Load", emberFire: "Ember",
+    boundTitle: "Tension of the Line",
+    boundRead: [
+      "The line is pushed deep inward.",
+      "You are on the pushed side.",
+      "Pushing and redrawing are evenly matched.",
+      "Redrawing has the upper hand.",
+      "The line is drawn straight again.",
+    ],
+    boundIn: "What crosses in", boundOut: "Your own ground",
+    sabTitle: "Ring of the Pattern",
+    sabRead: [
+      "The ring is closed. The move has not reached it.",
+      "Slightly notched, but it keeps turning.",
+      "A cut has opened.",
+      "It is wide open.",
+      "It no longer holds as a ring. It stops here.",
+    ],
+    sabSignal: "The signal before stopping",
+    loopTitle: "Unwinding of the Spiral",
+    loopRead: [
+      "Wound tight. Circling the same point.",
+      "The winding still dominates.",
+      "Winding and unwinding are evenly matched.",
+      "It is beginning to unwind outward.",
+      "Nearly unwound. You can step out of the loop.",
+    ],
+    bodyTitle: "Where the Heat Sits",
+    bodyRead: [
+      "Care outweighs the heat.",
+      "Care is keeping up.",
+      "Heat and care are evenly matched.",
+      "The heat has the upper hand.",
+      "The heat is strong and care is not keeping up.",
+    ],
+    bodyZone: ["Head", "Chest", "Belly", "Legs"],
+  },
+};
+const visT = (lang) => MODERN_VIS_I18N[lang] || MODERN_VIS_I18N.en;
+
+/** 段。cuts は昇順の四つ。返るのは 0〜4 */
+const visStep = (v, cuts) => { let s = 0; while (s < cuts.length && v >= cuts[s]) s++; return s; };
+/** 開いている札だけの平均の強さ。一枚も開いていなければ null */
+const visAvg = (drawn, seen, ix) => {
+  const a = ix.filter((i) => seen.has(i) && drawn[i]);
+  return a.length ? a.reduce((s, i) => s + cardPower(drawn[i]), 0) / a.length : null;
+};
+/** ホロの傾斜。図ごとに id を変えないと、同じ画面で二つ出したとき片方が消える */
+function HoloDefs({ id, w, h }) {
+  return (
+    <defs>
+      <linearGradient id={id} gradientUnits="userSpaceOnUse" x1="0" y1={h} x2={w} y2="0">
+        {HOLO_STOPS.map(([off, col]) => <stop key={off} offset={off} stopColor={col} />)}
+      </linearGradient>
+    </defs>
+  );
+}
+
+/*
+  【影の統合】影の重なり
+
+  0〜2 が影の側（目を背けている面・生まれた事情・日常での現れ方）、
+  3〜4 が統合の側（認めたときに得るもの・統合への一歩）。
+  位置がそのまま二極に分かれているので、二つの円の重なりで出せる。
+
+    integ = 統合側の平均 / (影側の平均 + 統合側の平均)
+
+  ⚠️ 枚数で割らずに合計で比べると、3枚ある影側が必ず勝つ。
+  ⚠️ 重なった部分だけをホロで塗る。全体を光らせると、
+     重なっていない回との差が消えて図が動かなく見える。
+*/
+const SHADOW_CUTS = [0.329, 0.454, 0.545, 0.635];
+function ShadowMass({ drawn, lang, openedIndices }) {
+  const t = visT(lang);
+  const seen = new Set(openedIndices);
+  const dark = visAvg(drawn, seen, [0, 1, 2]);
+  const light = visAvg(drawn, seen, [3, 4]);
+  if (dark === null && light === null) return null;
+  const d = dark === null ? 0 : dark, l = light === null ? 0 : light;
+  const integ = (d + l) > 0 ? l / (d + l) : 0.5;
+  const step = visStep(integ, SHADOW_CUTS);
+  const W = 300, H = 176, CY = 84, R = 46;
+  const gap = (1 - integ) * R * 1.75;
+  const bx = 150 - gap / 2, sx = 150 + gap / 2;
+  const lit = step >= 3;
+  return (
+    <div className="hs-pass">
+      <div className="hs-pass-title sheen-text">{t.shadowTitle}</div>
+      <svg viewBox={`0 0 ${W} ${H}`} className="hs-pass-svg" role="img" aria-label={t.shadowTitle}>
+        <HoloDefs id="shadowHolo" w={W} h={H} />
+        <clipPath id="shadowClip"><circle cx={bx} cy={CY} r={R} /></clipPath>
+        {/* 影。輪郭だけ。塗ると本体を食う */}
+        <circle cx={sx} cy={CY} r={R} fill="rgba(8,6,16,0.72)" stroke="rgba(150,140,190,0.45)" strokeWidth="0.8" />
+        {/* 本体 */}
+        <circle cx={bx} cy={CY} r={R} fill="none" stroke="url(#shadowHolo)" strokeWidth="1.2" opacity="0.85" />
+        {/* 重なり。ここだけがホロ */}
+        <g clipPath="url(#shadowClip)">
+          <circle cx={sx} cy={CY} r={R} fill="url(#shadowHolo)" opacity={lit ? 0.55 : 0.34}
+            className={lit ? "mv-pulse" : ""} />
+        </g>
+        {/* 影から本体へ流れる粒。統合が進むほど速く、多く */}
+        {Array.from({ length: 3 + step }).map((_, k) => (
+          <circle key={k} r="1.7" fill="url(#shadowHolo)" opacity="0.9"
+            className="mv-drift"
+            style={{ animationDelay: `${(k * 0.42).toFixed(2)}s`, ["--mv-from"]: `${sx.toFixed(1)}px`, ["--mv-to"]: `${bx.toFixed(1)}px` }}
+            cx="0" cy={CY - 18 + k * 9} />
+        ))}
+        <text x={bx} y={CY + R + 18} textAnchor="middle" className="hs-pt-name" fill="rgba(226,214,240,0.75)">{t.shadowBody}</text>
+        <text x={sx} y={CY + R + 18} textAnchor="middle" className="hs-pt-name" fill="rgba(226,214,240,0.5)">{t.shadowCast}</text>
+      </svg>
+      <p className="hs-pass-read">{t.shadowRead[step]}</p>
+    </div>
+  );
+}
+
+/*
+  【内なる子ども】灯りの距離
+
+  2〜4（その子が伝えたいこと・いま与えられる世話・取り戻せる喜び）が
+  「いまの自分から差し出せるもの」。その平均で距離が縮む。
+
+  ⚠️ 0〜1（幼い自分の姿・置き去りにした感情）を距離に入れないこと。
+  それは差し出す側ではなく差し出される側で、
+  入れると「子どもの札が弱いから遠い」という読みになる。子どもの責任にしない。
+*/
+const CHILD_CUTS = [0.305, 0.378, 0.497, 0.591];
+function ChildLamp({ drawn, lang, openedIndices }) {
+  const t = visT(lang);
+  const seen = new Set(openedIndices);
+  const near = visAvg(drawn, seen, [2, 3, 4]);
+  if (near === null) return null;
+  const step = visStep(near, CHILD_CUTS);
+  const W = 300, H = 150, CY = 70, RIGHT = 246;
+  const left = 54 + (RIGHT - 54 - 62) * (step / 4);
+  const bridged = step >= 3;
+  return (
+    <div className="hs-pass">
+      <div className="hs-pass-title sheen-text">{t.childTitle}</div>
+      <svg viewBox={`0 0 ${W} ${H}`} className="hs-pass-svg" role="img" aria-label={t.childTitle}>
+        <HoloDefs id="childHolo" w={W} h={H} />
+        {/* 声の波紋。小さいほうから出る */}
+        {[0, 1, 2].map((k) => (
+          <circle key={k} cx={left} cy={CY} r="10" fill="none" stroke="url(#childHolo)" strokeWidth="0.9"
+            className="mv-ripple" style={{ animationDelay: `${(k * 0.8).toFixed(1)}s` }} />
+        ))}
+        {/* 届いたときだけ橋がかかる */}
+        {bridged && (
+          <line x1={left} y1={CY} x2={RIGHT} y2={CY} stroke="url(#childHolo)" strokeWidth="1.6"
+            className="mv-bridge" opacity="0.95" />
+        )}
+        <circle cx={left} cy={CY} r="9" fill="url(#childHolo)" opacity={bridged ? 0.95 : 0.65}
+          className={bridged ? "mv-pulse" : ""} style={{ filter: HOLO_GLOW }} />
+        <circle cx={RIGHT} cy={CY} r="15" fill="url(#childHolo)" opacity="0.9" style={{ filter: HOLO_GLOW }} />
+        <text x={left} y={CY + 30} textAnchor="middle" className="hs-pt-name" fill="rgba(226,214,240,0.6)">{t.childYoung}</text>
+        <text x={RIGHT} y={CY + 36} textAnchor="middle" className="hs-pt-name" fill="rgba(226,214,240,0.75)">{t.childNow}</text>
+        {bridged && <text x={(left + RIGHT) / 2} y={CY - 26} textAnchor="middle" className="hs-pt-name" fill="#FFFFFF">{t.childBridge}</text>}
+      </svg>
+      <p className="hs-pass-read">{t.childRead[step]}</p>
+    </div>
+  );
+}
+
+/*
+  【消耗からの回復】荷と残り火
+
+    relief = いま降ろしてよいもの − すり減っているもの/消耗の源 の平均
+
+  ⚠️ 火の高さを「元気の量」として出さないこと。
+  この配置は頑張りを促さない。火が伸びるのは荷を降ろしたときだけで、
+  踏ん張った結果としては伸びない。
+*/
+const EMBER_CUTS = [-0.348, -0.113, 0.086, 0.352];
+function EmberLoad({ drawn, lang, openedIndices }) {
+  const t = visT(lang);
+  const seen = new Set(openedIndices);
+  const load = visAvg(drawn, seen, [0, 1]);
+  const drop = visAvg(drawn, seen, [2]);
+  if (load === null && drop === null) return null;
+  const relief = (drop === null ? 0 : drop) - (load === null ? 0 : load);
+  const step = visStep(relief, EMBER_CUTS);
+  const W = 300, H = 170, BASE = 138, CX = 150;
+  const bars = 4 - step;                       // 残る荷。降ろせるほど減る
+  const flame = 16 + step * 15;                // 火の高さ。荷が減った分だけ伸びる
+  return (
+    <div className="hs-pass">
+      <div className="hs-pass-title sheen-text">{t.emberTitle}</div>
+      <svg viewBox={`0 0 ${W} ${H}`} className="hs-pass-svg" role="img" aria-label={t.emberTitle}>
+        <HoloDefs id="emberHolo" w={W} h={H} />
+        {/* 荷。上から順に降りる */}
+        {Array.from({ length: 4 }).map((_, k) => {
+          const on = k < bars;
+          return (
+            <rect key={k} x={CX - 40 + k * 2} y={BASE - 10 - k * 11} width={80 - k * 4} height="8" rx="2"
+              fill={on ? "rgba(150,140,190,0.5)" : "none"}
+              stroke={on ? "rgba(190,180,220,0.55)" : "rgba(150,140,190,0.18)"} strokeWidth="0.7"
+              strokeDasharray={on ? "" : "3 4"} />
+          );
+        })}
+        {/* 残り火。荷の上で燃える */}
+        <path d={`M ${CX} ${BASE - 14 - bars * 11 - flame} C ${CX - 15} ${BASE - 14 - bars * 11 - flame * 0.4}, ${CX - 11} ${BASE - 14 - bars * 11}, ${CX} ${BASE - 14 - bars * 11} C ${CX + 11} ${BASE - 14 - bars * 11}, ${CX + 15} ${BASE - 14 - bars * 11 - flame * 0.4}, ${CX} ${BASE - 14 - bars * 11 - flame} Z`}
+          fill="url(#emberHolo)" opacity="0.9" className="mv-flame" style={{ filter: HOLO_GLOW }} />
+        {/* 火の粉。上へ舞う */}
+        {Array.from({ length: 2 + step * 2 }).map((_, k) => (
+          <circle key={k} cx={CX - 22 + ((k * 13) % 45)} cy={BASE - 14 - bars * 11} r="1.4"
+            fill="url(#emberHolo)" opacity="0.85" className="mv-spark"
+            style={{ animationDelay: `${(k * 0.53).toFixed(2)}s` }} />
+        ))}
+        <line x1={CX - 52} y1={BASE} x2={CX + 52} y2={BASE} stroke="url(#emberHolo)" strokeWidth="0.8" opacity="0.4" />
+        <text x={CX - 62} y={BASE - 20} textAnchor="middle" className="hs-pt-name" fill="rgba(226,214,240,0.55)">{t.emberLoad}</text>
+        <text x={CX + 64} y={BASE - 20 - flame * 0.5} textAnchor="middle" className="hs-pt-name" fill="rgba(226,214,240,0.75)">{t.emberFire}</text>
+      </svg>
+      <p className="hs-pass-read">{t.emberRead[step]}</p>
+    </div>
+  );
+}
+
+/*
+  【境界線】線の張り
+
+    lean = 引き直したあとの姿/伝えるときの言葉 の平均 − 越えさせている理由
+
+  ⚠️ 「越えられている線」（0枚目）を式に入れないこと。
+  それは押されている事実そのもので、押す力でも押し返す力でもない。
+  入れると、線が引けているのに図だけ凹むことが起きる。
+*/
+const BOUND_CUTS = [-0.348, -0.086, 0.113, 0.352];
+function BoundaryLine({ drawn, lang, openedIndices }) {
+  const t = visT(lang);
+  const seen = new Set(openedIndices);
+  const hold = visAvg(drawn, seen, [2, 3]);
+  const push = visAvg(drawn, seen, [1]);
+  if (hold === null && push === null) return null;
+  const lean = (hold === null ? 0 : hold) - (push === null ? 0 : push);
+  const step = visStep(lean, BOUND_CUTS);
+  const W = 300, H = 158, TOP = 24, BOT = 118, CX = 150;
+  const bow = (2 - step) * 21;                 // 正なら内側へ凹む
+  const straight = step >= 3;
+  return (
+    <div className="hs-pass">
+      <div className="hs-pass-title sheen-text">{t.boundTitle}</div>
+      <svg viewBox={`0 0 ${W} ${H}`} className="hs-pass-svg" role="img" aria-label={t.boundTitle}>
+        <HoloDefs id="boundHolo" w={W} h={H} />
+        {/* 押してくる側の矢。段が下がるほど深く刺さる */}
+        {[0, 1, 2].map((k) => {
+          const y = TOP + 24 + k * 24;
+          const tip = CX + bow - 6;
+          return (
+            <g key={k} opacity={straight ? 0.28 : 0.7}>
+              <line x1="34" y1={y} x2={tip} y2={y} stroke="rgba(190,150,220,0.6)" strokeWidth="0.9" />
+              <path d={`M ${tip} ${y} l -6 -3 l 0 6 Z`} fill="rgba(190,150,220,0.7)" />
+            </g>
+          );
+        })}
+        {/* 線そのもの */}
+        <path d={`M ${CX} ${TOP} Q ${CX + bow} ${(TOP + BOT) / 2} ${CX} ${BOT}`}
+          fill="none" stroke="url(#boundHolo)" strokeWidth={straight ? 2.4 : 1.4}
+          strokeDasharray={step === 0 ? "5 5" : ""}
+          className={straight ? "mv-pulse" : ""} style={{ filter: straight ? HOLO_GLOW : "none" }} />
+        {/* 張り直った瞬間の衝撃波 */}
+        {straight && [0, 1].map((k) => (
+          <path key={k} d={`M ${CX} ${TOP} L ${CX} ${BOT}`} fill="none" stroke="url(#boundHolo)"
+            strokeWidth="2" opacity="0.5" className="mv-shock"
+            style={{ animationDelay: `${(k * 0.9).toFixed(1)}s` }} />
+        ))}
+        <text x="60" y={BOT + 22} textAnchor="middle" className="hs-pt-name" fill="rgba(226,214,240,0.55)">{t.boundIn}</text>
+        <text x="238" y={BOT + 22} textAnchor="middle" className="hs-pt-name" fill="rgba(226,214,240,0.75)">{t.boundOut}</text>
+      </svg>
+      <p className="hs-pass-read">{t.boundRead[step]}</p>
+    </div>
+  );
+}
+
+/*
+  【自己妨害を解く】型の輪
+
+    ratio = 型を外す一手 / (型を外す一手 + 繰り返している型/守ろうとしているもの/本当の怖れ の平均)
+
+  ⚠️ 「止める直前の合図」（1枚目）は式に入れず、輪の上の印として置く。
+  合図は強さではなく位置の情報で、足すと意味が混ざる。
+*/
+const SAB_CUTS = [0.223, 0.368, 0.558, 0.664];
+function SabotageRing({ drawn, lang, openedIndices }) {
+  const t = visT(lang);
+  const seen = new Set(openedIndices);
+  const cut = visAvg(drawn, seen, [4]);
+  const grip = visAvg(drawn, seen, [0, 2, 3]);
+  if (cut === null && grip === null) return null;
+  const c = cut === null ? 0 : cut, g = grip === null ? 0 : grip;
+  const ratio = (c + g) > 0 ? c / (c + g) : 0.5;
+  const step = visStep(ratio, SAB_CUTS);
+  const W = 300, H = 176, CX = 150, CY = 84, R = 54;
+  const gapDeg = step * 34;                     // 切れ目の角。段そのものを角度に写す
+  const half = (gapDeg / 2) * (Math.PI / 180);
+  const p = (a) => `${(CX + Math.cos(a) * R).toFixed(1)} ${(CY + Math.sin(a) * R).toFixed(1)}`;
+  const start = -Math.PI / 2 + half, end = -Math.PI / 2 - half + Math.PI * 2;
+  const broken = step >= 4;
+  return (
+    <div className="hs-pass">
+      <div className="hs-pass-title sheen-text">{t.sabTitle}</div>
+      <svg viewBox={`0 0 ${W} ${H}`} className="hs-pass-svg" role="img" aria-label={t.sabTitle}>
+        <HoloDefs id="sabHolo" w={W} h={H} />
+        {/* 輪。切れ目のぶんだけ欠ける */}
+        <path d={`M ${p(start)} A ${R} ${R} 0 1 1 ${p(end)}`} fill="none" stroke="url(#sabHolo)"
+          strokeWidth={broken ? 1.2 : 2} opacity={broken ? 0.5 : 0.95}
+          className={step === 0 ? "mv-spin" : ""} style={{ transformOrigin: `${CX}px ${CY}px` }} />
+        {/* 切れ目から噴く光 */}
+        {step > 0 && [0, 1, 2].map((k) => (
+          <line key={k} x1={CX} y1={CY - R} x2={CX} y2={CY - R - 16 - k * 6}
+            stroke="url(#sabHolo)" strokeWidth="1.6" opacity="0.8" className="mv-burst"
+            style={{ animationDelay: `${(k * 0.4).toFixed(1)}s`, transformOrigin: `${CX}px ${CY}px`, transform: `rotate(${(k - 1) * 16}deg)` }} />
+        ))}
+        {/* 合図。輪の上の一点 */}
+        <circle cx={CX + R} cy={CY} r="5" fill="#FFFFFF" opacity="0.9" className="hs-pass-ring" />
+        <text x={CX + R} y={CY + 22} textAnchor="middle" className="hs-pt-name" fill="rgba(226,214,240,0.6)">{t.sabSignal}</text>
+      </svg>
+      <p className="hs-pass-read">{t.sabRead[step]}</p>
+    </div>
+  );
+}
+
+/*
+  【堂々巡り】渦のほどけ
+
+    unwind = 輪を切る一手 − 回っている考え/回し続けているもの の平均
+
+  剣14枚しか使わないので、出る札はすべて思考の領域にある。
+  ⚠️ 巻き数を乱数で決めないこと。同じ盤面で違う図になる。
+*/
+const LOOP_CUTS = [-0.340, -0.113, 0.105, 0.367];
+function ThoughtSpiral({ drawn, lang, openedIndices }) {
+  const t = visT(lang);
+  const seen = new Set(openedIndices);
+  const spin = visAvg(drawn, seen, [0, 1]);
+  const cut = visAvg(drawn, seen, [2]);
+  if (spin === null && cut === null) return null;
+  const unwind = (cut === null ? 0 : cut) - (spin === null ? 0 : spin);
+  const step = visStep(unwind, LOOP_CUTS);
+  const W = 300, H = 176, CX = 150, CY = 86;
+  const turns = 4 - step * 0.7;                 // 巻き。解けるほど緩む
+  const pts = [];
+  const N = 190;
+  for (let i = 0; i <= N; i++) {
+    const a = (i / N) * turns * Math.PI * 2;
+    const r = 6 + (i / N) * 62;
+    pts.push(`${(CX + Math.cos(a) * r).toFixed(1)} ${(CY + Math.sin(a) * r * 0.72).toFixed(1)}`);
+  }
+  const out = step >= 3;
+  return (
+    <div className="hs-pass">
+      <div className="hs-pass-title sheen-text">{t.loopTitle}</div>
+      <svg viewBox={`0 0 ${W} ${H}`} className="hs-pass-svg" role="img" aria-label={t.loopTitle}>
+        <HoloDefs id="loopHolo" w={W} h={H} />
+        <path d={`M ${pts.join(" L ")}`} fill="none" stroke="url(#loopHolo)" strokeWidth="1.3"
+          opacity="0.85" className="mv-spin" style={{ transformOrigin: `${CX}px ${CY}px` }} />
+        {/* 出口。解けている回だけ、外へ抜ける線が伸びる */}
+        {out && (
+          <line x1={CX + 68} y1={CY} x2={CX + 68 + 30} y2={CY} stroke="url(#loopHolo)" strokeWidth="2"
+            className="mv-bridge" style={{ filter: HOLO_GLOW }} />
+        )}
+        <circle cx={CX} cy={CY} r="3.5" fill="#FFFFFF" opacity="0.85" />
+      </svg>
+      <p className="hs-pass-read">{t.loopRead[step]}</p>
+    </div>
+  );
+}
+
+/*
+  【体からの声】熱の在り処
+
+  小アルカナ56枚だけを使う配置なので、出た札には必ずスートがある。
+  熱の位置はスートで決まる ―― 剣＝頭、聖杯＝胸、棒＝腹、貨幣＝脚。
+  ⚠️ これは元素の対応そのままで、後から意味を足していない。
+
+    heat = 熱を持っている場所/溜まっている感情/頭が休めない理由 の平均 − 身体が求めている手当て
+*/
+const BODY_CUTS = [-0.365, -0.122, 0.141, 0.341];
+const BODY_ZONE_BY_SUIT = { swords: 0, cups: 1, wands: 2, pentacles: 3 };
+function BodyHeat({ drawn, lang, openedIndices }) {
+  const t = visT(lang);
+  const seen = new Set(openedIndices);
+  const heatAvg = visAvg(drawn, seen, [0, 1, 2]);
+  const care = visAvg(drawn, seen, [3]);
+  if (heatAvg === null && care === null) return null;
+  const heat = (heatAvg === null ? 0 : heatAvg) - (care === null ? 0 : care);
+  const step = visStep(heat, BODY_CUTS);
+  // 熱の位置は0枚目のスート。まだ開いていなければ中央（胸）に置く
+  const first = seen.has(0) && drawn[0] ? drawn[0] : null;
+  const zone = first ? (BODY_ZONE_BY_SUIT[String(first.id).split("-")[0]] ?? 1) : 1;
+  const W = 300, H = 190, CX = 150;
+  const ZY = [34, 74, 110, 150];
+  const cooled = step <= 1;
+  return (
+    <div className="hs-pass">
+      <div className="hs-pass-title sheen-text">{t.bodyTitle}</div>
+      <svg viewBox={`0 0 ${W} ${H}`} className="hs-pass-svg" role="img" aria-label={t.bodyTitle}>
+        <HoloDefs id="bodyHolo" w={W} h={H} />
+        {ZY.map((y, k) => {
+          const on = k === zone;
+          return (
+            <g key={k}>
+              <rect x={CX - 34} y={y - 14} width="68" height="28" rx="12"
+                fill={on ? "url(#bodyHolo)" : "none"} opacity={on ? 0.18 + step * 0.14 : 0}
+                className={on && !cooled ? "mv-pulse" : ""} />
+              <rect x={CX - 34} y={y - 14} width="68" height="28" rx="12"
+                fill="none" stroke="url(#bodyHolo)" strokeWidth={on ? 1.4 : 0.6} opacity={on ? 0.9 : 0.22} />
+              <text x={CX} y={y + 4} textAnchor="middle" className="hs-pt-name"
+                fill={on ? "#FFFFFF" : "rgba(226,214,240,0.4)"} style={{ fontWeight: on ? 700 : 400 }}>
+                {t.bodyZone[k]}
+              </text>
+            </g>
+          );
+        })}
+        {/* 手当て。上から降りて熱を冷ます */}
+        {cooled && [0, 1].map((k) => (
+          <line key={k} x1={CX - 52} y1="16" x2={CX - 52} y2="30" stroke="url(#bodyHolo)" strokeWidth="1.4"
+            opacity="0.8" className="mv-spark" style={{ animationDelay: `${(k * 0.7).toFixed(1)}s`, animationDirection: "reverse" }} />
+        ))}
+      </svg>
+      <p className="hs-pass-read">{t.bodyRead[step]}</p>
+    </div>
+  );
+}
+
+/*
+  ============================================================
+  【二領域の対】共通の図
+
+  やる気と地面・好きと暮らし・まだ痛むのは ―― この三つは形が同じ。
+  0番と1番が対になる二つの側、2番がずれの正体、3番がどちらから動かすか。
+  同じ形なので図も一つで足りる。配置ごとに別の図を作ると、
+  同じ絵が三つ別名で増えるだけになる。
+
+  ⚠️ 頭と心（headAndHeart）はここに寄せない。
+  あちらはスートで側を決めており、位置ではなく山札が二極になっている。
+  実測した段の境目もその前提で取ってあるので、混ぜると閾値が無効になる。
+
+  ⚠️ 段は三つ。二枚の差だけで決まる指標に五段は置けない。
+  cardPower は良い向きと悪い向きで二つの山に分かれるので、
+  二枚の差は実質三つの塊にしかならない。五段に切ると、
+  中間の二段が「たまたま境目に落ちただけ」の帯になる。
+  三分位は実測（各40万回、占有はいずれも33.3%）。
+  ============================================================
+*/
+const PAIR_CUTS = {
+  driveAndGround: [-0.078, 0.078],
+  loveAndLiving:  [-0.102, 0.102],
+  stillHurts:     [-0.117, 0.117],
+  newRelation:    [-0.117, 0.117],
+};
+/* 対の添字。stillHurts だけ 0番が「いま残っている痛み」なので、対は1と2 */
+const PAIR_IDX = {
+  driveAndGround: [0, 1],
+  loveAndLiving:  [0, 1],
+  stillHurts:     [1, 2],
+  /* 新しい関係。1=相手が持ち込むもの、2=自分が持ち込むもの */
+  newRelation:    [1, 2],
+};
+/*
+  「先に手を付ける側」を決める札の位置。
+  ⚠️ 3番固定にしないこと。新しい関係では3番は「いまの課題」で、
+  育てる方法は5番にある。固定すると課題の札で側を決めてしまう。
+*/
+const PAIR_MOVER_IDX = {
+  driveAndGround: 3, loveAndLiving: 3, stillHurts: 3, newRelation: 5,
+};
+
+function PairTension({ spreadKey, drawn, labels, lang, openedIndices }) {
+  const t = visT(lang);
+  const seen = new Set(openedIndices);
+  const [ia, ib] = PAIR_IDX[spreadKey] || [0, 1];
+  const a = visAvg(drawn, seen, [ia]);
+  const b = visAvg(drawn, seen, [ib]);
+  if (a === null && b === null) return null;
+  const lean = (a === null ? 0 : a) - (b === null ? 0 : b);
+  const step = visStep(lean, PAIR_CUTS[spreadKey] || [-0.1, 0.1]);
+  /* 3番（どちらから動かすか）は、傾きではなく「先に手を付ける側」の印にする */
+  const mi = PAIR_MOVER_IDX[spreadKey] ?? 3;
+  const mover = seen.has(mi) && drawn[mi]
+    ? (isGoodOrientation(drawn[mi], drawn[mi].reversed) ? 0 : 1) : null;
+  const W = 300, H = 168, CX = 150, TOP = 40, R = 40;
+  /* 皿の高さ。傾いた側が下がる */
+  const tilt = (step - 1) * 16;
+  const la = TOP + 26 + tilt, lb = TOP + 26 - tilt;
+  /* ずれの札。対の二枚と mover 以外で最初に来るものを使う */
+  const gi = spreadKey === "newRelation" ? 3 : 2;
+  const gapCard = seen.has(gi) && drawn[gi] ? drawn[gi] : null;
+  const wide = gapCard ? cardPower(gapCard) : 0;
+  return (
+    <div className="hs-pass">
+      <div className="hs-pass-title sheen-text">{t.pairTitle}</div>
+      <svg viewBox={`0 0 ${W} ${H}`} className="hs-pass-svg" role="img" aria-label={t.pairTitle}>
+        <HoloDefs id="pairHolo" w={W} h={H} />
+        {/* 梁。傾きそのもの */}
+        <line x1={CX - 92} y1={la} x2={CX + 92} y2={lb} stroke="url(#pairHolo)" strokeWidth="1.8" opacity="0.85" />
+        <line x1={CX} y1={(la + lb) / 2} x2={CX} y2={TOP + 92} stroke="url(#pairHolo)" strokeWidth="1" opacity="0.4" />
+        {/* 二つの皿 */}
+        {[[CX - 92, la, ia], [CX + 92, lb, ib]].map(([x, y, idx], k) => {
+          const on = seen.has(idx);
+          const isMover = mover === k;
+          return (
+            <g key={k}>
+              <circle cx={x} cy={y} r={R * 0.42} fill="url(#pairHolo)"
+                opacity={on ? (isMover ? 0.55 : 0.24) : 0.08}
+                className={isMover ? "mv-pulse" : ""} />
+              <circle cx={x} cy={y} r={R * 0.42} fill="none" stroke="url(#pairHolo)"
+                strokeWidth={isMover ? 1.8 : 0.9} opacity={on ? 0.95 : 0.25}
+                strokeDasharray={on ? "" : "3 4"} />
+              <text x={x} y={y + R * 0.42 + 17} textAnchor="middle" className="hs-pt-name"
+                fill={isMover ? "#FFFFFF" : "rgba(226,214,240,0.6)"}
+                style={{ fontWeight: isMover ? 700 : 400 }}>
+                {(labels && labels[idx]) ? hsWrapLabel(labels[idx], 9, 2)[0] : ""}
+              </text>
+            </g>
+          );
+        })}
+        {/*
+          ずれ。二つの皿の間の裂け目として出す。
+          ⚠️ 傾きと同じものを二度描かないこと。傾きは「どちらが強いか」、
+          裂け目は「どれだけ噛み合っていないか」で、別のことを言っている。
+        */}
+        {gapCard && (
+          <g>
+            {[0, 1, 2].map((k) => (
+              <line key={k} x1={CX - 2 - wide * 9} y1={TOP + 100 + k * 9} x2={CX + 2 + wide * 9} y2={TOP + 100 + k * 9}
+                stroke="url(#pairHolo)" strokeWidth="1.2" opacity={0.35 + wide * 0.5}
+                className="mv-shock" style={{ animationDelay: `${(k * 0.6).toFixed(1)}s` }} />
+            ))}
+          </g>
+        )}
+        {mover !== null && (
+          <text x={CX} y={H - 6} textAnchor="middle" className="hs-pt-name" fill="rgba(226,214,240,0.7)">
+            {t.pairMover((labels && labels[mover === 0 ? ia : ib]) || "")}
+          </text>
+        )}
+      </svg>
+      <p className="hs-pass-read">
+        {t.pairRead[step]((labels && labels[ia]) || "", (labels && labels[ib]) || "")}
+      </p>
+    </div>
+  );
+}
+
+/*
+  【この人は安全か】言葉と行いのずれ
+
+    safety = 日ごろの振る舞い/あなたに向けているもの の平均
+           − 言葉と行いのずれ/見ないふりをしている合図 の平均
+
+  ⚠️ 「近づく前に確かめること」（4番）を式に入れないこと。
+  あれは相談者が取る手であって、相手の安全性ではない。
+  入れると、確かめようとしている人ほど相手が安全に見える。
+
+  ⚠️ この図で「危険な人だ」と断定しない。出せるのは、
+  いま見えている振る舞いと、見ないでいる合図との差だけ。
+*/
+const SAFE_CUTS = [-0.289, -0.066, 0.063, 0.289];
+function SafetyGap({ drawn, lang, openedIndices }) {
+  const t = visT(lang);
+  const seen = new Set(openedIndices);
+  const shown = visAvg(drawn, seen, [0, 1]);
+  const hidden = visAvg(drawn, seen, [2, 3]);
+  if (shown === null && hidden === null) return null;
+  const safety = (shown === null ? 0 : shown) - (hidden === null ? 0 : hidden);
+  const step = visStep(safety, SAFE_CUTS);
+  const W = 300, H = 162, CX = 150, CY = 74;
+  /* 二重の輪。外＝見えている振る舞い、内＝見ないでいる合図。ずれると芯が外れる */
+  const off = (2 - step) * 13;
+  const aligned = step >= 3;
+  return (
+    <div className="hs-pass">
+      <div className="hs-pass-title sheen-text">{t.safeTitle}</div>
+      <svg viewBox={`0 0 ${W} ${H}`} className="hs-pass-svg" role="img" aria-label={t.safeTitle}>
+        <HoloDefs id="safeHolo" w={W} h={H} />
+        <circle cx={CX} cy={CY} r="52" fill="none" stroke="url(#safeHolo)" strokeWidth="1.4" opacity="0.8" />
+        <circle cx={CX + off} cy={CY} r="26" fill="url(#safeHolo)" opacity={aligned ? 0.4 : 0.22}
+          className={aligned ? "mv-pulse" : ""} />
+        <circle cx={CX + off} cy={CY} r="26" fill="none" stroke="url(#safeHolo)" strokeWidth="1.1"
+          strokeDasharray={aligned ? "" : "4 5"} opacity="0.9" />
+        {/* ずれの矢印。芯が外れているぶんだけ伸びる */}
+        {!aligned && (
+          <g>
+            <line x1={CX} y1={CY} x2={CX + off} y2={CY} stroke="#FFFFFF" strokeWidth="1" opacity="0.7" />
+            <circle cx={CX} cy={CY} r="2.4" fill="#FFFFFF" opacity="0.8" />
+          </g>
+        )}
+        <text x={CX} y={CY + 70} textAnchor="middle" className="hs-pt-name" fill="rgba(226,214,240,0.6)">{t.safeOuter}</text>
+        <text x={CX + off} y={CY - 34} textAnchor="middle" className="hs-pt-name" fill="rgba(226,214,240,0.75)">{t.safeInner}</text>
+      </svg>
+      <p className="hs-pass-read">{t.safeRead[step]}</p>
+    </div>
+  );
+}
+
+/*
+  【決めきれない】止まった振り子
+
+    move = 期限を切るならいつか/決めるために足りない一つ の平均
+         − 選ばずにいて守れているもの/決めた後に来る面倒 の平均
+
+  ⚠️ どちらを選ぶかは出さない。この配置は選択肢を比べていない
+  （それは二者択一の仕事）。出すのは、決めに向かって動けているかだけ。
+*/
+const UNDEC_CUTS = [-0.289, -0.063, 0.063, 0.289];
+function StalledPendulum({ drawn, lang, openedIndices }) {
+  const t = visT(lang);
+  const seen = new Set(openedIndices);
+  const push = visAvg(drawn, seen, [3, 4]);
+  const hold = visAvg(drawn, seen, [1, 2]);
+  if (push === null && hold === null) return null;
+  const move = (push === null ? 0 : push) - (hold === null ? 0 : hold);
+  const step = visStep(move, UNDEC_CUTS);
+  const W = 300, H = 170, CX = 150, PIV = 26, LEN = 96;
+  const ang = (step - 2) * 17;                    // 振れ幅。止まっているほど真下
+  const rad = (ang * Math.PI) / 180;
+  const bx = CX + Math.sin(rad) * LEN, by = PIV + Math.cos(rad) * LEN;
+  const swinging = step >= 3;
+  return (
+    <div className="hs-pass">
+      <div className="hs-pass-title sheen-text">{t.undecTitle}</div>
+      <svg viewBox={`0 0 ${W} ${H}`} className="hs-pass-svg" role="img" aria-label={t.undecTitle}>
+        <HoloDefs id="undecHolo" w={W} h={H} />
+        {/* 振れうる幅。実際に振れている分だけ弧が濃くなる */}
+        <path d={`M ${CX - Math.sin(0.6) * LEN} ${PIV + Math.cos(0.6) * LEN} A ${LEN} ${LEN} 0 0 1 ${CX + Math.sin(0.6) * LEN} ${PIV + Math.cos(0.6) * LEN}`}
+          fill="none" stroke="url(#undecHolo)" strokeWidth="0.7" opacity="0.2" strokeDasharray="3 5" />
+        <g className={swinging ? "mv-swing" : ""} style={{ transformOrigin: `${CX}px ${PIV}px` }}>
+          <line x1={CX} y1={PIV} x2={bx} y2={by} stroke="url(#undecHolo)" strokeWidth="1.3" opacity="0.85" />
+          <circle cx={bx} cy={by} r="11" fill="url(#undecHolo)" opacity={swinging ? 0.9 : 0.45}
+            style={{ filter: swinging ? HOLO_GLOW : "none" }} />
+        </g>
+        <circle cx={CX} cy={PIV} r="3.5" fill="#FFFFFF" opacity="0.9" />
+        <text x="52" y={H - 10} textAnchor="middle" className="hs-pt-name" fill="rgba(226,214,240,0.5)">{t.undecHold}</text>
+        <text x="248" y={H - 10} textAnchor="middle" className="hs-pt-name" fill="rgba(226,214,240,0.7)">{t.undecPush}</text>
+      </svg>
+      <p className="hs-pass-read">{t.undecRead[step]}</p>
+    </div>
+  );
+}
+
+/*
+  ============================================================
+  【推進と抵抗】坂
+
+  願いの実現・キャリアの岐路・お金と価値観・比べるのをやめる ――
+  この四つは「前へ出す側の札」と「引き戻す側の札」に位置が分かれている。
+  分かれ方は配置ごとに違うので、添字だけ表に持つ。
+
+  ⚠️ 到達点を「叶う／叶わない」として出さないこと。
+  出しているのは、いま推している力と引き戻している力の差だけで、
+  結果ではない。文言も「どこまで押せているか」に留める。
+  ============================================================
+*/
+const DRIVE_CFG = {
+  manifestation: { push: [2, 4], hold: [1, 3], cuts: [-0.289, -0.066, 0.063, 0.289] },
+  careerCross:   { push: [1, 4], hold: [2, 3], cuts: [-0.289, -0.063, 0.063, 0.289] },
+  moneyMind:     { push: [3, 4], hold: [1, 2], cuts: [-0.289, -0.063, 0.063, 0.289] },
+  comparison:    { push: [2, 3], hold: [0, 1], cuts: [-0.289, -0.063, 0.063, 0.289] },
+};
+function ObstacleDrive({ spreadKey, drawn, lang, openedIndices }) {
+  const t = visT(lang);
+  const cfg = DRIVE_CFG[spreadKey];
+  if (!cfg) return null;
+  const seen = new Set(openedIndices);
+  const p = visAvg(drawn, seen, cfg.push);
+  const h = visAvg(drawn, seen, cfg.hold);
+  if (p === null && h === null) return null;
+  const drive = (p === null ? 0 : p) - (h === null ? 0 : h);
+  const step = visStep(drive, cfg.cuts);
+  const W = 300, H = 170, X0 = 34, X1 = 266, Y0 = 130, Y1 = 42;
+  const at = step / 4;
+  const mx = X0 + (X1 - X0) * (0.12 + at * 0.76);
+  const my = Y0 + (Y1 - Y0) * (0.12 + at * 0.76);
+  const high = step >= 3;
+  return (
+    <div className="hs-pass">
+      <div className="hs-pass-title sheen-text">{t.driveTitle}</div>
+      <svg viewBox={`0 0 ${W} ${H}`} className="hs-pass-svg" role="img" aria-label={t.driveTitle}>
+        <HoloDefs id="driveHolo" w={W} h={H} />
+        {/* 坂。登りきった先は描かない ―― 結果を図に置かないため */}
+        <line x1={X0} y1={Y0} x2={X1} y2={Y1} stroke="url(#driveHolo)" strokeWidth="1.2" opacity="0.4" />
+        <line x1={X0} y1={Y0} x2={X1} y2={Y0} stroke="url(#driveHolo)" strokeWidth="0.6" opacity="0.18" strokeDasharray="4 6" />
+        {/* 五つの目盛り。段そのもの */}
+        {[0, 1, 2, 3, 4].map((k) => {
+          const f = 0.12 + (k / 4) * 0.76;
+          return <circle key={k} cx={X0 + (X1 - X0) * f} cy={Y0 + (Y1 - Y0) * f} r="2"
+            fill="url(#driveHolo)" opacity={k <= step ? 0.8 : 0.2} />;
+        })}
+        {/* 引き戻す力。玉の後ろから下へ引く */}
+        <g opacity={high ? 0.3 : 0.85}>
+          <line x1={mx - 34} y1={my + 20} x2={mx - 10} y2={my + 6} stroke="rgba(190,150,220,0.7)" strokeWidth="1.1" />
+          <path d={`M ${mx - 34} ${my + 20} l 8 -1 l -3 7 Z`} fill="rgba(190,150,220,0.8)" />
+        </g>
+        {/* 玉 */}
+        <circle cx={mx} cy={my} r="12" fill="url(#driveHolo)" opacity={high ? 0.95 : 0.6}
+          className={high ? "mv-pulse" : ""} style={{ filter: high ? HOLO_GLOW : "none" }} />
+        <text x={X0 + 6} y={Y0 + 20} className="hs-pt-name" fill="rgba(226,214,240,0.5)">{t.driveHold}</text>
+        <text x={X1 - 6} y={Y1 - 12} textAnchor="end" className="hs-pt-name" fill="rgba(226,214,240,0.75)">{t.drivePush}</text>
+      </svg>
+      <p className="hs-pass-read">{t.driveRead[step]}</p>
+    </div>
+  );
+}
+
+/*
+  【流れの帯】今月の流れ・季節の巡り
+
+  一列に並ぶ配置なので、各位置の高さをそのまま帯にできる。
+  ⚠️ 高さは吉凶ではなく、その位置の札の強さである。
+  「注意すべきこと」が高く出たら、注意すべきことが強いという意味で、
+  月が悪いという意味ではない。文言でそこを取り違えないこと。
+
+  ⚠️ 総評（tide）は、押す側の位置と引く側の位置を配置ごとに指定する。
+  全位置の平均にすると、障害の札が強い月と好機の札が弱い月が同じ値になる。
+*/
+const FLOW_CFG = {
+  monthly: { up: [1, 3, 5], down: [2, 4], cuts: [-0.246, -0.076, 0.082, 0.249] },
+  season:  { up: [1, 2, 4], down: [3],    cuts: [-0.372, -0.120, 0.146, 0.339] },
+};
+function TimelineFlow({ spreadKey, drawn, labels, lang, openedIndices }) {
+  const t = visT(lang);
+  const cfg = FLOW_CFG[spreadKey];
+  if (!cfg) return null;
+  const seen = new Set(openedIndices);
+  const u = visAvg(drawn, seen, cfg.up);
+  const d = visAvg(drawn, seen, cfg.down);
+  if (u === null && d === null) return null;
+  const tide = (u === null ? 0 : u) - (d === null ? 0 : d);
+  const step = visStep(tide, cfg.cuts);
+  const n = (drawn || []).length || 1;
+  const W = 300, H = 176, BASE = 122, TOPY = 26;
+  const bw = (W - 40) / n;
+  /* 開いた中でいちばん高い位置。ここだけ名前を白で出す */
+  let peak = -1, peakV = -1;
+  (drawn || []).forEach((c, i) => {
+    if (!seen.has(i) || !c) return;
+    const v = cardPower(c);
+    if (v > peakV) { peakV = v; peak = i; }
+  });
+  return (
+    <div className="hs-pass">
+      <div className="hs-pass-title sheen-text">{t.flowTitle}</div>
+      <svg viewBox={`0 0 ${W} ${H}`} className="hs-pass-svg" role="img" aria-label={t.flowTitle}>
+        <HoloDefs id="flowHolo" w={W} h={H} />
+        <line x1="20" y1={BASE} x2={W - 20} y2={BASE} stroke="url(#flowHolo)" strokeWidth="0.7" opacity="0.35" />
+        {(drawn || []).map((c, i) => {
+          const on = seen.has(i) && c;
+          const v = on ? cardPower(c) : 0;
+          const hgt = 6 + v * (BASE - TOPY - 6);
+          const x = 20 + bw * i + bw * 0.18, w = bw * 0.64;
+          const isPeak = i === peak;
+          return (
+            <g key={i}>
+              <rect x={x} y={BASE - hgt} width={w} height={hgt} rx="3"
+                fill="url(#flowHolo)" opacity={on ? (isPeak ? 0.9 : 0.42) : 0.08}
+                className={isPeak ? "mv-pulse" : ""} />
+              <rect x={x} y={BASE - hgt} width={w} height={hgt} rx="3" fill="none"
+                stroke="url(#flowHolo)" strokeWidth={isPeak ? 1.2 : 0.5}
+                opacity={on ? 0.85 : 0.2} strokeDasharray={on ? "" : "2 3"} />
+              <text x={x + w / 2} y={BASE + 14} textAnchor="middle" className="hs-pt-name"
+                fill={isPeak ? "#FFFFFF" : "rgba(226,214,240,0.45)"}
+                style={{ fontWeight: isPeak ? 700 : 400, fontSize: "7px" }}>
+                {(labels && labels[i]) ? hsWrapLabel(labels[i], 5, 2)[0] : ""}
+              </text>
+            </g>
+          );
+        })}
+        {peak >= 0 && (
+          <text x={W / 2} y={H - 6} textAnchor="middle" className="hs-pt-name" fill="rgba(226,214,240,0.7)">
+            {t.flowPeak((labels && labels[peak]) || "")}
+          </text>
+        )}
+      </svg>
+      <p className="hs-pass-read">{t.flowRead[step]}</p>
+    </div>
+  );
+}
+
+/*
+  【人物を読む】明暗の球
+
+  1番が最大の長所、2番が最大の短所。位置がそのまま二面なので、
+  一つの球の明るい側と暗い側の取り分で出せる。
+
+  ⚠️ 「良い人／悪い人」を出さないこと。長所と短所はどちらも
+  その人の同じ性質の別の面として扱う。だから二つの円ではなく
+  一つの球を割る形にしている。
+*/
+const CHAR_CUTS = [0.224, 0.457, 0.544, 0.777];
+function TwoFaceOrb({ drawn, lang, openedIndices }) {
+  const t = visT(lang);
+  const seen = new Set(openedIndices);
+  const good = visAvg(drawn, seen, [1]);
+  const bad = visAvg(drawn, seen, [2]);
+  if (good === null && bad === null) return null;
+  const g = good === null ? 0 : good, b = bad === null ? 0 : bad;
+  const ratio = (g + b) > 0 ? g / (g + b) : 0.5;
+  const step = visStep(ratio, CHAR_CUTS);
+  const W = 300, H = 176, CX = 150, CY = 84, R = 56;
+  /* 分割線。比に応じて球を横に割る */
+  const split = CX - R + R * 2 * (1 - ratio);
+  return (
+    <div className="hs-pass">
+      <div className="hs-pass-title sheen-text">{t.orbTitle}</div>
+      <svg viewBox={`0 0 ${W} ${H}`} className="hs-pass-svg" role="img" aria-label={t.orbTitle}>
+        <HoloDefs id="orbHolo" w={W} h={H} />
+        <clipPath id="orbClip"><circle cx={CX} cy={CY} r={R} /></clipPath>
+        <g clipPath="url(#orbClip)">
+          <rect x={CX - R} y={CY - R} width={R * 2} height={R * 2} fill="rgba(10,8,20,0.8)" />
+          <rect x={split} y={CY - R} width={CX + R - split} height={R * 2}
+            fill="url(#orbHolo)" opacity="0.55" className="mv-pulse" />
+        </g>
+        <circle cx={CX} cy={CY} r={R} fill="none" stroke="url(#orbHolo)" strokeWidth="1.3" opacity="0.9" />
+        <line x1={split} y1={CY - R} x2={split} y2={CY + R} stroke="#FFFFFF" strokeWidth="1" opacity="0.6" />
+        <text x={CX - R - 4} y={CY + R + 18} className="hs-pt-name" fill="rgba(226,214,240,0.5)">{t.orbShade}</text>
+        <text x={CX + R + 4} y={CY + R + 18} textAnchor="end" className="hs-pt-name" fill="rgba(226,214,240,0.75)">{t.orbLight}</text>
+      </svg>
+      <p className="hs-pass-read">{t.orbRead[step]}</p>
+    </div>
+  );
+}
+
+/*
+  【直感とのつながり】通り道
+
+    open = 直感の開き具合 / つながりを強める方法 の平均 − 邪魔しているもの
+
+  ⚠️ 「霊感がある／ない」を出さないこと。図が示すのは、
+  いま通り道がどれだけ開いているかであって、能力の有無ではない。
+*/
+const CHANNEL_CUTS = [-0.348, -0.086, 0.113, 0.348];
+function OpenChannel({ drawn, lang, openedIndices }) {
+  const t = visT(lang);
+  const seen = new Set(openedIndices);
+  const o = visAvg(drawn, seen, [0, 3]);
+  const block = visAvg(drawn, seen, [5]);
+  if (o === null && block === null) return null;
+  const open = (o === null ? 0 : o) - (block === null ? 0 : block);
+  const step = visStep(open, CHANNEL_CUTS);
+  const W = 300, H = 186, CX = 150, TOPY = 20, BOTY = 158;
+  const wide = 8 + step * 11;                    // 管の幅。開くほど広い
+  const flowing = step >= 3;
+  return (
+    <div className="hs-pass">
+      <div className="hs-pass-title sheen-text">{t.chanTitle}</div>
+      <svg viewBox={`0 0 ${W} ${H}`} className="hs-pass-svg" role="img" aria-label={t.chanTitle}>
+        <HoloDefs id="chanHolo" w={W} h={H} />
+        {/* 管の壁 */}
+        <path d={`M ${CX - wide} ${TOPY} L ${CX - wide} ${BOTY}`} stroke="url(#chanHolo)" strokeWidth="1.2" opacity="0.7" />
+        <path d={`M ${CX + wide} ${TOPY} L ${CX + wide} ${BOTY}`} stroke="url(#chanHolo)" strokeWidth="1.2" opacity="0.7" />
+        {/* 通っているもの */}
+        <rect x={CX - wide} y={TOPY} width={wide * 2} height={BOTY - TOPY}
+          fill="url(#chanHolo)" opacity={0.08 + step * 0.09} className={flowing ? "mv-pulse" : ""} />
+        {Array.from({ length: 1 + step }).map((_, k) => (
+          <circle key={k} cx={CX - wide + 4 + ((k * 13) % Math.max(1, wide * 2 - 8))} cy={BOTY} r="2.2"
+            fill="url(#chanHolo)" opacity="0.9" className="mv-spark"
+            style={{ animationDelay: `${(k * 0.5).toFixed(1)}s` }} />
+        ))}
+        {/* 邪魔しているもの。管を横切る帯 */}
+        {step <= 1 && (
+          <rect x={CX - wide - 12} y={(TOPY + BOTY) / 2 - 5} width={wide * 2 + 24} height="10" rx="3"
+            fill="rgba(20,14,32,0.9)" stroke="rgba(190,150,220,0.7)" strokeWidth="0.9" />
+        )}
+        <text x={CX} y={TOPY - 6} textAnchor="middle" className="hs-pt-name" fill="rgba(226,214,240,0.7)">{t.chanIn}</text>
+        <text x={CX} y={H - 6} textAnchor="middle" className="hs-pt-name" fill="rgba(226,214,240,0.55)">{t.chanOut}</text>
+      </svg>
+      <p className="hs-pass-read">{t.chanRead[step]}</p>
+    </div>
+  );
+}
+
+/*
+  クイズの文言。
+  ⚠️ ここも T に足さない。11言語に散らすと一つ抜けたところで落ちる。
+  未訳は英語へ落とす（spreadInfo と同じ方針）。
+*/
+const QUIZ_I18N = {
+  ja: {
+    title: "タロットクイズ",
+    tabNote: "78枚から出題",
+    lead: "78枚すべてから出題します。図鑑で開いていない札も出ます。",
+    upLabel: "正位置", revLabel: "逆位置",
+    /*
+      ⚠️ 設問は三つに分ける ―― lead（前置き）、subject（引用そのもの）、ask（問い）。
+      一本の文字列にすると、引用が地の文に飲まれて改行がおかしくなる。
+      「支配力」が行をまたいだのはそれが原因。引用は独立した枠に置く。
+    */
+    qLayer: (txt, o, layer) => ({
+      lead: `ある札の${o}の${layer}です。`, subject: txt, ask: "どの札でしょう。",
+    }),
+    qReverse: (n, o, layer) => ({
+      lead: `「${n}」の${o}。`, subject: null, ask: `その${layer}はどれでしょう。`,
+    }),
+    qUpright: (n, kw) => ({
+      lead: `「${n}」に、こう出ました。`, subject: kw,
+      ask: "これは正位置と逆位置、どちらでしょう。",
+    }),
+    qElement: (s) => ({
+      lead: null, subject: s, ask: "このスートに対応する元素はどれでしょう。",
+    }),
+    qOrder: (n, next) => ({
+      lead: "大アルカナの道行きで、", subject: n,
+      ask: next ? "この次に来るのはどの札でしょう。" : "この一つ前はどの札でしょう。",
+    }),
+    nCard: (n, kw) => `${n} ―― ${kw}`,
+    nUpright: (n, o) => `${n}の${o}でした。`,
+    nInverted: (n) => `${n}の逆位置でした。この札は、正逆と吉凶が一致しません。逆位置のほうが良い向きとして扱われる四枚（死神・悪魔・塔・月）のひとつです。`,
+    nElement: (s, e) => `${s}は${e}に対応します。`,
+    nOrder: (i, a, j, b) => `${i}「${a}」の${j > i ? "次" : "前"}は ${j}「${b}」。`,
+    correct: "正解", wrong: "不正解",
+    next: "次の問題", restart: "もう一度", back: "戻る",
+    scoreLine: (a, b) => `${b}問中 ${a}問 正解`,
+    streak: (n) => `${n}問連続正解`,
+    hintKind: { layer: "文から札へ", reverse: "札から文へ", upright: "正逆", element: "元素", order: "大アルカナの順" },
+  },
+  en: {
+    title: "Tarot Quiz",
+    tabNote: "All 78 cards",
+    lead: "Questions are drawn from all 78 cards, including ones you have not collected.",
+    upLabel: "Upright", revLabel: "Reversed",
+    qLayer: (txt, o, layer) => ({
+      lead: `A card's ${o.toLowerCase()} ${layer.toLowerCase()}.`, subject: txt, ask: "Which card is it?",
+    }),
+    qReverse: (n, o, layer) => ({
+      lead: `"${n}", ${o.toLowerCase()}.`, subject: null, ask: `Which ${layer.toLowerCase()} belongs to it?`,
+    }),
+    qUpright: (n, kw) => ({
+      lead: `"${n}" came up like this.`, subject: kw, ask: "Upright or reversed?",
+    }),
+    qElement: (s) => ({ lead: null, subject: s, ask: "Which element corresponds to this suit?" }),
+    qOrder: (n, next) => ({
+      lead: "In the journey of the Major Arcana,", subject: n,
+      ask: next ? "which card comes next?" : "which card comes before it?",
+    }),
+    nCard: (n, kw) => `${n} — ${kw}`,
+    nUpright: (n, o) => `It was ${n}, ${o.toLowerCase()}.`,
+    nInverted: (n) => `It was ${n}, reversed. For this card, orientation and fortune do not match: it is one of the four (Death, Devil, Tower, Moon) whose reversed position counts as the favourable one.`,
+    nElement: (s, e) => `${s} corresponds to ${e}.`,
+    nOrder: (i, a, j, b) => `${j > i ? "After" : "Before"} ${i} "${a}" comes ${j} "${b}".`,
+    correct: "Correct", wrong: "Not quite",
+    next: "Next", restart: "Again", back: "Back",
+    scoreLine: (a, b) => `${a} of ${b} correct`,
+    streak: (n) => `${n} in a row`,
+    hintKind: { layer: "Text to card", reverse: "Card to text", upright: "Orientation", element: "Element", order: "Major order" },
+  },
+};
+const quizT = (lang) => QUIZ_I18N[lang] || QUIZ_I18N.en;
+
+/*
+  クイズ画面。
+
+  ⚠️ AI鑑定の回数を消費しない。ここはAPIを一切呼ばない。
+  引かずに戻ってこられる導線をひとつ作るのが目的なので、
+  ここで回数を減らすと目的と手段が食い違う。
+
+  ⚠️ 成績を保存しない。正答率を記録すると、
+  知らない札を引きにくる場所ではなく、点を守る場所になる。
+*/
+function QuizPanel({ lang, onBack }) {
+  const t = quizT(lang);
+  const [q, setQ] = React.useState(() => buildQuizQuestion(lang));
+  const [picked, setPicked] = React.useState(null);
+  const [asked, setAsked] = React.useState(0);
+  const [hit, setHit] = React.useState(0);
+  const [streak, setStreak] = React.useState(0);
+
+  /* 言語が変わったら作り直す。問題文だけ差し替えると選択肢と食い違う */
+  React.useEffect(() => { setQ(buildQuizQuestion(lang)); setPicked(null); }, [lang]);
+
+  const answer = (i) => {
+    if (picked !== null) return;
+    setPicked(i);
+    setAsked((n) => n + 1);
+    if (i === q.answer) { setHit((n) => n + 1); setStreak((n) => n + 1); }
+    else setStreak(0);
+  };
+  const next = () => { setQ(buildQuizQuestion(lang)); setPicked(null); };
+
+  return (
+    <div className="quiz-wrap">
+      <div className="quiz-card">
+      <div className="quiz-head">
+        <span className="quiz-kind">{t.hintKind[q.kind] || ""}</span>
+        {asked > 0 && <span className="quiz-score">{t.scoreLine(hit, asked)}</span>}
+        {streak >= 3 && <span className="quiz-streak sheen-text">{t.streak(streak)}</span>}
+      </div>
+      {asked === 0 && <p className="quiz-lead">{t.lead}</p>}
+      {/*
+        ⚠️ 引用は必ず独立した枠に置く。地の文と混ぜない。
+        混ぜると中央揃えの折り返しが語の途中に入り、
+        「支配力」が行をまたぐような読みにくい割れ方をする。
+      */}
+      {q.q.lead && <p className="quiz-prompt-lead">{q.q.lead}</p>}
+      {q.q.subject && (
+        <div className="quiz-subject">
+          <span className="quiz-subject-text sheen-text">{q.q.subject}</span>
+        </div>
+      )}
+      <p className="quiz-prompt-ask">{q.q.ask}</p>
+      <div className="quiz-opts">
+        {q.options.map((o, i) => {
+          const done = picked !== null;
+          const isAns = i === q.answer;
+          const isPick = i === picked;
+          const cls = !done ? "" : isAns ? " right" : isPick ? " wrong" : " dim";
+          return (
+            <button key={i} className={`quiz-opt${cls}`} onClick={() => answer(i)} disabled={done}>
+              {o}
+            </button>
+          );
+        })}
+      </div>
+      {picked !== null && (
+        <div className={`quiz-note${picked === q.answer ? " ok" : ""}`}>
+          <div className="quiz-verdict">{picked === q.answer ? t.correct : t.wrong}</div>
+          <p>{q.note}</p>
+          <button className="quiz-next" onClick={next}>{t.next}</button>
+        </div>
+      )}
+      </div>
+      <button className="quiz-back" onClick={onBack}>{t.back}</button>
+    </div>
+  );
+}
+
+/*
+  ============================================================
+  クイズ
+
+  ⚠️ 出題は78枚全体から行う。図鑑で開いた札に限定しないこと。
+  一度そう設計しかけたが、利益相反になる ――
+  熟知者ほど出題範囲が広く、知識を欲しい新規ほど狭くなる。
+  クイズは知らない札を教えるためにあるので、順序が逆になる。
+
+  ⚠️ 問題文を新規に書き起こさない。
+  出題も選択肢も、既にあるデータ（キーワード表・スート表・
+  山札の指定・ウェイト表）から機械的に組む。
+  文章を書き足すと、11言語ぶんの翻訳がそのまま負債になる。
+
+  ⚠️ 誤答は乱数で選ばない。「同じ数の別スート」「同じスートの隣の数」から
+  作る。棒の2を答えにしたら、棒の3・貨幣の2・貨幣の3 が並ぶ。
+  こうすると、間違えたときに スート×数 の格子のどこで間違えたかが分かる。
+  無関係な札を混ぜると、消去法で当たってしまい何も残らない。
+  ============================================================
+*/
+const QUIZ_SUITS = ["wands", "cups", "swords", "pentacles"];
+
+/** 78枚の索引。id と、キーワードを引くのに要るものだけ持つ */
+function quizAllCards() {
+  const out = [];
+  for (let i = 0; i < 22; i++) out.push({ id: `major-${i}`, suit: "major", rank: i });
+  QUIZ_SUITS.forEach((s) => {
+    for (let i = 0; i < 14; i++) out.push({ id: `${s}-${i}`, suit: s, rank: i });
+  });
+  return out;
+}
+const QUIZ_CARDS = quizAllCards();
+
+/** id から表示名とキーワードを解決する。既存の関数だけを通す */
+function quizName(c, lang) {
+  const src = c.suit === "major"
+    ? MAJOR_LIST[c.rank]
+    : MINOR_LIST.find((x) => x.id === c.id);
+  return src ? getCardName(src, lang) : c.id;
+}
+function quizKeyword(c, reversed, lang) {
+  if (c.suit === "major") return majorKeyword(c.rank, reversed, lang);
+  const src = MINOR_LIST.find((x) => x.id === c.id);
+  return minorKeyword(c.suit, c.rank, reversed, lang, src && src.up, src && src.rev);
+}
+
+/*
+  誤答の作り方。
+  小アルカナ … 同じ数の別スート、同じスートの隣の数。
+  大アルカナ … 番号が近い札（物語の順序が隣なので、そこが紛らわしい）。
+  ⚠️ 足りないときだけ全体から補う。補った分は最後に混ぜる。
+*/
+function quizDistractors(ans, n) {
+  const pool = [];
+  const push = (id) => {
+    const c = QUIZ_CARDS.find((x) => x.id === id);
+    if (c && c.id !== ans.id && !pool.some((p) => p.id === c.id)) pool.push(c);
+  };
+  if (ans.suit === "major") {
+    [-2, -1, 1, 2, -3, 3].forEach((d) => {
+      const r = ans.rank + d;
+      if (r >= 0 && r < 22) push(`major-${r}`);
+    });
+  } else {
+    QUIZ_SUITS.forEach((s) => { if (s !== ans.suit) push(`${s}-${ans.rank}`); });
+    [1, -1, 2, -2].forEach((d) => {
+      const r = ans.rank + d;
+      if (r >= 0 && r < 14) push(`${ans.suit}-${r}`);
+    });
+    /* 同じ数の別スートの、隣の数。格子の斜めを埋める */
+    QUIZ_SUITS.forEach((s) => {
+      if (s === ans.suit) return;
+      [1, -1].forEach((d) => {
+        const r = ans.rank + d;
+        if (r >= 0 && r < 14) push(`${s}-${r}`);
+      });
+    });
+  }
+  return pool.slice(0, Math.max(n * 2, 6));
+}
+
+/** 決まった数だけ、重複なく抜く */
+function quizPick(arr, n, rnd) {
+  const a = arr.slice();
+  for (let i = a.length - 1; i > 0; i--) {
+    const j = Math.floor(rnd() * (i + 1));
+    [a[i], a[j]] = [a[j], a[i]];
+  }
+  return a.slice(0, n);
+}
+
+/*
+  出題の型。
+  ⚠️ どれも既存の表から組む。ここに文章を書かない。
+
+    keyword   キーワード → どの札か
+    reverse   札 → どのキーワードか
+    upright   このキーワードは正位置か逆位置か
+    element   このスートの元素は
+    deck      この札はどの配置の山札に入るか（アプリ自身の構造を教える）
+*/
+/*
+  ============================================================
+  カードの「文の層」レジストリ
+
+  ★ 将来ここに層を足すための入口。クイズ側のコードは触らなくてよい。
+
+  いま在るのはキーワードだけだが、物語・世界観・解釈の指針・イメージ・
+  あてはめの例・注意、そしてまだ名前の無い層が後から入る。
+  そのとき直すのはこの配列の一行だけで済むようにしてある。
+
+  ── 足し方 ──
+  1. データを別の表として用意する（例: CARD_STORY[lang][cardId].up / .rev）
+  2. この配列に一行足す:
+       { key: "story", label: { ja: "物語", en: "Story" },
+         get: (c, rev, lang) => pick(CARD_STORY, lang, c.id, rev) }
+  3. 以上。出題数もカバレッジ表示も自動で増える。
+
+  ── get() の約束 ──
+  ⚠️ 必ず「無ければ falsy を返す」こと。throw しないこと。
+     途中まで書いた表（大アルカナだけ、日本語だけ）でも壊れないのは、
+     この約束の上に成り立っている。undefined が返れば、その札は
+     その層の出題対象から静かに外れるだけになる。
+  ⚠️ 全札ぶん揃うまで待たなくてよい。22枚だけ書いた時点で、
+     大アルカナだけを対象に出題が始まる。
+  ⚠️ 同じ文言を複数の札に持たせないこと。正解が二つある問題になる。
+     これは自動で弾いているが、弾かれたぶん出題されなくなる。
+     quizSelfCheck() で重複件数が見える。
+
+    orientational … 正逆で内容が変わる層は true。
+                    変わらない層（元素、スートなど）は false にする。
+    minLen        … これより短い値は「未記入」とみなす。既定 2。
+  ============================================================
+*/
+const CARD_TEXT_LAYERS = [
+  {
+    key: "keyword",
+    label: { ja: "キーワード", en: "Keywords" },
+    orientational: true,
+    get: (c, rev, lang) => quizKeyword(c, rev, lang),
+  },
+  /*
+    ここから下は、データが入り次第コメントを外す。
+    ⚠️ 外す前に、対応する表が本当に存在するか確かめること。
+       存在しない変数を参照すると ReferenceError で画面ごと落ちる。
+       get の中は必ず typeof で守るか、既に定義済みの表だけを見ること。
+
+    { key: "story", label: { ja: "物語", en: "Story" }, orientational: true,
+      get: (c, rev, lang) => quizLayerLookup("CARD_STORY", c, rev, lang) },
+    { key: "guide", label: { ja: "解釈の指針", en: "Guide" }, orientational: true,
+      get: (c, rev, lang) => quizLayerLookup("CARD_GUIDE", c, rev, lang) },
+    { key: "image", label: { ja: "イメージ", en: "Image" }, orientational: true,
+      get: (c, rev, lang) => quizLayerLookup("CARD_IMAGE", c, rev, lang) },
+  */
+];
+
+/*
+  未定義の表を安全に引く。
+  ⚠️ グローバルに在るかどうかを名前で確かめてから触る。
+  層を足すとき、データの投入とコードの有効化がずれても落ちないようにするため。
+  表の形は { [lang]: { [cardId]: { up, rev } } } を想定するが、
+  { [cardId]: { up, rev } }（言語なし）でも引ける。
+*/
+function quizLayerLookup(tableName, c, rev, lang) {
+  let tbl;
+  try {
+    tbl = typeof globalThis !== "undefined" ? globalThis[tableName] : undefined;
+  } catch (e) { return null; }
+  if (!tbl) return null;
+  const byLang = tbl[lang] || tbl.en || tbl.ja || tbl;
+  const row = byLang && byLang[c.id];
+  if (!row) return null;
+  return (rev ? row.rev : row.up) || null;
+}
+
+/** その層で、その札に値が入っているか。空白と短すぎる値は未記入とみなす */
+function quizLayerValue(layer, c, rev, lang) {
+  let v;
+  try { v = layer.get(c, layer.orientational ? rev : false, lang); }
+  catch (e) { return null; }              // ⚠️ 表の形が想定と違っても落とさない
+  if (typeof v !== "string") return null;
+  const s = v.trim();
+  return s.length >= (layer.minLen || 2) ? s : null;
+}
+
+/**
+ * その層で出題できる札を集める。
+ * ⚠️ 同じ文言を持つ札は全部落とす。正解が二つある問題を作らないため。
+ */
+function quizLayerPool(layer, rev, lang) {
+  const seen = new Map();
+  QUIZ_CARDS.forEach((c) => {
+    const v = quizLayerValue(layer, c, rev, lang);
+    if (!v) return;
+    if (seen.has(v)) { seen.set(v, null); return; }   // 重複は無効化
+    seen.set(v, c);
+  });
+  const byCard = new Map();
+  seen.forEach((c, v) => { if (c) byCard.set(c.id, { card: c, text: v }); });
+  return byCard;
+}
+
+/**
+ * いま出題できる層の一覧。データが無い層は自動で消える。
+ * ⚠️ 4枚そろわない層は出題しない。選択肢が埋まらないため。
+ */
+function quizAvailableLayers(lang) {
+  return CARD_TEXT_LAYERS.filter((L) => {
+    const up = quizLayerPool(L, false, lang);
+    if (up.size >= 4) return true;
+    return L.orientational && quizLayerPool(L, true, lang).size >= 4;
+  });
+}
+
+/*
+  カバレッジの自己点検。
+  ★ 層を足したあと、これを呼べば入り具合が分かる。
+  コンソールで quizSelfCheck("ja") と打つだけ。画面には出さない。
+
+  ⚠️ 出題数が思ったより少ないときは、たいてい重複が原因。
+  同じ文言を二枚に書くと両方が落ちる。
+*/
+function quizSelfCheck(lang = "ja") {
+  const rows = CARD_TEXT_LAYERS.map((L) => {
+    const r = { 層: L.key };
+    [false, true].forEach((rev) => {
+      if (rev && !L.orientational) return;
+      let filled = 0, dup = 0;
+      const seen = new Map();
+      QUIZ_CARDS.forEach((c) => {
+        const v = quizLayerValue(L, c, rev, lang);
+        if (!v) return;
+        filled++;
+        if (seen.has(v)) dup++; else seen.set(v, 1);
+      });
+      r[rev ? "逆位置" : "正位置"] = `${filled}/78${dup ? `（重複${dup}）` : ""}`;
+    });
+    r.出題可 = quizLayerPool(L, false, lang).size >= 4 ? "可" : "枚数不足";
+    return r;
+  });
+  if (typeof console !== "undefined" && console.table) console.table(rows);
+  return rows;
+}
+
+/*
+  出題の型。
+  ⚠️ 層が増えても、この配列は変えない。
+     layer 型は CARD_TEXT_LAYERS を回るので、層を足せば自動で問題が増える。
+
+    layer     層の文 → どの札か（キーワード・物語・イメージ…すべてここ）
+    reverse   札 → その層の文はどれか
+    upright   この文は正位置か逆位置か
+    element   このスートの元素は
+    order     大アルカナの並び順（愚者から世界までの道行き）
+
+  ⚠️ かつて deck 型（この札はどの配置の山札に入るか）を置いていたが撤去した。
+  あれが試していたのはアプリの仕様の暗記であって、タロットの知識ではない。
+  クイズは札を覚える場所なので、アプリを覚えさせる問いは置かない。
+*/
+const QUIZ_KINDS = ["layer", "reverse", "upright", "element", "order"];
+
+
+
+/**
+ * 一問作る。
+ *
+ * ⚠️ 再帰で作り直さないこと。層が全部空だと無限に潜って画面ごと落ちる。
+ *    型を順に試して、作れたものを返す。全部だめなら element を返す
+ *    ―― element はスート表だけで成立するので、必ず作れる。
+ *
+ * rnd は 0〜1 を返す関数。渡すと同じ問題を再現できる（検証用）。
+ */
+function buildQuizQuestion(lang, rnd = Math.random, kinds = QUIZ_KINDS) {
+  const order = quizPick(kinds, kinds.length, rnd);
+  for (let i = 0; i < order.length; i++) {
+    const q = quizTryKind(order[i], lang, rnd);
+    if (q) return q;
+  }
+  return quizElementQuestion(lang, rnd);       // 最後の砦。データ欠損に強い
+}
+
+/** 型ひとつを試す。作れなければ null。⚠️ ここから他の型を呼ばない */
+function quizTryKind(kind, lang, rnd) {
+  const t = quizT(lang);
+
+  if (kind === "element") return quizElementQuestion(lang, rnd);
+
+  if (kind === "order") {
+    /*
+      大アルカナの道行き。愚者0から世界21まで、順序そのものが物語になっている。
+      ⚠️ 誤答は前後の札から作る。無関係な番号を混ぜると消去法で当たる。
+      ⚠️ 端（0と21）は片側しか隣が無いので、範囲外を避けて選ぶ。
+    */
+    const i = Math.floor(rnd() * 22);
+    const dir = rnd() < 0.5 ? 1 : -1;
+    const j = i + dir;
+    if (j < 0 || j > 21) return null;
+    const ansCard = QUIZ_CARDS.find((c) => c.id === `major-${j}`);
+    if (!ansCard) return null;
+    const near = [];
+    [-3, -2, -1, 1, 2, 3].forEach((d) => {
+      const r = i + d;
+      if (r >= 0 && r <= 21 && r !== j) near.push(QUIZ_CARDS.find((c) => c.id === `major-${r}`));
+    });
+    const wrong = quizPick(near.filter(Boolean), 3, rnd);
+    if (wrong.length < 3) return null;
+    const opts = quizPick([ansCard, ...wrong], 4, rnd);
+    const names = opts.map((c) => quizName(c, lang));
+    if (new Set(names).size !== names.length) return null;
+    return {
+      kind, layerKey: null,
+      q: t.qOrder(quizName(QUIZ_CARDS.find((c) => c.id === `major-${i}`), lang), dir > 0),
+      options: names,
+      answer: opts.findIndex((c) => c.id === ansCard.id),
+      note: t.nOrder(i, quizName(QUIZ_CARDS.find((c) => c.id === `major-${i}`), lang),
+                     j, quizName(ansCard, lang)),
+    };
+  }
+
+  /* ここから下は層が要る。無ければ素直に諦める */
+  const layers = quizAvailableLayers(lang);
+  if (!layers.length) return null;
+  const L = layers[Math.floor(rnd() * layers.length)];
+  const rev = L.orientational ? rnd() < 0.5 : false;
+  let pool = quizLayerPool(L, rev, lang);
+  if (pool.size < 4 && L.orientational) pool = quizLayerPool(L, false, lang);
+  if (pool.size < 4) return null;
+
+  const entries = Array.from(pool.values());
+  const ansEntry = entries[Math.floor(rnd() * entries.length)];
+  const ans = ansEntry.card;
+
+  if (kind === "upright") {
+    if (!L.orientational) return null;
+    const other = quizLayerPool(L, !rev, lang);
+    /* ⚠️ 表裏で同じ文言なら出題しない。答えが定まらない */
+    const mine = other.get(ans.id);
+    if (mine && mine.text === ansEntry.text) return null;
+    const inverted = (typeof ORIENTATION_INVERTED_CARDS !== "undefined")
+      && ORIENTATION_INVERTED_CARDS.has(ans.id);
+    return {
+      kind, layerKey: L.key,
+      q: t.qUpright(quizName(ans, lang), ansEntry.text),
+      options: [t.upLabel, t.revLabel],
+      answer: rev ? 1 : 0,
+      note: inverted ? t.nInverted(quizName(ans, lang))
+                     : t.nUpright(quizName(ans, lang), rev ? t.revLabel : t.upLabel),
+    };
+  }
+
+  /*
+    誤答。まず格子の近所（同じ数の別スート／同じスートの隣の数）から取り、
+    その層に値がある札だけを残す。
+    ⚠️ 近所で足りないときだけ、同じ層の他の札から補う。
+       ここで層を持たない札を混ぜると、選択肢が空欄になる。
+  */
+  const near = quizDistractors(ans, 3).filter((c) => pool.has(c.id));
+  let wrong = quizPick(near, 3, rnd);
+  if (wrong.length < 3) {
+    const rest = entries
+      .filter((e) => e.card.id !== ans.id && !wrong.some((w) => w.id === e.card.id))
+      .map((e) => e.card);
+    wrong = wrong.concat(quizPick(rest, 3 - wrong.length, rnd));
+  }
+  if (wrong.length < 3) return null;
+
+  const opts = quizPick([ans, ...wrong], 4, rnd);
+  const label = (L.label && (L.label[lang] || L.label.en)) || L.key;
+
+  if (kind === "reverse") {
+    const texts = opts.map((c) => (pool.get(c.id) || {}).text);
+    if (texts.some((x) => !x)) return null;
+    if (new Set(texts).size !== texts.length) return null;   // 同文が並んだら捨てる
+    return {
+      kind, layerKey: L.key,
+      q: { ...t.qReverse(quizName(ans, lang), rev ? t.revLabel : t.upLabel, label), subject: quizName(ans, lang) },
+      options: texts,
+      answer: opts.findIndex((c) => c.id === ans.id),
+      note: t.nCard(quizName(ans, lang), ansEntry.text),
+    };
+  }
+
+  /* layer 型 */
+  const names = opts.map((c) => quizName(c, lang));
+  if (new Set(names).size !== names.length) return null;
+  return {
+    kind: "layer", layerKey: L.key,
+    q: t.qLayer(ansEntry.text, rev ? t.revLabel : t.upLabel, label),
+    options: names,
+    answer: opts.findIndex((c) => c.id === ans.id),
+    note: t.nCard(quizName(ans, lang), ansEntry.text),
+  };
+}
+
+/** 元素の問い。スート表だけで成立するので、どんなデータ状況でも作れる */
+function quizElementQuestion(lang, rnd) {
+  const t = quizT(lang);
+  const s = QUIZ_SUITS[Math.floor(rnd() * 4)];
+  const suit = SUITS.find((x) => x.key === s);
+  const opts = quizPick(QUIZ_SUITS.map((x) => SUITS.find((y) => y.key === x)), 4, rnd);
+  return {
+    kind: "element", layerKey: null,
+    q: t.qElement(suitLabel(s, lang)),
+    options: opts.map((o) => elementLabel(o.element, lang)),
+    answer: opts.findIndex((o) => o.key === s),
+    note: t.nElement(suitLabel(s, lang), elementLabel(suit.element, lang)),
+  };
+}
+
+/*
+  ============================================================
+  【ダビデスター】六芒星が閉じる
+
+  ⚠️ この演出はガチャの見た目をしているが、確率をいじってはいない。
+  三角が光るのは「その三枚が開いた」という事実だけで決まる。
+  引きの良し悪しでは光らない。演出と抽選を混ぜないこと。
+
+  上向きの三角 … 頂点(太陽)・左下(金星)・右下(木星)＝与えた側
+  下向きの三角 … 底(火星)・左上(月)・右上(土星)＝受けた側
+  両方閉じると六芒星が完成し、全体が発光する。
+  ============================================================
+*/
+const DS_UP_TRI = [0, 2, 3];      // 太陽・金星・木星
+const DS_DOWN_TRI = [5, 1, 4];    // 火星・月・土星
+/* 与えた側と受けた側の釣り合い。三分位は実測（40万回、各33.3%） */
+const DS_CUTS = [-0.112, 0.112];
+/*
+  三角ごとの輝き。閉じたかどうかではなく、その三枚の強さで段階が決まる。
+  ⚠️ 実測（40万回、各20.0%）。GIVE と TAKE で分布はほぼ同じなので同じ刻みを使う。
+  ⚠️ 強さで光るのは、引いた札を映しているからで、演出のための水増しではない。
+     確率には一切手を入れていない。
+*/
+const DS_TRI_CUTS = [0.305, 0.378, 0.497, 0.591];
+
+function DavidStarStar({ drawn, labels, lang, openedIndices }) {
+  const t = visT(lang);
+  const seen = new Set(openedIndices);
+  const gave = visAvg(drawn, seen, DS_UP_TRI);
+  const got = visAvg(drawn, seen, DS_DOWN_TRI);
+  if (gave === null && got === null) return null;
+  const lean = (gave === null ? 0 : gave) - (got === null ? 0 : got);
+  const step = visStep(lean, DS_CUTS);
+
+  /* 三角ごとの輝きの段。閉じていなければ 0 に寄せる */
+  const upStep = gave === null ? 0 : visStep(gave, DS_TRI_CUTS);
+  const downStep = got === null ? 0 : visStep(got, DS_TRI_CUTS);
+
+  const upClosed = DS_UP_TRI.every((i) => seen.has(i));
+  const downClosed = DS_DOWN_TRI.every((i) => seen.has(i));
+  const complete = upClosed && downClosed;
+
+  const W = 300, H = 250, CX = 150, CY = 120, R = 96;
+  /* 頂点。SPREADS の layout と同じ順序で並べる（0=頂点、時計回りではない） */
+  const ang = (deg) => (deg * Math.PI) / 180;
+  const P = {
+    0: [CX, CY - R],
+    1: [CX - R * 0.866, CY - R * 0.5],
+    2: [CX - R * 0.866, CY + R * 0.5],
+    3: [CX + R * 0.866, CY + R * 0.5],
+    4: [CX + R * 0.866, CY - R * 0.5],
+    5: [CX, CY + R],
+  };
+  const tri = (ids) => ids.map((i) => P[i].join(",")).join(" ");
+  return (
+    <div className="hs-pass">
+      <div className="hs-pass-title sheen-text">{t.dsTitle}</div>
+      <svg viewBox={`0 0 ${W} ${H}`} className="hs-pass-svg" role="img" aria-label={t.dsTitle}>
+        <HoloDefs id="dsHolo" w={W} h={H} />
+        {/* まだ閉じていない辺。うっすら道筋だけ見せる */}
+        <polygon points={tri(DS_UP_TRI)} fill="none" stroke="url(#dsHolo)"
+          strokeWidth="0.7" opacity="0.16" strokeDasharray="4 6" />
+        <polygon points={tri(DS_DOWN_TRI)} fill="none" stroke="url(#dsHolo)"
+          strokeWidth="0.7" opacity="0.16" strokeDasharray="4 6" />
+        {/*
+          閉じた三角。輝きは段階制。
+
+          GIVE（太陽・金星・木星）… 強いほどホロが濃く、光が伸びる。
+          TAKE（月・土星・火星）  … 強いほど灰に沈み、彩度が落ちる。
+
+          ⚠️ 前世で受けた側が強いことは「悪い」ではない。背負ったものが
+             大きいという意味なので、文言では罰として書かないこと。
+             くすみは重さの表現であって、減点ではない。
+        */}
+        {upClosed && (
+          <polygon points={tri(DS_UP_TRI)} fill="url(#dsHolo)"
+            fillOpacity={0.05 + upStep * 0.05}
+            stroke="url(#dsHolo)" strokeWidth={1.2 + upStep * 0.45}
+            opacity={0.55 + upStep * 0.11}
+            className="mv-tri-seal"
+            style={{ filter: `drop-shadow(0 0 ${2 + upStep * 3}px rgba(190,230,255,${(0.35 + upStep * 0.14).toFixed(2)}))` }} />
+        )}
+        {downClosed && (
+          <polygon points={tri(DS_DOWN_TRI)} fill="url(#dsHolo)"
+            fillOpacity={0.11 - downStep * 0.02}
+            stroke="url(#dsHolo)" strokeWidth={1.8 - downStep * 0.22}
+            opacity={0.9 - downStep * 0.13}
+            className="mv-tri-seal"
+            style={{
+              /* くすませる。彩度を落として少し暗くする */
+              filter: `saturate(${(1 - downStep * 0.22).toFixed(2)}) brightness(${(1 - downStep * 0.13).toFixed(2)})`,
+              animationDelay: "0.25s",
+            }} />
+        )}
+        {/* 完成。外周の輪が二重に走る */}
+        {complete && [0, 1].map((k) => (
+          <circle key={k} cx={CX} cy={CY} r={R} fill="none" stroke="url(#dsHolo)"
+            strokeWidth="2" opacity="0.55" className="mv-seal-burst"
+            style={{ animationDelay: `${(k * 0.85).toFixed(2)}s` }} />
+        ))}
+        {/* 六つの点。開いた天体だけ灯る */}
+        {[0, 1, 2, 3, 4, 5].map((i) => {
+          const [x, y] = P[i];
+          const on = seen.has(i);
+          return (
+            <g key={i}>
+              <circle cx={x} cy={y} r={on ? 6 : 3.2} fill="url(#dsHolo)"
+                opacity={on ? (DS_UP_TRI.includes(i) ? 0.7 + upStep * 0.07 : 0.95 - downStep * 0.12) : 0.22}
+                className={on && complete ? "mv-pulse" : ""}
+                style={{
+                  filter: !on ? "none"
+                    : DS_UP_TRI.includes(i)
+                      ? `drop-shadow(0 0 ${2 + upStep * 3}px rgba(190,230,255,0.9))`
+                      : `saturate(${(1 - downStep * 0.22).toFixed(2)}) brightness(${(1 - downStep * 0.13).toFixed(2)})`,
+                }} />
+              <text x={x} y={y + (i === 5 ? 20 : i === 0 ? -12 : (y > CY ? 18 : -12))}
+                textAnchor="middle" className="hs-pt-name"
+                fill={on ? "rgba(226,214,240,0.8)" : "rgba(226,214,240,0.3)"}
+                style={{ fontSize: "8px" }}>
+                {(labels && labels[i]) ? String(labels[i]).split("｜")[0] : ""}
+              </text>
+            </g>
+          );
+        })}
+      </svg>
+      {/*
+        天体ごとの台帳。
+
+        ⚠️ 三角ぜんたいの明暗だけでは「どの分野で与え、どの分野で受けたか」が読めない。
+        三角は総量、こちらは内訳。図と表で役割を分ける。
+        ⚠️ 段は三角の輝きと同じ刻み（DS_TRI_CUTS）を使うこと。
+           図と表で別の刻みを使うと、図が明るいのに表が低い、が起きる。
+      */}
+      <div className="ds-ledger">
+        {[["give", DS_UP_TRI, upStep], ["take", DS_DOWN_TRI, downStep]].map(([side, ids, sideStep]) => (
+          <div key={side} className={`ds-col ds-${side}`}>
+            <div className="ds-col-head">
+              {side === "give" ? t.dsGive : t.dsTake}
+              <span className="ds-col-sum">{sideStep + 1}/5</span>
+            </div>
+            {ids.map((i) => {
+              const on = seen.has(i) && drawn[i];
+              const lv = on ? visStep(cardPower(drawn[i]), DS_TRI_CUTS) : -1;
+              const parts = String((labels && labels[i]) || "").split("｜");
+              return (
+                <div key={i} className="ds-row">
+                  <span className="ds-body">{parts[0] || ""}</span>
+                  <span className="ds-field">{parts[1] || ""}</span>
+                  <span className="ds-dots" aria-label={on ? `${lv + 1}/5` : ""}>
+                    {[0, 1, 2, 3, 4].map((k) => (
+                      <i key={k} className={`ds-dot${on && k <= lv ? " on" : ""}`} />
+                    ))}
+                  </span>
+                </div>
+              );
+            })}
+          </div>
+        ))}
+      </div>
+      <p className="hs-pass-read">
+        {complete
+          ? `${t.dsRead[step]}${t.dsTri(upStep, downStep)}`
+          : upClosed ? t.dsHalfUp(upStep)
+          : downClosed ? t.dsHalfDown(downStep)
+          : t.dsOpen}
+      </p>
+    </div>
+  );
+}
+
+/*
+  ============================================================
+  【ゾディアック】十二の資質と、共鳴
+
+  ⚠️ 各位置の明るさは、その札の強さであって吉凶ではない。
+  「その資質がいま前に出ている度合い」として読ませること。
+
+  ★ 共鳴 … その星座に対応する大アルカナ（ZODIAC_MAJOR）が
+    その位置に出た場合。伝統的に「その力は既に足りている」と読む。
+    起きる確率は 1 - (77/78 の12連) = 14.38%（40万回実測。理論値14.34%と一致）。
+    珍しいので、出たときははっきり見せる。
+  ============================================================
+*/
+/**
+ * 十二の位置に対応する「分野」。ホロスコープの十二ハウス名を借りる。
+ * ⚠️ 対応表を新しく作らないこと。ゾディアックとホロスコープは
+ *    同じ円の同じ座標を使っているので、i 番目同士が対応する。
+ *    表を別に持つと、片方だけ直したときに黙ってずれる。
+ * 取れなければ null。呼び側は何も出さない（空文字で枠だけ残さない）。
+ */
+function zodiacField(i, lang) {
+  try {
+    const h = spreadInfo("horoscope", lang);
+    const v = h && h.pos && h.pos[i];
+    return typeof v === "string" && v.trim() ? v : null;
+  } catch (e) { return null; }
+}
+
+function ZodiacWheel({ drawn, labels, lang, openedIndices }) {
+  const t = visT(lang);
+  const seen = new Set(openedIndices);
+  const W = 300, H = 300, CX = 150, CY = 150, R = 110;
+  const pt = (i, r) => {
+    const a = Math.PI + (Math.PI * 2 * i) / 12;
+    return [CX + Math.cos(a) * r, CY - Math.sin(a) * r];
+  };
+  /* 共鳴している位置 */
+  const resonant = [];
+  for (let i = 0; i < 12; i++) {
+    const c = seen.has(i) && drawn[i];
+    if (!c) continue;
+    const m = String(c.id).match(/^major-(\d+)$/);
+    if (m && Number(m[1]) === ZODIAC_MAJOR[i]) resonant.push(i);
+  }
+  /* いちばん強く出ている資質。開いたものの中から選ぶ */
+  let peak = -1, pv = -1;
+  for (let i = 0; i < 12; i++) {
+    if (!seen.has(i) || !drawn[i]) continue;
+    const v = cardPower(drawn[i]);
+    if (v > pv) { pv = v; peak = i; }
+  }
+  const anyOpen = peak >= 0;
+  if (!anyOpen && !resonant.length) return null;
+  return (
+    <div className="hs-pass">
+      <div className="hs-pass-title sheen-text">{t.zoTitle}</div>
+      <svg viewBox={`0 0 ${W} ${H}`} className="hs-pass-svg" role="img" aria-label={t.zoTitle}>
+        <HoloDefs id="zoHolo" w={W} h={H} />
+        <circle cx={CX} cy={CY} r={R} fill="none" stroke="url(#zoHolo)" strokeWidth="0.7" opacity="0.25" />
+        <circle cx={CX} cy={CY} r={R * 0.42} fill="none" stroke="url(#zoHolo)" strokeWidth="0.6" opacity="0.18" />
+        {Array.from({ length: 12 }).map((_, i) => {
+          const on = seen.has(i) && drawn[i];
+          const v = on ? cardPower(drawn[i]) : 0;
+          const [ox, oy] = pt(i, R * 0.42);
+          const [ix, iy] = pt(i, R * 0.42 + 6 + v * (R * 0.5));
+          const isRes = resonant.includes(i);
+          const isPeak = i === peak;
+          return (
+            <g key={i}>
+              {/* 資質の伸び。中心から外へ */}
+              {/*
+                ⚠️ カーソルを合わせたときの星座名。SVG の <title> を使う。
+                独自のツールチップを作らないこと ―― 触る操作のときは
+                ブラウザ側が長押しで出してくれるので、実装が増えるだけ損になる。
+              */}
+              {/* ⚠️ <title> の中身は必ず一つの文字列にすること。
+                  {a}{b} と並べると React が配列として扱い警告を出す */}
+              <title>{`${(labels && labels[i]) || ""}${on ? "" : t.zoUnopened}`}</title>
+              <line x1={ox} y1={oy} x2={ix} y2={iy} stroke="url(#zoHolo)"
+                strokeWidth={isRes ? 4 : isPeak ? 3 : 1.6}
+                opacity={on ? (isRes ? 0.95 : 0.6) : 0.12}
+                strokeLinecap="round"
+                className={isRes ? "mv-pulse" : ""}
+                style={{ filter: isRes ? HOLO_GLOW : "none" }} />
+              <circle cx={ix} cy={iy} r={isRes ? 5 : 2.6} fill="url(#zoHolo)"
+                opacity={on ? 0.95 : 0.15}
+                style={{ filter: isRes ? HOLO_GLOW : "none" }} />
+              {/*
+                当たり判定。細い線のままだと指にもカーソルにも当たらない。
+                見えない太い線を重ねて、そこで拾う。
+              */}
+              {(() => {
+                const [hx, hy] = pt(i, R * 0.42 + 6 + (R * 0.5));
+                return <line x1={ox} y1={oy} x2={hx} y2={hy} stroke="transparent"
+                  strokeWidth="16" style={{ cursor: "pointer" }} />;
+              })()}
+              {(isRes || isPeak) && (() => {
+                const [lx, ly] = pt(i, R + 12);
+                return (
+                  <text x={lx} y={ly} textAnchor="middle" className="hs-pt-name"
+                    fill="#FFFFFF" style={{ fontSize: "8px", fontWeight: 700 }}>
+                    {(labels && labels[i]) ? String(labels[i]).split("｜")[0] : ""}
+                  </text>
+                );
+              })()}
+            </g>
+          );
+        })}
+        {/*
+          中央。13枚目＝いま最も伸びる力。
+
+          ⚠️ 札の名前だけでは、どの分野の話なのかが分からない。
+          十二の位置のうち最も強く出ているものを分野として添える。
+          名称はホロスコープの十二ハウスから借りる ―― 同じ円の同じ位置なので、
+          新しい対応表を作らずに済み、二重管理にもならない。
+        */}
+        {seen.has(12) && drawn[12] && (
+          <g>
+            <circle cx={CX} cy={CY} r="16" fill="url(#zoHolo)" opacity="0.85"
+              className="mv-pulse" style={{ filter: HOLO_GLOW }} />
+            {peak >= 0 && (
+              <text x={CX} y={CY + 32} textAnchor="middle" className="hs-pt-name"
+                fill="#FFFFFF" style={{ fontSize: "8.5px", fontWeight: 700 }}>
+                {zodiacField(peak, lang)}
+              </text>
+            )}
+          </g>
+        )}
+      </svg>
+      <p className="hs-pass-read">
+        {resonant.length
+          ? t.zoResonate(resonant.map((i) => String((labels && labels[i]) || "").split("｜")[0]).join("・"))
+          : peak >= 0
+            ? t.zoPeak(String((labels && labels[peak]) || "").split("｜")[1] || "")
+            : ""}
+      </p>
+    </div>
+  );
+}
+
+/*
+  ============================================================
+  タイトルに戻る（誤打よけつき）
+
+  スプレッドを開いた直後と、札をめくった直後の短い間だけ反応しない。
+  札を連打しているとき、指が戻るボタンに乗って画面ごと落ちる事故を防ぐ。
+
+  ⚠️⚠️ ここは「押せなくなったまま」に絶対しないこと。
+  以前タイトルに戻れなくなって課金ぶんを無駄にした事故がある。
+  そのため次の三つを守る。
+
+    1. disabled 属性を使わない。押すこと自体はいつでもできる。
+    2. 判定は時刻の引き算だけ。状態フラグで塞がない。
+       フラグは戻し忘れた瞬間に永久ロックになる。
+    3. 値が少しでもおかしければ必ず通す（fail-open）。
+       NaN・負の差・未来の時刻 ―― どれも「押せる」側に倒す。
+
+  薄く見えるのは飾りで、実際の判定は押された瞬間にその場で計算する。
+  再描画が一度も来なくても、時間さえ経っていれば押せば戻れる。
+  ============================================================
+*/
+const BACK_GUARD_MS = 650;
+
+function BackToTitle({ onBack, label, activityKey, style, className }) {
+  const [since, setSince] = React.useState(() => Date.now());
+  const [, bump] = React.useState(0);
+
+  /* 札をめくるたびに数え直す。連打の最中はずっと効く */
+  React.useEffect(() => { setSince(Date.now()); }, [activityKey]);
+
+  /* 猶予明けに薄さを戻すためだけの再描画。届かなくても押せる */
+  React.useEffect(() => {
+    const id = setTimeout(() => bump((n) => n + 1), BACK_GUARD_MS + 40);
+    return () => clearTimeout(id);
+  }, [since]);
+
+  /** 猶予中か。判定できないときは false（＝押せる）を返す */
+  const isGuarded = () => {
+    if (typeof since !== "number" || !Number.isFinite(since) || since <= 0) return false;
+    const d = Date.now() - since;
+    if (!Number.isFinite(d) || d < 0) return false;   // 時計が巻き戻っても通す
+    return d < BACK_GUARD_MS;
+  };
+
+  return (
+    <button
+      type="button"
+      className={`back-to-title${isGuarded() ? " guarded" : ""}${className ? " " + className : ""}`}
+      style={style}
+      onClick={() => {
+        /* ⚠️ 描画時の値ではなく、押された瞬間に測り直す */
+        if (isGuarded()) return;
+        onBack();
+      }}
+    >
+      {label}
+    </button>
   );
 }
 
@@ -10592,7 +13372,7 @@ function YesNoPanel({ lang, onBack }) {
   return (
     <div style={{ width: "100%", maxWidth: "460px", margin: "0 auto" }}>
       {/* 既存の戻る導線と同じクラス・同じ文言を使う。独自に作らない */}
-      <button className="back-to-title" onClick={onBack}>{t.backToTitle}</button>
+      <BackToTitle onBack={onBack} label={t.backToTitle} activityKey={drawn ? "d" : "i"} />
 
       {!drawn ? (
         <>
@@ -10710,7 +13490,7 @@ function YesNoPanel({ lang, onBack }) {
             画面の外へ出てしまう。長い画面では下にも要る。
           */}
           <div style={{ textAlign: "center" }}>
-            <button className="back-to-title" onClick={onBack}>{t.backToTitle}</button>
+            <BackToTitle onBack={onBack} label={t.backToTitle} activityKey={drawn ? "d" : "i"} />
           </div>
         </>
       )}
@@ -12458,6 +15238,26 @@ function HexagramPanel({ lang, onBack, question, userName, canDraw, onConsume, o
     burnout: BURNOUT_STAGES,
     moonPhase: MOON_STAGES,
     headAndHeart: HEAD_HEART_STAGES,
+    boundary: BOUNDARY_STAGES,
+    selfSabotage: SABOTAGE_STAGES,
+    loopOfThought: LOOP_STAGES,
+    somatic: SOMATIC_STAGES,
+    driveAndGround: PAIR_STAGES,
+    loveAndLiving: PAIR_STAGES,
+    stillHurts: STILL_HURTS_STAGES,
+    safePerson: SAFE_PERSON_STAGES,
+    undecided: UNDECIDED_STAGES,
+    davidStar: DAVID_STAR_STAGES,
+    zodiac: ZODIAC_STAGES,
+    manifestation: MANIFEST_STAGES,
+    comparison: COMPARISON_STAGES,
+    moneyMind: MONEY_STAGES,
+    careerCross: CAREER_STAGES,
+    character: CHARACTER_STAGES,
+    newRelation: NEW_RELATION_STAGES,
+    monthly: MONTHLY_STAGES,
+    season: SEASON_STAGES,
+    spiritGuide: SPIRIT_STAGES,
   };
   const STAGES = EXTRA_STAGES[spreadKey]
     || (isWeekly ? WEEKLY_STAGES : isCeltic ? CELTIC_STAGES : isHoro ? HOROSCOPE_STAGES : isChoice ? CHOICE_STAGES : HEXAGRAM_STAGES);
@@ -13885,6 +16685,91 @@ function HexagramPanel({ lang, onBack, question, userName, canDraw, onConsume, o
             <HeadHeartRope drawn={drawn} lang={lang} openedIndices={openedIndices} />
           )}
 
+          {/* 影の統合は重なり。影の側3枚と統合の側2枚の面積比 */}
+          {spreadKey === "shadowWork" && stage > 0 && (
+            <ShadowMass drawn={drawn} lang={lang} openedIndices={openedIndices} />
+          )}
+
+          {/* 内なる子どもは灯りの距離。差し出せるものの分だけ近づく */}
+          {spreadKey === "innerChild" && stage > 0 && (
+            <ChildLamp drawn={drawn} lang={lang} openedIndices={openedIndices} />
+          )}
+
+          {/* 消耗からの回復は荷と残り火。降ろした分だけ火が伸びる */}
+          {spreadKey === "burnout" && stage > 0 && (
+            <EmberLoad drawn={drawn} lang={lang} openedIndices={openedIndices} />
+          )}
+
+          {/* 境界線は線の張り。押す力と引き直す力の差 */}
+          {spreadKey === "boundary" && stage > 0 && (
+            <BoundaryLine drawn={drawn} lang={lang} openedIndices={openedIndices} />
+          )}
+
+          {/* 自己妨害は型の輪。外す一手の分だけ切れ目が開く */}
+          {spreadKey === "selfSabotage" && stage > 0 && (
+            <SabotageRing drawn={drawn} lang={lang} openedIndices={openedIndices} />
+          )}
+
+          {/* 堂々巡りは渦。切る一手の分だけ巻きが緩む */}
+          {spreadKey === "loopOfThought" && stage > 0 && (
+            <ThoughtSpiral drawn={drawn} lang={lang} openedIndices={openedIndices} />
+          )}
+
+          {/* 体からの声は熱の在り処。位置はスート、強さは熱と手当ての差 */}
+          {spreadKey === "somatic" && stage > 0 && (
+            <BodyHeat drawn={drawn} lang={lang} openedIndices={openedIndices} />
+          )}
+
+          {/* やる気と地面・好きと暮らし・まだ痛むのは。対の釣り合いは同じ形 */}
+          {(spreadKey === "driveAndGround" || spreadKey === "loveAndLiving" || spreadKey === "stillHurts") && stage > 0 && (
+            <PairTension spreadKey={spreadKey} drawn={drawn} labels={info.pos} lang={lang} openedIndices={openedIndices} />
+          )}
+
+          {/* この人は安全か。見えている輪と内側の芯のずれ */}
+          {spreadKey === "safePerson" && stage > 0 && (
+            <SafetyGap drawn={drawn} lang={lang} openedIndices={openedIndices} />
+          )}
+
+          {/* 決めきれない。振り子が振れているかどうか */}
+          {spreadKey === "undecided" && stage > 0 && (
+            <StalledPendulum drawn={drawn} lang={lang} openedIndices={openedIndices} />
+          )}
+
+          {/* 願いの実現・キャリアの岐路・お金と価値観・比べるのをやめる。坂は同じ形 */}
+          {DRIVE_CFG[spreadKey] && stage > 0 && (
+            <ObstacleDrive spreadKey={spreadKey} drawn={drawn} lang={lang} openedIndices={openedIndices} />
+          )}
+
+          {/* 今月の流れ・季節の巡り。一列に並ぶので帯にできる */}
+          {FLOW_CFG[spreadKey] && stage > 0 && (
+            <TimelineFlow spreadKey={spreadKey} drawn={drawn} labels={info.pos} lang={lang} openedIndices={openedIndices} />
+          )}
+
+          {/* 人物を読む。長所と短所を一つの球の取り分で */}
+          {spreadKey === "character" && stage > 0 && (
+            <TwoFaceOrb drawn={drawn} lang={lang} openedIndices={openedIndices} />
+          )}
+
+          {/* 新しい関係。持ち込むものの釣り合いなので対の図を使う */}
+          {spreadKey === "newRelation" && stage > 0 && (
+            <PairTension spreadKey={spreadKey} drawn={drawn} labels={info.pos} lang={lang} openedIndices={openedIndices} />
+          )}
+
+          {/* 直感とのつながり。通り道がどれだけ開いているか */}
+          {spreadKey === "spiritGuide" && stage > 0 && (
+            <OpenChannel drawn={drawn} lang={lang} openedIndices={openedIndices} />
+          )}
+
+          {/* ダビデスター。三角が閉じるたびに線が光り、六芒星が完成する */}
+          {spreadKey === "davidStar" && stage > 0 && (
+            <DavidStarStar drawn={drawn} labels={info.pos} lang={lang} openedIndices={openedIndices} />
+          )}
+
+          {/* ゾディアック。十二の資質の伸びと、対応大アルカナの共鳴 */}
+          {spreadKey === "zodiac" && stage > 0 && (
+            <ZodiacWheel drawn={drawn} labels={info.pos} lang={lang} openedIndices={openedIndices} />
+          )}
+
           {/* ホースシューは峠。弧のどこが山かを示す */}
           {isHorseshoe && stage > 0 && (
             <HorseshoePass drawn={drawn} labels={info.pos} lang={lang} openedIndices={openedIndices} />
@@ -14009,7 +16894,7 @@ function HexagramPanel({ lang, onBack, question, userName, canDraw, onConsume, o
           </button>
         </>
       )}
-      <button className="back-to-title" onClick={onBack}>{t.backToTitle}</button>
+      <BackToTitle onBack={onBack} label={t.backToTitle} activityKey={stage} />
     </div>
   );
 
@@ -14916,7 +17801,7 @@ function OneOraclePanel({ lang, onBack, onHoloConsumed, deck = "major", onCollec
         「明日またお越しください」だけが出ている画面は行き止まりだった。
         画面ごとに有無が変わる出口は、出口として数えられない。
       */}
-      <button className="back-to-title" onClick={onBack}>{t.backToTitle}</button>
+      <BackToTitle onBack={onBack} label={t.backToTitle} />
     </div>
   );
 }
@@ -21981,6 +24866,10 @@ export default function TarotDraw() {
     "horseshoe", "horseshoeFree", "treeOfLife", "treeOfLifeFree",
     "shadowWork", "innerChild", "burnout",
     "moonPhase", "headAndHeart",
+    "boundary", "selfSabotage", "loopOfThought", "somatic",
+    "driveAndGround", "loveAndLiving", "stillHurts", "safePerson", "undecided",
+    "davidStar", "davidStarFree", "zodiac", "zodiacFree",
+    "manifestation", "comparison", "moneyMind", "careerCross", "character", "newRelation", "monthly", "season", "spiritGuide",
   ].includes(drawMode);
   /*
     無料版では問いを入力させないので、前の版で書いた文字列が残っていても使わない。
@@ -23052,6 +25941,11 @@ export default function TarotDraw() {
           background: rgba(255,255,255,0.04); color: var(--parchment); text-align: center;
         }
         .question-field input::placeholder { color: rgba(169,155,201,0.55); }
+        /* 配置ごとの入力の手引き。placeholder より前に読ませたいので欄の上 */
+        .topic-hint {
+          font-size: 11px; color: var(--gold-soft); opacity: 0.9;
+          margin: -2px 0 6px; text-align: center; line-height: 1.8;
+        }
         .question-field input:focus-visible { outline: 2px solid var(--gold); outline-offset: 2px; border-color: var(--gold); }
 
         .question-banner { position: relative; z-index: 1; text-align: center; font-family: 'Shippori Mincho', serif; font-size: 12.5px; color: var(--gold-soft); margin: 0 0 20px; }
@@ -23258,6 +26152,13 @@ export default function TarotDraw() {
           font-size: 11.5px; line-height: 1.8; color: var(--rose); text-align: center;
         }
 
+        /*
+          猶予中の見た目。薄くするだけで、押せなくはしない。
+          ⚠️ pointer-events: none を絶対に付けないこと。
+          付けると、判定側が壊れたときに本当に押せなくなる。
+          押しても効かないのは JS 側の 650ms だけで、CSS は関与させない。
+        */
+        .back-to-title.guarded { opacity: 0.28; }
         .back-to-title {
           margin-top: 18px; background: none; border: none; cursor: pointer;
           font-family: inherit; font-size: 11px; color: var(--muted);
@@ -24569,6 +27470,234 @@ export default function TarotDraw() {
           animation: treeBridge 1.4s linear infinite;
         }
         @keyframes treeBridge { to { stroke-dashoffset: -16; } }
+        /*
+          --- 現代派の視覚補完 ---
+          ⚠️ 図ごとに新しいクラスを作らず、この7つを共有する。
+          図が増えるたびに keyframes を足すと、同じ動きが別名で何本もできる。
+        */
+        /* 重なり・張り・熱。強くなった側を脈打たせる */
+        /*
+          --- クイズ ---
+          ⚠️ タブは配置一覧と同じ .school-tab を使う。タブ側のCSSは足さない。
+        */
+        .quiz-wrap { padding: 4px 2px 20px; }
+        .quiz-head {
+          display: flex; gap: 10px; align-items: center; justify-content: center;
+          flex-wrap: wrap; margin-bottom: 12px; min-height: 18px;
+        }
+        .quiz-kind {
+          font-size: 10px; color: var(--muted); border: 1px solid rgba(201,162,75,0.22);
+          border-radius: 999px; padding: 2px 10px; letter-spacing: 0.06em;
+        }
+        .quiz-score { font-size: 11px; color: var(--muted); }
+        .quiz-streak { font-size: 11px; font-weight: 700; }
+        .quiz-lead {
+          font-size: 11px; color: var(--muted); text-align: center;
+          line-height: 1.9; margin: 0 0 14px;
+        }
+        /*
+          設問。前置き・引用・問いで見た目を分ける。
+          ⚠️ 引用は line-break: strict を効かせる。禁則処理が入り、
+          行頭に「・」や「。」が来なくなる。
+        */
+        .quiz-prompt-lead {
+          font-size: 12px; color: var(--muted); text-align: center;
+          margin: 0 0 10px; line-height: 1.9;
+        }
+        .quiz-subject {
+          margin: 0 auto 14px; max-width: 30em; padding: 14px 16px;
+          border-radius: 10px; border: 1px solid rgba(201,162,75,0.28);
+          background: rgba(255,255,255,0.025); text-align: center;
+        }
+        .quiz-subject-text {
+          font-family: 'Shippori Mincho', serif; font-size: 15px;
+          line-height: 2.05; letter-spacing: 0.05em;
+          line-break: strict; overflow-wrap: break-word; word-break: normal;
+        }
+        .quiz-prompt-ask {
+          font-family: 'Shippori Mincho', serif; font-size: 14px; line-height: 2;
+          text-align: center; margin: 0 0 18px; letter-spacing: 0.04em;
+          line-break: strict;
+        }
+        /*
+          クイズ全体の枠。
+          ⚠️ 落ちものの背景が透けるので、塗りは薄く。
+          濃くすると星が消えて、クイズだけ別のアプリに見える。
+        */
+        .quiz-card {
+          border: 1px solid rgba(201,162,75,0.3); border-radius: 14px;
+          padding: 20px 16px 18px; margin: 0 0 4px;
+          background: rgba(12,9,24,0.55);
+          box-shadow: 0 0 24px rgba(0,0,0,0.35) inset;
+        }
+        .quiz-opts { display: flex; flex-direction: column; gap: 8px; }
+        .quiz-opt {
+          width: 100%; text-align: left; padding: 12px 14px; border-radius: 10px;
+          border: 1px solid rgba(201,162,75,0.22); background: rgba(255,255,255,0.02);
+          color: inherit; font-size: 13px; line-height: 1.7; cursor: pointer;
+          transition: border-color 0.18s, background 0.18s, opacity 0.18s;
+        }
+        .quiz-opt:hover:not(:disabled) { border-color: rgba(201,162,75,0.5); }
+        .quiz-opt:disabled { cursor: default; }
+        /* ⚠️ 正誤を色だけで示さない。記号を併記する（色覚と暗所での判別のため） */
+        .quiz-opt.right {
+          border-color: rgba(120,255,140,0.6); background: rgba(120,255,140,0.08);
+        }
+        .quiz-opt.right::before { content: "○ "; font-weight: 700; }
+        .quiz-opt.wrong {
+          border-color: rgba(255,120,150,0.55); background: rgba(255,120,150,0.07);
+        }
+        .quiz-opt.wrong::before { content: "× "; font-weight: 700; }
+        .quiz-opt.dim { opacity: 0.35; }
+        .quiz-note {
+          margin-top: 16px; padding: 14px; border-radius: 10px;
+          border: 1px solid rgba(201,162,75,0.2); background: rgba(255,255,255,0.02);
+        }
+        .quiz-note p { font-size: 12px; line-height: 2; margin: 6px 0 12px; }
+        .quiz-verdict { font-size: 12px; font-weight: 700; letter-spacing: 0.08em; }
+        .quiz-note.ok .quiz-verdict { color: rgba(150,255,170,0.95); }
+        .quiz-next {
+          width: 100%; padding: 10px; border-radius: 8px; cursor: pointer;
+          border: 1px solid rgba(201,162,75,0.4); background: rgba(201,162,75,0.1);
+          color: inherit; font-size: 12px; letter-spacing: 0.08em;
+        }
+        .quiz-back {
+          display: block; margin: 18px auto 0; padding: 6px 18px; cursor: pointer;
+          border: none; background: none; color: var(--muted); font-size: 11px;
+          letter-spacing: 0.08em;
+        }
+        /*
+          --- ダビデスターの天体台帳 ---
+          三角は総量、台帳は内訳。どの分野で与えどの分野で受けたかを段で示す。
+          ⚠️ 与えた側はホロ、受けた側は彩度を落とす。図と同じ扱いに揃える。
+        */
+        .ds-ledger {
+          display: grid; grid-template-columns: 1fr 1fr; gap: 10px;
+          margin: 6px 0 10px;
+        }
+        .ds-col {
+          border: 1px solid rgba(201,162,75,0.2); border-radius: 8px;
+          padding: 8px 8px 6px; background: rgba(255,255,255,0.02);
+        }
+        .ds-col-head {
+          font-size: 10px; letter-spacing: 0.06em; margin-bottom: 6px;
+          display: flex; justify-content: space-between; align-items: baseline;
+        }
+        .ds-give .ds-col-head { color: rgba(226,214,240,0.95); }
+        .ds-take .ds-col-head { color: rgba(170,160,190,0.7); }
+        .ds-col-sum { font-size: 9px; opacity: 0.7; }
+        .ds-row { display: flex; align-items: center; gap: 4px; margin: 3px 0; }
+        .ds-body { font-size: 10px; width: 2.6em; flex: none; color: var(--gold-soft); }
+        .ds-field {
+          font-size: 9px; flex: 1; min-width: 0; color: var(--muted);
+          overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
+        }
+        .ds-dots { display: inline-flex; gap: 2px; flex: none; }
+        .ds-dot {
+          width: 5px; height: 5px; border-radius: 50%;
+          border: 1px solid rgba(201,162,75,0.35); background: transparent;
+        }
+        /* 与えた側は光る */
+        .ds-give .ds-dot.on {
+          background: linear-gradient(135deg, #FF3CB4, #3CC8FF, #78FF8C, #FFDC3C);
+          border-color: transparent;
+          box-shadow: 0 0 4px rgba(190,230,255,0.8);
+        }
+        /* 受けた側は沈む。同じ段でも見え方を変えて、役割の違いを目で分ける */
+        .ds-take .ds-dot.on {
+          background: rgba(150,140,175,0.85); border-color: transparent;
+          box-shadow: none;
+        }
+        /*
+          --- ダビデスターの封印演出 ---
+          ⚠️ 光るのは「三枚そろった」という事実だけで決まる。
+          引きの強さでは光らない。演出と抽選を混ぜないこと。
+        */
+        .mv-tri-seal {
+          transform-box: fill-box; transform-origin: center;
+          animation: mvTriSeal 0.85s cubic-bezier(0.16, 1, 0.3, 1) 1 both;
+        }
+        @keyframes mvTriSeal {
+          0%   { transform: scale(0.72) rotate(-8deg); opacity: 0; }
+          55%  { transform: scale(1.06) rotate(2deg);  opacity: 1; }
+          100% { transform: scale(1) rotate(0deg);     opacity: 1; }
+        }
+        /* 六芒星が閉じた瞬間、外周が二重に走る */
+        .mv-seal-burst {
+          transform-box: fill-box; transform-origin: center;
+          animation: mvSealBurst 2.4s ease-out infinite;
+        }
+        @keyframes mvSealBurst {
+          0%   { transform: scale(0.86); opacity: 0.75; }
+          100% { transform: scale(1.5);  opacity: 0; }
+        }
+        .mv-pulse { animation: mvPulse 2.4s ease-in-out infinite; }
+        @keyframes mvPulse {
+          0%, 100% { opacity: 0.34; }
+          50%      { opacity: 0.9; }
+        }
+        /* 影から本体へ流れる粒。--mv-from / --mv-to を各粒が持つ */
+        .mv-drift {
+          animation: mvDrift 2.8s ease-in-out infinite;
+          transform: translateX(var(--mv-from));
+        }
+        @keyframes mvDrift {
+          0%   { transform: translateX(var(--mv-from)); opacity: 0; }
+          18%  { opacity: 0.95; }
+          82%  { opacity: 0.95; }
+          100% { transform: translateX(var(--mv-to)); opacity: 0; }
+        }
+        /* 声の波紋。外へ広がって消える */
+        .mv-ripple {
+          transform-box: fill-box; transform-origin: center;
+          animation: mvRipple 2.4s ease-out infinite;
+        }
+        @keyframes mvRipple {
+          0%   { transform: scale(0.4); opacity: 0.9; }
+          100% { transform: scale(2.6); opacity: 0; }
+        }
+        /* 届いた線・抜けた線。端から端へ走る */
+        .mv-bridge {
+          stroke-dasharray: 10 14;
+          animation: mvBridge 1.1s linear infinite;
+        }
+        @keyframes mvBridge { to { stroke-dashoffset: -24; } }
+        /* 火。横に揺れる。上下に伸ばすと荷の高さと混ざる */
+        .mv-flame {
+          transform-box: fill-box; transform-origin: bottom center;
+          animation: mvFlame 1.6s ease-in-out infinite;
+        }
+        @keyframes mvFlame {
+          0%, 100% { transform: scaleX(1) skewX(0deg); }
+          33%      { transform: scaleX(0.88) skewX(5deg); }
+          66%      { transform: scaleX(1.08) skewX(-4deg); }
+        }
+        /* 火の粉。上へ */
+        .mv-spark { animation: mvSpark 2.2s linear infinite; }
+        @keyframes mvSpark {
+          0%   { transform: translateY(0); opacity: 0; }
+          15%  { opacity: 0.95; }
+          100% { transform: translateY(-52px); opacity: 0; }
+        }
+        /* 線が張り直る衝撃 */
+        .mv-shock {
+          transform-box: fill-box; transform-origin: center;
+          animation: mvShock 1.8s ease-out infinite;
+        }
+        @keyframes mvShock {
+          0%   { transform: scaleX(1); opacity: 0.7; }
+          100% { transform: scaleX(9); opacity: 0; }
+        }
+        /* 輪と渦の回転。⚠️ 切れ目が開いた回は止める（回っていない状態が読み） */
+        .mv-spin { animation: mvSpin 14s linear infinite; }
+        @keyframes mvSpin { to { transform: rotate(360deg); } }
+        /* 切れ目から噴く光 */
+        .mv-burst { animation: mvBurst 1.9s ease-out infinite; }
+        @keyframes mvBurst {
+          0%   { opacity: 0; }
+          25%  { opacity: 0.95; }
+          100% { opacity: 0; }
+        }
         /*
           次に開く札。押せることを、光で示す。
           ⚠️ animation の shorthand をここで持つので、
@@ -26150,14 +29279,26 @@ export default function TarotDraw() {
               使われないことを注記で明示すれば、
               「入力させておいて使わない」にはならない。
             */}
+            {/*
+              現代派は AI鑑定しかないので、ここに何を書いたかが出力をほぼ決める。
+              ⚠️ 配置ごとの例示を出すこと。既定の「来月の恋愛運」を
+              境界線や自己妨害で出すと、この配置が何を聞く場所なのかが
+              伝わらないまま空欄で引かれる。未対応の配置と言語は既定へ落ちる。
+            */}
             <label htmlFor="tarot-question">{t.questionLabel}</label>
+            {(() => {
+              const mh = spreadTopicHint(drawMode, lang);
+              return mh ? (
+                <p className="topic-hint">{mh.hint}</p>
+              ) : null;
+            })()}
             <input
               id="tarot-question"
               type="text"
               maxLength={140}
               value={question}
               onChange={(e) => setQuestion(e.target.value)}
-              placeholder={t.questionPlaceholder}
+              placeholder={(spreadTopicHint(drawMode, lang) || {}).ph || t.questionPlaceholder}
             />
             <p style={{ fontSize: "11px", color: "var(--muted)", margin: "-4px 0 4px", textAlign: "center", opacity: 0.85 }}>
               {isFreeDraw ? t.topicNote : t.questionPrivacy}
