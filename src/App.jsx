@@ -9309,7 +9309,15 @@ function pickSkyKind() {
 }
 
 /* ホロの四色。傾斜ではなく、粒ごとに直接塗るための並び */
+/* 空を固定したときの保存先。値は SKY_KINDS のどれか、または "" で解除 */
+const LS_SKY_FIXED = "tarot_sky_fixed";
 const SKY_PALETTE = ["#FF3CB4", "#3CC8FF", "#78FF8C", "#FFDC3C"];
+/*
+  夜のビルの窓の色。
+  ⚠️ ホロの四色から拾わないこと。窓が桃や水色になると看板や広告に見えて、
+  住んでいる灯りに見えない。夜景の窓は黄色と決め打ちにする。
+*/
+const SKY_WINDOW = "#FFD98A";
 /*
   大雪は一粒が34個の線でできているので、数を増やしすぎると要素が一万を超える。
   ⚠️ 340体で1万1千。スマホで重くなる。
@@ -9344,8 +9352,9 @@ const skyMotes = (n) => Array.from({ length: n }, (_, k) => ({
 
   ⚠️ 細長くしないこと。実物のビルの比率にすると背景が写実に寄り、
   落ちものの素朴さと噛み合わなくなる。幅は高さの半分以上を保つ。
-  ⚠️ 窓は横2・縦4の八つで固定。全部に灯りを点ける。
-  間引くと空室に見えて、寂しい街になる。
+  ⚠️ 窓は横2・縦4の八つで固定。全部に黄色の灯りを点ける。
+  間引くと空室に見えて寂しい街になり、色を散らすと看板に見える。
+  夜のビルの窓は黄色、と決め打ちにする。
   ⚠️ 下端に一列で並べないこと。真下に揃うと書き割りになる。
   y をばらして奥行きを作る。上のほうを多めにして、
   タイトルの文字に隠れる位置ほど数を増やす。
@@ -9356,24 +9365,39 @@ const skyMotes = (n) => Array.from({ length: n }, (_, k) => ({
     h  高さ（px）
 */
 const SKY_BUILDINGS = [
-  /* 上のほう。文字に隠れる帯なので多めに置く */
-  { x: 4,  y: 6,  w: 52, h: 76 },
-  { x: 17, y: 3,  w: 44, h: 92 },
-  { x: 29, y: 9,  w: 60, h: 66 },
-  { x: 43, y: 4,  w: 48, h: 86 },
-  { x: 56, y: 8,  w: 56, h: 72 },
-  { x: 69, y: 2,  w: 46, h: 96 },
-  { x: 82, y: 7,  w: 58, h: 70 },
-  { x: 93, y: 5,  w: 42, h: 84 },
+  /* 上のほう。タイトルの文字に隠れる帯なので多めに置く */
+  { x: 3,  y: 4,  w: 104, h: 152 },
+  { x: 11, y: 9,  w: 92,  h: 176 },
+  { x: 19, y: 2,  w: 116, h: 138 },
+  { x: 27, y: 11, w: 88,  h: 192 },
+  { x: 35, y: 5,  w: 108, h: 148 },
+  { x: 43, y: 8,  w: 96,  h: 168 },
+  { x: 51, y: 3,  w: 120, h: 132 },
+  { x: 59, y: 10, w: 90,  h: 184 },
+  { x: 67, y: 6,  w: 112, h: 144 },
+  { x: 75, y: 2,  w: 94,  h: 172 },
+  { x: 83, y: 9,  w: 106, h: 150 },
+  { x: 91, y: 5,  w: 98,  h: 164 },
+  { x: 97, y: 12, w: 86,  h: 188 },
   /* 中ほど */
-  { x: 9,  y: 34, w: 50, h: 78 },
-  { x: 34, y: 30, w: 58, h: 68 },
-  { x: 61, y: 36, w: 46, h: 82 },
-  { x: 87, y: 32, w: 54, h: 74 },
+  { x: 6,  y: 34, w: 100, h: 156 },
+  { x: 22, y: 30, w: 116, h: 134 },
+  { x: 38, y: 37, w: 92,  h: 178 },
+  { x: 54, y: 32, w: 108, h: 146 },
+  { x: 70, y: 36, w: 96,  h: 170 },
+  { x: 86, y: 31, w: 110, h: 142 },
+  { x: 14, y: 44, w: 102, h: 158 },
+  { x: 30, y: 48, w: 88,  h: 186 },
+  { x: 46, y: 43, w: 118, h: 130 },
+  { x: 62, y: 47, w: 100, h: 160 },
+  { x: 78, y: 42, w: 92,  h: 180 },
+  { x: 94, y: 46, w: 112, h: 140 },
   /* 下のほう。少なめ */
-  { x: 21, y: 66, w: 56, h: 72 },
-  { x: 52, y: 70, w: 48, h: 80 },
-  { x: 78, y: 64, w: 60, h: 66 },
+  { x: 13, y: 64, w: 104, h: 150 },
+  { x: 33, y: 70, w: 94,  h: 174 },
+  { x: 53, y: 66, w: 114, h: 136 },
+  { x: 72, y: 72, w: 98,  h: 162 },
+  { x: 90, y: 65, w: 106, h: 148 },
 ];
 /* 雨と雪の雲。上のほうに数枚 */
 const SKY_CLOUDS = [
@@ -9659,8 +9683,8 @@ function TitleSky({ kind, dim = false }) {
                   x={(-b.w / 2 + gx * (col + 1) - ww / 2).toFixed(1)}
                   y={(gy * (row + 1) - wh / 2).toFixed(1)}
                   width={ww.toFixed(1)} height={wh.toFixed(1)}
-                  fill={SKY_PALETTE[(bi + row) % SKY_PALETTE.length]}
-                  opacity="0.6" />
+                  fill={SKY_WINDOW}
+                  opacity="0.72" />
               );
             })}
           </g>
@@ -12113,32 +12137,43 @@ function DavidStarStar({ drawn, labels, lang, openedIndices }) {
         })}
       </svg>
       {/*
-        天体ごとの内訳。
+        六つのゲージ。原点を共有して左右へ振る。
 
-        ⚠️ 数字を出さないこと。以前は「4/5」の分数と五つの点を
-        天体ごとに並べていて、画面が数字と点だらけになり読めなくなった。
-        分野ごとの多い少ないが分かればよく、目盛りの値は要らない。
-        帯の長さひとつで示す。
+        ★ 天体がどちら側かは配置で決まっている（太陽・金星・木星＝与えた、
+          月・土星・火星＝受けた）。だから向きは固定で、伸びる長さだけが変わる。
+          原点を揃えると「どちらが重いか」と「どの分野か」が一度に読める。
+
+        ⚠️ くすませないこと。以前は受けた側を灰色にしていたが、
+          左右に分かれている時点で側は分かるので、色で二重に言う必要がない。
+          灰色にすると受けた側が劣ったものに見える。どちらも虹色にする。
+        ⚠️ 目盛りの数字は出さない。長さだけで足りる。
       */}
-      <div className="ds-ledger">
-        {[["give", DS_UP_TRI], ["take", DS_DOWN_TRI]].map(([side, ids]) => (
-          <div key={side} className={`ds-col ds-${side}`}>
-            <div className="ds-col-head">{side === "give" ? t.dsGive : t.dsTake}</div>
-            {ids.map((i) => {
-              const on = seen.has(i) && drawn[i];
-              const lv = on ? visStep(cardPower(drawn[i]), DS_TRI_CUTS) : -1;
-              const parts = String((labels && labels[i]) || "").split("｜");
-              return (
-                <div key={i} className="ds-row">
-                  <span className="ds-field">{parts[1] || parts[0] || ""}</span>
-                  <span className="ds-bar">
-                    <i className="ds-fill" style={{ width: on ? `${(lv + 1) * 20}%` : "0%" }} />
-                  </span>
-                </div>
-              );
-            })}
-          </div>
-        ))}
+      <div className="ds6">
+        <div className="ds6-head">
+          <span>{t.dsGive}</span>
+          <span>{t.dsTake}</span>
+        </div>
+        {[...DS_UP_TRI, 1, 4, 5].map((i) => {
+          const left = DS_UP_TRI.includes(i);
+          const on = seen.has(i) && drawn[i];
+          const lv = on ? visStep(cardPower(drawn[i]), DS_TRI_CUTS) : -1;
+          const parts = String((labels && labels[i]) || "").split("｜");
+          const pct = on ? (lv + 1) * 20 : 0;
+          return (
+            <div key={i} className={`ds6-row${left ? " l" : " r"}`}>
+              <div className="ds6-half ds6-l">
+                {left
+                  ? <i className="ds6-fill" style={{ width: `${pct}%` }} />
+                  : <span className="ds6-label">{parts[1] || parts[0] || ""}</span>}
+              </div>
+              <div className="ds6-half ds6-r">
+                {left
+                  ? <span className="ds6-label">{parts[1] || parts[0] || ""}</span>
+                  : <i className="ds6-fill" style={{ width: `${pct}%` }} />}
+              </div>
+            </div>
+          );
+        })}
       </div>
       <p className="hs-pass-read">
         {complete
@@ -24334,7 +24369,20 @@ export default function TarotDraw() {
     ⚠️ useState の初期化関数を使うこと。本体で Math.random を呼ぶと、
     再描画のたびに空が変わって落ち着かない。
   */
-  const [skyKind] = useState(pickSkyKind);
+  /*
+    空。既定は毎回くじ引き。
+    ⚠️ コードで固定したときだけ上書きする。固定は localStorage に持たせて
+    リロードしても残す ―― 見せたい相手に見せる前に消えたら意味がない。
+    ⚠️ 保存された値が SKY_KINDS に無ければ無視してくじ引きに戻す。
+    綴りを間違えた値が残ると、空が永久に消える。
+  */
+  const [skyKind, setSkyKind] = useState(() => {
+    try {
+      const fixed = localStorage.getItem(LS_SKY_FIXED);
+      if (fixed && SKY_KINDS.includes(fixed)) return fixed;
+    } catch (e) { /* 読めなければくじ引き */ }
+    return pickSkyKind();
+  });
 
   /*
     ホロ図鑑の取得状況。{ "major-0": { up: true, rev: false }, ... }
@@ -24786,9 +24834,38 @@ export default function TarotDraw() {
       setLimitExpanded(null);
       setForceStarVariant(null);
       setActiveStarVariant(null);
+      /* ⚠️ 空の固定もここで解く。localStorage.clear() で消えてはいるが、
+         state は残るので、明示的に戻さないと画面だけ固定が続く */
+      setSkyKind(pickSkyKind());
       setCouponInput("");
       setShowCoupon(false);
       alert("✓ リセット完了\nページをリロードしてください");
+    } else if (code === "building" || code === "biru") {
+      /*
+        夜のビルの空（超大雪）に固定する。
+        人に見せたいときに、くじ引き待ちにならないための入口。
+        ⚠️ 固定は解除できること。sora で戻る。
+        戻せない固定は、飽きたときに逃げ場が無くなる。
+      */
+      try { localStorage.setItem(LS_SKY_FIXED, "blizzard"); } catch (e) {}
+      setSkyKind("blizzard");
+      setCouponInput("");
+      alert("✓ 空を「夜のビルと超大雪」に固定しました\n（sora と入れると元のくじ引きに戻ります）");
+    } else if (code === "sora") {
+      try { localStorage.removeItem(LS_SKY_FIXED); } catch (e) {}
+      setSkyKind(pickSkyKind());
+      setCouponInput("");
+      alert("✓ 空の固定を解除しました");
+    } else if (SKY_KINDS.includes(code)) {
+      /*
+        他の空も同じ綴りで呼べる。rain / snow / heavysnow / blizzard /
+        clear / star / petal / thunder / maple / ufo
+        ⚠️ ここは SKY_KINDS を直接見ること。空を足したら自動で呼べるようにする。
+      */
+      try { localStorage.setItem(LS_SKY_FIXED, code); } catch (e) {}
+      setSkyKind(code);
+      setCouponInput("");
+      alert(`✓ 空を「${code}」に固定しました\n（sora で解除）`);
     } else if (code === "taishokuten") {
       // AI鑑定を停止（フォールバック定型文のみ、API消費ゼロ）
       try { localStorage.setItem("tarot_ai_enabled", "off"); } catch {}
@@ -27592,39 +27669,42 @@ export default function TarotDraw() {
           letter-spacing: 0.08em;
         }
         /*
-          --- ダビデスターの内訳 ---
-          ⚠️ 数字も点も出さない。帯の長さひとつだけ。
-          分野ごとの多い少ないが分かればよく、目盛りは要らない。
+          --- ダビデスターの六ゲージ ---
+          原点を中央に置き、与えた側は左へ、受けた側は右へ伸ばす。
+          ⚠️ 色は両側とも虹色。左右に分かれている時点で側は分かるので、
+          色で二重に言わない。片側を灰色にすると劣ったものに見える。
         */
-        .ds-ledger {
-          display: grid; grid-template-columns: 1fr 1fr; gap: 12px;
-          margin: 4px 0 12px;
+        .ds6 { margin: 6px 0 12px; position: relative; }
+        .ds6-head {
+          display: flex; justify-content: space-between;
+          font-size: 10px; letter-spacing: 0.08em; margin-bottom: 8px;
+          color: rgba(226,214,240,0.85);
         }
-        .ds-col-head {
-          font-size: 10.5px; letter-spacing: 0.08em; margin-bottom: 7px;
-          text-align: center;
+        /* 原点。全行を貫く一本 */
+        .ds6::after {
+          content: ""; position: absolute; left: 50%; top: 20px; bottom: 0;
+          width: 1px; background: rgba(201,162,75,0.4);
         }
-        .ds-give .ds-col-head { color: rgba(226,214,240,0.95); }
-        .ds-take .ds-col-head { color: rgba(165,155,188,0.72); }
-        .ds-row { margin: 7px 0; }
-        .ds-field {
-          display: block; font-size: 10px; color: var(--muted);
-          margin-bottom: 3px; line-height: 1.5;
+        .ds6-row {
+          display: grid; grid-template-columns: 1fr 1fr;
+          align-items: center; height: 20px;
+        }
+        .ds6-half { height: 7px; display: flex; align-items: center; position: relative; }
+        /* 左半分は右端（＝原点）から左へ伸ばす */
+        .ds6-l { justify-content: flex-end; padding-right: 5px; }
+        .ds6-r { justify-content: flex-start; padding-left: 5px; }
+        .ds6-fill {
+          display: block; height: 7px; border-radius: 3px;
+          background: linear-gradient(90deg, #FF3CB4, #3CC8FF, #78FF8C, #FFDC3C);
+          box-shadow: 0 0 5px rgba(190,230,255,0.65);
+          transition: width .5s ease;
+        }
+        /* 伸びる向きに合わせて、傾斜の始まりも外側から */
+        .ds6-row.l .ds6-fill { background: linear-gradient(270deg, #FFDC3C, #78FF8C, #3CC8FF, #FF3CB4); }
+        .ds6-label {
+          font-size: 9.5px; color: var(--muted); line-height: 1.4;
           overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
         }
-        .ds-bar {
-          display: block; height: 5px; border-radius: 3px;
-          background: rgba(255,255,255,0.06);
-          border: 1px solid rgba(201,162,75,0.16); overflow: hidden;
-        }
-        .ds-fill { display: block; height: 100%; transition: width .5s ease; }
-        /* 与えた側は光る */
-        .ds-give .ds-fill {
-          background: linear-gradient(90deg, #FF3CB4, #3CC8FF, #78FF8C, #FFDC3C);
-          box-shadow: 0 0 5px rgba(190,230,255,0.7);
-        }
-        /* 受けた側は沈む。同じ長さでも役割の違いが目で分かるように */
-        .ds-take .ds-fill { background: rgba(150,140,175,0.8); }
         /*
           --- ダビデスターの封印演出 ---
           ⚠️ 光るのは「三枚そろった」という事実だけで決まる。
