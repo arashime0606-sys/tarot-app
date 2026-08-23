@@ -9316,10 +9316,12 @@ const SKY_PALETTE = ["#FF3CB4", "#3CC8FF", "#78FF8C", "#FFDC3C"];
   一粒が大きく密なので、150体でも画面は埋まる。
 */
 /*
-  ⚠️ 超大雪は一粒が大雪よりさらに細かく、加えて三段階の大きさがある。
-  大粒は要素数も面積も大きいので、大雪より減らす。110体で画面は埋まる。
+  ⚠️ 超大雪は「超」なので降り方の密度が要る。320体まで増やした。
+  三段階のうち小が過半なので、要素数は 320 × 平均25 ≒ 8千に収まる。
+  ⚠️ これ以上増やすなら、先に小の段の描画を削ること。
+  大の段（一粒70要素）を増やすと一気に一万を超えてスマホが重くなる。
 */
-const SKY_COUNT = { ufo: 16, heavysnow: 150, blizzard: 110 };
+const SKY_COUNT = { ufo: 16, heavysnow: 150, blizzard: 320 };
 const SKY_DEFAULT_N = 220;
 const skyMotes = (n) => Array.from({ length: n }, (_, k) => ({
   x: (k * 137.508) % 100,                    // 黄金角。並ばずに散る
@@ -9338,27 +9340,40 @@ const skyMotes = (n) => Array.from({ length: n }, (_, k) => ({
 }));
 
 /*
-  夜のビル。四角だけで組む。位置も大きさも固定で、動かさない。
-  ⚠️ 降るものと同じ動きを付けないこと。動く背景が二層になると、
-  どちらを見ればいいのか分からなくなる。ビルは止まっているから奥に見える。
+  夜のビル。四角だけで組む。絵本の街並みの調子で、太く短く。
+
+  ⚠️ 細長くしないこと。実物のビルの比率にすると背景が写実に寄り、
+  落ちものの素朴さと噛み合わなくなる。幅は高さの半分以上を保つ。
+  ⚠️ 窓は横2・縦4の八つで固定。全部に灯りを点ける。
+  間引くと空室に見えて、寂しい街になる。
+  ⚠️ 下端に一列で並べないこと。真下に揃うと書き割りになる。
+  y をばらして奥行きを作る。上のほうを多めにして、
+  タイトルの文字に隠れる位置ほど数を増やす。
 
     x  左端（画面幅に対する％）
+    y  上端（画面高に対する％）
     w  幅（px）
     h  高さ（px）
-    c  窓の列数
-    r  窓の行数
-    lit 灯りが点いている窓の間引き（この数で割り切れる窓だけ光る）
 */
 const SKY_BUILDINGS = [
-  { x: 2,  w: 34, h: 96,  c: 3, r: 6,  lit: 3 },
-  { x: 13, w: 26, h: 148, c: 2, r: 9,  lit: 4 },
-  { x: 23, w: 44, h: 74,  c: 4, r: 4,  lit: 2 },
-  { x: 36, w: 30, h: 190, c: 3, r: 12, lit: 5 },
-  { x: 48, w: 38, h: 118, c: 3, r: 7,  lit: 3 },
-  { x: 60, w: 24, h: 164, c: 2, r: 10, lit: 4 },
-  { x: 69, w: 46, h: 88,  c: 4, r: 5,  lit: 3 },
-  { x: 82, w: 28, h: 138, c: 2, r: 8,  lit: 4 },
-  { x: 91, w: 36, h: 106, c: 3, r: 6,  lit: 2 },
+  /* 上のほう。文字に隠れる帯なので多めに置く */
+  { x: 4,  y: 6,  w: 52, h: 76 },
+  { x: 17, y: 3,  w: 44, h: 92 },
+  { x: 29, y: 9,  w: 60, h: 66 },
+  { x: 43, y: 4,  w: 48, h: 86 },
+  { x: 56, y: 8,  w: 56, h: 72 },
+  { x: 69, y: 2,  w: 46, h: 96 },
+  { x: 82, y: 7,  w: 58, h: 70 },
+  { x: 93, y: 5,  w: 42, h: 84 },
+  /* 中ほど */
+  { x: 9,  y: 34, w: 50, h: 78 },
+  { x: 34, y: 30, w: 58, h: 68 },
+  { x: 61, y: 36, w: 46, h: 82 },
+  { x: 87, y: 32, w: 54, h: 74 },
+  /* 下のほう。少なめ */
+  { x: 21, y: 66, w: 56, h: 72 },
+  { x: 52, y: 70, w: 48, h: 80 },
+  { x: 78, y: 64, w: 60, h: 66 },
 ];
 /* 雨と雪の雲。上のほうに数枚 */
 const SKY_CLOUDS = [
@@ -9505,10 +9520,15 @@ function TitleSky({ kind, dim = false }) {
             <line key={`m${deg}`} x1={-R} y1="0" x2={R} y2="0" stroke={C} strokeWidth={LW}
               strokeLinecap="round" transform={`rotate(${deg})`} />
           ))}
-          {[0, 60, 120, 180, 240, 300].map((deg) => (
+          {/*
+            ⚠️ 小の段は骨格だけで済ませる。320体のうち過半が小なので、
+            ここに枝を足すと要素数が一気に膨らむ。
+            小さい粒では枝は潰れて見えないので、描いても得がない。
+          */}
+          {tier >= 1 && [0, 60, 120, 180, 240, 300].map((deg) => (
             <g key={`b${deg}`} transform={`rotate(${deg})`}>
-              {/* 枝。中と大は三対、小は一対だけ */}
-              {(tier >= 1 ? [0.34, 0.56, 0.76] : [0.56]).map((f, bi) => {
+              {/* 枝。中は二対、大は三対 */}
+              {(tier >= 2 ? [0.34, 0.56, 0.76] : [0.4, 0.66]).map((f, bi) => {
                 const len = R * (0.2 - bi * 0.03);
                 return (
                   <g key={f}>
@@ -9532,15 +9552,15 @@ function TitleSky({ kind, dim = false }) {
                     stroke={C} strokeWidth={LW * 0.5} strokeLinecap="round" />
                 </g>
               ))}
-              {/* 先端。大は結晶、中と小は粒 */}
+              {/* 先端。大は結晶、中は粒、小は描かない（320体ぶんの軽量化） */}
               {tier >= 2 ? (
                 <polygon points={Array.from({ length: 6 }, (_, i) => {
                   const a2 = (Math.PI / 3) * i;
                   return `${(R + Math.cos(a2) * R * 0.11).toFixed(2)},${(Math.sin(a2) * R * 0.11).toFixed(2)}`;
                 }).join(" ")} fill="none" stroke={C} strokeWidth={LW * 0.55} />
-              ) : (
-                <circle cx={R.toFixed(2)} cy="0" r={(LW * (tier ? 0.8 : 0.6)).toFixed(2)} fill={C} />
-              )}
+              ) : tier >= 1 ? (
+                <circle cx={R.toFixed(2)} cy="0" r={(LW * 0.8).toFixed(2)} fill={C} />
+              ) : null}
             </g>
           ))}
           {/* 中心。大は二重の六角、中は一つ、小は無し */}
@@ -9617,31 +9637,30 @@ function TitleSky({ kind, dim = false }) {
       {/*
         夜のビル。超大雪のときだけ。四角だけで組む。
 
-        ⚠️ 画面の下端に貼り付けること。y="100%" の入れ子svgを基準にして、
-        矩形は負の y へ伸ばす。高さを％で持つと、縦長の端末で
-        ビルだけが引き伸ばされて別物になる。
         ⚠️ 動かさない。降るものと同じ動きを付けると層が二つとも動いて、
         どこを見ればいいのか分からなくなる。止まっているから奥に見える。
         ⚠️ 落ちものより前に描く。あとに描くと雪がビルの裏へ回る。
+        ⚠️ 大きさは px で持つこと。％にすると縦長の端末で
+        ビルだけが引き伸ばされて、四角ではなくなる。
       */}
       {kind === "blizzard" && SKY_BUILDINGS.map((b, bi) => (
-        <svg key={`bl${bi}`} x={`${b.x}%`} y="100%" overflow="visible">
-          <g opacity="0.5">
+        <svg key={`bl${bi}`} x={`${b.x}%`} y={`${b.y}%`} overflow="visible">
+          <g opacity="0.42">
             {/* 躯体 */}
-            <rect x={-b.w / 2} y={-b.h} width={b.w} height={b.h}
-              fill="rgba(9,7,18,0.92)" stroke="rgba(150,140,190,0.35)" strokeWidth="0.8" />
-            {/* 窓。四角だけ。灯りは間引いて点ける */}
-            {Array.from({ length: b.c * b.r }, (_, wi) => {
-              const col = wi % b.c, row = Math.floor(wi / b.c);
-              const gapX = b.w / (b.c + 1), gapY = b.h / (b.r + 1);
-              const on = (wi + bi) % b.lit === 0;
+            <rect x={-b.w / 2} y="0" width={b.w} height={b.h}
+              fill="rgba(9,7,18,0.9)" stroke="rgba(160,150,200,0.4)" strokeWidth="1" />
+            {/* 窓。横2・縦4の八つ。全部に灯りを点ける */}
+            {Array.from({ length: 8 }, (_, wi) => {
+              const col = wi % 2, row = Math.floor(wi / 2);
+              const ww = b.w * 0.26, wh = b.h * 0.13;
+              const gx = b.w / 3, gy = b.h / 5;
               return (
                 <rect key={wi}
-                  x={(-b.w / 2 + gapX * (col + 1) - 3).toFixed(1)}
-                  y={(-b.h + gapY * (row + 1) - 3).toFixed(1)}
-                  width="6" height="6"
-                  fill={on ? SKY_PALETTE[(bi + wi) % SKY_PALETTE.length] : "rgba(60,55,80,0.5)"}
-                  opacity={on ? 0.55 : 0.3} />
+                  x={(-b.w / 2 + gx * (col + 1) - ww / 2).toFixed(1)}
+                  y={(gy * (row + 1) - wh / 2).toFixed(1)}
+                  width={ww.toFixed(1)} height={wh.toFixed(1)}
+                  fill={SKY_PALETTE[(bi + row) % SKY_PALETTE.length]}
+                  opacity="0.6" />
               );
             })}
           </g>
@@ -10282,7 +10301,6 @@ const MODERN_VIS_I18N = {
       "下向きの三角が閉じました。受けた側が半ばくすんでいます。",
       "下向きの三角が閉じました。受けた側が濃くくすんでいます。",
       "下向きの三角が閉じました。受けた側が深く沈んでいます。"][s],
-    dsTri: (u, d) => `（与えた側の輝き ${u + 1}／5、受けた側の沈み ${d + 1}／5）`,
     dsRead: [
       "受けた側のほうが重く出ています。前世で背負ったものが、いまも効いています。",
       "与えた側と受けた側が釣り合っています。",
@@ -10432,7 +10450,6 @@ const MODERN_VIS_I18N = {
       "The downward triangle closed. The receiving side is half clouded.",
       "The downward triangle closed. The receiving side is heavily clouded.",
       "The downward triangle closed. The receiving side sits deep in shadow."][s],
-    dsTri: (u, d) => ` (giving ${u + 1}/5, receiving ${d + 1}/5)`,
     dsRead: [
       "What was received weighs heavier. What you carried then still tells.",
       "What was given and what was received are in balance.",
@@ -12023,9 +12040,9 @@ function DavidStarStar({ drawn, labels, lang, openedIndices }) {
         <HoloDefs id="dsHolo" w={W} h={H} />
         {/* まだ閉じていない辺。うっすら道筋だけ見せる */}
         <polygon points={tri(DS_UP_TRI)} fill="none" stroke="url(#dsHolo)"
-          strokeWidth="0.7" opacity="0.16" strokeDasharray="4 6" />
+          strokeWidth="1" opacity="0.3" strokeDasharray="4 6" />
         <polygon points={tri(DS_DOWN_TRI)} fill="none" stroke="url(#dsHolo)"
-          strokeWidth="0.7" opacity="0.16" strokeDasharray="4 6" />
+          strokeWidth="1" opacity="0.3" strokeDasharray="4 6" />
         {/*
           閉じた三角。輝きは段階制。
 
@@ -12036,23 +12053,31 @@ function DavidStarStar({ drawn, labels, lang, openedIndices }) {
              大きいという意味なので、文言では罰として書かないこと。
              くすみは重さの表現であって、減点ではない。
         */}
+        {/*
+          ⚠️⚠️ 段階を付けるのは「見えている範囲の中」だけ。
+          以前、弱い盤面で六芒星そのものが消えた。輝度を 0 に向けて下げると、
+          図が読めないのではなく図が無くなる。
+          下限は必ず十分見える値にして、段階は上へ伸ばす方向で付けること。
+            線の太さ 2.2 〜 3.4 ／ 不透明度 0.82 〜 1.0
+            くすみも 彩度 0.5 ／ 明度 0.78 で止める。真っ黒にしない。
+        */}
         {upClosed && (
           <polygon points={tri(DS_UP_TRI)} fill="url(#dsHolo)"
-            fillOpacity={0.05 + upStep * 0.05}
-            stroke="url(#dsHolo)" strokeWidth={1.2 + upStep * 0.45}
-            opacity={0.55 + upStep * 0.11}
+            fillOpacity={0.07 + upStep * 0.045}
+            stroke="url(#dsHolo)" strokeWidth={2.2 + upStep * 0.3}
+            opacity={0.82 + upStep * 0.045}
             className="mv-tri-seal"
-            style={{ filter: `drop-shadow(0 0 ${2 + upStep * 3}px rgba(190,230,255,${(0.35 + upStep * 0.14).toFixed(2)}))` }} />
+            style={{ filter: `drop-shadow(0 0 ${3 + upStep * 3.5}px rgba(190,230,255,${(0.5 + upStep * 0.12).toFixed(2)}))` }} />
         )}
         {downClosed && (
           <polygon points={tri(DS_DOWN_TRI)} fill="url(#dsHolo)"
-            fillOpacity={0.11 - downStep * 0.02}
-            stroke="url(#dsHolo)" strokeWidth={1.8 - downStep * 0.22}
-            opacity={0.9 - downStep * 0.13}
+            fillOpacity={0.1 - downStep * 0.012}
+            stroke="url(#dsHolo)" strokeWidth={3.0 - downStep * 0.2}
+            opacity={1 - downStep * 0.045}
             className="mv-tri-seal"
             style={{
-              /* くすませる。彩度を落として少し暗くする */
-              filter: `saturate(${(1 - downStep * 0.22).toFixed(2)}) brightness(${(1 - downStep * 0.13).toFixed(2)})`,
+              /* くすませる。ただし沈めきらない */
+              filter: `saturate(${(1 - downStep * 0.125).toFixed(2)}) brightness(${(1 - downStep * 0.055).toFixed(2)})`,
               animationDelay: "0.25s",
             }} />
         )}
@@ -12068,14 +12093,14 @@ function DavidStarStar({ drawn, labels, lang, openedIndices }) {
           const on = seen.has(i);
           return (
             <g key={i}>
-              <circle cx={x} cy={y} r={on ? 6 : 3.2} fill="url(#dsHolo)"
-                opacity={on ? (DS_UP_TRI.includes(i) ? 0.7 + upStep * 0.07 : 0.95 - downStep * 0.12) : 0.22}
+              <circle cx={x} cy={y} r={on ? 6.5 : 3.2} fill="url(#dsHolo)"
+                opacity={on ? (DS_UP_TRI.includes(i) ? 0.85 + upStep * 0.037 : 1 - downStep * 0.05) : 0.25}
                 className={on && complete ? "mv-pulse" : ""}
                 style={{
                   filter: !on ? "none"
                     : DS_UP_TRI.includes(i)
-                      ? `drop-shadow(0 0 ${2 + upStep * 3}px rgba(190,230,255,0.9))`
-                      : `saturate(${(1 - downStep * 0.22).toFixed(2)}) brightness(${(1 - downStep * 0.13).toFixed(2)})`,
+                      ? `drop-shadow(0 0 ${3 + upStep * 3.5}px rgba(190,230,255,0.9))`
+                      : `saturate(${(1 - downStep * 0.125).toFixed(2)}) brightness(${(1 - downStep * 0.055).toFixed(2)})`,
                 }} />
               <text x={x} y={y + (i === 5 ? 20 : i === 0 ? -12 : (y > CY ? 18 : -12))}
                 textAnchor="middle" className="hs-pt-name"
@@ -12088,32 +12113,26 @@ function DavidStarStar({ drawn, labels, lang, openedIndices }) {
         })}
       </svg>
       {/*
-        天体ごとの台帳。
+        天体ごとの内訳。
 
-        ⚠️ 三角ぜんたいの明暗だけでは「どの分野で与え、どの分野で受けたか」が読めない。
-        三角は総量、こちらは内訳。図と表で役割を分ける。
-        ⚠️ 段は三角の輝きと同じ刻み（DS_TRI_CUTS）を使うこと。
-           図と表で別の刻みを使うと、図が明るいのに表が低い、が起きる。
+        ⚠️ 数字を出さないこと。以前は「4/5」の分数と五つの点を
+        天体ごとに並べていて、画面が数字と点だらけになり読めなくなった。
+        分野ごとの多い少ないが分かればよく、目盛りの値は要らない。
+        帯の長さひとつで示す。
       */}
       <div className="ds-ledger">
-        {[["give", DS_UP_TRI, upStep], ["take", DS_DOWN_TRI, downStep]].map(([side, ids, sideStep]) => (
+        {[["give", DS_UP_TRI], ["take", DS_DOWN_TRI]].map(([side, ids]) => (
           <div key={side} className={`ds-col ds-${side}`}>
-            <div className="ds-col-head">
-              {side === "give" ? t.dsGive : t.dsTake}
-              <span className="ds-col-sum">{sideStep + 1}/5</span>
-            </div>
+            <div className="ds-col-head">{side === "give" ? t.dsGive : t.dsTake}</div>
             {ids.map((i) => {
               const on = seen.has(i) && drawn[i];
               const lv = on ? visStep(cardPower(drawn[i]), DS_TRI_CUTS) : -1;
               const parts = String((labels && labels[i]) || "").split("｜");
               return (
                 <div key={i} className="ds-row">
-                  <span className="ds-body">{parts[0] || ""}</span>
-                  <span className="ds-field">{parts[1] || ""}</span>
-                  <span className="ds-dots" aria-label={on ? `${lv + 1}/5` : ""}>
-                    {[0, 1, 2, 3, 4].map((k) => (
-                      <i key={k} className={`ds-dot${on && k <= lv ? " on" : ""}`} />
-                    ))}
+                  <span className="ds-field">{parts[1] || parts[0] || ""}</span>
+                  <span className="ds-bar">
+                    <i className="ds-fill" style={{ width: on ? `${(lv + 1) * 20}%` : "0%" }} />
                   </span>
                 </div>
               );
@@ -12123,7 +12142,7 @@ function DavidStarStar({ drawn, labels, lang, openedIndices }) {
       </div>
       <p className="hs-pass-read">
         {complete
-          ? `${t.dsRead[step]}${t.dsTri(upStep, downStep)}`
+          ? t.dsRead[step]
           : upClosed ? t.dsHalfUp(upStep)
           : downClosed ? t.dsHalfDown(downStep)
           : t.dsOpen}
@@ -27567,47 +27586,39 @@ export default function TarotDraw() {
           letter-spacing: 0.08em;
         }
         /*
-          --- ダビデスターの天体台帳 ---
-          三角は総量、台帳は内訳。どの分野で与えどの分野で受けたかを段で示す。
-          ⚠️ 与えた側はホロ、受けた側は彩度を落とす。図と同じ扱いに揃える。
+          --- ダビデスターの内訳 ---
+          ⚠️ 数字も点も出さない。帯の長さひとつだけ。
+          分野ごとの多い少ないが分かればよく、目盛りは要らない。
         */
         .ds-ledger {
-          display: grid; grid-template-columns: 1fr 1fr; gap: 10px;
-          margin: 6px 0 10px;
-        }
-        .ds-col {
-          border: 1px solid rgba(201,162,75,0.2); border-radius: 8px;
-          padding: 8px 8px 6px; background: rgba(255,255,255,0.02);
+          display: grid; grid-template-columns: 1fr 1fr; gap: 12px;
+          margin: 4px 0 12px;
         }
         .ds-col-head {
-          font-size: 10px; letter-spacing: 0.06em; margin-bottom: 6px;
-          display: flex; justify-content: space-between; align-items: baseline;
+          font-size: 10.5px; letter-spacing: 0.08em; margin-bottom: 7px;
+          text-align: center;
         }
         .ds-give .ds-col-head { color: rgba(226,214,240,0.95); }
-        .ds-take .ds-col-head { color: rgba(170,160,190,0.7); }
-        .ds-col-sum { font-size: 9px; opacity: 0.7; }
-        .ds-row { display: flex; align-items: center; gap: 4px; margin: 3px 0; }
-        .ds-body { font-size: 10px; width: 2.6em; flex: none; color: var(--gold-soft); }
+        .ds-take .ds-col-head { color: rgba(165,155,188,0.72); }
+        .ds-row { margin: 7px 0; }
         .ds-field {
-          font-size: 9px; flex: 1; min-width: 0; color: var(--muted);
+          display: block; font-size: 10px; color: var(--muted);
+          margin-bottom: 3px; line-height: 1.5;
           overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
         }
-        .ds-dots { display: inline-flex; gap: 2px; flex: none; }
-        .ds-dot {
-          width: 5px; height: 5px; border-radius: 50%;
-          border: 1px solid rgba(201,162,75,0.35); background: transparent;
+        .ds-bar {
+          display: block; height: 5px; border-radius: 3px;
+          background: rgba(255,255,255,0.06);
+          border: 1px solid rgba(201,162,75,0.16); overflow: hidden;
         }
+        .ds-fill { display: block; height: 100%; transition: width .5s ease; }
         /* 与えた側は光る */
-        .ds-give .ds-dot.on {
-          background: linear-gradient(135deg, #FF3CB4, #3CC8FF, #78FF8C, #FFDC3C);
-          border-color: transparent;
-          box-shadow: 0 0 4px rgba(190,230,255,0.8);
+        .ds-give .ds-fill {
+          background: linear-gradient(90deg, #FF3CB4, #3CC8FF, #78FF8C, #FFDC3C);
+          box-shadow: 0 0 5px rgba(190,230,255,0.7);
         }
-        /* 受けた側は沈む。同じ段でも見え方を変えて、役割の違いを目で分ける */
-        .ds-take .ds-dot.on {
-          background: rgba(150,140,175,0.85); border-color: transparent;
-          box-shadow: none;
-        }
+        /* 受けた側は沈む。同じ長さでも役割の違いが目で分かるように */
+        .ds-take .ds-fill { background: rgba(150,140,175,0.8); }
         /*
           --- ダビデスターの封印演出 ---
           ⚠️ 光るのは「三枚そろった」という事実だけで決まる。
