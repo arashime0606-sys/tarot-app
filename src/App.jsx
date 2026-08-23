@@ -11505,14 +11505,14 @@ const quizT = (lang) => QUIZ_I18N[lang] || QUIZ_I18N.en;
 */
 function QuizPanel({ lang, onBack }) {
   const t = quizT(lang);
-  const [q, setQ] = React.useState(() => buildQuizQuestion(lang));
-  const [picked, setPicked] = React.useState(null);
-  const [asked, setAsked] = React.useState(0);
-  const [hit, setHit] = React.useState(0);
-  const [streak, setStreak] = React.useState(0);
+  const [q, setQ] = useState(() => buildQuizQuestion(lang));
+  const [picked, setPicked] = useState(null);
+  const [asked, setAsked] = useState(0);
+  const [hit, setHit] = useState(0);
+  const [streak, setStreak] = useState(0);
 
   /* 言語が変わったら作り直す。問題文だけ差し替えると選択肢と食い違う */
-  React.useEffect(() => { setQ(buildQuizQuestion(lang)); setPicked(null); }, [lang]);
+  useEffect(() => { setQ(buildQuizQuestion(lang)); setPicked(null); }, [lang]);
 
   const answer = (i) => {
     if (picked !== null) return;
@@ -12314,15 +12314,21 @@ function ZodiacWheel({ drawn, labels, lang, openedIndices }) {
 */
 const BACK_GUARD_MS = 650;
 
+/*
+  ⚠️⚠️ このファイルは `import { useState, useEffect, useRef, useMemo } from "react"` だけで、
+  React という名前空間は存在しない。React.useState と書くと undefined を参照して
+  画面が真っ暗になる（実際に全メニューが開かなくなった）。
+  フックは必ず素の名前で呼ぶこと。
+*/
 function BackToTitle({ onBack, label, activityKey, style, className }) {
-  const [since, setSince] = React.useState(() => Date.now());
-  const [, bump] = React.useState(0);
+  const [since, setSince] = useState(() => Date.now());
+  const [, bump] = useState(0);
 
   /* 札をめくるたびに数え直す。連打の最中はずっと効く */
-  React.useEffect(() => { setSince(Date.now()); }, [activityKey]);
+  useEffect(() => { setSince(Date.now()); }, [activityKey]);
 
   /* 猶予明けに薄さを戻すためだけの再描画。届かなくても押せる */
-  React.useEffect(() => {
+  useEffect(() => {
     const id = setTimeout(() => bump((n) => n + 1), BACK_GUARD_MS + 40);
     return () => clearTimeout(id);
   }, [since]);
