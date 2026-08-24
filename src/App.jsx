@@ -9423,7 +9423,8 @@ function SkyHouse({ w, seedIndex }) {
         fill="#171128" stroke="rgba(150,142,190,0.32)" strokeWidth="0.5" />
       {/* 窓ひとつ。必ず灯す */}
       <rect x={-win / 2} y={body * 0.3} width={win} height={win}
-        fill={SKY_WINDOW} opacity="0.9" />
+        fill={SKY_WINDOW} opacity="0.9"
+        style={{ filter: "drop-shadow(0 0 3px rgba(255,214,120,0.85))" }} />
     </g>
   );
 }
@@ -9521,13 +9522,7 @@ function SkySnowman({ w }) {
   ⚠️ UFO は「たまに一つ」ではなく群れにする。
   16体では特殊演出として弱く、気づかれないまま流れていた。
 */
-/*
-  ⚠️ 超大雪を 320 まで増やしたら PC で重くなった。
-  .title-sky は色相回転を毎フレームかけるので、層の中の要素数が
-  そのまま毎フレームの塗り直し量になる。画面が広いほど不利。
-  一粒あたりの要素数が多い超大雪は、数で押さない。
-*/
-const SKY_COUNT = { ufo: 90, heavysnow: 150, blizzard: 170 };
+const SKY_COUNT = { ufo: 90, heavysnow: 150, blizzard: 320 };
 const SKY_DEFAULT_N = 220;
 const skyMotes = (n) => Array.from({ length: n }, (_, k) => ({
   x: (k * 137.508) % 100,                    // 黄金角。並ばずに散る
@@ -9968,7 +9963,8 @@ function TitleSky({ kind, dim = false }) {
                     x={(-b.w / 2 + gx * (col + 1) - ww / 2).toFixed(1)}
                     y={(gy * (row + 1) - wh / 2).toFixed(1)}
                     width={ww.toFixed(1)} height={wh.toFixed(1)}
-                    fill={SKY_WINDOW} opacity={0.92 - far * 0.2} />
+                    fill={SKY_WINDOW} opacity={0.92 - far * 0.2}
+                    style={{ filter: `drop-shadow(0 0 ${(3 - far * 1.5).toFixed(1)}px rgba(255,214,120,0.85))` }} />
                 );
               })}
             </g>
@@ -26084,8 +26080,7 @@ export default function TarotDraw() {
       try { localStorage.setItem(LS_SKY_FIXED, "blizzard"); } catch (e) {}
       setSkyKind("blizzard");
       setCouponInput("");
-      alert("✓ 空を「夜のビルと超大雪」に固定しました\n"
-        + "この空はいちばん重いので、動きが鈍いときは sora で解除してください");
+      alert("✓ 空を「夜のビルと超大雪」に固定しました\n（sora と入れると元のくじ引きに戻ります）");
     } else if (code === "sora") {
       try { localStorage.removeItem(LS_SKY_FIXED); } catch (e) {}
       setSkyKind(pickSkyKind());
@@ -26999,6 +26994,13 @@ export default function TarotDraw() {
           x/y（％）で散らす。
         */
         /*
+          ⚠️⚠️ 空の層は position: absolute にしないこと。
+          absolute + inset:0 は「中身の高さ」に追従する。表紙は縦に長いので
+          気づかないが、「その他」のように中身の短い画面へ行くと層が潰れ、
+          y を 2〜83％ で置いているビルが一箇所に集まる。実際にそうなった。
+          fixed + 100vh にすれば、どの画面でも画面の高さそのものになる。
+          巻き取りでも動かないので、塗り直しも起きない。
+
           ⚠️⚠️ 空の層は z-index を 0 にしないこと。
           位置指定した要素は、DOMの順序に関わらず、静的な中身より上に描かれる。
           雪だけなら薄いので気づかないが、不透明なビルを置いた途端に
@@ -27006,7 +27008,7 @@ export default function TarotDraw() {
           空は必ず 0 未満へ落とす。中身は .tarot-root の背景の上に載る。
         */
         .title-sky {
-          position: absolute; inset: 0; width: 100%; height: 100%;
+          position: fixed; inset: 0; width: 100vw; height: 100vh;
           pointer-events: none; z-index: -2; opacity: 0.5;
           overflow: hidden;
           /*
@@ -28968,7 +28970,7 @@ export default function TarotDraw() {
              出しっぱなしにすると壁紙になって、落ちている感じが消える。
         */
         .sky-bolt {
-          position: absolute; inset: 0; width: 100%; height: 100%;
+          position: fixed; inset: 0; width: 100vw; height: 100vh;
           pointer-events: none; z-index: -1; overflow: hidden;
         }
         .sky-bolt.dim { opacity: 0.25; }
@@ -28981,7 +28983,7 @@ export default function TarotDraw() {
           5%       { opacity: 0; }
         }
         .sky-city {
-          position: absolute; inset: 0; width: 100%; height: 100%;
+          position: fixed; inset: 0; width: 100vw; height: 100vh;
           pointer-events: none; z-index: -3; overflow: hidden;
           opacity: 0.92;
         }
