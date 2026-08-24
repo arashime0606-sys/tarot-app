@@ -9345,6 +9345,26 @@ const SKY_PALETTE = ["#FF3CB4", "#3CC8FF", "#78FF8C", "#FFDC3C"];
 const SKY_WINDOW = "#FFD98A";
 
 /*
+  粒の大きさ。種類ごとにここだけで決める。
+
+  ⚠️ 三段階を使う種類は、いちばん小さい段でも形が読めること。
+  雷を 0.7 倍から始めたら点にしか見えなかった。
+  段の差は「小さくする」ではなく「大きくする」方向で付ける。
+*/
+const SKY_TIER_SCALE = {
+  blizzard: [0.9, 1.5, 2.5],   // 雪の結晶。小でも骨格が見える大きさから
+  thunder:  [1.4, 2.0, 3.0],   // 稲妻。記号なので潰れやすい。下限を高く取る
+};
+/* 三段階を持たない種類の倍率。既定は 1、大粒は 2.1 倍 */
+const SKY_BASE_SCALE = { rain: 1.3, maple: 1.9, petal: 1.2 };
+function skyScale(kind, m) {
+  const tiers = SKY_TIER_SCALE[kind];
+  if (tiers) return tiers[m.tier || 0];
+  const base = SKY_BASE_SCALE[kind] || 1;
+  return base * (m.big ? 2.1 : 1);
+}
+
+/*
   大稲妻の形。
   ⚠️ 乱数で作らないこと。再描画のたびに形が変わると、
   光るたびに別の稲妻に見えて、同じ空だと感じられなくなる。
@@ -9411,10 +9431,11 @@ function SkyTree({ w }) {
         const top = h * (0.06 + i * 0.22);
         const half = (w / 2) * f;
         const bot = top + h * 0.34;
+        /* ⚠️ 暗くしすぎない。ほぼ黒にしたらビルの群れに見えた */
         return (
           <polygon key={i} points={`${-half},${bot} 0,${top} ${half},${bot}`}
-            fill={`rgb(${22 + i * 6},${34 + i * 8},${28 + i * 6})`}
-            stroke="rgba(150,200,170,0.3)" strokeWidth="0.5" />
+            fill={`rgb(${30 + i * 10},${72 + i * 16},${46 + i * 10})`}
+            stroke="rgba(160,220,180,0.45)" strokeWidth="0.6" />
         );
       })}
     </g>
@@ -9610,32 +9631,15 @@ function TitleSky({ kind, dim = false }) {
     }
     if (kind === "thunder") {
       /*
-        雷。三段階。小は記号のまま、中は枝が一本、大は二本に分かれる。
-        ⚠️ 大きくするだけにしないこと。同じ形の拡大が混ざると
-        「近い雷」ではなく「解像度の違う雷」に見える。折れの数を変える。
+        雷。稲妻の記号。上から下へ折れる。
+        ⚠️ 形は触らないこと。枝を足した版を試したが、
+        小さい粒では枝が潰れて汚れに見え、大きい粒では別の記号に見えた。
+        三段階は大きさだけで付ける。形は一つでよい。
       */
-      const tier = m.tier || 0;
-      const bolt = `M ${(R * 0.25).toFixed(2)} ${-R} L ${(-R * 0.6).toFixed(2)} ${(R * 0.12).toFixed(2)}`
+      return <path d={`M ${(R * 0.25).toFixed(2)} ${-R} L ${(-R * 0.6).toFixed(2)} ${(R * 0.12).toFixed(2)}`
         + ` L ${(-R * 0.05).toFixed(2)} ${(R * 0.12).toFixed(2)} L ${(-R * 0.3).toFixed(2)} ${R}`
-        + ` L ${(R * 0.65).toFixed(2)} ${(-R * 0.18).toFixed(2)} L ${(R * 0.02).toFixed(2)} ${(-R * 0.18).toFixed(2)} Z`;
-      return (
-        <g opacity={0.85 - tier * 0.05}>
-          <path d={bolt} fill={C} />
-          {/* 中・大の枝。本体から分かれて途中で止まる */}
-          {tier >= 1 && (
-            <path d={`M ${(-R * 0.05).toFixed(2)} ${(R * 0.12).toFixed(2)}`
-              + ` L ${(R * 0.5).toFixed(2)} ${(R * 0.5).toFixed(2)}`
-              + ` L ${(R * 0.18).toFixed(2)} ${(R * 0.52).toFixed(2)}`}
-              fill="none" stroke={C} strokeWidth={LW * 0.8} strokeLinecap="round" />
-          )}
-          {tier >= 2 && (
-            <path d={`M ${(R * 0.02).toFixed(2)} ${(-R * 0.18).toFixed(2)}`
-              + ` L ${(-R * 0.62).toFixed(2)} ${(-R * 0.5).toFixed(2)}`
-              + ` L ${(-R * 0.28).toFixed(2)} ${(-R * 0.52).toFixed(2)}`}
-              fill="none" stroke={C} strokeWidth={LW * 0.7} strokeLinecap="round" />
-          )}
-        </g>
-      );
+        + ` L ${(R * 0.65).toFixed(2)} ${(-R * 0.18).toFixed(2)} L ${(R * 0.02).toFixed(2)} ${(-R * 0.18).toFixed(2)} Z`}
+        fill={C} opacity="0.85" />;
     }
     if (kind === "maple") {
       /*
@@ -9839,7 +9843,7 @@ function TitleSky({ kind, dim = false }) {
         {(kind === "snow" || kind === "heavysnow") && SKY_BUILDINGS.map((b, bi) => (
           <svg key={`sm${bi}`} x={`${b.x}%`} y={`${b.y}%`} overflow="visible">
             <g className="sky-building" opacity={0.5 + (b.y / 90) * 0.45}>
-              <SkySnowman w={b.w * 0.16} />
+              <SkySnowman w={b.w * 0.3} />
             </g>
           </svg>
         ))}
@@ -9847,26 +9851,35 @@ function TitleSky({ kind, dim = false }) {
         {kind === "maple" && SKY_BUILDINGS.map((b, bi) => (
           <svg key={`tr${bi}`} x={`${b.x}%`} y={`${b.y}%`} overflow="visible">
             <g className="sky-building" opacity={0.45 + (b.y / 90) * 0.45}>
-              <SkyTree w={b.w * 0.34} />
+              <SkyTree w={b.w * 0.5} />
             </g>
           </svg>
         ))}
         {/* 絵本の家。超大雪のとき、ビルとビルの間に */}
+        {/*
+          ⚠️ 一棟おきにしていたら十軒しか建たず、狭い画面ではほぼ見えなかった。
+          隣り合う全ての組の間に建てる。屋根が三角なので、
+          並べてもビルほど視界を塞がない。
+        */}
         {kind === "blizzard" && SKY_BUILDINGS.map((b, bi) => {
-          /* 一棟おきに、右隣との中間へ。全部の間に建てると街が埋まる */
-          if (bi % 2) return null;
           const nx = SKY_BUILDINGS[bi + 1];
           if (!nx) return null;
-          const mx = (b.x + nx.x) / 2, my = (b.y + nx.y) / 2 + 6;
+          const mx = (b.x + nx.x) / 2, my = (b.y + nx.y) / 2 + 8;
           return (
             <svg key={`hs${bi}`} x={`${mx}%`} y={`${my}%`} overflow="visible">
               <g className="sky-building">
-                <SkyHouse w={b.w * 0.3} seedIndex={bi} />
+                <SkyHouse w={b.w * 0.46} seedIndex={bi} />
               </g>
             </svg>
           );
         })}
-        {SKY_BUILDINGS.map((b, bi) => {
+        {/*
+          ⚠️⚠️ ここの kind 判定を落とさないこと。
+          レイヤーを分けたときに外してしまい、雪・大雪・落ち葉にもビルが建った。
+          しかもビルは不透明で雪だるまより後に描かれるので、雪だるまが
+          完全に隠れて「存在しない」ように見えていた。
+        */}
+        {kind === "blizzard" && SKY_BUILDINGS.map((b, bi) => {
         /* 上にあるものほど遠い。遠いほど暗くする（薄くはしない） */
         const far = Math.max(0, Math.min(1, 1 - b.y / 90));
         const body = `rgb(${Math.round(9 + (1 - far) * 8)},${Math.round(7 + (1 - far) * 7)},${Math.round(20 + (1 - far) * 12)})`;
@@ -9911,13 +9924,22 @@ function TitleSky({ kind, dim = false }) {
         {SKY_BOLTS.map((bo, i) => (
           <svg key={`bo${i}`} x={`${bo.x}%`} y="0" overflow="visible">
             <g className="sky-bolt-run" style={{ animationDelay: `${bo.d}s`, animationDuration: `${bo.dur}s` }}>
-              <path d={bo.trunk} fill="none" stroke="#EAF2FF" strokeWidth="2.4"
+              {/*
+                ⚠️ 細くしないこと。2.4 では亀裂にしか見えなかった。
+                幹は太く、そのうえに白い芯を重ねて、光っている棒に見せる。
+              */}
+              <path d={bo.trunk} fill="none" stroke="#9FD4FF" strokeWidth="11"
+                strokeLinecap="round" strokeLinejoin="round" opacity="0.45"
+                style={{ filter: "drop-shadow(0 0 18px rgba(150,210,255,0.95))" }} />
+              <path d={bo.trunk} fill="none" stroke="#EAF2FF" strokeWidth="6"
                 strokeLinecap="round" strokeLinejoin="round"
-                style={{ filter: "drop-shadow(0 0 7px rgba(190,225,255,0.95))" }} />
+                style={{ filter: "drop-shadow(0 0 10px rgba(190,225,255,0.95))" }} />
+              <path d={bo.trunk} fill="none" stroke="#FFFFFF" strokeWidth="2.2"
+                strokeLinecap="round" strokeLinejoin="round" />
               {bo.limbs.map((d, j) => (
-                <path key={j} d={d} fill="none" stroke="#EAF2FF" strokeWidth="1.3"
-                  strokeLinecap="round" strokeLinejoin="round" opacity="0.85"
-                  style={{ filter: "drop-shadow(0 0 4px rgba(190,225,255,0.8))" }} />
+                <path key={j} d={d} fill="none" stroke="#EAF2FF" strokeWidth="3.4"
+                  strokeLinecap="round" strokeLinejoin="round" opacity="0.9"
+                  style={{ filter: "drop-shadow(0 0 9px rgba(190,225,255,0.9))" }} />
               ))}
             </g>
           </svg>
@@ -9972,9 +9994,7 @@ function TitleSky({ kind, dim = false }) {
               ⚠️ 超大雪だけは三段階（0.7 / 1.25 / 2.3）を使う。
                  big の二段階と混ぜると四段階になり、粒の大きさが読めなくなる。
             */}
-            <g transform={`scale(${(m.s * ((kind === "blizzard" || kind === "thunder")
-              ? [0.7, 1.25, 2.3][m.tier || 0]
-              : (m.big ? 2.1 : 1))).toFixed(2)})`}>
+            <g transform={`scale(${(m.s * skyScale(kind, m)).toFixed(2)})`}>
               {shape(k, m, colorAt(k))}
             </g>
           </g>
