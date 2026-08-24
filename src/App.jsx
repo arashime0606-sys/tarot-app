@@ -324,7 +324,7 @@ const MAJOR_ROMAN = [
   他9言語は4語のまま（未消化。増やすときは極性を崩さないこと）。
 */
 const MAJOR_UP = [
-  "冒険心・可能性・無邪気な始まり・自由な魂・型にはまらない・身軽さ・直感に従う",
+  "冒険心・可能性・無邪気な始まり・自由な魂・型にはまらない・身軽さ・直感に従う・開き直る",
   "知性・はじまり・意志力・創造の才・手際のよさ・言葉が通る・道具が揃う",
   "洞察力・直感力・秘められた知恵・静かな神秘・清らかさ・沈黙の理解・学びの深まり",
   "母性・豊かさ・実り・官能的な喜び・包容力・育てる力・美への感度",
@@ -3302,7 +3302,7 @@ const SPREAD_I18N = {
     celticCross: { name: "ケルト十字", desc: "十枚で顕在意識と潜在意識の両方を照らす。深く掘りたいときに。", pos: ["現在の意識の方向", "障害となるもの", "顕在意識", "潜在意識", "過去", "近い未来", "あなた自身", "周囲の環境", "希望と不安", "最終結果"] },
     relationship: { name: "関係の杯", desc: "二人の関係を、両側から読む。", pos: ["あなたの状況", "相手の状況", "あなたの願い", "相手の願い", "あなたの不安", "相手の不安", "二人の現在", "障害", "可能性", "あなたの取るべき道", "二人の行く先"] },
     davidStar: { name: "ダビデスター", desc: "六芒星に六枚。六つの天体を手がかりに、前世と今の繋がりを読む。", pos: ["太陽｜前世の記憶", "月｜前世の感情", "金星｜前世の愛情", "木星｜前世の善行", "土星｜前世の試練", "火星｜前世の出来事"] },
-    zodiac: { name: "ゾディアック", desc: "十二星座の資質で、眠っている力をどう起こすかを見る。", pos: ["牡羊座｜先陣を切る力", "牡牛座｜味わい保つ力", "双子座｜伝え繋ぐ力", "蟹座｜育み守る力", "獅子座｜表し放つ力", "乙女座｜整え支える力", "天秤座｜釣り合わせる力", "蠍座｜深く関わる力", "射手座｜遠くを見る力", "山羊座｜積み上げる力", "水瓶座｜組み替える力", "魚座｜溶け合う力", "いま最も伸びる力"] },
+    zodiac: { name: "ゾディアック", desc: "十二星座の資質で、眠っている力をどう起こすかを見る。", pos: ["牡羊座｜先陣を切る力", "牡牛座｜味わい保つ力", "双子座｜伝え繋ぐ力", "蟹座｜育み守る力", "獅子座｜表し放つ力", "乙女座｜整え支える力", "天秤座｜釣り合わせる力", "蠍座｜深く関わる力", "射手座｜遠くを見る力", "山羊座｜積み上げる力", "水瓶座｜組み替える力", "魚座｜溶け合う力", "いま最も効いている一点"] },
     horoscope: { name: "ホロスコープ", desc: "十二の領域と中央の一枚で、現状の人生を見渡す。", pos: ["決断と自分", "財産と五感", "学習と交流", "家庭と基盤", "恋愛と子供", "労働と健康", "関係と契約", "挫折と承継", "挑戦と探究", "天職と地位", "仲間と理想", "因縁と霊性", "現状の人生に対する総合とアドバイス"] },
     simpleCross: { name: "シンプル・クロス", desc: "二枚で状況と障害を、一枚で進む道を見る。", pos: ["現在の状況", "横切るもの", "進むべき道"] },
     greekCross: { name: "ギリシャ十字", desc: "四方の力が結果をどこまで広げるかを見る。", pos: ["結果", "現状", "障害", "このまま進むと", "対策"] },
@@ -3349,7 +3349,7 @@ const SPREAD_I18N = {
     celticCross: { name: "Celtic Cross", desc: "Ten cards lighting both the conscious and the unconscious. For digging deep.", pos: ["Where your mind is turned", "What crosses it", "Conscious mind", "Unconscious mind", "The past", "The near future", "Yourself", "Your surroundings", "Hopes and fears", "The outcome"] },
     relationship: { name: "Cup of Relationship", desc: "Reading a bond from both sides.", pos: ["Your situation", "Their situation", "Your wish", "Their wish", "Your fear", "Their fear", "Where you are now", "The obstacle", "What is possible", "Your path", "Where you are heading"] },
     davidStar: { name: "Star of David", desc: "Six cards on a hexagram. Six planets as the way into a past life and its hold on this one.", pos: ["Sun | Memory of the past life", "Moon | Feeling of the past life", "Venus | Love of the past life", "Jupiter | Good done in the past life", "Saturn | Trial of the past life", "Mars | Events of the past life"] },
-    zodiac: { name: "Zodiac Spread", desc: "Twelve signs as twelve capacities, and how to wake the ones still sleeping.", pos: ["Aries | Power to lead the charge", "Taurus | Power to savour and hold", "Gemini | Power to carry and connect", "Cancer | Power to nurture and guard", "Leo | Power to show and radiate", "Virgo | Power to order and support", "Libra | Power to balance", "Scorpio | Power to go deep", "Sagittarius | Power to see far", "Capricorn | Power to build up", "Aquarius | Power to reconfigure", "Pisces | Power to merge", "The capacity that grows most now"] },
+    zodiac: { name: "Zodiac Spread", desc: "Twelve signs as twelve capacities, and how to wake the ones still sleeping.", pos: ["Aries | Power to lead the charge", "Taurus | Power to savour and hold", "Gemini | Power to carry and connect", "Cancer | Power to nurture and guard", "Leo | Power to show and radiate", "Virgo | Power to order and support", "Libra | Power to balance", "Scorpio | Power to go deep", "Sagittarius | Power to see far", "Capricorn | Power to build up", "Aquarius | Power to reconfigure", "Pisces | Power to merge", "The single point that tells most now"] },
     horoscope: { name: "Horoscope Spread", desc: "Survey your life as it stands across twelve realms and one card at the centre.", pos: ["Decision and Self", "Property and the Senses", "Learning and Exchange", "Home and Foundation", "Love and Children", "Work and Health", "Relations and Contracts", "Setback and Succession", "Challenge and Inquiry", "Vocation and Standing", "Companions and Ideals", "Karma and Spirit", "The Whole and the Counsel for Life as It Stands"] },
     simpleCross: { name: "Simple Cross", desc: "Two cards for the situation and its obstacle, one for the way ahead.", pos: ["The present situation", "What crosses it", "The way to go"] },
     greekCross: { name: "Greek Cross", desc: "See how far the four forces widen the outcome.", pos: ["The outcome", "The present", "The obstacle", "If this continues", "The countermeasure"] },
@@ -4539,7 +4539,11 @@ const MODERN_OUTPUT_CONTRACT = `
 - 「専門家に相談してください」で終わらせないこと。相談を勧めるなら、誰に・どういう名目で・何を持って行き・最初の一言を何と言うか、まで書く。
 - ⚠️ 国や地域の制度名（各国固有の保険・手当・窓口・法律の名称）を挙げないこと。相談者がどの国にいるかは分からない。どこでも成り立つ具体（言い方、順序、記録の残し方、断り方の型、頼み方の型）を書くこと。
 - ⚠️ 医療・投薬・法的手続きの判断はしないこと。それが要る話だと盤面が示しているなら、そう述べるにとどめ、内容には踏み込まない。
-- 長くなってよい。ただし、長さは具体で埋めること。同じことの言い換えで伸ばさない。`;
+- 長くなってよい。ただし、長さは具体で埋めること。同じことの言い換えで伸ばさない。
+- ⚠️ 画面には既に「結論」が出ている。そこには、配置の最後の位置に出た札の名前と短い意味、正逆どちらか、そして今回いちばん重い札が書かれている。
+  この四つを繰り返さないこと。同じことを二度言うと、鑑定文が結論の言い換えに見える。
+  結論が示すのは盤面の事実だけなので、あなたが書くのは、その事実が相談者の書いた状況にどう効くか、そして何をするかである。
+  札の名前を出すのは、具体を盤面に結びつけるときだけでよい。`;
 
 /*
   ============================================================
@@ -9354,6 +9358,12 @@ const SKY_WINDOW = "#FFD98A";
 const SKY_TIER_SCALE = {
   blizzard: [0.9, 1.5, 2.5],   // 雪の結晶。小でも骨格が見える大きさから
   thunder:  [1.4, 2.0, 3.0],   // 稲妻。記号なので潰れやすい。下限を高く取る
+  /*
+    UFO。遠くの小さいものから、近くの大きいものまで。
+    ⚠️ 幅を大きく取ること。全部同じ大きさだと編隊飛行に見えて、
+    ばらけて浮かんでいる感じが出ない。
+  */
+  ufo:      [0.8, 1.6, 3.2],
 };
 /* 三段階を持たない種類の倍率。既定は 1、大粒は 2.1 倍 */
 const SKY_BASE_SCALE = { rain: 1.3, maple: 1.9, petal: 1.2 };
@@ -9413,8 +9423,7 @@ function SkyHouse({ w, seedIndex }) {
         fill="#171128" stroke="rgba(150,142,190,0.32)" strokeWidth="0.5" />
       {/* 窓ひとつ。必ず灯す */}
       <rect x={-win / 2} y={body * 0.3} width={win} height={win}
-        fill={SKY_WINDOW} opacity="0.9"
-        style={{ filter: "drop-shadow(0 0 3px rgba(255,214,120,0.85))" }} />
+        fill={SKY_WINDOW} opacity="0.9" />
     </g>
   );
 }
@@ -9508,7 +9517,17 @@ function SkySnowman({ w }) {
   ⚠️ これ以上増やすなら、先に小の段の描画を削ること。
   大の段（一粒70要素）を増やすと一気に一万を超えてスマホが重くなる。
 */
-const SKY_COUNT = { ufo: 16, heavysnow: 150, blizzard: 320 };
+/*
+  ⚠️ UFO は「たまに一つ」ではなく群れにする。
+  16体では特殊演出として弱く、気づかれないまま流れていた。
+*/
+/*
+  ⚠️ 超大雪を 320 まで増やしたら PC で重くなった。
+  .title-sky は色相回転を毎フレームかけるので、層の中の要素数が
+  そのまま毎フレームの塗り直し量になる。画面が広いほど不利。
+  一粒あたりの要素数が多い超大雪は、数で押さない。
+*/
+const SKY_COUNT = { ufo: 90, heavysnow: 150, blizzard: 170 };
 const SKY_DEFAULT_N = 220;
 const skyMotes = (n) => Array.from({ length: n }, (_, k) => ({
   x: (k * 137.508) % 100,                    // 黄金角。並ばずに散る
@@ -9562,32 +9581,32 @@ const skyMotes = (n) => Array.from({ length: n }, (_, k) => ({
 
 const SKY_BUILDINGS = [
   /* 一帯め。いちばん上。タイトルの文字に隠れる */
-  { x: 10, y: 2, w: 208, h: 304 },
-  { x: 38, y: 6, w: 184, h: 352 },
-  { x: 66, y: 1, w: 232, h: 276 },
-  { x: 93, y: 7, w: 176, h: 384 },
+  { x: 10, y: 2, w: 104, h: 152 },
+  { x: 38, y: 6, w: 92, h: 176 },
+  { x: 66, y: 1, w: 116, h: 138 },
+  { x: 93, y: 7, w: 88, h: 192 },
   /* 二帯め */
-  { x: 22, y: 17, w: 192, h: 336 },
-  { x: 51, y: 21, w: 240, h: 264 },
-  { x: 80, y: 16, w: 180, h: 368 },
+  { x: 22, y: 17, w: 96, h: 168 },
+  { x: 51, y: 21, w: 120, h: 132 },
+  { x: 80, y: 16, w: 90, h: 184 },
   /* 三帯め */
-  { x: 7, y: 32, w: 212, h: 300 },
-  { x: 35, y: 36, w: 196, h: 328 },
-  { x: 63, y: 31, w: 172, h: 376 },
-  { x: 91, y: 37, w: 220, h: 284 },
+  { x: 7, y: 32, w: 106, h: 150 },
+  { x: 35, y: 36, w: 98, h: 164 },
+  { x: 63, y: 31, w: 86, h: 188 },
+  { x: 91, y: 37, w: 110, h: 142 },
   /* 四帯め */
-  { x: 19, y: 48, w: 232, h: 268 },
-  { x: 47, y: 52, w: 184, h: 356 },
-  { x: 76, y: 47, w: 216, h: 292 },
+  { x: 19, y: 48, w: 116, h: 134 },
+  { x: 47, y: 52, w: 92, h: 178 },
+  { x: 76, y: 47, w: 108, h: 146 },
   /* 五帯め */
-  { x: 5, y: 63, w: 204, h: 316 },
-  { x: 33, y: 67, w: 176, h: 372 },
-  { x: 61, y: 62, w: 236, h: 260 },
-  { x: 89, y: 68, w: 200, h: 320 },
+  { x: 5, y: 63, w: 102, h: 158 },
+  { x: 33, y: 67, w: 88, h: 186 },
+  { x: 61, y: 62, w: 118, h: 130 },
+  { x: 89, y: 68, w: 100, h: 160 },
   /* 六帯め。いちばん下。少しだけ */
-  { x: 17, y: 79, w: 224, h: 280 },
-  { x: 50, y: 83, w: 208, h: 300 },
-  { x: 84, y: 78, w: 188, h: 348 },
+  { x: 17, y: 79, w: 112, h: 140 },
+  { x: 50, y: 83, w: 104, h: 150 },
+  { x: 84, y: 78, w: 94, h: 174 },
 ];
 /* 雨と雪の雲。上のほうに数枚 */
 const SKY_CLOUDS = [
@@ -9884,7 +9903,7 @@ function TitleSky({ kind, dim = false }) {
           return (
             <svg key={`sa${bi}`} x={`${b.x}%`} y={`${b.y}%`} overflow="visible">
               <g className="sky-building" opacity={0.5 + (bi % 4) * 0.12}>
-                <SkySaturn w={b.w * (0.24 + (bi % 3) * 0.07)} tilt={-22 + (bi * 13) % 44} />
+                <SkySaturn w={b.w * (0.5 + (bi % 3) * 0.16)} tilt={-22 + (bi * 13) % 44} />
               </g>
             </svg>
           );
@@ -9949,8 +9968,7 @@ function TitleSky({ kind, dim = false }) {
                     x={(-b.w / 2 + gx * (col + 1) - ww / 2).toFixed(1)}
                     y={(gy * (row + 1) - wh / 2).toFixed(1)}
                     width={ww.toFixed(1)} height={wh.toFixed(1)}
-                    fill={SKY_WINDOW} opacity={0.92 - far * 0.2}
-                    style={{ filter: `drop-shadow(0 0 ${(3 - far * 1.5).toFixed(1)}px rgba(255,214,120,0.85))` }} />
+                    fill={SKY_WINDOW} opacity={0.92 - far * 0.2} />
                 );
               })}
             </g>
@@ -10012,12 +10030,13 @@ function TitleSky({ kind, dim = false }) {
                 <path d="M 0 -13 A 13 13 0 1 0 0 13 A 10.5 10.5 0 1 1 0 -13 Z" fill={C} opacity="0.55" />
               ) : (
                 <g>
-                  <circle cx="0" cy="0" r="9" fill={C} opacity="0.5" />
+                  {/* ⚠️ 太陽は大きく。半径9では光の粒に紛れて天体に見えなかった */}
+                  <circle cx="0" cy="0" r="24" fill={C} opacity="0.5" />
                   {Array.from({ length: 12 }, (_, i) => {
                     const a = (Math.PI / 6) * i;
-                    return <line key={i} x1={(Math.cos(a) * 12).toFixed(1)} y1={(Math.sin(a) * 12).toFixed(1)}
-                      x2={(Math.cos(a) * 17).toFixed(1)} y2={(Math.sin(a) * 17).toFixed(1)}
-                      stroke={C} strokeWidth="1" strokeLinecap="round" opacity="0.45" />;
+                    return <line key={i} x1={(Math.cos(a) * 30).toFixed(1)} y1={(Math.sin(a) * 30).toFixed(1)}
+                      x2={(Math.cos(a) * 44).toFixed(1)} y2={(Math.sin(a) * 44).toFixed(1)}
+                      stroke={C} strokeWidth="2.4" strokeLinecap="round" opacity="0.45" />;
                   })}
                 </g>
               )}
@@ -10654,11 +10673,49 @@ function HeadHeartRope({ drawn, lang, openedIndices }) {
    ============================================================ */
 const MODERN_VIS_I18N = {
   ja: {
-    mvTop: (s) => `いま最も強く出ているのは「${s}」です。`,
-    mvLow: (s) => `最も弱いのは「${s}」です。`,
-    mvLand: (top, land) => `「${top}」を動かして、この配置が最後に置く「${land}」へ着地させてください。`,
-    mvLandIsTop: (s) => `この配置が最後に置く「${s}」が、そのまま最も強く出ています。ここは既に手の内にあります。`,
-    mvLandYet: (s) => `この配置は最後に「${s}」を置きます。そこへ向けて読み進めてください。`,
+    mvAnswer: (where, card, gist) => `答えは「${where}」に出ています ―― ${card}。${gist}。`,
+    mvAnswerYet: (where) => `答えは「${where}」に出ます。まだ伏せられています。`,
+    mvGo: "向きは通っています。このまま進めて構いません。",
+    mvHold: "向きが逆です。急がず、整えてからにしてください。",
+    mvHeavy: (where, card) => `今回いちばん重いのは「${where}」の${card}です。`,
+    bathTitle: "湯かげん",
+    bathLegend: "回復は火を強くすれば進むものではありません。水と火の釣り合いで決まります。",
+    bathGauge: ["冷たすぎ", "ぬるい", "ちょうどいい", "熱い", "熱すぎ"],
+    bathRead: [
+      "消耗のほうが大きく、まだ入れる温度ではありません。降ろすものを先に決めてください。",
+      "ぬるい状態です。回復に回せる分が足りていません。",
+      "ちょうどいい湯かげんです。いまの配分を変えないでください。",
+      "熱めです。回復に振りすぎていないか、一度確かめてください。",
+      "熱すぎます。急いで戻そうとして、かえって消耗しています。火を弱めてください。",
+    ],
+    jumpTitle: "跳躍",
+    jumpLegend: "ばね（やりたい気持ち）と地面の固さ、両方そろって初めて跳べます。片方が弱いと跳べません。",
+    jumpGauge: ["跳べない", "わずか", "跳べる", "高い", "とても高い"],
+    jumpRead: [
+      "跳べません。気持ちか地面か、どちらかが足りていません。まず足りない側を見てください。",
+      "わずかに浮く程度です。両方をもう少し要します。",
+      "跳べます。いまの高さで届く範囲から始めてください。",
+      "高く跳べます。気持ちと足場がかみ合っています。",
+      "とても高く跳べます。この組み合わせは長くは続かないので、いま動いてください。",
+    ],
+    dishTitle: "皿と落ちもの",
+    dishLegend: "落ちてくる量は毎回同じです。受け止められるかは、皿の大きさ ―― 何に使うと決めているか ―― で決まります。",
+    dishCaught: (a, b) => `${b}のうち ${a} を受け止めています`,
+    dishRead: [
+      "皿がとても小さく、ほとんど受け止められていません。まず何に使うのかを一つだけ決めてください。",
+      "皿が小さめです。決めていない支出が多くなっています。",
+      "半分ほど受け止めています。決めている分と流れている分が拮抗しています。",
+      "よく受け止めています。使い道が定まってきています。",
+      "皿が大きく、ほとんど受け止めています。額ではなく、決めていることの広さの話です。",
+    ],
+    fireTitle: "焚き火",
+    fireLegend: "火が気持ち、薪が暮らしです。どちらが尽きても消えます。天秤ではありません。",
+    fireLogs: "薪＝暮らし", fireFlame: "火＝気持ち",
+    fireRead: [
+      "薪のほうが多く、火が小さい状態です。暮らしは回っていますが、気持ちが灯っていません。",
+      "火と薪が釣り合っています。この配分なら燃え続けます。",
+      "火が大きく薪が足りません。いまの勢いのままだと、早く燃え尽きます。",
+    ],
     dsTitle: "六芒星",
     dsGive: "▲ 与えた側",
     dsTake: "▼ 受けた側",
@@ -10680,6 +10737,10 @@ const MODERN_VIS_I18N = {
       "与えた側のほうが重く出ています。前世で手渡したものが、いまの土台になっています。",
     ],
     zoTitle: "十二の資質",
+    zoLegend: "中心からの筋の長さが、その資質のいまの出方です。輪まで届くほど強く出ています。",
+    zoCentreUp: "伸ばせる", zoCentreRev: "塞いでいる",
+    zoGrow: (s) => `中央は正位置。いま伸ばせる一点です。まず「${s}」から手を付けてください。`,
+    zoBlock: (s) => `中央は逆位置。いま塞いでいる一点です。伸ばす前に、「${s}」で引っかかっているものを外してください。`,
     zoPeak: (s) => `いま最も前に出ているのは「${s}」`,
     zoUnopened: "（未開封）",
     zoResonate: (s) => `${s}に共鳴が出ています。この力は既に足りています。伸ばすより、使う番です。`,
@@ -10701,7 +10762,8 @@ const MODERN_VIS_I18N = {
       "伸びる側の札が強く出ています。",
     ],
     flowPeak: (s) => `いちばん強いのは「${s}」`,
-    orbTitle: "明暗の取り分",
+    orbTitle: "月の満ち欠け",
+    orbLegend: "同じ月の、光の当たり方だけが違います。欠けている側も同じ月にあります。",
     orbRead: [
       "短所の側が大きく出ています。",
       "短所の側がやや勝っています。",
@@ -10710,7 +10772,8 @@ const MODERN_VIS_I18N = {
       "長所の側が大きく出ています。",
     ],
     orbLight: "長所の側", orbShade: "短所の側",
-    chanTitle: "通り道の開き",
+    chanTitle: "滝",
+    chanLegend: "水は絶えず落ちています。通るかどうかは、堰がどれだけ積まれているかで決まります。",
     chanRead: [
       "塞がっています。邪魔しているもののほうが強い状態です。",
       "細く、途中で止まっています。",
@@ -10726,15 +10789,65 @@ const MODERN_VIS_I18N = {
       (a, b) => `${a}のほうが重く出ています。`,
     ],
     pairMover: (s) => `先に手を付けるなら「${s}」の側`,
-    safeTitle: "見えている輪と、内側の芯",
-    safeRead: [
-      "見えている振る舞いと、見ないでいる合図が大きく食い違っています。",
-      "食い違いが出ています。",
-      "食い違いと一致が拮抗しています。",
-      "おおむね一致しています。",
-      "見えているものと内側が揃っています。",
+    safeTitle: "雲のかかり方",
+    safePct: (p) => `${p}% 見えています`,
+    safeCheckHead: "今回、確かめること",
+    /*
+      ⚠️ どの段にも「近づいてよい」と読める文言を置かないこと。
+      出せるのは、次に何を見るかまで。背中を押す役はこの配置にない。
+    */
+    /*
+      見どころ。盤面ごとに違うものが出る。
+
+      ★ この配置の値打ちは、当てることではなく「次に何を見るか」を増やすこと。
+        毎回同じ助言だと一度で学び終わってしまうので、数を持たせて回す。
+
+      ⚠️ 見た目で人を選り分ける項目を入れないこと。
+        入れ墨・傷痕・訛り・持ち物の安さ・出身 ―― どれも危険とは関係がなく、
+        入れれば偏見を教えることになる。ここに置くのは
+        「言っていることと、実際に見えるものが食い違っていないか」だけ。
+      ⚠️ 相手を試す小細工（わざと嘘をつく等）も入れない。
+        こちらが加害側になる助言はしない。
+    */
+    safeTipsTitle: "今回の見どころ",
+    safeTips: [
+      "靴を見てください。服装の格と釣り合っているか、履き込まれ方が本人の言う生活と合っているか。",
+      "腕時計や鞄が、話している暮らしぶりと釣り合っているか。片方だけ極端に浮いていないか。",
+      "職業や職場の話が、前に聞いたときと同じか。役職や人数だけが少しずつ大きくなっていないか。",
+      "共通の知人が一人でもいるか。誰にも辿れない相手かどうか。",
+      "写真が一枚しかない、または全部が同じ場所・同じ角度でないか。",
+      "連絡手段を一つのアプリに限定してこないか。通話や、番号を教えることを避けていないか。",
+      "会う場所を、初回から個室・車の中・自宅にしたがらないか。",
+      "待ち合わせの時間や場所を、直前に変えてこないか。何度あったか数えてください。",
+      "お金の話が出るまでの早さ。投資・副業・立て替えが、知り合って何日目に出たか。",
+      "支払いのしかた。極端に奢る、逆に毎回こちらに出させる ―― どちらも記録しておく価値があります。",
+      "こちらの予定を聞く量と、自分の予定を話す量が釣り合っているか。",
+      "こちらの家族や職場のことを、早い段階で細かく聞いてこないか。",
+      "褒め方が具体的か。あなたの何を見て言っているのか分かる褒め方か。",
+      "こちらが断ったとき、理由を聞かずに引くか。それとも理由を潰しにかかるか。",
+      "急かしてこないか。「今日中に」「今しかない」が口癖になっていないか。",
+      "第三者がいる場面での態度が、二人のときと同じか。店員への接し方も見てください。",
+      "話の途中で口を挟んだとき、話を戻せるか。こちらの話に戻ってくるか。",
+      "前に言った予定が実際に実行されたか。守られた約束と守られなかった約束を数えてください。",
+      "秘密にしてほしいと言われたことがあるか。それが誰に対しての秘密か。",
+      "こちらの他の人間関係について、否定的なことを言っていないか。",
     ],
-    safeOuter: "日ごろ見えている振る舞い", safeInner: "見ないでいる合図",
+    /* 自分の側の備え。相手を見るのではなく、自分の逃げ道を確保する項目 */
+    safeSelfTips: [
+      "帰る手段を自分で確保しておいてください。送ると言われても、自分の分は残しておく。",
+      "会う前に、誰と・どこで・何時までかを、家族か友人に一言送っておいてください。",
+      "荷物と上着は自分の手元に置いてください。預かると言われても渡さない。",
+      "飲み物から目を離さないでください。席を立ったら、新しいものに替える。",
+      "初回は明るい時間、人の出入りがある場所にしてください。",
+      "何時に切り上げるかを、会う前に自分で決めておいてください。",
+    ],
+    safeRead: [
+      "ほとんど隠れています。判断材料がまだありません。約束が守られたかどうかだけを、日付とともに控えてください。",
+      "隠れている部分のほうが多い状態です。言葉ではなく、実際にした行動の数を見てください。",
+      "見えている分と隠れている分が拮抗しています。二人きりでない場面での振る舞いを見てください。",
+      "見えている部分が多めです。断ったときにどう反応するかを、一度だけ確かめてください。",
+      "よく見えている状態です。それでも、自分の持ち物と帰る手段が自分の管理下にあるかを確認してください。",
+    ],
     undecTitle: "振り子の振れ",
     undecRead: [
       "止まっています。決めに向かう力より、決めずにいる利のほうが勝っています。",
@@ -10744,7 +10857,8 @@ const MODERN_VIS_I18N = {
       "大きく振れています。決められる状態にあります。",
     ],
     undecHold: "決めずにいて守れるもの", undecPush: "決めに向かう力",
-    shadowTitle: "影の重なり",
+    shadowTitle: "日食",
+    shadowLegend: "影が本体に重なるほど、縁に冠のような光が出ます。統合は失うことではありません。",
     shadowRead: [
       "影がまだ本体から離れています。見ている段階です。",
       "近づいてはいますが、重なってはいません。",
@@ -10798,6 +10912,7 @@ const MODERN_VIS_I18N = {
       "ほとんど解けています。輪から出られます。",
     ],
     bodyTitle: "熱の在り処",
+    bodyLegend: "スートが熱の場所を決めます。剣＝頭、聖杯＝胸、棒＝腹、貨幣＝脚。",
     bodyRead: [
       "熱より手当てのほうが勝っています。",
       "手当てが追いついています。",
@@ -10808,11 +10923,49 @@ const MODERN_VIS_I18N = {
     bodyZone: ["頭", "胸", "腹", "脚"],
   },
   en: {
-    mvTop: (s) => `What stands out most right now is "${s}".`,
-    mvLow: (s) => `The weakest is "${s}".`,
-    mvLand: (top, land) => `Move "${top}", and let it land on "${land}", where this spread ends.`,
-    mvLandIsTop: (s) => `"${s}", where this spread ends, is itself the strongest. It is already in hand.`,
-    mvLandYet: (s) => `This spread ends on "${s}". Read toward it.`,
+    mvAnswer: (where, card, gist) => `The answer sits at "${where}" — ${card}. ${gist}.`,
+    mvAnswerYet: (where) => `The answer will sit at "${where}". Still face down.`,
+    mvGo: "The orientation is clear. You can go ahead.",
+    mvHold: "The orientation is reversed. Settle things first; don't rush.",
+    mvHeavy: (where, card) => `The heaviest card this time is ${card}, at "${where}".`,
+    bathTitle: "Water Temperature",
+    bathLegend: "Recovery is not a matter of more fire. It is the balance of water and fire.",
+    bathGauge: ["Too cold", "Lukewarm", "Just right", "Hot", "Too hot"],
+    bathRead: [
+      "Depletion outweighs recovery; not warm enough to get in. Decide first what to set down.",
+      "Lukewarm. There isn't enough left over for recovery.",
+      "Just right. Don't change the current balance.",
+      "On the hot side. Check once whether you are overdoing the recovery.",
+      "Too hot. Rushing to recover is costing you more. Turn the fire down.",
+    ],
+    jumpTitle: "The Jump",
+    jumpLegend: "The spring (what you want) and firm ground both have to be there. One alone won't lift you.",
+    jumpGauge: ["No lift", "Barely", "Clears it", "High", "Very high"],
+    jumpRead: [
+      "No lift. Either the wish or the ground is missing. Look at whichever is short.",
+      "Barely off the ground. Both need more.",
+      "You can clear it. Start from what this height reaches.",
+      "A high jump. Wish and footing are meshing.",
+      "Very high. This combination won't last long, so move now.",
+    ],
+    dishTitle: "The Dish",
+    dishLegend: "The same amount falls every time. Whether you catch it depends on the dish — what you have decided to spend on.",
+    dishCaught: (a, b) => `Caught ${a} of ${b}`,
+    dishRead: [
+      "A very small dish; almost nothing is caught. Decide one thing you spend on.",
+      "A small dish. Much is going out undecided.",
+      "About half caught. Decided and undecided are evenly matched.",
+      "Catching well. Your uses are settling.",
+      "A wide dish, catching nearly all. This is about breadth of decision, not amount.",
+    ],
+    fireTitle: "The Campfire",
+    fireLegend: "Fire is feeling, wood is daily life. If either runs out, it goes out. This is not a scale.",
+    fireLogs: "wood = living", fireFlame: "fire = feeling",
+    fireRead: [
+      "More wood than fire. Life runs, but nothing is alight.",
+      "Fire and wood are matched. At this balance it keeps burning.",
+      "Big fire, not enough wood. At this pace it burns out early.",
+    ],
     dsTitle: "The Hexagram",
     dsGive: "▲ Given",
     dsTake: "▼ Received",
@@ -10834,6 +10987,10 @@ const MODERN_VIS_I18N = {
       "What was given weighs heavier. What you handed over then is the ground you stand on.",
     ],
     zoTitle: "The Twelve Capacities",
+    zoLegend: "Each spoke's length is how strongly that capacity shows now. Reaching the outer ring means strong.",
+    zoCentreUp: "to grow", zoCentreRev: "blocking",
+    zoGrow: (s) => `The centre is upright — a point you can grow now. Start from "${s}".`,
+    zoBlock: (s) => `The centre is reversed — a point that is blocking. Clear what snags at "${s}" before growing anything.`,
     zoPeak: (s) => `Most forward right now: "${s}"`,
     zoUnopened: "（未開封）",
     zoUnopened: " (not yet opened)",
@@ -10856,7 +11013,8 @@ const MODERN_VIS_I18N = {
       "The growing side comes out strong.",
     ],
     flowPeak: (s) => `Strongest: "${s}"`,
-    orbTitle: "Share of Light and Shade",
+    orbTitle: "Phase of the Moon",
+    orbLegend: "One moon, lit differently. The dark side is part of the same moon.",
     orbRead: [
       "The shadow side shows much larger.",
       "The shadow side is slightly ahead.",
@@ -10865,7 +11023,8 @@ const MODERN_VIS_I18N = {
       "The strength side shows much larger.",
     ],
     orbLight: "Strength", orbShade: "Fault",
-    chanTitle: "Opening of the Channel",
+    chanTitle: "The Waterfall",
+    chanLegend: "The water never stops. What decides the flow is how high the weir is stacked.",
     chanRead: [
       "Blocked. What obstructs is stronger.",
       "Narrow, and it stops partway.",
@@ -10881,15 +11040,47 @@ const MODERN_VIS_I18N = {
       (a, b) => `${a} weighs heavier.`,
     ],
     pairMover: (s) => `Start from the side of "${s}"`,
-    safeTitle: "The Outer Ring and the Core",
-    safeRead: [
-      "What is shown and what you look away from diverge sharply.",
-      "A divergence is showing.",
-      "Divergence and alignment are evenly matched.",
-      "They largely align.",
-      "What is shown and what lies inside line up.",
+    safeTitle: "How Much Cloud",
+    safePct: (p) => `${p}% visible`,
+    safeCheckHead: "What to check this time",
+    safeTipsTitle: "What to watch this time",
+    safeTips: [
+      "Look at their shoes. Do they match the rest of the outfit, and the life they describe?",
+      "Does the watch or bag match the lifestyle they talk about? Is one item oddly out of place?",
+      "Is the job story the same as last time? Do the title and headcount keep creeping upward?",
+      "Is there a single person you both know? Or is this someone no one can vouch for?",
+      "Is there only one photo, or are they all the same place and angle?",
+      "Do they insist on one app only? Do they avoid calls or giving a number?",
+      "Do they push for a private room, a car, or their home on the first meeting?",
+      "Do they change the time or place at the last minute? Count how often.",
+      "How fast did money come up? Investment, side work, or a loan — on what day?",
+      "How paying works. Lavish treating, or always leaving it to you — note either.",
+      "Do they ask about your schedule far more than they share their own?",
+      "Do they ask detailed questions about your family or workplace early on?",
+      "Are compliments specific? Can you tell what they actually noticed?",
+      "When you decline, do they drop it, or work on dismantling your reason?",
+      "Do they rush you? Has \"today only\" become a habit?",
+      "Do they behave the same with others present? Watch how they treat staff.",
+      "If you interrupt, can the conversation come back to you?",
+      "Did stated plans actually happen? Count promises kept and broken.",
+      "Have they asked you to keep something secret? Secret from whom?",
+      "Do they speak badly of your other relationships?",
     ],
-    safeOuter: "Conduct you can see", safeInner: "The signal you look away from",
+    safeSelfTips: [
+      "Arrange your own way home. Even if offered a ride, keep your own option.",
+      "Before meeting, tell someone who, where, and until when.",
+      "Keep your bag and coat with you. Don't hand them over.",
+      "Don't leave your drink unattended. If you step away, get a fresh one.",
+      "Make the first meeting daytime, somewhere with other people around.",
+      "Decide your leaving time before you go.",
+    ],
+    safeRead: [
+      "Almost entirely hidden. There is nothing to judge on yet. Just note, with dates, whether promises were kept.",
+      "More is hidden than shown. Count actions actually taken, not words.",
+      "Hidden and shown are evenly matched. Watch how they behave when others are present.",
+      "More is shown than hidden. Check once how they react when you say no.",
+      "Largely visible. Even so, check that your belongings and your way home stay under your own control.",
+    ],
     undecTitle: "Swing of the Pendulum",
     undecRead: [
       "Stopped. What not deciding protects outweighs the push to decide.",
@@ -10899,7 +11090,8 @@ const MODERN_VIS_I18N = {
       "Swinging widely. You are in a state to decide.",
     ],
     undecHold: "What not deciding protects", undecPush: "The push to decide",
-    shadowTitle: "Overlap of the Shadow",
+    shadowTitle: "Eclipse",
+    shadowLegend: "The closer the shadow sits over the disc, the stronger the corona. Integration is not loss.",
     shadowRead: [
       "The shadow still stands apart. You are at the looking stage.",
       "It has come closer, but does not yet overlap.",
@@ -10953,6 +11145,7 @@ const MODERN_VIS_I18N = {
       "Nearly unwound. You can step out of the loop.",
     ],
     bodyTitle: "Where the Heat Sits",
+    bodyLegend: "The suit sets the place: Swords head, Cups chest, Wands belly, Pentacles legs.",
     bodyRead: [
       "Care outweighs the heat.",
       "Care is keeping up.",
@@ -10997,6 +11190,21 @@ function HoloDefs({ id, w, h }) {
      重なっていない回との差が消えて図が動かなく見える。
 */
 const SHADOW_CUTS = [0.329, 0.454, 0.545, 0.635];
+/*
+  【影の統合】日食
+
+  0〜2 が影の側、3〜4 が統合の側。位置がそのまま二極に分かれているので、
+  重なりの度合いで出せる。
+
+    integ = 統合側の平均 / (影側の平均 + 統合側の平均)
+
+  ★ 円の重なりではなく日食にしたのは、影が本体に重なるとき
+    光が消えるのではなく、縁に冠のような光が現れるという現象が、
+    この配置の言いたいことそのものだから。
+    影を統合すると、失うのではなく別の光が出る。
+
+  ⚠️ 枚数で割らずに合計で比べると、3枚ある影側が必ず勝つ。
+*/
 function ShadowMass({ drawn, lang, openedIndices }) {
   const t = visT(lang);
   const seen = new Set(openedIndices);
@@ -11006,34 +11214,39 @@ function ShadowMass({ drawn, lang, openedIndices }) {
   const d = dark === null ? 0 : dark, l = light === null ? 0 : light;
   const integ = (d + l) > 0 ? l / (d + l) : 0.5;
   const step = visStep(integ, SHADOW_CUTS);
-  const W = 300, H = 176, CY = 84, R = 46;
-  const gap = (1 - integ) * R * 1.75;
-  const bx = 150 - gap / 2, sx = 150 + gap / 2;
-  const lit = step >= 3;
+  const W = 300, H = 200, CX = 150, CY = 92, R = 54;
+  /* 影の円の中心。統合が進むほど本体に近づき、重なる */
+  const gap = (1 - integ) * R * 1.9;
+  const sx = CX + gap;
+  const near = step >= 3;
   return (
     <div className="hs-pass">
       <div className="hs-pass-title sheen-text">{t.shadowTitle}</div>
+      <p className="hs-pass-legend">{t.shadowLegend}</p>
       <svg viewBox={`0 0 ${W} ${H}`} className="hs-pass-svg" role="img" aria-label={t.shadowTitle}>
         <HoloDefs id="shadowHolo" w={W} h={H} />
-        <clipPath id="shadowClip"><circle cx={bx} cy={CY} r={R} /></clipPath>
-        {/* 影。輪郭だけ。塗ると本体を食う */}
-        <circle cx={sx} cy={CY} r={R} fill="rgba(8,6,16,0.72)" stroke="rgba(150,140,190,0.45)" strokeWidth="0.8" />
-        {/* 本体 */}
-        <circle cx={bx} cy={CY} r={R} fill="none" stroke="url(#shadowHolo)" strokeWidth="1.2" opacity="0.85" />
-        {/* 重なり。ここだけがホロ */}
-        <g clipPath="url(#shadowClip)">
-          <circle cx={sx} cy={CY} r={R} fill="url(#shadowHolo)" opacity={lit ? 0.55 : 0.34}
-            className={lit ? "mv-pulse" : ""} />
-        </g>
-        {/* 影から本体へ流れる粒。統合が進むほど速く、多く */}
-        {Array.from({ length: 3 + step }).map((_, k) => (
-          <circle key={k} r="1.7" fill="url(#shadowHolo)" opacity="0.9"
-            className="mv-drift"
-            style={{ animationDelay: `${(k * 0.42).toFixed(2)}s`, ["--mv-from"]: `${sx.toFixed(1)}px`, ["--mv-to"]: `${bx.toFixed(1)}px` }}
-            cx="0" cy={CY - 18 + k * 9} />
+        {/*
+          冠。重なるほど強く出る。
+          ⚠️ 常に出さないこと。離れている回にも冠が出ると、
+          統合しなくても同じものが得られるように見える。
+        */}
+        {[0, 1, 2].map((i) => (
+          <circle key={i} cx={CX} cy={CY} r={R + 6 + i * 9} fill="none"
+            stroke="url(#shadowHolo)" strokeWidth={2 - i * 0.5}
+            opacity={(0.05 + integ * 0.5) * (1 - i * 0.28)}
+            className={near ? "mv-pulse" : ""}
+            style={{ animationDelay: `${(i * 0.5).toFixed(1)}s` }} />
         ))}
-        <text x={bx} y={CY + R + 18} textAnchor="middle" className="hs-pt-name" fill="rgba(226,214,240,0.75)">{t.shadowBody}</text>
-        <text x={sx} y={CY + R + 18} textAnchor="middle" className="hs-pt-name" fill="rgba(226,214,240,0.5)">{t.shadowCast}</text>
+        {/* 本体。いつも光っている */}
+        <circle cx={CX} cy={CY} r={R} fill="url(#shadowHolo)" opacity="0.9"
+          style={{ filter: HOLO_GLOW }} />
+        {/* 影。黒い円が横から寄ってきて重なる */}
+        <circle cx={sx} cy={CY} r={R} fill="rgba(8,6,16,0.97)"
+          stroke="rgba(150,140,190,0.35)" strokeWidth="0.8" />
+        <text x={CX} y={CY + R + 40} textAnchor="middle" className="hs-pt-name"
+          fill="rgba(226,214,240,0.7)">{t.shadowBody}</text>
+        <text x={sx} y={CY - R - 12} textAnchor="middle" className="hs-pt-name"
+          fill="rgba(226,214,240,0.5)">{t.shadowCast}</text>
       </svg>
       <p className="hs-pass-read">{t.shadowRead[step]}</p>
     </div>
@@ -11302,6 +11515,22 @@ function ThoughtSpiral({ drawn, lang, openedIndices }) {
 */
 const BODY_CUTS = [-0.365, -0.122, 0.141, 0.341];
 const BODY_ZONE_BY_SUIT = { swords: 0, cups: 1, wands: 2, pentacles: 3 };
+/*
+  【体からの声】人体
+
+  小アルカナ56枚だけを使う配置なので、出た札には必ずスートがある。
+  熱の位置はスートで決まる ―― 剣＝頭、聖杯＝胸、棒＝腹、貨幣＝脚。
+  ⚠️ これは元素の対応そのままで、後から意味を足していない。
+
+    heat = 熱を持っている場所/溜まっている感情/頭が休めない理由 の平均
+         − 身体が求めている手当て
+
+  ★ 四つの角丸長方形を積んでいたのをやめて、人型にした。
+    「肩が固い」「腹に来る」は身体の話なので、身体の形で示すほうが早い。
+
+  ⚠️ 医学の図にしないこと。臓器や骨を描くと診断に見える。
+    輪郭と、熱のある領域だけでよい。
+*/
 function BodyHeat({ drawn, lang, openedIndices }) {
   const t = visT(lang);
   const seen = new Set(openedIndices);
@@ -11310,38 +11539,62 @@ function BodyHeat({ drawn, lang, openedIndices }) {
   if (heatAvg === null && care === null) return null;
   const heat = (heatAvg === null ? 0 : heatAvg) - (care === null ? 0 : care);
   const step = visStep(heat, BODY_CUTS);
-  // 熱の位置は0枚目のスート。まだ開いていなければ中央（胸）に置く
   const first = seen.has(0) && drawn[0] ? drawn[0] : null;
   const zone = first ? (BODY_ZONE_BY_SUIT[String(first.id).split("-")[0]] ?? 1) : 1;
-  const W = 300, H = 190, CX = 150;
-  const ZY = [34, 74, 110, 150];
   const cooled = step <= 1;
+  const W = 300, H = 250, CX = 150;
   return (
     <div className="hs-pass">
       <div className="hs-pass-title sheen-text">{t.bodyTitle}</div>
+      <p className="hs-pass-legend">{t.bodyLegend}</p>
       <svg viewBox={`0 0 ${W} ${H}`} className="hs-pass-svg" role="img" aria-label={t.bodyTitle}>
         <HoloDefs id="bodyHolo" w={W} h={H} />
-        {ZY.map((y, k) => {
-          const on = k === zone;
-          return (
-            <g key={k}>
-              <rect x={CX - 34} y={y - 14} width="68" height="28" rx="12"
-                fill={on ? "url(#bodyHolo)" : "none"} opacity={on ? 0.18 + step * 0.14 : 0}
-                className={on && !cooled ? "mv-pulse" : ""} />
-              <rect x={CX - 34} y={y - 14} width="68" height="28" rx="12"
-                fill="none" stroke="url(#bodyHolo)" strokeWidth={on ? 1.4 : 0.6} opacity={on ? 0.9 : 0.22} />
-              <text x={CX} y={y + 4} textAnchor="middle" className="hs-pt-name"
-                fill={on ? "#FFFFFF" : "rgba(226,214,240,0.4)"} style={{ fontWeight: on ? 700 : 400 }}>
-                {t.bodyZone[k]}
-              </text>
-            </g>
-          );
-        })}
-        {/* 手当て。上から降りて熱を冷ます */}
-        {cooled && [0, 1].map((k) => (
-          <line key={k} x1={CX - 52} y1="16" x2={CX - 52} y2="30" stroke="url(#bodyHolo)" strokeWidth="1.4"
-            opacity="0.8" className="mv-spark" style={{ animationDelay: `${(k * 0.7).toFixed(1)}s`, animationDirection: "reverse" }} />
+        <clipPath id="bodyClip">
+          <g>
+            <circle cx={CX} cy="42" r="24" />
+            <rect x={CX - 12} y="64" width="24" height="14" />
+            <rect x={CX - 38} y="76" width="76" height="72" rx="16" />
+            <rect x={CX - 62} y="82" width="26" height="66" rx="12" transform={`rotate(12 ${CX - 49} 82)`} />
+            <rect x={CX + 36} y="82" width="26" height="66" rx="12" transform={`rotate(-12 ${CX + 49} 82)`} />
+            <rect x={CX - 34} y="146" width="28" height="82" rx="13" />
+            <rect x={CX + 6} y="146" width="28" height="82" rx="13" />
+          </g>
+        </clipPath>
+        {/* 輪郭。臓器は描かない */}
+        <g fill="rgba(18,14,34,0.9)" stroke="url(#bodyHolo)" strokeWidth="1.1" opacity="0.95">
+          <circle cx={CX} cy="42" r="24" />
+          <rect x={CX - 12} y="60" width="24" height="20" rx="6" />
+          <rect x={CX - 38} y="76" width="76" height="72" rx="16" />
+          <rect x={CX - 62} y="82" width="26" height="66" rx="12" transform={`rotate(12 ${CX - 49} 82)`} />
+          <rect x={CX + 36} y="82" width="26" height="66" rx="12" transform={`rotate(-12 ${CX + 49} 82)`} />
+          <rect x={CX - 34} y="146" width="28" height="82" rx="13" />
+          <rect x={CX + 6} y="146" width="28" height="82" rx="13" />
+        </g>
+        {/*
+          熱。身体の内側だけを塗る。
+          ⚠️ 円をそのまま置かないこと。輪郭からはみ出して湯気に見える。
+          clipPath で身体の中に収める。
+        */}
+        <g clipPath="url(#bodyClip)">
+          {[[CX, 42, 40], [CX, 108, 52], [CX, 138, 48], [CX, 196, 56]].map(([hx, hy, hr], i) => (
+            i === zone ? (
+              <g key={i}>
+                <circle cx={hx} cy={hy} r={hr} fill="url(#bodyHolo)"
+                  opacity={0.2 + step * 0.16} className={cooled ? "" : "mv-pulse"} />
+                <circle cx={hx} cy={hy} r={hr * 0.55} fill="url(#bodyHolo)"
+                  opacity={0.25 + step * 0.16} className={cooled ? "" : "mv-pulse"} />
+              </g>
+            ) : null
+          ))}
+        </g>
+        {/* 手当て。冷めている回だけ、上から降りてくる */}
+        {cooled && [0, 1, 2].map((k) => (
+          <line key={k} x1={CX - 76 + k * 76} y1="14" x2={CX - 76 + k * 76} y2="30"
+            stroke="url(#bodyHolo)" strokeWidth="2" strokeLinecap="round" opacity="0.75"
+            className="mv-fall" style={{ animationDelay: `${(k * 0.5).toFixed(1)}s` }} />
         ))}
+        <text x="16" y={[46, 112, 142, 200][zone]} className="hs-pt-name"
+          fill="#FFFFFF" style={{ fontWeight: 700 }}>{t.bodyZone[zone]}</text>
       </svg>
       <p className="hs-pass-read">{t.bodyRead[step]}</p>
     </div>
@@ -11468,52 +11721,226 @@ function PairTension({ spreadKey, drawn, labels, lang, openedIndices }) {
 }
 
 /*
-  【この人は安全か】言葉と行いのずれ
+  【この人は安全か】雲のかかり方
 
-    safety = 日ごろの振る舞い/あなたに向けているもの の平均
-           − 言葉と行いのずれ/見ないふりをしている合図 の平均
+    見えている割合 = 日ごろの振る舞い/あなたに向けているもの の平均
+                   ÷（それ ＋ 言葉と行いのずれ/見ないふりをしている合図 の平均）
 
-  ⚠️ 「近づく前に確かめること」（4番）を式に入れないこと。
-  あれは相談者が取る手であって、相手の安全性ではない。
-  入れると、確かめようとしている人ほど相手が安全に見える。
+  人型に雲がどれだけ被さっているかで示す。数字も出す ―― 「半分見えている」は
+  図だけだと伝わらないが、パーセントなら一目で分かる。
 
-  ⚠️ この図で「危険な人だ」と断定しない。出せるのは、
-  いま見えている振る舞いと、見ないでいる合図との差だけ。
+  ⚠️ 「近づいてよい」と読める結論を一つも置かないこと。
+  この配置が出せるのは、見えている分と見ていない分の比だけで、
+  相手が安全かどうかではない。よく見えている回でも、
+  出せるのは「次に何を見るか」まで。背中を押す文言は書かない。
+
+  ⚠️ 「危険な人だ」とも断定しない。扱うのは振る舞いであって人格ではない。
+
+  ⚠️ 「近づく前に確かめること」（4番）を式に入れない。
+  あれは相談者が取る手であって、相手の見え方ではない。
+
+  段の境目は実測（40万回、各20.0%）。
 */
-const SAFE_CUTS = [-0.289, -0.066, 0.063, 0.289];
+/*
+  ============================================================
+  確かめること。この配置の本体。
+
+  ★ 狙いは「この人は安全か」の答えを出すことではなく、
+    引っかからない型を数えきれないほど覚えてもらうこと。
+    だから毎回ちがう二つを出す。二十四通りあるので、
+    続けて引けば順に別の観点が出る。
+
+  ⚠️⚠️ 見た目で判断させる項目を入れないこと。
+    「顔に紋が入っていないか」「詐欺師がよくつける装飾品」といった
+    外見の型は、当たらないうえに人を外見で選別させる。
+    刺青のある善人はいくらでもいるし、詐欺師は身なりを整えてくる。
+    ―― 外見は相手が自由に作れる。作れないのは、
+    こちらが働きかけたときの反応と、話の一貫性である。
+    だから全項目を「相手の振る舞い」と「検証できるか」に絞る。
+
+  ⚠️ 「靴だけ汚れていないか」も外見なので入れていない。
+    ただし元の狙い（語る立場と実物の食い違い）は
+    「話と確かめられる事実が合うか」として残してある。
+
+  ⚠️ 相手を疑わせる方向に振り切らないこと。項目はすべて
+    「確かめる」「記録する」で終える。断定させない。
+  ============================================================
+*/
+const SAFE_CHECKS_JA = [
+  // 断りへの反応
+  "小さな頼みを一度だけ断ってみて、そのあと機嫌がどう変わるかを見る。",
+  "予定を自分の都合で一度ずらしてみて、責める言い方が出るかを見る。",
+  "行き先の希望を一つだけ言ってみて、通るか、押し返されるかを見る。",
+  // 場所と時間の主導権
+  "会う場所を相手が毎回決めていないか。次は自分が選べるか試す。",
+  "早い段階で人目のない場所へ移したがっていないか。",
+  "帰る時間を自分で決められているか。引き止め方に無理がないか。",
+  // 連絡のかたち
+  "連絡手段を一つに絞りたがっていないか。別の手段でも取れるか確かめる。",
+  "返信が遅れたときの言い方を覚えておく。回数が増えていないか。",
+  "こちらの予定や交友を細かく聞いてくるのに、自分の話は薄くないか。",
+  // 検証できるか
+  "職場や住む地域など、あとから確かめられる話が一つでもあるか。",
+  "共通の知人が一人でもいるか。いないなら、そのこと自体を覚えておく。",
+  "前に聞いた話と食い違いが出ていないか。日付とともに控えておく。",
+  "写真や経歴が本人のものか、別の場所でも同じ情報が出るか調べる。",
+  // お金
+  "お金の話が出た時期を覚えておく。会う前に出ていないか。",
+  "立て替え・投資・送金の話が、どれだけ自然な流れで来たかを思い返す。",
+  "支払いの割り方でもめたとき、どう振る舞ったかを見る。",
+  // 第三者への態度
+  "店員や運転手への話し方を見る。こちらへの態度と違わないか。",
+  "同席した人への扱いを見る。いない人の悪口の量を数える。",
+  // 距離の詰め方
+  "関係の呼び名を決めたがる早さを見る。こちらの同意を待っているか。",
+  "『二人だけの秘密』にしたがる話題がないか。",
+  "家族や友人に会わせることを避けていないか。理由が毎回変わらないか。",
+  // 自分の側の記録
+  "会った日と話した内容を短く残す。あとで並べて読めるようにしておく。",
+  "違和感を覚えた瞬間を、理由が言えなくても書き留めておく。",
+  "自分の持ち物と帰る手段が、常に自分の管理下にあるかを確かめる。",
+];
+const SAFE_CHECKS_EN = [
+  "Decline one small request and watch how their mood shifts afterwards.",
+  "Move a plan once for your own reasons and see whether blame appears.",
+  "State one preference about where to go, and see if it stands.",
+  "Notice whether they choose the venue every time. Try choosing next.",
+  "Notice any early push toward somewhere out of public view.",
+  "Check that you decide when to leave, and how they try to keep you.",
+  "Notice any push to keep contact on one channel only. Test another.",
+  "Remember how they speak when you reply late. Is it happening more?",
+  "Do they ask a lot about your plans while saying little about their own?",
+  "Is there one detail — workplace, area — you could verify later?",
+  "Is there any person you both know? If not, note that fact itself.",
+  "Look for gaps against what you were told before. Write them with dates.",
+  "Check whether their photos or history show up elsewhere as the same person.",
+  "Note when money first came up. Was it before you met?",
+  "Recall how naturally the talk of lending, investing, or transfers arrived.",
+  "Watch how they behave when splitting a bill becomes awkward.",
+  "Watch how they speak to staff and drivers. Same as with you?",
+  "Watch how they treat people present, and count how much they run others down.",
+  "Notice how fast they want to name the relationship, and whether they wait for you.",
+  "Notice any topic framed as a secret just between the two of you.",
+  "Are they avoiding meeting your family or friends? Does the reason keep changing?",
+  "Keep a short note of each meeting so you can read them side by side later.",
+  "Write down the moment something felt off, even if you can't say why.",
+  "Check that your belongings and your way home stay under your own control.",
+];
+
+const SAFE_CUTS = [0.333, 0.460, 0.541, 0.669];
+/*
+  雲の置き場所。人型のどこに被さるか。段が下がるほど手前から順に足す。
+
+  ⚠️ 大きさをばらして重ねること。同じ大きさを等間隔に置くと
+  雲ではなく「丸が並んでいる」に見える。重なりが雲らしさを作る。
+  ⚠️ 十枚全部を使う段は無い。いちばん隠れた回でも八枚まで。
+  埋め尽くすと人型が消えて、何が隠れているのか分からなくなる。
+*/
+const SAFE_CLOUDS = [
+  { x: -4,  y: -34, s: 2.6 },   // 顔の上半分
+  { x: 20,  y: -18, s: 2.0 },   // 顔の右
+  { x: -30, y: -8,  s: 2.3 },   // 左肩
+  { x: 30,  y: 14,  s: 2.4 },   // 右肩から腕
+  { x: -14, y: 26,  s: 2.9 },   // 胴の中央。いちばん大きい
+  { x: 16,  y: 44,  s: 2.1 },   // 腰
+  { x: -24, y: 58,  s: 2.5 },   // 左脚
+  { x: 22,  y: 72,  s: 2.2 },   // 右脚
+];
 function SafetyGap({ drawn, lang, openedIndices }) {
   const t = visT(lang);
   const seen = new Set(openedIndices);
   const shown = visAvg(drawn, seen, [0, 1]);
   const hidden = visAvg(drawn, seen, [2, 3]);
   if (shown === null && hidden === null) return null;
-  const safety = (shown === null ? 0 : shown) - (hidden === null ? 0 : hidden);
-  const step = visStep(safety, SAFE_CUTS);
-  const W = 300, H = 162, CX = 150, CY = 74;
-  /* 二重の輪。外＝見えている振る舞い、内＝見ないでいる合図。ずれると芯が外れる */
-  const off = (2 - step) * 13;
-  const aligned = step >= 3;
+  const sv = shown === null ? 0 : shown, hv = hidden === null ? 0 : hidden;
+  const visible = (sv + hv) > 0 ? sv / (sv + hv) : 0.5;
+  const step = visStep(visible, SAFE_CUTS);
+  const pct = Math.round(visible * 100);
+  /* 雲の枚数。よく見えている回でも二枚は残す ―― 全部見えたことにしない */
+  const clouds = 8 - step * 1.5;
+  const W = 300, H = 210, CX = 150, CY = 96;
   return (
     <div className="hs-pass">
       <div className="hs-pass-title sheen-text">{t.safeTitle}</div>
       <svg viewBox={`0 0 ${W} ${H}`} className="hs-pass-svg" role="img" aria-label={t.safeTitle}>
         <HoloDefs id="safeHolo" w={W} h={H} />
-        <circle cx={CX} cy={CY} r="52" fill="none" stroke="url(#safeHolo)" strokeWidth="1.4" opacity="0.8" />
-        <circle cx={CX + off} cy={CY} r="26" fill="url(#safeHolo)" opacity={aligned ? 0.4 : 0.22}
-          className={aligned ? "mv-pulse" : ""} />
-        <circle cx={CX + off} cy={CY} r="26" fill="none" stroke="url(#safeHolo)" strokeWidth="1.1"
-          strokeDasharray={aligned ? "" : "4 5"} opacity="0.9" />
-        {/* ずれの矢印。芯が外れているぶんだけ伸びる */}
-        {!aligned && (
-          <g>
-            <line x1={CX} y1={CY} x2={CX + off} y2={CY} stroke="#FFFFFF" strokeWidth="1" opacity="0.7" />
-            <circle cx={CX} cy={CY} r="2.4" fill="#FFFFFF" opacity="0.8" />
-          </g>
-        )}
-        <text x={CX} y={CY + 70} textAnchor="middle" className="hs-pt-name" fill="rgba(226,214,240,0.6)">{t.safeOuter}</text>
-        <text x={CX + off} y={CY - 34} textAnchor="middle" className="hs-pt-name" fill="rgba(226,214,240,0.75)">{t.safeInner}</text>
+        {/* 人型。四角と丸だけ。顔を描かないのは、相手を特定の誰かにしないため */}
+        <g opacity="0.95">
+          <circle cx={CX} cy={CY - 46} r="19" fill="url(#safeHolo)" opacity="0.6" />
+          <rect x={CX - 26} y={CY - 24} width="52" height="62" rx="10"
+            fill="url(#safeHolo)" opacity="0.5" />
+          <rect x={CX - 17} y={CY + 38} width="13" height="46" rx="6"
+            fill="url(#safeHolo)" opacity="0.45" />
+          <rect x={CX + 4} y={CY + 38} width="13" height="46" rx="6"
+            fill="url(#safeHolo)" opacity="0.45" />
+        </g>
+        {/*
+          雲。タイトル画面と同じ形を使う。
+          ⚠️ 見えている回でも雲は消さず、人から外して漂わせる。
+          雲が無くなると「完全に見えた」に見えてしまう。
+        */}
+        {SAFE_CLOUDS.map((c, i) => {
+          const on = i < clouds;                 // 人に被さる雲
+          /* 外れた雲は、左右へ逃がして人に重ねない。消しはしない */
+          const ox = on ? c.x : (i % 2 ? 132 : -132);
+          const oy = on ? c.y : c.y - 28;
+          return (
+            <g key={i} transform={`translate(${CX + ox - 16 * c.s} ${CY + oy - 8 * c.s}) scale(${c.s})`}>
+              {/* ⚠️ 塗りは不透明に近く。透けると重なりが見えず、一枚の靄になる */}
+              <path d={AFF_CLOUD_D}
+                fill={on ? "rgba(20,16,36,0.95)" : "none"}
+                stroke={on ? "rgba(180,170,215,0.6)" : "rgba(170,160,200,0.25)"}
+                strokeWidth={on ? 1.1 : 0.9} strokeLinejoin="round" />
+            </g>
+          );
+        })}
+        {/* 見えている割合。図だけでは「半分」が伝わらない */}
+        <text x={CX} y={H - 8} textAnchor="middle" className="sheen-text"
+          style={{ fontSize: "15px", fontWeight: 700, fontFamily: "'Shippori Mincho',serif" }}>
+          {t.safePct(pct)}
+        </text>
       </svg>
       <p className="hs-pass-read">{t.safeRead[step]}</p>
+      {/*
+        確かめること。毎回ちがう二つを出す。
+        ⚠️ 乱数で選ばないこと。引き直すたびに項目が変わると、
+        気に入る項目が出るまで引き直せてしまう。盤面から決める。
+      */}
+      {(() => {
+        const list = (lang === "ja" ? SAFE_CHECKS_JA : SAFE_CHECKS_EN);
+        /* 盤面から種を作る。同じ盤面なら同じ二つが出る */
+        /*
+          ⚠️ 札の id の「長さ」を種にしないこと。長さは 7〜11 しか無く、
+          盤面が違っても同じ二つばかり出る。実際、組み合わせが
+          五十通りほどしか出ていなかった。id の中身を一文字ずつ混ぜる。
+        */
+        let seed = step * 31 + 7;
+        (drawn || []).forEach((c, i) => {
+          if (!seen.has(i) || !c) return;
+          const id = String(c.id);
+          for (let n = 0; n < id.length; n++) {
+            seed = (seed * 33 + id.charCodeAt(n)) % 1000003;
+          }
+          seed = (seed * 33 + (i + 1) * 17 + (c.reversed ? 91 : 13)) % 1000003;
+        });
+        /*
+          ⚠️ 二つ目を「seed * 3 + 11」で作らないこと。
+          24で割った余りが一つ目に従属してしまい、組み合わせが
+          二十数通りにしかならない。上位桁を使って独立に選ぶ。
+          さらに、二つ目は一つ目を飛ばして数えることで重複を防ぐ。
+        */
+        const n = list.length;
+        const a1 = seed % n;
+        const off = Math.floor(seed / n) % (n - 1);
+        const a2 = (a1 + 1 + off) % n;
+        const pick = [a1, a2];
+        return (
+          <div className="safe-checks">
+            <div className="safe-checks-head">{t.safeCheckHead}</div>
+            {pick.map((i) => <p key={i}>{list[i]}</p>)}
+          </div>
+        );
+      })()}
     </div>
   );
 }
@@ -11712,6 +12139,19 @@ function TimelineFlow({ spreadKey, drawn, labels, lang, openedIndices }) {
   一つの球を割る形にしている。
 */
 const CHAR_CUTS = [0.224, 0.457, 0.544, 0.777];
+/*
+  【人物を読む】月の満ち欠け
+
+  1番が最大の長所、2番が最大の短所。位置がそのまま二面なので、
+  ひとつの球の照らされ方として出せる。
+
+  ★ 幾何の図形ではなく月にしたのは、同じ球の同じ面が、
+    光の当たり方で見え方を変えるという現象そのものが、
+    この配置の言いたいことだから。欠けている側も同じ月にある。
+
+  ⚠️ 二つの円を並べないこと。長所と短所を別のものとして描くと、
+    「良い面と悪い面のある人」になる。同じ性質の別の面だと言えなくなる。
+*/
 function TwoFaceOrb({ drawn, lang, openedIndices }) {
   const t = visT(lang);
   const seen = new Set(openedIndices);
@@ -11721,24 +12161,38 @@ function TwoFaceOrb({ drawn, lang, openedIndices }) {
   const g = good === null ? 0 : good, b = bad === null ? 0 : bad;
   const ratio = (g + b) > 0 ? g / (g + b) : 0.5;
   const step = visStep(ratio, CHAR_CUTS);
-  const W = 300, H = 176, CX = 150, CY = 84, R = 56;
-  /* 分割線。比に応じて球を横に割る */
-  const split = CX - R + R * 2 * (1 - ratio);
+  const W = 300, H = 210, CX = 150, CY = 96, R = 62;
+  /*
+    月相。照らされている割合 ratio を、終端円の横半径で作る。
+    ratio 0.5 で半月、1 に近いほど満月、0 に近いほど新月。
+    ⚠️ 影を長方形で切らないこと。直線の境目は月ではなく食に見える。
+  */
+  const k = (ratio - 0.5) * 2;                 // -1〜+1
+  const rx = Math.abs(k) * R;
+  const sweepOuter = 1;
+  const sweepInner = k >= 0 ? 1 : 0;
+  const lit = `M ${CX} ${CY - R} A ${R} ${R} 0 0 ${sweepOuter} ${CX} ${CY + R}`
+    + ` A ${rx.toFixed(2)} ${R} 0 0 ${sweepInner} ${CX} ${CY - R} Z`;
   return (
     <div className="hs-pass">
       <div className="hs-pass-title sheen-text">{t.orbTitle}</div>
+      <p className="hs-pass-legend">{t.orbLegend}</p>
       <svg viewBox={`0 0 ${W} ${H}`} className="hs-pass-svg" role="img" aria-label={t.orbTitle}>
         <HoloDefs id="orbHolo" w={W} h={H} />
-        <clipPath id="orbClip"><circle cx={CX} cy={CY} r={R} /></clipPath>
-        <g clipPath="url(#orbClip)">
-          <rect x={CX - R} y={CY - R} width={R * 2} height={R * 2} fill="rgba(10,8,20,0.8)" />
-          <rect x={split} y={CY - R} width={CX + R - split} height={R * 2}
-            fill="url(#orbHolo)" opacity="0.55" className="mv-pulse" />
-        </g>
-        <circle cx={CX} cy={CY} r={R} fill="none" stroke="url(#orbHolo)" strokeWidth="1.3" opacity="0.9" />
-        <line x1={split} y1={CY - R} x2={split} y2={CY + R} stroke="#FFFFFF" strokeWidth="1" opacity="0.6" />
-        <text x={CX - R - 4} y={CY + R + 18} className="hs-pt-name" fill="rgba(226,214,240,0.5)">{t.orbShade}</text>
-        <text x={CX + R + 4} y={CY + R + 18} textAnchor="end" className="hs-pt-name" fill="rgba(226,214,240,0.75)">{t.orbLight}</text>
+        {/* 夜側。月そのものは常にまるごと在る */}
+        <circle cx={CX} cy={CY} r={R} fill="rgba(12,9,24,0.9)"
+          stroke="url(#orbHolo)" strokeWidth="1" opacity="0.9" />
+        {/* 照らされている側 */}
+        <path d={lit} fill="url(#orbHolo)" opacity="0.75" className="mv-pulse" />
+        {/* 海。月に見せるための斑。位置は固定 */}
+        {[[-18, -22, 9], [14, -6, 12], [-8, 24, 7], [22, 26, 6]].map(([dx, dy, r], i) => (
+          <circle key={i} cx={CX + dx} cy={CY + dy} r={r}
+            fill="rgba(90,80,120,0.28)" />
+        ))}
+        <text x={CX - R - 2} y={CY + R + 22} textAnchor="start" className="hs-pt-name"
+          fill="rgba(226,214,240,0.5)">{t.orbShade}</text>
+        <text x={CX + R + 2} y={CY + R + 22} textAnchor="end" className="hs-pt-name"
+          fill="rgba(226,214,240,0.8)">{t.orbLight}</text>
       </svg>
       <p className="hs-pass-read">{t.orbRead[step]}</p>
     </div>
@@ -11754,6 +12208,18 @@ function TwoFaceOrb({ drawn, lang, openedIndices }) {
   いま通り道がどれだけ開いているかであって、能力の有無ではない。
 */
 const CHANNEL_CUTS = [-0.348, -0.086, 0.113, 0.348];
+/*
+  【直感とのつながり】滝
+
+    open = 直感の開き具合 / つながりを強める方法 の平均 − 邪魔しているもの
+
+  ★ 管ではなく滝にしたのは、通り道は「開けたら通る」ものではなく、
+    上から絶えず来ていて、堰があると溜まるものだから。
+    水量ではなく、堰の高さで通りが決まる。
+
+  ⚠️ 「霊感がある／ない」を出さないこと。図が示すのは
+    いま通りやすいかどうかで、能力の有無ではない。
+*/
 function OpenChannel({ drawn, lang, openedIndices }) {
   const t = visT(lang);
   const seen = new Set(openedIndices);
@@ -11762,43 +12228,60 @@ function OpenChannel({ drawn, lang, openedIndices }) {
   if (o === null && block === null) return null;
   const open = (o === null ? 0 : o) - (block === null ? 0 : block);
   const step = visStep(open, CHANNEL_CUTS);
-  const W = 300, H = 186, CX = 150, TOPY = 20, BOTY = 158;
-  const wide = 8 + step * 11;                    // 管の幅。開くほど広い
+  const W = 300, H = 210, CX = 150, TOPY = 16, BOTY = 178;
+  const wide = 10 + step * 12;                  // 落ちてくる幅
+  const damH = (4 - step) * 9;                  // 堰の高さ。段が低いほど高い
+  const damY = (TOPY + BOTY) / 2;
   const flowing = step >= 3;
   return (
     <div className="hs-pass">
       <div className="hs-pass-title sheen-text">{t.chanTitle}</div>
+      <p className="hs-pass-legend">{t.chanLegend}</p>
       <svg viewBox={`0 0 ${W} ${H}`} className="hs-pass-svg" role="img" aria-label={t.chanTitle}>
         <HoloDefs id="chanHolo" w={W} h={H} />
-        {/* 管の壁 */}
-        <path d={`M ${CX - wide} ${TOPY} L ${CX - wide} ${BOTY}`} stroke="url(#chanHolo)" strokeWidth="1.2" opacity="0.7" />
-        <path d={`M ${CX + wide} ${TOPY} L ${CX + wide} ${BOTY}`} stroke="url(#chanHolo)" strokeWidth="1.2" opacity="0.7" />
-        {/* 通っているもの */}
+        {/* 岩壁。左右 */}
+        <path d={`M ${CX - wide - 10} ${TOPY} L ${CX - wide - 26} ${BOTY} L ${CX - wide - 62} ${BOTY} L ${CX - wide - 52} ${TOPY} Z`}
+          fill="rgba(14,11,26,0.85)" stroke="rgba(150,142,190,0.25)" strokeWidth="0.6" />
+        <path d={`M ${CX + wide + 10} ${TOPY} L ${CX + wide + 26} ${BOTY} L ${CX + wide + 62} ${BOTY} L ${CX + wide + 52} ${TOPY} Z`}
+          fill="rgba(14,11,26,0.85)" stroke="rgba(150,142,190,0.25)" strokeWidth="0.6" />
+        {/* 落ちてくる水。幅が段そのもの */}
         <rect x={CX - wide} y={TOPY} width={wide * 2} height={BOTY - TOPY}
-          fill="url(#chanHolo)" opacity={0.08 + step * 0.09} className={flowing ? "mv-pulse" : ""} />
-        {Array.from({ length: 1 + step }).map((_, k) => (
-          <circle key={k} cx={CX - wide + 4 + ((k * 13) % Math.max(1, wide * 2 - 8))} cy={BOTY} r="2.2"
-            fill="url(#chanHolo)" opacity="0.9" className="mv-spark"
-            style={{ animationDelay: `${(k * 0.5).toFixed(1)}s` }} />
+          fill="url(#chanHolo)" opacity={0.12 + step * 0.1} />
+        {/* 水の筋。落ちる速さを見せる */}
+        {Array.from({ length: 2 + step * 2 }).map((_, k) => (
+          <line key={k} x1={CX - wide + 4 + ((k * 11) % Math.max(1, wide * 2 - 8))} y1={TOPY}
+            x2={CX - wide + 4 + ((k * 11) % Math.max(1, wide * 2 - 8))} y2={TOPY + 26}
+            stroke="url(#chanHolo)" strokeWidth="2" strokeLinecap="round" opacity="0.9"
+            className="mv-fall" style={{ animationDelay: `${(k * 0.23).toFixed(2)}s` }} />
         ))}
-        {/* 邪魔しているもの。管を横切る帯 */}
-        {step <= 1 && (
-          <rect x={CX - wide - 12} y={(TOPY + BOTY) / 2 - 5} width={wide * 2 + 24} height="10" rx="3"
-            fill="rgba(20,14,32,0.9)" stroke="rgba(190,150,220,0.7)" strokeWidth="0.9" />
+        {/* 堰。段が低いほど高く積まれ、水を溜める */}
+        {damH > 0 && (
+          <g>
+            <rect x={CX - wide - 8} y={damY - damH} width={wide * 2 + 16} height={damH} rx="2"
+              fill="rgba(24,18,40,0.95)" stroke="rgba(190,150,220,0.65)" strokeWidth="1" />
+            {/* 溜まり。堰の上にできる */}
+            <rect x={CX - wide} y={damY - damH - 8} width={wide * 2} height="8"
+              fill="url(#chanHolo)" opacity="0.5" />
+          </g>
         )}
-        <text x={CX} y={TOPY - 6} textAnchor="middle" className="hs-pt-name" fill="rgba(226,214,240,0.7)">{t.chanIn}</text>
-        <text x={CX} y={H - 6} textAnchor="middle" className="hs-pt-name" fill="rgba(226,214,240,0.55)">{t.chanOut}</text>
+        {/* 滝壺。通っている回だけ飛沫が上がる */}
+        {flowing && [0, 1, 2, 3].map((k) => (
+          <circle key={k} cx={CX - wide + (k * wide * 0.7)} cy={BOTY} r="2.4"
+            fill="url(#chanHolo)" opacity="0.85" className="mv-spark"
+            style={{ animationDelay: `${(k * 0.4).toFixed(1)}s` }} />
+        ))}
+        <ellipse cx={CX} cy={BOTY} rx={wide + 22} ry="7"
+          fill="url(#chanHolo)" opacity={0.15 + step * 0.09} />
+        <text x={CX} y={TOPY - 4} textAnchor="middle" className="hs-pt-name"
+          fill="rgba(226,214,240,0.7)">{t.chanIn}</text>
+        <text x={CX} y={H - 6} textAnchor="middle" className="hs-pt-name"
+          fill="rgba(226,214,240,0.55)">{t.chanOut}</text>
       </svg>
       <p className="hs-pass-read">{t.chanRead[step]}</p>
     </div>
   );
 }
 
-/*
-  クイズの文言。
-  ⚠️ ここも T に足さない。11言語に散らすと一つ抜けたところで落ちる。
-  未訳は英語へ落とす（spreadInfo と同じ方針）。
-*/
 const QUIZ_I18N = {
   ja: {
     title: "タロットクイズ",
@@ -12358,6 +12841,285 @@ function quizElementQuestion(lang, rnd) {
 }
 
 /*
+  【消耗からの回復】湯かげん
+
+    温度 = いま降ろしてよいもの/戻ってくる回復 の平均
+         − すり減っているもの/消耗の源 の平均
+
+  ★ 荷と炎の図をやめて風呂にした。回復は「火を強くすれば進む」ものではなく、
+    水と火の釣り合いで決まる。冷たすぎれば入れず、熱すぎればのぼせる。
+    どちらも入れない、という一点がこの配置の言いたいことに合う。
+
+  ⚠️ 熱いほど良い、という読みにしないこと。段の上端は「熱すぎ」で、
+    急いで回復しようとしすぎている状態を指す。中央がいちばん良い。
+  ⚠️ 段の境目は実測（30万回、各20.0%）。
+*/
+const BATH_CUTS = [-0.289, -0.063, 0.063, 0.289];
+function BathTemp({ drawn, lang, openedIndices }) {
+  const t = visT(lang);
+  const seen = new Set(openedIndices);
+  const warm = visAvg(drawn, seen, [2, 3]);
+  const cold = visAvg(drawn, seen, [0, 1]);
+  if (warm === null && cold === null) return null;
+  const temp = (warm === null ? 0 : warm) - (cold === null ? 0 : cold);
+  const step = visStep(temp, BATH_CUTS);
+  const W = 300, H = 200, LX = 46, RX = 254, TUBY = 58, TUBH = 92;
+  /* 湯面。ちょうどいい段で真ん中 */
+  const level = TUBY + TUBH * (0.62 - (step - 2) * 0.08);
+  const good = step === 2;
+  const hot = step >= 3, chill = step <= 1;
+  return (
+    <div className="hs-pass">
+      <div className="hs-pass-title sheen-text">{t.bathTitle}</div>
+      <p className="hs-pass-legend">{t.bathLegend}</p>
+      <svg viewBox={`0 0 ${W} ${H}`} className="hs-pass-svg" role="img" aria-label={t.bathTitle}>
+        <HoloDefs id="bathHolo" w={W} h={H} />
+        {/* 湯気。熱いほど多く上がる */}
+        {Array.from({ length: Math.max(0, step - 1) * 2 }).map((_, k) => (
+          <path key={k}
+            d={`M ${LX + 40 + k * 26} ${level - 10} q 8 -14 0 -26 q -8 -12 0 -24`}
+            fill="none" stroke="url(#bathHolo)" strokeWidth="1.6" strokeLinecap="round"
+            opacity="0.6" className="mv-spark"
+            style={{ animationDelay: `${(k * 0.5).toFixed(1)}s` }} />
+        ))}
+        {/* 浴槽 */}
+        <path d={`M ${LX} ${TUBY} L ${LX + 10} ${TUBY + TUBH} L ${RX - 10} ${TUBY + TUBH} L ${RX} ${TUBY}`}
+          fill="rgba(14,11,26,0.9)" stroke="url(#bathHolo)" strokeWidth="1.6" />
+        {/* 湯 */}
+        <path d={`M ${LX + (level - TUBY) * 0.11} ${level} L ${LX + 10} ${TUBY + TUBH} L ${RX - 10} ${TUBY + TUBH} L ${RX - (level - TUBY) * 0.11} ${level} Z`}
+          fill="url(#bathHolo)" opacity={0.28 + step * 0.1} className={good ? "mv-pulse" : ""} />
+        {/* 湯面の波 */}
+        <line x1={LX + (level - TUBY) * 0.11} y1={level} x2={RX - (level - TUBY) * 0.11} y2={level}
+          stroke="url(#bathHolo)" strokeWidth="2" opacity="0.9" />
+        {/*
+          焚き口。下の火。
+          ⚠️ 火を大きくするほど良い、と見えないように、
+          熱すぎの段では火を赤く強く出して「行きすぎ」を示す。
+        */}
+        {Array.from({ length: 1 + step }).map((_, k) => {
+          const fx = 110 + k * 20, fh = 10 + step * 5;
+          return (
+            <path key={k}
+              d={`M ${fx} ${TUBY + TUBH + 22 - fh} C ${fx - 7} ${TUBY + TUBH + 22 - fh * 0.4}, ${fx - 5} ${TUBY + TUBH + 22}, ${fx} ${TUBY + TUBH + 22} C ${fx + 5} ${TUBY + TUBH + 22}, ${fx + 7} ${TUBY + TUBH + 22 - fh * 0.4}, ${fx} ${TUBY + TUBH + 22 - fh} Z`}
+              fill={hot ? "#FF6B4A" : "url(#bathHolo)"} opacity="0.9" className="mv-flame"
+              style={{ filter: HOLO_GLOW }} />
+          );
+        })}
+        {/* 冷たすぎの回だけ、湯に氷を浮かべる */}
+        {chill && [0, 1, 2].map((k) => (
+          <rect key={k} x={LX + 50 + k * 46} y={level - 7} width="13" height="9" rx="2"
+            fill="#CFE6FF" opacity="0.75" transform={`rotate(${-12 + k * 11} ${LX + 56 + k * 46} ${level - 3})`} />
+        ))}
+        <text x={W / 2} y={H - 6} textAnchor="middle" className="sheen-text"
+          style={{ fontSize: "13px", fontWeight: 700, fontFamily: "'Shippori Mincho',serif" }}>
+          {t.bathGauge[step]}
+        </text>
+      </svg>
+      <p className="hs-pass-read">{t.bathRead[step]}</p>
+    </div>
+  );
+}
+
+/*
+  【やる気と地面】跳躍
+
+    跳ぶ高さ = √( やりたい気持ち × 実際に立っている地面 )
+
+  ★ 天秤をやめた。この配置は「どちらが重いか」ではなく
+    「両方ないと跳べない」話なので、積ではかる。
+    ばねだけ強くても地面がぬかるんでいれば沈むし、
+    地面が固くてもばねが縮んでいなければ上がらない。
+
+  ⚠️ 和で測らないこと。片方が0でも半分跳べることになってしまう。
+    積にすると、片方が弱ければ跳べない ―― それがこの配置の主張。
+  ⚠️ 段の境目は実測（30万回、各20.0%）。
+*/
+const JUMP_CUTS = [0.167, 0.283, 0.363, 0.626];
+function GroundJump({ drawn, labels, lang, openedIndices }) {
+  const t = visT(lang);
+  const seen = new Set(openedIndices);
+  const spring = visAvg(drawn, seen, [0]);
+  const ground = visAvg(drawn, seen, [1]);
+  if (spring === null && ground === null) return null;
+  const s = spring === null ? 0 : spring, g = ground === null ? 0 : ground;
+  const jump = Math.sqrt(s * g);
+  const step = visStep(jump, JUMP_CUTS);
+  const W = 300, H = 210, CX = 150, GY = 168;
+  const top = GY - 18 - step * 30;               // 跳んだ高さ
+  const high = step >= 3;
+  /* ばねの巻き数。やりたい気持ちが強いほど詰まって縮んでいる */
+  const coils = 3 + Math.round(s * 4);
+  const springTop = GY - 30 - s * 16;
+  return (
+    <div className="hs-pass">
+      <div className="hs-pass-title sheen-text">{t.jumpTitle}</div>
+      <p className="hs-pass-legend">{t.jumpLegend}</p>
+      <svg viewBox={`0 0 ${W} ${H}`} className="hs-pass-svg" role="img" aria-label={t.jumpTitle}>
+        <HoloDefs id="jumpHolo" w={W} h={H} />
+        {/* 到達の目盛り */}
+        {[0, 1, 2, 3, 4].map((k) => (
+          <line key={k} x1={CX + 74} y1={GY - 18 - k * 30} x2={CX + 92} y2={GY - 18 - k * 30}
+            stroke="url(#jumpHolo)" strokeWidth="0.8" opacity={k <= step ? 0.7 : 0.18} />
+        ))}
+        {/*
+          地面。固さで描き分ける。
+          ⚠️ 平らな線一本にしないこと。地面の強さが図に出ない。
+          弱い地面は割れ目を入れて、沈むことを見せる。
+        */}
+        <rect x="20" y={GY} width={W - 40} height={30 - g * 12} rx="3"
+          fill={`rgba(${Math.round(30 + g * 30)},${Math.round(24 + g * 30)},${Math.round(46 + g * 26)},0.95)`}
+          stroke="url(#jumpHolo)" strokeWidth={0.6 + g * 1.4} />
+        {g < 0.45 && [0, 1, 2].map((k) => (
+          <line key={k} x1={60 + k * 76} y1={GY} x2={54 + k * 76} y2={GY + 16}
+            stroke="rgba(10,8,18,0.9)" strokeWidth="2" />
+        ))}
+        {/* ばね */}
+        <path d={`M ${CX} ${GY} ` + Array.from({ length: coils }, (_, k) =>
+          `L ${CX + (k % 2 ? 15 : -15)} ${GY - (k + 1) * ((GY - springTop) / coils)}`).join(" ")}
+          fill="none" stroke="url(#jumpHolo)" strokeWidth="2.4" strokeLinejoin="round" opacity="0.85" />
+        {/* 跳ぶもの */}
+        <circle cx={CX} cy={top} r="13" fill="url(#jumpHolo)" opacity="0.95"
+          className={high ? "mv-pulse" : ""} style={{ filter: high ? HOLO_GLOW : "none" }} />
+        <text x="30" y={GY + 26} className="hs-pt-name" fill="rgba(226,214,240,0.6)">
+          {(labels && labels[1]) ? String(labels[1]).split("｜").pop() : ""}
+        </text>
+        <text x={CX + 96} y={GY - 18 - step * 30 + 4} className="hs-pt-name" fill="#FFFFFF">
+          {t.jumpGauge[step]}
+        </text>
+      </svg>
+      <p className="hs-pass-read">{t.jumpRead[step]}</p>
+    </div>
+  );
+}
+
+/*
+  【お金と価値観】皿と落ちもの
+
+    受け止め = お金に対する構え/払って惜しくないもの の平均
+             − 身についた場所/無理が出ている使い方 の平均
+
+  ★ 坂をやめた。お金は登るものではなく降ってくるもので、
+    受け止められるかどうかは皿の大きさ ―― つまり価値観で決まる。
+    落ちる量そのものは、この配置では扱っていない。
+
+  ⚠️ 皿が大きいほど裕福、と読ませないこと。
+    皿は「何に使うと決めているか」の広さであって、収入ではない。
+  ⚠️ 段の境目は実測（30万回、各20.0%）。
+*/
+const DISH_CUTS = [-0.289, -0.063, 0.063, 0.289];
+function ValueDish({ drawn, lang, openedIndices }) {
+  const t = visT(lang);
+  const seen = new Set(openedIndices);
+  const dish = visAvg(drawn, seen, [0, 3]);
+  const fall = visAvg(drawn, seen, [1, 2]);
+  if (dish === null && fall === null) return null;
+  const hold = (dish === null ? 0 : dish) - (fall === null ? 0 : fall);
+  const step = visStep(hold, DISH_CUTS);
+  const W = 300, H = 210, CX = 150, DY = 148;
+  const halfW = 34 + step * 20;                  // 皿の半幅
+  const drops = 14;                              // 落ちてくる量は一定
+  const caught = Math.round(drops * (0.2 + step * 0.2));
+  return (
+    <div className="hs-pass">
+      <div className="hs-pass-title sheen-text">{t.dishTitle}</div>
+      <p className="hs-pass-legend">{t.dishLegend}</p>
+      <svg viewBox={`0 0 ${W} ${H}`} className="hs-pass-svg" role="img" aria-label={t.dishTitle}>
+        <HoloDefs id="dishHolo" w={W} h={H} />
+        {/* 落ちてくるもの。量は毎回同じ。受かるかどうかだけが変わる */}
+        {Array.from({ length: drops }).map((_, k) => {
+          const x = 34 + (k * 232) / (drops - 1);
+          const inDish = Math.abs(x - CX) <= halfW;
+          return (
+            <circle key={k} cx={x} cy={24 + ((k * 37) % 70)} r="4.2"
+              fill="url(#dishHolo)" opacity={inDish ? 0.95 : 0.35}
+              className="mv-spark"
+              style={{ animationDelay: `${((k * 0.31) % 2.2).toFixed(2)}s`, animationDirection: "reverse" }} />
+          );
+        })}
+        {/* 皿。価値観の広さ */}
+        <path d={`M ${CX - halfW} ${DY} Q ${CX} ${DY + 30} ${CX + halfW} ${DY}`}
+          fill="none" stroke="url(#dishHolo)" strokeWidth="3.4" strokeLinecap="round"
+          style={{ filter: step >= 3 ? HOLO_GLOW : "none" }} />
+        <path d={`M ${CX - halfW} ${DY} Q ${CX} ${DY + 30} ${CX + halfW} ${DY} Z`}
+          fill="url(#dishHolo)" opacity="0.16" />
+        {/* 皿に溜まったもの */}
+        {Array.from({ length: caught }).map((_, k) => (
+          <circle key={k} cx={CX - halfW + 10 + ((k * 15) % Math.max(1, halfW * 2 - 20))}
+            cy={DY + 12 - (k % 3) * 6} r="4" fill="url(#dishHolo)" opacity="0.85" />
+        ))}
+        {/* 受けきれずに落ちたもの */}
+        {Array.from({ length: drops - caught }).map((_, k) => (
+          <circle key={k} cx={k % 2 ? CX - halfW - 16 - k * 6 : CX + halfW + 16 + k * 6}
+            cy={H - 14} r="3.4" fill="rgba(150,140,175,0.5)" />
+        ))}
+        <text x={CX} y={H - 4} textAnchor="middle" className="hs-pt-name"
+          fill="rgba(226,214,240,0.6)">{t.dishCaught(caught, drops)}</text>
+      </svg>
+      <p className="hs-pass-read">{t.dishRead[step]}</p>
+    </div>
+  );
+}
+
+/*
+  【好きと暮らし】焚き火
+
+    釣り合い = 気持ちが向いている先 − 暮らしが求めていること
+
+  ★ 天秤をやめた。火（気持ち）と薪（暮らし）は competing ではなく、
+    片方が尽きれば消える関係にある。天秤は「どちらを取るか」に見えてしまう。
+
+  ⚠️ 火が大きいほど良い、としないこと。薪に対して火が大きすぎれば
+    すぐ燃え尽きる。三段のうち中央が釣り合い。
+  ⚠️ 三分位は実測（40万回、各33.3%）。二枚の差なので五段には割らない。
+*/
+const FIRE_CUTS = [-0.102, 0.102];
+function LoveFire({ drawn, lang, openedIndices }) {
+  const t = visT(lang);
+  const seen = new Set(openedIndices);
+  const heart = visAvg(drawn, seen, [0]);
+  const livin = visAvg(drawn, seen, [1]);
+  if (heart === null && livin === null) return null;
+  const h = heart === null ? 0 : heart, l = livin === null ? 0 : livin;
+  const step = visStep(h - l, FIRE_CUTS);
+  const W = 300, H = 200, CX = 150, BASE = 156;
+  const flame = 26 + h * 62;                     // 火の高さ＝気持ち
+  const logs = 2 + Math.round(l * 4);            // 薪の本数＝暮らし
+  const even = step === 1;
+  return (
+    <div className="hs-pass">
+      <div className="hs-pass-title sheen-text">{t.fireTitle}</div>
+      <p className="hs-pass-legend">{t.fireLegend}</p>
+      <svg viewBox={`0 0 ${W} ${H}`} className="hs-pass-svg" role="img" aria-label={t.fireTitle}>
+        <HoloDefs id="fireHolo" w={W} h={H} />
+        {/* 薪。暮らしの厚み */}
+        {Array.from({ length: logs }).map((_, k) => (
+          <rect key={k} x={CX - 46 + (k % 2) * 12} y={BASE - k * 8} width={92 - (k % 2) * 24} height="7" rx="3"
+            fill="rgba(52,36,28,0.95)" stroke="rgba(150,142,190,0.3)" strokeWidth="0.5"
+            transform={`rotate(${k % 2 ? 3 : -3} ${CX} ${BASE - k * 8})`} />
+        ))}
+        {/* 火。気持ちの高さ */}
+        <path d={`M ${CX} ${BASE - logs * 8 - flame} C ${CX - 22} ${BASE - logs * 8 - flame * 0.42}, ${CX - 16} ${BASE - logs * 8}, ${CX} ${BASE - logs * 8} C ${CX + 16} ${BASE - logs * 8}, ${CX + 22} ${BASE - logs * 8 - flame * 0.42}, ${CX} ${BASE - logs * 8 - flame} Z`}
+          fill="url(#fireHolo)" opacity="0.9" className="mv-flame" style={{ filter: HOLO_GLOW }} />
+        {/* 火の粉 */}
+        {Array.from({ length: 2 + Math.round(h * 4) }).map((_, k) => (
+          <circle key={k} cx={CX - 20 + ((k * 13) % 42)} cy={BASE - logs * 8 - flame * 0.5} r="1.6"
+            fill="url(#fireHolo)" opacity="0.85" className="mv-spark"
+            style={{ animationDelay: `${(k * 0.47).toFixed(2)}s` }} />
+        ))}
+        {even && (
+          <circle cx={CX} cy={BASE - logs * 8 - flame * 0.5} r={flame * 0.9} fill="none"
+            stroke="url(#fireHolo)" strokeWidth="1" opacity="0.3" className="mv-pulse" />
+        )}
+        <text x={CX - 92} y={BASE + 20} className="hs-pt-name" fill="rgba(226,214,240,0.6)">{t.fireLogs}</text>
+        <text x={CX + 92} y={BASE - logs * 8 - flame - 6} textAnchor="end" className="hs-pt-name"
+          fill="rgba(226,214,240,0.8)">{t.fireFlame}</text>
+      </svg>
+      <p className="hs-pass-read">{t.fireRead[step]}</p>
+    </div>
+  );
+}
+
+/*
   ============================================================
   【ダビデスター】六芒星が閉じる
 
@@ -12571,12 +13333,12 @@ function zodiacField(i, lang) {
 function ZodiacWheel({ drawn, labels, lang, openedIndices }) {
   const t = visT(lang);
   const seen = new Set(openedIndices);
-  const W = 300, H = 300, CX = 150, CY = 150, R = 110;
+  const W = 320, H = 320, CX = 160, CY = 158, R0 = 46, R1 = 118;
   const pt = (i, r) => {
     const a = Math.PI + (Math.PI * 2 * i) / 12;
     return [CX + Math.cos(a) * r, CY - Math.sin(a) * r];
   };
-  /* 共鳴している位置 */
+  /* 共鳴。その星座に対応する大アルカナがその位置に出た回 */
   const resonant = [];
   for (let i = 0; i < 12; i++) {
     const c = seen.has(i) && drawn[i];
@@ -12584,98 +13346,101 @@ function ZodiacWheel({ drawn, labels, lang, openedIndices }) {
     const m = String(c.id).match(/^major-(\d+)$/);
     if (m && Number(m[1]) === ZODIAC_MAJOR[i]) resonant.push(i);
   }
-  /* いちばん強く出ている資質。開いたものの中から選ぶ */
   let peak = -1, pv = -1;
   for (let i = 0; i < 12; i++) {
     if (!seen.has(i) || !drawn[i]) continue;
     const v = cardPower(drawn[i]);
     if (v > pv) { pv = v; peak = i; }
   }
-  const anyOpen = peak >= 0;
-  if (!anyOpen && !resonant.length) return null;
+  const centre = seen.has(12) && drawn[12] ? drawn[12] : null;
+  /*
+    ⚠️ 13枚目を「伸びる力」と決め打ちしないこと。
+    逆位置で出た回にまで「伸びる」と言うと、塞がっているものを
+    伸ばせと言うことになる。向きで役割が変わる。
+      正位置 … いま伸ばせる一点
+      逆位置 … いま塞いでいる一点
+    位置の名前自体も「いま最も効いている一点」に変えてある。
+  */
+  const centreUp = centre ? isGoodOrientation(centre, centre.reversed) : null;
+  if (peak < 0 && !centre) return null;
+  const nameOf = (i) => String((labels && labels[i]) || "").split("｜")[0];
+  const powerOf = (i) => String((labels && labels[i]) || "").split("｜").pop();
   return (
     <div className="hs-pass">
       <div className="hs-pass-title sheen-text">{t.zoTitle}</div>
+      {/* ⚠️ 図だけでは筋の長さが何なのか伝わらない。必ず一行で言う */}
+      <p className="hs-pass-legend">{t.zoLegend}</p>
       <svg viewBox={`0 0 ${W} ${H}`} className="hs-pass-svg" role="img" aria-label={t.zoTitle}>
         <HoloDefs id="zoHolo" w={W} h={H} />
-        <circle cx={CX} cy={CY} r={R} fill="none" stroke="url(#zoHolo)" strokeWidth="0.7" opacity="0.25" />
-        <circle cx={CX} cy={CY} r={R * 0.42} fill="none" stroke="url(#zoHolo)" strokeWidth="0.6" opacity="0.18" />
+        {/*
+          目盛りの輪。三本置く。
+          ⚠️ 輪が無いと、筋がどこまで伸びれば長いのかが分からない。
+          長短は相対でしか読めないので、基準の円が要る。
+        */}
+        {[R0, (R0 + R1) / 2, R1].map((r, i) => (
+          <circle key={r} cx={CX} cy={CY} r={r} fill="none" stroke="url(#zoHolo)"
+            strokeWidth="0.6" opacity={i === 2 ? 0.3 : 0.14}
+            strokeDasharray={i === 1 ? "3 5" : ""} />
+        ))}
         {Array.from({ length: 12 }).map((_, i) => {
           const on = seen.has(i) && drawn[i];
           const v = on ? cardPower(drawn[i]) : 0;
-          const [ox, oy] = pt(i, R * 0.42);
-          const [ix, iy] = pt(i, R * 0.42 + 6 + v * (R * 0.5));
+          const [ox, oy] = pt(i, R0);
+          const [ix, iy] = pt(i, R0 + v * (R1 - R0));
+          const [ex, ey] = pt(i, R1);
+          const [lx, ly] = pt(i, R1 + 16);
           const isRes = resonant.includes(i);
           const isPeak = i === peak;
           return (
             <g key={i}>
-              {/* 資質の伸び。中心から外へ */}
-              {/*
-                ⚠️ カーソルを合わせたときの星座名。SVG の <title> を使う。
-                独自のツールチップを作らないこと ―― 触る操作のときは
-                ブラウザ側が長押しで出してくれるので、実装が増えるだけ損になる。
-              */}
-              {/* ⚠️ <title> の中身は必ず一つの文字列にすること。
-                  {a}{b} と並べると React が配列として扱い警告を出す */}
-              <title>{`${(labels && labels[i]) || ""}${on ? "" : t.zoUnopened}`}</title>
+              <title>{`${nameOf(i)}｜${powerOf(i)}${on ? "" : t.zoUnopened}`}</title>
+              {/* 伸びていない方向も薄く見せる。空白だと未開封と区別が付かない */}
+              <line x1={ox} y1={oy} x2={ex} y2={ey}
+                stroke="url(#zoHolo)" strokeWidth="0.5" opacity="0.12" />
               <line x1={ox} y1={oy} x2={ix} y2={iy} stroke="url(#zoHolo)"
-                strokeWidth={isRes ? 4 : isPeak ? 3 : 1.6}
-                opacity={on ? (isRes ? 0.95 : 0.6) : 0.12}
+                strokeWidth={isRes ? 6 : isPeak ? 4.5 : 2.6}
+                opacity={on ? (isRes ? 0.95 : isPeak ? 0.85 : 0.5) : 0.1}
                 strokeLinecap="round"
                 className={isRes ? "mv-pulse" : ""}
                 style={{ filter: isRes ? HOLO_GLOW : "none" }} />
-              <circle cx={ix} cy={iy} r={isRes ? 5 : 2.6} fill="url(#zoHolo)"
-                opacity={on ? 0.95 : 0.15}
-                style={{ filter: isRes ? HOLO_GLOW : "none" }} />
               {/*
-                当たり判定。細い線のままだと指にもカーソルにも当たらない。
-                見えない太い線を重ねて、そこで拾う。
+                ⚠️ 十二すべてに名前を出す。強い二つだけに出していたら、
+                残り十が何を指しているのか分からない飾りに見えていた。
               */}
-              {(() => {
-                const [hx, hy] = pt(i, R * 0.42 + 6 + (R * 0.5));
-                return <line x1={ox} y1={oy} x2={hx} y2={hy} stroke="transparent"
-                  strokeWidth="16" style={{ cursor: "pointer" }} />;
-              })()}
-              {(isRes || isPeak) && (() => {
-                const [lx, ly] = pt(i, R + 12);
-                return (
-                  <text x={lx} y={ly} textAnchor="middle" className="hs-pt-name"
-                    fill="#FFFFFF" style={{ fontSize: "8px", fontWeight: 700 }}>
-                    {(labels && labels[i]) ? String(labels[i]).split("｜")[0] : ""}
-                  </text>
-                );
-              })()}
+              <text x={lx} y={ly + 3} textAnchor="middle" className="hs-pt-name"
+                fill={isRes || isPeak ? "#FFFFFF" : "rgba(226,214,240,0.5)"}
+                style={{ fontSize: "8.5px", fontWeight: isRes || isPeak ? 700 : 400 }}>
+                {nameOf(i)}
+              </text>
+              {/* 当たり判定。細い線には指もカーソルも当たらない */}
+              <line x1={ox} y1={oy} x2={ex} y2={ey}
+                stroke="transparent" strokeWidth="18" style={{ cursor: "pointer" }} />
             </g>
           );
         })}
-        {/*
-          中央。13枚目＝いま最も伸びる力。
-
-          ⚠️ 札の名前だけでは、どの分野の話なのかが分からない。
-          十二の位置のうち最も強く出ているものを分野として添える。
-          名称はホロスコープの十二ハウスから借りる ―― 同じ円の同じ位置なので、
-          新しい対応表を作らずに済み、二重管理にもならない。
-        */}
-        {seen.has(12) && drawn[12] && (
+        {/* 中央。13枚目。向きで役割が変わる */}
+        {centre && (
           <g>
-            <circle cx={CX} cy={CY} r="16" fill="url(#zoHolo)" opacity="0.85"
-              className="mv-pulse" style={{ filter: HOLO_GLOW }} />
-            {peak >= 0 && (
-              <text x={CX} y={CY + 32} textAnchor="middle" className="hs-pt-name"
-                fill="#FFFFFF" style={{ fontSize: "8.5px", fontWeight: 700 }}>
-                {zodiacField(peak, lang)}
-              </text>
-            )}
+            <circle cx={CX} cy={CY} r={R0 - 8} fill="url(#zoHolo)"
+              opacity={centreUp ? 0.85 : 0.28} className="mv-pulse"
+              style={{ filter: centreUp ? HOLO_GLOW : "none" }} />
+            <circle cx={CX} cy={CY} r={R0 - 8} fill="none" stroke="url(#zoHolo)"
+              strokeWidth="1.2" strokeDasharray={centreUp ? "" : "5 4"} opacity="0.9" />
+            <text x={CX} y={CY + 3} textAnchor="middle" className="hs-pt-name"
+              fill="#FFFFFF" style={{ fontSize: "8.5px", fontWeight: 700 }}>
+              {centreUp ? t.zoCentreUp : t.zoCentreRev}
+            </text>
           </g>
         )}
       </svg>
       <p className="hs-pass-read">
-        {resonant.length
-          ? t.zoResonate(resonant.map((i) => String((labels && labels[i]) || "").split("｜")[0]).join("・"))
-          : peak >= 0
-            ? t.zoPeak(String((labels && labels[peak]) || "").split("｜")[1] || "")
-            : ""}
+        {centre
+          ? (centreUp ? t.zoGrow(peak >= 0 ? powerOf(peak) : "") : t.zoBlock(peak >= 0 ? powerOf(peak) : ""))
+          : peak >= 0 ? t.zoPeak(powerOf(peak)) : ""}
       </p>
+      {resonant.length > 0 && (
+        <p className="hs-pass-read">{t.zoResonate(resonant.map(nameOf).join("・"))}</p>
+      )}
     </div>
   );
 }
@@ -13732,49 +14497,64 @@ function SpreadVerdict({ spreadKey, drawn, lang, openedIndices, extra }) {
     ============================================================
   */
   if (!title && MODERN_SPREADS.includes(spreadKey)) {
+    /*
+      現代派の結論。
+
+      ⚠️⚠️ 位置の名前だけで組み立てないこと。
+      「『ずれが出ている場所』を動かして『境目でできる一手』へ着地させて」は、
+      配置の仕組みの説明であって助言ではない。読んだ人は
+      「だから何をすればいいの」としか思えない。実際そうなった。
+
+      言うべきは三つだけ。
+        1. 答えがどこに出ているか ―― 位置ではなく、そこに出た札の名前と意味
+        2. その札が正位置か逆位置か ―― 進めてよいか、整えてからか
+        3. 今回いちばん重い札は何か
+
+      位置名は場所を指すためだけに使い、動詞の主語にしない。
+      札の名前と意味を言えば、それだけで具体になる。
+    */
     const info = spreadInfo(spreadKey, lang);
     const pos = info && info.pos;
     if (pos && pos.length) {
-      let top = -1, tv = -1, bottom = -1, bv = 2;
+      const mv = visT(lang);
+      const landIdx = pos.length - 1;
+      const nameOf = (i) => String(pos[i]).split("｜").pop();
+      /* 札の名前と短い意味。既存の関数だけを通す */
+      const cardOf = (i) => {
+        const c = (drawn || [])[i];
+        if (!c || !seen.has(i)) return null;
+        const src2 = String(c.id).startsWith("major-")
+          ? MAJOR_LIST[Number(String(c.id).split("-")[1])]
+          : MINOR_LIST.find((x) => x.id === c.id);
+        if (!src2) return null;
+        const kw = String(c.id).startsWith("major-")
+          ? majorKeyword(Number(String(c.id).split("-")[1]), c.reversed, lang)
+          : minorKeyword(src2.suit, src2.rank, c.reversed, lang, src2.up, src2.rev);
+        return {
+          name: getCardName(src2, lang),
+          up: isGoodOrientation(c, c.reversed),
+          /* 意味は先頭の二語まで。全部並べると結論が本文になる */
+          gist: String(kw || "").split("・").slice(0, 2).join("・"),
+        };
+      };
+      let top = -1, tv = -1;
       (drawn || []).forEach((c, i) => {
         if (!seen.has(i) || !c || !pos[i]) return;
         const v = cardPower(c);
         if (v > tv) { tv = v; top = i; }
-        if (v < bv) { bv = v; bottom = i; }
       });
-      if (top >= 0) {
-        const nameOf = (i) => String(pos[i]).split("｜").pop();
-        /*
-          ⚠️ 文言は MODERN_VIS_I18N から取る。T に足すと11言語に散らばり、
-          一つ抜けたところで結論が空欄になる。こちらは未訳を英語へ落とす。
-        */
-        const mv = visT(lang);
-        /*
-          ★ 着地点。配置の最後の位置を使う。
-
-          段の設計で「最後は必ず◯◯で終える」と決めてあり、
-          最終段は常にいちばん大きい添字で終わる。だから pos の末尾が
-          その配置の着地点になる ―― 表を持たずに導ける。
-
-          ⚠️ 末尾を「次の一手」と呼ばないこと。
-          自己妨害の「型を外す一手」や体からの声の「手当て」は行動だが、
-          今月の流れの「月末に残るもの」や人物を読むの「得るもの」は行動ではない。
-          全部を一手と言うと、行動でないものまで実行を迫ることになる。
-          言えるのは「この配置が最後に置くもの」までで、そこは正確に言う。
-        */
-        const landIdx = pos.length - 1;
-        const opened = seen.has(landIdx) && (drawn || [])[landIdx];
+      const land = cardOf(landIdx);
+      const strongest = cardOf(top);
+      if (land || strongest) {
         title = t.verdictTitle;
         lines = [
-          mv.mvTop(nameOf(top)),
-          /* 一枚しか開いていない回は、最も弱い位置が最も強い位置と同じになる */
-          bottom >= 0 && bottom !== top ? mv.mvLow(nameOf(bottom)) : null,
-          /* 着地点がまだ伏せられている間は、そこへ向かうとだけ言う */
-          landIdx === top
-            ? mv.mvLandIsTop(nameOf(landIdx))
-            : opened
-              ? mv.mvLand(nameOf(top), nameOf(landIdx))
-              : mv.mvLandYet(nameOf(landIdx)),
+          land
+            ? mv.mvAnswer(nameOf(landIdx), land.name, land.gist)
+            : mv.mvAnswerYet(nameOf(landIdx)),
+          land ? (land.up ? mv.mvGo : mv.mvHold) : null,
+          strongest && top !== landIdx
+            ? mv.mvHeavy(nameOf(top), strongest.name)
+            : null,
         ];
       }
     }
@@ -17194,9 +17974,9 @@ function HexagramPanel({ lang, onBack, question, userName, canDraw, onConsume, o
             <ChildLamp drawn={drawn} lang={lang} openedIndices={openedIndices} />
           )}
 
-          {/* 消耗からの回復は荷と残り火。降ろした分だけ火が伸びる */}
+          {/* 消耗からの回復は湯かげん。水と火の釣り合いで決まる */}
           {spreadKey === "burnout" && stage > 0 && (
-            <EmberLoad drawn={drawn} lang={lang} openedIndices={openedIndices} />
+            <BathTemp drawn={drawn} lang={lang} openedIndices={openedIndices} />
           )}
 
           {/* 境界線は線の張り。押す力と引き直す力の差 */}
@@ -17219,8 +17999,18 @@ function HexagramPanel({ lang, onBack, question, userName, canDraw, onConsume, o
             <BodyHeat drawn={drawn} lang={lang} openedIndices={openedIndices} />
           )}
 
-          {/* やる気と地面・好きと暮らし・まだ痛むのは。対の釣り合いは同じ形 */}
-          {(spreadKey === "driveAndGround" || spreadKey === "loveAndLiving" || spreadKey === "stillHurts") && stage > 0 && (
+          {/* やる気と地面は跳躍。ばねと地面の積で決まる */}
+          {spreadKey === "driveAndGround" && stage > 0 && (
+            <GroundJump drawn={drawn} labels={info.pos} lang={lang} openedIndices={openedIndices} />
+          )}
+
+          {/* 好きと暮らしは焚き火。火が気持ち、薪が暮らし */}
+          {spreadKey === "loveAndLiving" && stage > 0 && (
+            <LoveFire drawn={drawn} lang={lang} openedIndices={openedIndices} />
+          )}
+
+          {/* まだ痛むのは。対の釣り合いなので天秤のまま */}
+          {spreadKey === "stillHurts" && stage > 0 && (
             <PairTension spreadKey={spreadKey} drawn={drawn} labels={info.pos} lang={lang} openedIndices={openedIndices} />
           )}
 
@@ -17234,8 +18024,13 @@ function HexagramPanel({ lang, onBack, question, userName, canDraw, onConsume, o
             <StalledPendulum drawn={drawn} lang={lang} openedIndices={openedIndices} />
           )}
 
-          {/* 願いの実現・キャリアの岐路・お金と価値観・比べるのをやめる。坂は同じ形 */}
-          {DRIVE_CFG[spreadKey] && stage > 0 && (
+          {/* お金と価値観は皿と落ちもの。受け止められる広さで見る */}
+          {spreadKey === "moneyMind" && stage > 0 && (
+            <ValueDish drawn={drawn} lang={lang} openedIndices={openedIndices} />
+          )}
+
+          {/* 願いの実現・キャリアの岐路・比べるのをやめる。坂は同じ形 */}
+          {DRIVE_CFG[spreadKey] && spreadKey !== "moneyMind" && stage > 0 && (
             <ObstacleDrive spreadKey={spreadKey} drawn={drawn} lang={lang} openedIndices={openedIndices} />
           )}
 
@@ -25289,7 +26084,8 @@ export default function TarotDraw() {
       try { localStorage.setItem(LS_SKY_FIXED, "blizzard"); } catch (e) {}
       setSkyKind("blizzard");
       setCouponInput("");
-      alert("✓ 空を「夜のビルと超大雪」に固定しました\n（sora と入れると元のくじ引きに戻ります）");
+      alert("✓ 空を「夜のビルと超大雪」に固定しました\n"
+        + "この空はいちばん重いので、動きが鈍いときは sora で解除してください");
     } else if (code === "sora") {
       try { localStorage.removeItem(LS_SKY_FIXED); } catch (e) {}
       setSkyKind(pickSkyKind());
@@ -26127,6 +26923,8 @@ export default function TarotDraw() {
       <style>{`
         @import url('https://fonts.googleapis.com/css2?family=Shippori+Mincho:wght@400;500;600;700;800&family=Noto+Sans+JP:wght@300;400;500;700&family=Cinzel:wght@500;600&display=swap');
 
+        /* ⚠️ 空を負の z-index に落とすので、土台をここで作る */
+        .tarot-root { position: relative; z-index: 0; }
         .tarot-root {
           --bg-deep: #120f24;
           --bg-mid: #1c1640;
@@ -26200,9 +26998,16 @@ export default function TarotDraw() {
           利用者座標＝CSSピクセルのまま使い、位置だけを入れ子の svg の
           x/y（％）で散らす。
         */
+        /*
+          ⚠️⚠️ 空の層は z-index を 0 にしないこと。
+          位置指定した要素は、DOMの順序に関わらず、静的な中身より上に描かれる。
+          雪だけなら薄いので気づかないが、不透明なビルを置いた途端に
+          言語切り替えのボタンがビルの裏に隠れて押せなくなった。
+          空は必ず 0 未満へ落とす。中身は .tarot-root の背景の上に載る。
+        */
         .title-sky {
           position: absolute; inset: 0; width: 100%; height: 100%;
-          pointer-events: none; z-index: 0; opacity: 0.5;
+          pointer-events: none; z-index: -2; opacity: 0.5;
           overflow: hidden;
           /*
             ホロの巡り。
@@ -27953,7 +28758,48 @@ export default function TarotDraw() {
         .greek-area-num u { font-size: 12px; text-decoration: none; opacity: 0.85; }
         .greek-area-note { font-size: 10.5px; color: var(--muted); display: flex; flex-direction: column; gap: 2px; }
         .greek-area-note b { font-weight: 400; color: var(--gold-soft); font-size: 11px; }
-        .cross-vec, .greek-ten, .hs-pass, .tree-vis { width: 100%; max-width: 340px; margin: 14px auto 4px; }
+        /*
+          視覚補正の枠。
+          ⚠️ 背景に直接載せないこと。落ちものと星がそのまま図の裏に透けて、
+          どこまでが図でどこからが背景か分からなくなる。
+          薄い面を一枚敷いて、図の領域をはっきりさせる。
+          ⚠️ 塗りは濃くしない。濃いと空が消えて、図だけ別の画面に見える。
+        */
+        /* 確かめること。結論より下に、箇条で置く */
+        .safe-checks {
+          margin: 10px 2px 2px; padding: 10px 12px;
+          border-top: 1px solid rgba(201,162,75,0.2);
+        }
+        .safe-checks-head {
+          font-size: 10px; letter-spacing: 0.08em; color: var(--gold-soft);
+          margin-bottom: 6px;
+        }
+        .safe-checks p {
+          font-size: 11.5px; line-height: 1.95; margin: 5px 0;
+          color: var(--muted); padding-left: 1em; text-indent: -1em;
+        }
+        .safe-checks p::before { content: "・"; }
+        /* 見えている割合。図の中でいちばん強い情報なので大きく出す */
+        .safe-pct { font-size: 15px; font-weight: 700; }
+        /* 図の凡例。何を測っているのかを一行で言う */
+        .hs-pass-legend {
+          font-size: 10.5px; color: var(--muted); text-align: center;
+          line-height: 1.8; margin: -2px 0 8px; opacity: 0.85;
+        }
+        /* 滝。水の筋が落ちる */
+        .mv-fall { animation: mvFall 1.1s linear infinite; }
+        @keyframes mvFall {
+          0%   { transform: translateY(0); opacity: 0; }
+          15%  { opacity: 0.9; }
+          100% { transform: translateY(150px); opacity: 0; }
+        }
+        .cross-vec, .greek-ten, .hs-pass, .tree-vis {
+          width: 100%; max-width: 340px; margin: 16px auto 6px;
+          padding: 14px 12px 10px; box-sizing: border-box;
+          border: 1px solid rgba(201,162,75,0.26); border-radius: 14px;
+          background: rgba(12,9,24,0.5);
+          box-shadow: 0 0 20px rgba(0,0,0,0.3) inset;
+        }
         /*
           図の地。
 
@@ -28123,7 +28969,7 @@ export default function TarotDraw() {
         */
         .sky-bolt {
           position: absolute; inset: 0; width: 100%; height: 100%;
-          pointer-events: none; z-index: 0; overflow: hidden;
+          pointer-events: none; z-index: -1; overflow: hidden;
         }
         .sky-bolt.dim { opacity: 0.25; }
         .sky-bolt-run { opacity: 0; animation-name: skyBolt; animation-iteration-count: infinite; }
@@ -28136,7 +28982,7 @@ export default function TarotDraw() {
         }
         .sky-city {
           position: absolute; inset: 0; width: 100%; height: 100%;
-          pointer-events: none; z-index: 0; overflow: hidden;
+          pointer-events: none; z-index: -3; overflow: hidden;
           opacity: 0.92;
         }
         .sky-city.dim { opacity: 0.2; }
@@ -28146,10 +28992,16 @@ export default function TarotDraw() {
           横幅で段階的に縮める。％で持つと縦長の端末で四角でなくなるので、
           大きさの調整は必ずこちら側（拡大縮小）で行うこと。
         */
+        /*
+          ⚠️ px で持っているので、広い画面ほど「相対的に小さく」なるのが本来。
+          ところが実際は PC で巨大に見えた ―― 4倍化を二度重ねたため。
+          いまは基準寸法を戻し、狭い画面でだけ縮める。
+          ⚠️ 大きくする方向の指定は入れないこと。PC で画面を覆う。
+        */
         .sky-building { transform-box: fill-box; transform-origin: top center; }
         @media (max-width: 900px) { .sky-building { transform: scale(0.72); } }
         @media (max-width: 600px) { .sky-building { transform: scale(0.5); } }
-        @media (max-width: 420px) { .sky-building { transform: scale(0.4); } }
+        @media (max-width: 420px) { .sky-building { transform: scale(0.42); } }
         /*
           --- ダビデスターの六ゲージ ---
           原点を中央に置き、与えた側は左へ、受けた側は右へ伸ばす。
