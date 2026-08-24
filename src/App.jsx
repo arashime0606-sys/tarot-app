@@ -9343,6 +9343,106 @@ const SKY_PALETTE = ["#FF3CB4", "#3CC8FF", "#78FF8C", "#FFDC3C"];
   住んでいる灯りに見えない。夜景の窓は黄色と決め打ちにする。
 */
 const SKY_WINDOW = "#FFD98A";
+
+/*
+  大稲妻の形。
+  ⚠️ 乱数で作らないこと。再描画のたびに形が変わると、
+  光るたびに別の稲妻に見えて、同じ空だと感じられなくなる。
+  添字から決めて、盤面が変わっても同じ三本が走る。
+*/
+const SKY_BOLTS = (() => {
+  const out = [];
+  [18, 52, 83].forEach((x, i) => {
+    const seg = 5, step = 150;
+    let d = "M 0 0", cx = 0, cy = 0;
+    const joints = [];
+    for (let s = 0; s < seg; s++) {
+      cx += (((i * 7 + s * 13) % 9) - 4) * 11;
+      cy += step;
+      d += ` L ${cx} ${cy}`;
+      joints.push([cx, cy]);
+    }
+    /* 枝。幹の途中から二本、斜めに分かれて途中で止まる */
+    const limbs = [1, 3].map((j) => {
+      const [jx, jy] = joints[j];
+      const dir = j % 2 ? 1 : -1;
+      return `M ${jx} ${jy} L ${jx + dir * 62} ${jy + 74} L ${jx + dir * 34} ${jy + 88}`;
+    });
+    out.push({ x, trunk: d, limbs, d: i * 3.7, dur: 9 + i * 2 });
+  });
+  return out;
+})();
+
+/*
+  地上の飾りの部品。四角と三角だけで組む。
+
+  ⚠️ 曲線を使わないこと。落ちものがすべて直線と多角形でできているので、
+  ここだけ曲線にすると背景の描き味が割れる。
+*/
+
+/** 絵本の家。正方形の胴に三角の屋根、窓ひとつ。ビルとビルの間に建てる */
+function SkyHouse({ w, seedIndex }) {
+  const body = w, roof = w * 0.62, win = w * 0.3;
+  return (
+    <g>
+      {/* 屋根。三角 */}
+      <polygon points={`${-body / 2 - roof * 0.16},0 0,${-roof} ${body / 2 + roof * 0.16},0`}
+        fill="#241a2e" stroke="rgba(150,142,190,0.32)" strokeWidth="0.5" />
+      {/* 胴。正方形 */}
+      <rect x={-body / 2} y="0" width={body} height={body}
+        fill="#171128" stroke="rgba(150,142,190,0.32)" strokeWidth="0.5" />
+      {/* 窓ひとつ。必ず灯す */}
+      <rect x={-win / 2} y={body * 0.3} width={win} height={win}
+        fill={SKY_WINDOW} opacity="0.9"
+        style={{ filter: "drop-shadow(0 0 3px rgba(255,214,120,0.85))" }} />
+    </g>
+  );
+}
+
+/** 絵本の木。三角を三段重ねた常緑樹と、四角の幹 */
+function SkyTree({ w }) {
+  const tiers = [1, 0.78, 0.56];
+  const h = w * 1.5;
+  return (
+    <g>
+      <rect x={-w * 0.09} y={h * 0.72} width={w * 0.18} height={h * 0.28}
+        fill="#2a1d18" stroke="rgba(150,142,190,0.28)" strokeWidth="0.5" />
+      {tiers.map((f, i) => {
+        const top = h * (0.06 + i * 0.22);
+        const half = (w / 2) * f;
+        const bot = top + h * 0.34;
+        return (
+          <polygon key={i} points={`${-half},${bot} 0,${top} ${half},${bot}`}
+            fill={`rgb(${22 + i * 6},${34 + i * 8},${28 + i * 6})`}
+            stroke="rgba(150,200,170,0.3)" strokeWidth="0.5" />
+        );
+      })}
+    </g>
+  );
+}
+
+/** 雪だるま。丸ふたつ、目と口、枝の腕。雪と大雪のときだけ立つ */
+function SkySnowman({ w }) {
+  const rb = w * 0.5, rt = w * 0.32;
+  const cyB = rb, cyT = rb - rt * 0.7 - rb * 0.32;
+  return (
+    <g>
+      <circle cx="0" cy={cyB} r={rb} fill="#e8e6f2" opacity="0.9"
+        stroke="rgba(180,190,220,0.6)" strokeWidth="0.6" />
+      <circle cx="0" cy={cyT} r={rt} fill="#f2f0fa" opacity="0.95"
+        stroke="rgba(180,190,220,0.6)" strokeWidth="0.6" />
+      {/* 枝の腕。左右に一本ずつ */}
+      <line x1={-rb * 0.9} y1={cyB - rb * 0.35} x2={-rb * 1.7} y2={cyB - rb * 0.85}
+        stroke="#3a2a20" strokeWidth={Math.max(1, w * 0.035)} strokeLinecap="round" />
+      <line x1={rb * 0.9} y1={cyB - rb * 0.35} x2={rb * 1.7} y2={cyB - rb * 0.85}
+        stroke="#3a2a20" strokeWidth={Math.max(1, w * 0.035)} strokeLinecap="round" />
+      {/* 目と鼻 */}
+      <circle cx={-rt * 0.35} cy={cyT - rt * 0.15} r={Math.max(0.8, rt * 0.11)} fill="#241a2e" />
+      <circle cx={rt * 0.35} cy={cyT - rt * 0.15} r={Math.max(0.8, rt * 0.11)} fill="#241a2e" />
+      <polygon points={`0,${cyT} ${rt * 0.62},${cyT + rt * 0.1} 0,${cyT + rt * 0.2}`} fill="#E88B3C" />
+    </g>
+  );
+}
 /*
   大雪は一粒が34個の線でできているので、数を増やしすぎると要素が一万を超える。
   ⚠️ 340体で1万1千。スマホで重くなる。
@@ -9391,34 +9491,49 @@ const skyMotes = (n) => Array.from({ length: n }, (_, k) => ({
     w  幅（px）
     h  高さ（px）
 */
+/*
+  地上に据える固定の飾り。動かさない。
+
+  ★ 位置はビルと共有する（SKY_BUILDINGS の x / y）。
+    空の種類ごとに座標表を作ると、片方だけ直したときに黙ってずれる。
+    ビルの位置に、空に応じて別のものを建てる。
+
+      超大雪 … ビル。ときどき間に絵本の家
+      雪・大雪 … 雪だるま（ビルの位置に、ずっと小さく）
+      落ち葉 … 絵本の木
+
+  ⚠️ どれも動かさない。降るものと同じ動きを付けると層が二つとも動いて、
+  どこを見ればいいのか分からなくなる。止まっているから奥に見える。
+*/
+
 const SKY_BUILDINGS = [
   /* 一帯め。いちばん上。タイトルの文字に隠れる */
-  { x: 10, y: 2,  w: 104, h: 152 },
-  { x: 38, y: 6,  w: 92,  h: 176 },
-  { x: 66, y: 1,  w: 116, h: 138 },
-  { x: 93, y: 7,  w: 88,  h: 192 },
+  { x: 10, y: 2, w: 208, h: 304 },
+  { x: 38, y: 6, w: 184, h: 352 },
+  { x: 66, y: 1, w: 232, h: 276 },
+  { x: 93, y: 7, w: 176, h: 384 },
   /* 二帯め */
-  { x: 22, y: 17, w: 96,  h: 168 },
-  { x: 51, y: 21, w: 120, h: 132 },
-  { x: 80, y: 16, w: 90,  h: 184 },
+  { x: 22, y: 17, w: 192, h: 336 },
+  { x: 51, y: 21, w: 240, h: 264 },
+  { x: 80, y: 16, w: 180, h: 368 },
   /* 三帯め */
-  { x: 7,  y: 32, w: 106, h: 150 },
-  { x: 35, y: 36, w: 98,  h: 164 },
-  { x: 63, y: 31, w: 86,  h: 188 },
-  { x: 91, y: 37, w: 110, h: 142 },
+  { x: 7, y: 32, w: 212, h: 300 },
+  { x: 35, y: 36, w: 196, h: 328 },
+  { x: 63, y: 31, w: 172, h: 376 },
+  { x: 91, y: 37, w: 220, h: 284 },
   /* 四帯め */
-  { x: 19, y: 48, w: 116, h: 134 },
-  { x: 47, y: 52, w: 92,  h: 178 },
-  { x: 76, y: 47, w: 108, h: 146 },
+  { x: 19, y: 48, w: 232, h: 268 },
+  { x: 47, y: 52, w: 184, h: 356 },
+  { x: 76, y: 47, w: 216, h: 292 },
   /* 五帯め */
-  { x: 5,  y: 63, w: 102, h: 158 },
-  { x: 33, y: 67, w: 88,  h: 186 },
-  { x: 61, y: 62, w: 118, h: 130 },
-  { x: 89, y: 68, w: 100, h: 160 },
+  { x: 5, y: 63, w: 204, h: 316 },
+  { x: 33, y: 67, w: 176, h: 372 },
+  { x: 61, y: 62, w: 236, h: 260 },
+  { x: 89, y: 68, w: 200, h: 320 },
   /* 六帯め。いちばん下。少しだけ */
-  { x: 17, y: 79, w: 112, h: 140 },
-  { x: 50, y: 83, w: 104, h: 150 },
-  { x: 84, y: 78, w: 94,  h: 174 },
+  { x: 17, y: 79, w: 224, h: 280 },
+  { x: 50, y: 83, w: 208, h: 300 },
+  { x: 84, y: 78, w: 188, h: 348 },
 ];
 /* 雨と雪の雲。上のほうに数枚 */
 const SKY_CLOUDS = [
@@ -9444,7 +9559,9 @@ function starPoints(r) {
 }
 
 function TitleSky({ kind, dim = false }) {
-  const clouded = kind === "rain" || kind === "snow" || kind === "heavysnow" || kind === "blizzard";
+  /* ⚠️ 雷にも雲を出す。雲の無い雷は、どこから落ちているのか分からない */
+  const clouded = kind === "rain" || kind === "snow" || kind === "heavysnow"
+    || kind === "blizzard" || kind === "thunder";
   const baseN = SKY_COUNT[kind] || SKY_DEFAULT_N;
   /* 盤面の裏に敷くときは半分に減らす。主役は札のほうなので */
   const motes = skyMotes(dim ? Math.max(8, Math.round(baseN / 2)) : baseN);
@@ -9492,23 +9609,73 @@ function TitleSky({ kind, dim = false }) {
       );
     }
     if (kind === "thunder") {
-      /* 雷。稲妻の記号。上から下へ折れる */
-      return <path d={`M ${(R * 0.25).toFixed(2)} ${-R} L ${(-R * 0.6).toFixed(2)} ${(R * 0.12).toFixed(2)}`
+      /*
+        雷。三段階。小は記号のまま、中は枝が一本、大は二本に分かれる。
+        ⚠️ 大きくするだけにしないこと。同じ形の拡大が混ざると
+        「近い雷」ではなく「解像度の違う雷」に見える。折れの数を変える。
+      */
+      const tier = m.tier || 0;
+      const bolt = `M ${(R * 0.25).toFixed(2)} ${-R} L ${(-R * 0.6).toFixed(2)} ${(R * 0.12).toFixed(2)}`
         + ` L ${(-R * 0.05).toFixed(2)} ${(R * 0.12).toFixed(2)} L ${(-R * 0.3).toFixed(2)} ${R}`
-        + ` L ${(R * 0.65).toFixed(2)} ${(-R * 0.18).toFixed(2)} L ${(R * 0.02).toFixed(2)} ${(-R * 0.18).toFixed(2)} Z`}
-        fill={C} opacity="0.85" />;
+        + ` L ${(R * 0.65).toFixed(2)} ${(-R * 0.18).toFixed(2)} L ${(R * 0.02).toFixed(2)} ${(-R * 0.18).toFixed(2)} Z`;
+      return (
+        <g opacity={0.85 - tier * 0.05}>
+          <path d={bolt} fill={C} />
+          {/* 中・大の枝。本体から分かれて途中で止まる */}
+          {tier >= 1 && (
+            <path d={`M ${(-R * 0.05).toFixed(2)} ${(R * 0.12).toFixed(2)}`
+              + ` L ${(R * 0.5).toFixed(2)} ${(R * 0.5).toFixed(2)}`
+              + ` L ${(R * 0.18).toFixed(2)} ${(R * 0.52).toFixed(2)}`}
+              fill="none" stroke={C} strokeWidth={LW * 0.8} strokeLinecap="round" />
+          )}
+          {tier >= 2 && (
+            <path d={`M ${(R * 0.02).toFixed(2)} ${(-R * 0.18).toFixed(2)}`
+              + ` L ${(-R * 0.62).toFixed(2)} ${(-R * 0.5).toFixed(2)}`
+              + ` L ${(-R * 0.28).toFixed(2)} ${(-R * 0.52).toFixed(2)}`}
+              fill="none" stroke={C} strokeWidth={LW * 0.7} strokeLinecap="round" />
+          )}
+        </g>
+      );
     }
     if (kind === "maple") {
-      /* 紅葉。五つに裂けた葉 */
+      /*
+        落ち葉。楓の五裂ではなく、ふつうの広葉樹の葉。
+
+        ⚠️ 左右対称に描かないこと。対称だと図形記号に見えて、
+        葉が落ちている感じが出ない。中央の脈を軸に、
+        片側をわずかに膨らませ、全体を斜めに傾ける。
+        ⚠️ 傾きは粒ごとに変えるが、乱数は使わない。
+        添字から決めて、同じ盤面では同じ向きにする。
+      */
+      const tilt = -34 + ((k * 37) % 68);          // -34〜+34度
+      const bulge = 1 + (((k * 17) % 5) - 2) * 0.06;
+      const tipY = -R, baseY = R * 0.62;
       return (
-        <g opacity="0.75">
-          {[-90, -40, 0, 40, 90].map((deg, i) => (
-            <path key={deg} d={`M 0 ${(R * 0.5).toFixed(2)} L ${(-R * 0.22).toFixed(2)} ${(-R * 0.1).toFixed(2)}`
-              + ` L 0 ${(-R * (i === 2 ? 1 : 0.78)).toFixed(2)} L ${(R * 0.22).toFixed(2)} ${(-R * 0.1).toFixed(2)} Z`}
-              fill={C} transform={`rotate(${deg})`} />
-          ))}
-          <line x1="0" y1={(R * 0.5).toFixed(2)} x2="0" y2={R.toFixed(2)}
-            stroke={C} strokeWidth={LW} strokeLinecap="round" />
+        <g opacity="0.78" transform={`rotate(${tilt})`}>
+          {/* 葉身。左右で膨らみを変える */}
+          <path d={`M 0 ${tipY.toFixed(2)}`
+            + ` C ${(R * 0.62 * bulge).toFixed(2)} ${(-R * 0.42).toFixed(2)},`
+            + ` ${(R * 0.5 * bulge).toFixed(2)} ${(R * 0.3).toFixed(2)},`
+            + ` 0 ${baseY.toFixed(2)}`
+            + ` C ${(-R * 0.46 / bulge).toFixed(2)} ${(R * 0.28).toFixed(2)},`
+            + ` ${(-R * 0.58 / bulge).toFixed(2)} ${(-R * 0.4).toFixed(2)},`
+            + ` 0 ${tipY.toFixed(2)} Z`}
+            fill={C} />
+          {/* 主脈 */}
+          <line x1="0" y1={tipY.toFixed(2)} x2="0" y2={R.toFixed(2)}
+            stroke={C} strokeWidth={LW * 0.7} strokeLinecap="round" opacity="0.5" />
+          {/* 側脈。斜めに三対 */}
+          {[0.3, 0.0, -0.3].map((f, i) => {
+            const y = tipY + (baseY - tipY) * (0.3 + i * 0.22);
+            return (
+              <g key={i}>
+                <line x1="0" y1={y.toFixed(2)} x2={(R * 0.4 * bulge).toFixed(2)}
+                  y2={(y + R * 0.2).toFixed(2)} stroke={C} strokeWidth={LW * 0.4} opacity="0.4" />
+                <line x1="0" y1={y.toFixed(2)} x2={(-R * 0.36 / bulge).toFixed(2)}
+                  y2={(y + R * 0.2).toFixed(2)} stroke={C} strokeWidth={LW * 0.4} opacity="0.4" />
+              </g>
+            );
+          })}
         </g>
       );
     }
@@ -9661,8 +9828,44 @@ function TitleSky({ kind, dim = false }) {
         ⚠️ 大きさは px。％にすると縦長の端末でビルだけ引き伸ばされる。
         代わりに、狭い画面では .sky-building 側で縮める。
       */}
-    {kind === "blizzard" && (
+    {/*
+      地上の飾り。空の種類で建つものが変わるが、位置は SKY_BUILDINGS で共通。
+      ⚠️ 色相回転のかかる .title-sky には入れない。
+      窓や雪だるまの色が回ってしまう。
+    */}
+    {(kind === "blizzard" || kind === "snow" || kind === "heavysnow" || kind === "maple") && (
       <svg className={`sky-city${dim ? " dim" : ""}`} aria-hidden="true">
+        {/* 雪だるま。雪と大雪のとき。ビルの位置に、ずっと小さく立たせる */}
+        {(kind === "snow" || kind === "heavysnow") && SKY_BUILDINGS.map((b, bi) => (
+          <svg key={`sm${bi}`} x={`${b.x}%`} y={`${b.y}%`} overflow="visible">
+            <g className="sky-building" opacity={0.5 + (b.y / 90) * 0.45}>
+              <SkySnowman w={b.w * 0.16} />
+            </g>
+          </svg>
+        ))}
+        {/* 絵本の木。落ち葉のとき */}
+        {kind === "maple" && SKY_BUILDINGS.map((b, bi) => (
+          <svg key={`tr${bi}`} x={`${b.x}%`} y={`${b.y}%`} overflow="visible">
+            <g className="sky-building" opacity={0.45 + (b.y / 90) * 0.45}>
+              <SkyTree w={b.w * 0.34} />
+            </g>
+          </svg>
+        ))}
+        {/* 絵本の家。超大雪のとき、ビルとビルの間に */}
+        {kind === "blizzard" && SKY_BUILDINGS.map((b, bi) => {
+          /* 一棟おきに、右隣との中間へ。全部の間に建てると街が埋まる */
+          if (bi % 2) return null;
+          const nx = SKY_BUILDINGS[bi + 1];
+          if (!nx) return null;
+          const mx = (b.x + nx.x) / 2, my = (b.y + nx.y) / 2 + 6;
+          return (
+            <svg key={`hs${bi}`} x={`${mx}%`} y={`${my}%`} overflow="visible">
+              <g className="sky-building">
+                <SkyHouse w={b.w * 0.3} seedIndex={bi} />
+              </g>
+            </svg>
+          );
+        })}
         {SKY_BUILDINGS.map((b, bi) => {
         /* 上にあるものほど遠い。遠いほど暗くする（薄くはしない） */
         const far = Math.max(0, Math.min(1, 1 - b.y / 90));
@@ -9691,6 +9894,34 @@ function TitleSky({ kind, dim = false }) {
           </svg>
         );
         })}
+      </svg>
+    )}
+
+    {/*
+      大稲妻。雷のときだけ、ときどき空を走る。
+
+      ★ 形は生命の樹の稲妻と同じ考え方 ―― 幹が折れながら下り、
+        途中から枝が分かれる。あちらは柱の背景を走るが、こちらは空を走る。
+      ⚠️ 常時光らせないこと。ずっと出ていると壁紙になり、
+        落ちている感じが消える。長い間隔で一瞬だけ光らせる。
+      ⚠️ 色相回転の層に入れない。稲妻が緑や桃色になる。
+    */}
+    {kind === "thunder" && (
+      <svg className={`sky-bolt${dim ? " dim" : ""}`} aria-hidden="true">
+        {SKY_BOLTS.map((bo, i) => (
+          <svg key={`bo${i}`} x={`${bo.x}%`} y="0" overflow="visible">
+            <g className="sky-bolt-run" style={{ animationDelay: `${bo.d}s`, animationDuration: `${bo.dur}s` }}>
+              <path d={bo.trunk} fill="none" stroke="#EAF2FF" strokeWidth="2.4"
+                strokeLinecap="round" strokeLinejoin="round"
+                style={{ filter: "drop-shadow(0 0 7px rgba(190,225,255,0.95))" }} />
+              {bo.limbs.map((d, j) => (
+                <path key={j} d={d} fill="none" stroke="#EAF2FF" strokeWidth="1.3"
+                  strokeLinecap="round" strokeLinejoin="round" opacity="0.85"
+                  style={{ filter: "drop-shadow(0 0 4px rgba(190,225,255,0.8))" }} />
+              ))}
+            </g>
+          </svg>
+        ))}
       </svg>
     )}
 
@@ -9741,7 +9972,7 @@ function TitleSky({ kind, dim = false }) {
               ⚠️ 超大雪だけは三段階（0.7 / 1.25 / 2.3）を使う。
                  big の二段階と混ぜると四段階になり、粒の大きさが読めなくなる。
             */}
-            <g transform={`scale(${(m.s * (kind === "blizzard"
+            <g transform={`scale(${(m.s * ((kind === "blizzard" || kind === "thunder")
               ? [0.7, 1.25, 2.3][m.tier || 0]
               : (m.big ? 2.1 : 1))).toFixed(2)})`}>
               {shape(k, m, colorAt(k))}
@@ -27790,6 +28021,25 @@ export default function TarotDraw() {
           ⚠️ opacity も落とさない。灯りは灯りとして見えないと意味がない。
           札の裏に敷くときだけ dim で下げる。
         */
+        /*
+          大稲妻の層。
+          ⚠️ 色相回転をかけない。稲妻が緑や桃色になる。
+          ⚠️ ずっと光らせない。点く時間はごく短く、間隔を長く取る。
+             出しっぱなしにすると壁紙になって、落ちている感じが消える。
+        */
+        .sky-bolt {
+          position: absolute; inset: 0; width: 100%; height: 100%;
+          pointer-events: none; z-index: 0; overflow: hidden;
+        }
+        .sky-bolt.dim { opacity: 0.25; }
+        .sky-bolt-run { opacity: 0; animation-name: skyBolt; animation-iteration-count: infinite; }
+        @keyframes skyBolt {
+          0%, 100% { opacity: 0; }
+          1.2%     { opacity: 1; }
+          2.4%     { opacity: 0.15; }
+          3.4%     { opacity: 0.9; }
+          5%       { opacity: 0; }
+        }
         .sky-city {
           position: absolute; inset: 0; width: 100%; height: 100%;
           pointer-events: none; z-index: 0; overflow: hidden;
