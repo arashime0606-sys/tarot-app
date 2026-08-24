@@ -4464,8 +4464,33 @@ const CHOICE_STAGES = [
   専用の入力欄（相手との関係／意味を知りたいこと／A と B／目標と手段）を
   持つものは、そちらで足りるので出さない。
 */
-const NEEDS_TOPIC = ["weekly", "horoscope", "simpleCross", "greekCross", "treeOfLife",
-  "shadowWork", "innerChild", "burnout"];
+/*
+  ⚠️ ここを手書きの一覧にしていたせいで、影・内なる子ども・消耗の三つを
+  書いた時点で止まり、そのあと開放した二十種すべてに入力欄が出ていなかった。
+  現代派はAI鑑定しかないので、入力欄が無い＝ほぼ空欄で引かれるということ。
+
+  一覧を持たず、条件から導く。
+    ・専用の入力欄を持つ配置は除く（HAS_OWN_TOPIC_FIELD）
+    ・それ以外で、現代派か、配置ごとの入力例を持つものは出す
+  こうすると配置を足したときに自動で付く。二度と付け忘れない。
+*/
+const HAS_OWN_TOPIC_FIELD = [
+  "relationship",   // 相手との関係
+  "celticCross",    // 意味を知りたいこと
+  "choice",         // A と B
+  "horseshoe",      // 目標と、いまやっていること
+];
+const NEEDS_TOPIC_ALWAYS = ["weekly", "horoscope", "simpleCross", "greekCross", "treeOfLife"];
+const needsTopicField = (key) => {
+  const base = spreadBaseKey(key);
+  if (HAS_OWN_TOPIC_FIELD.includes(base)) return false;
+  if (NEEDS_TOPIC_ALWAYS.includes(base)) return true;
+  /* 現代派は全部。位置名そのものが問いなので、空欄だと読みようがない */
+  if (MODERN_SPREADS.includes(base)) return true;
+  /* 古典派でも、配置ごとの入力例を持たせたものは出す（ダビデスター・ゾディアック） */
+  if (SPREAD_TOPIC_I18N.ja && SPREAD_TOPIC_I18N.ja[base]) return true;
+  return false;
+};
 
 /*
   現代派へのAIの指示。
@@ -9354,50 +9379,46 @@ const skyMotes = (n) => Array.from({ length: n }, (_, k) => ({
   落ちものの素朴さと噛み合わなくなる。幅は高さの半分以上を保つ。
   ⚠️ 窓は横2・縦4の八つで固定。全部に黄色の灯りを点ける。
   間引くと空室に見えて寂しい街になり、色を散らすと看板に見える。
-  夜のビルの窓は黄色、と決め打ちにする。
-  ⚠️ 下端に一列で並べないこと。真下に揃うと書き割りになる。
-  y をばらして奥行きを作る。上のほうを多めにして、
-  タイトルの文字に隠れる位置ほど数を増やす。
+  ⚠️ 躯体は不透明にすること。半透明にすると重なったビルが透けて、
+  面が重なった一枚の図形に見える。手前が奥を隠すから街に見える。
+  ⚠️ 一つの帯に詰めこまないこと。帯を増やして一帯あたりを五棟に散らす。
+  横に並べすぎると、幅の狭い画面でびっしり重なる。
 
-    x  左端（画面幅に対する％）
+    x  中心（画面幅に対する％）  同じ帯では 28％ 前後を空ける
+       ⚠️ 一帯に四棟まで。スマホの幅では、それ以上並べるとびっしり重なる。
+       幅は px なので、画面が狭いほど％の間隔が詰まって見える。
     y  上端（画面高に対する％）
     w  幅（px）
     h  高さ（px）
 */
 const SKY_BUILDINGS = [
-  /* 上のほう。タイトルの文字に隠れる帯なので多めに置く */
-  { x: 3,  y: 4,  w: 104, h: 152 },
-  { x: 11, y: 9,  w: 92,  h: 176 },
-  { x: 19, y: 2,  w: 116, h: 138 },
-  { x: 27, y: 11, w: 88,  h: 192 },
-  { x: 35, y: 5,  w: 108, h: 148 },
-  { x: 43, y: 8,  w: 96,  h: 168 },
-  { x: 51, y: 3,  w: 120, h: 132 },
-  { x: 59, y: 10, w: 90,  h: 184 },
-  { x: 67, y: 6,  w: 112, h: 144 },
-  { x: 75, y: 2,  w: 94,  h: 172 },
-  { x: 83, y: 9,  w: 106, h: 150 },
-  { x: 91, y: 5,  w: 98,  h: 164 },
-  { x: 97, y: 12, w: 86,  h: 188 },
-  /* 中ほど */
-  { x: 6,  y: 34, w: 100, h: 156 },
-  { x: 22, y: 30, w: 116, h: 134 },
-  { x: 38, y: 37, w: 92,  h: 178 },
-  { x: 54, y: 32, w: 108, h: 146 },
-  { x: 70, y: 36, w: 96,  h: 170 },
-  { x: 86, y: 31, w: 110, h: 142 },
-  { x: 14, y: 44, w: 102, h: 158 },
-  { x: 30, y: 48, w: 88,  h: 186 },
-  { x: 46, y: 43, w: 118, h: 130 },
-  { x: 62, y: 47, w: 100, h: 160 },
-  { x: 78, y: 42, w: 92,  h: 180 },
-  { x: 94, y: 46, w: 112, h: 140 },
-  /* 下のほう。少なめ */
-  { x: 13, y: 64, w: 104, h: 150 },
-  { x: 33, y: 70, w: 94,  h: 174 },
-  { x: 53, y: 66, w: 114, h: 136 },
-  { x: 72, y: 72, w: 98,  h: 162 },
-  { x: 90, y: 65, w: 106, h: 148 },
+  /* 一帯め。いちばん上。タイトルの文字に隠れる */
+  { x: 10, y: 2,  w: 104, h: 152 },
+  { x: 38, y: 6,  w: 92,  h: 176 },
+  { x: 66, y: 1,  w: 116, h: 138 },
+  { x: 93, y: 7,  w: 88,  h: 192 },
+  /* 二帯め */
+  { x: 22, y: 17, w: 96,  h: 168 },
+  { x: 51, y: 21, w: 120, h: 132 },
+  { x: 80, y: 16, w: 90,  h: 184 },
+  /* 三帯め */
+  { x: 7,  y: 32, w: 106, h: 150 },
+  { x: 35, y: 36, w: 98,  h: 164 },
+  { x: 63, y: 31, w: 86,  h: 188 },
+  { x: 91, y: 37, w: 110, h: 142 },
+  /* 四帯め */
+  { x: 19, y: 48, w: 116, h: 134 },
+  { x: 47, y: 52, w: 92,  h: 178 },
+  { x: 76, y: 47, w: 108, h: 146 },
+  /* 五帯め */
+  { x: 5,  y: 63, w: 102, h: 158 },
+  { x: 33, y: 67, w: 88,  h: 186 },
+  { x: 61, y: 62, w: 118, h: 130 },
+  { x: 89, y: 68, w: 100, h: 160 },
+  /* 六帯め。いちばん下。少しだけ */
+  { x: 17, y: 79, w: 112, h: 140 },
+  { x: 50, y: 83, w: 104, h: 150 },
+  { x: 84, y: 78, w: 94,  h: 174 },
 ];
 /* 雨と雪の雲。上のほうに数枚 */
 const SKY_CLOUDS = [
@@ -9620,6 +9641,59 @@ function TitleSky({ kind, dim = false }) {
   const cls = kind === "ufo" ? "sky-blow"
     : kind === "rain" ? "sky-drop" : "sky-drift";
   return (
+    <>
+    {/*
+      ⚠️⚠️ ビルは空とは別の svg に分ける。同じ層に置いてはいけない。
+      .title-sky は 24秒で hue-rotate(0→360deg) を回しており、
+      その中に入れると窓の黄色も一緒に色相が回って、
+      黄色く光っている瞬間がほぼ無くなる。実際にそうなっていた。
+      さらに .title-sky は opacity 0.5 なので、窓が半分の明るさになる。
+      灯りは灯りとして、回転も減光もかけずに描く。
+    */}
+      {/*
+        夜のビル。超大雪のときだけ。四角だけで組む。
+
+        ⚠️ 躯体は不透明。透かすと重なったビルが互いに見えて街に見えない。
+        奥行きは、色を暗くすることで出す（薄くするのではなく）。
+        ⚠️ 動かさない。降るものと同じ動きを付けると層が二つとも動いて、
+        どこを見ればいいのか分からなくなる。止まっているから奥に見える。
+        ⚠️ 落ちものより前に描く。あとに描くと雪がビルの裏へ回る。
+        ⚠️ 大きさは px。％にすると縦長の端末でビルだけ引き伸ばされる。
+        代わりに、狭い画面では .sky-building 側で縮める。
+      */}
+    {kind === "blizzard" && (
+      <svg className={`sky-city${dim ? " dim" : ""}`} aria-hidden="true">
+        {SKY_BUILDINGS.map((b, bi) => {
+        /* 上にあるものほど遠い。遠いほど暗くする（薄くはしない） */
+        const far = Math.max(0, Math.min(1, 1 - b.y / 90));
+        const body = `rgb(${Math.round(9 + (1 - far) * 8)},${Math.round(7 + (1 - far) * 7)},${Math.round(20 + (1 - far) * 12)})`;
+        return (
+          <svg key={`bl${bi}`} x={`${b.x}%`} y={`${b.y}%`} overflow="visible">
+            <g className="sky-building">
+              {/* 躯体。塗りは不透明、枠は細く */}
+              <rect x={-b.w / 2} y="0" width={b.w} height={b.h}
+                fill={body} stroke="rgba(150,142,190,0.3)" strokeWidth="0.5" />
+              {/* 窓。横2・縦4の八つ。全部に黄色の灯りを点ける */}
+              {Array.from({ length: 8 }, (_, wi) => {
+                const col = wi % 2, row = Math.floor(wi / 2);
+                const ww = b.w * 0.26, wh = b.h * 0.13;
+                const gx = b.w / 3, gy = b.h / 5;
+                return (
+                  <rect key={wi}
+                    x={(-b.w / 2 + gx * (col + 1) - ww / 2).toFixed(1)}
+                    y={(gy * (row + 1) - wh / 2).toFixed(1)}
+                    width={ww.toFixed(1)} height={wh.toFixed(1)}
+                    fill={SKY_WINDOW} opacity={0.92 - far * 0.2}
+                    style={{ filter: `drop-shadow(0 0 ${(3 - far * 1.5).toFixed(1)}px rgba(255,214,120,0.85))` }} />
+                );
+              })}
+            </g>
+          </svg>
+        );
+        })}
+      </svg>
+    )}
+
     <svg className={`title-sky${dim ? " dim" : ""}`} aria-hidden="true">
       {/*
         天体。右上に据える。降るものと違って動かさない。
@@ -9658,38 +9732,6 @@ function TitleSky({ kind, dim = false }) {
           </g>
         </svg>
       ))}
-      {/*
-        夜のビル。超大雪のときだけ。四角だけで組む。
-
-        ⚠️ 動かさない。降るものと同じ動きを付けると層が二つとも動いて、
-        どこを見ればいいのか分からなくなる。止まっているから奥に見える。
-        ⚠️ 落ちものより前に描く。あとに描くと雪がビルの裏へ回る。
-        ⚠️ 大きさは px で持つこと。％にすると縦長の端末で
-        ビルだけが引き伸ばされて、四角ではなくなる。
-      */}
-      {kind === "blizzard" && SKY_BUILDINGS.map((b, bi) => (
-        <svg key={`bl${bi}`} x={`${b.x}%`} y={`${b.y}%`} overflow="visible">
-          <g opacity="0.42">
-            {/* 躯体 */}
-            <rect x={-b.w / 2} y="0" width={b.w} height={b.h}
-              fill="rgba(9,7,18,0.9)" stroke="rgba(160,150,200,0.4)" strokeWidth="1" />
-            {/* 窓。横2・縦4の八つ。全部に灯りを点ける */}
-            {Array.from({ length: 8 }, (_, wi) => {
-              const col = wi % 2, row = Math.floor(wi / 2);
-              const ww = b.w * 0.26, wh = b.h * 0.13;
-              const gx = b.w / 3, gy = b.h / 5;
-              return (
-                <rect key={wi}
-                  x={(-b.w / 2 + gx * (col + 1) - ww / 2).toFixed(1)}
-                  y={(gy * (row + 1) - wh / 2).toFixed(1)}
-                  width={ww.toFixed(1)} height={wh.toFixed(1)}
-                  fill={SKY_WINDOW}
-                  opacity="0.72" />
-              );
-            })}
-          </g>
-        </svg>
-      ))}
       {motes.map((m, k) => (
         <svg key={k} x={`${m.x.toFixed(2)}%`} y={`${m.y.toFixed(2)}%`} overflow="visible">
           <g className={cls}
@@ -9708,6 +9750,7 @@ function TitleSky({ kind, dim = false }) {
         </svg>
       ))}
     </svg>
+    </>
   );
 }
 
@@ -10310,6 +10353,9 @@ function HeadHeartRope({ drawn, lang, openedIndices }) {
    ============================================================ */
 const MODERN_VIS_I18N = {
   ja: {
+    mvTop: (s) => `いま最も強く出ているのは「${s}」です。`,
+    mvLow: (s) => `最も弱いのは「${s}」です。`,
+    mvAct: (s) => `手を付けるなら「${s}」から。ここが動くと、他の位置も動きます。`,
     dsTitle: "六芒星",
     dsGive: "▲ 与えた側",
     dsTake: "▼ 受けた側",
@@ -10459,6 +10505,9 @@ const MODERN_VIS_I18N = {
     bodyZone: ["頭", "胸", "腹", "脚"],
   },
   en: {
+    mvTop: (s) => `What stands out most right now is "${s}".`,
+    mvLow: (s) => `The weakest is "${s}".`,
+    mvAct: (s) => `Start from "${s}". Move that, and the other positions follow.`,
     dsTitle: "The Hexagram",
     dsGive: "▲ Given",
     dsTake: "▼ Received",
@@ -13358,6 +13407,54 @@ function SpreadVerdict({ spreadKey, drawn, lang, openedIndices, extra }) {
     ];
   }
 
+  /*
+    ============================================================
+    現代派の結論。
+
+    ⚠️ 古典派には配置ごとの判定文があるが、現代派には無かった。
+    「結論はカード結果の直下」は確定事項なのに、現代派だけ
+    図の末尾の一文しかなく、しかもあれは状態の説明であって結論ではない。
+
+    ★ 23配置ぶんの文言を書き起こさない。位置の名前そのものが問いなので、
+      いちばん強く出た位置を名指しして「そこから手を付ける」と言えば、
+      配置ごとに違う、具体的な結論になる。
+      配置を足しても自動で付く。表を持たないので付け忘れも起きない。
+
+    ⚠️ 良い悪いを言わないこと。出しているのは「どこがいま前に出ているか」で、
+      吉凶ではない。文言もそこに留める。
+    ⚠️ 位置名が取れない言語では何も出さない。
+      空の見出しだけ残すと、壊れた枠に見える。
+    ============================================================
+  */
+  if (!title && MODERN_SPREADS.includes(spreadKey)) {
+    const info = spreadInfo(spreadKey, lang);
+    const pos = info && info.pos;
+    if (pos && pos.length) {
+      let top = -1, tv = -1, bottom = -1, bv = 2;
+      (drawn || []).forEach((c, i) => {
+        if (!seen.has(i) || !c || !pos[i]) return;
+        const v = cardPower(c);
+        if (v > tv) { tv = v; top = i; }
+        if (v < bv) { bv = v; bottom = i; }
+      });
+      if (top >= 0) {
+        const nameOf = (i) => String(pos[i]).split("｜").pop();
+        /*
+          ⚠️ 文言は MODERN_VIS_I18N から取る。T に足すと11言語に散らばり、
+          一つ抜けたところで結論が空欄になる。こちらは未訳を英語へ落とす。
+        */
+        const mv = visT(lang);
+        title = t.verdictTitle;
+        lines = [
+          mv.mvTop(nameOf(top)),
+          /* 一枚しか開いていない回は、最も弱い位置が最も強い位置と同じになる */
+          bottom >= 0 && bottom !== top ? mv.mvLow(nameOf(bottom)) : null,
+          mv.mvAct(nameOf(top)),
+        ];
+      }
+    }
+  }
+
   if (!title || !lines.length) return null;
   return (
     <div className="verdict">
@@ -15826,7 +15923,7 @@ function HexagramPanel({ lang, onBack, question, userName, canDraw, onConsume, o
                   + "これはケルト十字です。十枚それぞれの位置の意味を踏まえ、現状・障害・意識と無意識・時間の流れ・周囲・結末を一つの筋として読んでください。\n\n"
                 : isTree
                   ? `これは生命の樹（セフィロト）の配置です。十の座に加えて、大アルカナは二十二のパスに対応し、二つの座を結ぶ小径として働きます。${topic.trim() ? `相談者が気にかかっていると書いたこと:「${topic.trim()}」\n` : ""}\n悩みへの助言ではなく、その像が無意識のどこから来て、現実（マルクト）とどこで接しているかを読んでください。夢や、なぜか目が行くもの、繰り返し現れるものの意味を扱う配置です。予言はしないでください。\n\n`
-                : NEEDS_TOPIC.includes(spreadKey) && topic.trim()
+                : needsTopicField(spreadKey) && topic.trim()
                   ? `相談者が占いたいと書いたこと:「${topic.trim()}」\n この一点について答えること。一般論で流さないこと。\n\n`
                 : isHorseshoe
                   ? `これは七枚の弧で、目標へ向かう過程のどこにいるかを読む配置です。${choiceA ? `目標は「${choiceA}」。` : ""}${choiceB ? `いま取り組んでいるのは「${choiceB}」。` : ""}\n\n⚠️ いつ叶うか、叶うかどうかは断定しないでください。示すのは、いまが準備の時なのか、山場なのか、仕上げの時なのか ―― 過程のどの段にいて、そこで何が効くかです。\n\n`
@@ -15962,7 +16059,7 @@ function HexagramPanel({ lang, onBack, question, userName, canDraw, onConsume, o
             無料版でも出す。AIは読まないが、
             書くこと自体が「何を知りたいのか」の整理になる。
           */}
-          {NEEDS_TOPIC.includes(spreadKey) && (
+          {needsTopicField(spreadKey) && (
             <div className="hex-fields">
               {/*
                 生命の樹だけ問いの立て方が違う。
@@ -15970,9 +16067,26 @@ function HexagramPanel({ lang, onBack, question, userName, canDraw, onConsume, o
                 無意識と現実の接点を読むので、悩みではなく
                 「気にかかっている像」を書いてもらう。
               */}
-              <label htmlFor="spread-topic">{isTree ? t.treeTopicLabel : t.topicLabel}</label>
-              {/* 例示は欄の上。プレースホルダだと書き始めた瞬間に消える */}
-              <p className="hex-fields-example">{isTree ? t.treeTopicExample : t.topicExample}</p>
+              {/*
+                ⚠️ 見出しと例示は配置ごとに出すこと。
+                「占いたいこと／例：来月の恋愛運」を境界線や自己妨害で見せても、
+                この配置が何を聞く場所なのかが伝わらない。
+                対応表に無い配置と言語だけ、既定の文言へ落ちる。
+              */}
+              {(() => {
+                const th = spreadTopicHint(spreadKey, lang);
+                return (
+                  <>
+                    <label htmlFor="spread-topic">
+                      {th ? th.hint : isTree ? t.treeTopicLabel : t.topicLabel}
+                    </label>
+                    {/* 例示は欄の上。プレースホルダだと書き始めた瞬間に消える */}
+                    <p className="hex-fields-example">
+                      {th ? th.ph : isTree ? t.treeTopicExample : t.topicExample}
+                    </p>
+                  </>
+                );
+              })()}
               <input
                 id="spread-topic" type="text" maxLength={120}
                 value={topic} onChange={(e) => setTopic(e.target.value)}
@@ -16689,7 +16803,7 @@ function HexagramPanel({ lang, onBack, question, userName, canDraw, onConsume, o
               控えを出すと、書いた覚えのない項目が並ぶ。
               生命の樹だけは見出しが違う（夢や気にかかっているもの）。
             */
-            if (NEEDS_TOPIC.includes(spreadKey) && topic.trim()) {
+            if (needsTopicField(spreadKey) && topic.trim()) {
               asked.push([isTree ? t.treeTopicLabel : t.topicLabel, topic.trim()]);
             }
             if (isChoice) {
@@ -27668,6 +27782,30 @@ export default function TarotDraw() {
           border: none; background: none; color: var(--muted); font-size: 11px;
           letter-spacing: 0.08em;
         }
+        /*
+          夜の街の層。
+          ⚠️ .title-sky と別にしてあるのは色相回転を避けるため。
+          あちらは 24秒で hue-rotate を一周させるので、同居させると
+          窓の黄色が全色に変わってしまう。ここには回転をかけない。
+          ⚠️ opacity も落とさない。灯りは灯りとして見えないと意味がない。
+          札の裏に敷くときだけ dim で下げる。
+        */
+        .sky-city {
+          position: absolute; inset: 0; width: 100%; height: 100%;
+          pointer-events: none; z-index: 0; overflow: hidden;
+          opacity: 0.92;
+        }
+        .sky-city.dim { opacity: 0.2; }
+        /*
+          --- 夜のビル ---
+          ⚠️ 幅と高さは px なので、狭い画面では相対的に大きくなり重なる。
+          横幅で段階的に縮める。％で持つと縦長の端末で四角でなくなるので、
+          大きさの調整は必ずこちら側（拡大縮小）で行うこと。
+        */
+        .sky-building { transform-box: fill-box; transform-origin: top center; }
+        @media (max-width: 900px) { .sky-building { transform: scale(0.72); } }
+        @media (max-width: 600px) { .sky-building { transform: scale(0.5); } }
+        @media (max-width: 420px) { .sky-building { transform: scale(0.4); } }
         /*
           --- ダビデスターの六ゲージ ---
           原点を中央に置き、与えた側は左へ、受けた側は右へ伸ばす。
