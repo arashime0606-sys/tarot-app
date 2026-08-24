@@ -9442,6 +9442,39 @@ function SkyTree({ w }) {
   );
 }
 
+/*
+  土星。星空のときだけ、背景に据える。
+
+  ⚠️ 環は本体の手前と奥に分けて描くこと。楕円を一枚重ねるだけだと
+  輪が球を貫通して見えて、板に環を刺した形になる。
+  奥の半分 → 球 → 手前の半分、の順に置く。
+  ⚠️ 動かさない。回すと目が行ってしまい、引いた札より目立つ。
+*/
+function SkySaturn({ w, tilt }) {
+  const r = w * 0.32;
+  const rx = w * 0.72, ry = w * 0.17;
+  const ring = (half) => (
+    <ellipse cx="0" cy="0" rx={rx} ry={ry} fill="none"
+      stroke="rgba(226,206,150,0.75)" strokeWidth={Math.max(0.8, w * 0.035)}
+      clipPath={`url(#satclip-${half})`} />
+  );
+  return (
+    <g transform={`rotate(${tilt})`}>
+      <defs>
+        {/* 奥側＝上半分、手前側＝下半分 */}
+        <clipPath id="satclip-back"><rect x={-rx * 1.2} y={-ry * 1.4} width={rx * 2.4} height={ry * 1.4} /></clipPath>
+        <clipPath id="satclip-front"><rect x={-rx * 1.2} y="0" width={rx * 2.4} height={ry * 1.4} /></clipPath>
+      </defs>
+      {ring("back")}
+      <circle cx="0" cy="0" r={r} fill="#C9A24B" opacity="0.85" />
+      {/* 縞。二本だけ。増やすと模様が主張しすぎる */}
+      <ellipse cx="0" cy={-r * 0.3} rx={r * 0.9} ry={r * 0.12} fill="rgba(255,240,200,0.35)" />
+      <ellipse cx="0" cy={r * 0.28} rx={r * 0.82} ry={r * 0.1} fill="rgba(120,90,40,0.35)" />
+      {ring("front")}
+    </g>
+  );
+}
+
 /** 雪だるま。丸ふたつ、目と口、枝の腕。雪と大雪のときだけ立つ */
 function SkySnowman({ w }) {
   const rb = w * 0.5, rt = w * 0.32;
@@ -9837,13 +9870,30 @@ function TitleSky({ kind, dim = false }) {
       ⚠️ 色相回転のかかる .title-sky には入れない。
       窓や雪だるまの色が回ってしまう。
     */}
-    {(kind === "blizzard" || kind === "snow" || kind === "heavysnow" || kind === "maple") && (
+    {(kind === "blizzard" || kind === "snow" || kind === "heavysnow"
+      || kind === "maple" || kind === "star") && (
       <svg className={`sky-city${dim ? " dim" : ""}`} aria-hidden="true">
-        {/* 雪だるま。雪と大雪のとき。ビルの位置に、ずっと小さく立たせる */}
+        {/*
+          土星。星空のとき。ほどほどの数にする。
+          ⚠️ 全ての位置に置かないこと。二十一個も浮いていると
+          星空ではなく太陽系の図解になる。三つに一つだけ据える。
+          ⚠️ clipPath の id が図ごとに衝突するので、入れ子svgを分けて置く。
+        */}
+        {kind === "star" && SKY_BUILDINGS.map((b, bi) => {
+          if (bi % 3) return null;
+          return (
+            <svg key={`sa${bi}`} x={`${b.x}%`} y={`${b.y}%`} overflow="visible">
+              <g className="sky-building" opacity={0.5 + (bi % 4) * 0.12}>
+                <SkySaturn w={b.w * (0.24 + (bi % 3) * 0.07)} tilt={-22 + (bi * 13) % 44} />
+              </g>
+            </svg>
+          );
+        })}
+        {/* 雪だるま。雪と大雪のとき。ビルの位置に立たせる */}
         {(kind === "snow" || kind === "heavysnow") && SKY_BUILDINGS.map((b, bi) => (
           <svg key={`sm${bi}`} x={`${b.x}%`} y={`${b.y}%`} overflow="visible">
             <g className="sky-building" opacity={0.5 + (b.y / 90) * 0.45}>
-              <SkySnowman w={b.w * 0.3} />
+              <SkySnowman w={b.w * (kind === "heavysnow" ? 0.46 : 0.3)} />
             </g>
           </svg>
         ))}
@@ -9888,7 +9938,7 @@ function TitleSky({ kind, dim = false }) {
             <g className="sky-building">
               {/* 躯体。塗りは不透明、枠は細く */}
               <rect x={-b.w / 2} y="0" width={b.w} height={b.h}
-                fill={body} stroke="rgba(150,142,190,0.3)" strokeWidth="0.5" />
+                fill={body} stroke="rgba(150,142,190,0.28)" strokeWidth="0.35" />
               {/* 窓。横2・縦4の八つ。全部に黄色の灯りを点ける */}
               {Array.from({ length: 8 }, (_, wi) => {
                 const col = wi % 2, row = Math.floor(wi / 2);
@@ -10606,7 +10656,9 @@ const MODERN_VIS_I18N = {
   ja: {
     mvTop: (s) => `いま最も強く出ているのは「${s}」です。`,
     mvLow: (s) => `最も弱いのは「${s}」です。`,
-    mvAct: (s) => `手を付けるなら「${s}」から。ここが動くと、他の位置も動きます。`,
+    mvLand: (top, land) => `「${top}」を動かして、この配置が最後に置く「${land}」へ着地させてください。`,
+    mvLandIsTop: (s) => `この配置が最後に置く「${s}」が、そのまま最も強く出ています。ここは既に手の内にあります。`,
+    mvLandYet: (s) => `この配置は最後に「${s}」を置きます。そこへ向けて読み進めてください。`,
     dsTitle: "六芒星",
     dsGive: "▲ 与えた側",
     dsTake: "▼ 受けた側",
@@ -10758,7 +10810,9 @@ const MODERN_VIS_I18N = {
   en: {
     mvTop: (s) => `What stands out most right now is "${s}".`,
     mvLow: (s) => `The weakest is "${s}".`,
-    mvAct: (s) => `Start from "${s}". Move that, and the other positions follow.`,
+    mvLand: (top, land) => `Move "${top}", and let it land on "${land}", where this spread ends.`,
+    mvLandIsTop: (s) => `"${s}", where this spread ends, is itself the strongest. It is already in hand.`,
+    mvLandYet: (s) => `This spread ends on "${s}". Read toward it.`,
     dsTitle: "The Hexagram",
     dsGive: "▲ Given",
     dsTake: "▼ Received",
@@ -13695,12 +13749,32 @@ function SpreadVerdict({ spreadKey, drawn, lang, openedIndices, extra }) {
           一つ抜けたところで結論が空欄になる。こちらは未訳を英語へ落とす。
         */
         const mv = visT(lang);
+        /*
+          ★ 着地点。配置の最後の位置を使う。
+
+          段の設計で「最後は必ず◯◯で終える」と決めてあり、
+          最終段は常にいちばん大きい添字で終わる。だから pos の末尾が
+          その配置の着地点になる ―― 表を持たずに導ける。
+
+          ⚠️ 末尾を「次の一手」と呼ばないこと。
+          自己妨害の「型を外す一手」や体からの声の「手当て」は行動だが、
+          今月の流れの「月末に残るもの」や人物を読むの「得るもの」は行動ではない。
+          全部を一手と言うと、行動でないものまで実行を迫ることになる。
+          言えるのは「この配置が最後に置くもの」までで、そこは正確に言う。
+        */
+        const landIdx = pos.length - 1;
+        const opened = seen.has(landIdx) && (drawn || [])[landIdx];
         title = t.verdictTitle;
         lines = [
           mv.mvTop(nameOf(top)),
           /* 一枚しか開いていない回は、最も弱い位置が最も強い位置と同じになる */
           bottom >= 0 && bottom !== top ? mv.mvLow(nameOf(bottom)) : null,
-          mv.mvAct(nameOf(top)),
+          /* 着地点がまだ伏せられている間は、そこへ向かうとだけ言う */
+          landIdx === top
+            ? mv.mvLandIsTop(nameOf(landIdx))
+            : opened
+              ? mv.mvLand(nameOf(top), nameOf(landIdx))
+              : mv.mvLandYet(nameOf(landIdx)),
         ];
       }
     }
