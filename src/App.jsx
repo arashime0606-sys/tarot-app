@@ -4623,6 +4623,17 @@ const SPREAD_TOPIC_I18N = {
   },
 };
 /** その配置に合った入力例。無ければ null（呼び側が既定へ落とす） */
+/*
+  入力が空のまま引こうとしたときの注意書き。
+  ⚠️ T に足さないこと。11言語に散らすと一つ抜けたところで
+  「押せないのに理由が出ない」になる。ここは未訳を英語へ落とす。
+*/
+const TOPIC_REQUIRED_I18N = {
+  ja: "この配置は、書かれた一文に答えるものです。空欄のままだと一般論にしかならないので、まず上の欄に書いてください。",
+  en: "This spread answers the sentence you write. Left blank it can only give generalities — please fill the field above first.",
+};
+const topicRequiredNote = (lang) => TOPIC_REQUIRED_I18N[lang] || TOPIC_REQUIRED_I18N.en;
+
 function spreadTopicHint(spreadKey, lang) {
   const tbl = SPREAD_TOPIC_I18N[lang] || SPREAD_TOPIC_I18N.en;
   return (tbl && tbl[spreadKey]) || null;
@@ -12859,54 +12870,91 @@ function BathTemp({ drawn, lang, openedIndices }) {
   if (warm === null && cold === null) return null;
   const temp = (warm === null ? 0 : warm) - (cold === null ? 0 : cold);
   const step = visStep(temp, BATH_CUTS);
-  const W = 300, H = 200, LX = 46, RX = 254, TUBY = 58, TUBH = 92;
-  /* 湯面。ちょうどいい段で真ん中 */
-  const level = TUBY + TUBH * (0.62 - (step - 2) * 0.08);
+  const W = 300, H = 240;
+  /*
+    浴槽。五角形の桶にする。
+    ⚠️ 台形の線だけで描いていたら、桶にも風呂にも見えなかった。
+    縁の厚みと、脚と、内側の面を分けて描くこと。
+  */
+  const TX = 34, TW = 232, TOP = 74, DEPTH = 108;
+  const IN = 10;                                   // 縁の厚み
+  /* 湯かさ。いちばん低い段でも底は隠れる程度は張る */
+  const fill = 0.34 + step * 0.14;
+  const level = TOP + IN + (DEPTH - IN * 2) * (1 - fill);
   const good = step === 2;
   const hot = step >= 3, chill = step <= 1;
+  const flames = 3 + step * 2;                     // 焚き口の炎
   return (
     <div className="hs-pass">
       <div className="hs-pass-title sheen-text">{t.bathTitle}</div>
       <p className="hs-pass-legend">{t.bathLegend}</p>
       <svg viewBox={`0 0 ${W} ${H}`} className="hs-pass-svg" role="img" aria-label={t.bathTitle}>
         <HoloDefs id="bathHolo" w={W} h={H} />
-        {/* 湯気。熱いほど多く上がる */}
-        {Array.from({ length: Math.max(0, step - 1) * 2 }).map((_, k) => (
+        {/* 湯気。熱いほど太く長く上がる */}
+        {Array.from({ length: Math.max(0, (step - 1) * 3) }).map((_, k) => (
           <path key={k}
-            d={`M ${LX + 40 + k * 26} ${level - 10} q 8 -14 0 -26 q -8 -12 0 -24`}
-            fill="none" stroke="url(#bathHolo)" strokeWidth="1.6" strokeLinecap="round"
-            opacity="0.6" className="mv-spark"
-            style={{ animationDelay: `${(k * 0.5).toFixed(1)}s` }} />
+            d={`M ${TX + 40 + k * 26} ${level - 8} q 10 -18 0 -34 q -10 -16 0 -32`}
+            fill="none" stroke="url(#bathHolo)" strokeWidth="2.4" strokeLinecap="round"
+            opacity="0.5" className="mv-spark"
+            style={{ animationDelay: `${(k * 0.42).toFixed(2)}s` }} />
         ))}
-        {/* 浴槽 */}
-        <path d={`M ${LX} ${TUBY} L ${LX + 10} ${TUBY + TUBH} L ${RX - 10} ${TUBY + TUBH} L ${RX} ${TUBY}`}
-          fill="rgba(14,11,26,0.9)" stroke="url(#bathHolo)" strokeWidth="1.6" />
+        {/* 桶の外殻 */}
+        <path d={`M ${TX} ${TOP} L ${TX + 16} ${TOP + DEPTH} L ${TX + TW - 16} ${TOP + DEPTH} L ${TX + TW} ${TOP} Z`}
+          fill="rgba(46,30,22,0.96)" stroke="rgba(150,142,190,0.4)" strokeWidth="1.2" />
+        {/* 内側 */}
+        <path d={`M ${TX + IN} ${TOP + IN} L ${TX + IN + 12} ${TOP + DEPTH - IN} L ${TX + TW - IN - 12} ${TOP + DEPTH - IN} L ${TX + TW - IN} ${TOP + IN} Z`}
+          fill="rgba(12,9,22,0.95)" />
         {/* 湯 */}
-        <path d={`M ${LX + (level - TUBY) * 0.11} ${level} L ${LX + 10} ${TUBY + TUBH} L ${RX - 10} ${TUBY + TUBH} L ${RX - (level - TUBY) * 0.11} ${level} Z`}
-          fill="url(#bathHolo)" opacity={0.28 + step * 0.1} className={good ? "mv-pulse" : ""} />
-        {/* 湯面の波 */}
-        <line x1={LX + (level - TUBY) * 0.11} y1={level} x2={RX - (level - TUBY) * 0.11} y2={level}
-          stroke="url(#bathHolo)" strokeWidth="2" opacity="0.9" />
+        {(() => {
+          const lw = (level - TOP - IN) / (DEPTH - IN * 2);
+          const lx = TX + IN + 12 * lw, rx = TX + TW - IN - 12 * lw;
+          return (
+            <g>
+              <path d={`M ${lx} ${level} L ${TX + IN + 12} ${TOP + DEPTH - IN} L ${TX + TW - IN - 12} ${TOP + DEPTH - IN} L ${rx} ${level} Z`}
+                fill="url(#bathHolo)" opacity={0.4 + step * 0.09} className={good ? "mv-pulse" : ""} />
+              {/* 湯面 */}
+              <ellipse cx={W / 2} cy={level} rx={(rx - lx) / 2} ry="5"
+                fill="url(#bathHolo)" opacity="0.75" />
+              {/* 波紋。熱いほど揺れる */}
+              {!chill && [0, 1].map((k) => (
+                <ellipse key={k} cx={W / 2} cy={level} rx={(rx - lx) / 2 - 10 - k * 22} ry="3.5"
+                  fill="none" stroke="url(#bathHolo)" strokeWidth="1" opacity="0.5"
+                  className="mv-pulse" style={{ animationDelay: `${(k * 0.6).toFixed(1)}s` }} />
+              ))}
+            </g>
+          );
+        })()}
+        {/* 縁の厚み。ここがあると桶に見える */}
+        <rect x={TX - 5} y={TOP - 7} width={TW + 10} height="11" rx="5"
+          fill="rgba(64,42,30,0.98)" stroke="rgba(170,160,205,0.45)" strokeWidth="1" />
+        {/* 脚。二本 */}
+        <rect x={TX + 30} y={TOP + DEPTH} width="14" height="16" rx="3" fill="rgba(40,26,20,0.95)" />
+        <rect x={TX + TW - 44} y={TOP + DEPTH} width="14" height="16" rx="3" fill="rgba(40,26,20,0.95)" />
         {/*
-          焚き口。下の火。
-          ⚠️ 火を大きくするほど良い、と見えないように、
-          熱すぎの段では火を赤く強く出して「行きすぎ」を示す。
+          焚き口。桶の下で焚く。
+          ⚠️ 炎を一つ二つしか置かないと「小さい火」ではなく「火の消し忘れ」に見える。
+          薪の上に並べて、数と高さの両方を段で変える。
         */}
-        {Array.from({ length: 1 + step }).map((_, k) => {
-          const fx = 110 + k * 20, fh = 10 + step * 5;
+        <rect x={TX + 52} y={TOP + DEPTH + 14} width={TW - 104} height="7" rx="3"
+          fill="rgba(52,36,28,0.95)" />
+        {Array.from({ length: flames }).map((_, k) => {
+          const fx = TX + 64 + (k * (TW - 128)) / Math.max(1, flames - 1);
+          const fy = TOP + DEPTH + 14;
+          const fh = 14 + step * 6 + ((k % 3) * 4);
           return (
             <path key={k}
-              d={`M ${fx} ${TUBY + TUBH + 22 - fh} C ${fx - 7} ${TUBY + TUBH + 22 - fh * 0.4}, ${fx - 5} ${TUBY + TUBH + 22}, ${fx} ${TUBY + TUBH + 22} C ${fx + 5} ${TUBY + TUBH + 22}, ${fx + 7} ${TUBY + TUBH + 22 - fh * 0.4}, ${fx} ${TUBY + TUBH + 22 - fh} Z`}
-              fill={hot ? "#FF6B4A" : "url(#bathHolo)"} opacity="0.9" className="mv-flame"
-              style={{ filter: HOLO_GLOW }} />
+              d={`M ${fx} ${fy - fh} C ${fx - 9} ${fy - fh * 0.42}, ${fx - 6} ${fy}, ${fx} ${fy} C ${fx + 6} ${fy}, ${fx + 9} ${fy - fh * 0.42}, ${fx} ${fy - fh} Z`}
+              fill={hot ? "#FF6B4A" : "url(#bathHolo)"} opacity="0.92" className="mv-flame"
+              style={{ filter: HOLO_GLOW, animationDelay: `${(k * 0.17).toFixed(2)}s` }} />
           );
         })}
-        {/* 冷たすぎの回だけ、湯に氷を浮かべる */}
-        {chill && [0, 1, 2].map((k) => (
-          <rect key={k} x={LX + 50 + k * 46} y={level - 7} width="13" height="9" rx="2"
-            fill="#CFE6FF" opacity="0.75" transform={`rotate(${-12 + k * 11} ${LX + 56 + k * 46} ${level - 3})`} />
+        {/* 冷たすぎの回。湯に氷が浮く */}
+        {chill && [0, 1, 2, 3].map((k) => (
+          <rect key={k} x={TX + 46 + k * 42} y={level - 8} width="16" height="11" rx="3"
+            fill="#CFE6FF" opacity="0.8"
+            transform={`rotate(${-14 + k * 9} ${TX + 54 + k * 42} ${level - 3})`} />
         ))}
-        <text x={W / 2} y={H - 6} textAnchor="middle" className="sheen-text"
+        <text x={W / 2} y={H - 4} textAnchor="middle" className="sheen-text"
           style={{ fontSize: "13px", fontWeight: 700, fontFamily: "'Shippori Mincho',serif" }}>
           {t.bathGauge[step]}
         </text>
@@ -16990,6 +17038,13 @@ function HexagramPanel({ lang, onBack, question, userName, canDraw, onConsume, o
     }, 200);
   };
 
+  /*
+    入力が要るのに空欄か。
+    ⚠️ needsTopicField と同じ条件を使うこと。片方だけ直すと、
+    欄は出ているのに引けてしまう（またはその逆）になる。
+  */
+  const topicRequired = aiEnabled && needsTopicField(spreadKey) && !topic.trim();
+
   // 最終段階に達したら鑑定を取りに行く
   useEffect(() => {
     if (!drawn || stage < STAGES.length || reading || loading || aiFailed) return;
@@ -17261,7 +17316,20 @@ function HexagramPanel({ lang, onBack, question, userName, canDraw, onConsume, o
               <p className="hex-fields-note"><NoteLines text={aiEnabled ? t.viewpointNoteAi : t.viewpointNote} /></p>
             </div>
           </div>)}
-          <button className="draw-btn" onClick={start} disabled={!canDraw}>
+          {/*
+            ⚠️⚠️ 入力欄を持つ配置で、空欄のまま引かせないこと。
+            現代派は AI鑑定しかなく、位置の名前そのものが問いなので、
+            相談者が何も書いていないと AI は一般論しか返せない。
+            それでも回数だけは消費される ―― 実際にそうなっていた。
+
+            ⚠️ 引く前に止めること。鑑定の直前で止めると、札を配り終えた
+            あとに断られることになり、体験としてはもっと悪い。
+            ⚠️ 無料版は AI を呼ばないので、この制限をかけない。
+          */}
+          {topicRequired && (
+            <p className="hex-fields-note draw-need-topic">{topicRequiredNote(lang)}</p>
+          )}
+          <button className="draw-btn" onClick={start} disabled={!canDraw || topicRequired}>
             <Shuffle size={16} />
             {t.startButton}
           </button>
@@ -27290,6 +27358,11 @@ export default function TarotDraw() {
         .question-field input:focus-visible { outline: 2px solid var(--gold); outline-offset: 2px; border-color: var(--gold); }
 
         .question-banner { position: relative; z-index: 1; text-align: center; font-family: 'Shippori Mincho', serif; font-size: 12.5px; color: var(--gold-soft); margin: 0 0 20px; }
+        /* 引けない理由。ボタンのすぐ上に出す */
+        .draw-need-topic {
+          color: var(--gold-soft); opacity: 0.95; text-align: center;
+          font-size: 11.5px; line-height: 1.9; margin: 0 auto 8px; max-width: 30em;
+        }
         .draw-btn {
           /*
             主要ボタン。字間を広げ、余白を厚くする。
