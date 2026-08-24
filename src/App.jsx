@@ -4628,6 +4628,16 @@ const SPREAD_TOPIC_I18N = {
   ⚠️ T に足さないこと。11言語に散らすと一つ抜けたところで
   「押せないのに理由が出ない」になる。ここは未訳を英語へ落とす。
 */
+/*
+  AI版・無料版の切り替えの文言。
+  ⚠️ T に足さないこと。ここも未訳は英語へ落とす。
+*/
+const VER_SWITCH_I18N = {
+  ja: { label: "版の切り替え", ai: "AI鑑定", free: "無料版" },
+  en: { label: "Version", ai: "AI reading", free: "Free" },
+};
+const verSwitchT = (lang) => VER_SWITCH_I18N[lang] || VER_SWITCH_I18N.en;
+
 const TOPIC_REQUIRED_I18N = {
   ja: "この配置は、書かれた一文に答えるものです。空欄のままだと一般論にしかならないので、まず上の欄に書いてください。",
   en: "This spread answers the sentence you write. Left blank it can only give generalities — please fill the field above first.",
@@ -10902,6 +10912,8 @@ const MODERN_VIS_I18N = {
     ],
     boundIn: "越えてくる側", boundOut: "自分の領分",
     sabTitle: "型の輪",
+    sabLegend: "玉は同じところを回り続けています。切れ目が広がるほど、そこから出る道が開きます。",
+    sabCut: "外す一手",
     sabRead: [
       "輪が閉じています。外す手がまだ届いていません。",
       "わずかに欠けていますが、回り続けます。",
@@ -10910,13 +10922,15 @@ const MODERN_VIS_I18N = {
       "輪として成り立っていません。ここで止まります。",
     ],
     sabSignal: "止める直前の合図",
-    loopTitle: "渦のほどけ",
+    loopTitle: "噛み合い",
+    loopLegend: "外は回っている考え、内は回し続けているもの。周期が揃っていると噛み合ったまま回り続けます。",
+    loopGap: (p) => p <= 0 ? "周期のずれ なし" : `周期のずれ ${p}%`,
     loopRead: [
-      "きつく巻いています。同じところを回っています。",
-      "まだ巻きが強い状態です。",
-      "巻きと解けが拮抗しています。",
-      "外へ解けはじめています。",
-      "ほとんど解けています。輪から出られます。",
+      "周期が完全に揃っています。二つが噛み合ったまま、同じところを回り続けます。",
+      "ほとんど揃っています。ずれはあるものの、噛み合いは外れていません。",
+      "ずれが出はじめました。噛み合う位置が少しずつ変わっています。",
+      "噛み合いが外れました。輪から出る道が見えています。",
+      "周期が大きく離れています。もう同じ形には戻りません。",
     ],
     bodyTitle: "熱の在り処",
     bodyLegend: "スートが熱の場所を決めます。剣＝頭、聖杯＝胸、棒＝腹、貨幣＝脚。",
@@ -11135,6 +11149,8 @@ const MODERN_VIS_I18N = {
     ],
     boundIn: "What crosses in", boundOut: "Your own ground",
     sabTitle: "Ring of the Pattern",
+    sabLegend: "The bead keeps circling the same track. The wider the cut, the more of a way out there is.",
+    sabCut: "the move",
     sabRead: [
       "The ring is closed. The move has not reached it.",
       "Slightly notched, but it keeps turning.",
@@ -11143,13 +11159,15 @@ const MODERN_VIS_I18N = {
       "It no longer holds as a ring. It stops here.",
     ],
     sabSignal: "The signal before stopping",
-    loopTitle: "Unwinding of the Spiral",
+    loopTitle: "The Mesh",
+    loopLegend: "Outer is the circling thought, inner is what keeps it turning. Matched periods mean it never breaks.",
+    loopGap: (p) => p <= 0 ? "No drift" : `Drift ${p}%`,
     loopRead: [
-      "Wound tight. Circling the same point.",
-      "The winding still dominates.",
-      "Winding and unwinding are evenly matched.",
-      "It is beginning to unwind outward.",
-      "Nearly unwound. You can step out of the loop.",
+      "The periods match exactly. The two stay meshed and keep circling.",
+      "Almost matched. There is drift, but the mesh still holds.",
+      "Drift is showing. Where they meet shifts a little each turn.",
+      "The mesh has come apart. A way out of the loop is visible.",
+      "The periods are far apart. It will not return to the same shape.",
     ],
     bodyTitle: "Where the Heat Sits",
     bodyLegend: "The suit sets the place: Swords head, Cups chest, Wands belly, Pentacles legs.",
@@ -11435,30 +11453,69 @@ function SabotageRing({ drawn, lang, openedIndices }) {
   const c = cut === null ? 0 : cut, g = grip === null ? 0 : grip;
   const ratio = (c + g) > 0 ? c / (c + g) : 0.5;
   const step = visStep(ratio, SAB_CUTS);
-  const W = 300, H = 176, CX = 150, CY = 84, R = 54;
-  const gapDeg = step * 34;                     // 切れ目の角。段そのものを角度に写す
+  const W = 300, H = 210, CX = 150, CY = 96, R = 62;
+  /*
+    ⚠️ 輪と切れ目だけでは何の図か伝わらなかった。
+    「同じところを回っている」ことも「そこから出られる」ことも、
+    静止した図形では言えていない。回るものを一つ置く。
+
+    ・玉が輪の上を回り続ける ―― これが繰り返している型
+    ・切れ目が段のぶんだけ開く ―― これが外す一手の効き
+    ・開ききった段では、玉が切れ目から外へ抜ける
+
+    ⚠️ 玉は必ず一つにすること。複数だと行列に見えて、
+    「自分が回っている」ではなく「何かが流れている」になる。
+  */
+  const gapDeg = 12 + step * 30;                 // 切れ目の角
   const half = (gapDeg / 2) * (Math.PI / 180);
   const p = (a) => `${(CX + Math.cos(a) * R).toFixed(1)} ${(CY + Math.sin(a) * R).toFixed(1)}`;
   const start = -Math.PI / 2 + half, end = -Math.PI / 2 - half + Math.PI * 2;
   const broken = step >= 4;
+  /* 切れ目の両端。ここが「外す一手」の当たる場所 */
+  const eA = [CX + Math.cos(start) * R, CY + Math.sin(start) * R];
+  const eB = [CX + Math.cos(end) * R, CY + Math.sin(end) * R];
   return (
     <div className="hs-pass">
       <div className="hs-pass-title sheen-text">{t.sabTitle}</div>
+      <p className="hs-pass-legend">{t.sabLegend}</p>
       <svg viewBox={`0 0 ${W} ${H}`} className="hs-pass-svg" role="img" aria-label={t.sabTitle}>
         <HoloDefs id="sabHolo" w={W} h={H} />
+        {/* 通ってきた跡。薄い輪 */}
+        <circle cx={CX} cy={CY} r={R} fill="none" stroke="url(#sabHolo)"
+          strokeWidth="0.8" opacity="0.16" />
         {/* 輪。切れ目のぶんだけ欠ける */}
         <path d={`M ${p(start)} A ${R} ${R} 0 1 1 ${p(end)}`} fill="none" stroke="url(#sabHolo)"
-          strokeWidth={broken ? 1.2 : 2} opacity={broken ? 0.5 : 0.95}
-          className={step === 0 ? "mv-spin" : ""} style={{ transformOrigin: `${CX}px ${CY}px` }} />
-        {/* 切れ目から噴く光 */}
-        {step > 0 && [0, 1, 2].map((k) => (
-          <line key={k} x1={CX} y1={CY - R} x2={CX} y2={CY - R - 16 - k * 6}
-            stroke="url(#sabHolo)" strokeWidth="1.6" opacity="0.8" className="mv-burst"
-            style={{ animationDelay: `${(k * 0.4).toFixed(1)}s`, transformOrigin: `${CX}px ${CY}px`, transform: `rotate(${(k - 1) * 16}deg)` }} />
+          strokeWidth={broken ? 2 : 3.2} opacity={broken ? 0.55 : 0.95}
+          style={{ filter: HOLO_GLOW }} />
+        {/* 切れ目の両端。切られた断面 */}
+        {[eA, eB].map((e, k) => (
+          <circle key={k} cx={e[0].toFixed(1)} cy={e[1].toFixed(1)} r="3.4"
+            fill="#FFFFFF" opacity={step > 0 ? 0.9 : 0.3} />
         ))}
+        {/*
+          回っている玉。切れ目が開くほど、抜ける確率が上がるのではなく、
+          抜ける道が広くなる。段が最大のときだけ外へ出る軌道にする。
+        */}
+        <g className={broken ? "mv-escape" : "mv-orbit"}
+          style={{ transformOrigin: `${CX}px ${CY}px` }}>
+          <circle cx={CX} cy={CY - R} r="7" fill="#FFFFFF"
+            style={{ filter: "drop-shadow(0 0 8px rgba(255,255,255,0.95))" }} />
+        </g>
+        {/* 外す一手。切れ目へ差し込まれる線 */}
+        {step > 0 && (
+          <g>
+            <line x1={CX} y1={CY - R - 34} x2={CX} y2={CY - R + 6}
+              stroke="url(#sabHolo)" strokeWidth={1.4 + step * 0.6} strokeLinecap="round"
+              opacity="0.9" className="mv-burst" style={{ filter: HOLO_GLOW }} />
+            <text x={CX} y={CY - R - 40} textAnchor="middle" className="hs-pt-name"
+              fill="rgba(226,214,240,0.8)">{t.sabCut}</text>
+          </g>
+        )}
         {/* 合図。輪の上の一点 */}
-        <circle cx={CX + R} cy={CY} r="5" fill="#FFFFFF" opacity="0.9" className="hs-pass-ring" />
-        <text x={CX + R} y={CY + 22} textAnchor="middle" className="hs-pt-name" fill="rgba(226,214,240,0.6)">{t.sabSignal}</text>
+        <circle cx={CX + R} cy={CY} r="5" fill="#FFD98A" opacity="0.95" className="hs-pass-ring" />
+        <text x={CX + R + 10} y={CY + 4} className="hs-pt-name" fill="rgba(226,214,240,0.75)">
+          {t.sabSignal}
+        </text>
       </svg>
       <p className="hs-pass-read">{t.sabRead[step]}</p>
     </div>
@@ -11482,29 +11539,65 @@ function ThoughtSpiral({ drawn, lang, openedIndices }) {
   if (spin === null && cut === null) return null;
   const unwind = (cut === null ? 0 : cut) - (spin === null ? 0 : spin);
   const step = visStep(unwind, LOOP_CUTS);
-  const W = 300, H = 176, CX = 150, CY = 86;
-  const turns = 4 - step * 0.7;                 // 巻き。解けるほど緩む
-  const pts = [];
-  const N = 190;
-  for (let i = 0; i <= N; i++) {
-    const a = (i / N) * turns * Math.PI * 2;
-    const r = 6 + (i / N) * 62;
-    pts.push(`${(CX + Math.cos(a) * r).toFixed(1)} ${(CY + Math.sin(a) * r * 0.72).toFixed(1)}`);
-  }
-  const out = step >= 3;
+  const W = 300, H = 230, CX = 150, CY = 106;
+  /*
+    ⚠️ 渦の巻き数で見せるのをやめた。巻きが緩んだかどうかは、
+    前の回と見比べないと分からない。一回の盤面で読めなければ意味がない。
+
+    ★ 二つの模様を別々の周期で回す。
+      外側 … 回っている考え
+      内側 … 回し続けているもの
+      周期が揃っていると、二つは噛み合ったまま回り続ける ―― これが堂々巡り。
+      輪を切る一手が効くほど周期が離れ、模様がずれて、噛み合いが外れる。
+
+    ⚠️ 速さそのものを段に対応させないこと。速い＝良い、に見える。
+      対応させるのは「二つの周期の差」。どちらも同じくらい回っていても、
+      差が無ければ抜けられない、というのがこの配置の言いたいこと。
+    ⚠️ 差はCSSの秒数で出す。JSで角度を回すと、盤面ごとに位相が変わって
+      同じ盤面が同じ図にならない。
+  */
+  const BASE = 14;                                  // 外側の周期（秒）
+  const inner = BASE * (1 - 0.13 * step);           // 内側。段が上がるほど離れる
+  const gapPct = Math.round((1 - inner / BASE) * 100);
+  const free = step >= 3;
+  /** 十二方向の歯。噛み合いが見えるように、外と内で同じ数にする */
+  const teeth = (r, len, w) => Array.from({ length: 12 }, (_, i) => {
+    const a = (Math.PI / 6) * i;
+    return (
+      <line key={i}
+        x1={(CX + Math.cos(a) * r).toFixed(1)} y1={(CY + Math.sin(a) * r).toFixed(1)}
+        x2={(CX + Math.cos(a) * (r + len)).toFixed(1)} y2={(CY + Math.sin(a) * (r + len)).toFixed(1)}
+        stroke="url(#loopHolo)" strokeWidth={w} strokeLinecap="round" />
+    );
+  });
   return (
     <div className="hs-pass">
       <div className="hs-pass-title sheen-text">{t.loopTitle}</div>
+      <p className="hs-pass-legend">{t.loopLegend}</p>
       <svg viewBox={`0 0 ${W} ${H}`} className="hs-pass-svg" role="img" aria-label={t.loopTitle}>
         <HoloDefs id="loopHolo" w={W} h={H} />
-        <path d={`M ${pts.join(" L ")}`} fill="none" stroke="url(#loopHolo)" strokeWidth="1.3"
-          opacity="0.85" className="mv-spin" style={{ transformOrigin: `${CX}px ${CY}px` }} />
-        {/* 出口。解けている回だけ、外へ抜ける線が伸びる */}
-        {out && (
-          <line x1={CX + 68} y1={CY} x2={CX + 68 + 30} y2={CY} stroke="url(#loopHolo)" strokeWidth="2"
-            className="mv-bridge" style={{ filter: HOLO_GLOW }} />
+        {/* 外の模様。回っている考え */}
+        <g className="mv-turn" style={{ transformOrigin: `${CX}px ${CY}px`, animationDuration: `${BASE}s` }}>
+          <circle cx={CX} cy={CY} r="82" fill="none" stroke="url(#loopHolo)" strokeWidth="1.4" opacity="0.6" />
+          {teeth(82, 14, 2.6)}
+        </g>
+        {/* 内の模様。回し続けているもの。周期が違うほどずれていく */}
+        <g className="mv-turn-back" style={{ transformOrigin: `${CX}px ${CY}px`, animationDuration: `${inner.toFixed(2)}s` }}>
+          <circle cx={CX} cy={CY} r="52" fill="none" stroke="url(#loopHolo)" strokeWidth="1.4" opacity="0.75" />
+          {teeth(52, -14, 2.6)}
+        </g>
+        {/* 噛み合いが外れた回だけ、外へ抜ける道が出る */}
+        {free && (
+          <line x1={CX + 96} y1={CY} x2={CX + 132} y2={CY} stroke="url(#loopHolo)"
+            strokeWidth="2.6" strokeLinecap="round" className="mv-bridge"
+            style={{ filter: HOLO_GLOW }} />
         )}
-        <circle cx={CX} cy={CY} r="3.5" fill="#FFFFFF" opacity="0.85" />
+        <circle cx={CX} cy={CY} r="4" fill="#FFFFFF" opacity="0.85" />
+        {/* ずれの量。数字で出す ―― 図だけでは「離れている」が伝わらない */}
+        <text x={CX} y={H - 6} textAnchor="middle" className="sheen-text"
+          style={{ fontSize: "13px", fontWeight: 700, fontFamily: "'Shippori Mincho',serif" }}>
+          {t.loopGap(gapPct)}
+        </text>
       </svg>
       <p className="hs-pass-read">{t.loopRead[step]}</p>
     </div>
@@ -13663,8 +13756,13 @@ function HorseshoePass({ drawn, labels, lang, openedIndices }) {
         */}
         {stageNames.map((name, i) => {
           const a = ang(i);
-          const lx = CX + Math.cos(a) * (R + 16);
-          const ly = CY - Math.sin(a) * (R + 16);
+          /*
+            ⚠️ 麓（両端）だけは外へ多く逃がす。端は弧が水平に近く、
+            矢じり・現在地の輪・名前が同じ高さに並んで重なる。
+          */
+          const isFoot = i === 0 || i === 6;
+          const lx = CX + Math.cos(a) * (R + (isFoot ? 30 : 16));
+          const ly = CY - Math.sin(a) * (R + 16) + (isFoot ? 14 : 0);
           const anchor = Math.cos(a) < -0.25 ? "end" : Math.cos(a) > 0.25 ? "start" : "middle";
           const lines = hsWrapLabel(name);
           const up = i === PEAK;
@@ -13745,6 +13843,11 @@ function HorseshoePass({ drawn, labels, lang, openedIndices }) {
               <circle cx={q.x} cy={q.y} r="13" fill="none" stroke="#FFFFFF" strokeWidth="1"
                 className="hs-pass-ring" opacity="0.9" />
               <g transform={`translate(${q.x.toFixed(1)} ${q.y.toFixed(1)}) rotate(${head.toFixed(1)})`}>
+                {/*
+                  ⚠️ 白い矢を白い光だけで浮かせると、点名や鬣と重なったとき
+                  輪郭が溶ける。麓では特に混むので、暗い縁を一枚下に敷く。
+                */}
+                <polygon points="16,0 -9.5,7.4 -9.5,-7.4" fill="rgba(10,8,20,0.9)" />
                 <polygon points="13,0 -7.5,5.8 -7.5,-5.8" fill="#FFFFFF" stroke="#FFF3D0" strokeWidth="1"
                   strokeLinejoin="round" style={{ filter: "drop-shadow(0 0 9px rgba(255,255,255,0.95))" }} />
               </g>
@@ -13757,9 +13860,15 @@ function HorseshoePass({ drawn, labels, lang, openedIndices }) {
                 矢じりから細い線でつなぐ。線でつながっているものは迷いようがない。
               */}
               {(() => {
+                /*
+                  ⚠️ 弧から一定距離（R-42）だけ内へ引くやり方だと、麓では破綻する。
+                  麓は弧の端なので内側の余白が少なく、札が矢じりに重なった。
+                  弧の中心からの割合（R*0.42）で置けば、どの点でも
+                  矢じりから六十px以上は離れる。
+                */
                 const inAng = ang(stand.norm);
-                const bx = Math.max(52, Math.min(W - 52, CX + Math.cos(inAng) * (R - 42)));
-                const by = Math.max(26, Math.min(H - 20, CY - Math.sin(inAng) * (R - 42)));
+                const bx = Math.max(58, Math.min(W - 58, CX + Math.cos(inAng) * (R * 0.42)));
+                const by = Math.max(26, Math.min(H - 22, CY - Math.sin(inAng) * (R * 0.42) - 8));
                 const label = t.hsPassNow || "";
                 const wpx = Array.from(label).reduce((a, ch) => a + (ch.charCodeAt(0) > 0x2e7f ? 11.5 : 6), 0) + 16;
                 return (
@@ -16520,7 +16629,7 @@ function NoteLines({ text }) {
   違うのは配置と段の切り方と、付随する入力だけ。
   別コンポーネントに複製すると、演出を直すたびに片方だけ直し忘れる。
 */
-function HexagramPanel({ lang, onBack, question, userName, canDraw, onConsume, onRefund, onRecord, spreadLog = [], aiEnabled, spreadKey = "hexagram", renderSpeakButton }) {
+function HexagramPanel({ lang, onBack, question, userName, canDraw, onConsume, onRefund, onRecord, spreadLog = [], aiEnabled, spreadKey = "hexagram", renderSpeakButton, onSwitchVersion }) {
   const isWeekly = spreadKey === "weekly";
   const isCeltic = spreadKey === "celticCross";
   const isHoro = spreadKey === "horoscope";
@@ -17326,6 +17435,28 @@ function HexagramPanel({ lang, onBack, question, userName, canDraw, onConsume, o
             あとに断られることになり、体験としてはもっと悪い。
             ⚠️ 無料版は AI を呼ばないので、この制限をかけない。
           */}
+          {/*
+            AI版と無料版の切り替え。
+            ⚠️ 引いたあとは出さないこと。途中で切り替えると、
+            いま見ている盤面がどちらの版のものか分からなくなる。
+            引く前だけに置く。
+          */}
+          {onSwitchVersion && !drawn && (
+            <div className="ver-switch" role="group" aria-label={verSwitchT(lang).label}>
+              <button type="button"
+                className={`ver-btn${aiEnabled ? " on" : ""}`}
+                onClick={() => { if (!aiEnabled) onSwitchVersion(); }}
+                aria-pressed={aiEnabled}>
+                {verSwitchT(lang).ai}
+              </button>
+              <button type="button"
+                className={`ver-btn${aiEnabled ? "" : " on"}`}
+                onClick={() => { if (aiEnabled) onSwitchVersion(); }}
+                aria-pressed={!aiEnabled}>
+                {verSwitchT(lang).free}
+              </button>
+            </div>
+          )}
           {topicRequired && (
             <p className="hex-fields-note draw-need-topic">{topicRequiredNote(lang)}</p>
           )}
@@ -26258,19 +26389,24 @@ export default function TarotDraw() {
     SPREAD_READY と この一覧の両方を必ず直すこと。
     実際に二者択一で起きた。
   */
+  /*
+    ⚠️ 基底キーで判定すること。以前は "hexagram" と "hexagramFree" を
+    両方書き並べていたので、無料版を足すたびに登録し忘れが起きた。
+    実際、二者択一で「メニューには出るのに画面が空になり、戻る導線も出ない」
+    という詰みが起きている。基底で見れば、Free は自動で通る。
+
+    ⚠️ ここに入れ忘れると、いまでも同じ詰み方をする。
+    配置を開放したら、この一覧に基底キーを足すこと。
+  */
   const isHexLike = [
-    "hexagram", "hexagramFree", "weekly", "weeklyFree",
-    "celticCross", "celticCrossFree", "horoscope", "horoscopeFree",
-    "choice", "choiceFree",
-    "simpleCross", "simpleCrossFree", "greekCross", "greekCrossFree",
-    "horseshoe", "horseshoeFree", "treeOfLife", "treeOfLifeFree",
-    "shadowWork", "innerChild", "burnout",
-    "moonPhase", "headAndHeart",
-    "boundary", "selfSabotage", "loopOfThought", "somatic",
-    "driveAndGround", "loveAndLiving", "stillHurts", "safePerson", "undecided",
-    "davidStar", "davidStarFree", "zodiac", "zodiacFree",
-    "manifestation", "comparison", "moneyMind", "careerCross", "character", "newRelation", "monthly", "season", "spiritGuide",
-  ].includes(drawMode);
+    "boundary", "burnout", "careerCross", "celticCross", "character",
+    "choice", "comparison", "davidStar", "driveAndGround", "greekCross",
+    "headAndHeart", "hexagram", "horoscope", "horseshoe", "innerChild",
+    "loopOfThought", "loveAndLiving", "manifestation", "moneyMind", "monthly",
+    "moonPhase", "newRelation", "safePerson", "season", "selfSabotage",
+    "shadowWork", "simpleCross", "somatic", "spiritGuide", "stillHurts",
+    "treeOfLife", "undecided", "weekly", "zodiac",
+  ].includes(spreadBaseKey(drawMode));
   /*
     無料版では問いを入力させないので、前の版で書いた文字列が残っていても使わない。
     残したまま履歴に保存すると、AIが読んでいない問いが「その回の問い」として
@@ -27362,6 +27498,20 @@ export default function TarotDraw() {
         .draw-need-topic {
           color: var(--gold-soft); opacity: 0.95; text-align: center;
           font-size: 11.5px; line-height: 1.9; margin: 0 auto 8px; max-width: 30em;
+        }
+        /* 版の切り替え。引く前だけ出る */
+        .ver-switch {
+          display: flex; gap: 0; justify-content: center; margin: 0 auto 12px;
+          width: fit-content; border: 1px solid rgba(201,162,75,0.3);
+          border-radius: 999px; overflow: hidden;
+        }
+        .ver-btn {
+          padding: 7px 20px; font-size: 11.5px; letter-spacing: 0.06em;
+          border: none; background: none; color: var(--muted); cursor: pointer;
+          font-family: inherit; transition: background .2s, color .2s;
+        }
+        .ver-btn.on {
+          background: rgba(201,162,75,0.18); color: var(--gold-soft); font-weight: 700;
         }
         .draw-btn {
           /*
@@ -29187,6 +29337,26 @@ export default function TarotDraw() {
           0%   { transform: scaleX(1); opacity: 0.7; }
           100% { transform: scaleX(9); opacity: 0; }
         }
+        /*
+          噛み合いの二つの模様。逆回りにする。
+          ⚠️ 同じ向きだと、周期が違ってもゆっくり同じ方へ流れて見えて、
+          ずれているのか揃っているのか読めない。逆回りだと差が目に出る。
+          ⚠️ 秒数はJSから渡す。ここで固定すると段が図に出ない。
+        */
+        .mv-turn { animation-name: mvTurn; animation-timing-function: linear; animation-iteration-count: infinite; }
+        .mv-turn-back { animation-name: mvTurnBack; animation-timing-function: linear; animation-iteration-count: infinite; }
+        @keyframes mvTurn { to { transform: rotate(360deg); } }
+        @keyframes mvTurnBack { to { transform: rotate(-360deg); } }
+        /* 型の輪を回る玉。⚠️ 一定の速さで回すこと。速度を変えると勢いの話に見える */
+        .mv-orbit { animation: mvOrbit 6s linear infinite; }
+        @keyframes mvOrbit { to { transform: rotate(360deg); } }
+        /* 切れ目が開ききった回。回って、切れ目から外へ抜ける */
+        .mv-escape { animation: mvEscape 5s ease-in infinite; }
+        @keyframes mvEscape {
+          0%   { transform: rotate(20deg) translateY(0); opacity: 1; }
+          70%  { transform: rotate(340deg) translateY(0); opacity: 1; }
+          100% { transform: rotate(356deg) translateY(-46px); opacity: 0; }
+        }
         /* 輪と渦の回転。⚠️ 切れ目が開いた回は止める（回っていない状態が読み） */
         .mv-spin { animation: mvSpin 14s linear infinite; }
         @keyframes mvSpin { to { transform: rotate(360deg); } }
@@ -30710,6 +30880,16 @@ export default function TarotDraw() {
                 renderSpeakButton={(key, text) => <SpeakButton speakKey={key} text={text} />}
                 canDraw={canDraw}
                 aiEnabled={aiEnabled}
+                /*
+                  AI版と無料版の行き来。デバッグ用でもあり、
+                  「無料版を試してから課金する」導線でもある。
+                  ⚠️ drawMode に Free を付け外しするだけにすること。
+                  別の状態を持つと、二つの真実ができて必ずずれる。
+                */
+                onSwitchVersion={() => {
+                  const base = spreadBaseKey(drawMode);
+                  setDrawMode(isFreeSpreadKey(drawMode) ? base : `${base}Free`);
+                }}
                 onConsume={() => {
                   // スリーカードと同じ枠を消費する。
                   // AIを使う占いは同じ財布から出ているため、枠を分けない
