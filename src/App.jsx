@@ -9423,7 +9423,8 @@ function SkyHouse({ w, seedIndex }) {
         fill="#171128" stroke="rgba(150,142,190,0.32)" strokeWidth="0.5" />
       {/* 窓ひとつ。必ず灯す */}
       <rect x={-win / 2} y={body * 0.3} width={win} height={win}
-        fill={SKY_WINDOW} opacity="0.9" />
+        fill={SKY_WINDOW} opacity="0.9"
+        style={{ filter: "drop-shadow(0 0 3px rgba(255,214,120,0.85))" }} />
     </g>
   );
 }
@@ -9521,13 +9522,7 @@ function SkySnowman({ w }) {
   ⚠️ UFO は「たまに一つ」ではなく群れにする。
   16体では特殊演出として弱く、気づかれないまま流れていた。
 */
-/*
-  ⚠️ 超大雪を 320 まで増やしたら PC で重くなった。
-  .title-sky は色相回転を毎フレームかけるので、層の中の要素数が
-  そのまま毎フレームの塗り直し量になる。画面が広いほど不利。
-  一粒あたりの要素数が多い超大雪は、数で押さない。
-*/
-const SKY_COUNT = { ufo: 90, heavysnow: 150, blizzard: 170 };
+const SKY_COUNT = { ufo: 90, heavysnow: 150, blizzard: 320 };
 const SKY_DEFAULT_N = 220;
 const skyMotes = (n) => Array.from({ length: n }, (_, k) => ({
   x: (k * 137.508) % 100,                    // 黄金角。並ばずに散る
@@ -9581,32 +9576,32 @@ const skyMotes = (n) => Array.from({ length: n }, (_, k) => ({
 
 const SKY_BUILDINGS = [
   /* 一帯め。いちばん上。タイトルの文字に隠れる */
-  { x: 10, y: 2, w: 104, h: 152 },
-  { x: 38, y: 6, w: 92, h: 176 },
-  { x: 66, y: 1, w: 116, h: 138 },
-  { x: 93, y: 7, w: 88, h: 192 },
+  { x: 10, y: 2, w: 208, h: 304 },
+  { x: 38, y: 6, w: 184, h: 352 },
+  { x: 66, y: 1, w: 232, h: 276 },
+  { x: 93, y: 7, w: 176, h: 384 },
   /* 二帯め */
-  { x: 22, y: 17, w: 96, h: 168 },
-  { x: 51, y: 21, w: 120, h: 132 },
-  { x: 80, y: 16, w: 90, h: 184 },
+  { x: 22, y: 17, w: 192, h: 336 },
+  { x: 51, y: 21, w: 240, h: 264 },
+  { x: 80, y: 16, w: 180, h: 368 },
   /* 三帯め */
-  { x: 7, y: 32, w: 106, h: 150 },
-  { x: 35, y: 36, w: 98, h: 164 },
-  { x: 63, y: 31, w: 86, h: 188 },
-  { x: 91, y: 37, w: 110, h: 142 },
+  { x: 7, y: 32, w: 212, h: 300 },
+  { x: 35, y: 36, w: 196, h: 328 },
+  { x: 63, y: 31, w: 172, h: 376 },
+  { x: 91, y: 37, w: 220, h: 284 },
   /* 四帯め */
-  { x: 19, y: 48, w: 116, h: 134 },
-  { x: 47, y: 52, w: 92, h: 178 },
-  { x: 76, y: 47, w: 108, h: 146 },
+  { x: 19, y: 48, w: 232, h: 268 },
+  { x: 47, y: 52, w: 184, h: 356 },
+  { x: 76, y: 47, w: 216, h: 292 },
   /* 五帯め */
-  { x: 5, y: 63, w: 102, h: 158 },
-  { x: 33, y: 67, w: 88, h: 186 },
-  { x: 61, y: 62, w: 118, h: 130 },
-  { x: 89, y: 68, w: 100, h: 160 },
+  { x: 5, y: 63, w: 204, h: 316 },
+  { x: 33, y: 67, w: 176, h: 372 },
+  { x: 61, y: 62, w: 236, h: 260 },
+  { x: 89, y: 68, w: 200, h: 320 },
   /* 六帯め。いちばん下。少しだけ */
-  { x: 17, y: 79, w: 112, h: 140 },
-  { x: 50, y: 83, w: 104, h: 150 },
-  { x: 84, y: 78, w: 94, h: 174 },
+  { x: 17, y: 79, w: 224, h: 280 },
+  { x: 50, y: 83, w: 208, h: 300 },
+  { x: 84, y: 78, w: 188, h: 348 },
 ];
 /* 雨と雪の雲。上のほうに数枚 */
 const SKY_CLOUDS = [
@@ -9968,7 +9963,8 @@ function TitleSky({ kind, dim = false }) {
                     x={(-b.w / 2 + gx * (col + 1) - ww / 2).toFixed(1)}
                     y={(gy * (row + 1) - wh / 2).toFixed(1)}
                     width={ww.toFixed(1)} height={wh.toFixed(1)}
-                    fill={SKY_WINDOW} opacity={0.92 - far * 0.2} />
+                    fill={SKY_WINDOW} opacity={0.92 - far * 0.2}
+                    style={{ filter: `drop-shadow(0 0 ${(3 - far * 1.5).toFixed(1)}px rgba(255,214,120,0.85))` }} />
                 );
               })}
             </g>
@@ -26084,8 +26080,7 @@ export default function TarotDraw() {
       try { localStorage.setItem(LS_SKY_FIXED, "blizzard"); } catch (e) {}
       setSkyKind("blizzard");
       setCouponInput("");
-      alert("✓ 空を「夜のビルと超大雪」に固定しました\n"
-        + "この空はいちばん重いので、動きが鈍いときは sora で解除してください");
+      alert("✓ 空を「夜のビルと超大雪」に固定しました\n（sora と入れると元のくじ引きに戻ります）");
     } else if (code === "sora") {
       try { localStorage.removeItem(LS_SKY_FIXED); } catch (e) {}
       setSkyKind(pickSkyKind());
