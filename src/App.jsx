@@ -2898,6 +2898,15 @@ function buildPool(list) {
  * そのため置き換えず、別モードとして併存させる。
  */
 const SPREADS = {
+  /*
+    アナログ分析の入口。実際に引く配置ではないので枚数も配置も持たない。
+
+    ⚠️⚠️ SPREAD_ORDER に載せるなら、必ずここにも entry を作ること。
+    一覧は SPREADS[base].count を読むので、無いと画面が落ちる。
+    実際 "SPREADS[base] is undefined" で真っ暗になった。
+    count は 0。枚数は AnalogPanel の中で、選んだ配置から決まる。
+  */
+  analogInput: { key: "analogInput", deck: "full", count: 0, layout: [] },
   // ① 1枚。最も軽く、日課に向く。基盤の検証用でもある
   oneOracle: {
     key: "oneOracle",
@@ -3300,6 +3309,7 @@ const SPREAD_I18N = {
     weekly: { name: "週の物語", desc: "七日それぞれの調子を追う。心身の起伏を知りたいときに。", pos: ["1日目", "2日目", "3日目", "4日目", "5日目", "6日目", "7日目"] },
     choice: { name: "二者択一", desc: "二つの道を並べて、比べて選ぶ。", pos: ["現在の状況", "Aを選んだ場合", "Aの結果", "Bを選んだ場合", "Bの結果"] },
     celticCross: { name: "ケルト十字", desc: "十枚で顕在意識と潜在意識の両方を照らす。深く掘りたいときに。", pos: ["現在の意識の方向", "障害となるもの", "顕在意識", "潜在意識", "過去", "近い未来", "あなた自身", "周囲の環境", "希望と不安", "最終結果"] },
+    analogInput: { name: "手元の札を入れる", desc: "実物の札を配置どおりに入力します。解釈はせず、計算と視覚化だけを担います。", pos: [] },
     relationship: { name: "関係の杯", desc: "二人の関係を、両側から読む。", pos: ["あなたの状況", "相手の状況", "あなたの願い", "相手の願い", "あなたの不安", "相手の不安", "二人の現在", "障害", "可能性", "あなたの取るべき道", "二人の行く先"] },
     davidStar: { name: "ダビデスター", desc: "六芒星に六枚。六つの天体を手がかりに、前世と今の繋がりを読む。", pos: ["太陽｜前世の記憶", "月｜前世の感情", "金星｜前世の愛情", "木星｜前世の善行", "土星｜前世の試練", "火星｜前世の出来事"] },
     zodiac: { name: "ゾディアック", desc: "十二星座の資質で、眠っている力をどう起こすかを見る。", pos: ["牡羊座｜先陣を切る力", "牡牛座｜味わい保つ力", "双子座｜伝え繋ぐ力", "蟹座｜育み守る力", "獅子座｜表し放つ力", "乙女座｜整え支える力", "天秤座｜釣り合わせる力", "蠍座｜深く関わる力", "射手座｜遠くを見る力", "山羊座｜積み上げる力", "水瓶座｜組み替える力", "魚座｜溶け合う力", "いま最も効いている一点"] },
@@ -3874,7 +3884,8 @@ function spreadInfo(key, lang) {
   無料版は有料版のすぐ下に置く。離して並べると別物に見え、
   「同じ占いの、鑑定文の出どころが違う版」だと伝わらない。
 */
-const SPREAD_ORDER = ["yesNo", "oneOracle", "oneOracleMinor", "three", "threeFree", "davidStar", "davidStarFree", "hexagram", "hexagramFree", "weekly", "weeklyFree", "celticCross", "celticCrossFree", "simpleCross", "simpleCrossFree", "greekCross", "greekCrossFree", "horseshoe", "horseshoeFree", "horoscope", "horoscopeFree", "zodiac", "zodiacFree", "treeOfLife", "treeOfLifeFree", "choice", "choiceFree", "relationship",
+const SPREAD_ORDER = [
+  "analogInput","yesNo", "oneOracle", "oneOracleMinor", "three", "threeFree", "davidStar", "davidStarFree", "hexagram", "hexagramFree", "weekly", "weeklyFree", "celticCross", "celticCrossFree", "simpleCross", "simpleCrossFree", "greekCross", "greekCrossFree", "horseshoe", "horseshoeFree", "horoscope", "horoscopeFree", "zodiac", "zodiacFree", "treeOfLife", "treeOfLifeFree", "choice", "choiceFree", "relationship",
   // ⚠️ 同じ配置の有料版と無料版は必ず隣同士に置くこと
   /*
     ⚠️ 現代派に無料版（〜Free）を作らないこと。
@@ -3955,7 +3966,12 @@ const MODERN_SPREADS = ["manifestation", "shadowWork", "innerChild", "boundary",
   "moonPhase", "safePerson", "somatic", "comparison", "undecided", "moneyMind",
   // スートを絞ったもの。古典派と配置図が似ていても、山札が違えば別の問いになる
   "loopOfThought", "headAndHeart", "driveAndGround", "loveAndLiving", "stillHurts"];
-const ANALOG_SPREADS = [];
+/*
+  アナログ分析。
+  ⚠️ 配置ごとの項目を並べない。入力する配置は AnalogPanel の中で選ばせるので、
+  ここは「その流派が使える」ことを示す一件だけでよい。
+*/
+const ANALOG_SPREADS = ["analogInput"];
 const MULTI_SPREADS = ["relationship", "reaper", "turnOrder", "roleAssign", "pairMatch", "luckiest", "teamOmen"];
 
 /*
@@ -3990,7 +4006,14 @@ const FREE_XP_PER_DAY = 3;
   SPREAD_READY / SPREAD_USES_AI / SPREAD_ORDER / isHexLike / EXTRA_STAGES の5つ。
   どれか一つ忘れると、メニューには出るのに画面が空になる（4回やった）。
 */
-const SPREAD_READY = { yesNo: true, oneOracle: true, oneOracleMinor: true, three: true, threeFree: true, hexagram: true, hexagramFree: true, weekly: true, weeklyFree: true, celticCross: true, celticCrossFree: true, horoscope: true, horoscopeFree: true, choice: true, choiceFree: true, simpleCross: true, simpleCrossFree: true, greekCross: true, greekCrossFree: true, horseshoe: true, horseshoeFree: true, treeOfLife: true, treeOfLifeFree: true,
+const SPREAD_READY = {
+  // マルチプレイ。関係の杯は十一枚の通常配置として動く
+  relationship: true,
+  // アナログ分析。入力用の擬似配置
+  analogInput: true,
+  // マルチプレイ六種。人数と枚数を先に決める催しなので専用パネルで動く
+  reaper: true, turnOrder: true, roleAssign: true,
+  pairMatch: true, luckiest: true, teamOmen: true, yesNo: true, oneOracle: true, oneOracleMinor: true, three: true, threeFree: true, hexagram: true, hexagramFree: true, weekly: true, weeklyFree: true, celticCross: true, celticCrossFree: true, horoscope: true, horoscopeFree: true, choice: true, choiceFree: true, simpleCross: true, simpleCrossFree: true, greekCross: true, greekCrossFree: true, horseshoe: true, horseshoeFree: true, treeOfLife: true, treeOfLifeFree: true,
   // 現代派（開放済み）
   shadowWork: true, innerChild: true, burnout: true,
   // 開放（第二陣）
@@ -4568,6 +4591,7 @@ const MODERN_OUTPUT_CONTRACT = `
 */
 const SPREAD_TOPIC_I18N = {
   ja: {
+    relationship:   { hint: "相手との間で何が知りたいかを書いてください", ph: "例：連絡の頻度が合わずお互い探っている" },
     davidStar:      { hint: "前世の何を知りたいかを書いてください", ph: "例：初対面なのに懐かしい人がいる" },
     zodiac:         { hint: "どの力を伸ばしたいかを書いてください", ph: "例：人前で話す度胸をつけたい" },
     shadowWork:     { hint: "認めたくない自分の面を書いてください", ph: "例：人の成功を素直に喜べない" },
@@ -4595,6 +4619,7 @@ const SPREAD_TOPIC_I18N = {
     spiritGuide:    { hint: "勘が働かなくなった場面を書いてください", ph: "例：以前は分かった潮目が読めなくなった" },
   },
   en: {
+    relationship:   { hint: "Write what you want to know about the two of you", ph: "e.g. Our pace of contact never matches and we are both guessing" },
     davidStar:      { hint: "Write what you want to know about a past life", ph: "e.g. Someone I just met feels familiar" },
     zodiac:         { hint: "Write which capacity you want to grow", ph: "e.g. I want the nerve to speak in public" },
     shadowWork:     { hint: "Write the side of yourself you would rather not admit", ph: "e.g. I cannot be glad for other people's wins" },
@@ -4735,6 +4760,17 @@ const SPREAD_AI_NOTE = {
 ⚠️ 直感に従えば正しい、という書き方をしないこと。直感は材料の一つで、判断そのものではありません。
 ⚠️ 医療・金銭・進路の判断を直感に委ねるよう促さないこと。
 四枚目「つながりを強める方法」は、静かな時間の取り方や記録の付け方といった、実際にできる形で書いてください。\n`,
+  relationship: (topic) =>
+    `これは関係の杯の配置です。${topic && topic.trim() ? `相談者が書いたこと:「${topic.trim()}」\n` : ""}
+十一枚を二人ぶんの列として並べ、同じ問いを両側から読みます。
+
+⚠️ 相手の気持ちを断定しないこと。二枚目・四枚目・六枚目は「相手の側に置かれた札」であって、相手の本心の暴露ではありません。「〜と出ています」の形で述べること。
+⚠️ どちらが悪いという書き方をしないこと。片方を責める配置ではありません。
+⚠️ 続く・別れる・復縁するといった結末を宣告しないこと。
+⚠️ 相手の事情（既婚か、他に相手がいるか等）を札から言い当てないこと。
+
+五枚目と六枚目は不安です。不安を欠点として扱わず、そこに何を守ろうとしているかを述べてください。
+十枚目は相談者が取れる道なので、相手を変える方法にしないこと。十一枚目で二人の行く先に触れますが、断定はせず、いまの並びが続いた場合の見え方として書いてください。${MODERN_NO_DIAGNOSIS}\n`,
   davidStar: (topic) =>
     `これはダビデスターの配置です。${topic && topic.trim() ? `相談者が書いたこと:「${topic.trim()}」\n` : ""}
 六芒星の六つの頂点に、太陽・月・金星・木星・土星・火星を割り当て、前世と現世の繋がりを読みます。
@@ -5001,6 +5037,22 @@ const ZODIAC_STAGES = [
   { key: "air",    indices: [2, 6, 10] },
   { key: "water",  indices: [3, 7, 11] },
   { key: "centre", indices: [12] },
+];
+
+/*
+  関係の杯。11枚。二人ぶんを左右に並べる配置。
+  ⚠️ 自分と相手を必ず同じ段で開くこと。片方だけ先に見せると、
+  もう片方がその答え合わせとして読まれ、突き合わせにならない。
+  ⚠️ 最後は「二人の行く先」で終える。個人の道で終えると、
+  二人の配置なのに片方の話で閉じてしまう。
+*/
+const RELATIONSHIP_STAGES = [
+  { key: "state",  indices: [0, 1] },
+  { key: "wish",   indices: [2, 3] },
+  { key: "fear",   indices: [4, 5] },
+  { key: "now",    indices: [6, 7] },
+  { key: "maybe",  indices: [8, 9] },
+  { key: "future", indices: [10] },
 ];
 
 const PAIR_STAGES = [
@@ -8400,16 +8452,19 @@ function SpreadSelect({ lang, onSelect }) {
     「同じ占いの、鑑定文の出どころが違う版」だと伝わらなくなる。
     実際に一度そうなった。
   */
-  const list = SPREAD_ORDER.filter((k) => schoolOf(k) === school)
+  /*
+    ⚠️ 無料版を別の項目として並べないこと。
+    画面の中で版を切り替えられるようになったので、同じ占いが二つ並ぶと
+    「何が違うのか」を毎回考えさせることになる。一覧には一つだけ出す。
+    版の選択は、その占いを開いてから行う。
+  */
+  const list = SPREAD_ORDER
+    .filter((k) => schoolOf(k) === school && !isFreeSpreadKey(k))
     .slice()
     .sort((a, b) => {
-      const ba = spreadBaseKey(a), bb = spreadBaseKey(b);
-      const ca = SPREADS[ba].count, cb = SPREADS[bb].count;
+      const ca = SPREADS[spreadBaseKey(a)].count, cb = SPREADS[spreadBaseKey(b)].count;
       if (ca !== cb) return ca - cb;
-      // 同じ枚数のなかでは、まず占いごとにまとめる
-      if (ba !== bb) return SPREAD_ORDER.indexOf(ba) - SPREAD_ORDER.indexOf(bb);
-      // 同じ占いなら、有料版を先に、無料版をすぐ下に
-      return (isFreeSpreadKey(a) ? 1 : 0) - (isFreeSpreadKey(b) ? 1 : 0);
+      return SPREAD_ORDER.indexOf(a) - SPREAD_ORDER.indexOf(b);
     });
   return (
     <div style={{ width: "100%", maxWidth: "460px", margin: "0 auto" }}>
@@ -9361,6 +9416,14 @@ function pickSkyKind() {
 /* ホロの四色。傾斜ではなく、粒ごとに直接塗るための並び */
 /* 空を固定したときの保存先。値は SKY_KINDS のどれか、または "" で解除 */
 const LS_SKY_FIXED = "tarot_sky_fixed";
+/* 背景を切っているか。"1" なら切 */
+const LS_SKY_OFF = "tarot_sky_off";
+/* 背景の入切の文言。⚠️ T に足さない。未訳は英語へ落とす */
+const SKY_TOGGLE_I18N = {
+  ja: { labelOn: "背景 ON", labelOff: "背景 OFF", on: "背景を出す", off: "背景を止める" },
+  en: { labelOn: "BG on", labelOff: "BG off", on: "Show background", off: "Stop background" },
+};
+const skyToggleT = (lang) => SKY_TOGGLE_I18N[lang] || SKY_TOGGLE_I18N.en;
 const SKY_PALETTE = ["#FF3CB4", "#3CC8FF", "#78FF8C", "#FFDC3C"];
 /*
   夜のビルの窓の色。
@@ -10198,7 +10261,12 @@ function GreekTension({ drawn, labels, lang, openedIndices }) {
     { idx: 1, suit: "pentacles" }, // 左・地・物質
   ];
   if (!ARMS.some((a) => seen.has(a.idx))) return null;
-  const W = 250, C = 125, R = 96, MIN = 24;
+  /*
+    ⚠️ R を W/2 に近づけないこと。左右の腕名は端に置くので、
+    菱形が端まで届くと文字と重なって潰れる。実際「地・物質」が潰れた。
+    腕の最大長は、名前の幅ぶんだけ内側で止める。
+  */
+  const W = 250, C = 125, R = 78, MIN = 22;
   /* 一枚も開いていないときに倒す先。無季節の状態を作らない */
   const LEAD_FALLBACK = "pentacles";
 
@@ -10254,14 +10322,196 @@ function GreekTension({ drawn, labels, lang, openedIndices }) {
           一枚の面に一つの季節なら、凡例が要らない。
         */}
         <defs>
+          {/*
+            宝石らしさの外づけ。
+            ⚠️ どれも図形の形と大きさを変えないこと。
+            四方の張りと面積が図の中身なので、そこに触れる効果は入れない。
+            触ってよいのは、色・光・縁の見え方だけ。
+          */}
+          {/*
+            屈折。厚みのあるガラス越しに見えるゆらぎ。
+            ⚠️ 強くかけないこと。等高線が読めなくなると、面積の図でなくなる。
+            ゆらぎは細かく、振れ幅は小さく。
+          */}
+          <filter id="gemRefract" x="-15%" y="-15%" width="130%" height="130%">
+            <feTurbulence type="fractalNoise" baseFrequency="0.055" numOctaves="2"
+              seed="7" result="noise" />
+            <feDisplacementMap in="SourceGraphic" in2="noise" scale="4"
+              xChannelSelector="R" yChannelSelector="G" />
+          </filter>
+          {/*
+            ベベルとエンボス。縁に高さを出す。
+            ⚠️ ぼかしてから光を当てること。ぼかさずに当てると
+            線が太くなるだけで、面が起き上がって見えない。
+          */}
+          <filter id="gemBevel" x="-30%" y="-30%" width="160%" height="160%">
+            <feGaussianBlur in="SourceAlpha" stdDeviation="2.2" result="blur" />
+            <feSpecularLighting in="blur" surfaceScale="4" specularConstant="1.1"
+              specularExponent="22" lightingColor="#FFFFFF" result="spec">
+              <feDistantLight azimuth="215" elevation="58" />
+            </feSpecularLighting>
+            <feComposite in="spec" in2="SourceAlpha" operator="in" result="specIn" />
+            <feMerge>
+              <feMergeNode in="SourceGraphic" />
+              <feMergeNode in="specIn" />
+            </feMerge>
+          </filter>
+          {/* プリズム。縁に沿って光が分かれる */}
+          <linearGradient id="gemPrism" x1="0" y1="0" x2="1" y2="1">
+            <stop offset="0%" stopColor="#FF3CB4" />
+            <stop offset="30%" stopColor="#3CC8FF" />
+            <stop offset="60%" stopColor="#78FF8C" />
+            <stop offset="100%" stopColor="#FFDC3C" />
+          </linearGradient>
+          {/* 回る光の帯。中心の細い明部だけが面をなでる */}
+          <linearGradient id="gemSweep" x1="0" y1="0" x2="1" y2="0">
+            <stop offset="0%" stopColor="#FFFFFF" stopOpacity="0" />
+            <stop offset="44%" stopColor="#FFFFFF" stopOpacity="0" />
+            <stop offset="50%" stopColor="#FFFFFF" stopOpacity="0.42" />
+            <stop offset="56%" stopColor="#FFFFFF" stopOpacity="0" />
+            <stop offset="100%" stopColor="#FFFFFF" stopOpacity="0" />
+          </linearGradient>
           <clipPath id="greekField">
             <polygon points={poly} />
           </clipPath>
         </defs>
+        {/*
+          ⚠️⚠️ ここで図形を回さないこと。以前は外側を丸ごと回して（潰して）いたので、
+          輪郭が伸び縮みし、宝石ではなく紙が動いているように見えた。
+          回すのは、切り抜きの中に置いた光の帯だけ。
+        */}
         <g clipPath="url(#greekField)">
           <polygon points={poly} fill={leadColor} opacity="0.13" />
           <ElementField fx={leadFx} color={leadColor} dur={3.4} />
-        </g>
+          {/*
+            切子面。宝石に見せるための面割り。
+
+            ★ 面を四つの三角に割り、隣り合う面で明るさを変える。
+              一枚の平らな面のままだと紙に見える。角度の違う面が並んで
+              初めて、光を受けている塊に見える。
+
+            ⚠️ 面割りは頂点から作ること。勝手な線を引くと、
+              四方の張りと無関係な模様になる。ここで割っているのは
+              「中心と隣り合う二頂点」で作れる三角だけ。
+            ⚠️ 色は増やさないこと。優位な元素の一色のまま、
+              明るさだけを変える。四色にすると濁って面積が読めなくなる。
+          */}
+          {/*
+            光の筋。面の上を斜めに走らせる。
+            ⚠️ 常時光らせないこと。ずっと光っていると素材が発光体に見える。
+            間を置いて一度だけ通す ―― 反射は瞬間のもの。
+          */}
+          {/*
+            光の帯。中心まわりを一定方向に回る。
+            ⚠️ 帯そのものは切り抜きの中にあるので、菱形からはみ出さない。
+            輪郭は動かず、面をなでる光だけが動く。
+          */}
+          <g className="gem-turn" style={{ transformOrigin: `${C}px ${C}px` }}>
+            <rect x={C - 190} y={C - 190} width="380" height="380" fill="url(#gemSweep)" />
+          </g>
+        {/*
+          ⚠️ 立体は切り抜きの外に置くこと。
+          菱形の clipPath の中に入れると、冠部と台部の尖りが
+          ガードルの線で切り落とされ、厚みが消えて平面に戻る。
+        */}
+          {/*
+            立体。Z軸を入れる。
+
+            ★ 四方の張りは XY 平面（菱形＝ガードル）に出る。
+              中央の札は、平面図では見えない「厚み」＝|z| を決める。
+              上に冠部の尖り、下に台部の尖りが、同じ高さだけ出る。
+              正面から見ているので厚みは見えないが、
+              斜めに投影すれば面の向きの違いとして現れる。
+
+            ⚠️ 厚みは絶対値。上下対称にすること。
+              片側だけ伸ばすと「上向きに傾いた図形」になり、
+              四方の張りと無関係な傾きが図に混ざる。
+            ⚠️ 中央の札は向きで面積（mul）を、強さで厚み（zh）を決める。
+              同じ札の別の側面なので、二重に効かせているわけではない。
+            ⚠️ 面の明るさは光の向きから計算すること。適当に振ると、
+              隣り合う面の明暗が噛み合わず、立体に見えない。
+          */}
+          {(() => {
+            /* 斜め投影。+Z を画面の右上へ倒す */
+            const ZX = 0.34, ZY = -0.80;
+            const zh = 12 + corePow * 44;
+            const apex = { x: C + ZX * zh, y: C + ZY * zh };
+            const culet = { x: C - ZX * zh, y: C - ZY * zh };
+            /* 光は左上から。面の向きに応じて明るさを変える */
+            const LX = -0.6, LY = -0.8;
+            const shade = (a, b, c) => {
+              const cx = (a.x + b.x + c.x) / 3, cy = (a.y + b.y + c.y) / 3;
+              const dx = cx - C, dy = cy - C;
+              const len = Math.hypot(dx, dy) || 1;
+              const d = (dx / len) * LX + (dy / len) * LY;      // -1〜1
+              return Math.max(0, Math.min(1, (d + 1) / 2));
+            };
+            const tri = (a, b, c) => `${a.x.toFixed(1)},${a.y.toFixed(1)} ${b.x.toFixed(1)},${b.y.toFixed(1)} ${c.x.toFixed(1)},${c.y.toFixed(1)}`;
+            const faces = [];
+            pts.forEach((p, i) => {
+              const nx = pts[(i + 1) % 4];
+              /* 台部（下の絞り）を先に。冠部が手前に重なる */
+              faces.push({ pts: tri(p, nx, culet), lit: shade(p, nx, culet), deep: true });
+              faces.push({ pts: tri(p, nx, apex), lit: shade(p, nx, apex), deep: false });
+            });
+            return (
+              <g>
+                {faces.filter((f) => f.deep).map((f, k) => (
+                  <polygon key={`d${k}`} points={f.pts} fill={leadColor}
+                    opacity={0.06 + f.lit * 0.16} />
+                ))}
+                {faces.filter((f) => !f.deep).map((f, k) => (
+                  <polygon key={`c${k}`} points={f.pts} fill={leadColor}
+                    opacity={0.1 + f.lit * 0.3}
+                    stroke="rgba(255,255,255,0.22)" strokeWidth="0.6" />
+                ))}
+                {/* 稜線。頂点から尖りへ。ここが立体の骨格になる */}
+                {pts.map((p, i) => (
+                  <g key={`edge${i}`}>
+                    <line x1={p.x} y1={p.y} x2={apex.x} y2={apex.y}
+                      stroke="rgba(255,255,255,0.34)" strokeWidth="0.8" />
+                    <line x1={p.x} y1={p.y} x2={culet.x} y2={culet.y}
+                      stroke="rgba(255,255,255,0.14)" strokeWidth="0.6" />
+                  </g>
+                ))}
+                {/* 冠の頂点。いちばん光が集まる一点 */}
+                <circle cx={apex.x} cy={apex.y} r="2.6" fill="rgba(255,255,255,0.85)" />
+                {/*
+                  グリッター。面の上で散る十字の光。
+
+                  ⚠️ 位置を乱数で決めないこと。描き直すたびに散る場所が変わると、
+                  同じ盤面が同じ図にならない。稜線の途中から拾う。
+                  ⚠️ 全部を同時に光らせないこと。ちらつきに見える。
+                  時間差を付けて、ひとつずつ瞬かせる。
+                  ⚠️ 大きくしないこと。面より大きい光は宝石ではなく星になる。
+                */}
+                {pts.map((p, i) => (
+                  [0.42, 0.68].map((f, k) => {
+                    const gx = p.x + (apex.x - p.x) * f;
+                    const gy = p.y + (apex.y - p.y) * f;
+                    const size = 4.5 + ((i + k) % 3) * 1.6;
+                    return (
+                      <g key={`gl${i}_${k}`} className="gem-glitter"
+                        style={{ animationDelay: `${((i * 2 + k) * 0.62).toFixed(2)}s` }}>
+                        <line x1={gx - size} y1={gy} x2={gx + size} y2={gy}
+                          stroke="#FFFFFF" strokeWidth="1.1" strokeLinecap="round" />
+                        <line x1={gx} y1={gy - size} x2={gx} y2={gy + size}
+                          stroke="#FFFFFF" strokeWidth="1.1" strokeLinecap="round" />
+                        <line x1={gx - size * 0.5} y1={gy - size * 0.5}
+                          x2={gx + size * 0.5} y2={gy + size * 0.5}
+                          stroke="#FFFFFF" strokeWidth="0.6" strokeLinecap="round" opacity="0.7" />
+                        <line x1={gx + size * 0.5} y1={gy - size * 0.5}
+                          x2={gx - size * 0.5} y2={gy + size * 0.5}
+                          stroke="#FFFFFF" strokeWidth="0.6" strokeLinecap="round" opacity="0.7" />
+                      </g>
+                    );
+                  })
+                ))}
+              </g>
+            );
+          })()}
+        {/* ⚠️ 屈折は等高線にだけかける。頂点や数値に掛けると読めなくなる */}
+        <g filter="url(#gemRefract)">
         {GREEK_CONTOURS.map((lv, li) => {
           const lp = pts.map((p) => ({ x: C + (p.x - C) * lv, y: C + (p.y - C) * lv }));
           const inner = li / (GREEK_CONTOURS.length - 1);   // 0=外側 1=中心側
@@ -10286,8 +10536,21 @@ function GreekTension({ drawn, labels, lang, openedIndices }) {
             </g>
           );
         })}
+        </g>
+        {/*
+          ガードルの縁。三重に描く。
+          ⚠️ 順番を変えないこと。虹の縁 → 本体の縁 → ベベル、の順でないと
+          虹が上に乗って線が濁る。
+        */}
+        {/* プリズム。わずかにずらして二本、色が分かれて見えるように */}
+        <polygon points={poly} fill="none" stroke="url(#gemPrism)" strokeWidth="3.4"
+          opacity="0.55" transform="translate(-1.2 -1.2)" />
+        <polygon points={poly} fill="none" stroke="url(#gemPrism)" strokeWidth="3.4"
+          opacity="0.42" transform="translate(1.2 1.2)" />
+        {/* 本体の縁。ベベルで起こす */}
         <polygon points={poly} fill="none" stroke="rgba(255,235,190,0.9)" strokeWidth="1.6"
-          className="greek-ten-poly" style={{ filter: "drop-shadow(0 0 8px rgba(255,220,150,0.45))" }} />
+          className="greek-ten-poly" filter="url(#gemBevel)" />
+        </g>
         {/*
           中心から各頂点への腕。
           ⚠️ 腕ごとに色を変えないこと。面・線は優位な元素の一色、
@@ -10306,6 +10569,28 @@ function GreekTension({ drawn, labels, lang, openedIndices }) {
         {pts.map((p, i) => {
           const open = seen.has(ARMS[i].idx);
           const col = ELEMENT_COLOR[ARMS[i].suit];
+          if (open) {
+            /* 開いた頂点は台座付きの石にする。四条の輝きを添える */
+            return (
+              <g key={i}>
+                {[0, 45, 90, 135].map((deg) => (
+                  <line key={deg}
+                    x1={p.x - Math.cos((deg * Math.PI) / 180) * 11}
+                    y1={p.y - Math.sin((deg * Math.PI) / 180) * 11}
+                    x2={p.x + Math.cos((deg * Math.PI) / 180) * 11}
+                    y2={p.y + Math.sin((deg * Math.PI) / 180) * 11}
+                    stroke={col} strokeWidth="1.3" strokeLinecap="round" opacity="0.75"
+                    className="gem-star" style={{ animationDelay: `${(i * 0.5).toFixed(1)}s` }} />
+                ))}
+                <polygon
+                  points={`${p.x},${p.y - 8} ${p.x + 7},${p.y} ${p.x},${p.y + 8} ${p.x - 7},${p.y}`}
+                  fill={col} stroke="rgba(18,15,36,0.85)" strokeWidth="1.2"
+                  style={{ filter: `drop-shadow(0 0 7px ${col})` }} />
+                <polygon points={`${p.x},${p.y - 8} ${p.x + 7},${p.y} ${p.x},${p.y}`}
+                  fill="rgba(255,255,255,0.45)" />
+              </g>
+            );
+          }
           return <circle key={i} cx={p.x} cy={p.y} r={open ? 6.5 : 3}
             fill={open ? col : "rgba(255,255,255,0.15)"}
             stroke={open ? "rgba(18,15,36,0.85)" : "none"} strokeWidth="1.2"
@@ -10313,9 +10598,9 @@ function GreekTension({ drawn, labels, lang, openedIndices }) {
         })}
         {/* 元素の名前も同じ色で置く。軸と語が色でつながる */}
         <text x={C} y="12" className="greek-el" fill={HISHI_COLOR.wands} textAnchor="middle">{t.greekEl.fire}</text>
-        <text x={W - 3} y={C + 4} className="greek-el" fill={HISHI_COLOR.cups} textAnchor="end">{t.greekEl.water}</text>
+        <text x={W - 2} y={C - 12} className="greek-el" fill={HISHI_COLOR.cups} textAnchor="end">{t.greekEl.water}</text>
         <text x={C} y={W - 3} className="greek-el" fill={HISHI_COLOR.swords} textAnchor="middle">{t.greekEl.air}</text>
-        <text x="3" y={C + 4} className="greek-el" fill={HISHI_COLOR.pentacles} textAnchor="start">{t.greekEl.earth}</text>
+        <text x="2" y={C - 12} className="greek-el" fill={HISHI_COLOR.pentacles} textAnchor="start">{t.greekEl.earth}</text>
         {core && (
           <circle cx={C} cy={C} r="10" fill="rgba(16,10,30,0.9)"
             stroke={coreGood ? "#FFD98A" : "#C89AFF"} strokeWidth="2" />
@@ -12061,24 +12346,51 @@ function BodyHeat({ drawn, lang, openedIndices }) {
         {/* 裏側の目印。背骨の線。これが無いと二体の区別が付かない */}
         <line x1={BX} y1={62 * S} x2={BX} y2={146 * S}
           stroke="rgba(176,168,208,0.5)" strokeWidth="1" strokeDasharray="4 4" />
-        {/* ほてり。面ごとに切り抜いて、身体の中に収める */}
+        {/*
+          ほてり。
+
+          ★ 二段構えにする。
+            1. あたたかい「領域」…… 輪郭のないもやもやした暖色の塊。
+               使い捨てカイロを貼ったときのような、じんわりした面。
+            2. そこから広がる「波」…… ソナーのように、淡くゆっくり。
+
+          ⚠️ 輪郭のはっきりした円を重ねただけでは的にしか見えない。
+          領域は必ずぼかすこと。境目が見えた時点で熱ではなく図形になる。
+          ⚠️ 波は淡く、遅く。濃く速いと警報の記号になる。
+        */}
+        <defs>
+          <filter id="heatBlur" x="-80%" y="-80%" width="260%" height="260%">
+            <feGaussianBlur stdDeviation="7" />
+          </filter>
+          <radialGradient id="heatCore" cx="50%" cy="50%">
+            <stop offset="0%" stopColor="#FFE3B0" stopOpacity="0.95" />
+            <stop offset="40%" stopColor="#FFB070" stopOpacity="0.6" />
+            <stop offset="100%" stopColor="#FF7A45" stopOpacity="0" />
+          </radialGradient>
+        </defs>
         {[false, true].map((isBack) => (
           <g key={isBack ? "b" : "f"} clipPath={`url(#bodyClip${isBack ? "B" : "F"})`}>
             {spots.filter((s) => s.back === isBack).map((z) => {
               const zx = side(isBack), zy = BODY_ZONE_AT[z.zone] * S;
-              const base = (14 + z.power * 26 + (z.count - 1) * 6) * S;
+              const base = (16 + z.power * 26 + (z.count - 1) * 6) * S;
               return (
                 <g key={z.zone}>
-                  <circle cx={zx} cy={zy} r={base * 0.42} fill={z.color}
-                    opacity={cooled ? 0.35 : 0.62} className="mv-warm" />
-                  {/* 波紋。三重が順に外へ抜ける */}
+                  {/* あたたかい領域。ぼかして境目を消す */}
+                  <g filter="url(#heatBlur)">
+                    <ellipse cx={zx} cy={zy} rx={base * 1.15} ry={base * 0.86}
+                      fill="url(#heatCore)" opacity={cooled ? 0.5 : 0.92} className="mv-warm" />
+                    <ellipse cx={zx} cy={zy} rx={base * 0.62} ry={base * 0.5}
+                      fill={z.color} opacity={cooled ? 0.35 : 0.7} className="mv-warm"
+                      style={{ animationDelay: "0.9s" }} />
+                  </g>
+                  {/* ソナー。領域の縁から、淡くゆっくり広がる */}
                   {[0, 1, 2].map((k) => (
-                    <circle key={k} cx={zx} cy={zy} r={base} fill="none"
-                      stroke={z.color} strokeWidth={2.4 - k * 0.5}
-                      className="mv-ripple"
+                    <circle key={k} cx={zx} cy={zy} r={base * 0.9} fill="none"
+                      stroke={z.color} strokeWidth="1.4" opacity="0.5"
+                      className="mv-sonar"
                       style={{
-                        animationDelay: `${(k * 1.1 + z.zone * 0.3).toFixed(2)}s`,
-                        animationDuration: `${(3.3 - z.tier * 0.5).toFixed(2)}s`,
+                        animationDelay: `${(k * 2 + z.zone * 0.5).toFixed(2)}s`,
+                        animationDuration: `${(6 - z.tier * 0.6).toFixed(2)}s`,
                         transformOrigin: `${zx}px ${zy}px`,
                       }} />
                   ))}
@@ -12087,19 +12399,6 @@ function BodyHeat({ drawn, lang, openedIndices }) {
             })}
           </g>
         ))}
-        {/* 部位の名前。ほてっている側の外へ出す */}
-        {spots.map((z) => {
-          const zx = side(z.back), zy = BODY_ZONE_AT[z.zone] * S;
-          const outward = z.back ? 1 : -1;
-          return (
-            <text key={`${z.back ? "b" : "f"}${z.zone}`}
-              x={zx + outward * 58} y={zy + 4}
-              textAnchor={z.back ? "start" : "end"} className="hs-pt-name"
-              fill={z.color} style={{ fontWeight: 700 }}>
-              {t.bodyZone[z.zone]}
-            </text>
-          );
-        })}
         {/*
           手当て。
           ⚠️ 上から線を降らせないこと。頭から雨が降っているようにしか見えない。
@@ -14543,6 +14842,555 @@ function BackToTitle({ onBack, label, activityKey, style, className }) {
   );
 }
 
+/*
+  ============================================================
+  マルチプレイ
+
+  「関係の杯」以外の六種は、配置ではなく催しもの。
+  人数と一人あたりの枚数を先に決めて、その場で配る。
+
+  ★ 六種で違うのは「配ったあと何を見るか」だけ。
+    配るところまでは完全に共通なので、判定だけを差し替える。
+
+  ⚠️ 一人一枚に固定しないこと。運の良さを一枚で決めると、
+    ただのくじ引きになって面白くない。枚数を増やすほど平均に寄り、
+    偏りが減って、腕ではなく傾向を見る催しになる。
+    どちらが良いかは場によるので、その場で選ばせる。
+
+  ⚠️ 山は一つ。全員ぶんを同じ山から配り、同じ札は二人に出さない。
+    人ごとに山を分けると「同じ札が二枚出た」が起きて、
+    その場の全員が納得できなくなる。
+  ============================================================
+*/
+/* 専用パネルで動く六種。関係の杯は含めない（あちらは通常の配置） */
+const MULTI_GAMES = ["reaper", "turnOrder", "roleAssign", "pairMatch", "luckiest", "teamOmen"];
+const MULTI_MIN_PLAYERS = 2, MULTI_MAX_PLAYERS = 8;
+const MULTI_MAX_CARDS = 5;
+
+const MULTI_I18N = {
+  ja: {
+    players: "人数", cards: "一人あたりの枚数",
+    unitP: "人", unitC: "枚",
+    deal: "配る", again: "もう一度", back: "戻る",
+    playerN: (n) => `${n}人目`,
+    note: "枚数を増やすほど、偏りが減って平均に近づきます。",
+    total: (v) => `合計 ${v}`,
+    /* 種目ごとの見出しと結び */
+    reaperTitle: "死神を引くな",
+    reaperHit: (n) => `${n} が死神を引きました。この場の役はこの人です。`,
+    reaperNone: (n) => `死神は出ませんでした。いちばん格の低い札を引いた ${n} が役を負います。`,
+    orderTitle: "順番を決める",
+    orderLead: "格の高い順に並びました。",
+    roleTitle: "役割を決める",
+    roleNames: { lead: "導く人", hold: "支える人", tidy: "整える人" },
+    roleNote: "いちばん強い札のスートで決まります。棒と大アルカナは導く、聖杯は支える、剣と貨幣は整える。",
+    pairTitle: "相性くらべ",
+    pairBest: (a, b, v) => `いちばん噛み合っているのは ${a} と ${b}（${v}%）。`,
+    pairNote: "同じスートなら通じ、格が近いほど噛み合います。",
+    luckTitle: "今いちばん運がいい人",
+    luckWin: (n, v) => `${n}。合計 ${v} でいちばんです。`,
+    omenTitle: "この集まりの兆し",
+    omenRead: [
+      "重い兆しです。今日は決めごとを持ち込まないほうがよさそうです。",
+      "やや重めです。話を広げるより、いまの話を終わらせる日です。",
+      "ふつうの兆しです。特に追い風も向かい風もありません。",
+      "軽い兆しです。話が前に進みやすい集まりです。",
+      "とても良い兆しです。決めるならこの場で決めてください。",
+    ],
+    omenSuit: (s) => `場に多いのは ${s}。`,
+  },
+  en: {
+    players: "Players", cards: "Cards each",
+    unitP: "", unitC: "",
+    deal: "Deal", again: "Again", back: "Back",
+    playerN: (n) => `Player ${n}`,
+    note: "More cards each means less swing and a result closer to the average.",
+    total: (v) => `Total ${v}`,
+    reaperTitle: "Don't Draw Death",
+    reaperHit: (n) => `${n} drew Death. That role falls to them.`,
+    reaperNone: (n) => `Death did not appear. ${n}, holding the lowest cards, takes the role.`,
+    orderTitle: "Set the Order",
+    orderLead: "Ordered from the strongest hand down.",
+    roleTitle: "Assign Roles",
+    roleNames: { lead: "Leader", hold: "Supporter", tidy: "Organiser" },
+    roleNote: "Decided by the suit of each player's strongest card: Wands and Majors lead, Cups support, Swords and Pentacles organise.",
+    pairTitle: "Who Matches Whom",
+    pairBest: (a, b, v) => `The closest match is ${a} and ${b} (${v}%).`,
+    pairNote: "Same suit connects; the closer the strength, the better the mesh.",
+    luckTitle: "Luckiest Right Now",
+    luckWin: (n, v) => `${n}, with a total of ${v}.`,
+    omenTitle: "Omen of This Gathering",
+    omenRead: [
+      "A heavy omen. Best not to bring decisions into today.",
+      "On the heavy side. A day for closing talks rather than opening them.",
+      "An ordinary omen. Neither tailwind nor headwind.",
+      "A light omen. Talk moves forward easily here.",
+      "A very good omen. If you are going to decide, decide here.",
+    ],
+    omenSuit: (s) => `The suit most present is ${s}.`,
+  },
+};
+const multiT = (lang) => MULTI_I18N[lang] || MULTI_I18N.en;
+
+/** 手札の合計の格。0〜100 で出す */
+function handScore(hand) {
+  if (!hand || !hand.length) return 0;
+  return Math.round((hand.reduce((s, c) => s + cardPower(c), 0) / hand.length) * 100);
+}
+
+function MultiPanel({ lang, onBack, spreadKey }) {
+  const t = multiT(lang);
+  const [players, setPlayers] = useState(3);
+  const [per, setPer] = useState(2);
+  const [hands, setHands] = useState(null);
+
+  /*
+    配る。
+    ⚠️ 山を作り直してから配ること。前の手札を引き継ぐと、
+    「さっき出た札がまた出た」が起きる。
+    ⚠️ 正逆もここで決める。表示のときに決めると、
+    再描画のたびに向きが変わって別の結果になる。
+  */
+  const deal = () => {
+    const deck = resolveDeck("full").map((c) => ({ ...c }));
+    for (let i = deck.length - 1; i > 0; i--) {
+      const j = Math.floor(Math.random() * (i + 1));
+      [deck[i], deck[j]] = [deck[j], deck[i]];
+    }
+    const out = [];
+    let at = 0;
+    for (let p = 0; p < players; p++) {
+      const h = [];
+      for (let k = 0; k < per; k++) {
+        const c = deck[at++];
+        h.push({ ...c, reversed: Math.random() < 0.5 });
+      }
+      out.push(h);
+    }
+    setHands(out);
+  };
+
+  const nameOf = (i) => t.playerN(i + 1);
+  const cardName = (c) => {
+    const s = String(c.id).startsWith("major-")
+      ? MAJOR_LIST[Number(String(c.id).split("-")[1])]
+      : MINOR_LIST.find((x) => x.id === c.id);
+    return s ? getCardName(s, lang) : c.id;
+  };
+
+  /* 種目ごとの判定。⚠️ ここだけが六種の違い */
+  const verdict = () => {
+    if (!hands) return null;
+    const scores = hands.map(handScore);
+    if (spreadKey === "reaper") {
+      const hit = hands.findIndex((h) => h.some((c) => c.id === "major-13"));
+      if (hit >= 0) return { title: t.reaperTitle, lines: [t.reaperHit(nameOf(hit))], mark: hit };
+      let low = 0;
+      scores.forEach((v, i) => { if (v < scores[low]) low = i; });
+      return { title: t.reaperTitle, lines: [t.reaperNone(nameOf(low))], mark: low };
+    }
+    if (spreadKey === "turnOrder") {
+      const order = scores.map((v, i) => [i, v]).sort((a, b) => b[1] - a[1]);
+      return {
+        title: t.orderTitle,
+        lines: [t.orderLead, order.map(([i, v], k) => `${k + 1}. ${nameOf(i)}（${v}）`).join("　")],
+      };
+    }
+    if (spreadKey === "roleAssign") {
+      const roleOf = (h) => {
+        const best = h.slice().sort((a, b) => cardPower(b) - cardPower(a))[0];
+        const suit = String(best.id).split("-")[0];
+        if (suit === "major" || suit === "wands") return "lead";
+        if (suit === "cups") return "hold";
+        return "tidy";
+      };
+      return {
+        title: t.roleTitle,
+        lines: [hands.map((h, i) => `${nameOf(i)} ── ${t.roleNames[roleOf(h)]}`).join("　"), t.roleNote],
+      };
+    }
+    if (spreadKey === "pairMatch") {
+      let best = null;
+      for (let a = 0; a < hands.length; a++) {
+        for (let b = a + 1; b < hands.length; b++) {
+          const sa = new Set(hands[a].map((c) => String(c.id).split("-")[0]));
+          const shared = hands[b].some((c) => sa.has(String(c.id).split("-")[0]));
+          const close = 1 - Math.abs(scores[a] - scores[b]) / 100;
+          const v = Math.round((close * 0.7 + (shared ? 0.3 : 0)) * 100);
+          if (!best || v > best.v) best = { a, b, v };
+        }
+      }
+      return best
+        ? { title: t.pairTitle, lines: [t.pairBest(nameOf(best.a), nameOf(best.b), best.v), t.pairNote] }
+        : null;
+    }
+    if (spreadKey === "luckiest") {
+      let top = 0;
+      scores.forEach((v, i) => { if (v > scores[top]) top = i; });
+      return { title: t.luckTitle, lines: [t.luckWin(nameOf(top), scores[top])], mark: top };
+    }
+    /* teamOmen */
+    const all = hands.flat();
+    const avg = all.reduce((s, c) => s + cardPower(c), 0) / all.length;
+    const step = visStep(avg, [0.24, 0.38, 0.52, 0.68]);
+    const cnt = {};
+    all.forEach((c) => {
+      const s = String(c.id).split("-")[0];
+      cnt[s] = (cnt[s] || 0) + 1;
+    });
+    const topSuit = Object.keys(cnt).sort((a, b) => cnt[b] - cnt[a])[0];
+    return {
+      title: t.omenTitle,
+      lines: [t.omenRead[step], t.omenSuit(topSuit === "major" ? "大アルカナ" : suitLabel(topSuit, lang))],
+    };
+  };
+  const v = verdict();
+
+  return (
+    <div className="multi-panel">
+      <div className="hs-pass-title sheen-text">{spreadInfo(spreadKey, lang).name}</div>
+      <p className="hs-pass-legend">{spreadInfo(spreadKey, lang).desc}</p>
+
+      {/* 人数と枚数。⚠️ 配る前にしか変えられない。途中で変えると場が壊れる */}
+      {!hands && (
+        <div className="multi-setup">
+          <div className="multi-row">
+            <span className="multi-label">{t.players}</span>
+            <div className="multi-pick">
+              {Array.from({ length: MULTI_MAX_PLAYERS - MULTI_MIN_PLAYERS + 1 }, (_, k) => {
+                const n = MULTI_MIN_PLAYERS + k;
+                return (
+                  <button key={n} type="button"
+                    className={`multi-btn${players === n ? " on" : ""}`}
+                    onClick={() => setPlayers(n)}>{n}{t.unitP}</button>
+                );
+              })}
+            </div>
+          </div>
+          <div className="multi-row">
+            <span className="multi-label">{t.cards}</span>
+            <div className="multi-pick">
+              {Array.from({ length: MULTI_MAX_CARDS }, (_, k) => (
+                <button key={k + 1} type="button"
+                  className={`multi-btn${per === k + 1 ? " on" : ""}`}
+                  onClick={() => setPer(k + 1)}>{k + 1}{t.unitC}</button>
+              ))}
+            </div>
+          </div>
+          <p className="multi-note">{t.note}</p>
+          <button className="draw-btn" onClick={deal}>
+            <Sparkles size={16} />{t.deal}
+          </button>
+        </div>
+      )}
+
+      {hands && (
+        <div className="multi-result">
+          {hands.map((h, i) => (
+            <div key={i} className={`multi-hand${v && v.mark === i ? " marked" : ""}`}>
+              <div className="multi-hand-head">
+                <span>{nameOf(i)}</span>
+                <span className="multi-score">{t.total(handScore(h))}</span>
+              </div>
+              <div className="multi-cards">
+                {h.map((c, k) => (
+                  <span key={k} className={`multi-card${c.reversed ? " rev" : ""}`}>
+                    {cardName(c)}
+                  </span>
+                ))}
+              </div>
+            </div>
+          ))}
+          {v && (
+            <div className="verdict">
+              <div className="verdict-title">{v.title}</div>
+              {v.lines.filter(Boolean).map((l, k) => <p key={k}>{l}</p>)}
+            </div>
+          )}
+          <button className="draw-btn" onClick={deal}>
+            <Sparkles size={16} />{t.again}
+          </button>
+        </div>
+      )}
+      <BackToTitle onBack={onBack} label={t.back} activityKey={hands ? "dealt" : "setup"} />
+    </div>
+  );
+}
+
+/*
+  ============================================================
+  アナログ分析
+
+  手元の実物の札を入力して、計算と視覚化だけを担う。
+  解釈はしない ―― 引いたのも並べたのも本人なので、読むのも本人の仕事。
+
+  ⚠️ 経験値も図鑑も動かさないこと。乱数が手の届く場所に移るので、
+  嘘の入力で育成できてしまう。ここは「数えるところだけ」を引き受ける。
+
+  ⚠️ AI鑑定を付けないこと。アプリが引いていない札に、
+  アプリが読みを付けると、どこまでが本人の読みか分からなくなる。
+  ============================================================
+*/
+const ANALOG_RANKS = 14;
+
+/*
+  位置ごとに使える山。
+
+  ⚠️ SPREADS の deck は配置ぜんたいの指定なので、位置ごとの違いは表せない。
+  スリーカードは一枚目だけ大アルカナ、残りは小アルカナで引く。
+  ここを見ずに全部から選ばせると、実際には出ない札を入力できてしまう。
+  位置ごとに違う配置を足したら、ここにも足すこと。
+*/
+const ANALOG_DECK_BY_POS = {
+  three: (i) => (i === 0 ? "major" : "minor"),
+};
+function analogDeckAt(spreadKey, i) {
+  const f = ANALOG_DECK_BY_POS[spreadBaseKey(spreadKey)];
+  if (f) return f(i);
+  const info = SPREADS[spreadBaseKey(spreadKey)];
+  return (info && info.deck) || "full";
+}
+
+/** 78枚から一枚を選ぶ盤。スート → 番号 → 正逆 の順に決める */
+/*
+  ⚠️ 位置ごとに使える山が違う。スリーカードは一枚目が大アルカナ、
+  残りが小アルカナ。全部から選ばせると、実際には出ない札を入れられる。
+  deck の指定をそのまま渡して、選べる範囲を絞る。
+*/
+function AnalogPicker({ lang, used, deckSpec, onPick, onCancel }) {
+  const t = analogT(lang);
+  const [suit, setSuit] = useState(null);
+  /* 選んだ札。⚠️ ここで一旦止めて、向きを聞いてから確定する */
+  const [chosen, setChosen] = useState(null);
+  const isUsed = (id) => used.includes(id);
+  /* この位置で実際に使える札 */
+  const allowed = new Set(resolveDeck(deckSpec).map((c) => c.id));
+  const cardsOf = (s) =>
+    (s === "major"
+      ? MAJOR_LIST.map((c) => c.id)
+      : Array.from({ length: ANALOG_RANKS }, (_, i) => `${s}-${i}`))
+      .filter((id) => allowed.has(id));
+  /* 中身が一枚も無いスートは出さない。押しても空なのは不親切 */
+  const suits = ["major", "wands", "cups", "swords", "pentacles"]
+    .filter((s) => cardsOf(s).length > 0);
+  const nameOf = (id) => {
+    const src = String(id).startsWith("major-")
+      ? MAJOR_LIST[Number(String(id).split("-")[1])]
+      : MINOR_LIST.find((x) => x.id === id);
+    return src ? getCardName(src, lang) : id;
+  };
+  /* ⚠️ 既定は「使える最初のスート」。major 決め打ちだと、
+     大アルカナを使わない位置で空の盤が出る */
+  const cur = suit && suits.includes(suit) ? suit : suits[0];
+  return (
+    <div className="analog-picker">
+      <div className="analog-suits">
+        {suits.map((s) => (
+          <button key={s} type="button"
+            className={`multi-btn${cur === s ? " on" : ""}`}
+            onClick={() => setSuit(s)}>
+            {s === "major" ? t.major : suitLabel(s, lang)}
+          </button>
+        ))}
+      </div>
+
+      <div className="analog-grid">
+        {cardsOf(cur).map((id) => (
+          <button key={id} type="button"
+            className={`analog-card${isUsed(id) ? " used" : ""}`}
+            disabled={isUsed(id)}
+            onClick={() => setChosen(id)}>
+            {nameOf(id)}
+          </button>
+        ))}
+      </div>
+      {/*
+        向きを聞く。⚠️ 札を選んだあとに聞くこと。
+        先に向きを決めさせると、札を探している間ずっとその設定を
+        覚えていなければならない。選んだ直後なら迷わない。
+      */}
+      {chosen && (
+        <div className="analog-confirm">
+          <div className="analog-confirm-name">{nameOf(chosen)}</div>
+          <div className="analog-orient">
+            <button type="button" className="multi-btn on"
+              onClick={() => { onPick({ id: chosen, reversed: false }); setChosen(null); }}>
+              {t.upright}
+            </button>
+            <button type="button" className="multi-btn on"
+              onClick={() => { onPick({ id: chosen, reversed: true }); setChosen(null); }}>
+              {t.reversed}
+            </button>
+          </div>
+          {/* ⚠️ 文言を分けること。同じ「やめる」が二つ並ぶと、
+              どちらが札の取り消しでどちらが画面を出るのか分からない */}
+          <button className="back-to-title" type="button"
+            onClick={() => setChosen(null)}>{t.pickAgain}</button>
+        </div>
+      )}
+      {/* 選んでいる最中は、画面を出る導線を隠す。並べて出すと二重に見える */}
+      {!chosen && (
+        <button className="back-to-title" type="button" onClick={onCancel}>{t.cancel}</button>
+      )}
+    </div>
+  );
+}
+
+const ANALOG_I18N = {
+  ja: {
+    title: "アナログ分析",
+    lead: "手元の札を配置どおりに入れてください。解釈はしません。数えるところだけ引き受けます。",
+    pickSpread: "どの配置で並べましたか",
+    major: "大アルカナ", upright: "正位置", reversed: "逆位置",
+    cancel: "やめる", empty: "＋ ここに入れる", clear: "全部消す",
+    filled: (a, b) => `${a} / ${b} 枚`,
+    toSpread: "この札で占う",
+    statTitle: "八つの分野",
+    trailTitle: "軌跡",
+    trailNote: "並べた順に、八分野の重心がどう動いたかです。",
+    noAi: "この画面では鑑定をしません。引いたのも並べたのもあなたなので、読むのもあなたの仕事です。",
+    noXp: "経験値と図鑑は動きません。入力で育成できてしまうためです。",
+    posN: (n) => `${n}枚目`,
+    nowAt: (p) => `いま入れる位置 ── ${p}`,
+    pickAgain: "選び直す",
+  },
+  en: {
+    title: "Analog Analysis",
+    lead: "Enter the cards you laid out. No interpretation here — only the counting.",
+    pickSpread: "Which spread did you lay out?",
+    major: "Majors", upright: "Upright", reversed: "Reversed",
+    cancel: "Cancel", empty: "+ place here", clear: "Clear all",
+    filled: (a, b) => `${a} / ${b}`,
+    toSpread: "Read with these cards",
+    statTitle: "The Eight Domains",
+    trailTitle: "Trail",
+    trailNote: "How the centre of the eight domains moved as you laid the cards.",
+    noAi: "No reading is given here. You drew and laid the cards, so the reading is yours.",
+    noXp: "Experience and the collection do not move — otherwise typing would level you up.",
+    posN: (n) => `Card ${n}`,
+    nowAt: (p) => `Placing — ${p}`,
+    pickAgain: "Pick again",
+  },
+};
+const analogT = (lang) => ANALOG_I18N[lang] || ANALOG_I18N.en;
+
+function AnalogPanel({ lang, onBack, onSubmit }) {
+  const t = analogT(lang);
+  const [spreadKey, setSpreadKey] = useState(null);
+  const [cards, setCards] = useState([]);
+  const [slot, setSlot] = useState(null);
+
+  /*
+    入力できる配置。⚠️ 枚数が決まっているものだけ。
+    マルチプレイと、この入口そのもの（analogInput）は除く。
+  */
+  const targets = SPREAD_ORDER.filter((k) => {
+    if (!SPREAD_READY[k] || isFreeSpreadKey(k)) return false;
+    if (MULTI_GAMES.includes(k) || k === "analogInput") return false;
+    const info = SPREADS[k];
+    return info && info.count >= 1 && info.count <= 13;
+  });
+
+  const need = spreadKey && SPREADS[spreadKey] ? SPREADS[spreadKey].count : 0;
+  /* ⚠️ 枚数ではなく「穴が無いこと」で判定する。飛ばして入れられるため */
+  const filled = cards.filter(Boolean).length;
+  const done = need > 0 && filled >= need;
+  const used = cards.filter(Boolean).map((c) => c.id);
+
+  const nameOf = (c) => {
+    const src2 = String(c.id).startsWith("major-")
+      ? MAJOR_LIST[Number(String(c.id).split("-")[1])]
+      : MINOR_LIST.find((x) => x.id === c.id);
+    return src2 ? getCardName(src2, lang) : c.id;
+  };
+
+  if (slot !== null) {
+    return (
+      <div className="analog-panel">
+        <div className="analog-head">
+          <span>{spreadInfo(spreadKey, lang).name}</span>
+          <span className="multi-score">{t.filled(filled, need)}</span>
+        </div>
+        <div className="analog-now">
+          {t.nowAt((spreadInfo(spreadKey, lang).pos || [])[slot] || t.posN(slot + 1))}
+        </div>
+        <AnalogPicker lang={lang} used={used}
+          deckSpec={analogDeckAt(spreadKey, slot)}
+          onPick={(c) => {
+            /* ⚠️ 押した枠に入れること。末尾に足すと、飛ばして入れたときにずれる */
+            const next = cards.slice();
+            next[slot] = c;
+            setCards(next);
+            setSlot(null);
+          }}
+          onCancel={() => setSlot(null)} />
+      </div>
+    );
+  }
+
+  return (
+    <div className="analog-panel">
+      <div className="hs-pass-title sheen-text">{t.title}</div>
+      <p className="hs-pass-legend">{t.lead}</p>
+
+      {!spreadKey && (
+        <div className="analog-spreads">
+          <div className="multi-label">{t.pickSpread}</div>
+          <div className="multi-pick">
+            {targets.map((k) => (
+              <button key={k} type="button" className="multi-btn"
+                onClick={() => { setSpreadKey(k); setCards([]); }}>
+                {spreadInfo(k, lang).name}（{SPREADS[k].count}）
+              </button>
+            ))}
+          </div>
+        </div>
+      )}
+
+      {spreadKey && (
+        <>
+          <div className="analog-head">
+            <span>{spreadInfo(spreadKey, lang).name}</span>
+            <span className="multi-score">{t.filled(filled, need)}</span>
+          </div>
+          <div className="analog-slots">
+            {Array.from({ length: need }, (_, i) => {
+              const c = cards[i];
+              const label = (spreadInfo(spreadKey, lang).pos || [])[i];
+              return (
+                <button key={i} type="button"
+                  className={`analog-slot${c ? " on" : ""}`}
+                  onClick={() => setSlot(i)}>
+                  <span className="analog-slot-pos">{label || t.posN(i + 1)}</span>
+                  <span className="analog-slot-card">
+                    {c ? `${nameOf(c)}${c.reversed ? " ⤵" : ""}` : t.empty}
+                  </span>
+                </button>
+              );
+            })}
+          </div>
+          {/*
+            ⚠️ ここで結果を出さないこと。
+            この画面が独自に読みを出すと、同じ配置なのに
+            アナログだけ別の見た目になる。入力が終わったら
+            いつもの配置の画面へ渡して、そこで開かせる。
+          */}
+          {done && (
+            <button className="draw-btn" onClick={() => onSubmit(spreadKey, cards)}>
+              <Sparkles size={16} />{t.toSpread}
+            </button>
+          )}
+          {cards.length > 0 && (
+            <button className="back-to-title" type="button"
+              onClick={() => setCards([])}>{t.clear}</button>
+          )}
+        </>
+      )}
+      <BackToTitle onBack={onBack} label={t.cancel}
+        activityKey={spreadKey || "pick"} />
+    </div>
+  );
+}
 function HorseshoePass({ drawn, labels, lang, openedIndices }) {
   const t = T[lang] || T.ja;
   const seen = [...openedIndices].sort((a, b) => a - b);
@@ -15366,12 +16214,42 @@ function SpreadVerdict({ spreadKey, drawn, lang, openedIndices, extra }) {
       });
       const vals = open.map((a) => elementAffinity(drawn[a.idx], a.suit));
       const skew = Math.max(...vals) - Math.min(...vals);
+      /* いちばん縮んでいる腕。偏っている回は、そこに何を足すかが用件になる */
+      let low = open[0], lowV = elementAffinity(drawn[low.idx], low.suit);
+      open.forEach((a) => {
+        const v3 = elementAffinity(drawn[a.idx], a.suit);
+        if (v3 < lowV) { low = a; lowV = v3; }
+      });
       const core = seen.has(0) ? drawn[0] : null;
       const L2 = extra && extra.labels ? extra.labels : [];
+      const nameAt = (i) => {
+        const c = drawn[i];
+        if (!c) return "";
+        const s2 = String(c.id).startsWith("major-")
+          ? MAJOR_LIST[Number(String(c.id).split("-")[1])]
+          : MINOR_LIST.find((x) => x.id === c.id);
+        return s2 ? getCardName(s2, lang) : "";
+      };
       title = t.verdictTitle;
+      /*
+        ⚠️ 位置の名前だけで「いま最も強く働いているのは『対策』です」と書かない。
+        対策は札を置く枠の名前であって、働く力ではない。何が出たかを言う。
+        ⚠️ 偏っている回は「弱い側を補いなさい」で終えない。
+        どこが縮んでいるのかを名指しする。名指ししないと動きようがない。
+      */
+      /*
+        ⚠️ 位置の名前を使わないこと。「このまま進むと」が張っている、
+        「障害」が縮んでいる、では日本語として意味を成さない。
+        この図が測っているのは四つの元素の張りなので、
+        図に書いてあるのと同じ名前（火・意志／水・感情／風・思考／地・物質）を使う。
+      */
+      const ELN = { wands: "fire", cups: "water", swords: "air", pentacles: "earth" };
+      const elName = (a) => (t.greekEl && t.greekEl[ELN[a.suit]]) || "";
       lines = [
-        t.greekTop(L2[top.idx] || ""),
-        skew < 0.25 ? t.greekVerdictEven : t.greekVerdictSkew,
+        t.greekTop(`${elName(top)}${nameAt(top.idx) ? " ── " + nameAt(top.idx) : ""}`),
+        skew < 0.25
+          ? t.greekVerdictEven
+          : (t.greekWeak ? t.greekWeak(elName(low), elName(top)) : t.greekVerdictSkew),
         core ? (isGoodOrientation(core, core.reversed) ? t.greekCoreVerdictOpen : t.greekCoreVerdictClose) : "",
       ];
     }
@@ -15681,8 +16559,17 @@ function YesNoPanel({ lang, onBack }) {
 
   return (
     <div style={{ width: "100%", maxWidth: "460px", margin: "0 auto" }}>
-      {/* 既存の戻る導線と同じクラス・同じ文言を使う。独自に作らない */}
-      <BackToTitle onBack={onBack} label={t.backToTitle} activityKey={drawn ? "d" : "i"} />
+      {/*
+        いま何を占っているか。
+        ⚠️ 他の配置は名前を先頭に出しているのに、ここだけ無かった。
+        画面の頭が「タイトルに戻る」から始まっていて、何の画面か分からない。
+        ⚠️ 戻る導線は末尾に置くこと。先頭に置くと、内容より先に
+        「戻る」が目に入る。
+      */}
+      <div className="spread-heading">
+        <p className="spread-heading-name">{spreadInfo("yesNo", lang).name}</p>
+        <p className="spread-heading-desc">{spreadInfo("yesNo", lang).desc}</p>
+      </div>
 
       {!drawn ? (
         <>
@@ -15804,6 +16691,7 @@ function YesNoPanel({ lang, onBack }) {
           </div>
         </>
       )}
+    <BackToTitle onBack={onBack} label={t.backToTitle} activityKey={drawn ? "d" : "i"} />
     </div>
   );
 }
@@ -17524,7 +18412,7 @@ function NoteLines({ text }) {
   違うのは配置と段の切り方と、付随する入力だけ。
   別コンポーネントに複製すると、演出を直すたびに片方だけ直し忘れる。
 */
-function HexagramPanel({ lang, onBack, question, userName, canDraw, onConsume, onRefund, onRecord, spreadLog = [], aiEnabled, spreadKey = "hexagram", renderSpeakButton, onSwitchVersion }) {
+function HexagramPanel({ lang, onBack, question, userName, canDraw, onConsume, onRefund, onRecord, spreadLog = [], aiEnabled, spreadKey = "hexagram", renderSpeakButton, onSwitchVersion, preset }) {
   const isWeekly = spreadKey === "weekly";
   const isCeltic = spreadKey === "celticCross";
   const isHoro = spreadKey === "horoscope";
@@ -17557,6 +18445,7 @@ function HexagramPanel({ lang, onBack, question, userName, canDraw, onConsume, o
     stillHurts: STILL_HURTS_STAGES,
     safePerson: SAFE_PERSON_STAGES,
     undecided: UNDECIDED_STAGES,
+    relationship: RELATIONSHIP_STAGES,
     davidStar: DAVID_STAR_STAGES,
     zodiac: ZODIAC_STAGES,
     manifestation: MANIFEST_STAGES,
@@ -17729,6 +18618,60 @@ function HexagramPanel({ lang, onBack, question, userName, canDraw, onConsume, o
   */
   const start = () => {
     if (!canDraw) return;
+    /*
+      アナログ分析から来た場合。
+      ⚠️ 場を作らず、選ばせず、そのまま開示へ進む。
+      引くのは手元で終わっているので、ここで引き直させると
+      「入力した札で占う」が嘘になる。
+      ⚠️ 以降の画面は通常とまったく同じものを使うこと。
+      アナログだけ別の見た目にすると、同じ配置が二種類あることになる。
+    */
+    if (preset && preset.length) {
+      /*
+        ⚠️⚠️ preset は {id, reversed} しか持っていない。
+        盤面が必要とするのは、名前も意味も持った札そのもの（MAJOR_LIST /
+        MINOR_LIST の要素）で、傾きの rot も要る。
+        id のまま渡すと、表示も判定も空になって先へ進まない。
+        ここで実体に引き当ててから使う。
+      */
+      const solid = preset
+        .map((c) => {
+          const base = String(c.id).startsWith("major-")
+            ? MAJOR_LIST[Number(String(c.id).split("-")[1])]
+            : MINOR_LIST.find((x) => x.id === c.id);
+          if (!base) return null;
+          return { ...base, rot: "0.0", reversed: !!c.reversed };
+        })
+        .filter(Boolean);
+      /* 引き当てに失敗した札があるなら、通常どおり引かせる */
+      if (solid.length !== spread.count) {
+        setPool(buildPool(fullDeck()));
+        setPicked([]); setPickedCards([]); setVanishing([]); setGone([]);
+        setShuffleCount(0); setDrawn(null); setStage(0); setReading("");
+        return;
+      }
+      /*
+        ⚠️ ここで setDrawn を直接呼ばないこと。
+        確定の処理（台帳への記録・実績・一呼吸の間）を飛ばすことになり、
+        アナログの回だけ履歴に残らなくなる。
+        選び終えた状態を作って、通常の confirm を通す。
+      */
+      /*
+        ⚠️⚠️ pool を null にしないこと。
+        画面は `!pool` を「まだ始めていない」の合図として使っているので、
+        null のままだと設定画面から動かず、押しても何も起きないように見える。
+        実際そうなった。選び終えた場として、入力した札そのものを入れる。
+      */
+      setPool(solid);
+      setPicked(solid.map((c) => c.id));
+      setPickedCards(solid);
+      setVanishing([]); setGone([]);
+      setShuffleCount(0);
+      setDrawn(null);
+      setStage(0);
+      setReading("");
+      return;
+    }
     setPool(buildPool(fullDeck()));
     setPicked([]); setPickedCards([]); setVanishing([]); setGone([]);
     setShuffleCount(0);
@@ -17989,7 +18932,12 @@ function HexagramPanel({ lang, onBack, question, userName, canDraw, onConsume, o
   };
 
   const confirm = () => {
-    if (!pool || pickedCards.length !== spread.count) return;
+    /*
+      ⚠️ アナログ分析から来た回は pool が無い。
+      pool を必須にすると台帳に残らず、再会の判定からも漏れる。
+      見るべきは「必要な枚数がそろっているか」だけ。
+    */
+    if (pickedCards.length !== spread.count) return;
     setDrawn(pickedCards);
     /*
       台帳に書くのはここ ―― 鑑定文が出そろうのを待たない。
@@ -18048,6 +18996,32 @@ function HexagramPanel({ lang, onBack, question, userName, canDraw, onConsume, o
     欄は出ているのに引けてしまう（またはその逆）になる。
   */
   const topicRequired = aiEnabled && needsTopicField(spreadKey) && !topic.trim();
+  /*
+    版を切り替えられる配置か。
+
+    ⚠️ SPREAD_READY に両方が載っているか、で判定しないこと。
+    現代派は無料版を一覧に出していないだけで、無料で引けないわけではない。
+    実際それで現代派23種すべてにスイッチが出ていなかった。
+
+    見るべきは「この配置がAIを使うか」だけ。使う配置なら、
+    AI版と無料版の二つがあり得る。無料版は SPREAD_USES_AI に無いので
+    自動的にAIを呼ばなくなる。
+  */
+  const hasBothVersions = !!SPREAD_USES_AI[spreadBaseKey(spreadKey)];
+
+  /*
+    アナログの回は、札がそろった時点で自動的に確定へ進む。
+    ⚠️ 一度だけ走らせること。confirm は台帳に書くので、
+    繰り返し呼ぶと同じ回が何度も記録される。
+  */
+  const analogDone = useRef(false);
+  useEffect(() => {
+    if (!preset || !preset.length) { analogDone.current = false; return; }
+    if (analogDone.current || drawn) return;
+    if (pickedCards.length !== spread.count) return;
+    analogDone.current = true;
+    confirm();
+  }, [preset, pickedCards, drawn]);
 
   // 最終段階に達したら鑑定を取りに行く
   useEffect(() => {
@@ -18336,7 +19310,12 @@ function HexagramPanel({ lang, onBack, question, userName, canDraw, onConsume, o
             いま見ている盤面がどちらの版のものか分からなくなる。
             引く前だけに置く。
           */}
-          {onSwitchVersion && !drawn && (
+          {/*
+            ⚠️ 対になる版が本当に在るときだけ出すこと。
+            無料版を持たない配置で出すと、押した先が空の画面になる。
+            SPREAD_READY に両方あることを確かめる。
+          */}
+          {onSwitchVersion && !drawn && hasBothVersions && (
             <div className="ver-switch" role="group" aria-label={verSwitchT(lang).label}>
               <button type="button"
                 className={`ver-btn${aiEnabled ? " on" : ""}`}
@@ -18441,7 +19420,13 @@ function HexagramPanel({ lang, onBack, question, userName, canDraw, onConsume, o
             </p>
           )}
 
-          <div className="spread-grid">
+          {/*
+            札を選ぶ盤。
+            ⚠️ アナログの回は出さない。引くのは手元で終わっているので、
+            ここで盤を見せると「もう一度選べ」という意味になる。
+            pool は画面を先へ進めるために埋めてあるだけ。
+          */}
+          <div className="spread-grid" style={preset && preset.length ? { display: "none" } : undefined}>
             {pool.map((card, gi) => {
               const at = picked.indexOf(card.id);
               return (
@@ -23821,9 +24806,9 @@ const T = {
     greekCoreOpen: "中央の札が四方を押し広げています",
     greekCoreClose: "中央の札が四方を狭めています",
     greekArea: ["大きく広がっています", "ほどよく広がっています", "やや狭まっています", "かなり狭まっています"],
-    greekTop: (x) => `いま最も強く働いているのは「${x}」です`,
-    greekCoreVerdictOpen: "結果の札が四方を押し広げています。動けば形になります",
-    greekCoreVerdictClose: "結果の札が四方を狭めています。いまは広げるより、守るほうが利きます",
+    greekTop: (x) => `四方でいちばん張っているのは ${x}。ここが面積を決めています。`,
+    greekCoreVerdictOpen: "中央は正位置。四方が外へ開いています。いま決めたことは形になります。",
+    greekCoreVerdictClose: "中央は逆位置。四方が内へ縮んでいます。新しく広げるより、いまあるものを保つ時期です。",
     greekTenEven: "四方が釣り合っています",
     greekTenSome: "いくらか偏りがあります",
     greekTenSkew: "一方に大きく偏っています",
@@ -23923,8 +24908,9 @@ const T = {
     crossVerdictStrong: "力ははっきり出ています。迷わず一手を打てます",
     crossVerdictWeak: "力は弱めです。小さく試すところから始めなさい",
     greekVerdict: ["表に出ている願いが最も強く出ています", "これから来るものが最も強く出ています", "底にあるものが最も強く出ています", "これまでの積み重ねが最も強く出ています"],
-    greekVerdictEven: "四方が釣り合っているので、どこから手をつけても崩れません",
-    greekVerdictSkew: "一方に偏っているので、弱い側を補いなさい",
+    greekVerdictEven: "四方の張りが揃っています。どこから手を付けても、形が崩れません。",
+    greekWeak: (weak, strong) => `「${strong}」ばかりが張って、「${weak}」が縮んでいます。強い側を伸ばすのではなく、縮んでいる側に一つ足してください。`,
+    greekVerdictSkew: "四方の張りが偏っています。",
     hsVerdict: ["いまは材料を集める時期です。手を広げず、まず調べて書き出しなさい", "支度を整える時期です。必要なものに、惜しまず金と時間を使いなさい", "地味な下ごしらえの時期です。派手さのない作業を、黙って積みなさい", "ここが山場です。迷っている一手を、今日のうちに決めなさい", "試す時期です。小さく出して、外れたところを直しなさい", "応用する時期です。うまくいったやり方を、別の場面へも持ち込みなさい", "追い込むより、休んで整えるほうが効きます。手を止める日を作りなさい"],
     hsVerdictHeavy: "越える山は重いようです。力を配分して臨みなさい",
     hsVerdictLight: "越える山は軽いようです。勢いのまま進んで構いません",
@@ -25240,7 +26226,8 @@ const T = {
     crossVerdictStrong: "The force is clear. You can act without hesitating.",
     crossVerdictWeak: "The force is faint. Begin with a small trial.",
     greekVerdict: ["The wish in the open shows strongest", "What is coming shows strongest", "What lies beneath shows strongest", "What has been built shows strongest"],
-    greekVerdictEven: "The four are balanced; you can begin anywhere without it collapsing.",
+    greekVerdictEven: "All four arms are evenly taut. You can start anywhere without breaking the shape.",
+    greekWeak: (weak, strong) => `Only "${strong}" is taut while "${weak}" has shrunk. Rather than stretching the strong side, add one thing to the side that shrank.`,
     greekVerdictSkew: "It leans to one side; shore up the weaker side.",
     hsVerdict: ["This is the gathering stage. Do not spread out; look things up and write them down", "This is the outfitting stage. Spend money and time on what you actually need", "This is the plain groundwork stage. Put in the unglamorous work without comment", "This is the crest. Decide the move you have been hesitating over, today", "This is the testing stage. Put out something small and correct what misses", "This is the applying stage. Take what worked and carry it into other places", "Resting serves you better than pushing. Set aside a day where you stop"],
     hsVerdictHeavy: "The climb looks heavy. Portion out your strength.",
@@ -26700,6 +27687,31 @@ export default function TarotDraw() {
     ⚠️ 保存された値が SKY_KINDS に無ければ無視してくじ引きに戻す。
     綴りを間違えた値が残ると、空が永久に消える。
   */
+  /*
+    背景の入切。
+    ⚠️ 既定は入。切った状態を保存して、次に開いても切れたままにする。
+    ⚠️ 保存値が壊れていたら入に倒すこと。切れたまま戻せなくなると、
+    背景があること自体に気づけない。
+  */
+  /*
+    アナログ分析で入力した札。
+    ⚠️ 配置を離れたら必ず捨てること。残したまま別の配置を開くと、
+    枚数の合わない札が渡って盤面が壊れる。
+  */
+  const [analogPreset, setAnalogPreset] = useState(null);
+
+  const [skyOff, setSkyOff] = useState(() => {
+    try { return localStorage.getItem(LS_SKY_OFF) === "1"; } catch (e) { return false; }
+  });
+  const toggleSky = () => {
+    const next = !skyOff;
+    setSkyOff(next);
+    try {
+      if (next) localStorage.setItem(LS_SKY_OFF, "1");
+      else localStorage.removeItem(LS_SKY_OFF);
+    } catch (e) { /* 保存できなくても画面は切り替える */ }
+  };
+
   const [skyKind, setSkyKind] = useState(() => {
     try {
       const fixed = localStorage.getItem(LS_SKY_FIXED);
@@ -27293,6 +28305,19 @@ export default function TarotDraw() {
     ⚠️ ここに入れ忘れると、いまでも同じ詰み方をする。
     配置を開放したら、この一覧に基底キーを足すこと。
   */
+  /*
+    マルチプレイの催しもの。
+    ⚠️ isHexLike に入れないこと。あちらは「決まった枚数を決まった位置に置く」
+    配置のための道。こちらは人数と枚数をその場で決めるので、枚数も位置も
+    事前に決まっていない。混ぜると空の盤面が出る。
+  */
+  const isAnalog = spreadBaseKey(drawMode) === "analogInput";
+  /* ⚠️ 別の配置へ移ったら入力済みの札を捨てる。持ち越すと枚数が合わない */
+  useEffect(() => {
+    if (!analogPreset) return;
+    if (spreadBaseKey(drawMode) !== analogPreset.key) setAnalogPreset(null);
+  }, [drawMode]);
+  const isMultiGame = MULTI_GAMES.includes(spreadBaseKey(drawMode));
   const isHexLike = [
     "boundary", "burnout", "careerCross", "celticCross", "character",
     "choice", "comparison", "davidStar", "driveAndGround", "greekCross",
@@ -27300,6 +28325,7 @@ export default function TarotDraw() {
     "loopOfThought", "loveAndLiving", "manifestation", "moneyMind", "monthly",
     "moonPhase", "newRelation", "safePerson", "season", "selfSabotage",
     "shadowWork", "simpleCross", "somatic", "spiritGuide", "stillHurts",
+    "relationship",
     "treeOfLife", "undecided", "weekly", "zodiac",
   ].includes(spreadBaseKey(drawMode));
   /*
@@ -28012,8 +29038,10 @@ export default function TarotDraw() {
         表紙と同じ濃さのまま札の後ろへ回すと、どれが結果で
         どれが飾りか分からなくなる。粒の数も半分に落としてある。
       */}
-      <TitleSky kind={skyKind}
-        dim={!(phase === "idle" && (mode === "select" || drawMode === "select"))} />
+      {!skyOff && (
+        <TitleSky kind={skyKind}
+          dim={!(phase === "idle" && (mode === "select" || drawMode === "select"))} />
+      )}
       <style>{`
         @import url('https://fonts.googleapis.com/css2?family=Shippori+Mincho:wght@400;500;600;700;800&family=Noto+Sans+JP:wght@300;400;500;700&family=Cinzel:wght@500;600&display=swap');
 
@@ -28408,6 +29436,142 @@ export default function TarotDraw() {
         .ver-btn.on {
           background: rgba(201,162,75,0.18); color: var(--gold-soft); font-weight: 700;
         }
+        /*
+          配置の見出し。⚠️ 全ての配置で同じ形にすること。
+          一つだけ無いと、その画面だけ何を占っているか分からなくなる。
+        */
+        .spread-heading { text-align: center; margin: 6px 0 16px; }
+        .spread-heading-name {
+          font-family: 'Shippori Mincho', serif; font-size: 17px;
+          letter-spacing: 0.1em; color: var(--gold-soft); margin: 0 0 5px;
+        }
+        .spread-heading-desc {
+          font-size: 11px; color: var(--muted); line-height: 1.8; margin: 0;
+        }
+        /* 背景の入切。タイトルの横 */
+        .sky-toggle {
+          margin-left: 10px; padding: 3px 9px; font-size: 9.5px;
+          border-radius: 999px; cursor: pointer; font-family: inherit;
+          letter-spacing: 0.06em;
+          border: 1px solid rgba(201,162,75,0.4);
+          background: rgba(201,162,75,0.12); color: var(--gold-soft);
+        }
+        /* ⚠️ 切っていることが見た目で分かるようにする */
+        .sky-toggle.off {
+          border-style: dashed; background: none; color: var(--muted); opacity: 0.75;
+        }
+        /* --- アナログ分析 --- */
+        .analog-panel { padding: 4px 2px 20px; }
+        .analog-spreads { margin: 14px 0; }
+        .analog-head {
+          display: flex; justify-content: space-between; align-items: baseline;
+          font-size: 12px; color: var(--gold-soft); margin: 14px 2px 8px;
+        }
+        .analog-slots { margin-bottom: 12px; }
+        .analog-slot {
+          display: flex; justify-content: space-between; align-items: baseline;
+          border: 1px solid rgba(201,162,75,0.16); border-radius: 8px;
+          padding: 7px 10px; margin-bottom: 5px; background: rgba(255,255,255,0.015);
+        }
+        /* 入った枠。⚠️ 色だけでなく枠線も変える（暗所と色覚のため） */
+        .analog-slot.on {
+          border-color: rgba(201,162,75,0.5); background: rgba(201,162,75,0.07);
+        }
+        .analog-slot-pos { font-size: 10.5px; color: var(--muted); }
+        .analog-slot-card { font-size: 11.5px; color: var(--gold-soft); }
+        .analog-now {
+          text-align: center; font-size: 12px; color: var(--gold-soft);
+          margin: 2px 0 10px; letter-spacing: 0.04em;
+        }
+        .analog-confirm {
+          margin: 14px 0 4px; padding: 12px; border-radius: 10px;
+          border: 1px solid rgba(201,162,75,0.4); background: rgba(201,162,75,0.08);
+        }
+        .analog-confirm-name {
+          text-align: center; font-size: 14px; font-weight: 700;
+          color: var(--gold-soft); margin-bottom: 8px;
+        }
+        .analog-suits, .analog-orient {
+          display: flex; flex-wrap: wrap; gap: 6px; justify-content: center; margin-bottom: 8px;
+        }
+        /* 78枚の盤。⚠️ 一覧で出す。検索窓を出すと入力が二度手間になる */
+        .analog-grid {
+          display: grid; grid-template-columns: repeat(auto-fill, minmax(84px, 1fr));
+          gap: 5px; margin: 10px 0 4px;
+        }
+        .analog-card {
+          padding: 8px 4px; font-size: 11px; border-radius: 7px; cursor: pointer;
+          border: 1px solid rgba(201,162,75,0.24); background: rgba(255,255,255,0.02);
+          color: var(--gold-soft); font-family: inherit;
+        }
+        /* 既に入れた札。⚠️ 隠さず、押せなくするだけ。消えると数え直しになる */
+        .analog-card.used { opacity: 0.25; cursor: default; text-decoration: line-through; }
+        .analog-note {
+          font-size: 10.5px; color: var(--muted); line-height: 1.9;
+          margin: 8px 2px 0; opacity: 0.85;
+        }
+        .analog-result { margin-top: 18px; }
+        /* 八分野。⚠️ 棒だけにしない。数値を必ず併記する */
+        .stat-bars { margin: 10px 0 6px; }
+        .stat-row { display: flex; align-items: center; gap: 8px; margin: 6px 0; }
+        .stat-name { font-size: 11px; color: var(--muted); width: 3.2em; flex: none; }
+        .stat-bar {
+          flex: 1; height: 7px; border-radius: 4px; overflow: hidden;
+          background: rgba(255,255,255,0.06); border: 1px solid rgba(201,162,75,0.16);
+        }
+        .stat-bar i {
+          display: block; height: 100%;
+          background: linear-gradient(90deg, #FF3CB4, #3CC8FF, #78FF8C, #FFDC3C);
+          box-shadow: 0 0 5px rgba(190,230,255,0.6);
+        }
+        .stat-val {
+          font-size: 11px; color: var(--gold-soft); width: 2.4em;
+          flex: none; text-align: right; font-weight: 700;
+        }
+        /* --- マルチプレイ --- */
+        .multi-panel { padding: 4px 2px 20px; }
+        .multi-setup { margin: 12px 0 4px; }
+        .multi-row { margin: 0 0 12px; }
+        .multi-label {
+          display: block; font-size: 11px; color: var(--muted);
+          letter-spacing: 0.08em; margin-bottom: 6px; text-align: center;
+        }
+        .multi-pick { display: flex; flex-wrap: wrap; gap: 6px; justify-content: center; }
+        .multi-btn {
+          padding: 7px 13px; font-size: 12px; border-radius: 8px; cursor: pointer;
+          border: 1px solid rgba(201,162,75,0.28); background: rgba(255,255,255,0.02);
+          color: var(--muted); font-family: inherit; transition: background .18s, color .18s;
+        }
+        .multi-btn.on {
+          background: rgba(201,162,75,0.18); color: var(--gold-soft);
+          border-color: rgba(201,162,75,0.55); font-weight: 700;
+        }
+        .multi-note {
+          font-size: 10.5px; color: var(--muted); text-align: center;
+          line-height: 1.8; margin: 10px 0 14px; opacity: 0.85;
+        }
+        .multi-result { margin-top: 8px; }
+        .multi-hand {
+          border: 1px solid rgba(201,162,75,0.18); border-radius: 10px;
+          padding: 9px 11px; margin: 0 0 8px; background: rgba(255,255,255,0.02);
+        }
+        /* 判定で名指しされた人。⚠️ 色だけでなく枠も変える */
+        .multi-hand.marked {
+          border-color: rgba(201,162,75,0.7); background: rgba(201,162,75,0.09);
+        }
+        .multi-hand-head {
+          display: flex; justify-content: space-between; align-items: baseline;
+          font-size: 11.5px; color: var(--gold-soft); margin-bottom: 5px;
+        }
+        .multi-score { font-size: 10px; color: var(--muted); }
+        .multi-cards { display: flex; flex-wrap: wrap; gap: 5px; }
+        .multi-card {
+          font-size: 11px; padding: 3px 8px; border-radius: 6px;
+          border: 1px solid rgba(201,162,75,0.22); color: var(--muted);
+        }
+        /* 逆位置。⚠️ 文字を回さない。読めなくなる。印で示す */
+        .multi-card.rev { border-style: dashed; }
+        .multi-card.rev::after { content: " ⤵"; opacity: 0.8; }
         .draw-btn {
           /*
             主要ボタン。字間を広げ、余白を厚くする。
@@ -30299,7 +31463,6 @@ export default function TarotDraw() {
           秒数だけJSから渡し、幅は共通にする。
         */
         .mv-swing {
-          transform-box: fill-box;
           animation-name: mvSwing; animation-timing-function: ease-in-out;
           animation-iteration-count: infinite;
         }
@@ -30313,7 +31476,6 @@ export default function TarotDraw() {
           ⚠️ 傾きと揺れを別々の要素に分けないこと。板と人が分かれて動く。
         */
         .mv-seesaw {
-          transform-box: fill-box;
           animation-name: mvSeesaw; animation-timing-function: ease-in-out;
           animation-iteration-count: infinite;
         }
@@ -30332,6 +31494,20 @@ export default function TarotDraw() {
           52%     { opacity: 0.95; transform: scaleY(1.1); }
           64%     { opacity: 0; transform: scaleY(0.6); }
           100%    { opacity: 0; }
+        }
+        /*
+          ソナー。ゆっくり大きく広がって、静かに消える。
+          ⚠️ 速くしないこと。速い波紋は警報の記号になる。
+          ⚠️ 消えぎわを長く取ること。すっと消えると点滅に見える。
+        */
+        .mv-sonar {
+          animation-name: mvSonar; animation-timing-function: cubic-bezier(0.2, 0.6, 0.3, 1);
+          animation-iteration-count: infinite;
+        }
+        @keyframes mvSonar {
+          0%   { transform: scale(0.85); opacity: 0; }
+          12%  { opacity: 0.55; }
+          100% { transform: scale(2.9); opacity: 0; }
         }
         /* かすかな明滅。目盛りや筋に */
         .mv-shimmer { animation: mvShimmer 3.2s ease-in-out infinite; }
@@ -30467,6 +31643,71 @@ export default function TarotDraw() {
         }
         @keyframes cvDraw { to { stroke-dashoffset: 0; } }
         /* 菱形がふくらむ */
+        /*
+          宝石の輝き。
+          ⚠️ 光の筋は常時流さないこと。ずっと光っていると発光体に見えて、
+          光を「受けている」塊にならない。長い間隔で一度だけ通す。
+          ⚠️ 面の切り替えは色ではなく明るさで行う（GreekTension 側）。
+        */
+        /*
+          宝石の回転。
+          ⚠️ 回しっぱなしにしないこと。この図は面積と目盛りを読むためのもので、
+          常時回っていると数値が追えない。八秒のうち回るのは一秒半だけにする。
+          ⚠️ scaleX の縮みで奥行きを作る。実際に rotateY で回すと
+          左右の腕が短く見え、張りの大小を読み違える。
+        */
+        /*
+          ⚠️⚠️ SVG座標で transform-origin を指定する要素に
+          transform-box: fill-box を付けてはいけない。
+          fill-box は原点を「その要素自身の外接矩形の左上」から測るので、
+          SVG の座標（例 125px 125px）を渡すと中心から大きくずれる。
+          宝石が中心を外れて泳ぎ、ソナーの円の中心が動いて見えたのはこれ。
+          座標を渡す側は view-box（既定）のまま使うこと。
+          fill-box を使ってよいのは transform-origin: center のように
+          自分の中身を基準にする場合だけ。
+        */
+        /*
+          ⚠️⚠️ 図形そのものを回したり潰したりしないこと。
+          見かけの輪郭が変わると、立体ではなく「紙が動いている」に見える。
+          scaleX で潰していたときがまさにそれで、踊っているように見えた。
+
+          ★ 輪郭は一切動かさない。動かすのは光だけ。
+            本物の宝石も、回っているときに変わるのは面の輝きであって外形ではない。
+            面は静止したまま、上に重ねた光の帯が中心まわりを一定の速さで回る。
+
+          ⚠️ 一方向に、等速で回すこと。往復させると回転ではなく揺れになる。
+          ⚠️ 輪郭が動かないので、回っている間も面積と目盛りが読める。
+             止める時間を作る必要がない。
+        */
+        .gem-turn {
+          animation: gemTurn 5.5s linear infinite;
+          transform-origin: 125px 125px;
+        }
+        @keyframes gemTurn { to { transform: rotate(360deg); } }
+        /* 旧・斜めに走る光の筋。回る帯（.gem-turn）に置き換えたので未使用 */
+        /*
+          グリッター。ひとつずつ、短く強く瞬く。
+          ⚠️ ゆっくり明滅させないこと。呼吸に見えて、反射の鋭さが出ない。
+          点いている時間を短く、消えている時間を長く取る。
+        */
+        .gem-glitter {
+          transform-box: fill-box; transform-origin: center;
+          animation: gemGlitter 4.6s ease-in-out infinite;
+          opacity: 0;
+        }
+        @keyframes gemGlitter {
+          0%, 82%, 100% { opacity: 0; transform: scale(0.4) rotate(0deg); }
+          88%           { opacity: 0.95; transform: scale(1.15) rotate(22deg); }
+          94%           { opacity: 0.25; transform: scale(0.8) rotate(38deg); }
+        }
+        .gem-star {
+          transform-box: fill-box; transform-origin: center;
+          animation: gemStar 3.8s ease-in-out infinite;
+        }
+        @keyframes gemStar {
+          0%, 100% { opacity: 0.28; transform: scale(0.72); }
+          50%      { opacity: 0.9; transform: scale(1.12); }
+        }
         .greek-ten-poly {
           transform-origin: 125px 125px;
           animation: gtGrow .6s cubic-bezier(.16,1,.3,1);
@@ -31846,6 +33087,20 @@ export default function TarotDraw() {
         <div className="eyebrow">
           <Sparkles size={14} />
           <span>{t.eyebrow}</span>
+          {/*
+            背景の入切。
+            ⚠️ 設定の奥に隠さないこと。重い端末で真っ先に切りたくなる場所なので、
+            見えているところに置く。
+            ⚠️ 切っていることが分かる表示にする。入切が同じ見た目だと、
+            切ったことを忘れて「背景が出ない」と受け取られる。
+          */}
+          <button type="button"
+            className={`sky-toggle${skyOff ? " off" : ""}`}
+            onClick={toggleSky}
+            aria-pressed={!skyOff}
+            title={skyOff ? skyToggleT(lang).on : skyToggleT(lang).off}>
+            {skyOff ? skyToggleT(lang).labelOff : skyToggleT(lang).labelOn}
+          </button>
         </div>
         <h1>{t.appTitle}</h1>
         {t.tagline && <p className="app-tagline">{t.tagline}</p>}
@@ -31890,6 +33145,30 @@ export default function TarotDraw() {
               <SpreadSelect lang={lang} onSelect={(k) => setDrawMode(k)} />
             )}
 
+            {navTab === "draw" && isAnalog && (
+              <AnalogPanel
+                lang={lang}
+                onBack={() => setDrawMode("select")}
+                onSubmit={(key, cards) => {
+                  /*
+                    入力が済んだら、その配置の通常画面へ移す。
+                    ⚠️ ここで結果まで進めないこと。AI版か無料版かを選ぶ場面と、
+                    問いを書く場面は通常どおり通す。飛ばすのは札を選ぶところだけ。
+                  */
+                  setAnalogPreset({ key, cards: cards.filter(Boolean) });
+                  setDrawMode(key);
+                }}
+              />
+            )}
+
+            {navTab === "draw" && isMultiGame && (
+              <MultiPanel
+                lang={lang}
+                onBack={() => setDrawMode("select")}
+                spreadKey={spreadBaseKey(drawMode)}
+              />
+            )}
+
             {navTab === "draw" && isHexLike && (
               <HexagramPanel
                 lang={lang}
@@ -31908,6 +33187,9 @@ export default function TarotDraw() {
                   ⚠️ drawMode に Free を付け外しするだけにすること。
                   別の状態を持つと、二つの真実ができて必ずずれる。
                 */
+                /* ⚠️ 同じ配置のときだけ渡す。別の配置には枚数が合わない */
+                preset={analogPreset && analogPreset.key === spreadBaseKey(drawMode)
+                  ? analogPreset.cards : null}
                 onSwitchVersion={() => {
                   const base = spreadBaseKey(drawMode);
                   setDrawMode(isFreeSpreadKey(drawMode) ? base : `${base}Free`);
