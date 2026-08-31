@@ -2905,7 +2905,7 @@ const SPREADS = {
   */
   goldVein: { key: "goldVein", deck: ["major", "pentacles"], count: 7,
     layout: [
-      { x: 50, y: 8 },
+      { x: 50, y: 14 },
       { x: 20, y: 32 }, { x: 50, y: 26 }, { x: 80, y: 32 },
       { x: 20, y: 68 }, { x: 50, y: 80 }, { x: 80, y: 68 },
     ] },
@@ -2922,31 +2922,31 @@ const SPREADS = {
     ⚠️ layout は縦一列の暫定。図が要る配置は視覚補正が担うので、
     実際の並びを持たせたくなったらここを書き換える。
   */
-  selfSabotage: { key: "selfSabotage", deck: "full", count: 5, layout: [{ x: 50, y: 16 }, { x: 50, y: 33 }, { x: 50, y: 50 }, { x: 50, y: 66 }, { x: 50, y: 83 }] },
-  character: { key: "character", deck: "full", count: 5, layout: [{ x: 50, y: 16 }, { x: 50, y: 33 }, { x: 50, y: 50 }, { x: 50, y: 66 }, { x: 50, y: 83 }] },
-  monthly: { key: "monthly", deck: "full", count: 7, layout: [{ x: 50, y: 12 }, { x: 50, y: 25 }, { x: 50, y: 37 }, { x: 50, y: 50 }, { x: 50, y: 62 }, { x: 50, y: 75 }, { x: 50, y: 87 }] },
-  newRelation: { key: "newRelation", deck: "full", count: 6, layout: [{ x: 50, y: 14 }, { x: 50, y: 28 }, { x: 50, y: 42 }, { x: 50, y: 57 }, { x: 50, y: 71 }, { x: 50, y: 85 }] },
-  season: { key: "season", deck: "full", count: 5, layout: [{ x: 50, y: 16 }, { x: 50, y: 33 }, { x: 50, y: 50 }, { x: 50, y: 66 }, { x: 50, y: 83 }] },
-  spiritGuide: { key: "spiritGuide", deck: "full", count: 7, layout: [{ x: 50, y: 12 }, { x: 50, y: 25 }, { x: 50, y: 37 }, { x: 50, y: 50 }, { x: 50, y: 62 }, { x: 50, y: 75 }, { x: 50, y: 87 }] },
-  careerCross: { key: "careerCross", deck: "full", count: 6, layout: [{ x: 50, y: 14 }, { x: 50, y: 28 }, { x: 50, y: 42 }, { x: 50, y: 57 }, { x: 50, y: 71 }, { x: 50, y: 85 }] },
-  burnout: { key: "burnout", deck: "full", count: 4, layout: [{ x: 50, y: 20 }, { x: 50, y: 40 }, { x: 50, y: 60 }, { x: 50, y: 80 }] },
-  moonPhase: { key: "moonPhase", deck: "major", count: 4, layout: [{ x: 50, y: 20 }, { x: 50, y: 40 }, { x: 50, y: 60 }, { x: 50, y: 80 }] },
+  selfSabotage: { key: "selfSabotage", deck: "full", count: 5, layout: [{ x: 10, y: 14 }, { x: 30, y: 32 }, { x: 50, y: 50 }, { x: 70, y: 68 }, { x: 90, y: 86 }] },
+  character: { key: "character", deck: "full", count: 5, layout: [{ x: 10, y: 14 }, { x: 30, y: 32 }, { x: 50, y: 50 }, { x: 70, y: 68 }, { x: 90, y: 86 }] },
+  monthly: { key: "monthly", deck: "full", count: 7, layout: [{ x: 10, y: 14 }, { x: 23, y: 26 }, { x: 37, y: 38 }, { x: 50, y: 50 }, { x: 63, y: 62 }, { x: 77, y: 74 }, { x: 90, y: 86 }] },
+  newRelation: { key: "newRelation", deck: "full", count: 6, layout: [{ x: 10, y: 14 }, { x: 26, y: 28 }, { x: 42, y: 43 }, { x: 58, y: 57 }, { x: 74, y: 72 }, { x: 90, y: 86 }] },
+  season: { key: "season", deck: "full", count: 5, layout: [{ x: 10, y: 14 }, { x: 30, y: 32 }, { x: 50, y: 50 }, { x: 70, y: 68 }, { x: 90, y: 86 }] },
+  spiritGuide: { key: "spiritGuide", deck: "full", count: 7, layout: [{ x: 10, y: 14 }, { x: 23, y: 26 }, { x: 37, y: 38 }, { x: 50, y: 50 }, { x: 63, y: 62 }, { x: 77, y: 74 }, { x: 90, y: 86 }] },
+  careerCross: { key: "careerCross", deck: "full", count: 6, layout: [{ x: 10, y: 14 }, { x: 26, y: 28 }, { x: 42, y: 43 }, { x: 58, y: 57 }, { x: 74, y: 72 }, { x: 90, y: 86 }] },
+  burnout: { key: "burnout", deck: "full", count: 4, layout: [{ x: 10, y: 14 }, { x: 37, y: 38 }, { x: 63, y: 62 }, { x: 90, y: 86 }] },
+  moonPhase: { key: "moonPhase", deck: "major", count: 4, layout: [{ x: 10, y: 14 }, { x: 37, y: 38 }, { x: 63, y: 62 }, { x: 90, y: 86 }] },
   safePerson: { key: "safePerson", deck: "full", count: 10, layout: [
-      { x: 20, y: 12 }, { x: 50, y: 12 }, { x: 80, y: 12 },
+      { x: 20, y: 14 }, { x: 50, y: 14 }, { x: 80, y: 14 },
       { x: 20, y: 38 }, { x: 50, y: 38 }, { x: 80, y: 38 },
       { x: 20, y: 64 }, { x: 50, y: 64 }, { x: 80, y: 64 },
-      { x: 50, y: 88 },
+      { x: 50, y: 86 },
     ],
   },
-  somatic: { key: "somatic", deck: "minor", count: 4, layout: [{ x: 50, y: 20 }, { x: 50, y: 40 }, { x: 50, y: 60 }, { x: 50, y: 80 }] },
+  somatic: { key: "somatic", deck: "minor", count: 4, layout: [{ x: 10, y: 14 }, { x: 37, y: 38 }, { x: 63, y: 62 }, { x: 90, y: 86 }] },
   comparison: { key: "comparison", deck: "full", count: 8, layout: [
       { x: 25, y: 14 }, { x: 25, y: 36 }, { x: 25, y: 60 }, { x: 25, y: 84 },
       { x: 75, y: 14 }, { x: 75, y: 36 }, { x: 75, y: 60 }, { x: 75, y: 84 },
     ],
   },
-  undecided: { key: "undecided", deck: "full", count: 5, layout: [{ x: 50, y: 16 }, { x: 50, y: 33 }, { x: 50, y: 50 }, { x: 50, y: 66 }, { x: 50, y: 83 }] },
-  moneyMind: { key: "moneyMind", deck: "full", count: 5, layout: [{ x: 50, y: 16 }, { x: 50, y: 33 }, { x: 50, y: 50 }, { x: 50, y: 66 }, { x: 50, y: 83 }] },
-  loopOfThought: { key: "loopOfThought", deck: ["swords"], count: 3, layout: [{ x: 50, y: 25 }, { x: 50, y: 50 }, { x: 50, y: 75 }] },
+  undecided: { key: "undecided", deck: "full", count: 5, layout: [{ x: 10, y: 14 }, { x: 30, y: 32 }, { x: 50, y: 50 }, { x: 70, y: 68 }, { x: 90, y: 86 }] },
+  moneyMind: { key: "moneyMind", deck: "full", count: 5, layout: [{ x: 10, y: 14 }, { x: 30, y: 32 }, { x: 50, y: 50 }, { x: 70, y: 68 }, { x: 90, y: 86 }] },
+  loopOfThought: { key: "loopOfThought", deck: ["swords"], count: 3, layout: [{ x: 10, y: 14 }, { x: 50, y: 50 }, { x: 90, y: 86 }] },
 
   /*
     アナログ分析の入口。実際に引く配置ではないので枚数も配置も持たない。
@@ -3061,11 +3061,11 @@ const SPREADS = {
      配置と位置ラベルだけ先に置き、メニューには近日公開として並べる。
      何が来るのかが分かれば、待つ側の見通しが立つ。
      ============================================================ */
-  manifestation: { key: "manifestation", deck: "full", count: 6, layout: [{ x: 50, y: 12 }, { x: 20, y: 38 }, { x: 80, y: 38 }, { x: 20, y: 68 }, { x: 80, y: 68 }, { x: 50, y: 90 }] },
+  manifestation: { key: "manifestation", deck: "full", count: 6, layout: [{ x: 50, y: 14 }, { x: 20, y: 38 }, { x: 80, y: 38 }, { x: 20, y: 68 }, { x: 80, y: 68 }, { x: 50, y: 86 }] },
   shadowWork: { key: "shadowWork", deck: "full", count: 5, layout: [{ x: 50, y: 14 }, { x: 22, y: 42 }, { x: 78, y: 42 }, { x: 35, y: 72 }, { x: 65, y: 72 }] },
-  innerChild: { key: "innerChild", deck: "full", count: 5, layout: [{ x: 50, y: 16 }, { x: 24, y: 44 }, { x: 76, y: 44 }, { x: 50, y: 62 }, { x: 50, y: 88 }] },
+  innerChild: { key: "innerChild", deck: "full", count: 5, layout: [{ x: 50, y: 16 }, { x: 24, y: 44 }, { x: 76, y: 44 }, { x: 50, y: 62 }, { x: 50, y: 86 }] },
   boundary: { key: "boundary", deck: "full", count: 10, layout: [
-      { x: 50, y: 10 }, { x: 22, y: 24 }, { x: 78, y: 24 },
+      { x: 50, y: 14 }, { x: 22, y: 24 }, { x: 78, y: 24 },
       { x: 12, y: 44 }, { x: 88, y: 44 },
       { x: 50, y: 50 },
       { x: 12, y: 68 }, { x: 88, y: 68 },
@@ -3133,8 +3133,8 @@ const SPREADS = {
     deck: "full",
     count: 7,
     layout: [
-      { x: 9, y: 80 }, { x: 15, y: 50 }, { x: 30, y: 26 }, { x: 50, y: 16 },
-      { x: 70, y: 26 }, { x: 85, y: 50 }, { x: 91, y: 80 },
+      { x: 10, y: 80 }, { x: 15, y: 50 }, { x: 30, y: 26 }, { x: 50, y: 16 },
+      { x: 70, y: 26 }, { x: 85, y: 50 }, { x: 90, y: 80 },
     ],
   },
   /*
@@ -3159,13 +3159,13 @@ const SPREADS = {
       形（左右の柱と中央柱の比）は変えていない。
     */
     layout: [
-      { x: 50, y: 8 },
+      { x: 50, y: 14 },
       { x: 76, y: 21 }, { x: 24, y: 21 },
       { x: 76, y: 40 }, { x: 24, y: 40 },
       { x: 50, y: 50 },
       { x: 76, y: 65 }, { x: 24, y: 65 },
       { x: 50, y: 76 },
-      { x: 50, y: 91 },
+      { x: 50, y: 86 },
     ],
   },
   // ⑥ 10枚。タロットで最も有名。本格派の象徴
@@ -3176,7 +3176,7 @@ const SPREADS = {
     layout: [
       { x: 34, y: 50 }, { x: 34, y: 50, cross: true }, { x: 34, y: 18 },
       { x: 34, y: 82 }, { x: 14, y: 50 }, { x: 54, y: 50 },
-      { x: 82, y: 88 }, { x: 82, y: 65 }, { x: 82, y: 42 }, { x: 82, y: 19 },
+      { x: 82, y: 86 }, { x: 82, y: 65 }, { x: 82, y: 42 }, { x: 82, y: 19 },
     ],
   },
   // ⑦ 11枚。2人の関係を読む
@@ -3189,7 +3189,7 @@ const SPREADS = {
       { x: 22, y: 44 }, { x: 78, y: 44 },
       { x: 22, y: 68 }, { x: 78, y: 68 },
       { x: 50, y: 32 }, { x: 50, y: 56 },
-      { x: 50, y: 80 }, { x: 30, y: 90 }, { x: 70, y: 90 },
+      { x: 50, y: 80 }, { x: 30, y: 86 }, { x: 70, y: 86 },
     ],
   },
   // ⑧ 12枚。12ハウスに対応。西洋占星術の知識がそのまま活きる
@@ -3355,7 +3355,7 @@ const SPREAD_I18N = {
     careerCross: { name: "キャリアの岐路", desc: "続ける力・重なる負荷・外からの評価を、火の三要素として見る。", pos: ["続けてきたもの", "続ける理由", "重なっている負荷", "抜けない疲れ", "外から見えている姿", "受けている評価"] },
     character: { name: "人物を読む", desc: "ひとりの人となりを、長所と短所の両面から見る。", pos: ["その人そのもの", "最大の長所", "最大の短所", "いま最も気にしていること", "関わることで得るもの"] },
     newRelation: { name: "新しい関係", desc: "始まったばかりの間柄を、双方の持ち込みから読む。", pos: ["関係の土台", "相手が持ち込むもの", "自分が持ち込むもの", "いまの課題", "秘めた可能性", "育てる方法"] },
-    monthly: { name: "今月の流れ", desc: "ひと月を、主題と機会と障害で見渡す。", pos: ["今月の主題", "隠れた好機", "越える障害", "伸びる部分", "注意すべきこと", "取るべき行動", "月末に残るもの"] },
+    monthly: { name: "今月の流れ", desc: "種から次の種まで、今月がどこまで進むかを七つの段で見る。", pos: ["種（何を蒔いたか）", "芽（もう出ているもの）", "根（見えない土台）", "葉（伸びている部分）", "つぼみ（あと少しのもの）", "花（今月ひらくもの）", "実（月末に残るもの）"] },
     season: { name: "季節の巡り", desc: "三月ほどの周期を、種と収穫で捉える。", pos: ["いまの勢い", "これから育てる種", "光を当てる領域", "影に置いたもの", "収穫できるもの"] },
     spiritGuide: { name: "直感とのつながり", desc: "勘の通り道が、いまどれだけ開いているかを見る。", pos: ["直感の開き具合", "受け取ろうとしているもの", "現状の見え方", "つながりを強める方法", "いま必要な導き", "邪魔しているもの", "果たしている役割"] },
   },
@@ -3405,7 +3405,7 @@ const SPREAD_I18N = {
     careerCross: { name: "Career Crossroads", desc: "Persistence, load, and outside regard, read as the three parts of a fire.", pos: ["What you have kept up", "Why you keep it up", "The load stacking up", "Tiredness that won't clear", "How you look from outside", "The regard you receive"] },
     character: { name: "Reading a Person", desc: "See one person from both their strengths and their faults.", pos: ["The person themselves", "Their greatest strength", "Their greatest fault", "What weighs on them now", "What you gain from knowing them"] },
     newRelation: { name: "A New Relationship", desc: "Read a young bond from what each side brings.", pos: ["The ground of the bond", "What they bring", "What you bring", "The present difficulty", "The hidden possibility", "How to grow it"] },
-    monthly: { name: "The Month Ahead", desc: "Survey a month by its theme, its chances and its obstacles.", pos: ["The theme of the month", "A hidden chance", "The obstacle to clear", "Where you will grow", "What to watch for", "The action to take", "What remains at month's end"] },
+    monthly: { name: "This Month", desc: "From seed to the next seed — how far this month gets, in seven stages.", pos: ["Seed (what you sowed)", "Sprout (already up)", "Root (the unseen base)", "Leaf (what is growing)", "Bud (almost there)", "Bloom (what opens this month)", "Fruit (what remains at month end)"] },
     season: { name: "The Turn of the Season", desc: "Take a season by its seed and its harvest.", pos: ["The present momentum", "The seed to grow", "Where to put the light", "What you set in shadow", "What can be harvested"] },
     spiritGuide: { name: "Connection with Intuition", desc: "See how far the channel of instinct is open right now.", pos: ["How open the intuition is", "What you are reaching for", "How things look from here", "How to strengthen the link", "The guidance needed now", "What gets in the way", "The role you are playing"] },
   },
@@ -4021,6 +4021,22 @@ const FLEXIBLE_COUNT = ["reaper", "turnOrder", "roleAssign", "pairMatch", "lucki
   ⚠️ ここに足したら、SPREADS の deck も「起こりうる札の全体」にしておくこと。
   図鑑や検査が deck を見るので、実際に出る札が入っていないと数が合わなくなる。
 */
+/*
+  斜めに並べる配置と、その枚数。
+
+  ★ 縦一列は「名前がどれに掛かるか」が読み取れず、押しにくい。
+    左上から右下へ斜めに置くと、一枚ずつが独立して見える。
+
+  ⚠️ 盤の縦横比を枚数から決めるために、ここで枚数を持つ。
+    比率が足りないと札が重なり、余ると間延びする。
+*/
+const DIAG_SPREADS = {
+  loopOfThought: 3, somatic: 4, moonPhase: 4, burnout: 4,
+  moneyMind: 5, undecided: 5, season: 5, character: 5, selfSabotage: 5,
+  careerCross: 6, newRelation: 6,
+  monthly: 7, spiritGuide: 7,
+};
+
 const SPREAD_STAGED_DECK = {
   /* THE 金運。一枚目は主題の大アルカナ、以降は貨幣 */
   goldVein: (n) => (n === 0 ? "major" : ["pentacles"]),
@@ -4455,9 +4471,28 @@ const POSITION_COLORS = {
 };
 
 /** その位置に割り当てられた色。無い配置では既定の色へ落とす */
+/*
+  位置ごとの色。
+
+  ★ 週の物語が読みやすいのは、位置に色が付いていて、
+    どの行がどの位置の話か一目で分かるから。これを全配置でやる。
+
+  ⚠️⚠️ 配置ごとに手で色表を書かないこと。
+    配置を足すたびに忘れて色が付かない。位置の数から機械的に割り当てる。
+  ⚠️ 隣り合う位置の色を近づけないこと。色相を順に回すと隣が似た色になる。
+    黄金角（137.5度）で回すと、何個並べても隣が離れる。
+*/
+const POSITION_HUE_STEP = 137.5;
+function autoPositionColor(index) {
+  const hue = Math.round((index * POSITION_HUE_STEP) % 360);
+  /* ⚠️ 彩度と明度は固定。動かすと色ごとに目立ち方が変わり、順位に見える */
+  return `hsl(${hue} 58% 66%)`;
+}
 function positionColor(spreadKey, index, fallback) {
   const table = POSITION_COLORS[spreadKey];
-  return (table && table[index]) || fallback;
+  if (table && table[index]) return table[index];
+  if (typeof index === "number" && index >= 0) return autoPositionColor(index);
+  return fallback;
 }
 //                       日           月           火           水           木           金           土
 
@@ -6916,6 +6951,74 @@ function loadSpreadLog() {
     const list = raw ? JSON.parse(raw) : [];
     return Array.isArray(list) ? list : [];
   } catch { return []; }
+}
+
+/*
+  配置の結果を「前回の結果」として残す。
+
+  ⚠️ これまでスリーカードしか残らず、他の配置は鑑定を読んだあと
+  どこにも残らずに消えていた。
+  ⚠️ スリーカードの履歴とは別に持つ。あちらは八分野の点数や
+  大アルカナの枠を前提にした形なので、他の配置を入れると読めない項目が並ぶ。
+*/
+/*
+  保存。
+
+  ★ 「前回」は上書きされるので、残したい回は自分で保存する。
+  ★ 無料10件。3件では窮屈すぎて課金前に離れ、50件では一生上限に当たらない。
+    10件なら印象に残った回は十分入り、数か月に一度は上限に当たる。
+
+  ⚠️⚠️ 保存は端末の中にしかない。機種変更でも、閲覧データを消しても失われる。
+    課金する前に必ずそう伝えること。伝えずに売ると、消えたときに
+    「金を取って消した」ことになる。
+  ⚠️ 上限に達しても古いものを勝手に消さないこと。黙って消えるのが最悪。
+*/
+const LS_SAVED_KEY = "tarot_saved_readings";
+const SAVED_FREE_LIMIT = 10;
+const SAVED_PAID_LIMIT = 100;
+function loadSaved() {
+  try {
+    const raw = localStorage.getItem(LS_SAVED_KEY);
+    const v = raw ? JSON.parse(raw) : [];
+    return Array.isArray(v) ? v : [];
+  } catch { return []; }
+}
+function savedLimit(paid) { return paid ? SAVED_PAID_LIMIT : SAVED_FREE_LIMIT; }
+function addSaved(entry, paid) {
+  try {
+    const list = loadSaved();
+    if (list.length >= savedLimit(paid)) return false;
+    /* ⚠️ 同じ回を二度保存させない。押した手応えが無いと連打される */
+    if (list.some((x) => x.ts === entry.ts)) return true;
+    localStorage.setItem(LS_SAVED_KEY, JSON.stringify([entry, ...list]));
+    return true;
+  } catch { return false; }
+}
+function removeSaved(ts) {
+  try {
+    localStorage.setItem(LS_SAVED_KEY,
+      JSON.stringify(loadSaved().filter((x) => x.ts !== ts)));
+  } catch (e) { /* 消せなくても表示は続く */ }
+}
+
+const LS_LAST_SPREAD = "tarot_last_spread";
+function saveSpreadResult(entry) {
+  try {
+    localStorage.setItem(LS_LAST_SPREAD, JSON.stringify({
+      ts: Date.now(),
+      spread: entry.spreadKey,
+      tier: entry.tier || "ai",
+      q: (entry.question || "").slice(0, 120),
+      cards: (entry.cards || []).map((c) => ({ id: c.id, r: !!c.reversed })),
+      reading: (entry.reading || "").slice(0, 4000),
+    }));
+  } catch (e) { /* 保存できなくても占いは成立する */ }
+}
+function loadSpreadResult() {
+  try {
+    const raw = localStorage.getItem(LS_LAST_SPREAD);
+    return raw ? JSON.parse(raw) : null;
+  } catch { return null; }
 }
 
 function appendSpreadLog(spreadKey, cards, question) {
@@ -9549,6 +9652,37 @@ function pickSkyKind() {
 /* 空を固定したときの保存先。値は SKY_KINDS のどれか、または "" で解除 */
 const LS_SKY_FIXED = "tarot_sky_fixed";
 /* 背景を切っているか。"1" なら切 */
+/*
+  エフェクトの入切。
+
+  ★ 見た目を足す仕組みは、必ず一つずつ切れるようにしておく。
+    まとめて一つにすると、不具合が出たときにどれが原因か分からないまま
+    全部消すことになる。実際それで何往復もした。
+
+  ⚠️ 演出を足したら、必ずここに一項目増やすこと。
+  ⚠️ 既定は入。切った状態で不具合を報告されると、
+    こちらは入の状態を見ていて話が噛み合わない。
+*/
+const LS_FX_OFF = "tarot_fx_off";
+const FX_KINDS = [
+  /*
+    エフェクト1。枠の厚み・入力欄の沈み・ボタンの縁の光・
+    見出しの線・結論の上辺・選んだ札の脈動をまとめたもの。
+    ⚠️ 個別に切る必要が出たら、また分ければよい。
+      いまは「この一式でどう見えるか」を確かめる段階。
+  */
+  { key: "fx1", cls: "fx-1" },
+  /* 触れたときの反応。押せるものが押せると分かる */
+  { key: "fx2", cls: "fx-2" },
+];
+function loadFxOff() {
+  try {
+    const raw = localStorage.getItem(LS_FX_OFF);
+    const v = raw ? JSON.parse(raw) : [];
+    return Array.isArray(v) ? v : [];
+  } catch { return []; }
+}
+
 const LS_SKY_OFF = "tarot_sky_off";
 /* 背景の入切の文言。⚠️ T に足さない。未訳は英語へ落とす */
 /* 戻る確認の文言。⚠️ T に足さない。未訳は英語へ落とす */
@@ -10876,6 +11010,20 @@ function horseshoeStand(drawn, openedIndices) {
   ⚠️ 文字を切らないこと。一行に詰める単位数の上限だけ決めて、
   溢れたら行を足す（捨てない）。全角は2、半角は1で数える。
 */
+/*
+  帯グラフの下に出す短い名前。
+
+  ⚠️ 括弧の前で切ること。括弧の中は補足なので、落としても意味が残る。
+  ⚠️ 中黒や読点でも切る。「過去・現在」のような並びは前半だけで通じる。
+  ⚠️ それでも長いときだけ、最後に文字数で切る。
+*/
+function shortLabel(s) {
+  const t = String(s || "");
+  const cut = t.search(/[（(・、,]/);
+  const base = cut > 0 ? t.slice(0, cut) : t;
+  return base.length > 5 ? base.slice(0, 5) : base;
+}
+
 function hsWrapLabel(text, budget = 13, maxLines = 4) {
   const str = String(text || "").trim();
   if (!str) return [];
@@ -11449,6 +11597,19 @@ const MODERN_VIS_I18N = {
         coin: "どちらも、持っているものをくすんで見ています。比べる前に、それぞれの値打ちを数え直してください。",
       },
     },
+    growTitle: "育つもの",
+    growLegend: "七枚を、種から実までの段として読みます。進んだ段が良い、ではありません。",
+    growNames: ["種", "芽", "根", "葉", "つぼみ", "花", "実"],
+    growStage: (n, v) => `いま ${n} ／ 七段のうち ${v}`,
+    growRead: [
+      "まだ種のままです。動きが見えないのは、始まっていないからではなく、土の中にいるからです。今月は蒔くことに使ってください。",
+      "芽が出ています。外から見て分かるのはここからで、まだ折れやすい段です。急に大きくしようとしないでください。",
+      "根が伸びています。見えないところが進む月です。手応えが薄くても、土台は作られています。",
+      "葉が広がっています。手を広げるのに向いた月です。光の当たる場所へ出してください。",
+      "つぼみが付いています。あと少しですが、開くのは今月とは限りません。待つのも仕事のうちです。",
+      "花がひらいています。人に見せるならこの月です。ただし花の時期は長くありません。",
+      "実がなっています。受け取る月であると同時に、次に蒔くものを選ぶ月です。ここで終わりではありません。",
+    ],
     boundTitle: "浸蝕",
     boundLegend: "桃色の円が自分、外の三人が関わる相手です。入口は小さくても、中で広がります。どの層まで届いているかを見てください。",
     boundZone: ["表向きの付き合い", "私生活", ["プライバシー", "の核心"]],
@@ -11824,6 +11985,19 @@ const MODERN_VIS_I18N = {
         coin: "Both of you see what you hold as tarnished. Count the worth again before comparing.",
       },
     },
+    growTitle: "What Grows",
+    growLegend: "Seven cards read as stages from seed to fruit. Further along is not better.",
+    growNames: ["Seed", "Sprout", "Root", "Leaf", "Bud", "Bloom", "Fruit"],
+    growStage: (n, v) => `Now: ${n} / stage ${v} of 7`,
+    growRead: [
+      "Still a seed. Nothing shows because it is underground, not because nothing began. Use this month to sow.",
+      "It has sprouted. Visible at last, and still easy to snap. Don't force it larger.",
+      "The roots are running. A month where the unseen part advances. Thin response, solid base.",
+      "Leaves are spreading. A good month to widen. Put it where the light falls.",
+      "A bud has set. Nearly there — though it may not open this month. Waiting is part of the work.",
+      "It is in bloom. If you are going to show it, show it now. Blooms do not last long.",
+      "The fruit is on. A month to receive, and to choose what you sow next. This is not the end.",
+    ],
     boundTitle: "Seepage",
     boundLegend: "The pink circle is you; the three figures are the people involved. Small openings spread wide inside. Watch which layer it reaches.",
     boundZone: ["What you show", "Private life", ["Core of", "privacy"]],
@@ -12005,7 +12179,13 @@ function ShadowMass({ drawn, lang, openedIndices }) {
   const d = dark === null ? 0 : dark, l = light === null ? 0 : light;
   const integ = (d + l) > 0 ? l / (d + l) : 0.5;
   const step = visStep(integ, SHADOW_CUTS);
-  const W = 300, H = 200, CX = 150, CY = 92, R = 54;
+  /*
+    ⚠️ 図の下に二行入る。高さを詰めると重なる。
+    実際 CY+R+40=186 と H-6=194 で 8px しか離れておらず、
+    「統合の自分」と「統合 71%」が重なっていた。
+    ⚠️ 行を足すときは H も一緒に増やすこと。
+  */
+  const W = 300, H = 232, CX = 150, CY = 92, R = 54;
   /* 影の円の中心。統合が進むほど本体に近づき、重なる */
   const gap = (1 - integ) * R * 1.9;
   const sx = CX + gap;
@@ -12035,7 +12215,7 @@ function ShadowMass({ drawn, lang, openedIndices }) {
         {/* 影。黒い円が横から寄ってきて重なる */}
         <circle cx={sx} cy={CY} r={R} fill="rgba(8,6,16,0.97)"
           stroke="rgba(150,140,190,0.35)" strokeWidth="0.8" />
-        <text x={CX} y={CY + R + 40} textAnchor="middle" className="hs-pt-name"
+        <text x={CX} y={CY + R + 34} textAnchor="middle" className="hs-pt-name"
           fill="rgba(226,214,240,0.7)">{t.shadowBody}</text>
         <VisNumber gradId="shadowHolo" x={CX} y={H - 6}>{t.shadowPct(Math.round(integ * 100))}</VisNumber>
         <text x={sx} y={CY - R - 12} textAnchor="middle" className="hs-pt-name"
@@ -12974,6 +13154,160 @@ function GoldVein({ drawn, lang, openedIndices }) {
       {reach && [pick, mine, spot, ground, timing, crew].every(Boolean) && (
         <p className="gv-joke sheen-text">{t.gvJoke}</p>
       )}
+    </div>
+  );
+}
+
+/*
+  【今月の流れ】育つもの
+
+  ★ 七枚を、種から実までの段として読む。
+    どこまで進むかは、七枚の総量で決まる。
+
+      種 → 芽 → 根 → 葉 → つぼみ → 花 → 実
+
+  ⚠️ 進んだ段が「良い」ではないこと。実まで行けば終わりが近いし、
+    種のままなら、まだ何にでもなれる。文言でもそう書く。
+  ⚠️ 段の境目は実測（30万回、各14.2〜14.3%）。
+
+  ★ 実の次は、また種に戻る。月は巡るので、終点ではない。
+    最後の段でだけ、実から落ちた種を描く。
+*/
+const GROW_CUTS = [0.317, 0.374, 0.421, 0.462, 0.510, 0.569];
+function MonthGrowth({ drawn, lang, openedIndices }) {
+  const t = visT(lang);
+  const seen = new Set(openedIndices);
+  const vals = [0, 1, 2, 3, 4, 5, 6].map((i) =>
+    (seen.has(i) && drawn[i] ? cardPower(drawn[i]) : null));
+  const got = vals.filter((x) => x !== null);
+  if (!got.length) return null;
+  const avg = got.reduce((a, b) => a + b, 0) / got.length;
+  const step = visStep(avg, GROW_CUTS);   /* 0=種 … 6=実 */
+
+  const W = 300, H = 250, GX = 150, GY = 196;
+  /* 茎の高さ。段が進むほど伸びる */
+  const stem = 12 + step * 18;
+  const showLeaf = step >= 3;
+  const showBud = step >= 4;
+  const showBloom = step >= 5;
+  const showFruit = step >= 6;
+  return (
+    <div className="hs-pass">
+      <div className="hs-pass-title sheen-text">{t.growTitle}</div>
+      <p className="hs-pass-legend">{t.growLegend}</p>
+      <svg viewBox={`0 0 ${W} ${H}`} className="hs-pass-svg" role="img" aria-label={t.growTitle}>
+        <HoloDefs id="growHolo" w={W} h={H} />
+        <defs>
+          <radialGradient id="growSun" cx="50%" cy="50%">
+            <stop offset="0%" stopColor="#FFE9A8" stopOpacity="0.5" />
+            <stop offset="100%" stopColor="#FFE9A8" stopOpacity="0" />
+          </radialGradient>
+        </defs>
+        {/*
+          陽。
+          ★ 背景の空で使っている太陽と同じ形にする。
+            別の描き方をすると、同じアプリの中で太陽が二種類になる。
+          ⚠️ 段が進むほど強くする。育つには光が要る。
+          ⚠️ 光条は本体から離して置くこと。接すると歯車に見える。
+        */}
+        <g transform="translate(52 46)" className="sky-orb">
+          <circle cx="0" cy="0" r={17 + step} fill="url(#growSun)" />
+          <circle cx="0" cy="0" r={13 + step * 0.6} fill="#FFE9A8" opacity={0.32 + step * 0.06} />
+          {Array.from({ length: 12 }, (_, k) => {
+            const a2 = (Math.PI / 6) * k;
+            const inner = 17 + step, outer = inner + 8 + step * 1.4;
+            return (
+              <line key={k}
+                x1={(Math.cos(a2) * inner).toFixed(1)} y1={(Math.sin(a2) * inner).toFixed(1)}
+                x2={(Math.cos(a2) * outer).toFixed(1)} y2={(Math.sin(a2) * outer).toFixed(1)}
+                stroke="#FFE9A8" strokeWidth="2" strokeLinecap="round"
+                opacity={0.3 + step * 0.07} />
+            );
+          })}
+        </g>
+        {/* 土。⚠️ 線一本にしないこと。土に見えない */}
+        <path d={`M 0 ${GY} L ${W} ${GY} L ${W} ${H} L 0 ${H} Z`} fill="#2A2018" />
+        <path d={`M 0 ${GY} q 40 -4 80 0 t 80 0 t 80 0 t 60 0`}
+          fill="none" stroke="#3E3024" strokeWidth="3" />
+        {/*
+          根。⚠️ 段2から。土の中なので、地面より下に描く。
+          見えない土台なので、細く、広く。
+        */}
+        {step >= 2 && [-1, 0, 1].map((k) => (
+          <path key={k}
+            d={`M ${GX} ${GY} q ${k * 16} 12 ${k * 26} ${20 + step * 2}`}
+            fill="none" stroke="#6B5A3E" strokeWidth="1.6" strokeLinecap="round" />
+        ))}
+        {/* 種。⚠️ どの段でも描く。始まりが消えると流れが読めない */}
+        <ellipse cx={GX} cy={GY - 4} rx="6" ry="8" fill="#8A6B3E"
+          stroke="#5C452A" strokeWidth="1" />
+        {/* 茎 */}
+        {step >= 1 && (
+          <path d={`M ${GX} ${GY - 6} q ${step % 2 ? 6 : -6} ${-stem / 2} 0 ${-stem}`}
+            fill="none" stroke="#4E8C4A" strokeWidth="2.6" strokeLinecap="round"
+            className="mv-sway" />
+        )}
+        {/* 葉 */}
+        {showLeaf && [-1, 1].map((k) => (
+          <path key={k}
+            d={`M ${GX} ${GY - stem * 0.55} q ${k * 22} -8 ${k * 30} 6 q ${-k * 18} 8 ${-k * 30} -6 Z`}
+            fill="#5AA854" stroke="#3E7A3A" strokeWidth="1" className="mv-sway"
+            style={{ animationDelay: `${k > 0 ? 0.4 : 0}s` }} />
+        ))}
+        {/* つぼみ */}
+        {showBud && !showBloom && (
+          <ellipse cx={GX} cy={GY - stem - 6} rx="7" ry="11" fill="#C86E96"
+            stroke="#9C4E72" strokeWidth="1.2" className="mv-breathe" />
+        )}
+        {/* 花。⚠️ 花びらを一枚ずつ置く。丸一つだと点にしか見えない */}
+        {showBloom && (
+          <g className="mv-breathe">
+            {[0, 1, 2, 3, 4].map((k) => {
+              const a2 = (Math.PI * 2 * k) / 5 - Math.PI / 2;
+              return (
+                <ellipse key={k}
+                  cx={GX + Math.cos(a2) * 11} cy={GY - stem - 6 + Math.sin(a2) * 11}
+                  rx="8" ry="11" fill="url(#growHolo)" opacity="0.9"
+                  transform={`rotate(${(k * 72)} ${GX + Math.cos(a2) * 11} ${GY - stem - 6 + Math.sin(a2) * 11})`} />
+              );
+            })}
+            <circle cx={GX} cy={GY - stem - 6} r="6" fill="#F2D06B" />
+          </g>
+        )}
+        {/* 実 */}
+        {showFruit && [-1, 1].map((k) => (
+          <g key={k}>
+            <circle cx={GX + k * 18} cy={GY - stem + 6} r="9"
+              fill="#D2503C" stroke="#9C3428" strokeWidth="1.2" className="mv-warm" />
+            <path d={`M ${GX + k * 18} ${GY - stem - 3} q 3 -5 8 -6`}
+              fill="none" stroke="#4E8C4A" strokeWidth="1.6" strokeLinecap="round" />
+          </g>
+        ))}
+        {/*
+          次の種。⚠️ 実まで来た回だけ。
+          月は巡るので、実は終点ではない。
+        */}
+        {showFruit && (
+          <g className="mv-fall">
+            <ellipse cx={GX + 28} cy={GY - 10} rx="4" ry="5.5" fill="#8A6B3E" />
+          </g>
+        )}
+        {/* 段の目盛り。⚠️ 七つ並べて、いまどこかを示す */}
+        {[0, 1, 2, 3, 4, 5, 6].map((k) => (
+          <g key={k}>
+            <circle cx={210 + (k % 4) * 22} cy={40 + Math.floor(k / 4) * 22} r="5"
+              fill={k <= step ? "#7ED882" : "rgba(150,140,190,0.25)"} />
+            {k === step && (
+              <circle cx={210 + (k % 4) * 22} cy={40 + Math.floor(k / 4) * 22} r="8"
+                fill="none" stroke="#FFFFFF" strokeWidth="1" className="mv-pulse" />
+            )}
+          </g>
+        ))}
+        <VisNumber gradId="growHolo" x={W / 2} y={H - 6}>
+          {t.growStage(t.growNames[step], step + 1)}
+        </VisNumber>
+      </svg>
+      <p className="hs-pass-read">{t.growRead[step]}</p>
     </div>
   );
 }
@@ -14055,7 +14389,12 @@ function TimelineFlow({ spreadKey, drawn, labels, lang, openedIndices }) {
               <text x={x + w / 2} y={BASE + 14} textAnchor="middle" className="hs-pt-name"
                 fill={isPeak ? "#FFFFFF" : "rgba(226,214,240,0.45)"}
                 style={{ fontWeight: isPeak ? 700 : 400, fontSize: "7px" }}>
-                {(labels && labels[i]) ? hsWrapLabel(labels[i], 5, 2)[0] : ""}
+                {/*
+                  ⚠️⚠️ 頭から5文字で切らないこと。
+                  「種（何を蒔いたか）」が「種（」になり、括弧だけが残る。
+                  括弧の前で切れば、括弧の中は補足なので落として構わない。
+                */}
+                {(labels && labels[i]) ? shortLabel(labels[i]) : ""}
               </text>
             </g>
           );
@@ -20599,8 +20938,21 @@ function HexagramPanel({ lang, onBack, question, userName, canDraw, onConsume, o
   const openAll = () => {
     setBulkAsking(false);
     if (revealTimer.current) clearTimeout(revealTimer.current);
+    /*
+      ⚠️⚠️ 一度に全部開くと、下に隠れていた内容がまとめて現れ、
+      その高さぶん画面が押し下げられて一番下まで飛ぶ。
+      押した場所に留まるよう、いまの位置を控えて戻す。
+      ⚠️ 即座に戻さないこと。描画が終わる前に戻すと、
+      増えた高さが反映されておらず、また飛ぶ。
+    */
+    const keep = typeof window !== "undefined" ? window.scrollY : 0;
     setStage(STAGES.length);
     setRevealLock(false);
+    if (typeof window !== "undefined") {
+      window.requestAnimationFrame(() => {
+        window.requestAnimationFrame(() => window.scrollTo({ top: keep }));
+      });
+    }
   };
 
   const advanceStage = () => {
@@ -21153,7 +21505,27 @@ function HexagramPanel({ lang, onBack, question, userName, canDraw, onConsume, o
             spreadKeyWithTier(spreadKey, tier)),
           2000
         );
-        if (alive) setReading(normalizeReadingText(txt));
+        if (alive) {
+          const text = normalizeReadingText(txt);
+          setReading(text);
+          /*
+            ⚠️ 失敗した回は残さないこと。失敗の文言が保存され、
+            見返すたびに「導くことができませんでした」が出る。
+          */
+          if (text && text.trim()) {
+            /*
+              ⚠️⚠️ onRecord をここで呼ばないこと。
+              台帳への記録は confirm で済んでいる。二度呼ぶと
+              親の状態が作り直され、開いている途中の画面が巻き戻る。
+              実際「これでいい」を押しても進まなくなった。
+            */
+            saveSpreadResult({
+              spreadKey, tier, lang,
+              cards: drawn, question: question || topic || "",
+              reading: text,
+            });
+          }
+        }
       } catch {
         /*
           AIが出せなかった回は枠を返す。消費したのは onConsume を通った回だけなので、
@@ -21676,8 +22048,23 @@ function HexagramPanel({ lang, onBack, question, userName, canDraw, onConsume, o
             // 円配置は正方形に近い。縦に余ると札が相対的に小さく、上下の余白も非対称になる
             aspectRatio: isTree ? "1 / 1.50" : isHorseshoe ? "1 / 0.82"
               : spreadKey === "simpleCross" ? "1 / 1.20" : spreadKey === "greekCross" ? "1 / 1.00"
-              : isWeekly ? "1 / 1.31" : isCeltic ? "1 / 1.05" : isHoro ? "1 / 1.02" : isChoice ? "1 / 1.10" : "1 / 1.15",
+              : isWeekly ? "1 / 1.31" : isCeltic ? "1 / 1.05" : isHoro ? "1 / 1.02" : isChoice ? "1 / 1.10"
+              /*
+                斜めに並べる配置。
+                ⚠️⚠️ 枚数に応じて縦を伸ばすこと。比率を固定すると、
+                枚数が多い配置で札どうしが重なる。
+                札は幅の19%・高さは幅の28%ぶんを占めるので、
+                n枚を斜めに置くなら、縦は (n-1)*0.28 + 0.28 ぶん要る。
+              */
+              : DIAG_SPREADS[spreadBaseKey(spreadKey)]
+                ? `1 / ${(0.42 + DIAG_SPREADS[spreadBaseKey(spreadKey)] * 0.30).toFixed(2)}`
+              : "1 / 1.15",
           }}>
+          {/*
+            気泡と傷。⚠️ 背景ではなく要素として置く。
+            背景に混ぜると色ガラスと同じ層になり、混色に飲まれて見えない。
+          */}
+          <span className="glass-flaw" aria-hidden="true" />
             {/* 盤面全体を巡る粒子。カードの手前を横切る */}
             <div className="hex-orbit" aria-hidden="true">
               {HEX_ORBIT_SPARKS.map((sp, k) => (
@@ -22240,6 +22627,11 @@ function HexagramPanel({ lang, onBack, question, userName, canDraw, onConsume, o
           {/* THE 金運は金脈。どこが足りないかを見る */}
           {spreadKey === "goldVein" && stage > 0 && (
             <GoldVein drawn={drawn} lang={lang} openedIndices={openedIndices} />
+          )}
+
+          {/* 今月の流れは、育つもの */}
+          {spreadKey === "monthly" && stage > 0 && (
+            <MonthGrowth drawn={drawn} lang={lang} openedIndices={openedIndices} />
           )}
 
           {/* 比べるのをやめるは、ふたつのポケット */}
@@ -24789,6 +25181,70 @@ function developerNote(majorCard, lang) {
 }
 
 // 「前回の結果を見る」：直近の履歴1件を、新しい占いを始めずにそのまま表示する
+function SavedPanel({ lang, paid }) {
+  /*
+    ⚠️ 未訳の言語では日本語へ落とす。関数の文言は未定義だと
+    「表示されない」ではなく「呼び出しで落ちる」ので、退避を必ず置く。
+  */
+  const base = T[lang] || T.ja;
+  const t = new Proxy(base, {
+    get: (o, k) => (o[k] !== undefined ? o[k] : (T.ja[k] !== undefined ? T.ja[k] : () => "")),
+  });
+  const [list, setList] = useState(() => loadSaved());
+  const [open, setOpen] = useState(null);
+  const lim = savedLimit(paid);
+  return (
+    <div style={{ width: "100%", maxWidth: "460px", margin: "0 auto" }}>
+      <p style={{ fontSize: "10.5px", color: "var(--muted)", lineHeight: 1.9, textAlign: "center" }}>
+        {t.savedWarn}
+      </p>
+      <p style={{ fontSize: "11px", color: "var(--gold-soft)", textAlign: "center", margin: "6px 0 12px" }}>
+        {t.savedCount(list.length, lim)}
+      </p>
+      {!list.length && (
+        <p style={{ fontSize: "11.5px", color: "var(--muted)", textAlign: "center", lineHeight: 1.9 }}>
+          {t.savedEmpty}
+        </p>
+      )}
+      {list.map((x) => (
+        <div key={x.ts} style={{
+          border: "1px solid rgba(201,162,75,0.24)", borderRadius: "12px",
+          padding: "12px", marginBottom: "10px",
+        }}>
+          <div style={{ display: "flex", justifyContent: "space-between", fontSize: "11px" }}>
+            <span style={{ color: "var(--gold-soft)" }}>{spreadInfo(x.spread, lang).name}</span>
+            <span style={{ color: "var(--muted)" }}>
+              {new Date(x.ts).toLocaleDateString(lang === "ja" ? "ja-JP" : "en-US")}
+            </span>
+          </div>
+          {x.q && (
+            <p style={{ fontSize: "11px", color: "var(--muted)", margin: "6px 0" }}>「{x.q}」</p>
+          )}
+          {/* ⚠️ 全文を畳んでおく。十件が全部開いていると探せない */}
+          <p style={{ fontSize: "12px", color: "var(--parchment)", lineHeight: 1.9, margin: "6px 0",
+            whiteSpace: open === x.ts ? "pre-wrap" : "normal" }}>
+            {open === x.ts ? x.reading : String(x.reading || "").slice(0, 60) + "…"}
+          </p>
+          <div style={{ display: "flex", gap: "8px", justifyContent: "center" }}>
+            <button type="button" onClick={() => setOpen(open === x.ts ? null : x.ts)}
+              style={{ padding: "6px 14px", fontSize: "11px", borderRadius: "8px", cursor: "pointer",
+                border: "1px solid rgba(201,162,75,0.4)", background: "none", color: "var(--gold-soft)",
+                fontFamily: "inherit" }}>
+              {open === x.ts ? t.savedFold : t.savedOpen}
+            </button>
+            <button type="button" onClick={() => { removeSaved(x.ts); setList(loadSaved()); }}
+              style={{ padding: "6px 14px", fontSize: "11px", borderRadius: "8px", cursor: "pointer",
+                border: "1px solid rgba(226,110,110,0.6)", background: "rgba(226,86,86,0.12)",
+                color: "#FFB0B0", fontFamily: "inherit" }}>
+              {t.savedDelete}
+            </button>
+          </div>
+        </div>
+      ))}
+    </div>
+  );
+}
+
 function LastResultPanel({ entry, lang, onClose }) {
   const t = T[lang] || T.ja;
   if (!entry) return null;
@@ -26888,6 +27344,14 @@ const T = {
     dexShardRare: "レアの欠片",
     dexShardHolo: "ホロの欠片",
     subShard: "交換",
+    subSaved: "保存",
+    savedWarn: "保存はこの端末の中だけに残ります。機種変更や閲覧データの削除で消えます。",
+    savedCount: (n, lim) => `${n} / ${lim} 件`,
+    savedEmpty: "まだ保存した鑑定はありません。鑑定の下にある「この鑑定を保存する」から残せます。",
+    savedOpen: "全文を読む", savedFold: "閉じる", savedDelete: "削除",
+    savedButton: "この鑑定を保存する",
+    savedDone: "保存しました。「記録」→「保存」から読めます。",
+    savedFull: (lim) => `保存できるのは ${lim} 件までです。古いものを削除してください。`,
     oneOracleRareTitle: "◈ レアカードが出現しました ◈",
     oneOracleDarkRareTitle: "◈ 闇のレアカードが出現しました ◈",
     oneOracleDarkHoloTitle: "✦ 闇が降臨しました ✦",
@@ -27168,6 +27632,13 @@ const T = {
     legalButtonLabel: "利用規約・プライバシーポリシー",
     legalClose: "閉じる",
     couponButtonLabel: "コード入力",
+    fxButtonLabel: "エフェクト切替",
+    fxNote: "見た目の効果を個別に切れます。表示がおかしいときは、上から順に切って、どれで直るかを見てください。切った状態は次に開いても続きます。",
+    fxNames: {
+      fx1: "エフェクト1（枠・入力欄・縁の光・見出しの線・脈動）",
+      fx2: "エフェクト2（触れた反応・現れ方・札の立体感・見出しの金）",
+    },
+    fxOn: "入", fxOff: "切",
     diagButtonLabel: "利用記録",
     diagCopy: "記録をコピーする",
     diagNote: "回数を消費した回だけを記録しています。問いの文面や鑑定文は含みません。お問い合わせの際に、この内容を貼り付けてください。",
@@ -29856,6 +30327,17 @@ export default function TarotDraw() {
   */
   const [analogPreset, setAnalogPreset] = useState(null);
 
+  /* 切っているエフェクトの鍵。⚠️ 切ったものを持つ。入れたものではない */
+  const [fxOff, setFxOff] = useState(() => loadFxOff());
+  const [showFx, setShowFx] = useState(false);
+  const toggleFx = (key) => {
+    const next = fxOff.includes(key) ? fxOff.filter((k) => k !== key) : [...fxOff, key];
+    setFxOff(next);
+    try { localStorage.setItem(LS_FX_OFF, JSON.stringify(next)); } catch (e) { /* 保存できなくても切り替わる */ }
+  };
+  /* ⚠️ 切っていないものだけクラスを付ける。付いていない規則は効かない */
+  const fxClass = FX_KINDS.filter((f) => !fxOff.includes(f.key)).map((f) => f.cls).join(" ");
+
   const [skyOff, setSkyOff] = useState(() => {
     try { return localStorage.getItem(LS_SKY_OFF) === "1"; } catch (e) { return false; }
   });
@@ -30108,6 +30590,18 @@ export default function TarotDraw() {
         reading2,
         reading3,
       };
+      /*
+        ⚠️⚠️ 鑑定に失敗した回を「前回の結果」に残さないこと。
+        失敗の文言がそのまま保存され、見返すたびに表示され続ける。
+        回数も消費していないので、占った回として数えるのが誤り。
+        ⚠️ 台帳（appendSpreadLog）とは扱いを分ける。あちらは
+        「引いた」という事実の記録なので、鑑定の成否とは無関係に残す。
+      */
+      const aiFailed = [reading1, reading2, reading3].some(
+        (r) => r && r === t.finalJudgmentFailed
+      );
+      if (aiFailed) return;
+
       // 同じセッションで二重に保存・要約生成しないための歯止め
       if (savedEntryRef.current === entry.date + entry.time + majorCard.card.id) return;
       savedEntryRef.current = entry.date + entry.time + majorCard.card.id;
@@ -31213,7 +31707,7 @@ export default function TarotDraw() {
   };
 
   return (
-    <div className={`tarot-root${phase === "idle" && mode === "normal" && drawMode === "select" ? " has-bottom-nav" : ""}`}>
+    <div className={`tarot-root ${fxClass}${phase === "idle" && mode === "normal" && drawMode === "select" ? " has-bottom-nav" : ""}`}>
       {/* 裏面の意匠。ここで1回だけ定義し、各カードは <use> で参照する */}
       <TarotCardBackDefs />
       {/*
@@ -31410,11 +31904,14 @@ export default function TarotDraw() {
           背景の星。濃さの調整はこの opacity 一箇所で行う。
           演出側の星と混ざらないよう、背景は丸い点のみ・無アニメーションに保つ。
         */
-        .tarot-bg {
-          position: absolute; inset: 0; pointer-events: none;
-          width: 100%; height: 100%; display: block;
-          opacity: 0.85;
-        }
+        /*
+          背景のSVG。
+          ⚠️⚠️ 中身が空なのに全面へ敷いてあった。
+          描くものが無い層を残すと白い面として乗り、画面全体が霞む。
+          実際、これが「消えない光」の正体だった。
+          ⚠️ 空の層を置いたままにしないこと。
+        */
+        .tarot-bg { display: none; }
         /* --- 図鑑 --- */
         .dex-summary {
           display: flex; flex-direction: column; gap: 4px;
@@ -35868,7 +36365,389 @@ export default function TarotDraw() {
           .static-card.big { width: 140px; height: 208px; }
           .card-slot { width: 116px; }
         }
-      `}</style>
+      
+        /*
+          ============================================================
+          エフェクト
+
+          ⚠️⚠️ 面を覆う層で光らせないこと。中身が霞む。
+          ★ 光は「縁」と「線」で出す。面を通さないので中身が濁らない。
+          ⚠️ すべて fx-* の下に置くこと。切替から外れると原因が追えなくなる。
+          ============================================================
+        */
+
+        /* 枠の厚み・影。⚠️ 内側の線で縁を立てる。面には何も乗せない */
+        .fx-1 .verdict, .fx-1 .ai-reading, .fx-1 .hex-fields,
+        .fx-1 .asked-box, .fx-1 .celtic-verdict, .fx-1 .dex-detail {
+          box-shadow:
+            inset 0 1px 0 rgba(255,255,255,0.16),
+            inset 0 -1px 0 rgba(0,0,0,0.4),
+            0 6px 20px rgba(0,0,0,0.45);
+          border-color: rgba(201,162,75,0.4);
+        }
+        .fx-1 .draw-btn {
+          box-shadow:
+            inset 0 1px 0 rgba(255,255,255,0.4),
+            inset 0 -2px 0 rgba(0,0,0,0.35),
+            0 6px 20px rgba(201,162,75,0.3);
+        }
+
+        /* 入力欄の沈み込み。⚠️ 押すものは浮き、書くものは沈む */
+        .fx-1 .hex-fields input,
+        .fx-1 .hex-fields textarea,
+        .fx-1 .question-field input {
+          box-shadow:
+            inset 0 2px 6px rgba(0,0,0,0.5),
+            inset 0 -1px 0 rgba(255,255,255,0.06);
+        }
+        .fx-1 .hex-fields input:focus,
+        .fx-1 .hex-fields textarea:focus,
+        .fx-1 .question-field input:focus {
+          box-shadow:
+            inset 0 2px 6px rgba(0,0,0,0.45),
+            0 0 0 3px rgba(201,162,75,0.16);
+        }
+
+        /*
+          ⚠️ ボタンの縁を回る光は撤去した。
+          灯台の光のように見えて、押す場所ではなく光そのものに目が行く。
+          押せることは、影と触れたときの反応で十分伝わる。
+        */
+
+        /* 見出しの下の流れる線。⚠️ 文字は光らせない。下の線だけ */
+        .fx-1 .spread-heading-name { position: relative; }
+        .fx-1 .spread-heading-name::after {
+          content: ""; position: absolute; left: 50%; bottom: -6px;
+          width: 5em; height: 1px; transform: translateX(-50%);
+          background: linear-gradient(90deg,
+            transparent, rgba(201,162,75,0.9), transparent);
+          background-size: 200% 100%;
+          animation: lineFlow 4.5s ease-in-out infinite;
+        }
+        @keyframes lineFlow {
+          0%, 100% { background-position: 100% 0; opacity: 0.4; }
+          50%      { background-position: 0 0; opacity: 1; }
+        }
+
+        /* 結論の枠の上辺。⚠️ 上辺の線だけ。面は触らない */
+        .fx-1 .verdict { position: relative; }
+        .fx-1 .verdict::before {
+          content: ""; position: absolute; left: 50%; top: 0;
+          height: 2px; transform: translateX(-50%); pointer-events: none;
+          background: linear-gradient(90deg,
+            transparent, rgba(255,231,170,0.9) 35%, rgba(201,162,75,0.9) 65%, transparent);
+          animation: edgeRun 5.2s ease-in-out infinite;
+        }
+        @keyframes edgeRun {
+          0%, 100% { opacity: 0.45; width: 40%; }
+          50%      { opacity: 1; width: 70%; }
+        }
+
+        /* 選んだ札の脈動。⚠️ 縁だけ。中身に膜を掛けない */
+        .fx-1 .multi-btn.on,
+        .fx-1 .ver-btn.on,
+        .fx-1 .mode-btn.on {
+          animation: pickPulse 2.8s ease-in-out infinite;
+        }
+        @keyframes pickPulse {
+          0%, 100% { box-shadow: 0 0 6px rgba(201,162,75,0.25); }
+          50%      { box-shadow: 0 0 16px rgba(201,162,75,0.55); }
+        }
+
+        /*
+          ============================================================
+          エフェクト2  触れたときの反応
+
+          ★ 押せるものが押せると分かるのは、質感の話ではなく機能の話。
+            商用のアプリはどれも、触れた瞬間に何かが必ず動く。
+          ⚠️ 大きく動かさないこと。1〜2px と 0.02 倍で十分伝わる。
+          ============================================================
+        */
+        .fx-2 button, .fx-2 .mini-card, .fx-2 .dex-cell {
+          transition: transform .14s cubic-bezier(0.2,0,0.2,1),
+                      box-shadow .14s, border-color .14s, filter .14s;
+        }
+        .fx-2 button:active { transform: translateY(1px) scale(0.985); }
+        @media (hover: hover) {
+          .fx-2 .draw-btn:hover { transform: translateY(-2px); filter: brightness(1.08); }
+          .fx-2 .mini-card:hover { transform: translateY(-3px); }
+          .fx-2 .dex-cell:hover { transform: scale(1.04); }
+        }
+        /* 触れた場所から広がる輪。⚠️ 一度だけ。繰り返すと落ち着かない */
+        .fx-2 .draw-btn { position: relative; }
+        .fx-2 .draw-btn:active::after {
+          content: ""; position: absolute; inset: 0; border-radius: inherit;
+          background: radial-gradient(circle at center,
+            rgba(255,240,200,0.4) 0%, transparent 60%);
+          animation: tapRipple .5s ease-out;
+          pointer-events: none;
+        }
+        @keyframes tapRipple {
+          from { opacity: 0.9; transform: scale(0.6); }
+          to   { opacity: 0; transform: scale(1.6); }
+        }
+
+        /*
+          ============================================================
+          エフェクト3  画面の現れ方
+
+          ★ 内容がぱっと出ると、切り替わったことに気づけない。
+            少し下から浮かび上がると、「入れ替わった」と体が理解する。
+          ⚠️ 長くしないこと。0.3秒を超えると待たされている感じになる。
+          ⚠️ 動きを止めたい人のために prefers-reduced-motion を尊重する。
+          ============================================================
+        */
+        /*
+          ⚠️ translateY で持ち上げないこと。
+          一括で開くと全部が同時に動き、高さが変わって画面が飛ぶ。
+          透明度だけなら高さが変わらないので、位置が動かない。
+        */
+        .fx-2 .verdict, .fx-2 .ai-reading, .fx-2 .hs-pass,
+        .fx-2 .asked-box, .fx-2 .dex-detail, .fx-2 .celtic-verdict {
+          animation: riseIn .32s cubic-bezier(0.2,0.7,0.3,1) both;
+        }
+        @keyframes riseIn {
+          from { opacity: 0; }
+          to   { opacity: 1; }
+        }
+        /* 一覧の札だけは持ち上げてよい。高さが決まっているので飛ばない */
+        @keyframes riseInCard {
+          from { opacity: 0; transform: translateY(8px); }
+          to   { opacity: 1; transform: translateY(0); }
+        }
+        /* 一覧は一枚ずつ遅れて出る。⚠️ 遅らせすぎない。全部で0.3秒以内 */
+        .fx-2 .spread-grid > * { animation: riseInCard .3s cubic-bezier(0.2,0.7,0.3,1) both; }
+        .fx-2 .spread-grid > *:nth-child(1) { animation-delay: 0s; }
+        .fx-2 .spread-grid > *:nth-child(2) { animation-delay: .04s; }
+        .fx-2 .spread-grid > *:nth-child(3) { animation-delay: .08s; }
+        .fx-2 .spread-grid > *:nth-child(4) { animation-delay: .12s; }
+        .fx-2 .spread-grid > *:nth-child(5) { animation-delay: .16s; }
+        @media (prefers-reduced-motion: reduce) {
+          .fx-2 * { animation: none !important; }
+        }
+
+        /*
+          ============================================================
+          エフェクト4  札の立体感
+
+          ★ 平らな長方形は紙に見える。厚みと、光の当たる向きを一つ決める。
+          ⚠️ 影を四方に落とさないこと。光源が四つあることになる。
+          ============================================================
+        */
+        .fx-2 .mini-card, .fx-2 .hex-card {
+          box-shadow:
+            0 3px 0 rgba(12,9,24,0.55),
+            0 8px 16px rgba(0,0,0,0.45);
+        }
+        .fx-2 .mini-card::after, .fx-2 .hex-card::after {
+          content: ""; position: absolute; inset: 0; border-radius: inherit;
+          pointer-events: none;
+          background: linear-gradient(150deg,
+            rgba(255,255,255,0.14) 0%, transparent 34%);
+        }
+
+        /*
+          ============================================================
+          エフェクト5  見出しの金の照り
+
+          ⚠️ 文字を光らせるのではなく、金の傾斜をゆっくり動かす。
+            光らせると読みにくくなる。
+          ============================================================
+        */
+        .fx-2 .spread-heading-name, .fx-2 .verdict-title, .fx-2 .hs-pass-title {
+          background: linear-gradient(100deg,
+            #C9A24B 0%, #F0DCA8 22%, #E7CF99 40%, #C9A24B 62%, #F0DCA8 84%, #C9A24B 100%);
+          background-size: 260% 100%;
+          -webkit-background-clip: text; background-clip: text;
+          -webkit-text-fill-color: transparent; color: transparent;
+          animation: goldDrift 7s ease-in-out infinite;
+        }
+        @keyframes goldDrift {
+          0%, 100% { background-position: 0% 0; }
+          50%      { background-position: 100% 0; }
+        }
+
+        /*
+          盤の下敷き。ステンドグラス。
+
+          ⚠️⚠️ 均一な半透明はアクリルに見える。ガラスに見えないのは
+          「厚みが無い」から。板ガラスは面ごとに明るさが違い、
+          縁で光が折れ、裏の色が透けて滲む。そこを作る。
+
+          ★ 一枚のガラスではなく、色ガラスの断片の集まりとして描く。
+            断片ごとに明るさを変え、境目に鉛線を通し、
+            断片の内側に光の帯を一本ずつ入れる。
+
+          ⚠️ 枠は金の額縁にする。細い線一本では窓に見えない。
+            外側から 濃い金／明るい金／暗い溝／盤 の四層で額を組む。
+        */
+        .hex-carpet, .horo-carpet {
+          position: relative; overflow: hidden;
+          background-color: #0B0718;
+          background-image:
+            /* 断片の内側の光。⚠️ 各色帯の中に一本ずつ通す */
+            repeating-linear-gradient(60deg,
+              rgba(255,255,255,0.22) 0px, rgba(255,255,255,0.22) 3px,
+              transparent 3px, transparent 34px),
+            /* 色ガラス。⚠️ 隣り合う色の明るさを変える。同じだと平らに見える */
+            repeating-linear-gradient(60deg,
+              rgba(228,42,86,0.72) 0px, rgba(228,42,86,0.72) 34px,
+              rgba(40,86,214,0.66) 34px, rgba(40,86,214,0.66) 68px,
+              rgba(246,182,38,0.70) 68px, rgba(246,182,38,0.70) 102px,
+              rgba(32,170,124,0.64) 102px, rgba(32,170,124,0.64) 136px,
+              rgba(150,58,208,0.70) 136px, rgba(150,58,208,0.70) 170px),
+            /* 交差する断片。⚠️ 二方向で切ると、菱形の破片になる */
+            repeating-linear-gradient(-60deg,
+              rgba(255,255,255,0.10) 0px, rgba(255,255,255,0.10) 2px,
+              rgba(0,0,0,0.30) 2px, rgba(0,0,0,0.30) 4px,
+              transparent 4px, transparent 30px),
+            /* 裏からの採光。窓の向こうに光源がある */
+            radial-gradient(ellipse at 50% 30%,
+              rgba(255,250,225,0.42) 0%, rgba(255,240,190,0.14) 38%, transparent 66%);
+          /*
+            額縁。⚠️ 一本の線にしないこと。四層重ねて初めて額に見える。
+          */
+          border: 3px solid #8A6B2A !important;
+          box-shadow:
+            0 0 0 1px #F2DFA6,
+            0 0 0 5px #C9A24B,
+            0 0 0 7px #6B5220,
+            0 0 0 8px rgba(255,240,200,0.5),
+            inset 0 0 0 1px rgba(255,246,214,0.7),
+            inset 0 3px 10px rgba(255,255,255,0.24),
+            inset 0 -6px 22px rgba(0,0,0,0.6),
+            0 18px 44px rgba(0,0,0,0.68),
+            0 0 34px rgba(201,162,75,0.3) !important;
+        }
+        /*
+          鉛線。⚠️ 太く、暗く、そして片側に光を入れる。
+          鉛は金属なので、上側だけ光る。平らな黒線だと格子の紙になる。
+        */
+        .hex-carpet::before, .horo-carpet::before {
+          content: ""; position: absolute; inset: 0; pointer-events: none;
+          background-image:
+            repeating-linear-gradient(60deg,
+              rgba(18,12,26,0.95) 0px, rgba(18,12,26,0.95) 3px,
+              rgba(150,140,120,0.45) 3px, rgba(150,140,120,0.45) 4px,
+              transparent 4px, transparent 34px),
+            repeating-linear-gradient(-60deg,
+              rgba(18,12,26,0.85) 0px, rgba(18,12,26,0.85) 2.5px,
+              rgba(140,130,112,0.35) 2.5px, rgba(140,130,112,0.35) 3.5px,
+              transparent 3.5px, transparent 30px);
+        }
+
+        /*
+          内枠。⚠️ 額縁を強めたので、これも合わせて金にする。
+          薄いままだと、豪華な額の内側に安い線が一本ある状態になる。
+        */
+        .hex-carpet::after, .horo-carpet::after {
+          inset: 9px !important;
+          border: 1px solid rgba(242,223,166,0.55) !important;
+          box-shadow:
+            inset 0 0 0 1px rgba(0,0,0,0.45),
+            0 0 8px rgba(201,162,75,0.35) !important;
+        }
+
+        /*
+          ============================================================
+          ガラスの質感
+
+          ⚠️⚠️ 色を並べただけでは印刷物に見える。実際そうなった。
+          ★ ガラスに見える条件は三つ。
+
+            1. 断片ごとに明るさが違う
+               本物は光源からの距離と角度で一枚ずつ違う。
+               均等だと「塗り絵」になる。
+            2. 面に反射がある
+               斜めの光沢が走り、そこだけ色が飛ぶ。
+            3. くすみがある
+               全部が鮮やかだとプラスチック。古いガラスは
+               気泡と汚れで濁った部分がある。
+
+          ⚠️ 反射は面全体に均一に掛けないこと。それをやると膜になる。
+            斜めの帯と、部分的な光の粒に分けて置く。
+          ============================================================
+        */
+
+        /* 明暗のむら。⚠️ 大きな楕円で、断片をまたいで明暗を作る */
+        .hex-carpet, .horo-carpet {
+          /*
+            ⚠️ 層の数と合わせること。多いと後ろが無視され、
+            少ないと先頭から繰り返されて意図しない混ざり方になる。
+            背景は4層（断片の光／色ガラス/交差/採光）。
+          */
+          background-blend-mode: screen, normal, overlay, screen;
+        }
+        .hex-carpet::before, .horo-carpet::before {
+          /* 鉛線に、明暗のむらとくすみを重ねる */
+          background-image:
+            /* 反射。⚠️ 斜めの帯。二本だけ。増やすと縞模様になる */
+            linear-gradient(118deg,
+              transparent 20%, rgba(255,255,255,0.30) 27%,
+              rgba(255,255,255,0.06) 31%, transparent 38%),
+            linear-gradient(118deg,
+              transparent 62%, rgba(255,255,255,0.18) 67%, transparent 72%),
+            /* くすみ。⚠️ 楕円で不均一に。四角いと汚れではなく影に見える */
+            radial-gradient(ellipse 40% 30% at 18% 78%,
+              rgba(60,54,44,0.55) 0%, transparent 70%),
+            radial-gradient(ellipse 30% 26% at 82% 22%,
+              rgba(48,44,58,0.48) 0%, transparent 68%),
+            radial-gradient(ellipse 26% 34% at 70% 84%,
+              rgba(70,60,40,0.36) 0%, transparent 72%),
+            /* 明暗のむら。光源に近い側を明るく */
+            radial-gradient(ellipse 90% 70% at 42% 18%,
+              rgba(255,250,230,0.30) 0%, transparent 62%),
+            radial-gradient(ellipse 70% 60% at 76% 88%,
+              rgba(0,0,0,0.42) 0%, transparent 66%),
+            /* 鉛線（元からあるもの） */
+            repeating-linear-gradient(60deg,
+              rgba(18,12,26,0.95) 0px, rgba(18,12,26,0.95) 3px,
+              rgba(170,158,132,0.55) 3px, rgba(170,158,132,0.55) 4px,
+              transparent 4px, transparent 34px),
+            repeating-linear-gradient(-60deg,
+              rgba(18,12,26,0.85) 0px, rgba(18,12,26,0.85) 2.5px,
+              rgba(150,140,118,0.42) 2.5px, rgba(150,140,118,0.42) 3.5px,
+              transparent 3.5px, transparent 30px);
+          mix-blend-mode: normal;
+        }
+
+        /*
+          気泡と傷。
+          ⚠️ 点を散らすだけにする。形を持たせると別のものに見える。
+          ⚠️ 位置は固定。乱数だと毎回変わり、汚れが動いて見える。
+        */
+        .hex-carpet .glass-flaw, .horo-carpet .glass-flaw {
+          position: absolute; inset: 0; pointer-events: none;
+          background-image:
+            radial-gradient(circle 2px at 22% 34%, rgba(255,255,255,0.5), transparent),
+            radial-gradient(circle 3px at 61% 19%, rgba(255,255,255,0.34), transparent),
+            radial-gradient(circle 2px at 78% 62%, rgba(255,255,255,0.42), transparent),
+            radial-gradient(circle 4px at 37% 71%, rgba(0,0,0,0.3), transparent),
+            radial-gradient(circle 2px at 88% 41%, rgba(255,255,255,0.3), transparent),
+            radial-gradient(circle 3px at 14% 58%, rgba(0,0,0,0.26), transparent);
+        }
+
+        /* 茎と葉。⚠️ ゆっくり。速いと風ではなく震えに見える */
+        .mv-sway { animation: mvSway 4.6s ease-in-out infinite; transform-origin: bottom center; }
+        @keyframes mvSway {
+          0%, 100% { transform: rotate(-1.6deg); }
+          50%      { transform: rotate(1.6deg); }
+        }
+        /* つぼみと花。息をする */
+        .mv-breathe { animation: mvBreathe 3.4s ease-in-out infinite; }
+        @keyframes mvBreathe {
+          0%, 100% { transform: scale(1); }
+          50%      { transform: scale(1.06); }
+        }
+        /* 落ちる種。⚠️ 落ちきったら消す。地面に溜まると散らかる */
+        .mv-fall { animation: mvFall 5.2s ease-in infinite; }
+        @keyframes mvFall {
+          0%, 55%  { opacity: 0; transform: translateY(0); }
+          62%      { opacity: 1; transform: translateY(0); }
+          92%      { opacity: 1; transform: translateY(34px); }
+          100%     { opacity: 0; transform: translateY(38px); }
+        }
+`}</style>
 
       <TarotBackdrop />
 
@@ -36209,6 +37088,7 @@ export default function TarotDraw() {
                     { key: "stats", label: t.subStats },
                     { key: "dex", label: t.subDex },
                     { key: "shard", label: t.subShard },
+                    { key: "saved", label: t.subSaved || T.ja.subSaved },
                   ].map((it, i) => {
                     const on = recordsTab === it.key;
                     return (
@@ -36256,6 +37136,9 @@ export default function TarotDraw() {
                     onExchange={exchangeShard} last={lastExchanged}
                   />
                 )}
+                {recordsTab === "saved" && (
+                  <SavedPanel lang={lang} paid={aiEnabledPlan} />
+                )}
               </div>
             )}
 
@@ -36290,6 +37173,51 @@ export default function TarotDraw() {
                   {t.diagButtonLabel}
                 </button>
                 {showDiag && <BillingDiagPanel lang={lang} />}
+
+                {/*
+                  エフェクトの入切。
+                  ⚠️ 隠さないこと。見た目に不具合が出たとき、ここで切って
+                  確かめられるのが目的なので、探さないと見つからない場所に
+                  置くと意味が無い。
+                */}
+                <button
+                  onClick={() => setShowFx(!showFx)}
+                  style={{
+                    marginTop: "6px", background: "none",
+                    border: "1px solid rgba(201,162,75,0.3)", borderRadius: "8px",
+                    color: "var(--muted)", fontSize: "11px", padding: "6px 14px",
+                    cursor: "pointer", fontFamily: "inherit",
+                  }}>
+                  {t.fxButtonLabel || "エフェクト切替"}
+                </button>
+                {showFx && (
+                  <div style={{
+                    maxWidth: "340px", margin: "8px auto 0", padding: "12px",
+                    border: "1px solid rgba(201,162,75,0.2)", borderRadius: "12px",
+                  }}>
+                    <p style={{ fontSize: "10.5px", color: "var(--muted)", lineHeight: 1.8, margin: "0 0 10px" }}>
+                      {t.fxNote || "見た目の効果を個別に切れます。表示がおかしいときは、上から順に切って、どれで直るかを見てください。"}
+                    </p>
+                    {FX_KINDS.map((f) => {
+                      const on = !fxOff.includes(f.key);
+                      return (
+                        <button key={f.key} type="button"
+                          onClick={() => toggleFx(f.key)}
+                          style={{
+                            display: "block", width: "100%", marginBottom: "6px",
+                            padding: "8px 12px", borderRadius: "8px", cursor: "pointer",
+                            fontFamily: "inherit", fontSize: "11.5px", textAlign: "left",
+                            border: `1px solid rgba(201,162,75,${on ? 0.6 : 0.2})`,
+                            background: on ? "rgba(201,162,75,0.14)" : "rgba(255,255,255,0.02)",
+                            color: on ? "var(--gold-soft)" : "var(--muted)",
+                          }}>
+                          {(t.fxNames && t.fxNames[f.key]) || f.key}
+                          <span style={{ float: "right" }}>{on ? (t.fxOn || "入") : (t.fxOff || "切")}</span>
+                        </button>
+                      );
+                    })}
+                  </div>
+                )}
 
                 <button
                   onClick={() => setShowLegal(!showLegal)}
