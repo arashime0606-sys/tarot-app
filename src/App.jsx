@@ -3341,7 +3341,7 @@ const SPREAD_I18N = {
     goldVein: { name: "THE 金運", desc: "その時期の主題を一枚引いてから、金脈を掘りあてられるかを六つの条件で見る。", pos: ["いまの時期の主題", "つるはしの性能", "鉱山が合っているか", "掘る場所が合っているか", "地盤のもろさ", "掘り出す潮時", "一人か、仲間とか"] },
     burnout: { name: "消耗からの回復", desc: "燃え尽きの手前で、何を降ろすかを決める。", pos: ["すり減っているもの", "消耗の源", "いま降ろしてよいもの", "回復のはじめ方"] },
     moonPhase: { name: "月の満ち欠け", desc: "始めたことが、いま輪のどこにあるかを見る。大アルカナだけ。", pos: ["新月に始めたこと", "満ちる途中で要るもの", "満月で露わになるもの", "欠けるときに手放すもの"] },
-    safePerson: { name: "この人は安全か", desc: "確かめられることと、確かめにくくしていることを並べて見る。", pos: ["断ったときの反応", "断りにくくさせるもの", "場所の決め方", "こちらの都合の扱い", "連絡のかたち", "返事を急がせるもの", "話の裏が取れるか", "確かめにくくしているもの", "第三者への態度", "距離の詰め方"] },
+    safePerson: { name: "この人は安全か", desc: "相手の振る舞いを、日々の具体だけで見る。小アルカナだけ。", pos: ["日ごろの振る舞い", "あなたに向けているもの", "言葉と行いのずれ", "見ないふりをしている合図", "近づく前に確かめること"] },
     somatic: { name: "体からの声", desc: "頭より先に、身体が言っていることを聞く。小アルカナだけ。", pos: ["いま熱を持っている場所", "溜まっている感情", "頭が休めない理由", "身体が求めている手当て"] },
     comparison: { name: "比べるのをやめる", desc: "相手と自分のポケットの中身を、実際の価値と見え方の両面から並べる。", pos: ["相手が実際に持っているもの", "その値打ち", "あなたに見えている相手", "そう見せているもの", "あなたが実際に持っているもの", "その値打ち", "あなたが自分をどう見ているか", "そこに向けている関心"] },
     undecided: { name: "決めきれない", desc: "どちらを選ぶかではなく、選べないこと自体を見る。", pos: ["決めきれない本当の理由", "選ばずにいて守れているもの", "決めた後に来る面倒", "期限を切るならいつか", "決めるために足りない一つ"] },
@@ -3391,7 +3391,7 @@ const SPREAD_I18N = {
     goldVein: { name: "THE Fortune", desc: "Draw the theme of the season, then read six conditions for striking the vein.", pos: ["The theme of this season", "The pick", "Whether the mine fits", "Whether the spot fits", "How firm the footing is", "The moment to dig it out", "Alone, or with others"] },
     burnout: { name: "Recovering from Depletion", desc: "Before burning out, decide what to set down.", pos: ["What is wearing thin", "The source of the drain", "What you may set down now", "How recovery begins"] },
     moonPhase: { name: "Phases of the Moon", desc: "See where what you began now sits on the wheel. Major Arcana only.", pos: ["What began at the new moon", "What the waxing needs", "What the full moon reveals", "What the waning lets go"] },
-    safePerson: { name: "Is This Person Safe", desc: "Set what you can verify beside what is being kept hard to verify.", pos: ["How they take a no", "What makes refusing hard", "How the place is chosen", "How your schedule is treated", "The shape of contact", "What rushes your reply", "Whether the story checks out", "What is kept unverifiable", "How they treat third parties", "How fast they close distance"] },
+    safePerson: { name: "Is This Person Safe", desc: "Read their conduct through daily specifics alone. Minor Arcana only.", pos: ["How they behave day to day", "What they turn toward you", "The gap between word and deed", "The signal you look away from", "What to check before going closer"] },
     somatic: { name: "What the Body Says", desc: "Hear the body before the head speaks. Minor Arcana only.", pos: ["Where the heat sits now", "The feeling that has pooled", "Why the head will not rest", "The care the body is asking for"] },
     comparison: { name: "Stop Comparing", desc: "What is in their pocket and yours, set against both real worth and how it looks.", pos: ["What they actually hold", "What it is worth", "The them you see", "What they show you", "What you actually hold", "What it is worth", "How you see yourself", "How much attention you give it"] },
     undecided: { name: "Unable to Decide", desc: "Not which to choose, but why the choice will not close.", pos: ["Why the choice will not close", "What not choosing protects", "The trouble that follows deciding", "Where the deadline should fall", "The one thing still missing"] },
@@ -4455,33 +4455,9 @@ const POSITION_COLORS = {
 };
 
 /** その位置に割り当てられた色。無い配置では既定の色へ落とす */
-/*
-  位置ごとの色。
-
-  ★ 週の物語が読みやすいのは、位置に色が付いていて、
-    どの行がどの位置の話か一目で分かるから。
-    これを全配置でやる。
-
-  ⚠️⚠️ 配置ごとに手で色表を書かないこと。
-    いま二つしか書けていないのがその証拠で、配置を足すたびに
-    忘れて色が付かない。位置の数から機械的に割り当てる。
-
-  ⚠️ 隣り合う位置の色を近づけないこと。
-    色相をそのまま順に回すと、隣が似た色になって区別が付かない。
-    黄金角（137.5度）で回すと、何個並べても隣が離れる。
-*/
-const POSITION_HUE_STEP = 137.5;
-function autoPositionColor(index) {
-  const hue = Math.round((index * POSITION_HUE_STEP) % 360);
-  /* ⚠️ 彩度と明度は固定する。動かすと、色ごとに目立ち方が変わって順位に見える */
-  return `hsl(${hue} 58% 66%)`;
-}
 function positionColor(spreadKey, index, fallback) {
   const table = POSITION_COLORS[spreadKey];
-  if (table && table[index]) return table[index];
-  /* ⚠️ fallback より先に自動割り当てを返す。fallback は色が要らない場面用 */
-  if (typeof index === "number" && index >= 0) return autoPositionColor(index);
-  return fallback;
+  return (table && table[index]) || fallback;
 }
 //                       日           月           火           水           木           金           土
 
@@ -6940,81 +6916,6 @@ function loadSpreadLog() {
     const list = raw ? JSON.parse(raw) : [];
     return Array.isArray(list) ? list : [];
   } catch { return []; }
-}
-
-/*
-  配置の結果を「前回の結果」として残す。
-
-  ⚠️ スリーカードの履歴（HISTORY_KEY）とは別に持つ。
-  あちらは八分野の点数や大アルカナの枠を前提にした形なので、
-  他の配置を無理に入れると、読めない項目が並ぶ。
-
-  ⚠️ 一件だけ持つ。ここは「前回」を見る場所で、ためる場所ではない。
-  ためたいものは保存（LS_SAVED_KEY）に入れる。
-*/
-/*
-  保存。
-
-  ★ 「前回」は上書きされるので、残したい回は自分で保存する。
-
-  ⚠️ 件数に上限を置くこと。無制限にすると、端末の保存領域を
-    使い切ったときに他の記録ごと壊れる。
-
-  ★ 無料10件。3件では窮屈すぎて課金前に離れ、50件では
-    一生上限に当たらない。10件なら「印象に残った回」は十分入り、
-    数か月に一度は上限に当たる。
-
-  ⚠️⚠️ 保存は端末の中にしかない。機種変更でも、閲覧データを
-    消しても失われる。課金する前に必ずそう伝えること。
-    伝えずに売ると、消えたときに「金を取って消した」ことになる。
-*/
-const LS_SAVED_KEY = "tarot_saved_readings";
-const SAVED_FREE_LIMIT = 10;
-const SAVED_PAID_LIMIT = 100;
-function loadSaved() {
-  try {
-    const raw = localStorage.getItem(LS_SAVED_KEY);
-    const v = raw ? JSON.parse(raw) : [];
-    return Array.isArray(v) ? v : [];
-  } catch { return []; }
-}
-function savedLimit(paid) { return paid ? SAVED_PAID_LIMIT : SAVED_FREE_LIMIT; }
-/** 保存する。上限に達していたら false を返す（勝手に古いものを消さない） */
-function addSaved(entry, paid) {
-  try {
-    const list = loadSaved();
-    if (list.length >= savedLimit(paid)) return false;
-    /* ⚠️ 同じ回を二度保存させない。押した手応えが無いと連打される */
-    if (list.some((x) => x.ts === entry.ts)) return true;
-    localStorage.setItem(LS_SAVED_KEY, JSON.stringify([entry, ...list]));
-    return true;
-  } catch { return false; }
-}
-function removeSaved(ts) {
-  try {
-    localStorage.setItem(LS_SAVED_KEY,
-      JSON.stringify(loadSaved().filter((x) => x.ts !== ts)));
-  } catch (e) { /* 消せなくても表示は続く */ }
-}
-
-const LS_LAST_SPREAD = "tarot_last_spread";
-function saveSpreadResult(entry) {
-  try {
-    localStorage.setItem(LS_LAST_SPREAD, JSON.stringify({
-      ts: Date.now(),
-      spread: entry.spreadKey,
-      tier: entry.tier || "ai",
-      q: (entry.question || "").slice(0, 120),
-      cards: (entry.cards || []).map((c) => ({ id: c.id, r: !!c.reversed })),
-      reading: (entry.reading || "").slice(0, 4000),
-    }));
-  } catch (e) { /* 保存できなくても占いは成立する */ }
-}
-function loadSpreadResult() {
-  try {
-    const raw = localStorage.getItem(LS_LAST_SPREAD);
-    return raw ? JSON.parse(raw) : null;
-  } catch { return null; }
 }
 
 function appendSpreadLog(spreadKey, cards, question) {
@@ -9648,42 +9549,6 @@ function pickSkyKind() {
 /* 空を固定したときの保存先。値は SKY_KINDS のどれか、または "" で解除 */
 const LS_SKY_FIXED = "tarot_sky_fixed";
 /* 背景を切っているか。"1" なら切 */
-/*
-  エフェクトの入切。
-
-  ★ 見た目を足す仕組みは、必ず切れるようにしておく。
-    「入れてみたが、どこかで悪さをする」が起きたとき、
-    切って確かめられないと原因が追えない。
-    実際、光の帯の原因を追うのに何度も往復した。
-
-  ⚠️ 既定は入。切った状態で不具合を報告されると、
-    こちらは入の状態を見ていて話が噛み合わない。
-*/
-const LS_FX_OFF = "tarot_fx_off";
-const FX_KINDS = [
-  { key: "depth", cls: "fx-depth" },      // 枠の厚み・影・金線
-  { key: "fields", cls: "fx-fields" },    // 入力欄の沈み込み
-  /*
-    既存の演出も切れるようにする。
-    ⚠️ 光の帯のように、原因が特定できない見た目の不具合が出たとき、
-    こちらで切って確かめられないと何往復もすることになる。
-    実際そうなった。
-  */
-];
-
-/*
-  切ったときに止めるもの。
-  ⚠️ クラスを付けるのではなく「付いていないとき無効にする」形にする。
-  既存の規則に手を入れずに切れるので、戻すのも簡単。
-*/
-function loadFxOff() {
-  try {
-    const raw = localStorage.getItem(LS_FX_OFF);
-    const v = raw ? JSON.parse(raw) : [];
-    return Array.isArray(v) ? v : [];
-  } catch { return []; }
-}
-
 const LS_SKY_OFF = "tarot_sky_off";
 /* 背景の入切の文言。⚠️ T に足さない。未訳は英語へ落とす */
 /* 戻る確認の文言。⚠️ T に足さない。未訳は英語へ落とす */
@@ -21288,26 +21153,7 @@ function HexagramPanel({ lang, onBack, question, userName, canDraw, onConsume, o
             spreadKeyWithTier(spreadKey, tier)),
           2000
         );
-        if (alive) {
-          const text = normalizeReadingText(txt);
-          setReading(text);
-          /*
-            記録に残す。
-            ⚠️⚠️ これまでスリーカードしか「前回の結果」に残らなかった。
-            他の配置は鑑定を読んだあと、どこにも残らずに消えていた。
-            ⚠️ 失敗した回は残さないこと。失敗の文言が保存され、
-            見返すたびに「導くことができませんでした」が出る。
-            ⚠️ 引いた事実の記録（台帳）とは別。あちらは確定時に書く。
-          */
-          if (text && text.trim()) {
-            saveSpreadResult({
-              spreadKey, tier, lang,
-              cards: drawn, question: question || topic || "",
-              reading: text,
-            });
-            onRecord && onRecord();
-          }
-        }
+        if (alive) setReading(normalizeReadingText(txt));
       } catch {
         /*
           AIが出せなかった回は枠を返す。消費したのは onConsume を通った回だけなので、
@@ -24943,71 +24789,6 @@ function developerNote(majorCard, lang) {
 }
 
 // 「前回の結果を見る」：直近の履歴1件を、新しい占いを始めずにそのまま表示する
-/*
-  保存した鑑定の一覧。
-
-  ⚠️ 端末の中にしかないことを、一覧の頭に必ず書くこと。
-  課金してから「消えた」と知るのが、いちばん悪い順序。
-*/
-function SavedPanel({ lang, paid }) {
-  /*
-    ⚠️ 未訳の言語では日本語へ落とす。
-    11言語に一度に足すのは現実的でないので、抜けても空欄にならない形にする。
-    翻訳が入ったら、この退避は自然に使われなくなる。
-  */
-  /*
-    ⚠️⚠️ 文言を足す言語ブロックを間違えないこと。
-    韓国語のブロックに入れてしまい、日本語では未定義になって
-    t.savedCount(...) の呼び出しで画面が落ちた。
-    ⚠️ 関数の文言は、未定義だと「表示されない」ではなく「落ちる」。
-    退避を用意しておく。
-  */
-  const base = T[lang] || T.ja;
-  const t = new Proxy(base, {
-    get: (o, k) => {
-      if (o[k] !== undefined) return o[k];
-      if (T.ja[k] !== undefined) return T.ja[k];
-      /* どちらにも無い場合。関数として呼ばれても落ちない形を返す */
-      return () => "";
-    },
-  });
-  const [list, setList] = useState(() => loadSaved());
-  const [open, setOpen] = useState(null);
-  const lim = savedLimit(paid);
-  return (
-    <div style={{ width: "100%", maxWidth: "460px", margin: "0 auto" }}>
-      <p className="analog-note">{t.savedWarn}</p>
-      <p className="analog-note">{t.savedCount(list.length, lim)}</p>
-      {!list.length && <p className="multi-note">{t.savedEmpty}</p>}
-      {list.map((x) => (
-        <div key={x.ts} className="panel" style={{ marginBottom: "10px" }}>
-          <div className="analog-head">
-            <span>{spreadInfo(x.spread, lang).name}</span>
-            <span className="multi-score">
-              {new Date(x.ts).toLocaleDateString(lang === "ja" ? "ja-JP" : "en-US")}
-            </span>
-          </div>
-          {x.q && <p className="hs-pass-legend">「{x.q}」</p>}
-          {/* ⚠️ 全文を畳んでおく。十件が全部開いていると探せない */}
-          {open === x.ts
-            ? <p className="hs-pass-read" style={{ whiteSpace: "pre-wrap" }}>{x.reading}</p>
-            : <p className="hs-pass-read">{String(x.reading || "").slice(0, 60)}…</p>}
-          <div style={{ display: "flex", gap: "8px", justifyContent: "center", marginTop: "8px" }}>
-            <button type="button" className="multi-btn"
-              onClick={() => setOpen(open === x.ts ? null : x.ts)}>
-              {open === x.ts ? t.savedFold : t.savedOpen}
-            </button>
-            <button type="button" className="back-confirm-yes"
-              onClick={() => { removeSaved(x.ts); setList(loadSaved()); }}>
-              {t.savedDelete}
-            </button>
-          </div>
-        </div>
-      ))}
-    </div>
-  );
-}
-
 function LastResultPanel({ entry, lang, onClose }) {
   const t = T[lang] || T.ja;
   if (!entry) return null;
@@ -27107,18 +26888,6 @@ const T = {
     dexShardRare: "レアの欠片",
     dexShardHolo: "ホロの欠片",
     subShard: "交換",
-    fxButtonLabel: "エフェクト切替",
-    fxNote: "見た目の効果を個別に切れます。表示がおかしいときは、上から順に切って、どれで直るかを見てください。切った状態は次に開いても続きます。",
-    fxNames: { depth: "枠の厚み・影", fields: "入力欄の沈み込み" },
-    fxOn: "入", fxOff: "切",
-    subSaved: "保存",
-    savedWarn: "保存はこの端末の中だけに残ります。機種変更や閲覧データの削除で消えます。",
-    savedCount: (n, lim) => `${n} / ${lim} 件`,
-    savedEmpty: "まだ保存した鑑定はありません。鑑定の下にある「保存する」から残せます。",
-    savedOpen: "全文を読む", savedFold: "閉じる", savedDelete: "削除",
-    savedButton: "この鑑定を保存する",
-    savedDone: "保存しました。「記録」→「保存」から読めます。",
-    savedFull: (lim) => `保存できるのは ${lim} 件までです。古いものを削除してください。`,
     oneOracleRareTitle: "◈ レアカードが出現しました ◈",
     oneOracleDarkRareTitle: "◈ 闇のレアカードが出現しました ◈",
     oneOracleDarkHoloTitle: "✦ 闇が降臨しました ✦",
@@ -30052,7 +29821,6 @@ export default function TarotDraw() {
   const [voiceReady, setVoiceReady] = useState(false); // この言語で喋れる音声が端末にあるか
   const [showCoupon, setShowCoupon] = useState(false);
   const [showDiag, setShowDiag] = useState(false);
-  const [showFx, setShowFx] = useState(false);
   const [showHistory, setShowHistory] = useState(false);
   const [showStats, setShowStats] = useState(false);
   const [showTitles, setShowTitles] = useState(false);
@@ -30087,16 +29855,6 @@ export default function TarotDraw() {
     枚数の合わない札が渡って盤面が壊れる。
   */
   const [analogPreset, setAnalogPreset] = useState(null);
-
-  /* 切っているエフェクトの一覧。⚠️ 切った鍵を持つ。入れた鍵ではない */
-  const [fxOff, setFxOff] = useState(() => loadFxOff());
-  const toggleFx = (key) => {
-    const next = fxOff.includes(key) ? fxOff.filter((k) => k !== key) : [...fxOff, key];
-    setFxOff(next);
-    try { localStorage.setItem(LS_FX_OFF, JSON.stringify(next)); } catch (e) { /* 保存できなくても切り替わる */ }
-  };
-  /* ⚠️ 切っていないものだけクラスを付ける。付けたクラスの規則だけが効く */
-  const fxClass = FX_KINDS.filter((f) => !fxOff.includes(f.key)).map((f) => f.cls).join(" ");
 
   const [skyOff, setSkyOff] = useState(() => {
     try { return localStorage.getItem(LS_SKY_OFF) === "1"; } catch (e) { return false; }
@@ -30350,20 +30108,6 @@ export default function TarotDraw() {
         reading2,
         reading3,
       };
-      /*
-        ⚠️⚠️ 鑑定に失敗した回を「前回の結果」に残さないこと。
-        失敗の文言がそのまま保存されるので、見返すたびに
-        「占断を導くことができませんでした」が表示され続ける。
-        回数も消費していないので、そもそも占った回として数えるのが誤り。
-
-        ⚠️ 台帳（appendSpreadLog）とは扱いを分ける。あちらは
-        「引いた」という事実の記録なので、鑑定の成否とは無関係に残す。
-      */
-      const aiFailed = [reading1, reading2, reading3].some(
-        (r) => r && r === t.finalJudgmentFailed
-      );
-      if (aiFailed) return;
-
       // 同じセッションで二重に保存・要約生成しないための歯止め
       if (savedEntryRef.current === entry.date + entry.time + majorCard.card.id) return;
       savedEntryRef.current = entry.date + entry.time + majorCard.card.id;
@@ -31469,7 +31213,7 @@ export default function TarotDraw() {
   };
 
   return (
-    <div className={`tarot-root ${fxClass}${phase === "idle" && mode === "normal" && drawMode === "select" ? " has-bottom-nav" : ""}`}>
+    <div className={`tarot-root${phase === "idle" && mode === "normal" && drawMode === "select" ? " has-bottom-nav" : ""}`}>
       {/* 裏面の意匠。ここで1回だけ定義し、各カードは <use> で参照する */}
       <TarotCardBackDefs />
       {/*
@@ -31484,115 +31228,6 @@ export default function TarotDraw() {
           dim={!(phase === "idle" && (mode === "select" || drawMode === "select"))} />
       )}
       <style>{`
-        /*
-          ============================================================
-          意匠の土台
-
-          ⚠️⚠️ 新しい色・余白・角丸・文字の大きさをここ以外に書かないこと。
-          いま角丸が18種、文字の大きさが24種ある。画面ごとに少しずつ違う値を
-          足していった結果で、そのままでは何を直しても揃わない。
-
-          ★ 売れている占いアプリはどれも、値の種類を絞って繰り返している。
-            奇抜さではなく、揃っていることが「作り込まれている」に見える。
-
-          ⚠️ 既存の色（夜空・金・ホロ）は変えない。捨てるのは不揃いだけ。
-          ============================================================
-        */
-        .tarot-root {
-          /* 余白。4の倍数で刻む。中間の値を作らない */
-          --sp-1: 4px;  --sp-2: 8px;  --sp-3: 12px;
-          --sp-4: 16px; --sp-5: 24px; --sp-6: 32px;
-
-          /* 角丸。小（札・記号）／中（枠・欄）／大（パネル）／丸 */
-          --r-s: 8px; --r-m: 12px; --r-l: 18px; --r-full: 999px;
-
-          /*
-            文字。⚠️ 三段階に固定する。
-            見出し・本文・補足のどれかに必ず当てはめ、中間を作らない。
-          */
-          --fs-title: 20px;   /* 画面の見出し */
-          --fs-head: 15px;    /* 節の見出し */
-          --fs-body: 13px;    /* 本文 */
-          --fs-note: 11px;    /* 補足・凡例 */
-          --fs-tiny: 9.5px;   /* 札の中など、どうしても小さくする場所 */
-
-          /* 影。⚠️ 二種だけ。浮いているか、置いてあるか */
-          --sh-raise: 0 4px 14px rgba(0,0,0,0.45);
-          --sh-flat: 0 1px 4px rgba(0,0,0,0.3);
-
-          /* 線の濃さ。⚠️ 三段階。薄い枠・通常の枠・目立つ枠 */
-          --line-dim: rgba(201,162,75,0.18);
-          --line: rgba(201,162,75,0.38);
-          --line-on: rgba(201,162,75,0.75);
-        }
-
-        /*
-          ボタンの型。
-
-          ★ 役割で三種類だけにする。見た目を役割に結び付けると、
-            初めての人でも「押していいもの」がすぐ分かる。
-
-              主（.btn-main）  その画面でいちばんやってほしいこと。
-                              占いを始める、この札で占う、配る。
-                              画面に一つだけ。二つあると、どちらが本命か迷う
-              副（.btn-sub）   選択肢や補助。人数、枚数、スート、版の切り替え
-              危険（.btn-warn）戻ると失われる、消える、やり直しになるもの
-
-          ⚠️ 三種類の外に新しい見た目を作らないこと。
-            「ここだけ少し違う」を積むと、いまの14種に戻る。
-        */
-        .btn-base {
-          font-family: inherit; cursor: pointer; border-radius: var(--r-s);
-          transition: background .16s, border-color .16s, transform .12s;
-        }
-        .btn-base:active { transform: translateY(1px); }
-        .btn-base:disabled { opacity: 0.4; cursor: default; transform: none; }
-
-        .btn-main {
-          padding: var(--sp-3) var(--sp-5); font-size: var(--fs-head); font-weight: 700;
-          letter-spacing: 0.08em; border: 1px solid var(--line-on);
-          background: linear-gradient(160deg, rgba(201,162,75,0.28), rgba(201,162,75,0.14));
-          color: var(--gold-soft); box-shadow: var(--sh-raise);
-        }
-        .btn-sub {
-          padding: var(--sp-2) var(--sp-3); font-size: var(--fs-note);
-          border: 1px solid var(--line); background: rgba(255,255,255,0.02);
-          color: var(--muted);
-        }
-        .btn-sub.on {
-          background: rgba(201,162,75,0.18); color: var(--gold-soft);
-          border-color: var(--line-on); font-weight: 700;
-        }
-        .btn-warn {
-          padding: var(--sp-2) var(--sp-4); font-size: var(--fs-note);
-          border: 1px solid rgba(226,110,110,0.7); color: #FFB0B0;
-          background: rgba(226,86,86,0.14);
-        }
-        @media (hover: hover) {
-          .btn-main:hover { background: linear-gradient(160deg, rgba(201,162,75,0.4), rgba(201,162,75,0.2)); }
-          .btn-sub:hover { border-color: var(--line-on); color: var(--gold-soft); }
-          .btn-warn:hover { background: rgba(226,86,86,0.26); }
-        }
-
-        /*
-          パネルの型。⚠️ 枠の見た目をここに集める。
-          画面ごとに枠を書くと、余白と角丸が必ずずれる。
-        */
-        .panel {
-          border: 1px solid var(--line-dim); border-radius: var(--r-l);
-          background: rgba(255,255,255,0.02); padding: var(--sp-4);
-          box-shadow: var(--sh-flat);
-        }
-        .panel-head {
-          font-family: 'Shippori Mincho', serif; font-size: var(--fs-title);
-          letter-spacing: 0.1em; color: var(--gold-soft);
-          text-align: center; margin: 0 0 var(--sp-2);
-        }
-        .panel-note {
-          font-size: var(--fs-note); color: var(--muted);
-          line-height: 1.9; text-align: center; margin: 0 0 var(--sp-3);
-        }
-
         @import url('https://fonts.googleapis.com/css2?family=Shippori+Mincho:wght@400;500;600;700;800&family=Noto+Sans+JP:wght@300;400;500;700&family=Cinzel:wght@500;600&display=swap');
 
         /* ⚠️ 空を負の z-index に落とすので、土台をここで作る */
@@ -31638,7 +31273,7 @@ export default function TarotDraw() {
           color: var(--parchment);
           font-family: 'Noto Sans JP', sans-serif;
           padding: 40px 20px 56px;
-          border-radius: var(--r-l);
+          border-radius: 24px;
           /*
             overflow:hidden は position:sticky を無効化する（祖先に hidden があると
             貼り付きが効かない）。角丸からの背景のはみ出しを抑える目的だったので、
@@ -31784,20 +31419,20 @@ export default function TarotDraw() {
         .dex-summary {
           display: flex; flex-direction: column; gap: 4px;
           padding: 8px 12px; margin-bottom: 14px;
-          border: 1px solid rgba(201,162,75,0.22); border-radius: var(--r-m);
+          border: 1px solid rgba(201,162,75,0.22); border-radius: 8px;
           background: rgba(255,255,255,0.03);
         }
         .dex-summary-row { display: flex; justify-content: space-between; align-items: baseline; }
-        .dex-summary-label { font-size: var(--fs-note); letter-spacing: 0.12em; color: var(--muted); }
-        .dex-summary-value { font-family: 'Cinzel', serif; font-size: var(--fs-head); }
+        .dex-summary-label { font-size: 10.5px; letter-spacing: 0.12em; color: var(--muted); }
+        .dex-summary-value { font-family: 'Cinzel', serif; font-size: 14px; }
         /* レアは真珠光沢（彩度の低い青白）、ホロは金。
            虹はホロの領分なのでレアには使わない */
         .dex-summary-value.rare { color: var(--rare-tint); }
         .dex-summary-value.holo { color: var(--gold); }
-        .dex-summary-value.small { font-size: var(--fs-body); opacity: 0.9; }
+        .dex-summary-value.small { font-size: 12px; opacity: 0.9; }
         .dex-summary-row.shard { padding-top: 3px; border-top: 1px solid rgba(201,162,75,0.12); }
         .dex-group-label {
-          font-family: 'Shippori Mincho', serif; font-size: var(--fs-body); font-weight: 400;
+          font-family: 'Shippori Mincho', serif; font-size: 12px; font-weight: 400;
           letter-spacing: 0.14em; color: var(--gold-soft);
           margin: 0; padding: 0;
         }
@@ -31808,7 +31443,7 @@ export default function TarotDraw() {
           position: relative; display: flex; flex-direction: column; gap: 3px;
           padding: 8px 8px 20px; min-height: 56px;
           font-family: inherit; text-align: left; cursor: pointer;
-          border: 1px solid rgba(201,162,75,0.20); border-radius: var(--r-s);
+          border: 1px solid rgba(201,162,75,0.20); border-radius: 6px;
           background: rgba(255,255,255,0.03); color: var(--parchment);
           -webkit-tap-highlight-color: rgba(201,162,75,0.25);
           transition: background .18s, border-color .18s;
@@ -31817,8 +31452,8 @@ export default function TarotDraw() {
         .dex-cell.on { background: rgba(201,162,75,0.14); border-color: var(--gold); }
         /* 両面そろった札だけ枠を締める。ここが第二段で意味を持つ */
         .dex-cell.both { border-color: rgba(201,162,75,0.55); }
-        .dex-cell-corner { font-family: 'Cinzel', serif; font-size: var(--fs-tiny); letter-spacing: 0.1em; color: var(--muted); }
-        .dex-cell-name { font-size: var(--fs-note); line-height: 1.35; letter-spacing: 0.02em; }
+        .dex-cell-corner { font-family: 'Cinzel', serif; font-size: 9px; letter-spacing: 0.1em; color: var(--muted); }
+        .dex-cell-name { font-size: 11px; line-height: 1.35; letter-spacing: 0.02em; }
         .dex-cell-marks { position: absolute; left: 8px; bottom: 7px; display: flex; gap: 3px; }
         .dex-cell-marks i {
           width: 4.5px; height: 4.5px; border-radius: 50%;
@@ -31832,12 +31467,12 @@ export default function TarotDraw() {
         }
         .dex-detail {
           margin-top: 8px; padding: 12px;
-          border: 1px solid rgba(201,162,75,0.28); border-radius: var(--r-m);
+          border: 1px solid rgba(201,162,75,0.28); border-radius: 8px;
           background: rgba(255,255,255,0.04);
         }
         .dex-detail-head { display: flex; flex-direction: column; gap: 2px; margin-bottom: 10px; }
-        .dex-detail-name { font-family: 'Shippori Mincho', serif; font-size: var(--fs-head); color: var(--parchment); letter-spacing: 0.06em; }
-        .dex-detail-sub { font-size: var(--fs-note); color: var(--muted); letter-spacing: 0.06em; }
+        .dex-detail-name { font-family: 'Shippori Mincho', serif; font-size: 15px; color: var(--parchment); letter-spacing: 0.06em; }
+        .dex-detail-sub { font-size: 10px; color: var(--muted); letter-spacing: 0.06em; }
         /* 鑑賞用の札。2枚並ぶので、ワンオラクルの168pxより一回り小さくする。
            それ以上詰めると札名が潰れて、鑑賞にならない */
         /*
@@ -31867,15 +31502,15 @@ export default function TarotDraw() {
         /* 札の中に余白を作る。無いと文字が縁に触れて切れて見える */
         .dex-view .card-face { padding: 10px 8px; box-sizing: border-box; }
         .dex-view .card-text-wrap { max-width: 100%; }
-        .dex-view .card-name { font-size: var(--fs-head); word-break: break-word; }
-        .dex-view .card-name.long { font-size: var(--fs-body); }
-        .dex-view .card-sub { font-size: var(--fs-tiny); line-height: 1.4; word-break: break-word; }
+        .dex-view .card-name { font-size: 14px; word-break: break-word; }
+        .dex-view .card-name.long { font-size: 12px; }
+        .dex-view .card-sub { font-size: 9px; line-height: 1.4; word-break: break-word; }
         @media (max-width: 380px) {
           .dex-cards { gap: 8px; }
-          .dex-view .card-name { font-size: var(--fs-body); }
-          .dex-view .card-name.long { font-size: var(--fs-note); }
+          .dex-view .card-name { font-size: 12.5px; }
+          .dex-view .card-name.long { font-size: 11px; }
         }
-        .dex-card-cap { font-size: var(--fs-note); letter-spacing: 0.08em; }
+        .dex-card-cap { font-size: 10px; letter-spacing: 0.08em; }
         .dex-card-cap.up { color: var(--orient-up); }
         .dex-card-cap.rev { color: var(--orient-rev); }
         .dex-card-cap.holo { color: var(--gold); }
@@ -31883,7 +31518,7 @@ export default function TarotDraw() {
         .dex-locked { position: relative; opacity: 0.55; }
         .dex-locked-mark {
           position: absolute; inset: 0; display: flex; align-items: center; justify-content: center;
-          font-family: 'Cinzel', serif; font-size: var(--fs-title); color: rgba(240,230,210,0.85);
+          font-family: 'Cinzel', serif; font-size: 30px; color: rgba(240,230,210,0.85);
           text-shadow: 0 0 4px rgba(0,0,0,0.9), 0 0 12px rgba(0,0,0,0.7);
           pointer-events: none;
         }
@@ -31891,17 +31526,17 @@ export default function TarotDraw() {
         .dex-detail-row { display: flex; gap: 10px; align-items: baseline; padding: 5px 0; }
         /* 向きの色は明度を揃えて色相だけ離す（形式的結果と同じ変数を使う）。
            逆位置を暗くすると「不吉」という含意まで一緒に運んでしまう */
-        .dex-orient { flex: 0 0 auto; min-width: 4.2em; font-size: var(--fs-note); letter-spacing: 0.08em; }
+        .dex-orient { flex: 0 0 auto; min-width: 4.2em; font-size: 10.5px; letter-spacing: 0.08em; }
         .dex-orient.up { color: var(--orient-up); }
         .dex-orient.rev { color: var(--orient-rev); }
-        .dex-tier-mark { font-style: normal; margin-left: 5px; font-size: var(--fs-tiny); letter-spacing: 0.06em; }
+        .dex-tier-mark { font-style: normal; margin-left: 5px; font-size: 9.5px; letter-spacing: 0.06em; }
         .dex-tier-mark.rare { color: var(--rare-tint); }
         .dex-tier-mark.holo { color: var(--gold); }
-        .dex-detail-words { font-size: var(--fs-note); line-height: 1.75; color: var(--parchment); }
-        .dex-detail-note { margin: 10px 0 0; font-size: var(--fs-note); line-height: 1.9; color: var(--parchment); }
+        .dex-detail-words { font-size: 11.5px; line-height: 1.75; color: var(--parchment); }
+        .dex-detail-note { margin: 10px 0 0; font-size: 11.5px; line-height: 1.9; color: var(--parchment); }
         @media (max-width: 520px) {
           .dex-grid { grid-template-columns: repeat(auto-fill, minmax(88px, 1fr)); }
-          .dex-cell-name { font-size: var(--fs-note); }
+          .dex-cell-name { font-size: 10.5px; }
         }
         .tarot-header { text-align: center; position: relative; z-index: 1; margin-bottom: 30px; }
         /* 更新ボタン。タイトルの右横に絶対配置する。
@@ -31911,7 +31546,7 @@ export default function TarotDraw() {
         .reload-wrap { display: block; height: 0; }
         .reload-btn {
           position: absolute; top: 0; right: 0;
-          font-family: inherit; font-size: var(--fs-note); letter-spacing: 0.06em;
+          font-family: inherit; font-size: 10px; letter-spacing: 0.06em;
           padding: 4px 11px; border-radius: 999px; cursor: pointer;
           background: rgba(201,162,75,0.07);
           border: 1px solid rgba(201,162,75,0.42);
@@ -31927,50 +31562,50 @@ export default function TarotDraw() {
         /* 説明は触れたときに出す。高さを先に確保して、出入りでタイトルが動かないようにする */
         .reload-note {
           position: absolute; top: 26px; right: 0;
-          font-size: var(--fs-tiny); color: var(--muted); letter-spacing: 0.02em;
+          font-size: 9.5px; color: var(--muted); letter-spacing: 0.02em;
           opacity: 0; pointer-events: none; transition: opacity 0.18s ease;
           white-space: nowrap; max-width: 60vw; overflow: hidden; text-overflow: ellipsis;
         }
         .reload-wrap:hover .reload-note, .reload-wrap:focus-within .reload-note { opacity: 1; }
-        .eyebrow { display: inline-flex; align-items: center; gap: 7px; font-family: 'Cinzel', serif; font-size: var(--fs-note); letter-spacing: 0.32em; text-indent: 0.32em; color: var(--gold); margin-bottom: 14px; opacity: 0.9; }
-        .privacy-note { font-size: var(--fs-note); color: var(--gold-soft); opacity: 0.8; margin-top: 10px; letter-spacing: 0.02em; }
-        .tarot-header h1 { font-family: 'Shippori Mincho', serif; font-size: var(--fs-title); font-weight: 400; margin: 0 0 14px; letter-spacing: 0.18em; text-indent: 0.18em; color: var(--parchment); animation: titleGlow 3.2s ease-in-out infinite; }
+        .eyebrow { display: inline-flex; align-items: center; gap: 7px; font-family: 'Cinzel', serif; font-size: 10px; letter-spacing: 0.32em; text-indent: 0.32em; color: var(--gold); margin-bottom: 14px; opacity: 0.9; }
+        .privacy-note { font-size: 11px; color: var(--gold-soft); opacity: 0.8; margin-top: 10px; letter-spacing: 0.02em; }
+        .tarot-header h1 { font-family: 'Shippori Mincho', serif; font-size: 30px; font-weight: 400; margin: 0 0 14px; letter-spacing: 0.18em; text-indent: 0.18em; color: var(--parchment); animation: titleGlow 3.2s ease-in-out infinite; }
         @keyframes titleGlow {
           0%, 100% { text-shadow: 0 0 0px rgba(201,162,75,0); }
           50%      { text-shadow: 0 0 14px rgba(201,162,75,0.45); }
         }
-        .tarot-header p { font-size: var(--fs-body); color: var(--muted); margin: 0 auto; line-height: 2.0; max-width: 420px; white-space: pre-line; letter-spacing: 0.02em; }
-        .app-tagline { font-family: 'Cinzel', serif; font-size: var(--fs-body); color: var(--gold-soft); letter-spacing: 0.06em; margin: 0 0 12px; opacity: 0.9; }
+        .tarot-header p { font-size: 12px; color: var(--muted); margin: 0 auto; line-height: 2.0; max-width: 420px; white-space: pre-line; letter-spacing: 0.02em; }
+        .app-tagline { font-family: 'Cinzel', serif; font-size: 12px; color: var(--gold-soft); letter-spacing: 0.06em; margin: 0 0 12px; opacity: 0.9; }
 
         .controls { position: relative; z-index: 1; display: flex; justify-content: center; margin-bottom: 18px; }
 
         .mode-select { display: flex; flex-direction: column; align-items: center; gap: 14px; }
-        .mode-label { font-family: 'Shippori Mincho', serif; font-size: var(--fs-head); color: var(--gold-soft); letter-spacing: 0.08em; }
+        .mode-label { font-family: 'Shippori Mincho', serif; font-size: 14px; color: var(--gold-soft); letter-spacing: 0.08em; }
         .mode-buttons { display: flex; gap: 12px; flex-wrap: wrap; justify-content: center; }
-        .mode-btn { font-size: var(--fs-body); padding: 13px 26px; }
+        .mode-btn { font-size: 13.5px; padding: 13px 26px; }
         .mode-btn.normal { border-color: var(--gold); color: var(--gold-soft); }
         .mode-btn.ranking { border-color: var(--star-max); color: var(--star-max); background: linear-gradient(180deg, rgba(255,233,77,0.18), rgba(255,233,77,0.04)); }
 
         .question-field { display: flex; flex-direction: column; align-items: center; gap: 10px; width: 100%; max-width: 360px; }
-        .question-field label { font-size: var(--fs-note); color: var(--muted); letter-spacing: 0.04em; }
+        .question-field label { font-size: 11.5px; color: var(--muted); letter-spacing: 0.04em; }
         .question-field input {
-          width: 100%; box-sizing: border-box; font-family: 'Noto Sans JP', sans-serif; font-size: var(--fs-body);
+          width: 100%; box-sizing: border-box; font-family: 'Noto Sans JP', sans-serif; font-size: 13.5px;
           padding: 10px 14px; border-radius: 999px; border: 1px solid rgba(201,162,75,0.4);
           background: rgba(255,255,255,0.04); color: var(--parchment); text-align: center;
         }
         .question-field input::placeholder { color: rgba(169,155,201,0.55); }
         /* 配置ごとの入力の手引き。placeholder より前に読ませたいので欄の上 */
         .topic-hint {
-          font-size: var(--fs-note); color: var(--gold-soft); opacity: 0.9;
+          font-size: 11px; color: var(--gold-soft); opacity: 0.9;
           margin: -2px 0 6px; text-align: center; line-height: 1.8;
         }
         .question-field input:focus-visible { outline: 2px solid var(--gold); outline-offset: 2px; border-color: var(--gold); }
 
-        .question-banner { position: relative; z-index: 1; text-align: center; font-family: 'Shippori Mincho', serif; font-size: var(--fs-body); color: var(--gold-soft); margin: 0 0 20px; }
+        .question-banner { position: relative; z-index: 1; text-align: center; font-family: 'Shippori Mincho', serif; font-size: 12.5px; color: var(--gold-soft); margin: 0 0 20px; }
         /* 引けない理由。ボタンのすぐ上に出す */
         .draw-need-topic {
           color: var(--gold-soft); opacity: 0.95; text-align: center;
-          font-size: var(--fs-note); line-height: 1.9; margin: 0 auto 8px; max-width: 30em;
+          font-size: 11.5px; line-height: 1.9; margin: 0 auto 8px; max-width: 30em;
         }
         /* 版の切り替え。引く前だけ出る */
         .ver-switch-row {
@@ -31992,7 +31627,7 @@ export default function TarotDraw() {
         .ver-switch { flex-wrap: wrap; }
         .ver-switch .ver-btn { padding: 7px 13px; }
         @media (max-width: 420px) {
-          .ver-switch .ver-btn { padding: 6px 10px; font-size: var(--fs-note); }
+          .ver-switch .ver-btn { padding: 6px 10px; font-size: 11px; }
         }
         /* 長文・高級の入力欄。⚠️ 幅は他の欄と揃える */
         .topic-area {
@@ -32005,7 +31640,7 @@ export default function TarotDraw() {
           border-radius: 999px; overflow: hidden;
         }
         .ver-btn {
-          padding: 7px 20px; font-size: var(--fs-note); letter-spacing: 0.06em;
+          padding: 7px 20px; font-size: 11.5px; letter-spacing: 0.06em;
           border: none; background: none; color: var(--muted); cursor: pointer;
           font-family: inherit; transition: background .2s, color .2s;
         }
@@ -32018,15 +31653,15 @@ export default function TarotDraw() {
         */
         .spread-heading { text-align: center; margin: 6px 0 16px; }
         .spread-heading-name {
-          font-family: 'Shippori Mincho', serif; font-size: var(--fs-head);
+          font-family: 'Shippori Mincho', serif; font-size: 17px;
           letter-spacing: 0.1em; color: var(--gold-soft); margin: 0 0 5px;
         }
         .spread-heading-desc {
-          font-size: var(--fs-note); color: var(--muted); line-height: 1.8; margin: 0;
+          font-size: 11px; color: var(--muted); line-height: 1.8; margin: 0;
         }
         /* 背景の入切。タイトルの横 */
         .sky-toggle {
-          margin-left: 10px; padding: 3px 9px; font-size: var(--fs-tiny);
+          margin-left: 10px; padding: 3px 9px; font-size: 9.5px;
           border-radius: 999px; cursor: pointer; font-family: inherit;
           letter-spacing: 0.06em;
           border: 1px solid rgba(201,162,75,0.4);
@@ -32042,18 +31677,18 @@ export default function TarotDraw() {
         /* 流派の見出し。⚠️ 分けたことが分かる程度に。主役は配置の名前 */
         .analog-school { margin-bottom: 14px; }
         .analog-school-name {
-          font-size: var(--fs-note); color: var(--gold-soft); text-align: center;
+          font-size: 10.5px; color: var(--gold-soft); text-align: center;
           letter-spacing: 0.12em; margin-bottom: 6px; opacity: 0.9;
         }
         /* 枚数。⚠️ 名前と同じ大きさにしない。探すのは名前のほう */
         .analog-count {
-          margin-left: 6px; font-size: var(--fs-note); opacity: 0.7;
+          margin-left: 6px; font-size: 10px; opacity: 0.7;
         }
         .analog-count::before { content: "("; }
         .analog-count::after { content: ")"; }
         .analog-head {
           display: flex; justify-content: space-between; align-items: baseline;
-          font-size: var(--fs-body); color: var(--gold-soft); margin: 14px 2px 8px;
+          font-size: 12px; color: var(--gold-soft); margin: 14px 2px 8px;
         }
         /*
           格子。⚠️ 座標で置かないこと。要素が場所を取り合う並べ方にすれば、
@@ -32065,23 +31700,23 @@ export default function TarotDraw() {
         }
         .analog-slot {
           display: flex; justify-content: space-between; align-items: baseline;
-          border: 1px solid rgba(201,162,75,0.16); border-radius: var(--r-m);
+          border: 1px solid rgba(201,162,75,0.16); border-radius: 8px;
           padding: 7px 10px; margin-bottom: 5px; background: rgba(255,255,255,0.015);
         }
         /* 入った枠。⚠️ 色だけでなく枠線も変える（暗所と色覚のため） */
         .analog-slot.on {
           border-color: rgba(201,162,75,0.5); background: rgba(201,162,75,0.07);
         }
-        .analog-slot-pos { font-size: var(--fs-note); color: var(--muted); }
-        .analog-slot-card { font-size: var(--fs-note); color: var(--gold-soft); }
+        .analog-slot-pos { font-size: 10.5px; color: var(--muted); }
+        .analog-slot-card { font-size: 11.5px; color: var(--gold-soft); }
         /* 位置の見取り図。⚠️ 大きくしすぎないこと。主役は札の一覧のほう */
         .analog-ring { width: 100%; max-width: 220px; display: block; margin: 4px auto 2px; }
         .analog-ring-note {
-          font-size: var(--fs-note); color: var(--muted); text-align: center;
+          font-size: 10px; color: var(--muted); text-align: center;
           line-height: 1.8; margin: 0 auto 10px; max-width: 26em; opacity: 0.85;
         }
         .analog-now {
-          text-align: center; font-size: var(--fs-body); color: var(--gold-soft);
+          text-align: center; font-size: 12px; color: var(--gold-soft);
           margin: 2px 0 10px; letter-spacing: 0.04em;
         }
         /*
@@ -32090,15 +31725,15 @@ export default function TarotDraw() {
         */
         .analog-badge {
           margin: 14px auto 4px; padding: 12px 14px; max-width: 30em;
-          border: 1px solid rgba(201,162,75,0.45); border-radius: var(--r-m);
+          border: 1px solid rgba(201,162,75,0.45); border-radius: 12px;
           background: rgba(201,162,75,0.08); text-align: center;
         }
         .analog-badge-title {
-          font-family: 'Shippori Mincho', serif; font-size: var(--fs-head);
+          font-family: 'Shippori Mincho', serif; font-size: 17px;
           letter-spacing: 0.12em; margin-bottom: 6px;
         }
         .analog-badge-note {
-          font-size: var(--fs-note); color: var(--muted); line-height: 1.9; margin: 0;
+          font-size: 11.5px; color: var(--muted); line-height: 1.9; margin: 0;
         }
         /* 旧・選んだ札の確認欄。向きは盤で切り替えるので撤去した */
         /*
@@ -32142,16 +31777,16 @@ export default function TarotDraw() {
         */
         .back-confirm {
           margin: 14px auto 4px; padding: 12px 14px; max-width: 26em;
-          border: 1px solid rgba(226,110,110,0.5); border-radius: var(--r-m);
+          border: 1px solid rgba(226,110,110,0.5); border-radius: 12px;
           background: rgba(226,86,86,0.1);
         }
         .back-confirm-text {
-          font-size: var(--fs-note); line-height: 1.9; color: var(--muted);
+          font-size: 11.5px; line-height: 1.9; color: var(--muted);
           margin: 0 0 10px; text-align: center;
         }
         .back-confirm-btns { display: flex; gap: 8px; justify-content: center; }
         .back-confirm-yes, .back-confirm-no {
-          padding: 7px 16px; font-size: var(--fs-body); border-radius: var(--r-m);
+          padding: 7px 16px; font-size: 12px; border-radius: 8px;
           cursor: pointer; font-family: inherit;
         }
         .back-confirm-yes {
@@ -32165,7 +31800,7 @@ export default function TarotDraw() {
         .analog-board {
           position: relative; width: 100%; aspect-ratio: 3 / 5;
           max-width: 560px; margin: 6px auto 14px;
-          border: 1px solid rgba(201,162,75,0.14); border-radius: var(--r-m);
+          border: 1px solid rgba(201,162,75,0.14); border-radius: 12px;
           background: rgba(255,255,255,0.015);
         }
         /*
@@ -32185,7 +31820,7 @@ export default function TarotDraw() {
         .analog-cell {
           /* ⚠️ 左上のボタンを重ねるので、必ず基準にすること */
           position: relative;
-          border-radius: var(--r-m);
+          border-radius: 8px;
           border: 1px dashed rgba(201,162,75,0.4);
           background: rgba(12,9,24,0.55);
         }
@@ -32224,19 +31859,19 @@ export default function TarotDraw() {
           position: relative; display: flex; flex-direction: column;
           align-items: center; justify-content: center; gap: 2px;
           width: 100%; aspect-ratio: 2 / 3; max-height: 88px;
-          border-radius: var(--r-s); padding: 4px 2px; box-sizing: border-box;
+          border-radius: 6px; padding: 4px 2px; box-sizing: border-box;
           border: 1px solid rgba(201,162,75,0.45);
           background: linear-gradient(160deg, rgba(60,48,96,0.9), rgba(22,17,44,0.95));
           color: var(--gold-soft);
         }
         .analog-cell-face.rev { transform: rotate(180deg); }
         .analog-cell-name {
-          font-size: var(--fs-tiny); line-height: 1.25; text-align: center; word-break: break-word;
+          font-size: 8.5px; line-height: 1.25; text-align: center; word-break: break-word;
         }
         @media (max-width: 460px) {
           .analog-board .analog-cell { width: 74px; min-width: 0; }
           .analog-cell-face { max-height: 72px; }
-          .analog-cell-name { font-size: var(--fs-tiny); }
+          .analog-cell-name { font-size: 7.5px; }
         }
         /*
           左上の反転。⚠️ 下の帯と同じ丸い見た目にすること。
@@ -32268,7 +31903,7 @@ export default function TarotDraw() {
         }
         .analog-cell-orient {
           flex: 1; padding: 3px 0;
-          font-size: var(--fs-note); font-weight: 700; font-family: inherit;
+          font-size: 10px; font-weight: 700; font-family: inherit;
           border: none; background: none; color: #FFB0B0;
         }
         /* 決まったあとは押しても何も起きないので、押せる見た目にしない */
@@ -32293,16 +31928,16 @@ export default function TarotDraw() {
         /* 未定。⚠️ 押せることが伝わる見た目にする。文言が入るので字を詰める */
         .analog-cell-orient.undecided {
           color: var(--gold-soft); background: rgba(201,162,75,0.22);
-          font-size: var(--fs-note); letter-spacing: -0.02em; white-space: nowrap;
+          font-size: 10px; letter-spacing: -0.02em; white-space: nowrap;
         }
-        .analog-cell-pos { font-size: var(--fs-tiny); line-height: 1.3; opacity: 0.85; }
+        .analog-cell-pos { font-size: 8.5px; line-height: 1.3; opacity: 0.85; }
         .analog-cell-card {
-          font-size: var(--fs-note); line-height: 1.3; color: var(--gold-soft); font-weight: 700;
+          font-size: 10px; line-height: 1.3; color: var(--gold-soft); font-weight: 700;
           word-break: break-word;
         }
         @media (max-width: 420px) {
           .analog-board .analog-cell { width: 62px; min-width: 0; }
-          .analog-cell-card { font-size: var(--fs-tiny); }
+          .analog-cell-card { font-size: 9px; }
         }
         /*
           絵の札。
@@ -32311,7 +31946,7 @@ export default function TarotDraw() {
         */
         .analog-face-card {
           position: relative; overflow: hidden;
-          width: 100%; aspect-ratio: 2 / 3; border-radius: var(--r-m);
+          width: 100%; aspect-ratio: 2 / 3; border-radius: 9px;
           display: flex; flex-direction: column;
           align-items: center; justify-content: center; gap: 4px;
           padding: 6px 4px; box-sizing: border-box;
@@ -32335,7 +31970,7 @@ export default function TarotDraw() {
           .analog-face:hover .analog-face-sheen { transform: translateX(60%); }
         }
         .analog-face-name {
-          font-size: var(--fs-tiny); line-height: 1.3; text-align: center; word-break: break-word;
+          font-size: 9px; line-height: 1.3; text-align: center; word-break: break-word;
         }
         .analog-faces {
           display: grid; grid-template-columns: repeat(auto-fill, minmax(72px, 1fr));
@@ -32343,14 +31978,14 @@ export default function TarotDraw() {
         }
         .analog-face {
           padding: 0; border: none; background: none; cursor: pointer;
-          border-radius: var(--r-m); transition: transform .14s ease;
+          border-radius: 8px; transition: transform .14s ease;
         }
         .analog-face .card-face {
-          width: 100%; aspect-ratio: 2 / 3; border-radius: var(--r-m);
+          width: 100%; aspect-ratio: 2 / 3; border-radius: 8px;
           display: flex; flex-direction: column; align-items: center;
           justify-content: center; gap: 3px;
         }
-        .analog-face .card-name { font-size: var(--fs-tiny); line-height: 1.35; }
+        .analog-face .card-name { font-size: 9.5px; line-height: 1.35; }
         @media (hover: hover) { .analog-face:hover { transform: translateY(-3px); } }
         /* 入れ済み。⚠️ 消さずに薄くする。消えると数え直しになる */
         .analog-face.used { opacity: 0.22; cursor: default; }
@@ -32360,23 +31995,23 @@ export default function TarotDraw() {
           gap: 5px; margin: 10px 0 4px;
         }
         .analog-card {
-          padding: 8px 4px; font-size: var(--fs-note); border-radius: var(--r-m); cursor: pointer;
+          padding: 8px 4px; font-size: 11px; border-radius: 7px; cursor: pointer;
           border: 1px solid rgba(201,162,75,0.24); background: rgba(255,255,255,0.02);
           color: var(--gold-soft); font-family: inherit;
         }
         /* 既に入れた札。⚠️ 隠さず、押せなくするだけ。消えると数え直しになる */
         .analog-card.used { opacity: 0.25; cursor: default; text-decoration: line-through; }
         .analog-note {
-          font-size: var(--fs-note); color: var(--muted); line-height: 1.9;
+          font-size: 10.5px; color: var(--muted); line-height: 1.9;
           margin: 8px 2px 0; opacity: 0.85;
         }
         .analog-result { margin-top: 18px; }
         /* 八分野。⚠️ 棒だけにしない。数値を必ず併記する */
         .stat-bars { margin: 10px 0 6px; }
         .stat-row { display: flex; align-items: center; gap: 8px; margin: 6px 0; }
-        .stat-name { font-size: var(--fs-note); color: var(--muted); width: 3.2em; flex: none; }
+        .stat-name { font-size: 11px; color: var(--muted); width: 3.2em; flex: none; }
         .stat-bar {
-          flex: 1; height: 7px; border-radius: var(--r-s); overflow: hidden;
+          flex: 1; height: 7px; border-radius: 4px; overflow: hidden;
           background: rgba(255,255,255,0.06); border: 1px solid rgba(201,162,75,0.16);
         }
         .stat-bar i {
@@ -32385,7 +32020,7 @@ export default function TarotDraw() {
           box-shadow: 0 0 5px rgba(190,230,255,0.6);
         }
         .stat-val {
-          font-size: var(--fs-note); color: var(--gold-soft); width: 2.4em;
+          font-size: 11px; color: var(--gold-soft); width: 2.4em;
           flex: none; text-align: right; font-weight: 700;
         }
         /* --- マルチプレイ --- */
@@ -32393,12 +32028,12 @@ export default function TarotDraw() {
         .multi-setup { margin: 12px 0 4px; }
         .multi-row { margin: 0 0 12px; }
         .multi-label {
-          display: block; font-size: var(--fs-note); color: var(--muted);
+          display: block; font-size: 11px; color: var(--muted);
           letter-spacing: 0.08em; margin-bottom: 6px; text-align: center;
         }
         .multi-pick { display: flex; flex-wrap: wrap; gap: 6px; justify-content: center; }
         .multi-btn {
-          padding: 7px 13px; font-size: var(--fs-body); border-radius: var(--r-m); cursor: pointer;
+          padding: 7px 13px; font-size: 12px; border-radius: 8px; cursor: pointer;
           border: 1px solid rgba(201,162,75,0.28); background: rgba(255,255,255,0.02);
           color: var(--muted); font-family: inherit; transition: background .18s, color .18s;
         }
@@ -32407,7 +32042,7 @@ export default function TarotDraw() {
           border-color: rgba(201,162,75,0.55); font-weight: 700;
         }
         .multi-note {
-          font-size: var(--fs-note); color: var(--muted); text-align: center;
+          font-size: 10.5px; color: var(--muted); text-align: center;
           line-height: 1.8; margin: 10px 0 14px; opacity: 0.85;
         }
         /*
@@ -32419,21 +32054,21 @@ export default function TarotDraw() {
         .multi-turn {
           display: flex; flex-direction: column; align-items: center; gap: 3px;
           margin: 0 auto 12px; padding: 9px 14px; width: fit-content;
-          border: 2px solid var(--who); border-radius: var(--r-m);
+          border: 2px solid var(--who); border-radius: 12px;
           background: color-mix(in srgb, var(--who) 16%, transparent);
         }
         .multi-turn-name {
-          font-family: 'Shippori Mincho', serif; font-size: var(--fs-head);
+          font-family: 'Shippori Mincho', serif; font-size: 17px;
           letter-spacing: 0.1em; color: var(--who); font-weight: 700;
         }
-        .multi-turn-note { font-size: var(--fs-note); color: var(--muted); }
+        .multi-turn-note { font-size: 11px; color: var(--muted); }
         .multi-table {
           display: grid; grid-template-columns: repeat(auto-fill, minmax(34px, 1fr));
           gap: 5px; margin: 10px 0 8px;
         }
         .multi-slot {
-          aspect-ratio: 2 / 3; border-radius: var(--r-s); cursor: pointer; padding: 0;
-          font-size: var(--fs-body); font-weight: 700; font-family: inherit;
+          aspect-ratio: 2 / 3; border-radius: 5px; cursor: pointer; padding: 0;
+          font-size: 12px; font-weight: 700; font-family: inherit;
           border: 1px solid rgba(201,162,75,0.35);
           background: linear-gradient(160deg, rgba(60,48,96,0.9), rgba(22,17,44,0.95));
           color: transparent;
@@ -32462,16 +32097,16 @@ export default function TarotDraw() {
         .multi-roles { list-style: none; padding: 0; margin: 10px 0 0; }
         .multi-role-row {
           display: grid; grid-template-columns: auto 1fr; gap: 2px 10px;
-          padding: 8px 12px; margin-bottom: 6px; border-radius: var(--r-m);
+          padding: 8px 12px; margin-bottom: 6px; border-radius: 10px;
           border-left: 4px solid var(--who);
           background: color-mix(in srgb, var(--who) 10%, transparent);
         }
-        .multi-role-who { font-size: var(--fs-note); color: var(--who); font-weight: 700; }
+        .multi-role-who { font-size: 11px; color: var(--who); font-weight: 700; }
         .multi-role-name {
-          font-family: 'Shippori Mincho', serif; font-size: var(--fs-head); letter-spacing: 0.06em;
+          font-family: 'Shippori Mincho', serif; font-size: 15px; letter-spacing: 0.06em;
         }
         .multi-role-note {
-          grid-column: 1 / -1; font-size: var(--fs-note); color: var(--muted); line-height: 1.8;
+          grid-column: 1 / -1; font-size: 10.5px; color: var(--muted); line-height: 1.8;
         }
         /*
           神経衰弱。
@@ -32490,7 +32125,7 @@ export default function TarotDraw() {
         }
         @media (max-width: 420px) { .mem-table { grid-template-columns: repeat(4, 1fr); gap: 5px; } }
         .mem-card {
-          aspect-ratio: 2 / 3; border-radius: var(--r-m); padding: 3px; cursor: pointer;
+          aspect-ratio: 2 / 3; border-radius: 7px; padding: 3px; cursor: pointer;
           display: flex; flex-direction: column; align-items: center; justify-content: center;
           gap: 2px; font-family: inherit;
           border: 1px solid rgba(201,162,75,0.35);
@@ -32517,24 +32152,24 @@ export default function TarotDraw() {
         }
         /* 逆位置。⚠️ 中身だけ回す。枠まで回すと枠線がずれて見える */
         .mem-card.rev .mem-no, .mem-card.rev .mem-name { transform: rotate(180deg); }
-        .mem-no { font-size: var(--fs-body); font-weight: 700; line-height: 1; }
-        .mem-name { font-size: var(--fs-tiny); line-height: 1.2; text-align: center; word-break: break-word; }
+        .mem-no { font-size: 13px; font-weight: 700; line-height: 1; }
+        .mem-name { font-size: 8.5px; line-height: 1.2; text-align: center; word-break: break-word; }
         @media (max-width: 420px) {
-          .mem-no { font-size: var(--fs-head); }
-          .mem-name { font-size: var(--fs-tiny); }
+          .mem-no { font-size: 15px; }
+          .mem-name { font-size: 9px; }
         }
         .mem-scores {
           display: flex; flex-wrap: wrap; gap: 6px; justify-content: center; margin: 8px 0;
         }
         .mem-score {
-          font-size: var(--fs-note); padding: 3px 9px; border-radius: 999px;
+          font-size: 11px; padding: 3px 9px; border-radius: 999px;
           border: 1px solid var(--who); color: var(--who);
           background: color-mix(in srgb, var(--who) 12%, transparent);
         }
         .multi-rank { list-style: none; padding: 0; margin: 10px 0 0; }
         .multi-rank-row {
           display: flex; align-items: center; gap: 10px;
-          padding: 8px 12px; margin-bottom: 6px; border-radius: var(--r-m);
+          padding: 8px 12px; margin-bottom: 6px; border-radius: 10px;
           border: 1px solid var(--who);
           background: color-mix(in srgb, var(--who) 12%, transparent);
         }
@@ -32543,12 +32178,12 @@ export default function TarotDraw() {
           background: color-mix(in srgb, var(--who) 22%, transparent);
         }
         .multi-rank-no {
-          font-family: 'Shippori Mincho', serif; font-size: var(--fs-title); font-weight: 700;
+          font-family: 'Shippori Mincho', serif; font-size: 26px; font-weight: 700;
           min-width: 1.4em; text-align: center; line-height: 1;
         }
-        .multi-rank-row.top .multi-rank-no { font-size: var(--fs-title); }
-        .multi-rank-who { flex: 1; font-size: var(--fs-head); color: var(--who); font-weight: 700; }
-        .multi-rank-score { font-size: var(--fs-body); color: var(--muted); }
+        .multi-rank-row.top .multi-rank-no { font-size: 32px; }
+        .multi-rank-who { flex: 1; font-size: 14px; color: var(--who); font-weight: 700; }
+        .multi-rank-score { font-size: 12px; color: var(--muted); }
         /*
           死神を引いた人。⚠️ ここだけは派手にする。
           誰に当たったかが催しの結論なので、他と同じ見た目では伝わらない。
@@ -32616,10 +32251,10 @@ export default function TarotDraw() {
           94% { transform: rotate(183deg); }
           97% { transform: rotate(178deg); }
         }
-        .multi-nodraw { font-size: var(--fs-note); color: var(--muted); margin: 2px 0 0; opacity: 0.8; }
+        .multi-nodraw { font-size: 10.5px; color: var(--muted); margin: 2px 0 0; opacity: 0.8; }
         .multi-face {
           position: relative; overflow: hidden;
-          width: 62px; aspect-ratio: 2 / 3; border-radius: var(--r-m);
+          width: 62px; aspect-ratio: 2 / 3; border-radius: 8px;
           display: flex; flex-direction: column;
           align-items: center; justify-content: center; gap: 3px;
           padding: 5px 3px; box-sizing: border-box;
@@ -32633,7 +32268,7 @@ export default function TarotDraw() {
         }
         /* ホロ。縁をゆっくり回る虹色 */
         .multi-face::before {
-          content: ""; position: absolute; inset: -1px; border-radius: var(--r-m);
+          content: ""; position: absolute; inset: -1px; border-radius: 8px;
           padding: 1px; pointer-events: none;
           background: linear-gradient(135deg, #FF3CB4, #3CC8FF, #78FF8C, #FFDC3C, #FF3CB4);
           background-size: 300% 300%;
@@ -32660,14 +32295,14 @@ export default function TarotDraw() {
         /* 逆位置。⚠️ 札ごと回す。印だけでは向きが伝わらない */
         .multi-face.rev { transform: rotate(180deg); }
         .multi-face-name {
-          font-size: var(--fs-tiny); line-height: 1.25; text-align: center; word-break: break-word;
+          font-size: 8px; line-height: 1.25; text-align: center; word-break: break-word;
         }
         /* 手札。⚠️ 人の色を左端の帯で示す。文字色だけだと読みにくい */
         .multi-hand { border-left: 4px solid var(--who); }
         .multi-who { color: var(--who); font-weight: 700; }
         .multi-result { margin-top: 8px; }
         .multi-hand {
-          border: 1px solid rgba(201,162,75,0.18); border-radius: var(--r-m);
+          border: 1px solid rgba(201,162,75,0.18); border-radius: 10px;
           padding: 9px 11px; margin: 0 0 8px; background: rgba(255,255,255,0.02);
         }
         /* 判定で名指しされた人。⚠️ 色だけでなく枠も変える */
@@ -32676,12 +32311,12 @@ export default function TarotDraw() {
         }
         .multi-hand-head {
           display: flex; justify-content: space-between; align-items: baseline;
-          font-size: var(--fs-note); color: var(--gold-soft); margin-bottom: 5px;
+          font-size: 11.5px; color: var(--gold-soft); margin-bottom: 5px;
         }
-        .multi-score { font-size: var(--fs-note); color: var(--muted); }
+        .multi-score { font-size: 10px; color: var(--muted); }
         .multi-cards { display: flex; flex-wrap: wrap; gap: 5px; }
         .multi-card {
-          font-size: var(--fs-note); padding: 3px 8px; border-radius: var(--r-s);
+          font-size: 11px; padding: 3px 8px; border-radius: 6px;
           border: 1px solid rgba(201,162,75,0.22); color: var(--muted);
         }
         /* 逆位置。⚠️ 文字を回さない。読めなくなる。印で示す */
@@ -32692,7 +32327,7 @@ export default function TarotDraw() {
             主要ボタン。字間を広げ、余白を厚くする。
             高級感は装飾を足すのではなく、文字を少なくして周囲の空間を増やすことで出る。
           */
-          display: inline-flex; align-items: center; gap: 10px; font-family: 'Shippori Mincho', serif; font-size: var(--fs-head);
+          display: inline-flex; align-items: center; gap: 10px; font-family: 'Shippori Mincho', serif; font-size: 15px;
           padding: 14px 34px; border-radius: 999px; border: 1px solid rgba(201,162,75,0.75);
           letter-spacing: 0.12em; text-indent: 0.12em;
           background: linear-gradient(180deg, rgba(201,162,75,0.18), rgba(201,162,75,0.04));
@@ -32705,23 +32340,23 @@ export default function TarotDraw() {
         .climax-btn { animation: glowPulse 2.2s ease-in-out infinite; }
 
         .open-choice { display: flex; flex-direction: column; align-items: center; gap: 12px; }
-        .open-choice-label { font-family: 'Shippori Mincho', serif; font-size: var(--fs-body); color: var(--gold-soft); margin: 0; letter-spacing: 0.04em; }
+        .open-choice-label { font-family: 'Shippori Mincho', serif; font-size: 13px; color: var(--gold-soft); margin: 0; letter-spacing: 0.04em; }
         .open-choice-btns { display: flex; gap: 12px; flex-wrap: wrap; justify-content: center; }
         .choice-up  { border-color: var(--gold);  color: var(--gold-soft); }
         .choice-rev { border-color: var(--rose);  color: var(--rose);
           background: linear-gradient(180deg, rgba(201,122,146,0.18), rgba(201,122,146,0.04)); }
         .choice-rev:hover:not(:disabled) { box-shadow: 0 8px 24px rgba(201,122,146,0.18); }
-        .copy-btn { font-size: var(--fs-body); padding: 11px 22px; }
+        .copy-btn { font-size: 13px; padding: 11px 22px; }
         .copy-btn:disabled { opacity: 0.4; cursor: default; animation: none; }
 
-        .reset-btn { display: inline-flex; align-items: center; gap: 7px; font-size: var(--fs-body); color: var(--gold-soft); background: none; border: 1px solid rgba(201,162,75,0.28); padding: 9px 20px; border-radius: 999px; cursor: pointer; letter-spacing: 0.06em; opacity: 0.85; transition: opacity .2s cubic-bezier(.16,1,.3,1), border-color .2s ease, color .2s ease; }
+        .reset-btn { display: inline-flex; align-items: center; gap: 7px; font-size: 12px; color: var(--gold-soft); background: none; border: 1px solid rgba(201,162,75,0.28); padding: 9px 20px; border-radius: 999px; cursor: pointer; letter-spacing: 0.06em; opacity: 0.85; transition: opacity .2s cubic-bezier(.16,1,.3,1), border-color .2s ease, color .2s ease; }
         .reset-btn:hover { color: var(--gold); border-color: rgba(201,162,75,0.6); opacity: 1; }
         .reset-btn:focus-visible { outline: 2px solid var(--gold); outline-offset: 2px; }
 
-        .round-label { position: relative; z-index: 1; text-align: center; font-family: 'Shippori Mincho', serif; font-size: var(--fs-body); color: var(--gold-soft); margin: 0 0 16px; line-height: 1.7; }
+        .round-label { position: relative; z-index: 1; text-align: center; font-family: 'Shippori Mincho', serif; font-size: 13.5px; color: var(--gold-soft); margin: 0 0 16px; line-height: 1.7; }
 
-        .held-chip { position: relative; z-index: 1; display: flex; align-items: center; gap: 10px; justify-content: center; margin: 0 auto 24px; padding: 8px 16px; border: 1px dashed rgba(201,162,75,0.5); border-radius: 999px; width: fit-content; color: var(--gold-soft); font-size: var(--fs-note); background: rgba(201,162,75,0.06); animation: glowPulse 2.4s ease-in-out infinite; }
-        .held-chip .mini-back { width: 26px; height: 38px; border-radius: var(--r-s); border: 1px solid var(--gold); background: linear-gradient(160deg, var(--surface), var(--bg-mid)); display: flex; align-items: center; justify-content: center; font-family: 'Cinzel', serif; font-size: var(--fs-note); color: var(--gold); flex-shrink: 0; }
+        .held-chip { position: relative; z-index: 1; display: flex; align-items: center; gap: 10px; justify-content: center; margin: 0 auto 24px; padding: 8px 16px; border: 1px dashed rgba(201,162,75,0.5); border-radius: 999px; width: fit-content; color: var(--gold-soft); font-size: 11.5px; background: rgba(201,162,75,0.06); animation: glowPulse 2.4s ease-in-out infinite; }
+        .held-chip .mini-back { width: 26px; height: 38px; border-radius: 4px; border: 1px solid var(--gold); background: linear-gradient(160deg, var(--surface), var(--bg-mid)); display: flex; align-items: center; justify-content: center; font-family: 'Cinzel', serif; font-size: 11px; color: var(--gold); flex-shrink: 0; }
         @keyframes glowPulse { 0%, 100% { box-shadow: 0 0 0 0 rgba(201,162,75,0); } 50% { box-shadow: 0 0 16px 2px rgba(201,162,75,0.20); } }
 
         /*
@@ -32738,23 +32373,23 @@ export default function TarotDraw() {
         /* ヘキサグラムの入力欄。既存の .question-field と同じ見え方に揃える */
         /* 入力欄の上に置く例示。書き始めても消えない */
         .hex-fields-example {
-          margin: -1px 0 1px; font-size: var(--fs-note); line-height: 1.75;
+          margin: -1px 0 1px; font-size: 10.5px; line-height: 1.75;
           color: var(--muted); opacity: 0.92;
         }
 
         .hex-fields { width: 100%; max-width: 340px; display: flex; flex-direction: column; gap: 5px; margin: 0 0 4px; }
-        .hex-fields label { font-size: var(--fs-note); color: var(--gold-soft); letter-spacing: 0.04em; }
+        .hex-fields label { font-size: 11px; color: var(--gold-soft); letter-spacing: 0.04em; }
         .hex-fields input {
-          width: 100%; padding: 9px 11px; border-radius: var(--r-m);
+          width: 100%; padding: 9px 11px; border-radius: 8px;
           border: 1px solid rgba(201,162,75,0.28);
           background: rgba(255,255,255,0.03); color: var(--parchment);
-          font-family: inherit; font-size: var(--fs-body);
+          font-family: inherit; font-size: 13px;
         }
         .hex-fields input:focus { outline: none; border-color: rgba(201,162,75,0.7); }
-        .hex-fields-note { font-size: var(--fs-note); color: var(--muted); margin: 2px 0 0; line-height: 1.7; text-align: center; opacity: 0.85; }
-        .hex-viewpoints { display: flex; flex-direction: column; gap: 6px; margin: 10px 0 0; padding: 10px 12px; border-radius: var(--r-m); background: rgba(255,255,255,0.025); border: 1px solid rgba(201,162,75,0.14); }
-        .hex-viewpoint-title { font-size: var(--fs-note); color: var(--gold-soft); margin: 0 0 2px; letter-spacing: 0.04em; }
-        .hex-viewpoint { display: flex; align-items: center; gap: 8px; font-size: var(--fs-body); color: var(--parchment); cursor: pointer; line-height: 1.5; opacity: 0.9; }
+        .hex-fields-note { font-size: 10.5px; color: var(--muted); margin: 2px 0 0; line-height: 1.7; text-align: center; opacity: 0.85; }
+        .hex-viewpoints { display: flex; flex-direction: column; gap: 6px; margin: 10px 0 0; padding: 10px 12px; border-radius: 10px; background: rgba(255,255,255,0.025); border: 1px solid rgba(201,162,75,0.14); }
+        .hex-viewpoint-title { font-size: 11px; color: var(--gold-soft); margin: 0 0 2px; letter-spacing: 0.04em; }
+        .hex-viewpoint { display: flex; align-items: center; gap: 8px; font-size: 12px; color: var(--parchment); cursor: pointer; line-height: 1.5; opacity: 0.9; }
         .hex-viewpoint input { accent-color: var(--gold); width: 14px; height: 14px; cursor: pointer; flex-shrink: 0; }
         @media (hover: hover) { .hex-viewpoint:hover { opacity: 1; color: var(--gold-soft); } }
 
@@ -32765,7 +32400,7 @@ export default function TarotDraw() {
         */
         .copy-wrap { width: 100%; max-width: 340px; display: flex; flex-direction: column; align-items: center; }
         .copy-hint {
-          font-size: var(--fs-note); color: var(--muted); line-height: 1.6;
+          font-size: 10.5px; color: var(--muted); line-height: 1.6;
           margin: 5px 0 0; text-align: center; max-width: 300px;
           opacity: 0; transition: opacity .22s ease;
         }
@@ -32800,7 +32435,7 @@ export default function TarotDraw() {
         */
         .reading-head-hit {
           animation: readHeadHit 1.6s ease-out 1;
-          border-radius: var(--r-s);
+          border-radius: 6px;
         }
         @keyframes readHeadHit {
           0%   { background: rgba(255,235,190,0.34); box-shadow: 0 0 0 6px rgba(255,235,190,0.20); }
@@ -32808,7 +32443,7 @@ export default function TarotDraw() {
           100% { background: transparent; box-shadow: none; }
         }
         .reading-head {
-          display: block; font-size: var(--fs-note); letter-spacing: 0.12em;
+          display: block; font-size: 11px; letter-spacing: 0.12em;
           color: #D8C89C; margin: 15px 0 4px;
         }
         .reading-head:first-child { margin-top: 0; }
@@ -32828,7 +32463,7 @@ export default function TarotDraw() {
         /* 曜日は正式名になったぶん字数が増えた。読める大きさまで上げる */
         .hex-pos-chip {
           color: #17102E !important; font-weight: 700; letter-spacing: 0;
-          font-size: var(--fs-tiny); min-width: 18px; height: 19px; padding: 0 7px; border-radius: 999px;
+          font-size: 9.5px; min-width: 18px; height: 19px; padding: 0 7px; border-radius: 999px;
           max-width: 96%; overflow: hidden; white-space: nowrap;
           display: inline-flex; align-items: center; justify-content: center;
           box-shadow: 0 0 0 1px rgba(20,12,40,0.75), 0 1px 3px rgba(0,0,0,0.5);
@@ -32842,10 +32477,10 @@ export default function TarotDraw() {
         }
 
         .reading-card {
-          display: inline-block; padding: 3px 11px; border-radius: var(--r-m);
+          display: inline-block; padding: 3px 11px; border-radius: 8px;
           border: 1px solid rgba(228,150,150,0.55);
           background: rgba(228,150,150,0.10);
-          color: var(--orient-up-soft); font-size: var(--fs-head); font-weight: 600;
+          color: var(--orient-up-soft); font-size: 14px; font-weight: 600;
           letter-spacing: 0.05em; font-family: 'Shippori Mincho', serif;
         }
         .reading-gap { display: block; height: 6px; }
@@ -32879,15 +32514,15 @@ export default function TarotDraw() {
         }
         .hex-ritual {
           margin: 2px 0; text-align: center;
-          font-family: 'Shippori Mincho', serif; font-size: var(--fs-body);
+          font-family: 'Shippori Mincho', serif; font-size: 12.5px;
           line-height: 2.1; letter-spacing: 0.10em;
           color: var(--gold-soft); opacity: 0.9;
         }
 
         .ai-failed-note {
-          width: 100%; margin: 0 0 12px; padding: 9px 12px; border-radius: var(--r-m);
+          width: 100%; margin: 0 0 12px; padding: 9px 12px; border-radius: 9px;
           border: 1px solid rgba(224,138,138,0.34); background: rgba(224,138,138,0.07);
-          font-size: var(--fs-note); line-height: 1.8; color: var(--rose); text-align: center;
+          font-size: 11.5px; line-height: 1.8; color: var(--rose); text-align: center;
         }
 
         /*
@@ -32899,19 +32534,19 @@ export default function TarotDraw() {
         .back-to-title.guarded { opacity: 0.28; }
         .back-to-title {
           margin-top: 18px; background: none; border: none; cursor: pointer;
-          font-family: inherit; font-size: var(--fs-note); color: var(--muted);
+          font-family: inherit; font-size: 11px; color: var(--muted);
           letter-spacing: 0.06em; padding: 8px 14px; opacity: 0.75;
           transition: opacity .2s ease, color .2s ease;
         }
         @media (hover: hover) { .back-to-title:hover { opacity: 1; color: var(--gold-soft); } }
-        .back-to-title:focus-visible { outline: 2px solid var(--gold); outline-offset: 2px; border-radius: var(--r-s); }
+        .back-to-title:focus-visible { outline: 2px solid var(--gold); outline-offset: 2px; border-radius: 6px; }
 
         /* 週の起伏。線は1本だけ描く。8本重ねると7点×8本で読めなくなる */
         /* ケルト十字の平面。開封のたびに重心が動く */
         .celtic-plane { width: 100%; max-width: 320px; margin: 8px auto 2px; }
         /* 図の見出し。11pxでは他の小さな注記と区別が付かなかった */
         .celtic-plane-title {
-          font-family: 'Shippori Mincho', serif; font-size: var(--fs-head); font-weight: 700;
+          font-family: 'Shippori Mincho', serif; font-size: 15px; font-weight: 700;
           letter-spacing: 0.14em; text-indent: 0.14em; text-align: center; margin-bottom: 8px;
         }
         .celtic-plane-svg { display: block; width: 100%; height: auto; overflow: visible; }
@@ -32919,15 +32554,15 @@ export default function TarotDraw() {
           軸の名。--muted は地の紫に近く、円の下地に重なると沈む。
           生成りまで上げ、字も一回り大きくする。
         */
-        .celtic-axis-label { font-size: var(--fs-note); fill: #D6CDE8; letter-spacing: 0.06em; font-weight: 600; }
+        .celtic-axis-label { font-size: 10.5px; fill: #D6CDE8; letter-spacing: 0.06em; font-weight: 600; }
         /* 意味づけの手がかり。称号より小さく、読ませる速度を落とす */
         .celtic-zone-note {
           max-width: none; margin: 7px 0 0; padding: 0;
-          font-size: var(--fs-note); line-height: 1.95; letter-spacing: 0.02em;
+          font-size: 11px; line-height: 1.95; letter-spacing: 0.02em;
           color: var(--parchment); opacity: 0.88; text-align: left;
         }
 
-        .celtic-plane-note { font-size: var(--fs-note); color: var(--muted); text-align: center; margin: 4px 0 0; opacity: 0.85; }
+        .celtic-plane-note { font-size: 10px; color: var(--muted); text-align: center; margin: 4px 0 0; opacity: 0.85; }
         /* 点が現れるときだけ弾ませる。重心は滑らかに移る */
         /* 軸に乗った回。その軸だけが光る */
         .celtic-axis-lit {
@@ -32948,7 +32583,7 @@ export default function TarotDraw() {
         /* 軌跡の格。上位二段だけ名前が出る */
         .celtic-grade {
           text-align: center; margin: 6px 0 0; font-family: 'Shippori Mincho', serif;
-          font-size: var(--fs-body); font-weight: 700; letter-spacing: 0.10em;
+          font-size: 13px; font-weight: 700; letter-spacing: 0.10em;
         }
         /*
           称号と説明を一つの枠に収める。
@@ -32960,7 +32595,7 @@ export default function TarotDraw() {
           二本のバーに分けると、同じ軸の両端が独立した量に見えてしまう。
         */
         .celtic-axis-meter { width: 100%; max-width: 320px; margin: 10px auto 0; }
-        .celtic-meter-ends { display: flex; justify-content: space-between; font-size: var(--fs-note); margin-bottom: 5px; }
+        .celtic-meter-ends { display: flex; justify-content: space-between; font-size: 11px; margin-bottom: 5px; }
         /* 端の語も軸と同じ色にして、どちらがどちらか一目で結びつける */
         .celtic-meter-ends span:first-child { color: #E8837C; }
         .celtic-meter-ends span:last-child { color: #6FC7C0; }
@@ -32986,11 +32621,11 @@ export default function TarotDraw() {
           box-shadow: 0 0 9px rgba(240,217,138,0.7);
           transition: left .7s cubic-bezier(.3,.9,.3,1);
         }
-        .celtic-meter-read { margin: 6px 0 0; font-size: var(--fs-note); line-height: 1.7; color: var(--muted); text-align: center; }
+        .celtic-meter-read { margin: 6px 0 0; font-size: 10.5px; line-height: 1.7; color: var(--muted); text-align: center; }
 
         .celtic-verdict {
           width: 100%; max-width: 320px; margin: 10px auto 0; padding: 11px 14px;
-          border-radius: var(--r-m); box-sizing: border-box;
+          border-radius: 12px; box-sizing: border-box;
           border: 1px solid rgba(169,155,201,0.28); background: rgba(169,155,201,0.05);
         }
         .celtic-verdict.strong {
@@ -32998,7 +32633,7 @@ export default function TarotDraw() {
           box-shadow: 0 0 20px rgba(201,162,75,0.13);
         }
         /* 称号は説明より大きく、流れも速くする。同じ光り方だと見分けが付かない */
-        .celtic-grade { font-size: var(--fs-head); animation-duration: 4s; }
+        .celtic-grade { font-size: 15px; animation-duration: 4s; }
         .celtic-grade.strong { animation-duration: 2.2s; filter: drop-shadow(0 0 8px rgba(255,225,160,0.45)); }
         /* 軸に乗った回と原点へ落ちた回だけ、名前も虹で流す */
 
@@ -33028,17 +32663,17 @@ export default function TarotDraw() {
         }
 
         .week-rhythm { width: 100%; max-width: 360px; margin: 6px auto 2px; }
-        .week-rhythm-title { font-size: var(--fs-note); letter-spacing: 0.12em; color: #D8C89C; text-align: center; margin-bottom: 6px; }
+        .week-rhythm-title { font-size: 11px; letter-spacing: 0.12em; color: #D8C89C; text-align: center; margin-bottom: 6px; }
         /* タブはグラフの下。真上に置くと、星の位置と縦に揃って誤読を生む */
         .week-rhythm-tabs { display: flex; flex-wrap: wrap; gap: 4px; justify-content: center; margin-top: 8px; }
         /* いま見ている分野。ここだけがグラフの見出しになる */
         .week-rhythm-field {
-          font-family: 'Shippori Mincho', serif; font-size: var(--fs-head); font-weight: 700;
+          font-family: 'Shippori Mincho', serif; font-size: 15px; font-weight: 700;
           letter-spacing: 0.10em; text-indent: 0.10em; color: var(--gold);
           text-align: center; margin-bottom: 4px;
         }
         .week-tab {
-          font-size: var(--fs-note); padding: 3px 9px; border-radius: 999px; cursor: pointer;
+          font-size: 10px; padding: 3px 9px; border-radius: 999px; cursor: pointer;
           font-family: inherit; color: var(--muted); background: transparent;
           border: 1px solid rgba(169,155,201,0.28);
           transition: color .18s ease, border-color .18s ease, background .18s ease;
@@ -33134,17 +32769,17 @@ export default function TarotDraw() {
         .week-rhythm-days { position: relative; height: 13px; margin-top: 2px; }
         .week-rhythm-days span {
           position: absolute; transform: translateX(-50%);
-          font-size: var(--fs-tiny); white-space: nowrap; transition: opacity .3s ease;
+          font-size: 8.5px; white-space: nowrap; transition: opacity .3s ease;
         }
         /* 山と谷。線を読めない人にも見せ場が伝わるよう、言葉でも出す */
-        .week-peak-note { display: flex; justify-content: center; gap: 14px; margin-top: 6px; font-size: var(--fs-note); }
+        .week-peak-note { display: flex; justify-content: center; gap: 14px; margin-top: 6px; font-size: 10.5px; }
         /*
           週の役。スリーカードの役と同じ位置づけなので、見え方も揃える。
           強い週は金の枠、静かな週は無彩色の枠。色数を増やさない。
         */
         .week-hand {
           width: 100%; max-width: 340px; margin: 4px auto 2px; padding: 9px 14px;
-          border-radius: var(--r-m); text-align: center;
+          border-radius: 12px; text-align: center;
           display: flex; flex-direction: column; gap: 3px;
         }
         .week-hand.strong {
@@ -33155,21 +32790,21 @@ export default function TarotDraw() {
         /* 沈む役。赤で警告するのではなく、青へ寄せて静かに沈ませる */
         .week-hand.dark { border: 1px solid rgba(140,160,225,0.42); background: rgba(140,160,225,0.07); }
         .week-hand.dark .week-hand-name { color: var(--orient-rev); }
-        .week-hand-name { font-family: 'Shippori Mincho', serif; font-size: var(--fs-head); font-weight: 700; letter-spacing: 0.08em; }
+        .week-hand-name { font-family: 'Shippori Mincho', serif; font-size: 15px; font-weight: 700; letter-spacing: 0.08em; }
         .week-hand.strong .week-hand-name { color: var(--gold); }
         .week-hand.quiet .week-hand-name { color: var(--parchment); }
-        .week-hand-note { font-size: var(--fs-note); color: var(--muted); line-height: 1.7; }
+        .week-hand-note { font-size: 10.5px; color: var(--muted); line-height: 1.7; }
 
         /* 課金診断。読ませるためのものなので、等幅で折り返さずに出す */
         .diag-panel { width: 100%; max-width: 480px; margin: 6px auto 0; display: flex; flex-direction: column; align-items: center; gap: 8px; }
-        .diag-note { font-size: var(--fs-note); color: var(--muted); line-height: 1.8; text-align: center; margin: 0; }
-        .diag-empty { font-size: var(--fs-note); color: var(--muted); margin: 0; }
+        .diag-note { font-size: 10.5px; color: var(--muted); line-height: 1.8; text-align: center; margin: 0; }
+        .diag-empty { font-size: 11px; color: var(--muted); margin: 0; }
         .diag-body {
           width: 100%; max-height: 220px; overflow: auto; margin: 0;
-          padding: 10px 12px; border-radius: var(--r-m); box-sizing: border-box;
+          padding: 10px 12px; border-radius: 10px; box-sizing: border-box;
           border: 1px solid rgba(201,162,75,0.24); background: rgba(0,0,0,0.28);
           font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
-          font-size: var(--fs-note); line-height: 1.7; color: var(--parchment);
+          font-size: 10px; line-height: 1.7; color: var(--parchment);
           white-space: pre; -webkit-overflow-scrolling: touch;
         }
 
@@ -33185,7 +32820,7 @@ export default function TarotDraw() {
         }
         .plan-badge {
           flex: 0 0 auto; align-self: center;
-          font-size: var(--fs-tiny); letter-spacing: 0.08em; padding: 2px 7px;
+          font-size: 9px; letter-spacing: 0.08em; padding: 2px 7px;
           border-radius: 999px; line-height: 1.5; white-space: nowrap;
           font-family: 'Cinzel', serif; font-weight: 700;
           /* 内容ぶんの幅で止める。伸ばさない・縮めない */
@@ -33295,7 +32930,7 @@ export default function TarotDraw() {
         /* 任せる入口。札の並びより目立たせない。あくまで近道 */
         /* 一括開封。段階開封より控えめに。あくまで近道 */
         .bulk-btn {
-          font-family: inherit; font-size: var(--fs-note); padding: 5px 14px; border-radius: 999px;
+          font-family: inherit; font-size: 11px; padding: 5px 14px; border-radius: 999px;
           color: var(--muted); background: transparent; cursor: pointer; margin-top: 2px;
           border: 1px solid rgba(169,155,201,0.3);
           transition: color .18s ease, border-color .18s ease;
@@ -33305,13 +32940,13 @@ export default function TarotDraw() {
         }
         .bulk-confirm {
           width: 100%; max-width: 300px; margin: 4px auto 0; padding: 10px 12px;
-          border-radius: var(--r-m); border: 1px solid rgba(201,162,75,0.35);
+          border-radius: 10px; border: 1px solid rgba(201,162,75,0.35);
           background: rgba(201,162,75,0.07); box-sizing: border-box;
         }
-        .bulk-confirm-text { margin: 0 0 8px; font-size: var(--fs-note); line-height: 1.75; color: var(--parchment); text-align: center; }
+        .bulk-confirm-text { margin: 0 0 8px; font-size: 11.5px; line-height: 1.75; color: var(--parchment); text-align: center; }
         .bulk-confirm-row { display: flex; gap: 8px; justify-content: center; }
         .bulk-yes, .bulk-no {
-          font-family: inherit; font-size: var(--fs-note); padding: 5px 16px; border-radius: 999px; cursor: pointer;
+          font-family: inherit; font-size: 11px; padding: 5px 16px; border-radius: 999px; cursor: pointer;
         }
         .bulk-yes { color: #17102E; background: var(--gold); border: none; font-weight: 700; }
         .bulk-no { color: var(--muted); background: transparent; border: 1px solid rgba(169,155,201,0.3); }
@@ -33320,10 +32955,10 @@ export default function TarotDraw() {
         /* 触れているあいだの説明。高さを確保して、出入りで並びが動かないようにする */
         .auto-pick-hint {
           min-height: 15px; margin: 0 0 8px; text-align: center;
-          font-size: var(--fs-note); line-height: 1.6; color: var(--muted);
+          font-size: 10.5px; line-height: 1.6; color: var(--muted);
         }
         .auto-pick-btn {
-          font-family: inherit; font-size: var(--fs-note); padding: 5px 13px; border-radius: 999px;
+          font-family: inherit; font-size: 11px; padding: 5px 13px; border-radius: 999px;
           color: var(--muted); background: transparent; cursor: pointer;
           border: 1px solid rgba(169,155,201,0.3);
           transition: color .18s ease, border-color .18s ease, background .18s ease;
@@ -33335,7 +32970,7 @@ export default function TarotDraw() {
         .spread-grid { position: relative; z-index: 1; display: flex; flex-wrap: wrap; gap: 6px; justify-content: center; max-width: 760px; margin: 0 auto 28px; }
         /* 地色は裏面SVG（TarotCardBack）が持つ。ここで background を敷くと二重になる。
            overflow:hidden は、傾いた札から意匠が角丸の外へ出ないための保険。 */
-        .mini-card { animation: cardDealInDepth .42s cubic-bezier(.22,.85,.25,1) both; position: relative; width: 40px; height: 60px; border-radius: var(--r-s); overflow: hidden; border: 1px solid rgba(201,162,75,0.45); background: none; box-shadow: inset 1px 1px 0 rgba(240,221,172,0.5), inset -1px -1px 0 rgba(18,11,36,0.85), 0 1px 2px rgba(0,0,0,0.7); display: flex; align-items: center; justify-content: center; cursor: pointer; padding: 0; font: inherit; transform: rotate(var(--rot, 0deg)); transition: transform .18s cubic-bezier(.16,1,.3,1), box-shadow .18s ease, border-color .18s ease; }
+        .mini-card { animation: cardDealInDepth .42s cubic-bezier(.22,.85,.25,1) both; position: relative; width: 40px; height: 60px; border-radius: 6px; overflow: hidden; border: 1px solid rgba(201,162,75,0.45); background: none; box-shadow: inset 1px 1px 0 rgba(240,221,172,0.5), inset -1px -1px 0 rgba(18,11,36,0.85), 0 1px 2px rgba(0,0,0,0.7); display: flex; align-items: center; justify-content: center; cursor: pointer; padding: 0; font: inherit; transform: rotate(var(--rot, 0deg)); transition: transform .18s cubic-bezier(.16,1,.3,1), box-shadow .18s ease, border-color .18s ease; }
         .mini-card:hover:not(:disabled) { transform: rotate(var(--rot, 0deg)) translateY(-4px) scale(1.08); box-shadow: inset 1px 1px 0 rgba(240,221,172,0.5), inset -1px -1px 0 rgba(18,11,36,0.85), 0 6px 16px rgba(201,162,75,0.20); border-color: var(--gold); }
         .mini-card:focus-visible { outline: 2px solid var(--gold); outline-offset: 2px; }
         .mini-card:disabled { cursor: default; }
@@ -33369,7 +33004,7 @@ export default function TarotDraw() {
           場に「ここから抜けた」という痕跡を一拍だけ残す。
         */
         .mini-card.picked-vanish::after {
-          content: ""; position: absolute; inset: -2px; border-radius: var(--r-m);
+          content: ""; position: absolute; inset: -2px; border-radius: 8px;
           border: 2px solid var(--pick-color, var(--gold));
           animation: pickRipple .62s ease-out forwards;
         }
@@ -33397,7 +33032,7 @@ export default function TarotDraw() {
           金の丸を重ねると枠と丸の境界が溶けて番号が読めない。
           銀は裏面の翼に既にある色なので、意匠から浮かない。
         */
-        .mini-badge { position: absolute; top: 3px; right: 3px; z-index: 2; width: 16px; height: 16px; border-radius: 50%; background: #E6EBF1; color: #17102E; font-size: var(--fs-note); font-weight: 700; display: flex; align-items: center; justify-content: center; font-family: 'Cinzel', serif; line-height: 1; box-shadow: 0 0 0 1px rgba(20,12,40,0.85), 0 1px 3px rgba(0,0,0,0.55); }
+        .mini-badge { position: absolute; top: 3px; right: 3px; z-index: 2; width: 16px; height: 16px; border-radius: 50%; background: #E6EBF1; color: #17102E; font-size: 10px; font-weight: 700; display: flex; align-items: center; justify-content: center; font-family: 'Cinzel', serif; line-height: 1; box-shadow: 0 0 0 1px rgba(20,12,40,0.85), 0 1px 3px rgba(0,0,0,0.55); }
 
         .result-area { position: relative; z-index: 1; display: flex; flex-direction: column; align-items: center; gap: 22px; animation: popIn .5s cubic-bezier(.16,1,.3,1); margin-bottom: 10px; }
         .cards-row { display: flex; gap: 18px; flex-wrap: wrap; justify-content: center; }
@@ -33416,7 +33051,7 @@ export default function TarotDraw() {
         .tc-flip-outer.tc-big { width: 168px; height: 252px; }
         .tc-flip { position: absolute; inset: 0; transform-style: preserve-3d; transition: transform 1.1s cubic-bezier(.45,.05,.25,1); }
         .tc-flip-outer.open .tc-flip { transform: rotateY(540deg); }
-        .tc-face { position: absolute; inset: 0; border-radius: var(--r-m); overflow: hidden; backface-visibility: hidden; -webkit-backface-visibility: hidden; }
+        .tc-face { position: absolute; inset: 0; border-radius: 12px; overflow: hidden; backface-visibility: hidden; -webkit-backface-visibility: hidden; }
         .tc-front { border: 1px solid var(--gold-dim); box-shadow: 0 1px 2px rgba(0,0,0,0.75), 0 10px 30px rgba(0,0,0,0.5); }
         .tc-back { transform: rotateY(180deg); }
         /*
@@ -33425,9 +33060,9 @@ export default function TarotDraw() {
           130x194 の面から2pxはみ出して切られていた。
         */
         .tc-face .static-card { box-sizing: border-box; width: 100%; height: 100%; }
-        .position-label { font-family: 'Cinzel', serif; font-size: var(--fs-note); letter-spacing: 0.15em; color: var(--gold); }
+        .position-label { font-family: 'Cinzel', serif; font-size: 11px; letter-spacing: 0.15em; color: var(--gold); }
         /* 位置ラベルと同寸。明滅は薄い側に振り、消えきらせない（点滅は目に障る） */
-        .tap-hint { font-size: var(--fs-note); letter-spacing: 0.12em; color: var(--gold-soft); animation: tapHintBlink 2s ease-in-out infinite; }
+        .tap-hint { font-size: 11px; letter-spacing: 0.12em; color: var(--gold-soft); animation: tapHintBlink 2s ease-in-out infinite; }
         @keyframes tapHintBlink { 0%, 100% { opacity: 0.4; } 50% { opacity: 1; } }
 
         /*
@@ -33437,7 +33072,7 @@ export default function TarotDraw() {
           外側は接地影（近く硬い）と環境影（遠く柔らかい）の二段。
         */
         .static-card {
-          width: 130px; height: 194px; border-radius: var(--r-m);
+          width: 130px; height: 194px; border-radius: 12px;
           border: 1px solid var(--gold);
           background: linear-gradient(152deg, #2A1F55, #1a1440 55%, #120E24);
           display: flex; align-items: center; justify-content: center; overflow: hidden;
@@ -33458,7 +33093,7 @@ export default function TarotDraw() {
         */
         .static-card.oracle { width: 168px; height: 252px; }
         .static-card.oracle .card-name {
-          font-size: var(--fs-title); line-height: 1.35;
+          font-size: 19px; line-height: 1.35;
           /*
             日本語なら最長5字（吊られた男）で余裕があるが、
             英語の The High Priestess は18字、ベトナム語やインドネシア語も
@@ -33470,28 +33105,28 @@ export default function TarotDraw() {
           word-break: keep-all; overflow-wrap: break-word; hyphens: auto;
         }
         /* 長い名前（ラテン文字圏など）は自動で一段小さくする */
-        .static-card.oracle .card-name.long { font-size: var(--fs-head); line-height: 1.25; }
-        .static-card.oracle .card-sub { font-size: var(--fs-note); }
+        .static-card.oracle .card-name.long { font-size: 15px; line-height: 1.25; }
+        .static-card.oracle .card-sub { font-size: 11px; }
         .card-face { width: 100%; height: 100%; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 9px; padding: 14px 8px; text-align: center; }
         .card-face.reversed { transform: rotate(180deg); }
         .card-face.reversed .card-text-wrap.keep-readable { transform: rotate(180deg); }
-        .card-corner { font-family: 'Cinzel', serif; font-size: var(--fs-body); color: var(--accent, var(--gold)); letter-spacing: 0.1em; }
+        .card-corner { font-family: 'Cinzel', serif; font-size: 13px; color: var(--accent, var(--gold)); letter-spacing: 0.1em; }
         .card-icon { color: var(--accent, var(--gold)); display: flex; }
         /*
           明朝は字間を少し開けると格が上がる。詰まっていると詰め込んだ印象になる。
           letter-spacing は右端にも余白を足すため、中央揃えでは半字ぶん左に寄る。
           text-indent で打ち消して、光学的な中心を保つ。
         */
-        .card-name { font-family: 'Shippori Mincho', serif; font-size: var(--fs-head); font-weight: 600; color: var(--parchment); line-height: 1.34; letter-spacing: 0.07em; text-indent: 0.07em; }
-        .card-sub { font-size: var(--fs-tiny); color: var(--muted); letter-spacing: 0.08em; text-indent: 0.08em; }
+        .card-name { font-family: 'Shippori Mincho', serif; font-size: 15px; font-weight: 600; color: var(--parchment); line-height: 1.34; letter-spacing: 0.07em; text-indent: 0.07em; }
+        .card-sub { font-size: 9.5px; color: var(--muted); letter-spacing: 0.08em; text-indent: 0.08em; }
 
-        .orientation { display: inline-block; font-family: 'Cinzel', serif; font-size: var(--fs-note); letter-spacing: 0.12em; padding: 3px 10px; border-radius: 999px; }
+        .orientation { display: inline-block; font-family: 'Cinzel', serif; font-size: 10px; letter-spacing: 0.12em; padding: 3px 10px; border-radius: 999px; }
         .orientation.up { background: rgba(201,162,75,0.15); color: var(--gold-soft); border: 1px solid rgba(201,162,75,0.4); }
         .orientation.rev { background: rgba(201,122,146,0.15); color: var(--rose); border: 1px solid rgba(201,122,146,0.4); }
 
-        .ai-reading { width: 100%; max-width: 480px; margin: 4px auto 0; padding: 18px 22px; border-radius: var(--r-l); border: 1px solid rgba(201,162,75,0.32); background: linear-gradient(160deg, rgba(36,28,77,0.65), rgba(18,15,36,0.65)); box-sizing: border-box; }
+        .ai-reading { width: 100%; max-width: 480px; margin: 4px auto 0; padding: 18px 22px; border-radius: 14px; border: 1px solid rgba(201,162,75,0.32); background: linear-gradient(160deg, rgba(36,28,77,0.65), rgba(18,15,36,0.65)); box-sizing: border-box; }
         .ai-reading.final-judgment { border-color: rgba(231, 207, 153, 0.55); background: linear-gradient(160deg, rgba(60,45,110,0.7), rgba(24,18,48,0.7)); }
-        .ai-label { display: flex; align-items: center; gap: 6px; font-family: 'Cinzel', serif; font-size: var(--fs-note); letter-spacing: 0.14em; color: var(--gold); margin-bottom: 10px; min-height: 34px; }
+        .ai-label { display: flex; align-items: center; gap: 6px; font-family: 'Cinzel', serif; font-size: 10px; letter-spacing: 0.14em; color: var(--gold); margin-bottom: 10px; min-height: 34px; }
         .ai-label > span { flex: 1 1 auto; line-height: 1.5; }
         /*
           ⚠️ overflow-wrap は break-word ではなく anywhere。
@@ -33499,7 +33134,7 @@ export default function TarotDraw() {
           keep-all と組み合わせると、長い一文が枠から溢れることがある。
           折り返してよい場所は breakByClause が句読点だけに置いている。
         */
-        .ai-reading p { font-size: var(--fs-body); line-height: 1.85; color: var(--parchment); margin: 0; white-space: pre-line; word-break: keep-all; overflow-wrap: anywhere; }
+        .ai-reading p { font-size: 13px; line-height: 1.85; color: var(--parchment); margin: 0; white-space: pre-line; word-break: keep-all; overflow-wrap: anywhere; }
         .loading-dots { display: inline-flex; gap: 4px; margin-left: 6px; vertical-align: middle; }
         .loading-dots span { width: 5px; height: 5px; border-radius: 50%; background: var(--gold); display: inline-block; animation: dotPulse 1.1s ease-in-out infinite; }
         .loading-dots span:nth-child(2) { animation-delay: .15s; }
@@ -33507,25 +33142,25 @@ export default function TarotDraw() {
         @keyframes dotPulse { 0%, 80%, 100% { opacity: .25; transform: scale(.8); } 40% { opacity: 1; transform: scale(1); } }
 
         .major-stage { position: relative; z-index: 1; display: flex; flex-direction: column; align-items: center; gap: 14px; margin-top: 8px; padding-top: 28px; border-top: 1px solid rgba(201,162,75,0.2); animation: popIn .55s cubic-bezier(.16,1,.3,1); }
-        .major-keywords { font-size: var(--fs-body); color: var(--muted); text-align: center; max-width: 320px; margin: 0; }
-        .intuition-msg { font-family: 'Shippori Mincho', serif; font-size: var(--fs-body); text-align: center; margin: 2px 0 0; letter-spacing: 0.04em; }
+        .major-keywords { font-size: 12.5px; color: var(--muted); text-align: center; max-width: 320px; margin: 0; }
+        .intuition-msg { font-family: 'Shippori Mincho', serif; font-size: 12px; text-align: center; margin: 2px 0 0; letter-spacing: 0.04em; }
         .intuition-msg.hit  { color: var(--star-max); }
         .intuition-msg.miss { color: var(--muted); font-style: italic; }
 
-        .stats-panel { width: 100%; max-width: 360px; margin: 6px auto 0; padding: 14px 20px; border-radius: var(--r-l); border: 1px solid rgba(201,162,75,0.3); background: rgba(36,28,77,0.4); box-sizing: border-box; }
-        .stats-title { display: flex; align-items: center; gap: 6px; justify-content: center; font-family: 'Cinzel', serif; font-size: var(--fs-note); letter-spacing: 0.14em; color: var(--gold); margin-bottom: 10px; }
+        .stats-panel { width: 100%; max-width: 360px; margin: 6px auto 0; padding: 14px 20px; border-radius: 14px; border: 1px solid rgba(201,162,75,0.3); background: rgba(36,28,77,0.4); box-sizing: border-box; }
+        .stats-title { display: flex; align-items: center; gap: 6px; justify-content: center; font-family: 'Cinzel', serif; font-size: 10px; letter-spacing: 0.14em; color: var(--gold); margin-bottom: 10px; }
         .stats-row { display: flex; align-items: center; justify-content: space-between; gap: 10px; padding: 7px 0; }
         .stats-row + .stats-row { border-top: 1px solid rgba(201,162,75,0.10); }
-        .stats-label { font-family: 'Shippori Mincho', serif; font-size: var(--fs-body); color: var(--parchment); width: 44px; flex-shrink: 0; }
+        .stats-label { font-family: 'Shippori Mincho', serif; font-size: 13px; color: var(--parchment); width: 44px; flex-shrink: 0; }
         .stats-stars { display: flex; gap: 2px; }
         .star-wrap { position: relative; width: 15px; height: 15px; display: inline-block; flex-shrink: 0; }
         .star-bg { position: absolute; top: 0; left: 0; color: rgba(201,162,75,0.20); }
         .star-fill { position: absolute; top: 0; left: 0; overflow: hidden; color: var(--gold); display: block; height: 15px; }
-        .stats-value { font-family: 'Cinzel', serif; font-size: var(--fs-note); color: var(--muted); width: 26px; text-align: right; flex-shrink: 0; }
+        .stats-value { font-family: 'Cinzel', serif; font-size: 10.5px; color: var(--muted); width: 26px; text-align: right; flex-shrink: 0; }
 
         .stars-max .star-wrap { animation: starPop 0.55s cubic-bezier(.2,1.5,.4,1) both; }
         .stars-max .star-fill { animation: starShimmer 2.4s ease-in-out 0.6s infinite; }
-        .stats-row.row-max { background: rgba(255,233,77,0.05); border-radius: var(--r-m); }
+        .stats-row.row-max { background: rgba(255,233,77,0.05); border-radius: 8px; }
         .stats-row.row-min { opacity: 0.65; }
 
         /* 奈落のトリプル・全部正位置: ★1だけど光っている */
@@ -33544,15 +33179,15 @@ export default function TarotDraw() {
         .star-dull .star-wrap { animation: none !important; }
 
         /* クーポン「same」：星を鮫の絵文字に差し替える演出 */
-        .shark-emoji { font-size: var(--fs-head); line-height: 1; display: inline-block; transition: opacity 0.2s cubic-bezier(.16,1,.3,1); }
-        .candy-emoji { font-size: var(--fs-head); line-height: 1; display: inline-block; transition: opacity 0.2s cubic-bezier(.16,1,.3,1); }
+        .shark-emoji { font-size: 14px; line-height: 1; display: inline-block; transition: opacity 0.2s cubic-bezier(.16,1,.3,1); }
+        .candy-emoji { font-size: 14px; line-height: 1; display: inline-block; transition: opacity 0.2s cubic-bezier(.16,1,.3,1); }
 
         /* 開発者の一言：控えめだが温かみのある表示 */
         .developer-note {
           /* 句点で入れた改行をそのまま表示する */
           white-space: pre-line;
           font-family: 'Shippori Mincho', serif;
-          font-size: var(--fs-body);
+          font-size: 12.5px;
           color: var(--gold-soft);
           opacity: 0.85;
           text-align: center;
@@ -33593,7 +33228,7 @@ export default function TarotDraw() {
         .rare-card > .card-face { position: relative; z-index: 1; }
         .sheen-card::after {
           content: "";
-          position: absolute; inset: 0; border-radius: var(--r-m); pointer-events: none;
+          position: absolute; inset: 0; border-radius: 12px; pointer-events: none;
           background: linear-gradient(115deg,
             transparent 18%, rgba(255,120,200,0.34) 32%, rgba(120,220,255,0.34) 44%,
             rgba(180,255,160,0.34) 56%, rgba(255,220,120,0.34) 68%, transparent 82%);
@@ -33661,7 +33296,7 @@ export default function TarotDraw() {
         /* 虹の帯。常時演出（0.34）とホロ（0.75）の中間 */
         .rare-card::after {
           content: "";
-          position: absolute; inset: 0; border-radius: var(--r-m); pointer-events: none;
+          position: absolute; inset: 0; border-radius: 12px; pointer-events: none;
           /*
             ダークレアが紫と緑なので、明るいレアはその対抗色を厚くする。
             緑だけ微かに落とし（0.52→0.44）、
@@ -33688,7 +33323,7 @@ export default function TarotDraw() {
         /* 縁の光。中央58%は透明なので文字にかからない */
         .rare-card::before {
           content: "";
-          position: absolute; inset: 0; border-radius: var(--r-m); pointer-events: none;
+          position: absolute; inset: 0; border-radius: 12px; pointer-events: none;
           z-index: 2;
           background: radial-gradient(closest-side at 50% 50%,
             rgba(0,0,0,0) 58%,
@@ -33700,7 +33335,7 @@ export default function TarotDraw() {
         }
         /* 金属の枠。金と銀が流れる */
         .rare-frame {
-          position: absolute; inset: 0; border-radius: var(--r-m); pointer-events: none;
+          position: absolute; inset: 0; border-radius: 12px; pointer-events: none;
           z-index: 2; padding: 2px;
           background: linear-gradient(115deg,
             #6E5B2E 0%, #F5DE9B 14%, #C9A24B 28%,
@@ -33749,7 +33384,7 @@ export default function TarotDraw() {
           下に敷けば地だけが沈み、文字は残る。
         */
         .rare-mist {
-          position: absolute; inset: 0; border-radius: var(--r-m); pointer-events: none;
+          position: absolute; inset: 0; border-radius: 12px; pointer-events: none;
           background: radial-gradient(95% 75% at 50% 42%,
             rgba(70,6,20,0) 28%, rgba(48,4,15,0.40) 60%, rgba(24,2,8,0.72) 100%);
           mix-blend-mode: multiply;
@@ -33757,7 +33392,7 @@ export default function TarotDraw() {
         /* 暗転。均一な赤黒の板を、事件の拍だけ被せる */
         .rare-mist::after {
           content: "";
-          position: absolute; inset: 0; border-radius: var(--r-m); pointer-events: none;
+          position: absolute; inset: 0; border-radius: 12px; pointer-events: none;
           background: linear-gradient(180deg, rgba(28,2,10,1), rgba(10,0,4,1));
           mix-blend-mode: multiply;
           opacity: 0;
@@ -33877,7 +33512,7 @@ export default function TarotDraw() {
           中央は透明なので文字にはかからない。
         */
         .holo-edge {
-          position: absolute; inset: 0; border-radius: var(--r-m); pointer-events: none;
+          position: absolute; inset: 0; border-radius: 12px; pointer-events: none;
           z-index: 2;
           background: radial-gradient(closest-side at 50% 50%,
             rgba(0,0,0,0) 52%,
@@ -33940,15 +33575,15 @@ export default function TarotDraw() {
         .shard-tip {
           position: absolute; left: 50%; transform: translateX(-50%);
           top: calc(100% + 6px); white-space: nowrap;
-          padding: 5px 10px; border-radius: var(--r-s);
+          padding: 5px 10px; border-radius: 6px;
           border: 1px solid rgba(201,162,75,0.40); background: rgba(20,14,36,0.96);
-          font-size: var(--fs-note); color: var(--gold-soft); letter-spacing: 0.04em;
+          font-size: 10.5px; color: var(--gold-soft); letter-spacing: 0.04em;
           opacity: 0; pointer-events: none; transition: opacity .18s ease; z-index: 5;
         }
         .shard-got:hover .shard-tip, .shard-got:focus-within .shard-tip { opacity: 1; }
         /* 集め方の一文 */
         .dex-howto {
-          font-size: var(--fs-note); line-height: 1.9; color: var(--muted);
+          font-size: 11px; line-height: 1.9; color: var(--muted);
           margin: 0 0 12px; letter-spacing: 0.04em;
         }
         /* 束の見出し。押して開閉する */
@@ -33960,8 +33595,8 @@ export default function TarotDraw() {
           -webkit-tap-highlight-color: rgba(201,162,75,0.25);
         }
         @media (hover: hover) { .dex-group-head:hover { background: rgba(201,162,75,0.06); } }
-        .dex-group-caret { font-size: var(--fs-note); color: var(--gold-soft); }
-        .dex-group-count { margin-left: auto; font-family: 'Cinzel', serif; font-size: var(--fs-note); color: var(--muted); }
+        .dex-group-caret { font-size: 10px; color: var(--gold-soft); }
+        .dex-group-count { margin-left: auto; font-family: 'Cinzel', serif; font-size: 11px; color: var(--muted); }
         /* 銀（レア）と金（ホロ）。4つ並ぶので点を一回り小さくする */
         .dex-cell-marks i.rare { background: #C6CCD4; border-color: #C6CCD4; }
         .dex-cell-marks i.holo {
@@ -33992,26 +33627,26 @@ export default function TarotDraw() {
           50%      { box-shadow: 0 0 34px rgba(255,255,255,0.95), 0 0 86px rgba(60,200,255,0.7); }
         }
         /* --- イエス・ノー --- */
-        .yn-intro { font-size: var(--fs-note); line-height: 1.9; color: var(--muted); margin: 0 0 16px; }
+        .yn-intro { font-size: 11px; line-height: 1.9; color: var(--muted); margin: 0 0 16px; }
         .yn-question-echo {
-          text-align: center; font-family: 'Shippori Mincho', serif; font-size: var(--fs-body);
+          text-align: center; font-family: 'Shippori Mincho', serif; font-size: 13px;
           color: var(--gold-soft); margin: 0 0 14px; letter-spacing: 0.04em;
         }
-        .yn-level-label { font-size: var(--fs-note); color: var(--muted); margin: 14px 0 8px; text-align: center; }
+        .yn-level-label { font-size: 11px; color: var(--muted); margin: 14px 0 8px; text-align: center; }
         .yn-levels { display: grid; grid-template-columns: repeat(3, 1fr); gap: 8px; margin-bottom: 16px; }
         .yn-level {
-          padding: 10px 6px; border-radius: var(--r-m); cursor: pointer;
+          padding: 10px 6px; border-radius: 10px; cursor: pointer;
           font-family: inherit; text-align: center;
           border: 1px solid rgba(201,162,75,0.24); background: rgba(255,255,255,0.03); color: var(--muted);
           -webkit-tap-highlight-color: rgba(201,162,75,0.25);
         }
         .yn-level.on { border-color: var(--gold); background: rgba(201,162,75,0.14); color: var(--parchment); }
-        .yn-level-name { display: block; font-size: var(--fs-body); margin-bottom: 3px; }
-        .yn-level-n { display: block; font-family: 'Cinzel', serif; font-size: var(--fs-body); color: var(--gold-soft); }
+        .yn-level-name { display: block; font-size: 12px; margin-bottom: 3px; }
+        .yn-level-n { display: block; font-family: 'Cinzel', serif; font-size: 13px; color: var(--gold-soft); }
         /* 5〜9枚が1行に収まる幅にする。多いほど1枚を小さくする */
         .yn-row { display: flex; gap: 6px; justify-content: center; flex-wrap: wrap; margin: 18px 0 10px; }
         .yn-card {
-          width: 15%; max-width: 58px; aspect-ratio: 2 / 3; border-radius: var(--r-m); padding: 0;
+          width: 15%; max-width: 58px; aspect-ratio: 2 / 3; border-radius: 8px; padding: 0;
           border: 1px solid rgba(201,162,75,0.30); cursor: pointer; overflow: hidden;
           background: linear-gradient(152deg, #2A1F55, #1a1440 55%, #120E24);
           -webkit-tap-highlight-color: rgba(201,162,75,0.25);
@@ -34023,25 +33658,25 @@ export default function TarotDraw() {
           display: flex; align-items: flex-start; justify-content: flex-start; padding: 4px;
         }
         .yn-card-face.reversed { transform: rotate(180deg); }
-        .yn-card-corner { font-family: 'Cinzel', serif; font-size: var(--fs-note); color: var(--gold-soft); }
+        .yn-card-corner { font-family: 'Cinzel', serif; font-size: 10px; color: var(--gold-soft); }
         /* 正逆で縁の色を変える。開いた瞬間にどちらか分かる */
         .yn-card.up { box-shadow: inset 0 0 0 2px rgba(240,200,120,0.7); }
         .yn-card.down { box-shadow: inset 0 0 0 2px rgba(170,120,230,0.7); }
         .yn-card-name {
           position: absolute; left: 0; right: 0; bottom: 3px;
-          font-size: var(--fs-tiny); line-height: 1.2; color: var(--parchment);
+          font-size: 7.5px; line-height: 1.2; color: var(--parchment);
           text-align: center; padding: 0 2px;
           overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
         }
         .yn-card-arrow {
-          position: absolute; right: 3px; bottom: 14px; font-size: var(--fs-tiny); opacity: 0.8;
+          position: absolute; right: 3px; bottom: 14px; font-size: 8px; opacity: 0.8;
         }
         .yn-card.up .yn-card-arrow { color: #FFD98A; }
         .yn-card.down .yn-card-arrow { color: #C89AFF; }
         /* 途中経過の天秤 */
         .yn-tally { width: 100%; max-width: 300px; margin: 0 auto 10px; }
         .yn-tally-bar {
-          display: flex; height: 9px; border-radius: var(--r-s); overflow: hidden;
+          display: flex; height: 9px; border-radius: 5px; overflow: hidden;
           background: rgba(255,255,255,0.06); border: 1px solid rgba(201,162,75,0.20);
         }
         .yn-tally-bar i { display: block; height: 100%; transition: width .35s ease; }
@@ -34049,46 +33684,46 @@ export default function TarotDraw() {
         .yn-tally-bar i.down { background: linear-gradient(90deg, #9A6ED8, #C89AFF); }
         .yn-tally-row {
           display: flex; justify-content: space-between; align-items: baseline;
-          margin-top: 5px; font-size: var(--fs-note);
+          margin-top: 5px; font-size: 10px;
         }
-        .yn-tally-row b { font-family: 'Cinzel', serif; font-size: var(--fs-head); margin: 0 4px; }
+        .yn-tally-row b { font-family: 'Cinzel', serif; font-size: 14px; margin: 0 4px; }
         .yn-tally-row .up { color: rgba(240,200,120,0.95); }
         .yn-tally-row .down { color: rgba(190,150,240,0.95); }
-        .yn-tally-row .rest { color: var(--muted); font-size: var(--fs-tiny); }
+        .yn-tally-row .rest { color: var(--muted); font-size: 9.5px; }
         .yn-decided {
-          margin: 6px 0 0; text-align: center; font-size: var(--fs-note);
+          margin: 6px 0 0; text-align: center; font-size: 10.5px;
           color: var(--gold-soft); letter-spacing: 0.06em;
         }
-        .yn-progress { text-align: center; font-size: var(--fs-note); color: var(--muted); margin: 0 0 10px; }
+        .yn-progress { text-align: center; font-size: 11px; color: var(--muted); margin: 0 0 10px; }
         .yn-verdict {
-          margin-top: 14px; padding: 20px 16px; border-radius: var(--r-m); text-align: center;
+          margin-top: 14px; padding: 20px 16px; border-radius: 12px; text-align: center;
           border: 1px solid rgba(201,162,75,0.35);
           background: linear-gradient(160deg, rgba(201,162,75,0.10), rgba(255,255,255,0.02));
         }
         .yn-verdict-word {
-          font-family: 'Shippori Mincho', serif; font-size: var(--fs-title); letter-spacing: 0.14em;
+          font-family: 'Shippori Mincho', serif; font-size: 30px; letter-spacing: 0.14em;
           margin-bottom: 10px;
         }
         .yn-verdict.yes .yn-verdict-word { color: #FFD98A; text-shadow: 0 0 14px rgba(255,217,138,0.5); }
         .yn-verdict.no .yn-verdict-word { color: #C89AFF; text-shadow: 0 0 14px rgba(200,154,255,0.5); }
-        .yn-verdict-tally { font-size: var(--fs-body); color: var(--parchment); margin: 0 0 6px; }
-        .yn-verdict-margin { font-size: var(--fs-note); color: var(--muted); margin: 0; line-height: 1.8; }
+        .yn-verdict-tally { font-size: 12px; color: var(--parchment); margin: 0 0 6px; }
+        .yn-verdict-margin { font-size: 10.5px; color: var(--muted); margin: 0; line-height: 1.8; }
         /* 占った内容の控え。結論の上に置く */
         .asked-box {
           width: 100%; max-width: 340px; margin: 12px auto 0;
-          padding: 10px 13px; border-radius: var(--r-m);
+          padding: 10px 13px; border-radius: 10px;
           border: 1px solid rgba(169,155,201,0.28);
           background: rgba(255,255,255,0.03);
         }
         .asked-title {
-          font-size: var(--fs-tiny); letter-spacing: 0.14em; color: var(--muted);
+          font-size: 9.5px; letter-spacing: 0.14em; color: var(--muted);
           margin-bottom: 6px;
         }
-        .asked-row { display: flex; gap: 8px; margin: 0 0 4px; font-size: var(--fs-note); line-height: 1.7; }
+        .asked-row { display: flex; gap: 8px; margin: 0 0 4px; font-size: 11px; line-height: 1.7; }
         .asked-row:last-child { margin-bottom: 0; }
         .asked-row em {
           flex: 0 0 5.6em; font-style: normal; color: var(--muted);
-          font-size: var(--fs-tiny); padding-top: 1px;
+          font-size: 9.5px; padding-top: 1px;
         }
         .asked-row span {
           flex: 1; color: var(--parchment);
@@ -34097,17 +33732,17 @@ export default function TarotDraw() {
         /* さらに質問する */
         .dd-turn { border-left: 2px solid rgba(201,162,75,0.45); padding-left: 10px; }
         .dd-q {
-          margin: 0 0 5px; font-family: 'Shippori Mincho', serif; font-size: var(--fs-body);
+          margin: 0 0 5px; font-family: 'Shippori Mincho', serif; font-size: 12.5px;
           color: var(--gold-soft); letter-spacing: 0.03em;
         }
         .dd-a {
-          margin: 0; font-size: var(--fs-body); line-height: 1.85; color: var(--parchment);
+          margin: 0; font-size: 13px; line-height: 1.85; color: var(--parchment);
           white-space: pre-line; word-break: keep-all; overflow-wrap: break-word;
         }
         .dd-a.loading { color: var(--muted); }
         .dd-ask { display: flex; flex-direction: column; gap: 8px; }
         .dd-ask input {
-          font-family: inherit; font-size: var(--fs-body); padding: 9px 11px; border-radius: var(--r-m);
+          font-family: inherit; font-size: 13px; padding: 9px 11px; border-radius: 8px;
           border: 1px solid rgba(201,162,75,0.35); background: rgba(255,255,255,0.04);
           color: var(--parchment);
         }
@@ -34116,30 +33751,30 @@ export default function TarotDraw() {
         /* --- 結論 --- */
         .verdict {
           width: 100%; max-width: 340px; margin: 12px auto 4px;
-          padding: 13px 15px; border-radius: var(--r-m);
+          padding: 13px 15px; border-radius: 10px;
           border: 1px solid rgba(201,162,75,0.35);
           background: linear-gradient(160deg, rgba(201,162,75,0.10), rgba(255,255,255,0.02));
         }
         .verdict-title {
-          font-family: 'Shippori Mincho', serif; font-size: var(--fs-note);
+          font-family: 'Shippori Mincho', serif; font-size: 11px;
           letter-spacing: 0.16em; color: var(--gold-soft);
           padding-bottom: 7px; margin-bottom: 9px;
           border-bottom: 1px solid rgba(201,162,75,0.20);
         }
         .verdict p {
           margin: 0 0 6px; font-family: 'Shippori Mincho', serif;
-          font-size: var(--fs-body); line-height: 1.9; letter-spacing: 0.03em;
+          font-size: 13px; line-height: 1.9; letter-spacing: 0.03em;
           color: var(--parchment);
         }
         .verdict p:last-child { margin-bottom: 0; }
         /* --- 追加4種の視覚補完 --- */
-        .greek-el { font-size: var(--fs-tiny); font-weight: 700; letter-spacing: 0.04em; }
+        .greek-el { font-size: 9px; font-weight: 700; letter-spacing: 0.04em; }
         /* 面積。この図でいちばん見せたい数字 */
         .greek-area {
           display: flex; align-items: baseline; justify-content: center; gap: 8px; margin-top: 6px;
         }
         .greek-area-num {
-          font-family: 'Cinzel', serif; font-size: var(--fs-title);
+          font-family: 'Cinzel', serif; font-size: 22px;
           background: linear-gradient(115deg, #FFE9A3, #F0A6D8, #9FD6F5, #A8F0BC, #FFE9A3);
           background-size: 300% 100%;
           -webkit-background-clip: text; background-clip: text;
@@ -34147,9 +33782,9 @@ export default function TarotDraw() {
           animation: sheenTextFlow 5.5s linear infinite;
           filter: drop-shadow(0 0 6px rgba(255,233,163,0.35));
         }
-        .greek-area-num u { font-size: var(--fs-body); text-decoration: none; opacity: 0.85; }
-        .greek-area-note { font-size: var(--fs-note); color: var(--muted); display: flex; flex-direction: column; gap: 2px; }
-        .greek-area-note b { font-weight: 400; color: var(--gold-soft); font-size: var(--fs-note); }
+        .greek-area-num u { font-size: 12px; text-decoration: none; opacity: 0.85; }
+        .greek-area-note { font-size: 10.5px; color: var(--muted); display: flex; flex-direction: column; gap: 2px; }
+        .greek-area-note b { font-weight: 400; color: var(--gold-soft); font-size: 11px; }
         /*
           視覚補正の枠。
           ⚠️ 背景に直接載せないこと。落ちものと星がそのまま図の裏に透けて、
@@ -34163,24 +33798,24 @@ export default function TarotDraw() {
           border-top: 1px solid rgba(201,162,75,0.2);
         }
         .safe-checks-head {
-          font-size: var(--fs-note); letter-spacing: 0.08em; color: var(--gold-soft);
+          font-size: 10px; letter-spacing: 0.08em; color: var(--gold-soft);
           margin-bottom: 6px;
         }
         .safe-checks p {
-          font-size: var(--fs-note); line-height: 1.95; margin: 5px 0;
+          font-size: 11.5px; line-height: 1.95; margin: 5px 0;
           color: var(--muted); padding-left: 1em; text-indent: -1em;
         }
         .safe-checks p::before { content: "・"; }
         /* 見えている割合。図の中でいちばん強い情報なので大きく出す */
-        .safe-pct { font-size: var(--fs-head); font-weight: 700; }
+        .safe-pct { font-size: 15px; font-weight: 700; }
         /* 点数。⚠️ 読みの下に置く。上に置くと数字が先に目に入って、文が読まれない */
         .hs-pass-score {
-          font-size: var(--fs-note); line-height: 1.9; text-align: center;
+          font-size: 11.5px; line-height: 1.9; text-align: center;
           color: var(--gold-soft); margin: 6px 2px 0;
         }
         /* 図の凡例。何を測っているのかを一行で言う */
         .hs-pass-legend {
-          font-size: var(--fs-note); color: var(--muted); text-align: center;
+          font-size: 10.5px; color: var(--muted); text-align: center;
           line-height: 1.8; margin: -2px 0 8px; opacity: 0.85;
         }
         /* 滝。水の筋が落ちる */
@@ -34193,7 +33828,7 @@ export default function TarotDraw() {
         .cross-vec, .greek-ten, .hs-pass, .tree-vis {
           width: 100%; max-width: 340px; margin: 16px auto 6px;
           padding: 14px 12px 10px; box-sizing: border-box;
-          border: 1px solid rgba(201,162,75,0.26); border-radius: var(--r-l);
+          border: 1px solid rgba(201,162,75,0.26); border-radius: 14px;
           background: rgba(12,9,24,0.5);
           box-shadow: 0 0 20px rgba(0,0,0,0.3) inset;
         }
@@ -34207,7 +33842,7 @@ export default function TarotDraw() {
           ⚠️ 地は暗いほうへ。明るくすると図の線より地のほうが目立つ。
         */
         .vis-plate {
-          position: relative; border-radius: var(--r-l); overflow: hidden;
+          position: relative; border-radius: 14px; overflow: hidden;
           background:
             radial-gradient(120% 80% at 50% 0%, rgba(120,160,255,0.10), transparent 62%),
             linear-gradient(180deg, rgba(14,11,30,0.82), rgba(24,18,52,0.62));
@@ -34270,13 +33905,13 @@ export default function TarotDraw() {
           flex-wrap: wrap; margin-bottom: 12px; min-height: 18px;
         }
         .quiz-kind {
-          font-size: var(--fs-note); color: var(--muted); border: 1px solid rgba(201,162,75,0.22);
+          font-size: 10px; color: var(--muted); border: 1px solid rgba(201,162,75,0.22);
           border-radius: 999px; padding: 2px 10px; letter-spacing: 0.06em;
         }
-        .quiz-score { font-size: var(--fs-note); color: var(--muted); }
-        .quiz-streak { font-size: var(--fs-note); font-weight: 700; }
+        .quiz-score { font-size: 11px; color: var(--muted); }
+        .quiz-streak { font-size: 11px; font-weight: 700; }
         .quiz-lead {
-          font-size: var(--fs-note); color: var(--muted); text-align: center;
+          font-size: 11px; color: var(--muted); text-align: center;
           line-height: 1.9; margin: 0 0 14px;
         }
         /*
@@ -34285,21 +33920,21 @@ export default function TarotDraw() {
           行頭に「・」や「。」が来なくなる。
         */
         .quiz-prompt-lead {
-          font-size: var(--fs-body); color: var(--muted); text-align: center;
+          font-size: 12px; color: var(--muted); text-align: center;
           margin: 0 0 10px; line-height: 1.9;
         }
         .quiz-subject {
           margin: 0 auto 14px; max-width: 30em; padding: 14px 16px;
-          border-radius: var(--r-m); border: 1px solid rgba(201,162,75,0.28);
+          border-radius: 10px; border: 1px solid rgba(201,162,75,0.28);
           background: rgba(255,255,255,0.025); text-align: center;
         }
         .quiz-subject-text {
-          font-family: 'Shippori Mincho', serif; font-size: var(--fs-head);
+          font-family: 'Shippori Mincho', serif; font-size: 15px;
           line-height: 2.05; letter-spacing: 0.05em;
           line-break: strict; overflow-wrap: break-word; word-break: normal;
         }
         .quiz-prompt-ask {
-          font-family: 'Shippori Mincho', serif; font-size: var(--fs-head); line-height: 2;
+          font-family: 'Shippori Mincho', serif; font-size: 14px; line-height: 2;
           text-align: center; margin: 0 0 18px; letter-spacing: 0.04em;
           line-break: strict;
         }
@@ -34309,16 +33944,16 @@ export default function TarotDraw() {
           濃くすると星が消えて、クイズだけ別のアプリに見える。
         */
         .quiz-card {
-          border: 1px solid rgba(201,162,75,0.3); border-radius: var(--r-l);
+          border: 1px solid rgba(201,162,75,0.3); border-radius: 14px;
           padding: 20px 16px 18px; margin: 0 0 4px;
           background: rgba(12,9,24,0.55);
           box-shadow: 0 0 24px rgba(0,0,0,0.35) inset;
         }
         .quiz-opts { display: flex; flex-direction: column; gap: 8px; }
         .quiz-opt {
-          width: 100%; text-align: left; padding: 12px 14px; border-radius: var(--r-m);
+          width: 100%; text-align: left; padding: 12px 14px; border-radius: 10px;
           border: 1px solid rgba(201,162,75,0.22); background: rgba(255,255,255,0.02);
-          color: inherit; font-size: var(--fs-body); line-height: 1.7; cursor: pointer;
+          color: inherit; font-size: 13px; line-height: 1.7; cursor: pointer;
           transition: border-color 0.18s, background 0.18s, opacity 0.18s;
         }
         .quiz-opt:hover:not(:disabled) { border-color: rgba(201,162,75,0.5); }
@@ -34334,20 +33969,20 @@ export default function TarotDraw() {
         .quiz-opt.wrong::before { content: "× "; font-weight: 700; }
         .quiz-opt.dim { opacity: 0.35; }
         .quiz-note {
-          margin-top: 16px; padding: 14px; border-radius: var(--r-m);
+          margin-top: 16px; padding: 14px; border-radius: 10px;
           border: 1px solid rgba(201,162,75,0.2); background: rgba(255,255,255,0.02);
         }
-        .quiz-note p { font-size: var(--fs-body); line-height: 2; margin: 6px 0 12px; }
-        .quiz-verdict { font-size: var(--fs-body); font-weight: 700; letter-spacing: 0.08em; }
+        .quiz-note p { font-size: 12px; line-height: 2; margin: 6px 0 12px; }
+        .quiz-verdict { font-size: 12px; font-weight: 700; letter-spacing: 0.08em; }
         .quiz-note.ok .quiz-verdict { color: rgba(150,255,170,0.95); }
         .quiz-next {
-          width: 100%; padding: 10px; border-radius: var(--r-m); cursor: pointer;
+          width: 100%; padding: 10px; border-radius: 8px; cursor: pointer;
           border: 1px solid rgba(201,162,75,0.4); background: rgba(201,162,75,0.1);
-          color: inherit; font-size: var(--fs-body); letter-spacing: 0.08em;
+          color: inherit; font-size: 12px; letter-spacing: 0.08em;
         }
         .quiz-back {
           display: block; margin: 18px auto 0; padding: 6px 18px; cursor: pointer;
-          border: none; background: none; color: var(--muted); font-size: var(--fs-note);
+          border: none; background: none; color: var(--muted); font-size: 11px;
           letter-spacing: 0.08em;
         }
         /*
@@ -34408,7 +34043,7 @@ export default function TarotDraw() {
         .ds6 { margin: 6px 0 12px; position: relative; }
         .ds6-head {
           display: flex; justify-content: space-between;
-          font-size: var(--fs-note); letter-spacing: 0.08em; margin-bottom: 8px;
+          font-size: 10px; letter-spacing: 0.08em; margin-bottom: 8px;
           color: rgba(226,214,240,0.85);
         }
         /* 原点。全行を貫く一本 */
@@ -34425,7 +34060,7 @@ export default function TarotDraw() {
         .ds6-l { justify-content: flex-end; padding-right: 5px; }
         .ds6-r { justify-content: flex-start; padding-left: 5px; }
         .ds6-fill {
-          display: block; height: 7px; border-radius: var(--r-s);
+          display: block; height: 7px; border-radius: 3px;
           background: linear-gradient(90deg, #FF3CB4, #3CC8FF, #78FF8C, #FFDC3C);
           box-shadow: 0 0 5px rgba(190,230,255,0.65);
           transition: width .5s ease;
@@ -34433,7 +34068,7 @@ export default function TarotDraw() {
         /* 伸びる向きに合わせて、傾斜の始まりも外側から */
         .ds6-row.l .ds6-fill { background: linear-gradient(270deg, #FFDC3C, #78FF8C, #3CC8FF, #FF3CB4); }
         .ds6-label {
-          font-size: var(--fs-tiny); color: var(--muted); line-height: 1.4;
+          font-size: 9.5px; color: var(--muted); line-height: 1.4;
           overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
         }
         /*
@@ -34707,18 +34342,18 @@ export default function TarotDraw() {
           この要素に別のインライン animation を足さないこと（出現の回転は親が持っている）。
           ⚠️ 強くしすぎない。伏せ札が主役になると、既に開いた札が読まれなくなる。
         */
-        .hex-card-next { animation: hexNext 2.2s ease-in-out infinite; border-radius: var(--r-m); }
+        .hex-card-next { animation: hexNext 2.2s ease-in-out infinite; border-radius: 8px; }
         @keyframes hexNext {
           0%, 100% { filter: drop-shadow(0 0 3px rgba(201,162,75,0.45)); }
           50%      { filter: drop-shadow(0 0 11px rgba(255,235,180,0.95)); }
         }
         .tree-spine-read {
-          margin: 8px 0 0; font-size: var(--fs-note); line-height: 1.75; text-align: center;
+          margin: 8px 0 0; font-size: 11.5px; line-height: 1.75; text-align: center;
           font-family: 'Shippori Mincho', serif; letter-spacing: 0.04em;
           color: #FFFFFF; text-shadow: 0 0 10px rgba(120,200,255,0.75);
         }
         .tree-bridge-read {
-          margin: 8px 0 0; font-size: var(--fs-note); line-height: 1.8; color: var(--muted);
+          margin: 8px 0 0; font-size: 11px; line-height: 1.8; color: var(--muted);
         }
         .tree-bridge-card {
           color: #7CF5FF; font-family: 'Shippori Mincho', serif;
@@ -34737,16 +34372,16 @@ export default function TarotDraw() {
           100% { transform: translateY(350%); opacity: 0; }
         }
         .cross-vec-title, .greek-ten-title, .hs-pass-title, .tree-vis-title {
-          font-family: 'Shippori Mincho', serif; font-size: var(--fs-body);
+          font-family: 'Shippori Mincho', serif; font-size: 12px;
           letter-spacing: 0.14em; text-align: center; margin-bottom: 8px;
         }
         .cross-vec-svg, .greek-ten-svg, .hs-pass-svg { display: block; width: 100%; height: auto; }
         .cross-vec-read, .greek-ten-read, .hs-pass-read, .tree-vis-read {
-          margin: 8px 0 0; font-size: var(--fs-note); line-height: 1.8;
+          margin: 8px 0 0; font-size: 10.5px; line-height: 1.8;
           color: var(--muted); text-align: center;
         }
-        .cross-vec-ax { font-size: var(--fs-tiny); fill: rgba(220,210,190,0.6); letter-spacing: 0.04em; }
-        .cv-mag { font-family: 'Cinzel', serif; font-size: var(--fs-head); }
+        .cross-vec-ax { font-size: 9px; fill: rgba(220,210,190,0.6); letter-spacing: 0.04em; }
+        .cv-mag { font-family: 'Cinzel', serif; font-size: 17px; }
         /* 到達点の波紋 */
         .cv-ripple {
           transform-box: fill-box; transform-origin: center;
@@ -34869,7 +34504,7 @@ export default function TarotDraw() {
         }
         /* 六つ揃った回だけの一言。⚠️ 小さく、最後に。読みを食わない */
         .gv-joke {
-          font-size: var(--fs-note); line-height: 1.9; text-align: center;
+          font-size: 11px; line-height: 1.9; text-align: center;
           margin: 8px 2px 0; letter-spacing: 0.03em;
         }
         /* つるはし。⚠️ 必ず振らせる。止まっていると道具の絵になる */
@@ -34913,9 +34548,9 @@ export default function TarotDraw() {
         }
         @keyframes hsDraw { to { stroke-dashoffset: 0; } }
         /* 七つの点の名前。図の中の文字なので px ではなく viewBox 座標に載る */
-        .hs-pt-name { font-size: var(--fs-note); letter-spacing: 0.02em; }
-        .hs-now-label { font-size: var(--fs-note); letter-spacing: 0.06em; font-weight: 700; }
-        .hs-peak-label { font-size: var(--fs-note); letter-spacing: 0.06em; opacity: 0.85; }
+        .hs-pt-name { font-size: 10px; letter-spacing: 0.02em; }
+        .hs-now-label { font-size: 11.5px; letter-spacing: 0.06em; font-weight: 700; }
+        .hs-peak-label { font-size: 10px; letter-spacing: 0.06em; opacity: 0.85; }
         /* 現在地の輪が広がる */
         .hs-pass-ring {
           transform-box: fill-box; transform-origin: center;
@@ -34992,23 +34627,23 @@ export default function TarotDraw() {
         /* 上下の意味。図だけでは根源と現実の向きが分からない */
         .tree-axis-note {
           display: flex; justify-content: space-between;
-          font-size: var(--fs-tiny); color: var(--muted); margin: 0 0 6px; letter-spacing: 0.04em;
+          font-size: 9px; color: var(--muted); margin: 0 0 6px; letter-spacing: 0.04em;
         }
         .tree-axis-note .up { color: rgba(220,200,255,0.8); }
         .tree-axis-note .down { color: rgba(255,217,138,0.85); }
         /* 灯った小径の内訳 */
-        .tree-axis-in { font-size: var(--fs-tiny); letter-spacing: 0.04em; }
+        .tree-axis-in { font-size: 8.5px; letter-spacing: 0.04em; }
         .tree-axis-in.top { fill: rgba(220,200,255,0.85); }
         .tree-axis-in.bottom { fill: rgba(255,217,138,0.9); }
         /* 小径の行。押して象徴を開く */
         .tree-path-row {
           display: flex; flex-wrap: wrap; align-items: baseline; gap: 3px 8px;
           width: 100%; padding: 0; border: none; background: none; cursor: pointer;
-          font-family: inherit; font-size: var(--fs-note); text-align: left;
+          font-family: inherit; font-size: 10.5px; text-align: left;
           -webkit-tap-highlight-color: rgba(201,162,75,0.25);
         }
         .tree-path-mean {
-          margin: 6px 0 0; font-size: var(--fs-note); line-height: 1.8; color: var(--gold-soft);
+          margin: 6px 0 0; font-size: 10px; line-height: 1.8; color: var(--gold-soft);
           border-top: 1px solid rgba(201,162,75,0.18); padding-top: 6px; width: 100%;
         }
         /* 選んだ行も、図の小径と同じ色で示す */
@@ -35019,29 +34654,29 @@ export default function TarotDraw() {
         .tree-paths li {
           display: flex; flex-wrap: wrap; align-items: baseline; gap: 3px 8px;
           flex-direction: column;
-          padding: 6px 9px; border-radius: var(--r-s); background: rgba(255,255,255,0.03);
-          border-left: 2px solid transparent; font-size: var(--fs-note);
+          padding: 6px 9px; border-radius: 6px; background: rgba(255,255,255,0.03);
+          border-left: 2px solid transparent; font-size: 10.5px;
         }
         .tree-paths li.good { border-left-color: rgba(255,217,138,0.8); }
         .tree-paths li.bad { border-left-color: rgba(200,154,255,0.8); }
         .tree-path-card { color: var(--parchment); }
-        .tree-path-card i { font-style: normal; font-size: var(--fs-tiny); color: var(--muted); margin-left: 4px; }
-        .tree-path-link { color: var(--gold-soft); font-size: var(--fs-note); }
+        .tree-path-card i { font-style: normal; font-size: 9px; color: var(--muted); margin-left: 4px; }
+        .tree-path-link { color: var(--gold-soft); font-size: 10px; }
         .tree-path-link em { font-style: normal; opacity: 0.6; margin: 0 2px; }
         .tree-path-depth {
-          margin-left: auto; font-size: var(--fs-tiny); color: var(--muted);
+          margin-left: auto; font-size: 9px; color: var(--muted);
           padding: 1px 6px; border-radius: 999px; background: rgba(255,255,255,0.06);
           white-space: nowrap;
         }
         .tree-pillars-title {
-          font-family: 'Shippori Mincho', serif; font-size: var(--fs-note);
+          font-family: 'Shippori Mincho', serif; font-size: 11px;
           letter-spacing: 0.12em; text-align: center; margin: 14px 0 7px;
         }
         .tree-path.sel { animation: none; stroke-dashoffset: 0; }
         .tree-pillars { display: grid; gap: 6px; margin-top: 8px; }
         .tree-pillar { display: flex; align-items: center; gap: 8px; }
         .tree-pillar-bar {
-          flex: 1; height: 10px; border-radius: var(--r-s);
+          flex: 1; height: 10px; border-radius: 5px;
           background: rgba(255,255,255,0.06);
           border: 1px solid rgba(201,162,75,0.20);
           display: flex; overflow: hidden;
@@ -35051,12 +34686,12 @@ export default function TarotDraw() {
         .tree-pillar-bar i.left { background: linear-gradient(90deg, #7A4FB0, #C89AFF); }
         .tree-pillar-bar i.middle { background: linear-gradient(90deg, #B8AE96, #F1EAD8); }
         .tree-pillar-bar i.right { background: linear-gradient(90deg, #C9A24B, #FFD98A); }
-        .tree-pillar-name { flex: 0 0 3.6em; font-size: var(--fs-note); color: var(--muted); text-align: right; }
-        .tree-pillar-val { flex: 0 0 2.6em; font-family: 'Cinzel', serif; font-size: var(--fs-note); color: var(--gold-soft); }
+        .tree-pillar-name { flex: 0 0 3.6em; font-size: 10px; color: var(--muted); text-align: right; }
+        .tree-pillar-val { flex: 0 0 2.6em; font-family: 'Cinzel', serif; font-size: 11px; color: var(--gold-soft); }
         /* --- 二者択一の 秩序⇔混沌 --- */
         .choice-axis { width: 100%; max-width: 340px; margin: 14px auto 4px; }
         .choice-axis-title {
-          font-family: 'Shippori Mincho', serif; font-size: var(--fs-body);
+          font-family: 'Shippori Mincho', serif; font-size: 12px;
           letter-spacing: 0.14em; text-align: center; margin-bottom: 10px;
         }
         /* 秩序は寒色、混沌は暖色。どちらが良いという色にはしない */
@@ -35069,14 +34704,14 @@ export default function TarotDraw() {
         .choice-zones {
           display: grid; grid-template-columns: 42.5% 15% 42.5%;
           margin: 0 0 4px;
-          font-size: var(--fs-tiny); letter-spacing: 0.06em; text-align: center;
+          font-size: 9.5px; letter-spacing: 0.06em; text-align: center;
         }
         .choice-zones .law { color: #FFD95C; text-align: left; }
         .choice-zones .neutral { color: #B8D96A; }
         .choice-zones .chaos { color: #B98CFF; text-align: right; }
         /* 道ごとの枠。二つを同じ形で並べて見比べる */
         .choice-card {
-          border-radius: var(--r-m); padding: 10px 12px 8px; margin-bottom: 10px;
+          border-radius: 12px; padding: 10px 12px 8px; margin-bottom: 10px;
           background: linear-gradient(180deg, rgba(14,11,30,0.72), rgba(24,18,52,0.5));
           border: 1px solid rgba(201,162,75,0.20);
           box-shadow: inset 0 0 26px rgba(0,0,0,0.4);
@@ -35097,7 +34732,7 @@ export default function TarotDraw() {
         */
         .choice-zone-tag {
           flex: 0 0 5.2em; text-align: center;
-          font-size: var(--fs-tiny); padding: 1px 4px; border-radius: 999px;
+          font-size: 9px; padding: 1px 4px; border-radius: 999px;
           letter-spacing: 0.02em; white-space: nowrap; overflow: hidden;
         }
         .choice-zone-tag.law { color: #FFD95C; background: rgba(255,217,92,0.14); }
@@ -35105,7 +34740,7 @@ export default function TarotDraw() {
         .choice-zone-tag.chaos { color: #B98CFF; background: rgba(138,92,214,0.18); }
         /* 道の性質。目盛りの真下に置き、字下げで目盛りと揃える */
         .choice-axis-kind {
-          margin: 7px 0 0; font-size: var(--fs-note); line-height: 1.7;
+          margin: 7px 0 0; font-size: 10.5px; line-height: 1.7;
         }
         .choice-axis-kind.a { color: var(--gold-soft); }
         .choice-axis-kind.b { color: #B9D4DA; }
@@ -35115,7 +34750,7 @@ export default function TarotDraw() {
           行を独立させたので、切る理由が無くなっている。
         */
         .choice-axis-name {
-          flex: 1 1 auto; min-width: 0; font-size: var(--fs-note); text-align: left;
+          flex: 1 1 auto; min-width: 0; font-size: 11px; text-align: left;
           font-family: 'Shippori Mincho', serif;
           overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
         }
@@ -35128,7 +34763,7 @@ export default function TarotDraw() {
         .choice-axis-track .pin {
           position: absolute; top: 50%; width: 13px; height: 13px;
           margin: -6.5px 0 0 -6.5px; transform: rotate(45deg);
-          border-radius: var(--r-s); z-index: 2;
+          border-radius: 2px; z-index: 2;
         }
         .choice-axis-track .pin.law {
           background: #FFF0A8; box-shadow: 0 0 10px rgba(255,217,92,0.95), 0 0 24px rgba(255,217,92,0.55);
@@ -35141,7 +34776,7 @@ export default function TarotDraw() {
         }
         /* 地はSVGが描くので、枠は器だけ。高さを取って図として立たせる */
         .choice-axis-track {
-          position: relative; flex: 1; height: 20px; border-radius: var(--r-s);
+          position: relative; flex: 1; height: 20px; border-radius: 4px;
         }
         .choice-axis-track .mid {
           position: absolute; left: 50%; top: -3px; bottom: -3px; width: 1px;
@@ -35155,28 +34790,28 @@ export default function TarotDraw() {
         .choice-axis-track .pin { transition: left .45s cubic-bezier(.16,1,.3,1); }
         /* 判断の材料。二本を同じ形で並べて、見比べられるようにする */
         .choice-facts {
-          margin-top: 8px; padding: 9px 11px; border-radius: var(--r-m);
+          margin-top: 8px; padding: 9px 11px; border-radius: 8px;
           background: rgba(255,255,255,0.03); border-left: 2px solid transparent;
         }
         .choice-facts.a { border-left-color: var(--gold); }
         .choice-facts.b { border-left-color: #B9D4DA; }
-        .choice-facts-head { font-size: var(--fs-note); margin-bottom: 5px; letter-spacing: 0.06em; }
+        .choice-facts-head { font-size: 11px; margin-bottom: 5px; letter-spacing: 0.06em; }
         .choice-facts.a .choice-facts-head { color: var(--gold-soft); }
         .choice-facts.b .choice-facts-head { color: #B9D4DA; }
         .choice-facts ul { list-style: none; margin: 0; padding: 0; display: grid; gap: 3px; }
-        .choice-facts li { display: flex; gap: 8px; font-size: var(--fs-note); }
+        .choice-facts li { display: flex; gap: 8px; font-size: 10px; }
         .choice-facts em {
           flex: 0 0 5.4em; font-style: normal; color: var(--muted); letter-spacing: 0.04em;
         }
         .choice-facts span { color: var(--parchment); }
         .choice-axis-read {
-          margin: 8px 0 0; font-size: var(--fs-note); line-height: 1.8;
+          margin: 8px 0 0; font-size: 10.5px; line-height: 1.8;
           color: var(--muted); text-align: center;
         }
         /* --- ホロスコープ中央の助言 --- */
         .horo-center {
           width: 100%; max-width: 340px; margin: 12px auto 2px;
-          padding: 14px 16px; border-radius: var(--r-m);
+          padding: 14px 16px; border-radius: 10px;
           border: 1px solid rgba(201,162,75,0.35);
           background: linear-gradient(160deg, rgba(201,162,75,0.10), rgba(255,255,255,0.02));
         }
@@ -35186,36 +34821,36 @@ export default function TarotDraw() {
           border-bottom: 1px solid rgba(201,162,75,0.20);
         }
         .horo-center-title {
-          font-family: 'Shippori Mincho', serif; font-size: var(--fs-body);
+          font-family: 'Shippori Mincho', serif; font-size: 12px;
           letter-spacing: 0.14em; color: var(--gold-soft);
         }
-        .horo-center-card { font-size: var(--fs-note); color: var(--orient-up-soft); display: inline-flex; align-items: baseline; gap: 6px; }
+        .horo-center-card { font-size: 11px; color: var(--orient-up-soft); display: inline-flex; align-items: baseline; gap: 6px; }
         .horo-center-card.rev { color: var(--orient-rev); }
-        .horo-center-card i { font-style: normal; font-size: var(--fs-tiny); padding: 1px 6px; }
+        .horo-center-card i { font-style: normal; font-size: 9px; padding: 1px 6px; }
         /* 助言は読ませる文なので、この画面でいちばん大きい本文にする */
         .horo-center-text p {
           margin: 0 0 6px; font-family: 'Shippori Mincho', serif;
-          font-size: var(--fs-head); line-height: 1.9; letter-spacing: 0.04em;
+          font-size: 14px; line-height: 1.9; letter-spacing: 0.04em;
           color: var(--parchment);
         }
         .horo-center-text p:last-child { margin-bottom: 0; }
         /* --- ホロスコープの領域図 --- */
         .horo-wheel { width: 100%; max-width: 340px; margin: 14px auto 4px; }
         .horo-wheel-title {
-          font-family: 'Shippori Mincho', serif; font-size: var(--fs-body);
+          font-family: 'Shippori Mincho', serif; font-size: 12px;
           letter-spacing: 0.14em; text-align: center; margin-bottom: 8px;
         }
         .horo-wheel-svg { display: block; width: 100%; height: auto; }
         .horo-wheel-num {
-          font-family: 'Cinzel', serif; font-size: var(--fs-note); fill: rgba(255,248,232,0.95);
+          font-family: 'Cinzel', serif; font-size: 11px; fill: rgba(255,248,232,0.95);
           paint-order: stroke; stroke: rgba(12,8,24,0.85); stroke-width: 2.5px;
         }
         /* 中央。長所の割合を大きく置く */
         .horo-hub-num {
-          font-family: 'Cinzel', serif; font-size: var(--fs-title); fill: #FFE9A3;
+          font-family: 'Cinzel', serif; font-size: 20px; fill: #FFE9A3;
           filter: drop-shadow(0 0 5px rgba(255,220,150,0.6));
         }
-        .horo-hub-unit { font-family: 'Cinzel', serif; font-size: var(--fs-tiny); fill: rgba(255,248,232,0.6); }
+        .horo-hub-unit { font-family: 'Cinzel', serif; font-size: 9px; fill: rgba(255,248,232,0.6); }
         /*
           扇が中心から伸びる。開いた順に少し遅らせる。
           transform-origin を中心に置かないと、左上から伸びてくる。
@@ -35233,7 +34868,7 @@ export default function TarotDraw() {
         /* 長所と課題の合計 */
         .horo-balance { margin: 2px 0 12px; }
         .horo-balance-bar {
-          display: flex; height: 10px; border-radius: var(--r-s); overflow: hidden;
+          display: flex; height: 10px; border-radius: 5px; overflow: hidden;
           border: 1px solid rgba(201,162,75,0.22);
         }
         .horo-balance-bar i { display: block; height: 100%; transition: width .4s ease; }
@@ -35241,19 +34876,19 @@ export default function TarotDraw() {
         .horo-balance-bar i.bad { background: linear-gradient(90deg, #9A6ED8, #C89AFF); }
         .horo-balance-row {
           display: flex; justify-content: space-between; margin-top: 5px;
-          font-size: var(--fs-note); letter-spacing: 0.04em;
+          font-size: 10px; letter-spacing: 0.04em;
         }
         .horo-balance-row b {
-          font-family: 'Cinzel', serif; font-size: var(--fs-body); font-weight: 400; margin: 0 4px;
+          font-family: 'Cinzel', serif; font-size: 13px; font-weight: 400; margin: 0 4px;
         }
         .horo-balance-row .good { color: rgba(240,200,120,0.95); }
         .horo-balance-row .bad { color: rgba(190,150,240,0.95); }
         .horo-legend {
           display: flex; gap: 16px; justify-content: center;
-          font-size: var(--fs-note); color: var(--muted); margin: 6px 0 10px;
+          font-size: 10px; color: var(--muted); margin: 6px 0 10px;
         }
         .horo-legend span { display: inline-flex; align-items: center; gap: 5px; }
-        .horo-legend i { width: 9px; height: 9px; border-radius: var(--r-s); display: inline-block; }
+        .horo-legend i { width: 9px; height: 9px; border-radius: 2px; display: inline-block; }
         /* 長所は金、課題は紫。逆位置＝悪いではなく「向き合う対象」として置く */
         .horo-legend i.good { background: rgba(240,200,120,0.85); }
         .horo-legend i.bad { background: rgba(170,120,230,0.85); }
@@ -35261,7 +34896,7 @@ export default function TarotDraw() {
         .horo-rank li {
           position: relative; overflow: hidden;
           display: flex; align-items: flex-start; gap: 8px;
-          padding: 7px 10px; border-radius: var(--r-s); background: rgba(255,255,255,0.03);
+          padding: 7px 10px; border-radius: 6px; background: rgba(255,255,255,0.03);
         }
         /* 占有率に応じた帯。順位が下がるほど淡くなる */
         .horo-rank-bar {
@@ -35273,14 +34908,14 @@ export default function TarotDraw() {
         .horo-rank em, .horo-rank-main { position: relative; z-index: 1; }
         .horo-rank em {
           flex: 0 0 1.5em; text-align: right; font-style: normal; padding-top: 1px;
-          font-family: 'Cinzel', serif; font-size: var(--fs-note); color: var(--gold-soft);
+          font-family: 'Cinzel', serif; font-size: 10.5px; color: var(--gold-soft);
         }
         .horo-rank-main { flex: 1; min-width: 0; }
         .horo-rank-head { display: flex; flex-wrap: wrap; align-items: baseline; gap: 4px 8px; }
         /* 領域名。占有率と同じ虹をかけ、行の主役にする */
         .horo-rank-name {
           font-family: 'Shippori Mincho', serif;
-          font-size: var(--fs-head); letter-spacing: 0.08em;
+          font-size: 14px; letter-spacing: 0.08em;
           background: linear-gradient(115deg, #FFE9A3, #F0A6D8, #9FD6F5, #A8F0BC, #FFE9A3);
           background-size: 300% 100%;
           -webkit-background-clip: text; background-clip: text;
@@ -35288,12 +34923,12 @@ export default function TarotDraw() {
           animation: sheenTextFlow 5.5s linear infinite;
           filter: drop-shadow(0 0 5px rgba(255,233,163,0.30));
         }
-        .horo-rank-card { font-size: var(--fs-note); color: var(--orient-up-soft); display: inline-flex; align-items: baseline; gap: 5px; }
+        .horo-rank-card { font-size: 10.5px; color: var(--orient-up-soft); display: inline-flex; align-items: baseline; gap: 5px; }
         .horo-rank-card.rev { color: var(--orient-rev); }
-        .horo-rank-card i { font-style: normal; font-size: var(--fs-tiny); padding: 1px 6px; }
-        .horo-rank-kw { font-size: var(--fs-tiny); line-height: 1.7; color: var(--muted); margin-top: 2px; }
+        .horo-rank-card i { font-style: normal; font-size: 9px; padding: 1px 6px; }
+        .horo-rank-kw { font-size: 9.5px; line-height: 1.7; color: var(--muted); margin-top: 2px; }
         /* 右下に置く。行の締めくくりとして読ませる */
-        .horo-rank-note { font-size: var(--fs-tiny); letter-spacing: 0.06em; white-space: nowrap; }
+        .horo-rank-note { font-size: 9px; letter-spacing: 0.06em; white-space: nowrap; }
         .horo-rank-note.good { color: rgba(240,200,120,0.9); }
         .horo-rank-note.bad { color: rgba(190,150,240,0.9); }
         /*
@@ -35303,7 +34938,7 @@ export default function TarotDraw() {
         */
         .horo-share {
           flex: 0 0 auto; align-self: center;
-          font-family: 'Cinzel', serif; font-size: var(--fs-title); letter-spacing: 0.02em;
+          font-family: 'Cinzel', serif; font-size: 19px; letter-spacing: 0.02em;
           background: linear-gradient(115deg, #FFE9A3, #F0A6D8, #9FD6F5, #A8F0BC, #FFE9A3);
           background-size: 300% 100%;
           -webkit-background-clip: text; background-clip: text;
@@ -35311,14 +34946,14 @@ export default function TarotDraw() {
           animation: sheenTextFlow 5.5s linear infinite;
           filter: drop-shadow(0 0 6px rgba(255,233,163,0.35));
         }
-        .horo-share u { font-size: var(--fs-note); text-decoration: none; opacity: 0.85; }
+        .horo-share u { font-size: 11px; text-decoration: none; opacity: 0.85; }
         .horo-share-wrap {
           position: relative; z-index: 1; flex: 0 0 auto;
           display: flex; flex-direction: column; align-items: flex-end; gap: 1px;
         }
         /* 帯の称号。占有率のすぐ下に、小さく添える */
         .horo-share-rank {
-          font-family: 'Shippori Mincho', serif; font-size: var(--fs-tiny);
+          font-family: 'Shippori Mincho', serif; font-size: 9.5px;
           letter-spacing: 0.06em; white-space: nowrap;
         }
         .horo-share-rank.good { color: rgba(240,200,120,0.95); }
@@ -35328,34 +34963,34 @@ export default function TarotDraw() {
         .house-guide-head {
           display: flex; align-items: center; gap: 7px; width: 100%;
           padding: 8px 10px; cursor: pointer;
-          font-family: inherit; font-size: var(--fs-note); letter-spacing: 0.06em; text-align: left;
-          border: 1px solid rgba(201,162,75,0.24); border-radius: var(--r-m);
+          font-family: inherit; font-size: 11.5px; letter-spacing: 0.06em; text-align: left;
+          border: 1px solid rgba(201,162,75,0.24); border-radius: 8px;
           background: rgba(255,255,255,0.03); color: var(--gold-soft);
           -webkit-tap-highlight-color: rgba(201,162,75,0.25);
         }
         @media (hover: hover) { .house-guide-head:hover { background: rgba(201,162,75,0.08); } }
         .house-guide-head.open { border-radius: 8px 8px 0 0; border-bottom-color: transparent; }
-        .house-guide-caret { font-size: var(--fs-note); }
+        .house-guide-caret { font-size: 10px; }
         .house-guide-body {
           padding: 12px; border: 1px solid rgba(201,162,75,0.24); border-top: none;
           border-radius: 0 0 8px 8px; background: rgba(255,255,255,0.02);
         }
-        .house-guide-soon { margin: 0 0 10px; font-size: var(--fs-note); color: var(--muted); line-height: 1.9; }
+        .house-guide-soon { margin: 0 0 10px; font-size: 10.5px; color: var(--muted); line-height: 1.9; }
         .house-guide-list { list-style: none; margin: 0; padding: 0; display: grid; gap: 4px; }
-        .house-guide-list li { display: flex; gap: 8px; align-items: baseline; font-size: var(--fs-note); padding: 3px 0; }
+        .house-guide-list li { display: flex; gap: 8px; align-items: baseline; font-size: 11px; padding: 3px 0; }
         .house-guide-list b { display: block; font-weight: 400; color: var(--parchment); letter-spacing: 0.06em; }
         /* キーワードは本文より一段落とす。名前と並列に見えると、どちらが位置名か分からない */
         .hex-stage-house {
-          display: block; font-style: normal; font-size: var(--fs-tiny); line-height: 1.7;
+          display: block; font-style: normal; font-size: 9px; line-height: 1.7;
           color: var(--muted); margin-top: 3px; letter-spacing: 0.02em;
         }
         .house-guide-list i {
-          display: block; font-style: normal; font-size: var(--fs-note); line-height: 1.75;
+          display: block; font-style: normal; font-size: 10px; line-height: 1.75;
           color: var(--muted); margin-top: 1px;
         }
         .house-guide-list em {
           flex: 0 0 1.6em; text-align: right; font-style: normal;
-          font-family: 'Cinzel', serif; font-size: var(--fs-note); color: var(--gold-soft);
+          font-family: 'Cinzel', serif; font-size: 10px; color: var(--gold-soft);
         }
         .house-guide-list span { color: var(--parchment); }
         /* --- 流派の切り替え --- */
@@ -35387,7 +35022,7 @@ export default function TarotDraw() {
         .deck-mark { display: inline-flex; filter: drop-shadow(0 0 4px currentColor); opacity: 0.92; }
         .deck-marks.tight .deck-mark { filter: drop-shadow(0 0 3px currentColor); opacity: 0.8; }
         .deck-mark-n {
-          font-family: "Cinzel", serif; font-size: var(--fs-body); line-height: 1;
+          font-family: "Cinzel", serif; font-size: 12px; line-height: 1;
           color: var(--muted); margin-left: 3px;
         }
         .plan-badge.dex {
@@ -35397,7 +35032,7 @@ export default function TarotDraw() {
 
         .school-tabs { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; margin-bottom: 14px; }
         .school-tab {
-          padding: 10px 8px; border-radius: var(--r-m); cursor: pointer;
+          padding: 10px 8px; border-radius: 10px; cursor: pointer;
           font-family: inherit; text-align: center;
           border: 1px solid rgba(201,162,75,0.24);
           background: rgba(255,255,255,0.03); color: var(--muted);
@@ -35411,37 +35046,37 @@ export default function TarotDraw() {
         }
         .school-name {
           display: block; font-family: 'Shippori Mincho', serif;
-          font-size: var(--fs-body); letter-spacing: 0.10em; margin-bottom: 3px;
+          font-size: 13px; letter-spacing: 0.10em; margin-bottom: 3px;
         }
         .school-tab.on .school-name { color: var(--gold-soft); }
-        .school-note { display: block; font-size: var(--fs-tiny); line-height: 1.6; opacity: 0.85; }
+        .school-note { display: block; font-size: 9.5px; line-height: 1.6; opacity: 0.85; }
         .school-soon {
-          padding: 18px 16px; border-radius: var(--r-m); margin-bottom: 12px;
+          padding: 18px 16px; border-radius: 12px; margin-bottom: 12px;
           border: 1px dashed rgba(201,162,75,0.30); background: rgba(255,255,255,0.03);
         }
         .school-soon-title {
           margin: 0 0 8px; font-family: 'Shippori Mincho', serif;
-          font-size: var(--fs-body); letter-spacing: 0.08em; color: var(--gold-soft); text-align: center;
+          font-size: 13px; letter-spacing: 0.08em; color: var(--gold-soft); text-align: center;
         }
-        .school-soon-body { margin: 0; font-size: var(--fs-note); line-height: 2.0; color: var(--muted); white-space: pre-line; }
+        .school-soon-body { margin: 0; font-size: 11px; line-height: 2.0; color: var(--muted); white-space: pre-line; }
         /* --- 欠片の交換 --- */
-        .shard-intro { font-size: var(--fs-note); line-height: 1.9; color: var(--muted); margin: 0 0 14px; }
+        .shard-intro { font-size: 11.5px; line-height: 1.9; color: var(--muted); margin: 0 0 14px; }
         .shard-row {
-          padding: 12px; margin-bottom: 12px; border-radius: var(--r-m);
+          padding: 12px; margin-bottom: 12px; border-radius: 8px;
           border: 1px solid rgba(201,162,75,0.22); background: rgba(255,255,255,0.03);
         }
         .shard-head { display: flex; align-items: baseline; gap: 8px; margin-bottom: 8px; }
-        .shard-mark { font-size: var(--fs-head); }
-        .shard-name { font-size: var(--fs-body); letter-spacing: 0.08em; color: var(--parchment); }
-        .shard-count { margin-left: auto; font-family: 'Cinzel', serif; font-size: var(--fs-head); color: var(--gold-soft); }
-        .shard-bar { height: 5px; border-radius: var(--r-s); background: rgba(255,255,255,0.08); overflow: hidden; }
+        .shard-mark { font-size: 15px; }
+        .shard-name { font-size: 12px; letter-spacing: 0.08em; color: var(--parchment); }
+        .shard-count { margin-left: auto; font-family: 'Cinzel', serif; font-size: 14px; color: var(--gold-soft); }
+        .shard-bar { height: 5px; border-radius: 3px; background: rgba(255,255,255,0.08); overflow: hidden; }
         .shard-bar i { display: block; height: 100%; transition: width .3s ease; }
         .shard-bar i.rare { background: var(--rare-tint); }
         .shard-bar i.holo { background: var(--gold); box-shadow: 0 0 6px rgba(201,162,75,0.7); }
-        .shard-note { font-size: var(--fs-note); line-height: 1.8; color: var(--muted); margin: 8px 0 10px; }
+        .shard-note { font-size: 10.5px; line-height: 1.8; color: var(--muted); margin: 8px 0 10px; }
         .shard-btn {
-          width: 100%; padding: 9px; border-radius: var(--r-s); cursor: pointer;
-          font-family: inherit; font-size: var(--fs-body); letter-spacing: 0.08em;
+          width: 100%; padding: 9px; border-radius: 6px; cursor: pointer;
+          font-family: inherit; font-size: 12px; letter-spacing: 0.08em;
           border: 1px solid rgba(201,162,75,0.45);
           background: rgba(201,162,75,0.10); color: var(--gold-soft);
           -webkit-tap-highlight-color: rgba(201,162,75,0.25);
@@ -35451,11 +35086,11 @@ export default function TarotDraw() {
         /* 押せないものが押せるように見えないようにする */
         .shard-btn[disabled] { opacity: 0.45; cursor: default; }
         .shard-result {
-          margin: 4px 0 0; padding: 12px; border-radius: var(--r-m);
+          margin: 4px 0 0; padding: 12px; border-radius: 8px;
           border: 1px solid rgba(201,162,75,0.35); background: rgba(201,162,75,0.08);
           text-align: center;
         }
-        .shard-result-text { margin: 0 0 10px; font-size: var(--fs-body); line-height: 1.9; color: var(--parchment); }
+        .shard-result-text { margin: 0 0 10px; font-size: 12px; line-height: 1.9; color: var(--parchment); }
         /* 札は1枚だけなので、図鑑の4枚並びより大きく出してよい */
         .shard-result-card { display: flex; justify-content: center; }
         .shard-result-card .dex-view.static-card.oracle { max-width: 130px; }
@@ -35465,9 +35100,9 @@ export default function TarotDraw() {
         .dex-shard-chip { display: inline-flex; align-items: center; gap: 4px; }
         .dex-shard-chip em {
           font-style: normal; font-family: 'Cinzel', serif;
-          font-size: var(--fs-body); color: var(--gold-soft);
+          font-size: 12px; color: var(--gold-soft);
         }
-        .dex-shard-chip em b { font-weight: 400; font-size: var(--fs-tiny); color: var(--muted); }
+        .dex-shard-chip em b { font-weight: 400; font-size: 9.5px; color: var(--muted); }
         /* 4種になったので、色分けではなく絵で見分ける */
         .shard-mark { display: inline-flex; }
         .shard-bar i.light { background: linear-gradient(90deg,#FFE6A8,#FF8FD0); }
@@ -35487,7 +35122,7 @@ export default function TarotDraw() {
           animation: prizeSpin 1.15s cubic-bezier(.16,1,.3,1) forwards;
         }
         .prize-face {
-          position: absolute; inset: 0; border-radius: var(--r-m);
+          position: absolute; inset: 0; border-radius: 12px;
           backface-visibility: hidden; -webkit-backface-visibility: hidden;
           overflow: hidden;
         }
@@ -35504,9 +35139,9 @@ export default function TarotDraw() {
         /* --- 宝箱 --- */
         .chest-row { display: flex; gap: 8px; justify-content: center; flex-wrap: wrap; }
         .chest {
-          width: 68px; height: 62px; border-radius: var(--r-m); cursor: pointer;
+          width: 68px; height: 62px; border-radius: 8px; cursor: pointer;
           display: flex; align-items: center; justify-content: center;
-          font-family: 'Cinzel', serif; font-size: var(--fs-title);
+          font-family: 'Cinzel', serif; font-size: 18px;
           border: 1px solid rgba(201,162,75,0.42);
           background: rgba(201,162,75,0.08); color: var(--gold-soft);
           -webkit-tap-highlight-color: rgba(201,162,75,0.25);
@@ -35611,13 +35246,13 @@ export default function TarotDraw() {
         }
         .shard-got .shard-mark { animation: prizeRise .62s cubic-bezier(.16,1,.3,1); }
         .chest-result {
-          margin-top: 10px; text-align: center; font-size: var(--fs-body); line-height: 1.9;
+          margin-top: 10px; text-align: center; font-size: 12px; line-height: 1.9;
           letter-spacing: 0.04em; color: var(--parchment);
         }
         .chest-result .hit { color: var(--rare-tint); }
         .chest-result .big { color: var(--gold); }
-        .chest-lead { font-size: var(--fs-note); color: var(--muted); text-align: center; margin: 0 0 8px; letter-spacing: 0.06em; }
-        .shard-line { font-size: var(--fs-note); color: var(--muted); letter-spacing: 0.06em; text-align: center; margin-top: 6px; }
+        .chest-lead { font-size: 11px; color: var(--muted); text-align: center; margin: 0 0 8px; letter-spacing: 0.06em; }
+        .shard-line { font-size: 10.5px; color: var(--muted); letter-spacing: 0.06em; text-align: center; margin-top: 6px; }
 
         /*
           【ホロ】64分の1でのみ発現する、本物の虹。
@@ -35632,7 +35267,7 @@ export default function TarotDraw() {
         /* 虹の膜。常時版より濃く、速い */
         .holo-card::after {
           content: "";
-          position: absolute; inset: 0; border-radius: var(--r-m); pointer-events: none;
+          position: absolute; inset: 0; border-radius: 12px; pointer-events: none;
           background: linear-gradient(115deg,
             transparent 6%, rgba(255,60,180,0.90) 22%, rgba(60,200,255,0.90) 37%,
             rgba(120,255,140,0.90) 52%, rgba(255,220,60,0.90) 67%, rgba(255,60,180,0.78) 82%, transparent 96%);
@@ -35656,7 +35291,7 @@ export default function TarotDraw() {
         */
         .holo-card::before {
           content: "";
-          position: absolute; inset: 0; border-radius: var(--r-m); pointer-events: none;
+          position: absolute; inset: 0; border-radius: 12px; pointer-events: none;
           background: conic-gradient(from 0deg,
             #ff3ca6, #ffd23c, #6cff8d, #3cd2ff, #a86cff, #ff3ca6);
           filter: blur(12px) saturate(2.1) brightness(1.2);
@@ -35736,7 +35371,7 @@ export default function TarotDraw() {
         .holo-card .card-text-wrap {
           position: relative; z-index: 2;
           background: rgba(12,8,26,0.55);
-          border-radius: var(--r-m); padding: 4px 8px;
+          border-radius: 8px; padding: 4px 8px;
           backdrop-filter: blur(2px);
         }
 
@@ -35858,7 +35493,7 @@ export default function TarotDraw() {
           ここで奪うとホロの外周が消える。専用の要素に分ける。
         */
         .card-depth {
-          position: absolute; inset: 0; border-radius: var(--r-m); pointer-events: none; z-index: 2;
+          position: absolute; inset: 0; border-radius: 12px; pointer-events: none; z-index: 2;
           background:
             linear-gradient(180deg, rgba(255,255,255,0.10) 0%, rgba(255,255,255,0.02) 22%,
                             transparent 55%, rgba(0,0,0,0.16) 100%);
@@ -35876,7 +35511,7 @@ export default function TarotDraw() {
           同じ要素に両方のクラスが付くと片方が消える。専用の層に分ける。
         */
         .card-shine-layer {
-          position: absolute; inset: 0; border-radius: var(--r-m); pointer-events: none; z-index: 3;
+          position: absolute; inset: 0; border-radius: 12px; pointer-events: none; z-index: 3;
           background: linear-gradient(105deg,
             transparent 38%, rgba(255,255,255,0.42) 48%, rgba(255,255,255,0.62) 51%,
             rgba(255,255,255,0.42) 54%, transparent 64%);
@@ -35917,7 +35552,7 @@ export default function TarotDraw() {
           盛り上がりとして読まれる。
         */
         .hex-carpet {
-          border-radius: var(--r-l);
+          border-radius: 14px;
           background:
             radial-gradient(120% 80% at 50% 18%, rgba(150,40,60,0.30) 0%, rgba(88,20,34,0.34) 45%, rgba(44,10,20,0.40) 100%);
           border: 1px solid rgba(201,162,75,0.55);
@@ -35930,7 +35565,7 @@ export default function TarotDraw() {
         /* 内側の刺繍線。角丸を一回り小さくして二重の縁にする */
         .hex-carpet::after {
           content: ""; position: absolute; inset: 7px;
-          border-radius: var(--r-m); pointer-events: none;
+          border-radius: 9px; pointer-events: none;
           border: 1px solid rgba(201,162,75,0.34);
           box-shadow: inset 0 0 0 1px rgba(0,0,0,0.28);
         }
@@ -35951,7 +35586,7 @@ export default function TarotDraw() {
           transition: transform 1.1s cubic-bezier(.45,.05,.25,1);
         }
         .hex-face {
-          position: absolute; inset: 0; border-radius: var(--r-m); overflow: hidden;
+          position: absolute; inset: 0; border-radius: 7px; overflow: hidden;
           backface-visibility: hidden; -webkit-backface-visibility: hidden;
         }
         .hex-back-face {
@@ -35971,7 +35606,7 @@ export default function TarotDraw() {
           transform: rotateY(180deg);
         }
         .hex-card {
-          border-radius: var(--r-m);
+          border-radius: 7px;
           border: 1px solid rgba(201,162,75,0.45);
           background: linear-gradient(152deg, #2A1F55, #1a1440 55%, #120E24);
           overflow: hidden;
@@ -35997,13 +35632,13 @@ export default function TarotDraw() {
         .hex-card .card-face,
         .hex-front-face .card-face { gap: 3px; padding: 5px 3px 14px; position: relative; z-index: 1; }
         .hex-card .card-corner,
-        .hex-front-face .card-corner { font-size: var(--fs-tiny); letter-spacing: 0.06em; }
+        .hex-front-face .card-corner { font-size: 8px; letter-spacing: 0.06em; }
         .hex-name { font-size: 9px !important; line-height: 1.3 !important; font-weight: 500; letter-spacing: 0.03em; text-indent: 0.03em; }
         /* カードの下端に敷く帯。上下のカードと重ならない */
         .hex-pos {
           position: absolute; left: 0; right: 0; bottom: 0; z-index: 4;
           text-align: center; padding: 2px 2px 3px;
-          font-size: var(--fs-tiny); color: var(--orient-up); letter-spacing: 0.04em;
+          font-size: 8px; color: var(--orient-up); letter-spacing: 0.04em;
           line-height: 1.25;
           background: linear-gradient(180deg, rgba(10,7,22,0) 0%, rgba(10,7,22,0.88) 45%);
           border-radius: 0 0 7px 7px;
@@ -36026,11 +35661,11 @@ export default function TarotDraw() {
           display: flex; flex-direction: column; align-items: center; gap: 8px;
           padding: 14px 18px 16px;
           border: 1px solid rgba(201,162,75,0.28);
-          border-radius: var(--r-m);
+          border-radius: 12px;
           background: linear-gradient(160deg, rgba(46,36,92,0.5), rgba(24,20,44,0.5));
         }
         .affinity-label {
-          font-family: 'Cinzel', serif; font-size: var(--fs-note); letter-spacing: 0.18em;
+          font-family: 'Cinzel', serif; font-size: 10px; letter-spacing: 0.18em;
           color: var(--gold); opacity: 0.9;
         }
         .affinity-row { display: flex; align-items: center; gap: 14px; }
@@ -36108,10 +35743,10 @@ export default function TarotDraw() {
           50%      { opacity: 1; }
         }
         .affinity-value {
-          font-family: 'Cinzel', serif; font-size: var(--fs-title); color: var(--gold-soft);
+          font-family: 'Cinzel', serif; font-size: 26px; color: var(--gold-soft);
           letter-spacing: 0.02em; line-height: 1;
         }
-        .affinity-value small { font-size: var(--fs-body); opacity: 0.7; margin-left: 2px; }
+        .affinity-value small { font-size: 13px; opacity: 0.7; margin-left: 2px; }
         /* 満ちる部分がゆっくり上がってくる */
         @keyframes affinityFill {
           from { transform: translateY(100%); }
@@ -36133,33 +35768,33 @@ export default function TarotDraw() {
         .hex-stage-box {
           width: 100%; max-width: 360px;
           border: 1px solid rgba(201,162,75,0.28);
-          border-radius: var(--r-m); padding: 14px 16px;
+          border-radius: 12px; padding: 14px 16px;
           background: linear-gradient(160deg, rgba(46,36,92,0.45), rgba(24,20,44,0.45));
           display: flex; flex-direction: column; gap: 11px;
         }
         .hex-stage-title {
-          font-family: 'Cinzel', serif; font-size: var(--fs-note); letter-spacing: 0.16em;
+          font-family: 'Cinzel', serif; font-size: 10px; letter-spacing: 0.16em;
           color: var(--gold); opacity: 0.9; text-align: center;
           padding-bottom: 9px; border-bottom: 1px solid rgba(201,162,75,0.18);
         }
         .hex-stage-row { display: flex; gap: 11px; align-items: flex-start; }
         .hex-stage-pos {
-          flex-shrink: 0; width: 62px; font-size: var(--fs-note);
+          flex-shrink: 0; width: 62px; font-size: 10.5px;
           color: var(--gold-soft); opacity: 0.85; line-height: 1.7;
           letter-spacing: 0.04em;
         }
         .hex-stage-card {
-          font-family: 'Shippori Mincho', serif; font-size: var(--fs-body);
+          font-family: 'Shippori Mincho', serif; font-size: 13px;
           color: var(--orient-up); line-height: 1.6;
         }
         .hex-major-tag {
-          margin-left: 7px; font-size: var(--fs-tiny); letter-spacing: 0.06em;
+          margin-left: 7px; font-size: 9px; letter-spacing: 0.06em;
           color: var(--gold); border: 1px solid rgba(201,162,75,0.5);
           border-radius: 999px; padding: 1px 7px; vertical-align: middle;
           font-family: 'Noto Sans JP', sans-serif;
         }
         .hex-stage-kw {
-          font-size: var(--fs-note); color: var(--muted); line-height: 1.75; margin-top: 2px;
+          font-size: 11px; color: var(--muted); line-height: 1.75; margin-top: 2px;
           word-break: keep-all; overflow-wrap: break-word;
         }
 
@@ -36223,8 +35858,8 @@ export default function TarotDraw() {
           .reload-btn:hover, .reload-btn:active { transform: none !important; }
         }
         @media (max-width: 520px) {
-          .tarot-header h1 { font-size: var(--fs-title); }
-          .reload-btn { font-size: var(--fs-tiny); padding: 3px 9px; }
+          .tarot-header h1 { font-size: 24px; }
+          .reload-btn { font-size: 9.5px; padding: 3px 9px; }
           .reload-note { top: 24px; }
           .mini-gap { width: 32px; height: 48px; }
           .mini-card { width: 32px; height: 48px; }
@@ -36233,504 +35868,7 @@ export default function TarotDraw() {
           .static-card.big { width: 140px; height: 208px; }
           .card-slot { width: 116px; }
         }
-      
-        /*
-          既存のボタンを三種の型に寄せる。
-          ⚠️ 個々の定義を消さずに、型を上から当てること。
-          消すと、そのクラスに付いていた配置や大きさまで失われる。
-        */
-        .draw-btn { border-radius: var(--r-s); font-family: inherit; }
-        .climax-btn { border-radius: var(--r-s); font-family: inherit; }
-        .multi-btn { border-radius: var(--r-s); font-family: inherit; }
-        .ver-btn { border-radius: var(--r-s); font-family: inherit; }
-        .mode-btn { border-radius: var(--r-s); font-family: inherit; }
-        .auto-pick-btn { border-radius: var(--r-s); font-family: inherit; }
-        .bulk-btn { border-radius: var(--r-s); font-family: inherit; }
-        .copy-btn { border-radius: var(--r-s); font-family: inherit; }
-        .reload-btn { border-radius: var(--r-s); font-family: inherit; }
-        .shard-btn { border-radius: var(--r-s); font-family: inherit; }
-        .reset-btn { border-radius: var(--r-s); font-family: inherit; }
-        .back-confirm-yes { border-radius: var(--r-s); font-family: inherit; }
-
-        /*
-          ⚠️⚠️ この節は必ず末尾に置くこと。
-          同じ詳細度の規則は後に書いたほうが勝つので、
-          前に置くと後から定義された枠（hs-pass など）に負けて効かない。
-          実際それで一部の枠だけ薄いままだった。
-
-        .verdict, .ai-reading, .analog-badge, .back-confirm, .celtic-verdict,
-        .dex-detail, .dex-summary, .asked-box, .multi-hand, .hs-pass,
-        .analog-school, .multi-rank-row, .multi-role-row, .panel {
-          position: relative;
-          background-image: linear-gradient(160deg,
-            rgba(255,255,255,0.055) 0%,
-            rgba(255,255,255,0.012) 42%,
-            rgba(0,0,0,0.14) 100%);
-          box-shadow:
-            inset 0 1px 0 rgba(255,255,255,0.09),
-            inset 0 -1px 0 rgba(0,0,0,0.3),
-            var(--sh-flat);
-        }
-
-        /*
-          主な枠は、さらに一段持ち上げる。
-          ⚠️ 全部を持ち上げないこと。全部浮いていると、どれも浮いて見えない。
-        */
-        .verdict, .ai-reading, .analog-badge, .celtic-verdict, .hs-pass {
-          border-radius: var(--r-l);
-          box-shadow:
-            inset 0 1px 0 rgba(255,255,255,0.11),
-            inset 0 -1px 0 rgba(0,0,0,0.34),
-            var(--sh-raise);
-        }
-
-        /*
-          見出しの上の細い金線。
-          ⚠️ 全部の枠に付けないこと。付けた枠が「読むところ」だと分かるように、
-          結論と鑑定文だけに絞る。
-        */
-        .verdict::before, .ai-reading::before, .celtic-verdict::before {
-          content: ""; position: absolute; left: 50%; top: 0;
-          width: 46%; height: 1px; transform: translateX(-50%);
-          background: linear-gradient(90deg,
-            transparent, rgba(201,162,75,0.85), transparent);
-        }
-
-        /* 押せる枠は、触れたときに面が起きる */
-        @media (hover: hover) {
-          .multi-hand:hover, .analog-cell:hover, .dex-cell:hover {
-            box-shadow:
-              inset 0 1px 0 rgba(255,255,255,0.14),
-              inset 0 -1px 0 rgba(0,0,0,0.3),
-              var(--sh-raise);
-          }
-        }
-
-        /* 主のボタンは、いちばん浮いている要素にする */
-        .draw-btn, .climax-btn {
-          box-shadow:
-            inset 0 1px 0 rgba(255,255,255,0.22),
-            inset 0 -2px 0 rgba(0,0,0,0.34),
-            0 6px 18px rgba(201,162,75,0.28);
-        }
-
-        /*
-          ============================================================
-          質感の底上げ
-
-          ⚠️⚠️ 前回の値は控えめすぎて、変わったことが分からなかった。
-          「上品に薄く」は、既に薄い画面では何もしていないのと同じ。
-          はっきり見える強さまで上げること。
-
-          ★ 高級感は次の四つで出る。
-            1. 面の起伏  … 内側の明線を強く、暗線も入れて縁を立てる
-            2. 落ち影    … 濃く、広く。浮いているものは必ず影を落とす
-            3. 縁の光    … 枠の上辺だけに金を回す（照明が上にある想定）
-            4. 地の質感  … 平らな塗りをやめ、細かい粒と傾斜を入れる
-          ============================================================
-        */
-
-        /*
-          ⚠️⚠️ 画面全体を覆う層を足さないこと。
-          地に質感を出すつもりで fixed の層を重ねたが、
-          z-index: 1 で盤面より手前に来ていたため、
-          札も文字も霞んで「開封の光が出続けている」ように見えていた。
-          記録を見返すたびに光る、という最悪の形になっていた。
-
-          地の質感が要るなら、背景そのもの（TitleSky）に持たせること。
-          手前に膜を張って解決しない。
-        */
-
-        /* 枠。⚠️ 前回の倍の強さにする */
-        .fx-depth .verdict, .fx-depth .ai-reading, .fx-depth .analog-badge, .fx-depth .back-confirm, .fx-depth .celtic-verdict, .fx-depth .dex-detail, .fx-depth .dex-summary, .fx-depth .asked-box, .fx-depth .multi-hand, .fx-depth .hs-pass, .fx-depth .analog-school, .fx-depth .multi-rank-row, .fx-depth .multi-role-row, .fx-depth .panel, .fx-depth .hex-fields {
-          border-color: rgba(201,162,75,0.34);
-          background-image: linear-gradient(158deg,
-            rgba(255,255,255,0.10) 0%,
-            rgba(255,255,255,0.03) 38%,
-            rgba(0,0,0,0.22) 100%);
-          box-shadow:
-            inset 0 1px 0 rgba(255,255,255,0.20),
-            inset 0 -1px 0 rgba(0,0,0,0.45),
-            inset 0 0 24px rgba(120,100,190,0.10),
-            0 6px 20px rgba(0,0,0,0.5);
-        }
-
-        /* 主要な枠。⚠️ さらに強く。ここが画面の主役になる */
-        .fx-depth .verdict, .fx-depth .ai-reading, .fx-depth .analog-badge, .fx-depth .celtic-verdict, .fx-depth .hs-pass {
-          border-radius: var(--r-l);
-          border-color: rgba(201,162,75,0.5);
-          box-shadow:
-            inset 0 1px 0 rgba(255,255,255,0.26),
-            inset 0 -2px 0 rgba(0,0,0,0.5),
-            inset 0 0 32px rgba(140,115,210,0.13),
-            0 10px 30px rgba(0,0,0,0.58),
-            0 0 0 1px rgba(201,162,75,0.12);
-        }
-
-        /*
-          ⚠️⚠️ 枠の上に光の層を重ねないこと。
-          「縁に光を回す」つもりで inset:0 の層を敷いたが、
-          枠の中身ぜんぶが金の膜を通して見えることになり、
-          開封の光が出続けているように見えていた。
-
-          縁を光らせたいなら、層ではなく box-shadow の内側の線でやる。
-          あれは縁にしか出ないので、中身に膜が掛からない。
-        */
-
-        /* 見出しの金線。⚠️ 太く長くする。細い線は見えない */
-        .fx-depth .verdict::before, .fx-depth .ai-reading::before, .fx-depth .celtic-verdict::before {
-          width: 62%; height: 2px;
-          background: linear-gradient(90deg,
-            transparent, rgba(255,231,170,0.95) 35%, rgba(201,162,75,0.95) 65%, transparent);
-          box-shadow: 0 0 10px rgba(201,162,75,0.7);
-        }
-
-        /*
-          主のボタン。⚠️ 画面でいちばん目を引く要素にする。
-          ここが目立たないと、何をすればいいのか分からない。
-        */
-        .fx-depth .draw-btn, .fx-depth .climax-btn {
-          border: 1px solid rgba(232,207,153,0.75) !important;
-          background:
-            linear-gradient(168deg,
-              rgba(232,207,153,0.42) 0%,
-              rgba(201,162,75,0.26) 48%,
-              rgba(150,116,44,0.22) 100%) !important;
-          color: #FFF3D6 !important;
-          text-shadow: 0 1px 3px rgba(0,0,0,0.6);
-          box-shadow:
-            inset 0 1px 0 rgba(255,255,255,0.5),
-            inset 0 -2px 0 rgba(0,0,0,0.4),
-            0 8px 26px rgba(201,162,75,0.4),
-            0 2px 6px rgba(0,0,0,0.5) !important;
-        }
-        @media (hover: hover) {
-        .fx-depth .draw-btn:hover, .fx-depth .climax-btn:hover {
-            box-shadow:
-              inset 0 1px 0 rgba(255,255,255,0.6),
-              inset 0 -2px 0 rgba(0,0,0,0.4),
-              0 12px 34px rgba(201,162,75,0.6),
-              0 2px 6px rgba(0,0,0,0.5) !important;
-          }
-        }
-
-        /* 副のボタン。⚠️ 主より弱く、でも押せると分かる程度に */
-        .fx-depth .multi-btn, .fx-depth .ver-btn, .fx-depth .mode-btn, .fx-depth .analog-card {
-          background-image: linear-gradient(160deg,
-            rgba(255,255,255,0.07), rgba(0,0,0,0.14));
-          box-shadow:
-            inset 0 1px 0 rgba(255,255,255,0.13),
-            0 2px 6px rgba(0,0,0,0.35);
-        }
-        .fx-depth .multi-btn.on, .fx-depth .ver-btn.on, .fx-depth .mode-btn.on {
-          box-shadow:
-            inset 0 1px 0 rgba(255,255,255,0.3),
-            0 3px 12px rgba(201,162,75,0.35);
-        }
-
-        /* 見出し。⚠️ 字だけ大きくしない。線と余白で格を付ける */
-        .fx-depth .panel-head, .fx-depth .hs-pass-title, .fx-depth .verdict-title, .fx-depth .spread-heading-name {
-          text-shadow: 0 2px 8px rgba(0,0,0,0.6);
-        }
-
-        /*
-          ============================================================
-          入力まわり
-
-          ⚠️⚠️ .hex-fields を枠として扱ったのが間違いだった。
-          あれは「見出し・欄・補足」を縦に積むための入れ物で、
-          中の入力欄も枠を持っているので、枠が二重になる。
-          外枠に地色が付いた結果、中の文字だけが地から浮いて、
-          色が剥げたように見えていた。
-
-          ★ 入れ物は透明にして、枠を持つのは入力欄だけにする。
-            商用の占いアプリはどれもこの形で、
-            「見出し（小さく金）／欄（沈んだ面）／補足（さらに小さく）」
-            の三段が縦に揃っている。
-
-          ⚠️ 欄は「沈んで」見せること。押すボタンは浮き、書く欄は沈む。
-            向きが逆だと、どこに書けばいいのか分からない。
-          ============================================================
-        */
-        .fx-fields .hex-fields {
-          gap: var(--sp-1) !important;
-          margin: 0 auto var(--sp-3) !important;
-          /* ⚠️ 入れ物に枠と地色を付けない。付けると中の欄と二重になる */
-          border: none !important;
-          background: none !important;
-          background-image: none !important;
-          box-shadow: none !important;
-          padding: 0 !important;
-        }
-        .fx-fields .hex-fields::before, .fx-fields .hex-fields::after { content: none !important; }
-
-        /* 見出し。⚠️ 小さく、字間を開ける。大きくすると欄より目立つ */
-        .fx-fields .hex-fields label, .fx-fields .hex-field-label {
-          font-size: var(--fs-note); color: var(--gold-soft);
-          letter-spacing: 0.1em; opacity: 0.92;
-          margin-bottom: var(--sp-1);
-        }
-
-        /*
-          書く欄。⚠️ 沈ませる。内側に影を落として、面が凹んで見えるようにする。
-        */
-        .hex-fields input, .hex-fields textarea, .topic-area,
-        .hex-fields input[type="text"] {
-          width: 100%; box-sizing: border-box;
-          padding: var(--sp-3) var(--sp-3) !important;
-          border-radius: var(--r-m) !important;
-          border: 1px solid rgba(201,162,75,0.3) !important;
-          background:
-            linear-gradient(180deg, rgba(0,0,0,0.34), rgba(0,0,0,0.16)) !important;
-          color: var(--parchment);
-          font-family: inherit; font-size: var(--fs-body);
-          box-shadow:
-            inset 0 2px 6px rgba(0,0,0,0.55),
-            inset 0 -1px 0 rgba(255,255,255,0.06),
-            0 1px 0 rgba(255,255,255,0.05);
-          transition: border-color .18s, box-shadow .18s;
-        }
-        .fx-fields .hex-fields input:focus, .fx-fields .hex-fields textarea:focus, .fx-fields .topic-area:focus {
-          outline: none;
-          border-color: rgba(232,207,153,0.85) !important;
-          box-shadow:
-            inset 0 2px 6px rgba(0,0,0,0.5),
-            0 0 0 3px rgba(201,162,75,0.16),
-            0 0 18px rgba(201,162,75,0.24);
-        }
-        /* 例示。⚠️ 薄く。本文と同じ濃さだと入力済みに見える */
-        .fx-fields .hex-fields input::placeholder, .fx-fields .hex-fields textarea::placeholder, .fx-fields .topic-area::placeholder {
-          color: rgba(226,214,240,0.34); letter-spacing: 0.03em;
-        }
-
-        /* 補足。⚠️ いちばん小さく、いちばん薄く */
-        .fx-fields .hex-fields-note, .fx-fields .hex-fields-example {
-          font-size: var(--fs-note); color: var(--muted);
-          line-height: 1.85; margin: var(--sp-1) 0 0; opacity: 0.72;
-          text-align: center;
-        }
-
-        /*
-          入力のかたまり全体。
-          ⚠️ 欄と補足を離しすぎないこと。離すと、どの欄への説明か分からなくなる。
-        */
-        .hex-fields + .hex-fields { margin-top: var(--sp-3) !important; }
-
-        /*
-          段の切り替え。
-          ⚠️ 四つの札が横に散らばると、まとまりが無く見える。
-          一つの帯に収めて、選ばれているものだけを浮かせる。
-          商用アプリの「プラン選択」はどれもこの形。
-        */
-        .fx-fields .ver-switch {
-          padding: 3px !important;
-          border: 1px solid rgba(201,162,75,0.28) !important;
-          background: linear-gradient(180deg, rgba(0,0,0,0.3), rgba(0,0,0,0.14)) !important;
-          box-shadow: inset 0 2px 6px rgba(0,0,0,0.45) !important;
-          gap: 2px !important;
-        }
-        .fx-fields .ver-btn {
-          border: none !important; background: none !important;
-          box-shadow: none !important; border-radius: var(--r-s) !important;
-          color: var(--muted); padding: var(--sp-2) var(--sp-3) !important;
-        }
-        /* 選ばれている札だけ浮かせる。⚠️ 全部浮かせると選択が伝わらない */
-        .fx-fields .ver-btn.on {
-          background: linear-gradient(168deg,
-            rgba(232,207,153,0.34), rgba(201,162,75,0.2)) !important;
-          color: #FFF3D6 !important;
-          box-shadow:
-            inset 0 1px 0 rgba(255,255,255,0.4),
-            0 2px 8px rgba(0,0,0,0.45) !important;
-        }
-
-        /*
-          戻る導線。
-          ⚠️ 主のボタンと同じ強さにしないこと。戻るのは主目的ではない。
-          文字だけにして、触れたときだけ下線を出す。
-        */
-        .fx-fields .back-to-title {
-          border: none !important; background: none !important;
-          box-shadow: none !important;
-          color: var(--muted) !important; font-size: var(--fs-note) !important;
-          letter-spacing: 0.08em; padding: var(--sp-3) var(--sp-4) !important;
-          text-decoration: none;
-        }
-        @media (hover: hover) {
-        .fx-fields .back-to-title:hover { color: var(--gold-soft) !important; text-decoration: underline; }
-        }
-
-        /*
-          配置の見出し。
-          ⚠️ 名前と説明の間を詰めすぎないこと。詰まっていると一塊に見えて、
-          どこまでが題でどこからが説明か分からない。
-        */
-        .fx-fields .spread-heading { margin: var(--sp-2) 0 var(--sp-5) !important; }
-        .fx-fields .spread-heading-name {
-          font-size: var(--fs-title) !important;
-          letter-spacing: 0.16em !important;
-          margin-bottom: var(--sp-2) !important;
-        }
-        .fx-fields .spread-heading-desc {
-          font-size: var(--fs-note) !important; opacity: 0.8;
-          max-width: 28em; margin: 0 auto !important;
-        }
-
-        /*
-          選択欄（チェックボックス）。
-
-          ⚠️⚠️ .hex-fields label をまとめて縦積みにしたのが原因で、
-          チェックの札まで縦一列になり、文字が縦書きのように流れていた。
-          入力欄の見出しと、選択肢の札は別物なので、分けて指定すること。
-        */
-        .fx-fields .hex-viewpoints {
-          display: flex; flex-direction: column; gap: var(--sp-2);
-          margin: var(--sp-2) 0 0;
-        }
-        .fx-fields .hex-viewpoint-title {
-          font-size: var(--fs-note); color: var(--gold-soft);
-          letter-spacing: 0.1em; margin: 0 0 var(--sp-1);
-        }
-        /*
-          札。
-          ⚠️⚠️ .hex-fields が縦積みの flex なので、その直下の label は
-          flex の子として扱われ、幅が中身に縮む。
-          幅が狭まると文字が一字ずつ折り返して、縦書きのように流れる。
-          札は必ず幅いっぱいに広げること。
-        */
-        .fx-fields .hex-viewpoint {
-          width: 100%; box-sizing: border-box;
-          display: flex !important; flex-direction: row !important;
-          align-items: center; gap: var(--sp-2);
-          margin: 0 !important; padding: var(--sp-2) var(--sp-3);
-          font-size: var(--fs-note); letter-spacing: 0.02em;
-          color: var(--muted); cursor: pointer;
-          border: 1px solid rgba(201,162,75,0.22); border-radius: var(--r-s);
-          background: linear-gradient(160deg, rgba(255,255,255,0.05), rgba(0,0,0,0.16));
-          transition: border-color .16s, color .16s;
-        }
-        .fx-fields .hex-viewpoint input { flex: none; margin: 0; accent-color: #C9A24B; }
-        .hex-viewpoint:has(input:checked) {
-          border-color: rgba(201,162,75,0.7); color: var(--gold-soft);
-          background: linear-gradient(160deg, rgba(201,162,75,0.2), rgba(201,162,75,0.07));
-        }
-
-        /*
-          ============================================================
-          下敷き感をやめる
-
-          ⚠️⚠️ 半透明の面をただ重ねると、色付きの板が乗っているだけに見える。
-          「小学生の下敷き」に見えるのは、面が均一で、縁が立っていないから。
-
-          ★ 布・紙・石に見せるには、面の中に濃淡の変化が要る。
-            一枚の均一な半透明ではなく、
-            中心から外へ暗くなる／織り目がある／縁だけ明るい、を重ねる。
-          ============================================================
-        */
-
-        /*
-          盤の下敷き。ステンドグラス。
-
-          ★ 半透明のアクリル感は、布より硬い素材のほうが合う。
-            ガラスなら「向こうが透けている」のが正しい見え方になるので、
-            下敷きに見えていた性質がそのまま長所になる。
-
-          ⚠️ 色を混ぜて塗らないこと。ステンドグラスは
-            「色ガラスの断片を鉛の線で仕切ったもの」なので、
-            面ごとに色が切り替わり、その境目に必ず線が入る。
-            滑らかに混ざった時点でガラスではなくなる。
-
-          ⚠️ 線は暗く太く。鉛線（ケイム）は光を通さないので、
-            明るい線にすると格子の紙に見える。
-        */
-        .hex-carpet, .horo-carpet, .celtic-carpet, .tree-carpet {
-          position: relative; overflow: hidden;
-          background-image:
-            /* 色ガラスの断片。角度を変えた帯を重ねて、区画を作る */
-            repeating-linear-gradient(60deg,
-              rgba(214,58,92,0.42) 0px, rgba(214,58,92,0.42) 34px,
-              rgba(58,96,200,0.40) 34px, rgba(58,96,200,0.40) 68px,
-              rgba(228,168,44,0.38) 68px, rgba(228,168,44,0.38) 102px,
-              rgba(56,158,120,0.38) 102px, rgba(56,158,120,0.38) 136px,
-              rgba(140,66,190,0.40) 136px, rgba(140,66,190,0.40) 170px),
-            repeating-linear-gradient(-60deg,
-              rgba(255,255,255,0.07) 0px, rgba(255,255,255,0.07) 30px,
-              rgba(0,0,0,0.16) 30px, rgba(0,0,0,0.16) 60px),
-            /* 中心からの採光。窓の向こうに光がある */
-            radial-gradient(ellipse at 50% 34%,
-              rgba(255,244,214,0.30) 0%, transparent 62%),
-            linear-gradient(160deg, rgba(24,16,46,0.7), rgba(12,8,28,0.82)) !important;
-          border: 1px solid rgba(201,162,75,0.55) !important;
-          box-shadow:
-            inset 0 2px 0 rgba(255,255,255,0.2),
-            inset 0 -4px 16px rgba(0,0,0,0.55),
-            inset 0 0 70px rgba(0,0,0,0.3),
-            0 14px 38px rgba(0,0,0,0.6) !important;
-        }
-        /*
-          鉛線。⚠️ 背景ではなく上に重ねること。
-          背景に混ぜると色ガラスと同じ層になり、線が色に溶ける。
-        */
-        .hex-carpet::before, .horo-carpet::before, .celtic-carpet::before, .tree-carpet::before {
-          content: ""; position: absolute; inset: 0; pointer-events: none;
-          background-image:
-            repeating-linear-gradient(60deg,
-              rgba(12,8,20,0.85) 0px, rgba(12,8,20,0.85) 2.5px,
-              transparent 2.5px, transparent 34px),
-            repeating-linear-gradient(-60deg,
-              rgba(12,8,20,0.7) 0px, rgba(12,8,20,0.7) 2px,
-              transparent 2px, transparent 30px);
-        }
-        /*
-          ガラスの照り。⚠️ ゆっくり動かす。止まっていると印刷に見える。
-          ⚠️ 強くしないこと。札より目立つと盤が主役になる。
-        */
-        /*
-          ⚠️⚠️ ::after を使い回さないこと。
-          .hex-carpet::after には既に内枠の線が入っていて、
-          ここで上書きすると内枠が消えるうえ、盤の上に白い膜が乗る。
-          札も文字もその膜越しになり、光り続けているように見えた。
-
-          ガラスの照りが要るなら、盤の中に <span> を一つ置いて
-          そこに掛けること。既にある ::before / ::after を奪わない。
-        */
-
-        /*
-          半透明の面すべて。
-          ⚠️ 一枚で済ませないこと。濃淡を重ねて初めて素材に見える。
-        */
-        .panel, .verdict, .ai-reading, .hs-pass, .dex-detail, .analog-badge, .celtic-verdict, .multi-hand {
-          background-image:
-            radial-gradient(ellipse at 50% 0%,
-              rgba(255,255,255,0.13) 0%, transparent 52%),
-            repeating-linear-gradient(0deg,
-              rgba(255,255,255,0.018) 0px, rgba(255,255,255,0.018) 1px,
-              transparent 1px, transparent 3px),
-            linear-gradient(158deg,
-              rgba(46,38,82,0.6) 0%,
-              rgba(28,22,54,0.72) 46%,
-              rgba(16,12,34,0.82) 100%) !important;
-          border-color: rgba(201,162,75,0.42) !important;
-        }
-
-        /*
-          ⚠️⚠️ 発光そのものを切れるようにしたのは間違いだった。
-          演出は最初から良かったので、消すべきではない。
-          問題だったのは「出る場所」だけ ―― ワンオラクル・プチ・記録で
-          出ていたことなので、そこだけ止める。全部を切れるようにして
-          原因を分からなくしたのは、こちらの手順の誤り。
-
-          ★ 場所で止める。演出は残す。
-        */
-        .no-fx .holo-edge,
-        .no-fx .holo-orbit,
-        .no-fx .card-shine-layer,
-        .no-fx .hex-orbit,
-        .no-fx .holo-arm {
-          display: none !important;
-        }
-        .no-fx .rare-frame { animation: none !important; }
-`}</style>
+      `}</style>
 
       <TarotBackdrop />
 
@@ -37071,7 +36209,6 @@ export default function TarotDraw() {
                     { key: "stats", label: t.subStats },
                     { key: "dex", label: t.subDex },
                     { key: "shard", label: t.subShard },
-                    { key: "saved", label: t.subSaved || T.ja.subSaved },
                   ].map((it, i) => {
                     const on = recordsTab === it.key;
                     return (
@@ -37102,13 +36239,7 @@ export default function TarotDraw() {
 
                 {recordsTab === "last" && (
                   history[0]
-                    ? (
-                      /* ⚠️ 前回の結果も見返す場所。引いた瞬間の演出を出さない */
-                      <div className="no-fx">
-                        <LastResultPanel entry={history[0]} lang={lang}
-                          onClose={() => setRecordsTab("history")} />
-                      </div>
-                    )
+                    ? <LastResultPanel entry={history[0]} lang={lang} onClose={() => setRecordsTab("history")} />
                     : <p style={{ fontSize: "12px", color: "var(--muted)", marginTop: "20px" }}>{t.subEmpty}</p>
                 )}
                 {recordsTab === "history" && <HistoryPanel history={history} lang={lang} />}
@@ -37124,10 +36255,6 @@ export default function TarotDraw() {
                     }}
                     onExchange={exchangeShard} last={lastExchanged}
                   />
-                )}
-                {recordsTab === "saved" && (
-                  /* ⚠️ 記録は見返す場所。引いた瞬間の演出を出さない */
-                  <div className="no-fx"><SavedPanel lang={lang} paid={aiEnabledPlan} /></div>
                 )}
               </div>
             )}
@@ -37163,38 +36290,6 @@ export default function TarotDraw() {
                   {t.diagButtonLabel}
                 </button>
                 {showDiag && <BillingDiagPanel lang={lang} />}
-
-                {/*
-                  エフェクトの入切。
-                  ⚠️ 隠さないこと。見た目に不具合が出たとき、
-                  ここで切って確かめられるのが目的なので、
-                  探さないと見つからない場所に置くと意味が無い。
-                */}
-                <button className="reset-btn" onClick={() => setShowFx(!showFx)}
-                  style={{ fontSize: "11px", marginTop: "6px" }}>
-                  {t.fxButtonLabel || "エフェクト切替"}
-                </button>
-                {showFx && (
-                  <div className="panel" style={{ maxWidth: "340px", marginTop: "8px" }}>
-                    <p className="multi-note">
-                      {t.fxNote || "見た目の効果を個別に切れます。表示がおかしいときは、切って確かめてください。"}
-                    </p>
-                    {FX_KINDS.map((f) => {
-                      const on = !fxOff.includes(f.key);
-                      return (
-                        <div key={f.key} className="multi-row" style={{ marginBottom: "8px" }}>
-                          <button type="button"
-                            className={`multi-btn${on ? " on" : ""}`}
-                            onClick={() => toggleFx(f.key)}
-                            style={{ width: "100%" }}>
-                            {(t.fxNames && t.fxNames[f.key]) || f.key}
-                            {"　"}{on ? (t.fxOn || "入") : (t.fxOff || "切")}
-                          </button>
-                        </div>
-                      );
-                    })}
-                  </div>
-                )}
 
                 <button
                   onClick={() => setShowLegal(!showLegal)}
