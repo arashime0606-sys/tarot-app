@@ -19,7 +19,7 @@ import { Sparkles, Flame, Droplet, Swords, Coins, RotateCcw, Shuffle, Copy, Chec
   背景の星空。
 
   唐草は太くすると胴体に見え、羽は散らすと植物に見えた。どちらも
-  「輪郭を持つ形を薄く敷くと、別のものとして読まれる」という同じ失敗だった。
+  「輪郭を持つ形を薄く敷くと、別のものとして読まれる」という同じ失敗だった。a
   点には輪郭が無いので、この誤読が起きない。
 
   ただし演出との住み分けだけは守る。
@@ -2928,7 +2928,10 @@ const SPREADS = {
   newRelation: { key: "newRelation", deck: "full", count: 6, layout: [{ x: 10, y: 14 }, { x: 26, y: 28 }, { x: 42, y: 43 }, { x: 58, y: 57 }, { x: 74, y: 72 }, { x: 90, y: 86 }] },
   season: { key: "season", deck: "full", count: 5, layout: [{ x: 10, y: 14 }, { x: 30, y: 32 }, { x: 50, y: 50 }, { x: 70, y: 68 }, { x: 90, y: 86 }] },
   spiritGuide: { key: "spiritGuide", deck: "full", count: 7, layout: [{ x: 10, y: 14 }, { x: 23, y: 26 }, { x: 37, y: 38 }, { x: 50, y: 50 }, { x: 63, y: 62 }, { x: 77, y: 74 }, { x: 90, y: 86 }] },
-  careerCross: { key: "careerCross", deck: "full", count: 6, layout: [{ x: 10, y: 14 }, { x: 26, y: 28 }, { x: 42, y: 43 }, { x: 58, y: 57 }, { x: 74, y: 72 }, { x: 90, y: 86 }] },
+  careerCross: { key: "careerCross", deck: "full", count: 8, layout: [
+      { x: 25, y: 14 }, { x: 25, y: 36 }, { x: 25, y: 58 }, { x: 25, y: 80 },
+      { x: 75, y: 14 }, { x: 75, y: 36 }, { x: 75, y: 58 }, { x: 75, y: 80 },
+    ] },
   burnout: { key: "burnout", deck: "full", count: 4, layout: [{ x: 10, y: 14 }, { x: 37, y: 38 }, { x: 63, y: 62 }, { x: 90, y: 86 }] },
   moonPhase: { key: "moonPhase", deck: "major", count: 4, layout: [{ x: 10, y: 14 }, { x: 37, y: 38 }, { x: 63, y: 62 }, { x: 90, y: 86 }] },
   safePerson: { key: "safePerson", deck: "full", count: 10, layout: [
@@ -2944,7 +2947,7 @@ const SPREADS = {
       { x: 75, y: 14 }, { x: 75, y: 36 }, { x: 75, y: 60 }, { x: 75, y: 84 },
     ],
   },
-  undecided: { key: "undecided", deck: "full", count: 5, layout: [{ x: 10, y: 14 }, { x: 30, y: 32 }, { x: 50, y: 50 }, { x: 70, y: 68 }, { x: 90, y: 86 }] },
+  undecided: { key: "undecided", deck: "full", count: 6, layout: [{ x: 10, y: 14 }, { x: 26, y: 28 }, { x: 42, y: 43 }, { x: 59, y: 57 }, { x: 75, y: 72 }, { x: 91, y: 86 }] },
   moneyMind: { key: "moneyMind", deck: "full", count: 5, layout: [{ x: 10, y: 14 }, { x: 30, y: 32 }, { x: 50, y: 50 }, { x: 70, y: 68 }, { x: 90, y: 86 }] },
   loopOfThought: { key: "loopOfThought", deck: ["swords"], count: 3, layout: [{ x: 10, y: 14 }, { x: 50, y: 50 }, { x: 90, y: 86 }] },
 
@@ -3344,7 +3347,7 @@ const SPREAD_I18N = {
     safePerson: { name: "この人は安全か", desc: "相手の振る舞いを、日々の具体だけで見る。小アルカナだけ。", pos: ["日ごろの振る舞い", "あなたに向けているもの", "言葉と行いのずれ", "見ないふりをしている合図", "近づく前に確かめること"] },
     somatic: { name: "体からの声", desc: "頭より先に、身体が言っていることを聞く。小アルカナだけ。", pos: ["いま熱を持っている場所", "溜まっている感情", "頭が休めない理由", "身体が求めている手当て"] },
     comparison: { name: "比べるのをやめる", desc: "相手と自分のポケットの中身を、実際の価値と見え方の両面から並べる。", pos: ["相手が実際に持っているもの", "その値打ち", "あなたに見えている相手", "そう見せているもの", "あなたが実際に持っているもの", "その値打ち", "あなたが自分をどう見ているか", "そこに向けている関心"] },
-    undecided: { name: "決めきれない", desc: "どちらを選ぶかではなく、選べないこと自体を見る。", pos: ["決めきれない本当の理由", "選ばずにいて守れているもの", "決めた後に来る面倒", "期限を切るならいつか", "決めるために足りない一つ"] },
+    undecided: { name: "決めきれない", desc: "決める力を火に見立てる。薪・熱・風のどれが欠けても決まらない。", pos: ["決めたい気持ち", "決めてよい理由", "重なっている迷い", "決めた後に来る面倒", "外からの後押し", "背中を押す言葉"] },
     moneyMind: { name: "お金と価値観", desc: "金運ではなく、お金に対する自分の構えを見る。", pos: ["お金に対する構え", "それが身についた場所", "無理が出ている使い方", "払って惜しくないもの", "構えを一つ変えるなら"] },
     loopOfThought: { name: "堂々巡り", desc: "剣14枚だけ。同じ考えが回り続けているとき、思考の中だけを細かく見る。", pos: ["回っている考え", "回し続けているもの", "輪を切る一手"] },
     driveAndGround: { name: "やる気と地面", desc: "棒と貨幣だけ。やりたい気持ちと、実際に立っている地面のずれを見る。", pos: ["やりたい気持ち", "実際に立っている地面", "ずれが出ている場所", "境目でできる一手"] },
@@ -3352,7 +3355,7 @@ const SPREAD_I18N = {
     loveAndLiving: { name: "好きと暮らし", desc: "聖杯と貨幣だけ。気持ちの向く先と、生活が要ることの折り合いを見る。", pos: ["気持ちが向いている先", "暮らしが求めていること", "折り合っていない点", "先に動かすほう"] },
     stillHurts: { name: "まだ痛むのは", desc: "大アルカナと聖杯だけ。残っている痛みが自分の側か、時期の側かを分ける。", pos: ["いま残っている痛み", "自分の側にあるもの", "時間の側にあるもの", "いまできる手当て"] },
     manifestation: { name: "願いの実現", desc: "望みを言葉にし、妨げと資源を並べて道筋にする。", pos: ["本当に望んでいるもの", "妨げているもの", "持っている資源", "手放すべきもの", "具体的な一歩", "実現へ向かう力"] },
-    careerCross: { name: "キャリアの岐路", desc: "続ける力・重なる負荷・外からの評価を、火の三要素として見る。", pos: ["続けてきたもの", "続ける理由", "重なっている負荷", "抜けない疲れ", "外から見えている姿", "受けている評価"] },
+    careerCross: { name: "キャリアの岐路", desc: "二つの道を山として並べ、いまどこに立っているかを見る。", pos: ["今の道の登りやすさ", "今の道の高さ", "今の道で来た距離", "今の道に残る険しさ", "別の道の登りやすさ", "別の道の高さ", "別の道で必要な助走", "いま立っている場所"] },
     character: { name: "人物を読む", desc: "ひとりの人となりを、長所と短所の両面から見る。", pos: ["その人そのもの", "最大の長所", "最大の短所", "いま最も気にしていること", "関わることで得るもの"] },
     newRelation: { name: "新しい関係", desc: "始まったばかりの間柄を、双方の持ち込みから読む。", pos: ["関係の土台", "相手が持ち込むもの", "自分が持ち込むもの", "いまの課題", "秘めた可能性", "育てる方法"] },
     monthly: { name: "今月の流れ", desc: "種から次の種まで、今月がどこまで進むかを七つの段で見る。", pos: ["種（何を蒔いたか）", "芽（もう出ているもの）", "根（見えない土台）", "葉（伸びている部分）", "つぼみ（あと少しのもの）", "花（今月ひらくもの）", "実（月末に残るもの）"] },
@@ -3394,7 +3397,7 @@ const SPREAD_I18N = {
     safePerson: { name: "Is This Person Safe", desc: "Read their conduct through daily specifics alone. Minor Arcana only.", pos: ["How they behave day to day", "What they turn toward you", "The gap between word and deed", "The signal you look away from", "What to check before going closer"] },
     somatic: { name: "What the Body Says", desc: "Hear the body before the head speaks. Minor Arcana only.", pos: ["Where the heat sits now", "The feeling that has pooled", "Why the head will not rest", "The care the body is asking for"] },
     comparison: { name: "Stop Comparing", desc: "What is in their pocket and yours, set against both real worth and how it looks.", pos: ["What they actually hold", "What it is worth", "The them you see", "What they show you", "What you actually hold", "What it is worth", "How you see yourself", "How much attention you give it"] },
-    undecided: { name: "Unable to Decide", desc: "Not which to choose, but why the choice will not close.", pos: ["Why the choice will not close", "What not choosing protects", "The trouble that follows deciding", "Where the deadline should fall", "The one thing still missing"] },
+    undecided: { name: "Can't Decide", desc: "Deciding as a fire — wood, heat, air. Lose any one and it won't catch.", pos: ["The wish to decide", "Reason it is alright to", "Hesitation stacking up", "The trouble that follows", "A push from outside", "Words that move you"] },
     moneyMind: { name: "Money and What You Value", desc: "Not fortune, but your own stance toward money.", pos: ["Your stance toward money", "Where it was learned", "The spending that strains you", "What you never regret paying for", "The one stance to change"] },
     loopOfThought: { name: "Going in Circles", desc: "Swords only, all 14. When one thought keeps returning, look inside the thinking alone.", pos: ["The thought that circles", "What keeps it turning", "The one cut that opens it"] },
     driveAndGround: { name: "Drive and Ground", desc: "Wands and Pentacles only. The gap between what you want and where you stand.", pos: ["What you want to do", "The ground you actually stand on", "Where the gap shows", "One move at the seam"] },
@@ -3402,7 +3405,7 @@ const SPREAD_I18N = {
     loveAndLiving: { name: "Love and Living", desc: "Cups and Pentacles only. Where the heart points, and what daily life requires.", pos: ["Where the feeling points", "What daily life requires", "Where the two will not meet", "Which one to move first"] },
     stillHurts: { name: "Why It Still Hurts", desc: "Major Arcana and Cups only. Separate what is yours from what belongs to time.", pos: ["The ache that remains", "What belongs to you", "What belongs to time", "The care available now"] },
     manifestation: { name: "Manifestation", desc: "Put the wish into words, then lay out what blocks it and what you hold.", pos: ["What you truly want", "What blocks it", "The resources you hold", "What to let go of", "A concrete first step", "The force carrying it"] },
-    careerCross: { name: "Career Crossroads", desc: "Persistence, load, and outside regard, read as the three parts of a fire.", pos: ["What you have kept up", "Why you keep it up", "The load stacking up", "Tiredness that won't clear", "How you look from outside", "The regard you receive"] },
+    careerCross: { name: "Career Crossroads", desc: "Two roads set side by side as mountains, and where you stand now.", pos: ["How this road climbs", "How high this road goes", "How far you have come", "What steepness remains", "How the other road climbs", "How high the other goes", "The run-up it needs", "Where you stand now"] },
     character: { name: "Reading a Person", desc: "See one person from both their strengths and their faults.", pos: ["The person themselves", "Their greatest strength", "Their greatest fault", "What weighs on them now", "What you gain from knowing them"] },
     newRelation: { name: "A New Relationship", desc: "Read a young bond from what each side brings.", pos: ["The ground of the bond", "What they bring", "What you bring", "The present difficulty", "The hidden possibility", "How to grow it"] },
     monthly: { name: "This Month", desc: "From seed to the next seed — how far this month gets, in seven stages.", pos: ["Seed (what you sowed)", "Sprout (already up)", "Root (the unseen base)", "Leaf (what is growing)", "Bud (almost there)", "Bloom (what opens this month)", "Fruit (what remains at month end)"] },
@@ -5068,10 +5071,11 @@ const MANIFEST_STAGES = [
   { key: "force", indices: [5] },        // 実現へ向かう力
 ];
 const CAREER_STAGES = [
-  { key: "stand", indices: [0] },        // いまの立ち位置
-  { key: "lack",  indices: [2, 3] },     // 足りていないもの・外から来る流れ
-  { key: "have",  indices: [1, 4] },     // 持っている強み・選べる道
-  { key: "later", indices: [5] },        // 半年後の手応え
+  { key: "here",  indices: [0, 4] },
+  { key: "high",  indices: [1, 5] },
+  { key: "far",   indices: [2, 6] },
+  { key: "left",  indices: [3, 7] },
+
 ];
 const MONEY_STAGES = [
   { key: "stance", indices: [0] },       // お金に対する構え
@@ -5236,9 +5240,10 @@ const SAFE_PERSON_STAGES = [
   期限（3番）で終えると、急かして終わる配置になる。
 */
 const UNDECIDED_STAGES = [
-  { key: "why",     indices: [0, 1] },
-  { key: "cost",    indices: [2, 3] },
-  { key: "missing", indices: [4] },
+  { key: "want",  indices: [0, 1] },
+  { key: "doubt", indices: [2, 3] },
+  { key: "push",  indices: [4, 5] },
+
 ];
 
 const BOUNDARY_STAGES = [
@@ -11276,65 +11281,243 @@ function headHeartLean(drawn, openedIndices) {
     示すのは温度の組み合わせであって、優劣ではない。
   ⚠️ 段の境目は実測（30万回、各20.0%）。
 */
-const HEADHEART_CUTS = [-0.414, -0.062, 0.062, 0.414];
+
+/*
+  【頭と心】ふたつの部屋
+
+  ⚠️⚠️ 綱引きで描くと、勝ち負けの図になる。
+  頭と心は争っているのではなく、別のことを言っているだけなので、
+  どちらかが勝つ形にすると読みを誤らせる。
+
+  ★ 二つの部屋を左右に置き、それぞれの明かりの強さで「声の大きさ」を出す。
+    間の扉の開き具合が、噛み合っているかどうか。
+    扉が閉じていれば、どちらも大きくても話が通っていない。
+
+  ⚠️ 大きいほうを「正しい」と描かないこと。声が大きいだけで、
+    正しさとは別。
+  ⚠️ 段の境目は実測。
+*/
+
+/*
+  【頭と心】温度
+
+  ★ 頭は冷えているほうがよく働き、心は温かいほうがよく働く。
+    だから「どちらが熱いか」ではなく、それぞれが適温かを見る。
+
+  ⚠️ 部屋や綱で描かない。頭と心は体の場所を指す言葉なので、
+    人の形の上に置くのが一番早く伝わる。
+  ⚠️ 冷たい側に雪、熱い側に炎。数で強さを出すこと。
+    色の濃さだけだと、隣と比べたときにどちらが強いか分からない。
+  ⚠️ 段の境目は実測。
+*/
+const HEADHEART_CUTS = [0.262, 0.477, 0.523, 0.734];
 function HeadHeartRope({ drawn, lang, openedIndices }) {
   const t = visT(lang);
   const seen = new Set(openedIndices);
-  const head = visAvg(drawn, seen, [0]);
-  const heart = visAvg(drawn, seen, [1]);
+  const at = (i) => (seen.has(i) && drawn[i] ? cardPower(drawn[i]) : null);
+  const head = at(0), heart = at(1);
   if (head === null && heart === null) return null;
-  const hd = head === null ? 0 : head, ht = heart === null ? 0 : heart;
-  const step = visStep(hd - ht, HEADHEART_CUTS);
-  const W = 300, H = 236, CX = 150;
-  /* 温度の色。冷たいほど青、熱いほど赤 */
-  const col = (hot) => `rgb(${Math.round(70 + hot * 175)},${Math.round(150 - hot * 60)},${Math.round(240 - hot * 165)})`;
-  const tidy = step === 1;
+  const h = head === null ? 0.5 : head, c = heart === null ? 0.5 : heart;
+  /*
+    ⚠️⚠️ 「どちらが熱いか」で測らないこと。
+    理想は「頭が冷えていて、心が温かい」で、差の大小ではない。
+    頭も心も熱い回と、頭も心も冷たい回が、同じ点になってしまう。
+
+    ★ 理想からの遠さで測る。頭は低いほど、心は高いほど良い。
+      二つの隔たりを足して、近いほど高い点にする。
+  */
+  const gap = ((h) + (1 - c)) / 2;          // 0 が理想、1 が正反対
+  /* ⚠️ 境目は実測（30万回、各19.8〜20.2%）。等間隔だと中央が42%に偏る */
+  const step = visStep(1 - gap, HEADHEART_CUTS);
+  /* 粒の数。⚠️ 0個の段を作らないこと。何も無いと壊れて見える */
+  const headFlakes = 1 + Math.round((1 - h) * 5);   // 頭が冷えているほど雪が多い
+  const heartFlames = 1 + Math.round(c * 5);        // 心が温かいほど炎が多い
+
+  /*
+    ⚠️ 頭の上に雪の扇が広がる。上に余白を取らないと枠外へ出る。
+    実際、雪が上端で切れていた。
+  */
+  const W = 300, H = 300, CX = 150;
+  const HEADY = 96, HEARTY = 174;
+  /* 温度の色。⚠️ 一色の中で明度を変える。四色にすると濁る */
+  const headTint = h < 0.4 ? "#8FC8F5" : h < 0.6 ? "#B9C4E0" : "#F0A88A";
+  const heartTint = c < 0.4 ? "#9FB4D8" : c < 0.6 ? "#E0B0B8" : "#F58A6A";
+  /*
+    粒の色。
+    ⚠️ 雪だから青、炎だから橙、と固定しないこと。
+    頭が熱いのに青い雪が降っていたら、図と数字が食い違う。
+    ★ 雪は冷えているほど青白く、温むほど橙へ。
+      炎は弱いほど青白く（消えかけの炎は青い）、強いほど橙から赤へ。
+  */
+  /*
+    帽子とハートの対比。
+    ⚠️ 同じ色にしないこと。頭と心を分けて見る図なので、
+    二つが同じ色だと差が読み取れない。
+    ★ 帽子は頭の温度、ハートは心の温度。並べて比べられるようにする。
+  */
+  const capTint = h < 0.35 ? "#2E4A6E" : h < 0.55 ? "#2A2050" : "#5E3040";
+  const flakeTint = h < 0.35 ? "#BFE4FF" : h < 0.55 ? "#E4EEF8" : "#F5C8A0";
+  const flameOuter = c < 0.35 ? "#7FC8F0" : c < 0.55 ? "#F0C87A" : "#FF7A2A";
+  const flameInner = c < 0.35 ? "#CFEEFF" : c < 0.55 ? "#FFE9A8" : "#FFD24A";
   return (
     <div className="hs-pass">
       <div className="hs-pass-title sheen-text">{t.hhTitle}</div>
       <p className="hs-pass-legend">{t.hhLegend}</p>
       <svg viewBox={`0 0 ${W} ${H}`} className="hs-pass-svg" role="img" aria-label={t.hhTitle}>
         <HoloDefs id="hhHolo" w={W} h={H} />
-        <radialGradient id="hhHead" cx="50%" cy="50%">
-          <stop offset="0%" stopColor={col(hd)} stopOpacity="0.85" />
-          <stop offset="100%" stopColor={col(hd)} stopOpacity="0.12" />
-        </radialGradient>
-        <radialGradient id="hhHeart" cx="50%" cy="50%">
-          <stop offset="0%" stopColor={col(ht)} stopOpacity="0.9" />
-          <stop offset="100%" stopColor={col(ht)} stopOpacity="0.12" />
-        </radialGradient>
-        <circle cx={CX} cy="58" r="42" fill="url(#hhHead)" />
-        {/* ⚠️ 冷たい側も動かす。止めると片方だけ死んで見える。速さで温度差を出す */}
-        <circle cx={CX} cy="58" r="42" fill="none" stroke={col(hd)} strokeWidth="1.6"
-          className="mv-warm" style={{ animationDuration: `${(5.2 - hd * 2.6).toFixed(1)}s` }} />
-        <text x={CX} y="62" textAnchor="middle" className="hs-pt-name"
-          fill="#FFFFFF" style={{ fontWeight: 700 }}>{t.hhHead}</text>
-        <rect x={CX - 11} y="98" width="22" height="22" fill="rgba(190,180,225,0.28)" />
-        <rect x={CX - 52} y="118" width="104" height="82" rx="20"
-          fill="rgba(190,180,225,0.12)" stroke="rgba(190,180,225,0.4)" strokeWidth="1" />
-        <circle cx={CX} cy="158" r="34" fill="url(#hhHeart)" />
-        <circle cx={CX} cy="158" r="34" fill="none" stroke={col(ht)} strokeWidth="1.6"
-          className="mv-warm" style={{ animationDuration: `${(5.2 - ht * 2.6).toFixed(1)}s` }} />
-        <text x={CX} y="162" textAnchor="middle" className="hs-pt-name"
-          fill="#FFFFFF" style={{ fontWeight: 700 }}>{t.hhHeart}</text>
-        {/* 整っている並びのときだけ、首を通って上下がつながる */}
-        {tidy && (
-          <line x1={CX} y1="100" x2={CX} y2="122" stroke="url(#hhHolo)" strokeWidth="3"
-            className="mv-bridge" style={{ filter: HOLO_GLOW }} />
-        )}
-        <text x="20" y="212" className="hs-pt-name" fill={col(hd)}>
-          {t.hhTemp(t.hhHead, Math.round(hd * 100))}
-        </text>
-        <text x={W - 20} y="212" textAnchor="end" className="hs-pt-name" fill={col(ht)}>
-          {t.hhTemp(t.hhHeart, Math.round(ht * 100))}
-        </text>
-        <VisNumber gradId="hhHolo" x={CX} y={H - 6}>{t.hhGauge[step]}</VisNumber>
+        <defs>
+          <radialGradient id="hhHeadG" cx="50%" cy="50%">
+            <stop offset="0%" stopColor={headTint} stopOpacity="0.55" />
+            <stop offset="100%" stopColor={headTint} stopOpacity="0" />
+          </radialGradient>
+          <radialGradient id="hhHeartG" cx="50%" cy="50%">
+            <stop offset="0%" stopColor={heartTint} stopOpacity="0.6" />
+            <stop offset="100%" stopColor={heartTint} stopOpacity="0" />
+          </radialGradient>
+        </defs>
+        {/*
+          人の形。⚠️ 輪郭だけにする。塗ると人形が主役になり、
+          温度が読み取りにくくなる。
+        */}
+        <g stroke="rgba(201,162,75,0.55)" strokeWidth="2" fill="none" strokeLinecap="round">
+          <circle cx={CX} cy={HEADY} r="34" />
+          <line x1={CX} y1={HEADY + 34} x2={CX} y2={HEARTY - 22} />
+          {/* 胴。心の位置を胸に取る */}
+          <path d={`M ${CX - 34} ${HEARTY - 18} Q ${CX} ${HEARTY - 30} ${CX + 34} ${HEARTY - 18}`
+            + ` L ${CX + 28} ${HEARTY + 56} L ${CX - 28} ${HEARTY + 56} Z`} />
+          <line x1={CX - 34} y1={HEARTY - 14} x2={CX - 52} y2={HEARTY + 32} />
+          <line x1={CX + 34} y1={HEARTY - 14} x2={CX + 52} y2={HEARTY + 32} />
+          <line x1={CX - 14} y1={HEARTY + 56} x2={CX - 18} y2={HEARTY + 96} />
+          <line x1={CX + 14} y1={HEARTY + 56} x2={CX + 18} y2={HEARTY + 96} />
+        </g>
+        {/*
+          博士帽。
+          ⚠️ 頭は「考えるところ」なので、そうと分かる印を載せる。
+          丸だけだと、ただの人形の頭にしか見えない。
+          ⚠️ 板は水平に。傾けると落ちかけているように見える。
+        */}
+        <g>
+          <path d={`M ${CX} ${HEADY - 46} L ${CX - 12} ${HEADY - 34}`
+            + ` L ${CX} ${HEADY - 28} L ${CX + 12} ${HEADY - 34} Z`}
+            fill="#3A2E68" stroke="rgba(201,162,75,0.7)" strokeWidth="1.2" />
+          <path d={`M ${CX - 30} ${HEADY - 40} L ${CX} ${HEADY - 52} L ${CX + 30} ${HEADY - 40}`
+            + ` L ${CX} ${HEADY - 28} Z`}
+            fill={capTint} stroke="rgba(201,162,75,0.8)" strokeWidth="1.4" />
+          {/* 房。⚠️ 揺らす。垂れているものが止まっていると貼り絵に見える */}
+          <g className="mv-sway" style={{ transformOrigin: `${CX + 30}px ${HEADY - 40}px` }}>
+            <line x1={CX + 30} y1={HEADY - 40} x2={CX + 34} y2={HEADY - 20}
+              stroke="rgba(201,162,75,0.8)" strokeWidth="1.4" />
+            <circle cx={CX + 34} cy={HEADY - 17} r="3" fill="#C9A24B" />
+          </g>
+        </g>
+
+        {/*
+          心臓。
+          ⚠️⚠️ 胸に必ず置くこと。丸い光だけだと「心」がどこにあるか伝わらない。
+          ⚠️ 色は温度で変える。冷たいときは青灰、温かいときは桃、
+            熱いときは赤。桃を基準にすること ―― 心臓の色として自然に読める。
+          ⚠️ 鼓動させる。止まっている心臓は、止まっている意味になる。
+        */}
+        <g className="mv-beat" style={{ transformOrigin: `${CX}px ${HEARTY + 8}px` }}>
+          <path d={`M ${CX} ${HEARTY + 22}`
+            + ` C ${CX - 22} ${HEARTY + 6} ${CX - 20} ${HEARTY - 12} ${CX - 9} ${HEARTY - 12}`
+            + ` C ${CX - 3} ${HEARTY - 12} ${CX} ${HEARTY - 6} ${CX} ${HEARTY - 3}`
+            + ` C ${CX} ${HEARTY - 6} ${CX + 3} ${HEARTY - 12} ${CX + 9} ${HEARTY - 12}`
+            + ` C ${CX + 20} ${HEARTY - 12} ${CX + 22} ${HEARTY + 6} ${CX} ${HEARTY + 22} Z`}
+            fill={heartTint} stroke="rgba(20,14,32,0.55)" strokeWidth="1.2"
+            style={{ filter: `drop-shadow(0 0 8px ${heartTint})` }} />
+        </g>
+
+        {/* 温度の広がり */}
+        <circle cx={CX} cy={HEADY} r="34" fill="url(#hhHeadG)" className="mv-warm" />
+        <circle cx={CX} cy={HEARTY + 10} r="34" fill="url(#hhHeartG)" className="mv-warm"
+          style={{ animationDelay: "0.8s" }} />
+        {/*
+          頭の雪。⚠️ 冷えているほど多い。頭は冷えているほうがよく働く。
+          ⚠️ 位置を固定する。乱数だと毎回違う場所に出て、比べられない。
+        */}
+        {Array.from({ length: headFlakes }).map((_, k) => {
+          /*
+            ⚠️⚠️ 頭の周りを一周させないこと。
+            円で配ると真下にも来て、喉に雪が付いた状態になる。実際そうなった。
+            ★ 帽子の上に、扇形に広げる。上から降ってくるものなので、
+              頭より下には置かない。
+            ⚠️ 位置は固定。乱数だと毎回違う場所に出て、比べられない。
+          */
+          const n = Math.max(1, headFlakes);
+          const spread = Math.PI * 0.86;                 // 扇の開き
+          const a2 = -Math.PI / 2 - spread / 2 + (spread * (k + 0.5)) / n;
+          const r = 64 + (k % 2) * 14;
+          /* ⚠️ 帽子の上まで持ち上げること。頭の高さに残ると耳のあたりに付く */
+          const x = CX + Math.cos(a2) * r;
+          const y = HEADY - 34 + Math.sin(a2) * r * 0.5;
+          return (
+            <g key={k} className="mv-drift" style={{ animationDelay: `${(k * 0.4).toFixed(1)}s` }}>
+              {/*
+                ⚠️ 色を固定しないこと。頭が熱い回に青い雪が降ると、
+                図と数字が食い違って見える。
+                ★ 冷えているほど青白く、温まるほど白から橙へ寄せる。
+              */}
+              {[0, 1, 2].map((r) => (
+                <line key={r} x1={x} y1={y - 5} x2={x} y2={y + 5}
+                  stroke={flakeTint} strokeWidth="1.3" strokeLinecap="round"
+                  transform={`rotate(${r * 60} ${x} ${y})`} />
+              ))}
+            </g>
+          );
+        })}
+        {/*
+          心の炎。⚠️ 温かいほど多い。心は温かいほうがよく働く。
+          ⚠️ 上へ伸ばすこと。横に広がると炎に見えない。
+        */}
+        {Array.from({ length: heartFlames }).map((_, k) => {
+          const x = CX - 34 + (k * 68) / Math.max(1, heartFlames - 1 || 1);
+          const y = HEARTY + 40;
+          const s = 1 + (k % 3) * 0.16;
+          /*
+            ⚠️⚠️ 細長い雫にしないこと。虫に見える。実際そう見えていた。
+            ★ 絵本の炎は「幅がある・裾が広い・先が二つに割れる」の三つ。
+              縦長の水滴ではなく、下がふくらんだ形にする。
+          */
+          return (
+            <g key={k} className="mv-flame"
+              /*
+                ⚠️ mv-flame は fill-box なので、SVG座標の transform-origin を
+                渡すと軸がずれて炎が泳ぐ。遅延だけ渡す。
+              */
+              style={{ animationDelay: `${(k * 0.26).toFixed(2)}s` }}>
+              {/* 外炎。裾が広く、先が割れる */}
+              <path d={`M ${x} ${y}`
+                + ` C ${x - 13 * s} ${y - 4} ${x - 11 * s} ${y - 15 * s} ${x - 4 * s} ${y - 20 * s}`
+                + ` C ${x - 5 * s} ${y - 13 * s} ${x - 1 * s} ${y - 15 * s} ${x} ${y - 24 * s}`
+                + ` C ${x + 2 * s} ${y - 15 * s} ${x + 6 * s} ${y - 13 * s} ${x + 4 * s} ${y - 20 * s}`
+                + ` C ${x + 11 * s} ${y - 15 * s} ${x + 13 * s} ${y - 4} ${x} ${y} Z`}
+                fill={flameOuter} opacity="0.92" />
+              {/* 内炎。⚠️ 明るい芯を入れる。単色だと紙を切り抜いた形に見える */}
+              <path d={`M ${x} ${y - 2}`
+                + ` C ${x - 6 * s} ${y - 4} ${x - 5 * s} ${y - 10 * s} ${x} ${y - 14 * s}`
+                + ` C ${x + 5 * s} ${y - 10 * s} ${x + 6 * s} ${y - 4} ${x} ${y - 2} Z`}
+                fill={flameInner} opacity="0.95" />
+            </g>
+          );
+        })}
+        <text x={CX - 66} y={HEADY + 4} textAnchor="end" className="hs-pt-name"
+          fill={headTint} style={{ fontWeight: 700 }}>{t.hhHead}</text>
+        <text x={CX + 66} y={HEARTY + 14} textAnchor="start" className="hs-pt-name"
+          fill={heartTint} style={{ fontWeight: 700 }}>{t.hhHeart}</text>
+        <text x={CX - 66} y={HEADY + 18} textAnchor="end" className="hs-pt-name"
+          fill="rgba(226,214,240,0.5)">{t.hhFlakes(headFlakes)}</text>
+        <text x={CX + 66} y={HEARTY + 28} textAnchor="start" className="hs-pt-name"
+          fill="rgba(226,214,240,0.5)">{t.hhFlames(heartFlames)}</text>
+        <VisNumber gradId="hhHolo" x={CX} y={H - 6}>
+          {t.hhGauge(Math.round(h * 100), Math.round(c * 100))}
+        </VisNumber>
       </svg>
       <p className="hs-pass-read">{t.hhRead[step]}</p>
+      <VisScore label={t.scoreOf["HeadHeartRope"] || "温度の釣り合い"} step={step} total={5} lang={lang} />
     </div>
   );
 }
-
 /* ============================================================
    現代派の視覚補完
 
@@ -11352,11 +11535,50 @@ function HeadHeartRope({ drawn, lang, openedIndices }) {
    ============================================================ */
 const MODERN_VIS_I18N = {
   ja: {
-    mvAnswer: (where, card, gist) => `答えは「${where}」に出ています ―― ${card}。${gist}。`,
-    mvAnswerYet: (where) => `答えは「${where}」に出ます。まだ伏せられています。`,
-    mvGo: "向きは通っています。このまま進めて構いません。",
-    mvHold: "向きが逆です。急がず、整えてからにしてください。",
-    mvHeavy: (where, card) => `今回いちばん重いのは「${where}」の${card}です。`,
+    /*
+      結論の文。
+
+      ⚠️⚠️ 占い用語のまま書かないこと。
+      「答えは○○に出ています」「向きは通っています」「いちばん重いのは」は、
+      どれも書き手には通じるが、読み手には何のことか分からない。
+
+      ★ 三つを、それぞれ日常の言葉で言い直す。
+
+        どの位置の札が結論か … なぜその位置を見るのかを添える
+        正逆                 … 「通っている」ではなく、何をしてよいか
+        いちばん強い札       … 「重い」ではなく、何に一番影響しているか
+
+      ⚠️ 札の名前を出したら、それが何を意味するかも必ず添えること。
+        「剣の9」とだけ言われても、覚えていない人には情報が無い。
+    */
+    mvAnswer: (where, card, gist) =>
+      `この配置では、最後に置く「${where}」が結論にあたります。そこに出たのは${card}で、${gist}を示します。`,
+    mvAnswerYet: (where) => `結論は「${where}」に出ます。まだ伏せられています。`,
+    mvGo: "この札は正位置です。読み取ったとおりに進めて構いません。",
+    mvHold: "この札は逆位置です。すぐに動くより、引っかかっているところを片づけるほうが先です。",
+    /*
+      量が結論の配置の文。
+      ⚠️ 札の意味を書かないこと。配置の話とずれる。
+      ⚠️ 図が何を出しているかは、下の読みが言う。ここでは重ねない。
+    */
+    mvGaugeLead: (where, card, up) =>
+      `結論にあたるのは「${where}」で、${card}が${up ? "正位置" : "逆位置"}で出ています。どう出ているかは、上の図が示すとおりです。`,
+    mvGaugeHeavy: (where) => `盤面でいちばん強く出ているのは「${where}」です。`,
+    mvHeavy: (where, card, gist) =>
+      `盤面でいちばん強く出ているのは「${where}」の${card}です。${gist}が、今回の流れをいちばん動かしています。`,
+    hhTitle: "頭と心の温度",
+    hhLegend: "頭が冷えて心が温かいのが、いちばん働く並びです。雪と炎の数と色が、それぞれの温度を示します。",
+    hhHead: "頭", hhHeart: "心",
+    hhFlakes: (n) => `雪 ${n}`,
+    hhFlames: (n) => `炎 ${n}`,
+    hhGauge: (a, b) => `頭 ${a} ／ 心 ${b}（温度）`,
+    hhRead: [
+      "頭が熱く、心が冷えています。理想とは正反対です。理屈は組み上がっているのに動く気持ちが起きていないので、決める前に、なぜ気が乗らないのかを見てください。",
+      "理想から遠い並びです。頭が熱すぎるか、心が冷えすぎているか、どちらかが起きています。",
+      "半ばです。頭も心も中くらいで、どちらも突出していません。動かすなら、まず心を温めるほうが早いです。",
+      "理想に近い並びです。頭が冷え、心が温まりつつあります。この配分なら決めたことが動きます。",
+      "頭が冷えて心が温かい、いちばん良い並びです。動く理由があり、道筋も立てられています。",
+    ],
     bathTitle: "湯かげん",
     bathLegend: "回復は火を強くすれば進むものではありません。水と火の釣り合いで決まります。",
     bathGauge: ["冷たすぎ", "ぬるい", "ちょうどいい", "熱い", "熱すぎ"],
@@ -11579,9 +11801,22 @@ const MODERN_VIS_I18N = {
       "いま降ろせば、火はすぐ戻ります。",
     ],
     emberLoad: "荷", emberFire: "残り火",
+    tpTitle: "ふたつの山",
+    tpLegend: "二つの道を山として並べます。高い山ほど良い、緩い山ほど良い、のどちらでもありません。",
+    tpNow: "いまの道", tpOther: "別の道",
+    tpShape: ["なだらか", "ふつう", "険しい"],
+    tpShine: ["頂に見えるものは少ない", "頂に何かある", "頂で強く輝いている"],
+    tpGauge: (a, b) => `頂の高さ　いまの道 ${a} ／ 別の道 ${b}`,
+    tpRead: [
+      "別の道のほうが、高くも登りやすくも出ています。いま立っている場所から見えないだけで、向こうに道はあります。ただし助走がどれだけ要るかは別の話です。",
+      "別の道がやや勝っています。移るなら、いまの道でどこまで来たかを捨てる覚悟が要ります。",
+      "二つの山は同じくらいです。図では決まりません。決め手になるのは、どちらが登りたい山かという一点です。",
+      "いまの道がやや勝っています。別の道が魅力的に見えるのは、まだ登っていないからかもしれません。",
+      "いまの道のほうが、高くも登りやすくも出ています。いる場所を変えるより、ここを登り続けるほうが早く着きます。",
+    ],
     cfTitle: "火の三要素",
-    cfLegend: "続ける力を火に見立てます。薪・熱・風のどれが欠けても消えます。多いほど良い図ではありません。",
-    cfParts: { fuel: "薪（続ける力）", heat: "熱（負荷）", air: "風（評価）" },
+    cfLegend: "決める力を火に見立てます。薪・熱・風のどれが欠けても、火はつきません。多いほど良い図ではありません。",
+    cfParts: { fuel: "薪（決めたい気持ち）", heat: "熱（迷いの重さ）", air: "風（外からの後押し）" },
     cfWeak: (n, v) => `いちばん細いのは ${n} ／ 火の勢い ${v}/6`,
     cfRead: [
       "いちばん細いものが尽きかけています。三つのうち一つが欠けた時点で火は消えるので、まずそこを足してください。",
@@ -11660,6 +11895,21 @@ const MODERN_VIS_I18N = {
       "花がひらいています。人に見せるならこの月です。ただし花の時期は長くありません。",
       "実がなっています。受け取る月であると同時に、次に蒔くものを選ぶ月です。ここで終わりではありません。",
     ],
+    scoreLine: (label, v, s, n) => `${label} ${v}点／100点（${n}段のうち${s}）`,
+    /*
+      図ごとに、何を測っているかの名前。
+      ⚠️ 「点数」とだけ書かないこと。何の点かが分からないと、
+      占いの良し悪しを採点されたように読まれる。
+    */
+    scoreOf: {
+      HeadHeartRope: "温度の釣り合い", ShadowMass: "影の重なり", ChildLamp: "灯の明るさ",
+      BoundaryLine: "浸蝕の深さ", SabotageRing: "殻の厚み", BodyHeat: "熱の強さ",
+      SeesawPair: "傾きの大きさ", SafetyGap: "見えている割合", StalledPendulum: "振れ幅",
+      TwoFaceOrb: "重なり", OpenChannel: "通りの良さ", BathTemp: "湯かげん",
+      GroundJump: "跳ぶ力", ValueDish: "受け止める広さ", LoveFire: "火の勢い",
+      MonthGrowth: "育ちの段", CareerFire: "火の勢い", ComparePockets: "関心の大きさ",
+      TwoPeaks: "道の比べ",
+    },
     boundTitle: "浸蝕",
     boundLegend: "桃色の円が自分、外の三人が関わる相手です。入口は小さくても、中で広がります。どの層まで届いているかを見てください。",
     boundZone: ["表向きの付き合い", "私生活", ["プライバシー", "の核心"]],
@@ -11700,18 +11950,6 @@ const MODERN_VIS_I18N = {
       "はっきり上下しています。どちらかが多く持ち込んでいます。",
       "大きく揺れています。片方が持ち込みすぎて、もう片方が浮いています。",
       "激しく上下しています。このままでは乗り続けられません。持ち込む量をどちらかが変える必要があります。",
-    ],
-    hhTitle: "頭と心の温度",
-    hhLegend: "整っているのは、頭が冷たく心が温かいとき。頭が熱いと考えが煮え、心が冷えると動く理由がなくなります。",
-    hhHead: "頭", hhHeart: "心",
-    hhTemp: (n, p) => `${n} ${p}`,
-    hhGauge: ["心のほうが熱い", "頭が冷え、心が温かい", "釣り合っています", "頭が熱め", "頭のほうが熱い"],
-    hhRead: [
-      "心が頭より熱く出ています。動く理由はありますが、道筋がまだ言葉になっていません。",
-      "頭が冷えて心が温かい、整った並びです。この配分なら決めたことが動きます。",
-      "頭と心の温度が近い状態です。どちらも同じくらい働いています。",
-      "頭が熱めです。考えが回りはじめています。心が冷えていないか気をつけてください。",
-      "頭が心より熱く出ています。考えは進んでいますが、動く理由が薄くなっています。",
     ],
 
     sabLegend: "玉は同じところを回り続けています。切れ目が広がるほど、そこから出る道が開きます。",
@@ -11761,7 +11999,23 @@ const MODERN_VIS_I18N = {
     mvAnswerYet: (where) => `The answer will sit at "${where}". Still face down.`,
     mvGo: "The orientation is clear. You can go ahead.",
     mvHold: "The orientation is reversed. Settle things first; don't rush.",
+    mvGaugeLead: (where, card, up) =>
+      `The verdict rests on "${where}", where ${card} came up ${up ? "upright" : "reversed"}. How it reads is shown in the figure above.`,
+    mvGaugeHeavy: (where) => `The strongest position on the board is "${where}".`,
     mvHeavy: (where, card) => `The heaviest card this time is ${card}, at "${where}".`,
+    hhTitle: "Head and Heart",
+    hhLegend: "The head works better cool, the heart better warm. The count of snow and flames is how strong each runs.",
+    hhHead: "Head", hhHeart: "Heart",
+    hhFlakes: (n) => `snow ${n}`,
+    hhFlames: (n) => `flames ${n}`,
+    hhGauge: (a, b) => `Head ${a} / Heart ${b}`,
+    hhRead: [
+      "Hot head, cold heart — the opposite of what works. The logic is assembled but the will hasn't come. Look at why you're reluctant before deciding.",
+      "Far from the working arrangement. Either the head runs too hot or the heart too cold.",
+      "Halfway. Both are middling, neither stands out. To get moving, warming the heart is the faster route.",
+      "Close to the working arrangement. The head is cooling and the heart is warming. What you decide will move.",
+      "Cool head, warm heart — the best arrangement. Reason to move, and a route to take.",
+    ],
     bathTitle: "Water Temperature",
     bathLegend: "Recovery is not a matter of more fire. It is the balance of water and fire.",
     bathGauge: ["Too cold", "Lukewarm", "Just right", "Hot", "Too hot"],
@@ -11967,6 +12221,19 @@ const MODERN_VIS_I18N = {
       "Set it down now and the fire returns at once.",
     ],
     emberLoad: "Load", emberFire: "Ember",
+    tpTitle: "Two Peaks",
+    tpLegend: "Two roads as mountains. Higher is not better, and gentler is not better.",
+    tpNow: "This road", tpOther: "The other",
+    tpShape: ["gentle", "ordinary", "steep"],
+    tpShine: ["little at the summit", "something at the summit", "the summit shines"],
+    tpGauge: (a, b) => `This road ${a} / the other ${b} (summit height)`,
+    tpRead: [
+      "The other road reads higher and easier. You can't see it from where you stand, but it is there. How much run-up it needs is a separate question.",
+      "The other road is slightly ahead. Moving means letting go of the distance you have already covered here.",
+      "The two are level. The picture won't decide it. What decides is which one you want to climb.",
+      "This road is slightly ahead. The other may look attractive only because you haven't climbed it.",
+      "This road reads higher and easier. Climbing on here gets you there sooner than changing ground.",
+    ],
     cfTitle: "Three Parts of a Fire",
     cfLegend: "Persistence as a fire. Wood, heat and air — lose any one and it goes out. More is not better.",
     cfParts: { fuel: "Wood (persistence)", heat: "Heat (load)", air: "Air (regard)" },
@@ -12048,6 +12315,16 @@ const MODERN_VIS_I18N = {
       "It is in bloom. If you are going to show it, show it now. Blooms do not last long.",
       "The fruit is on. A month to receive, and to choose what you sow next. This is not the end.",
     ],
+    scoreLine: (label, v, s, n) => `${label} ${v}/100 (step ${s} of ${n})`,
+    scoreOf: {
+      HeadHeartRope: "Temperature balance", ShadowMass: "Overlap", ChildLamp: "Lamp brightness",
+      BoundaryLine: "Seepage depth", SabotageRing: "Shell thickness", BodyHeat: "Heat",
+      SeesawPair: "Tilt", SafetyGap: "Visible share", StalledPendulum: "Swing",
+      TwoFaceOrb: "Overlap", OpenChannel: "Flow", BathTemp: "Water temperature",
+      GroundJump: "Jump", ValueDish: "Catch width", LoveFire: "Flame",
+      MonthGrowth: "Growth stage", CareerFire: "Flame", ComparePockets: "Attention",
+      TwoPeaks: "Road comparison",
+    },
     boundTitle: "Seepage",
     boundLegend: "The pink circle is you; the three figures are the people involved. Small openings spread wide inside. Watch which layer it reaches.",
     boundZone: ["What you show", "Private life", ["Core of", "privacy"]],
@@ -12088,18 +12365,6 @@ const MODERN_VIS_I18N = {
       "Clearly rising and falling. One of you is bringing more.",
       "Swinging widely. One side brings too much and the other is lifted off.",
       "Violently up and down. You cannot keep riding like this. One side has to change how much they bring.",
-    ],
-    hhTitle: "Head and Heart",
-    hhLegend: "In order means a cool head and a warm heart. A hot head boils the thinking; a cold heart removes the reason to move.",
-    hhHead: "Head", hhHeart: "Heart",
-    hhTemp: (n, p) => `${n} ${p}`,
-    hhGauge: ["Heart runs hotter", "Cool head, warm heart", "Evenly matched", "Head running warm", "Head runs hotter"],
-    hhRead: [
-      "The heart runs hotter. There is reason to move, but no route in words yet.",
-      "Cool head, warm heart — the order that works. At this balance, decisions move.",
-      "Head and heart sit at similar temperatures. Both are working about equally.",
-      "The head is running warm. Thinking has started to spin. Watch that the heart doesn't cool.",
-      "The head runs hotter. Thinking is ahead, but the reason to move is thinning.",
     ],
 
     sabLegend: "The bead keeps circling the same track. The wider the cut, the more of a way out there is.",
@@ -12159,6 +12424,29 @@ const visT = (lang) => MODERN_VIS_I18N[lang] || MODERN_VIS_I18N.en;
   ⚠️ 数値は必ず出すこと。図だけでは「半分」「少し」が伝わらない。
   現代派はどの図にも一つ、読める数を置く。
 */
+/*
+  段から点数を出す共通の部品。
+
+  ★ どの図にも点数を出す。図だけでは「半分」「少し」が伝わらない。
+
+  ⚠️⚠️ 何の点数かを必ず書くこと。数字だけ出すと、
+    占いの良し悪しを採点されたように読まれる。
+  ⚠️ 高いほど良い、とは限らない。図ごとに意味が違うので、
+    label にその図が測っているものの名前を渡す。
+  ⚠️ 読みの下に置くこと。上に置くと数字が先に目に入って文が読まれない。
+*/
+function VisScore({ label, step, total, lang, note }) {
+  if (typeof step !== "number" || !total) return null;
+  const t = visT(lang);
+  const v = Math.round(((step + 1) / total) * 100);
+  return (
+    <p className="hs-pass-score">
+      {t.scoreLine(label, v, step + 1, total)}
+      {note ? ` ${note}` : ""}
+    </p>
+  );
+}
+
 function VisNumber({ gradId, x, y, children, size = 14 }) {
   return (
     <text x={x} y={y} textAnchor="middle"
@@ -12272,6 +12560,8 @@ function ShadowMass({ drawn, lang, openedIndices }) {
           fill="rgba(226,214,240,0.5)">{t.shadowCast}</text>
       </svg>
       <p className="hs-pass-read">{t.shadowRead[step]}</p>
+      {/* ⚠️ 点数を必ず出すこと。図だけでは「半分」「少し」が伝わらない */}
+      <VisScore label={t.scoreOf["ShadowMass"] || "影の重なり"} step={step} total={5} lang={lang} />
     </div>
   );
 }
@@ -12320,6 +12610,8 @@ function ChildLamp({ drawn, lang, openedIndices }) {
         <VisNumber gradId="childHolo" x={W / 2} y={H - 4}>{t.childPct(Math.round(near * 100))}</VisNumber>
       </svg>
       <p className="hs-pass-read">{t.childRead[step]}</p>
+      {/* ⚠️ 点数を必ず出すこと。図だけでは「半分」「少し」が伝わらない */}
+      <VisScore label={t.scoreOf["ChildLamp"] || "灯の明るさ"} step={step} total={5} lang={lang} />
     </div>
   );
 }
@@ -12513,6 +12805,8 @@ function BoundaryLine({ drawn, lang, openedIndices }) {
         <VisNumber gradId="boundHolo" x={CX} y={H - 6}>{t.boundPct(pct)}</VisNumber>
       </svg>
       <p className="hs-pass-read">{t.boundRead[step]}</p>
+      {/* ⚠️ 点数を必ず出すこと。図だけでは「半分」「少し」が伝わらない */}
+      <VisScore label={t.scoreOf["BoundaryLine"] || "浸蝕の深さ"} step={step} total={10} lang={lang} />
     </div>
   );
 }
@@ -12620,6 +12914,8 @@ function SabotageRing({ drawn, lang, openedIndices }) {
         </VisNumber>
       </svg>
       <p className="hs-pass-read">{t.sabRead[step]}</p>
+      {/* ⚠️ 点数を必ず出すこと。図だけでは「半分」「少し」が伝わらない */}
+      <VisScore label={t.scoreOf["SabotageRing"] || "殻の厚み"} step={step} total={5} lang={lang} />
     </div>
   );
 }
@@ -12717,6 +13013,8 @@ function CareerFire({ drawn, lang, openedIndices }) {
         </VisNumber>
       </svg>
       <p className="hs-pass-read">{t.cfRead[burn]}</p>
+      {/* ⚠️ 点数を必ず出すこと。図だけでは「半分」「少し」が伝わらない */}
+      <VisScore label={t.scoreOf["CareerFire"] || "火の勢い"} step={burn} total={6} lang={lang} />
     </div>
   );
 }
@@ -13358,6 +13656,179 @@ function MonthGrowth({ drawn, lang, openedIndices }) {
         </VisNumber>
       </svg>
       <p className="hs-pass-read">{t.growRead[step]}</p>
+      {/* ⚠️ 点数を必ず出すこと。図だけでは「半分」「少し」が伝わらない */}
+      <VisScore label={t.scoreOf["MonthGrowth"] || "育ちの段"} step={step} total={7} lang={lang} />
+    </div>
+  );
+}
+
+/*
+  【キャリアの岐路】二つの山
+
+  ★ 道を選ぶことを、二つの山を前にして立つ図にする。
+
+      登りやすさ … 斜面の角度。急なら険しい山、緩いなら丘
+      高さ       … 頂の高さ。行き着く先の大きさ
+      距離・助走 … いまどこに立っているか
+
+  ⚠️ どちらが良いかを図で決めないこと。
+    高い山ほど良い、緩い山ほど良い、のどちらも違う。
+    高くて険しい山と、低くて登りやすい丘は、選ぶ人によって答えが変わる。
+  ⚠️ 人形は必ず分岐点に立たせる。どちらかの山に寄せて描くと、
+    その時点で図が答えを出してしまう。
+
+  ⚠️ 段の境目は実測。形は一枚で三段（各31.5〜34.6%）、
+    比較は二枚平均の差で五段（各20.0%）。
+*/
+const PEAK_SHAPE_CUTS = [0.164, 0.750];
+const PEAK_DIFF_CUTS = [-0.289, -0.063, 0.063, 0.289];
+function TwoPeaks({ drawn, lang, openedIndices }) {
+  const t = visT(lang);
+  const seen = new Set(openedIndices);
+  const at = (i) => (seen.has(i) && drawn[i] ? cardPower(drawn[i]) : null);
+  const v = (i) => { const x = at(i); return x === null ? 0.5 : x; };
+  if ([0, 1, 2, 3, 4, 5, 6, 7].every((i) => at(i) === null)) return null;
+
+  /* 形。0=丘（緩い） 1=普通 2=針（険しい） */
+  const shapeA = visStep(v(0), PEAK_SHAPE_CUTS);
+  const shapeB = visStep(v(4), PEAK_SHAPE_CUTS);
+  /* 高さ。⚠️ 三段だと差が出ないので、そのまま比で使う */
+  const highA = v(1), highB = v(5);
+  /* いまどこまで来たか */
+  const goneA = v(2), needB = v(6);
+  const lean = visStep((v(0) + v(1)) / 2 - (v(4) + v(5)) / 2, PEAK_DIFF_CUTS);
+  /*
+    頂にあるもの。
+    ⚠️ 高さの札を使わないこと。使うと高さと輝きが連動して、
+    「高い＝良い」の一本道になる。
+    ★ 残る険しさ／必要な助走から出す。越えたあとに何が残るか、という読み。
+  */
+  const shineA = visStep(v(3), PEAK_SHAPE_CUTS);
+  const shineB = visStep(v(7), PEAK_SHAPE_CUTS);
+
+  /*
+    ⚠️ 名札が三行入る。高さを詰めると最後の行と数値が重なる。
+    実際 239 と 246 で 7px しか離れていなかった。
+  */
+  const W = 300, H = 268, GY = 196;
+  /* 山の形。⚠️ 頂の高さと裾の広さの両方を変える。片方だと同じ形に見える */
+  const peak = (cx, shape, high, dir) => {
+    const h = 40 + high * 84;
+    const foot = 76 - shape * 20;      // 険しいほど裾が狭い
+    return `M ${cx - foot} ${GY} Q ${cx - foot * 0.3} ${GY - h * (0.5 + shape * 0.2)}`
+      + ` ${cx} ${GY - h} Q ${cx + foot * 0.3} ${GY - h * (0.5 + shape * 0.2)} ${cx + foot} ${GY} Z`;
+  };
+  const AX = 78, BX = 222;
+  const hA = 40 + highA * 84, hB = 40 + highB * 84;
+  /* 立ち位置。⚠️ 分岐点は必ず中央。どちらにも寄せない */
+  const manX = 150, manY = GY - 6;
+  return (
+    <div className="hs-pass">
+      <div className="hs-pass-title sheen-text">{t.tpTitle}</div>
+      <p className="hs-pass-legend">{t.tpLegend}</p>
+      <svg viewBox={`0 0 ${W} ${H}`} className="hs-pass-svg" role="img" aria-label={t.tpTitle}>
+        <HoloDefs id="tpHolo" w={W} h={H} />
+        <defs>
+          <linearGradient id="tpRockA" x1="0" y1="0" x2="0" y2="1">
+            <stop offset="0%" stopColor="#6E6488" /><stop offset="100%" stopColor="#2E2846" />
+          </linearGradient>
+          <linearGradient id="tpRockB" x1="0" y1="0" x2="0" y2="1">
+            <stop offset="0%" stopColor="#7A6A78" /><stop offset="100%" stopColor="#332A40" />
+          </linearGradient>
+        </defs>
+        {/* 山。奥に描く */}
+        <path d={peak(AX, shapeA, highA)} fill="url(#tpRockA)"
+          stroke="rgba(201,162,75,0.35)" strokeWidth="1" />
+        <path d={peak(BX, shapeB, highB)} fill="url(#tpRockB)"
+          stroke="rgba(201,162,75,0.35)" strokeWidth="1" />
+        {/*
+          頂にあるもの。
+
+          ★ 山の高さは「どこまで行けるか」だが、頂の輝きは
+            「そこに何があるか」。高いのに何も無い山もあれば、
+            低くても確かなものが待っている丘もある。
+
+          ⚠️ 高さと輝きを連動させないこと。連動させると
+            「高い＝良い」になり、比べる意味が消える。
+            輝きは別の札（残る険しさ・必要な助走）から出す。
+          ⚠️ 光条の本数で段を示す。明るさだけだと、
+            隣と比べたときにどちらが強いか分からない。
+        */}
+        {[[AX, hA, shineA, "a"], [BX, hB, shineB, "b"]].map(([x, h, s, key]) => (
+          <g key={key}>
+            {/* 光の輪。⚠️ 輝きが弱い回は描かない。常に光ると差が消える */}
+            {s > 0 && (
+              <circle cx={x} cy={GY - h} r={8 + s * 5}
+                fill="none" stroke="url(#tpHolo)" strokeWidth="1.2"
+                opacity={0.25 + s * 0.18} className="mv-pulse"
+                style={{ animationDelay: key === "b" ? "0.7s" : "0s" }} />
+            )}
+            {/* 光条。段のぶんだけ本数が増える */}
+            {Array.from({ length: s * 2 }).map((_, k) => {
+              const a2 = (Math.PI * 2 * k) / Math.max(1, s * 2) - Math.PI / 2;
+              const len = 9 + s * 4;
+              return (
+                <line key={k}
+                  x1={x + Math.cos(a2) * 6} y1={GY - h + Math.sin(a2) * 6}
+                  x2={x + Math.cos(a2) * len} y2={GY - h + Math.sin(a2) * len}
+                  stroke="#FFE9A8" strokeWidth="1.4" strokeLinecap="round"
+                  opacity={0.35 + s * 0.14} className="mv-warm"
+                  style={{ animationDelay: `${(k * 0.12).toFixed(2)}s` }} />
+              );
+            })}
+            <circle cx={x} cy={GY - h} r={4 + s * 0.8} fill="url(#tpHolo)"
+              className="mv-warm" style={{ animationDelay: key === "b" ? "0.7s" : "0s" }} />
+          </g>
+        ))}
+        {/* 地面 */}
+        <path d={`M 0 ${GY} L ${W} ${GY} L ${W} ${H} L 0 ${H} Z`} fill="#241C2E" />
+        {/*
+          分岐の道。⚠️ 中央から二股に分かれる形にする。
+          一本道の途中に人形を置くと、選ぶ場面に見えない。
+        */}
+        <path d={`M 150 ${H - 8} L 150 ${GY} L ${AX} ${GY - 4}`}
+          fill="none" stroke="#5E5270" strokeWidth="7" strokeLinecap="round" />
+        <path d={`M 150 ${GY} L ${BX} ${GY - 4}`}
+          fill="none" stroke="#5E5270" strokeWidth="7" strokeLinecap="round" />
+        {/* いまどこまで登っているか。⚠️ 道の上に印を置く */}
+        <circle cx={150 - (150 - AX) * goneA} cy={GY - 4 * goneA} r="3.5"
+          fill="#7ED882" opacity="0.85" />
+        <circle cx={150 + (BX - 150) * (1 - needB)} cy={GY - 4 * (1 - needB)} r="3.5"
+          fill="rgba(226,214,240,0.4)" />
+        {/*
+          人形。⚠️ 必ず分岐点に立たせる。どちらかに寄せると
+          図が答えを出してしまう。
+        */}
+        <g className="mv-breathe" style={{ transformOrigin: `${manX}px ${manY}px` }}>
+          <circle cx={manX} cy={manY - 20} r="5" fill="url(#tpHolo)" />
+          <line x1={manX} y1={manY - 15} x2={manX} y2={manY - 5}
+            stroke="url(#tpHolo)" strokeWidth="2.6" strokeLinecap="round" />
+          <line x1={manX - 5} y1={manY} x2={manX} y2={manY - 5}
+            stroke="url(#tpHolo)" strokeWidth="2.2" strokeLinecap="round" />
+          <line x1={manX + 5} y1={manY} x2={manX} y2={manY - 5}
+            stroke="url(#tpHolo)" strokeWidth="2.2" strokeLinecap="round" />
+        </g>
+        {/* 名札 */}
+        <text x={AX} y={GY + 16} textAnchor="middle" className="hs-pt-name"
+          fill="rgba(226,214,240,0.75)">{t.tpNow}</text>
+        <text x={BX} y={GY + 16} textAnchor="middle" className="hs-pt-name"
+          fill="rgba(226,214,240,0.75)">{t.tpOther}</text>
+        <text x={AX} y={GY + 30} textAnchor="middle" className="hs-pt-name"
+          fill="rgba(226,214,240,0.5)">{t.tpShape[shapeA]}</text>
+        <text x={BX} y={GY + 30} textAnchor="middle" className="hs-pt-name"
+          fill="rgba(226,214,240,0.5)">{t.tpShape[shapeB]}</text>
+        {/* ⚠️ 頂に何があるかも書く。図の輝きだけでは段が読み取れない */}
+        <text x={AX} y={GY + 43} textAnchor="middle" className="hs-pt-name"
+          fill="#E8C46A" style={{ fontSize: "7px" }}>{t.tpShine[shineA]}</text>
+        <text x={BX} y={GY + 43} textAnchor="middle" className="hs-pt-name"
+          fill="#E8C46A" style={{ fontSize: "7px" }}>{t.tpShine[shineB]}</text>
+        <VisNumber gradId="tpHolo" x={W / 2} y={H - 4}>
+          {t.tpGauge(Math.round(highA * 100), Math.round(highB * 100))}
+        </VisNumber>
+      </svg>
+      <p className="hs-pass-read">{t.tpRead[lean]}</p>
+      {/* ⚠️ 点数を必ず出すこと。図だけでは「半分」「少し」が伝わらない */}
+      <VisScore label={t.scoreOf["TwoPeaks"] || "道の比べ"} step={lean} total={3} lang={lang} />
     </div>
   );
 }
@@ -13726,6 +14197,8 @@ function BodyHeat({ drawn, lang, openedIndices }) {
         </VisNumber>
       </svg>
       <p className="hs-pass-read">{t.bodyRead[step]}</p>
+      {/* ⚠️ 点数を必ず出すこと。図だけでは「半分」「少し」が伝わらない */}
+      <VisScore label={t.scoreOf["BodyHeat"] || "熱の強さ"} step={step} total={5} lang={lang} />
     </div>
   );
 }
@@ -13954,6 +14427,8 @@ function SeesawPair({ drawn, labels, lang, openedIndices }) {
         </VisNumber>
       </svg>
       <p className="hs-pass-read">{t.seeRead[step]}</p>
+      {/* ⚠️ 点数を必ず出すこと。図だけでは「半分」「少し」が伝わらない */}
+      <VisScore label={t.scoreOf["SeesawPair"] || "傾きの大きさ"} step={lean} total={5} lang={lang} />
     </div>
   );
 }
@@ -14225,6 +14700,8 @@ function SafetyGap({ drawn, lang, openedIndices }) {
         <VisNumber gradId="safeHolo" x={CX} y={H - 8} size={16}>{t.safePct(pct)}</VisNumber>
       </svg>
       <p className="hs-pass-read">{t.safeRead[step]}</p>
+      {/* ⚠️ 点数を必ず出すこと。図だけでは「半分」「少し」が伝わらない */}
+      <VisScore label={t.scoreOf["SafetyGap"] || "見えている割合"} step={step} total={10} lang={lang} />
       {/*
         確かめること。毎回ちがう二つを出す。
         ⚠️ 乱数で選ばないこと。引き直すたびに項目が変わると、
@@ -14313,6 +14790,8 @@ function StalledPendulum({ drawn, lang, openedIndices }) {
         <VisNumber gradId="undecHolo" x={CX} y={H - 4}>{t.undecPct((step + 1) * 20)}</VisNumber>
       </svg>
       <p className="hs-pass-read">{t.undecRead[step]}</p>
+      {/* ⚠️ 点数を必ず出すこと。図だけでは「半分」「少し」が伝わらない */}
+      <VisScore label={t.scoreOf["StalledPendulum"] || "振れ幅"} step={step} total={5} lang={lang} />
     </div>
   );
 }
@@ -14528,6 +15007,8 @@ function TwoFaceOrb({ drawn, lang, openedIndices }) {
         <VisNumber gradId="orbHolo" x={CX} y={H - 4}>{t.orbPct(Math.round(ratio * 100))}</VisNumber>
       </svg>
       <p className="hs-pass-read">{t.orbRead[step]}</p>
+      {/* ⚠️ 点数を必ず出すこと。図だけでは「半分」「少し」が伝わらない */}
+      <VisScore label={t.scoreOf["TwoFaceOrb"] || "重なり"} step={step} total={5} lang={lang} />
     </div>
   );
 }
@@ -14648,6 +15129,8 @@ function OpenChannel({ drawn, lang, openedIndices }) {
         </VisNumber>
       </svg>
       <p className="hs-pass-read">{t.chanRead[step]}</p>
+      {/* ⚠️ 点数を必ず出すこと。図だけでは「半分」「少し」が伝わらない */}
+      <VisScore label={t.scoreOf["OpenChannel"] || "通りの良さ"} step={step} total={5} lang={lang} />
     </div>
   );
 }
@@ -15551,6 +16034,8 @@ function BathTemp({ drawn, lang, openedIndices }) {
         <VisNumber gradId="bathHolo" x={W / 2} y={H - 4}>{t.bathGauge[step]}</VisNumber>
       </svg>
       <p className="hs-pass-read">{t.bathRead[step]}</p>
+      {/* ⚠️ 点数を必ず出すこと。図だけでは「半分」「少し」が伝わらない */}
+      <VisScore label={t.scoreOf["BathTemp"] || "湯かげん"} step={step} total={5} lang={lang} />
     </div>
   );
 }
@@ -15653,6 +16138,8 @@ function GroundJump({ drawn, labels, lang, openedIndices }) {
         </VisNumber>
       </svg>
       <p className="hs-pass-read">{t.jumpRead[step]}</p>
+      {/* ⚠️ 点数を必ず出すこと。図だけでは「半分」「少し」が伝わらない */}
+      <VisScore label={t.scoreOf["GroundJump"] || "跳ぶ力"} step={step} total={5} lang={lang} />
     </div>
   );
 }
@@ -15773,6 +16260,8 @@ function ValueDish({ drawn, lang, openedIndices }) {
         <VisNumber gradId="dishHolo" x={CX} y={H - 4}>{t.dishCaught(caught, drops)}</VisNumber>
       </svg>
       <p className="hs-pass-read">{t.dishRead[step]}</p>
+      {/* ⚠️ 点数を必ず出すこと。図だけでは「半分」「少し」が伝わらない */}
+      <VisScore label={t.scoreOf["ValueDish"] || "受け止める広さ"} step={step} total={5} lang={lang} />
     </div>
   );
 }
@@ -15835,6 +16324,8 @@ function LoveFire({ drawn, lang, openedIndices }) {
         </VisNumber>
       </svg>
       <p className="hs-pass-read">{t.fireRead[step]}</p>
+      {/* ⚠️ 点数を必ず出すこと。図だけでは「半分」「少し」が伝わらない */}
+      <VisScore label={t.scoreOf["LoveFire"] || "火の勢い"} step={step} total={3} lang={lang} />
     </div>
   );
 }
@@ -18645,6 +19136,41 @@ function TreeLightning({ drawn, lang, openedIndices, labels = [] }) {
  * ⚠️ 断定してよいのは、引いた札から機械的に出る事実だけ。
  * 「どちらを選べ」「こうなる」は書かない。
  */
+/*
+  結論に札を出すか、測った量を出すか。
+
+  ★ 配置によって、結論そのものが違う。
+
+    札が結論の配置 … その位置に何が出たかが答え。
+      ワンオラクル、スリーカード、ケルト十字、ダビデスターなど。
+    量が結論の配置 … どれだけかが答えで、札名は材料にすぎない。
+      体からの声、境界線、頭と心、この人は安全か など。
+
+  ⚠️⚠️ 量が結論の配置で札名を出さないこと。
+    「身体が求めている手当て」に「貨幣の2 ―― やりくり・優先順位の調整」
+    と出て、体の話をしているのに金の話が返ってくる状態になっていた。
+    札の意味は正しいが、配置と噛み合っていない。
+
+  ⚠️ ここに足すのは、視覚補正が段（step）を出している配置だけ。
+    段が無いと、代わりに書くものが無い。
+*/
+const VERDICT_BY_GAUGE = [
+  "somatic",        // 体からの声   … どこに熱があるか
+  "boundary",       // 境界線       … どこまで入られているか
+  "headAndHeart",   // 頭と心       … 温度が釣り合っているか
+  "safePerson",     // この人は安全か … 何割見えているか
+  "burnout",        // 消耗からの回復 … 湯かげん
+  "driveAndGround", // やる気と地面 … 跳ぶ力
+  "loopOfThought",  // 堂々巡り     … 噛み合い
+  "selfSabotage",   // 自己妨害     … 殻の厚み
+  "moneyMind",      // お金と価値観 … 受け止める広さ
+  "comparison",     // 比べるのをやめる … ポケットの中身
+  "undecided",      // 決めきれない … 火の三要素
+  "monthly",        // 今月の流れ   … 育ちの段
+  "careerCross",    // キャリアの岐路 … 二つの山
+  "goldVein",       // THE 金運     … 揃った条件
+];
+
 function SpreadVerdict({ spreadKey, drawn, lang, openedIndices, extra }) {
   const t = T[lang] || T.ja;
   const seen = new Set(openedIndices);
@@ -18939,15 +19465,34 @@ function SpreadVerdict({ spreadKey, drawn, lang, openedIndices, extra }) {
       const strongest = cardOf(top);
       if (land || strongest) {
         title = t.verdictTitle;
-        lines = [
-          land
-            ? mv.mvAnswer(nameOf(landIdx), land.name, land.gist)
-            : mv.mvAnswerYet(nameOf(landIdx)),
-          land ? (land.up ? mv.mvGo : mv.mvHold) : null,
-          strongest && top !== landIdx
-            ? mv.mvHeavy(nameOf(top), strongest.name)
-            : null,
-        ];
+        /*
+          ⚠️⚠️ 量が結論の配置では、札の意味を出さないこと。
+          体の話をしているところに「やりくり・優先順位の調整」が出て、
+          何の話か分からなくなる。図が測った量のほうが結論に近い。
+          ★ そういう配置では、どの位置に注目すればよいかだけを言い、
+            中身は図と読みに任せる。
+        */
+        if (VERDICT_BY_GAUGE.includes(spreadKey)) {
+          lines = [
+            land
+              ? mv.mvGaugeLead(nameOf(landIdx), land.name, land.up)
+              : mv.mvAnswerYet(nameOf(landIdx)),
+            strongest && top !== landIdx
+              ? mv.mvGaugeHeavy(nameOf(top))
+              : null,
+          ];
+        } else {
+          lines = [
+            land
+              ? mv.mvAnswer(nameOf(landIdx), land.name, land.gist)
+              : mv.mvAnswerYet(nameOf(landIdx)),
+            land ? (land.up ? mv.mvGo : mv.mvHold) : null,
+            strongest && top !== landIdx
+              /* ⚠️ 意味も渡すこと。札名だけでは、覚えていない人に何も伝わらない */
+              ? mv.mvHeavy(nameOf(top), strongest.name, strongest.gist)
+              : null,
+          ];
+        }
       }
     }
   }
@@ -22738,10 +23283,11 @@ function HexagramPanel({ lang, onBack, question, userName, canDraw, onConsume, o
             <SafetyGap drawn={drawn} lang={lang} openedIndices={openedIndices} />
           )}
 
-          {/* 決めきれない。振り子が振れているかどうか */}
-          {spreadKey === "undecided" && stage > 0 && (
-            <StalledPendulum drawn={drawn} lang={lang} openedIndices={openedIndices} />
-          )}
+          {/*
+            ⚠️ 振り子は撤去した。火の三要素に置き換えたので、
+            残しておくと同じ配置で図が二つ出る。実際そうなっていた。
+            ⚠️ 図を差し替えるときは、古い配線を必ず消すこと。
+          */}
 
           {/* THE 金運は金脈。どこが足りないかを見る */}
           {spreadKey === "goldVein" && stage > 0 && (
@@ -22758,9 +23304,18 @@ function HexagramPanel({ lang, onBack, question, userName, canDraw, onConsume, o
             <ComparePockets drawn={drawn} lang={lang} openedIndices={openedIndices} />
           )}
 
-          {/* キャリアの岐路は火の三要素。どれが細いかを見る */}
-          {spreadKey === "careerCross" && stage > 0 && (
+          {/*
+            決めきれないは火の三要素。
+            ⚠️ 図はそのまま使う。「決める」も三つ揃わないと起きないので、
+            薪・熱・風の見立てがそのまま通る。
+          */}
+          {spreadKey === "undecided" && stage > 0 && (
             <CareerFire drawn={drawn} lang={lang} openedIndices={openedIndices} />
+          )}
+
+          {/* キャリアの岐路は、二つの山 */}
+          {spreadKey === "careerCross" && stage > 0 && (
+            <TwoPeaks drawn={drawn} lang={lang} openedIndices={openedIndices} />
           )}
 
           {/* お金と価値観は皿と落ちもの。受け止められる広さで見る */}
@@ -22769,7 +23324,7 @@ function HexagramPanel({ lang, onBack, question, userName, canDraw, onConsume, o
           )}
 
           {/* 願いの実現・キャリアの岐路・比べるのをやめる。坂は同じ形 */}
-          {DRIVE_CFG[spreadKey] && spreadKey !== "moneyMind" && spreadKey !== "careerCross" && spreadKey !== "comparison" && stage > 0 && (
+          {DRIVE_CFG[spreadKey] && spreadKey !== "moneyMind" && spreadKey !== "careerCross" && spreadKey !== "undecided" && spreadKey !== "comparison" && stage > 0 && (
             <ObstacleDrive spreadKey={spreadKey} drawn={drawn} lang={lang} openedIndices={openedIndices} />
           )}
 
@@ -27653,6 +28208,7 @@ const T = {
     savedSort: "並び", savedNew: "新しい順", savedOld: "古い順",
     lastSaved: "保存済み", lastUnsaved: "未保存",
     lastUnsavedNote: "この記録は、次に占うと上書きされます。残したい場合は保存してください。",
+    backToSpreadList: "配置の一覧へ",
     lastNameLabel: "お名前：",
     savedFilter: "配置", savedAll: "すべて",
     savedDelAsk: (n) => `この記録を削除します。取り消せません。よければ「${n}」と入力してください。`,
@@ -37035,6 +37591,21 @@ export default function TarotDraw() {
             radial-gradient(circle 3px at 14% 58%, rgba(0,0,0,0.26), transparent);
         }
 
+        /*
+          鼓動。
+          ⚠️ 一定の間隔で打たないこと。心臓は「ドッ・ドッ、間」なので、
+          等間隔だと機械に見える。
+          ⚠️ 大きくしすぎない。1.1倍を超えると膨らむ風船に見える。
+          ⚠️ transform-box を付けない。原点を座標で渡しているので軸がずれる。
+        */
+        .mv-beat { animation: mvBeat 1.6s ease-in-out infinite; }
+        @keyframes mvBeat {
+          0%, 100% { transform: scale(1); }
+          12%      { transform: scale(1.08); }
+          22%      { transform: scale(1); }
+          34%      { transform: scale(1.05); }
+          46%      { transform: scale(1); }
+        }
         /* 茎と葉。⚠️ ゆっくり。速いと風ではなく震えに見える */
         .mv-sway { animation: mvSway 4.6s ease-in-out infinite; transform-origin: bottom center; }
         @keyframes mvSway {
@@ -37415,24 +37986,6 @@ export default function TarotDraw() {
               ここに入らず画面が真っ白になる。基底キーで判定する。
             */}
             {navTab === "draw" && spreadBaseKey(drawMode) === "three" && (<>
-            {/*
-              鑑定の段。
-              ⚠️ スリーカードだけ専用の画面なので、共通の切り替えが届かない。
-              ここにも置くこと。無いと、この配置だけ無料版で固定される。
-            */}
-            <div className="ver-switch-row">
-              <div className="ver-switch" role="group" aria-label={verSwitchT(lang).label}>
-                {SPREAD_TIERS.map((tk) => (
-                  <button key={tk} type="button"
-                    className={`ver-btn${spreadTier(drawMode) === tk ? " on" : ""}`}
-                    onClick={() => setDrawMode(spreadKeyWithTier(drawMode, tk))}
-                    aria-pressed={spreadTier(drawMode) === tk}>
-                    {verSwitchT(lang)[tk]}
-                  </button>
-                ))}
-              </div>
-            </div>
-
             {/* 選択画面へ戻る導線。スプレッドを選び直せることを常に示す */}
             <button
               onClick={() => setDrawMode("select")}
@@ -37442,8 +37995,20 @@ export default function TarotDraw() {
                 padding: "2px 4px 8px", opacity: 0.75, letterSpacing: "0.04em",
               }}
             >
-              ← {spreadInfo("three", lang).name}
+              {/*
+                ⚠️⚠️ ここは戻る導線であって、配置の見出しではない。
+                「← スリーカード」と出ていたので、画面の題に見えていた。
+                他の配置と同じく「一覧へ戻る」と書き、
+                配置名は見出しとして別に立てる。
+              */}
+              ← {t.backToSpreadList}
             </button>
+
+            {/* 配置の見出し。⚠️ 他の配置と同じ形にすること */}
+            <div className="spread-heading">
+              <p className="spread-heading-name">{spreadInfo("three", lang).name}</p>
+              <p className="spread-heading-desc">{spreadInfo("three", lang).desc}</p>
+            </div>
             <label htmlFor="tarot-name">{t.nameLabel}</label>
             <input
               id="tarot-name"
@@ -37513,6 +38078,27 @@ export default function TarotDraw() {
                 </p>
               </div>
             )}
+            {/*
+              鑑定の段。
+              ⚠️⚠️ 入力欄の下、始めるボタンの上に置くこと。
+              他の配置がその位置なので、ここだけ画面の一番上にあると
+              同じ機能だと分からない。
+              ⚠️ スリーカードは専用の画面なので、共通の切り替えが届かない。
+              無いと、この配置だけ無料版で固定される。
+            */}
+            <div className="ver-switch-row">
+              <div className="ver-switch" role="group" aria-label={verSwitchT(lang).label}>
+                {SPREAD_TIERS.map((tk) => (
+                  <button key={tk} type="button"
+                    className={`ver-btn${spreadTier(drawMode) === tk ? " on" : ""}`}
+                    onClick={() => setDrawMode(spreadKeyWithTier(drawMode, tk))}
+                    aria-pressed={spreadTier(drawMode) === tk}>
+                    {verSwitchT(lang)[tk]}
+                  </button>
+                ))}
+              </div>
+            </div>
+
             {canDraw ? (
               <button className="draw-btn" onClick={start}>
                 <Shuffle size={16} />
