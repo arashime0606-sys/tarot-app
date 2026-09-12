@@ -4874,14 +4874,16 @@ const BATTLE_FOE_HP = { 1: 236, 2: 2039, 3: 2074, 4: 2229, 5: 4707, 6: 4942,
   敵の攻撃力（1体あたり）。
   ★ 勝率から二分探索で求めた実測値。各2500回。
     狙い 90/80/70/62/54/46/38/30/23/16/10/5 ％
-    実測 87.7/81.4/73.0/62.1/54.6/47.8/38.3/28.9/24.6/16.0/9.0/5.4 ％
+    実測 90.4/80.4/71.9/62.4/53.8/47.5/39.9/31.3/25.6/16.7/9.9/5.6 ％
+    ⚠️ この値は「自傷は逆位置のみ・敵の振れ幅±35%」で測ってある。
+      どちらを変えても勝率が動くので、測り直すこと。
   ⚠️⚠️ 整数に丸めないこと。値が小さいので、丸めると勝率が10ポイント単位で飛ぶ。
   ⚠️ 全★で「敵の攻撃で負け」が100%。自傷・塔・審判で死ぬ経路は無い。
   ⚠️ 勝率を動かしたいときは、まず轟音の削り幅（FOE_MOVES.roar.roar）を見ること。
     あちらは単調に効く。轟音の「頻度」は効きが単調でないので調整に使えない。
 */
-const BATTLE_ATK = { 1: 6.46, 2: 4.52, 3: 3.53, 4: 5.27, 5: 5.58, 6: 3.13,
-  7: 3.38, 8: 3.03, 9: 2.55, 10: 2.68, 11: 2.73, 12: 2.92 };
+const BATTLE_ATK = { 1: 6.24, 2: 4.41, 3: 3.49, 4: 4.14, 5: 4.68, 6: 3.39,
+  7: 2.33, 8: 2.12, 9: 1.85, 10: 2.03, 11: 2.27, 12: 2.46 };
 /* ⚠️ ★+1.6 ぶんのHPを持たせる。★ぴったりだと敵が一度も殴れずに終わる */
 const BATTLE_HP_TURNS = 1.6;
 /** 一度に開く枚数。⚠️ 8枚を超えたら二枚ずつ。一枚ずつだとテンポが落ちる */
@@ -5392,7 +5394,22 @@ function battleApply(state, card) {
       t.f.hp -= d; out.hits.push({ i: t.i, d });
     }
     /* ⚠️ 現在HPの割合。階位が高いほど反動も大きい */
-    out.self = Math.round(state.hp * 0.022 * rankMultOf(shifted, "normal"));
+    /*
+      ⚠️ 凶刃に構えた相手を斬ると、自傷が跳ね上がる。
+        逆位置ならさらに重い ―― 無理に攻めると自分が削れる。
+    */
+    /*
+      ⚠️⚠️ 正位置では自傷しない。
+        「剣を振ると必ず自分も傷つく」は理屈が弱く、説明として通らなかった。
+      ★ 逆位置＝制御を失った状態だから自分も傷つく。タロットの意味とも噛み合う。
+      ⚠️ 聖杯の価値は自傷ではなく、敵の攻撃の振れ幅が担う。
+        上振れで削られた分を戻す ―― それが回復札の役目。
+      ⚠️ 正位置ぶんが消えるので、その代わり逆位置の自傷は倍にする。
+    */
+    const thorn = (state.foeThorn && t && state.foeThorn[t.i]) || 1;
+    out.self = rev
+      ? Math.round(state.hp * 0.044 * rankMultOf(shifted, "normal") * thorn)
+      : 0;
   } else if (suit === "wands") {
     /* ⚠️ 相手が1体なら威力を上げる。全体攻撃の利点が消えるため */
     const solo = state.foes.length === 1 ? BATTLE.wandSolo : 1;
@@ -5405,7 +5422,13 @@ function battleApply(state, card) {
         * (1 - defRate(state.foeDefM || 0)) * (1 - res.mag) * gd * rv);
       x.f.hp -= d; out.hits.push({ i: x.i, d });
     });
-    out.self = Math.round(state.hp * 0.016 * rankMultOf(shifted, "normal"));
+    /* ⚠️ 棒は全体なので、凶刃に構えた相手が一体でもいれば棘を受ける */
+    /* ⚠️ 棒も逆位置のときだけ。凶刃に構えた相手が一体でもいれば棘が乗る */
+    const thornW = Math.max(1, ...alive().map((x) =>
+      (state.foeThorn && state.foeThorn[x.i]) || 1));
+    out.self = rev
+      ? Math.round(state.hp * 0.032 * rankMultOf(shifted, "normal") * thornW)
+      : 0;
   } else if (suit === "cups") {
     /* ⚠️ 回復も精神から。固定値だと、育つほど回復が置いていかれる */
     out.heal = Math.round(S.spirit * CARD_COEF.cups * rankMultOf(shifted, "normal")
@@ -5624,18 +5647,36 @@ const FOE_PHASE = { calm: 0.66, press: 0.33 };
     殴ってくる回の密度が上がる。勝つときは楽に、負けるときはとことん。
   ⚠️ 表は★の帯ごとに持つ。★1〜3は轟音なし（貨幣を積む余地を残す）。
 */
+/*
+  腐食で封じる枚数。
+  ⚠️ 雑魚は必ず1枚。道中で手を大きく削ると、主に着く前に消耗しきる。
+  ⚠️ 主は★に応じて増やすが、手札の半分を超えないこと。
+*/
+function rotCountOf(star, cards, isZako) {
+  if (isZako) return 1;
+  const s = Math.max(1, Math.min(12, star | 0));
+  /*
+    ⚠️⚠️ 上限を毎回出さないこと。★12で必ず4枚だと、腐食が出るたびに
+      同じ重さの罰が来る。幅を持たせて、軽い回と重い回を作る。
+    ★ 1枚から上限までの一様。上限は★で伸びる。
+  */
+  const top = 1 + Math.floor((s - 1) / 3);   /* ★1〜3:1 ★4〜6:2 ★7〜9:3 ★10〜12:4 */
+  const cap = Math.max(1, Math.min(top, Math.floor((cards || 3) / 2)));
+  return 1 + Math.floor(Math.random() * cap);
+}
+
 const FOE_ROTA_BY_TIER = {
   /* ★1〜3。⚠️ 轟音を入れない。序盤から倍率を削ると、積む楽しみが消える */
   low: {
     calm:  ["hit", "hit", "guard", "hit", "combo"],
-    press: ["hit", "combo", "wind", "heavy", "hit", "guard"],
+    press: ["hit", "combo", "wind", "heavy", "hit", "guardHi"],
     last:  ["combo", "wind", "heavy", "hit", "combo", "wind", "heavy"],
   },
   /* ★4〜6。⚠️ 轟音はおよそ4回に1回。続けて出すと機械に見える */
   mid: {
-    calm:  ["hit", "hit", "roar", "hit"],
-    press: ["hit", "combo", "wind", "heavy", "roar", "hit", "guard", "combo"],
-    last:  ["combo", "wind", "heavy", "roar", "hit", "combo", "wind", "heavy"],
+    calm:  ["hit", "rot", "roar", "hit"],
+    press: ["hit", "combo", "wind", "heavy", "roar", "rot", "guardEdge", "combo"],
+    last:  ["combo", "wind", "heavy", "roar", "rot", "combo", "wind", "heavy"],
   },
   /*
     ★7〜8。
@@ -5645,9 +5686,9 @@ const FOE_ROTA_BY_TIER = {
     ⚠️ そのぶん殴る回は連撃と大技に寄せる。当たれば一気に持っていかれる。
   */
   high: {
-    calm:  ["hit", "roar", "combo", "despair"],
-    press: ["combo", "wind", "heavy", "roar", "combo", "despair", "wind", "heavy"],
-    last:  ["wind", "heavy", "roar", "combo", "wind", "heavy", "despair", "combo"],
+    calm:  ["hit", "roar", "rot", "despair"],
+    press: ["combo", "wind", "heavy", "roar", "rot", "despair", "wind", "heavy"],
+    last:  ["wind", "heavy", "roar", "rot", "wind", "heavy", "despair", "combo"],
   },
 };
 /* ⚠️ ★12まである。帯の境目も伸ばすこと */
@@ -5664,12 +5705,28 @@ const FOE_PHASE_MUL_BY_TIER = {
   high: { calm: 1.00, press: 1.45, last: 2.10 },
 };
 const FOE_MOVES = {
-  hit:   { mul: 1.0, hits: 1, spread: 0.22 },
-  combo: { mul: 0.30, hits: 4, spread: 0.16 },
+  /*
+    ⚠️ 振れ幅は広めに取ること。聖杯の価値はここが担う。
+      上振れで肝を冷やし、そのぶんを回復で戻す ―― それが回復札の役目。
+    ⚠️ 広げすぎると事故だけのゲームになる。通常で±35%が上限の目安。
+  */
+  hit:   { mul: 1.0, hits: 1, spread: 0.35 },
+  combo: { mul: 0.30, hits: 4, spread: 0.22 },
   /* 溜め。⚠️ 殴らない一手を挟む。ここで身構えられることが「読める」ということ */
   wind:  { mul: 0, hits: 0, wind: true },
-  heavy: { mul: 2.9, hits: 1, spread: 0.14 },
-  guard: { mul: 0, hits: 0, guard: 0.45 },
+  heavy: { mul: 2.9, hits: 1, spread: 0.22 },
+  /*
+    構えの三段。
+    ⚠️⚠️ どれも殴ってこない手なので、出しすぎると戦いが停滞する。
+      ローテーションに入れるのは一巡に一つまで。
+    ★ 防御 … 通りが悪くなるだけ
+      剛防御 … さらに通らない。長い一手だが、そのぶん殴られない
+      凶刃防御 … 通りは浅いが、こちらの自傷が跳ね上がる。
+        攻め続けると自分が削れる ―― 攻撃を止める理由になる。
+  */
+  guard:  { mul: 0, hits: 0, guard: 0.45 },
+  guardHi:{ mul: 0, hits: 0, guard: 0.72 },
+  guardEdge: { mul: 0, hits: 0, guard: 0.25, thorn: 3.5 },
   /*
     戦慄の轟音。
     ★ 殴らずに、積み上げた貨幣の倍率を削る。
@@ -5697,6 +5754,14 @@ const FOE_MOVES = {
       6は★12で0.4%まで落ちて効きすぎる。
   */
   despair: { mul: 0, hits: 0, despair: 2 },
+  /*
+    腐食攻撃。
+    ★ 威力は半分。そのかわり、次のターンの札を何枚か不発にする。
+      殴られながら手も削られるので、絶望の波動より重い場面が作れる。
+    ⚠️⚠️ 封じる枚数は相手によって変える。雑魚は1枚まで、主は★に応じて増やす。
+    ⚠️ 手札より多くは封じない。全部不発だと、ただ一ターン飛ばすのと同じになる。
+  */
+  rot: { mul: 0.5, hits: 1, spread: 0.18, rot: true },
 };
 function foePhaseOf(ratio) {
   return ratio > FOE_PHASE.calm ? "calm" : ratio > FOE_PHASE.press ? "press" : "last";
@@ -6469,6 +6534,8 @@ const ADV_I18N = {
     dbgStep: (n, all) => `${n}/${all}段 `,
     foeWind: "力を溜めている", foeHeavy: "渾身の一撃", foeCombo: "連撃",
     foeRoar: "戦慄の轟音",
+    foeRot: "腐食攻撃",
+    foeGuardHi: "剛防御", foeGuardEdge: "凶刃防御",
     /* ⚠️ 二行にまたがる定義の途中に差し込まないこと。別の表が壊れる */
     spName: { rage: "猛り", sync: "連携", call: "招集", howl: "群れの咆哮",
       shield: "守護", curse: "呪詛", command: "号令", drain: "吸収" },
@@ -6573,6 +6640,8 @@ const ADV_I18N = {
     dbgStep: (n, all) => `step ${n}/${all} `,
     foeWind: "Gathering force", foeHeavy: "A crushing blow", foeCombo: "A flurry",
     foeRoar: "A terrible roar",
+    foeRot: "A corroding strike",
+    foeGuardHi: "Braced hard", foeGuardEdge: "Bladed stance",
     spName: { rage: "Fury", sync: "In unison", call: "Summons", howl: "Pack howl",
       shield: "Guarded", curse: "Curse", command: "Command", drain: "Drain" },
     fxHelp: {
@@ -27710,7 +27779,7 @@ function loadSpeed() {
 }
 function saveSpeed(v) { try { localStorage.setItem(LS_BT_SPEED, String(v)); } catch (e) { /* 残せなくても遊べる */ } }
 
-function BattlePanel({ lang, star, stageName, onEnd, theme, rank, zako, startHP }) {
+function BattlePanel({ lang, star, stageName, onEnd, theme, rank, zako, startHP, startMult }) {
   const a = advT(lang);
   /* ⚠️ 土地柄を受け取る。無ければ町。戦っている場所が地図と揃うこと */
   const themeKey = theme || "town";
@@ -27727,7 +27796,9 @@ function BattlePanel({ lang, star, stageName, onEnd, theme, rank, zako, startHP 
   const S0 = useMemo(() => statsOf(rank || 0), [rank]);
   const [st, setSt] = useState(() => ({
     /* ⚠️ 削られたまま入れること。全快で始めると持ち越しが無意味になる */
-    hp: startHP != null ? startHP : statsOf(rank || 0).maxHP, mult: 1, take: 1,
+    hp: startHP != null ? startHP : statsOf(rank || 0).maxHP,
+    /* ⚠️ 倍率も引き継ぐ。道中で積んだものが主の戦いで効く */
+    mult: startMult && startMult > 1 ? startMult : 1, take: 1,
     /* ⚠️ 計算に要るものは全部ここに置く。画面側で別に持たない */
     stats: statsOf(rank || 0),
     foeDefP: battleSetup(star, rank || 0).defP,
@@ -27845,12 +27916,51 @@ function BattlePanel({ lang, star, stageName, onEnd, theme, rank, zako, startHP 
     /* ⚠️ 星は開始時に回復する。ここで払わないと、引く前に落ちる場面が出る */
     const heal = s.fx.star > 0 ? Math.round(S0.maxHP * 0.12) : 0;
     if (heal) pop("me", `+${heal}`, "heal");
+    /*
+      腐食で不発になる札。
+      ⚠️⚠️ 引いたあとに印を付ける。山から抜くのではなく、引けたのに効かない形にする。
+        そのほうが「腐らされた」と分かる。
+      ⚠️ 手札より多くは選ばない。全部不発だと、ただ一ターン飛ばすのと同じになる。
+    */
+    /*
+      最低保証。
+      ★ 正義が効いているなら、聖杯の正位置を必ず一枚。回復しなければ何も起きない札なので。
+        恋人が効いているなら、剣か棒の正位置を必ず一枚。与えなければ回復しないので。
+      ⚠️⚠️ 保証しないと、引き次第で完全な死に札になる。
+        「3ターン継続」と言いながら、一度も働かない回ができてしまう。
+      ⚠️ 一枚目に置くこと。後ろだと、先に清算が済んで間に合わない場面が出る。
+      ⚠️ 両方効いているときは正義を優先。回復が先に立たないと、恋人も働かない。
+    */
+    const guaranteed = (() => {
+      if (s.fx.justice > 0) return MINOR_LIST.filter((c) => String(c.id).split("-")[0] === "cups");
+      if (s.fx.lovers > 0) return MINOR_LIST.filter((c) => {
+        const k = String(c.id).split("-")[0];
+        return k === "swords" || k === "wands";
+      });
+      return null;
+    })();
+    const sured = guaranteed
+      ? [{ ...guaranteed[Math.floor(Math.random() * guaranteed.length)], reversed: false },
+         ...dealt.slice(1)]
+      : dealt;
+
+    const rotN = Math.min(sured.length - 1, Math.max(0, s.rotNext || 0));
+    const rotIdx = new Set();
+    /* ⚠️ 保証した一枚目は腐らせない。保証した意味が消える */
+    while (rotIdx.size < rotN) {
+      const k = Math.floor(Math.random() * sured.length);
+      if (guaranteed && k === 0) continue;
+      rotIdx.add(k);
+    }
+    const marked = sured.map((c, i2) => (rotIdx.has(i2) ? { ...c, rotten: true } : c));
     setSt((v) => ({
-      ...v, hand: dealt, shown: 0, phase: "play", turn: v.turn + 1,
+      ...v, hand: marked, shown: 0, phase: "play", turn: v.turn + 1,
+      /* ⚠️ 使ったら消す。次のターンへ持ち越さない */
+      rotNext: 0,
       hp: Math.min(S0.maxHP, v.hp + heal),
       /* ⚠️ 溜まっていたものを、このターンの持ち物として受け取る */
-      /* ⚠️ 敵の防御はこのターンの初めに解ける。持ち越すと永久に硬い */
-      foeGuard: {},
+      /* ⚠️ 敵の構えはこのターンの初めに解ける。持ち越すと永久に硬い */
+      foeGuard: {}, foeThorn: {},
       turnNext: v.pending || emptyNext(),
       /*
         ⚠️ 受け取ったら空にする。空にしないと永久に効き続ける。
@@ -27903,6 +28013,8 @@ function BattlePanel({ lang, star, stageName, onEnd, theme, rank, zako, startHP 
       /* ⚠️ 二巡目は手札の頭から。i を長さで割った余りを使う */
       const card = s.hand[i % s.hand.length];
       next.drawn = (next.drawn || 0) + 1;
+      /* ⚠️ 腐った札は何も起こさない。数字も出さず、印だけ残す */
+      if (card.rotten) { continue; }
       const out = battleApply(next, card);
       /*
         ⚠️ 形で見分けられるようにする。
@@ -27947,15 +28059,25 @@ function BattlePanel({ lang, star, stageName, onEnd, theme, rank, zako, startHP 
         恋人と正義が同時に効いたとき無限に増える。
     */
     if (to >= total) {
+      /*
+        ⚠️⚠️ 数字をすぐ出さないこと。最後の札の上に重なって、
+          その札（多くは貨幣）が回復や攻撃をしたように見える（実際そう見えていた）。
+        ★ 少し遅らせ、何の効果かを一行で示してから出す。
+      */
       if (s.fx.lovers > 0 && next.dmgSum > 0) {
         const h = Math.round(next.dmgSum);
         next.hp = Math.min(next.stats.maxHP, next.hp + h);
-        pop("me", `+${h}`, "heal");
+        next.note = a.fxName.lovers;
+        timers.current.push(setTimeout(() => { pop("me", `＋${h}`, "heal"); fx("me", "heal"); }, 260));
       }
       if (s.fx.justice > 0 && next.healSum > 0) {
         const d = Math.round(next.healSum);
         const t = next.foes.findIndex((f) => f.hp > 0);
-        if (t >= 0) { next.foes[t].hp -= d; pop(`foe${t}`, `-${d}`, "dmg"); }
+        if (t >= 0) {
+          next.foes[t].hp -= d;
+          next.note = a.fxName.justice;
+          timers.current.push(setTimeout(() => { pop(`foe${t}`, `-${d}`, "dmg"); fx(`foe${t}`, "burst"); }, 260));
+        }
       }
       next.dmgSum = 0; next.healSum = 0;
     }
@@ -28102,12 +28224,38 @@ function BattlePanel({ lang, star, stageName, onEnd, theme, rank, zako, startHP 
       }
       if (move === "despair") {
         /*
-          ⚠️ ターン数で持つこと。次の一枚だけ止めても気づかれない。
-          ⚠️ 殴らない。轟音と同じく、立て直す間になる。
+          ⚠️⚠️ 雑魚は使わない。道中で大アルカナを止められると、
+            主に着く前に効果札が一枚も来ない探索になる。
+          ⚠️⚠️ 累積させないこと。四体が同時に掛けると一度に8ターン積まれ、
+            戦闘のあいだずっと封印されたままになる（実際そうなっていた）。
+          ★ 上書きにする。残りが多いときは伸ばさない。
         */
-        next.fx = { ...next.fx, despair: (next.fx.despair || 0) + FOE_MOVES.despair.despair };
+        if (setup.zako) return;
+        /*
+          ⚠️ 手が回ってきても、四回に一回しか出さない。
+            ローテーションに入れたままだと、主の戦いでは常時かかりっぱなしになる。
+        */
+        if (Math.random() >= 0.25) { next.note = a.foeWind; return; }
+        next.fx = { ...next.fx, despair: Math.max(next.fx.despair || 0, FOE_MOVES.despair.despair) };
         next.note = a.foeDespair;
         fx("all", "major", { shape: "swirl", label: a.foeDespair });
+        return;
+      }
+      if (move === "rot") {
+        /*
+          腐食。
+          ⚠️ 殴りながら手も削る。威力が半分なのはその代償。
+          ⚠️ 封じる枚数は上書き。重ねると手札が全部消える。
+        */
+        const nrot = rotCountOf(setup.star, setup.cards, !!setup.zako);
+        next.rotNext = Math.max(next.rotNext || 0, nrot);
+        next.note = a.foeRot;
+        const myAtk2 = ((setup.foeAtkList && setup.foeAtkList[i]) || setup.foeAtk) * (next.foeAtkUp || 1);
+        const d2 = Math.max(1, Math.round(myAtk2 * boost * FOE_MOVES.rot.mul
+          * (FOE_PHASE_MUL_BY_TIER[foeTierOf(setup.star)][foePhaseOf(ratio)] || 1)
+          * next.take * (s.fx.moon > 0 ? 0.6 : 1)));
+        next.hp -= d2;
+        pop("me", `-${d2}`, "dmg");
         return;
       }
       if (move === "roar") {
@@ -28120,10 +28268,16 @@ function BattlePanel({ lang, star, stageName, onEnd, theme, rank, zako, startHP 
         fx("me", "burst");
         return;
       }
-      if (move === "guard") {
-        /* ⚠️ 防御は自分に掛かる。こちらの次の一手が軽く済む */
-        next.foeGuard = { ...(next.foeGuard || {}), [i]: FOE_MOVES.guard.guard };
-        next.note = a.foeGuard;
+      if (move === "guard" || move === "guardHi" || move === "guardEdge") {
+        /*
+          ⚠️ 構えは自分に掛かる。こちらの次の一手が通りにくくなる。
+          ⚠️ 凶刃はここで棘も積む。自傷が跳ね上がるのは、この敵を殴ったときだけ。
+        */
+        const m2 = FOE_MOVES[move];
+        next.foeGuard = { ...(next.foeGuard || {}), [i]: m2.guard };
+        if (m2.thorn) next.foeThorn = { ...(next.foeThorn || {}), [i]: m2.thorn };
+        next.note = move === "guard" ? a.foeGuard
+          : move === "guardHi" ? a.foeGuardHi : a.foeGuardEdge;
         return;
       }
       winding[i] = false;
@@ -28207,7 +28361,11 @@ function BattlePanel({ lang, star, stageName, onEnd, theme, rank, zako, startHP 
               <div key={i} className="bt-foe">
                 {/* ⚠️ 溜めている敵は光らせる。次に大技が来ることを示す */}
                 {st.winding && st.winding[i] && <span className="bt-wind" aria-hidden="true" />}
-                {st.foeGuard && st.foeGuard[i] > 0 && <span className="bt-guard" aria-hidden="true" />}
+                {/* ⚠️ 構えの強さで色を分ける。同じ印だと、どの構えか読めない */}
+                {st.foeGuard && st.foeGuard[i] > 0 && (
+                  <span className={`bt-guard${(st.foeThorn && st.foeThorn[i] > 1) ? " edge"
+                    : st.foeGuard[i] >= 0.7 ? " hi" : ""}`} aria-hidden="true" />
+                )}
                 {/* ⚠️ 大きさは編成から。特大は目に見えて大きく、小は小さく */}
                 {/* ⚠️ 主に印を付ける。どれを倒せば終わるのか分からないと狙いようがない */}
                 {setup.bossAt === i && <span className="bt-bosstag">{a.bossTag}</span>}
@@ -28253,7 +28411,12 @@ function BattlePanel({ lang, star, stageName, onEnd, theme, rank, zako, startHP 
         style={setup.cards >= 6 ? { "--cols": Math.ceil(setup.cards / 2) } : undefined}>
         {st.hand.map((c, i) => (
           <span key={i}
-            className={`bt-card${i < st.shown ? " used" : ""}${i === st.shown ? " now" : ""}${c.reversed ? " rev" : ""}`}
+            /*
+              ⚠️ 法王が効いているあいだは、逆位置でも回さない。
+                弱まりを受けないのだから、見た目も正位置でよい。
+                回したままだと「効いていないのでは」と見える。
+            */
+            className={`bt-card${i < st.shown ? " used" : ""}${i === st.shown ? " now" : ""}${(c.reversed && st.fx.hiero <= 0) ? " rev" : ""}${c.rotten ? " rotten" : ""}`}
             style={{ "--accent": c.accent || "var(--gold)" }}>
             <span className="bt-card-corner">{c.corner}</span>
             {c.Icon ? <c.Icon size={13} /> : <Sparkles size={13} />}
@@ -28330,7 +28493,7 @@ function BattlePanel({ lang, star, stageName, onEnd, theme, rank, zako, startHP 
         <div className={`adv-result${st.phase === "win" ? " win" : ""}`}>
           <p className="adv-result-title">{st.phase === "win" ? a.btWin : a.btLose}</p>
           <p className="adv-result-stage">{a.btTurn(st.turn)}</p>
-          <button type="button" className="adv-back" onClick={() => onEnd && onEnd(st.phase === "win", st.hp)}>
+          <button type="button" className="adv-back" onClick={() => onEnd && onEnd(st.phase === "win", st.hp, st.mult)}>
             {a.btBack}
           </button>
         </div>
@@ -29504,6 +29667,21 @@ function AdventurePanel({ lang, items, onItem }) {
   /* いま戦っている雑魚のマス。⚠️ null なら戦っていない */
   const [zako, setZako] = useState(null);
   /*
+    貨幣の累積。
+    ★ 小MAPに入ってから主までを通して持ち越す。
+      面倒な雑魚と長く戦うほど、主に強い状態で挑める ―― 戦う意味が生まれる。
+    ⚠️⚠️ 戦闘ごとに1へ戻さないこと。戻すと、道中の戦いが消耗でしかなくなる。
+    ⚠️ ステージを離れたら戻す。持ち越すのは一回の探索のあいだだけ。
+  */
+  const [carryMult, setCarryMult] = useState(1);
+  /*
+    効果が済んだマス。
+    ⚠️⚠️ マスの効果は一回の探索で一度だけ。
+      同じマスへ戻ったときに何度も起きると、泉で回復し続けられるし、
+      雑魚が繰り返し湧いて移動が止まらなくなる（実際そうなっていた）。
+  */
+  const [usedNodes, setUsedNodes] = useState([]);
+  /*
     戦闘の入口。
     ⚠️⚠️ 戦いが始まったら、そこへ視点を移すこと。
       盤の下に出るので、始まったことに気づかないまま画面外で進む。
@@ -29555,6 +29733,8 @@ function AdventurePanel({ lang, items, onItem }) {
       ⚠️ 雑魚・主の決着・勝敗の三つとも消す。一つでも残ると食い違う。
     */
     setZako(null); setFought(false); setWon(false);
+    /* ⚠️ 倍率も戻す。持ち越すのは一回の探索のあいだだけ */
+    setCarryMult(1); setUsedNodes([]);
   }, [stage, cleared.length, stepOver]);
   /*
     自動で進む。
@@ -30414,7 +30594,8 @@ function AdventurePanel({ lang, items, onItem }) {
           ⚠️⚠️ マスの種類は一つだけ処理すること。else if で繋ぐのはそのため。
             二つ以上効くと、泉なのに敵が出るような食い違いになる。
         */
-        } else if (nd && nd.kind === "zako") {
+        } else if (nd && nd.kind === "zako" && !usedNodes.includes(nd.key)) {
+          setUsedNodes((v) => [...v, nd.key]);
           /*
             雑魚。
             ⚠️⚠️ 主と同じ画面を出さないこと。あれは一戦に何十ターンもかかる。
@@ -30424,7 +30605,8 @@ function AdventurePanel({ lang, items, onItem }) {
           */
           setZako(nd.key);
           setLog((l) => [...l, where + a.metZako]);
-        } else if (nd && nd.kind === "trap") {
+        } else if (nd && nd.kind === "trap" && !usedNodes.includes(nd.key)) {
+          setUsedNodes((v) => [...v, nd.key]);
           /*
             罠。
             ⚠️ 割合で削る。固定値だと、育つほど無害になる。
@@ -30444,7 +30626,8 @@ function AdventurePanel({ lang, items, onItem }) {
           const dmg = Math.round(S.maxHP * 0.06);
           setHp((v) => Math.max(0, v - dmg));
           setLog((l) => [...l, where + a.trapped(dmg)]);
-        } else if (nd && nd.kind === "heal") {
+        } else if (nd && nd.kind === "heal" && !usedNodes.includes(nd.key)) {
+          setUsedNodes((v) => [...v, nd.key]);
           /*
             回復。
             ⚠️ 割合で戻す。固定値だと、育つほど焼け石に水になる。
@@ -30938,6 +31121,19 @@ function AdventurePanel({ lang, items, onItem }) {
                   </g>
                 )}
                 {/*
+                  罠。
+                  ⚠️⚠️ 踏むまでは道と同じ色にしてある（見えたら罠にならない）。
+                    ここで描くのは、踏んだあとに残る跡。
+                  ⚠️ 棘は上向きに三つ。丸や記号だと、他のマスの印と紛れる。
+                */}
+                {n.kind === "trap" && seen && (
+                  <g className="mv-bob" transform="scale(1.7)">
+                    <path d="M-4.5 3 L-3 -2.5 L-1.5 3 Z" fill="#8A6A6A" stroke="#D8A0A0" strokeWidth="0.5" />
+                    <path d="M-1 3 L0.5 -4 L2 3 Z" fill="#8A6A6A" stroke="#D8A0A0" strokeWidth="0.5" />
+                    <path d="M2.5 3 L4 -2 L5.5 3 Z" fill="#8A6A6A" stroke="#D8A0A0" strokeWidth="0.5" />
+                  </g>
+                )}
+                {/*
                   雑魚。
                   ⚠️ 何か居ることが分かる姿にする。無地のマスから敵が出ると理不尽になる。
                   ⚠️ 主（六角の器）とは別の形にする。同じだと主と紛れる。
@@ -31264,14 +31460,16 @@ function AdventurePanel({ lang, items, onItem }) {
         <div ref={battleRef}>
         <BattlePanel
           key={`zako-${rank}-${zako}`}
-          lang={lang} zako startHP={hp}
+          lang={lang} zako startHP={hp} startMult={carryMult}
           star={starOfStage(rank, walking)}
           rank={rank}
           stageName={walking}
           theme={themeOf(walking)}
-          onEnd={(win, leftHP) => {
+          onEnd={(win, leftHP, leftMult) => {
             setZako(null);
             setHp(Math.max(0, leftHP));
+            /* ⚠️ 積み上げた倍率を持ち帰り、主の戦いへ引き継ぐ */
+            if (leftMult) setCarryMult(leftMult);
             setLog((l) => [...l, win ? a.zakoWin : a.zakoLose]);
             /* ⚠️ 終わったら盤へ戻す。結果だけ見て地図を見失わないように */
             timers.current.push(setTimeout(() => {
@@ -31289,7 +31487,7 @@ function AdventurePanel({ lang, items, onItem }) {
               枚数も敵も前の段のまま残り、調整の役に立たない。
           */
           key={`boss-${rank}`}
-          lang={lang} startHP={hp}
+          lang={lang} startHP={hp} startMult={carryMult}
           star={starOfStage(rank, walking)}
           rank={rank}
           stageName={walking}
@@ -50075,15 +50273,37 @@ export default function TarotDraw() {
           transition: opacity 260ms ease, transform 260ms ease, box-shadow 260ms ease;
         }
         .bt-card-corner { font-family: 'Cinzel', serif; font-size: 10px; letter-spacing: 0.06em; }
-        /* ⚠️ 逆位置は札ごと回す。印だけ変えると気づかれない */
+        /*
+          ⚠️⚠️ 逆位置の回転と、処理中の持ち上げを別々の transform にしないこと。
+            後から当たったほうが前のを打ち消し、処理中だけ正位置に戻る
+            （実際そう見えていた）。組み合わせをすべて書き下す。
+        */
         .bt-card.rev { transform: rotate(180deg); }
         /* ⚠️ 処理済みは沈める。いま何枚目かが見えること */
         .bt-card.used { opacity: 0.3; }
+        /*
+          腐った札。
+          ⚠️ 引けたのに効かない、と分かる形にする。消すと、そもそも引けなかったように見える。
+          ⚠️ 斜線を一本。色を変えるだけでは、逆位置と見分けがつかない。
+        */
+        .bt-card.rotten {
+          position: relative; filter: grayscale(1) brightness(0.45);
+          opacity: 0.75; box-shadow: inset 0 0 0 1px rgba(138,127,154,0.6);
+        }
+        /* ⚠️ 斜線を二本にして、色だけの変化と区別が付くようにする */
+        .bt-card.rotten::after, .bt-card.rotten::before {
+          content: ""; position: absolute; left: 8%; right: 8%; top: 50%; height: 2px;
+          background: #A99FBA; border-radius: 2px;
+        }
+        .bt-card.rotten::after { transform: rotate(-38deg); }
+        .bt-card.rotten::before { transform: rotate(38deg); }
         /* ⚠️ いま処理している札は持ち上げる。枠の色だけだと目が拾えない */
         .bt-card.now {
           transform: translateY(-7px) scale(1.06);
           box-shadow: inset 0 0 0 2px #F6DE96, 0 0 20px rgba(246,222,150,0.75), 0 8px 16px rgba(0,0,0,0.5);
         }
+        /* ⚠️ 逆位置のまま持ち上げる。回転を保ったまま浮かせること */
+        .bt-card.rev.now { transform: translateY(-7px) scale(1.06) rotate(180deg); }
         /*
           戦場。
           ⚠️ 背景の上に敵を重ねる。板の上に並べると盤面になり、
@@ -50168,6 +50388,18 @@ export default function TarotDraw() {
         .bt-guard {
           border: 2px solid #9AD8FF;
           box-shadow: 0 0 14px rgba(154,216,255,0.8);
+        }
+        /* 剛防御。⚠️ 太くして「さらに硬い」と見せる */
+        .bt-guard.hi { border-width: 3.5px; border-color: #C9D4E8; box-shadow: 0 0 18px rgba(201,212,232,0.9); }
+        /*
+          凶刃防御。
+          ⚠️ 刺々しく見せる。青のままだと、ただ硬い相手に見えて
+            「殴ると自分が削れる」ことが伝わらない。
+        */
+        .bt-guard.edge {
+          border: 2px dashed #FF8A8A;
+          box-shadow: 0 0 16px rgba(255,138,138,0.9);
+          animation: btWind 900ms ease-in-out infinite;
         }
         @keyframes btShake {
           0%, 100% { transform: translateX(0); }
