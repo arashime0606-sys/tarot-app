@@ -6772,13 +6772,13 @@ const ADV_I18N = {
     majorList: "大アルカナ22枚の効果",
     majorHelp: {
       0: "次のターン、1枚目と同じ札に全部揃う",
-      1: "次のターン、棒だけを引く。階位が3つ上がる",
-      2: "次のターン、聖杯だけを引く。階位が3つ上がる",
-      3: "次のターン、貨幣だけを引く。階位が3つ上がる。そのあいだ轟音で倍率が削られない",
+      1: "次のターン、棒だけを引く。階位が3つ上がる。腐食を受けない",
+      2: "次のターン、聖杯だけを引く。階位が3つ上がる。腐食を受けない",
+      3: "次のターン、貨幣だけを引く。階位が3つ上がる。そのあいだ轟音で倍率が削られず、腐食も受けない",
       4: "次のターン、敵の手番を飛ばす",
       5: "3ターン、逆位置が出ない。大アルカナが必ず1枚来る",
       6: "3ターン、棒と剣が1.5倍。与えた分だけターンの終わりに回復",
-      7: "次のターン、剣だけを引く。階位が3つ上がる",
+      7: "次のターン、剣だけを引く。階位が3つ上がる。腐食を受けない",
       8: "次のターン、小アルカナだけを4倍で引く。防御を貫き、腐った札も動く。その次は継続効果がすべて消える",
       9: "3ターン、敵の妨害はすべて無駄行動になる（敵は何もできない）",
       10: "3ターン、引く札の階位がすべて10に。敵の攻撃もすべて10ダメージになる",
@@ -6906,13 +6906,13 @@ const ADV_I18N = {
     majorList: "The 22 Major Arcana",
     majorHelp: {
       0: "Next turn, every card matches the first one drawn",
-      1: "Next turn, wands only. Ranks rise by three",
-      2: "Next turn, cups only. Ranks rise by three",
+      1: "Next turn, wands only. Ranks rise by three; immune to corrosion",
+      2: "Next turn, cups only. Ranks rise by three; immune to corrosion",
       3: "Next turn, pentacles only, ranks rise by three, and roars cannot strip your multiplier",
       4: "Next turn, the enemy loses its turn",
       5: "3 turns: no reversed cards, and one Major Arcana is guaranteed each turn",
       6: "3 turns: swords and wands x1.5, and heal for the damage dealt",
-      7: "Next turn, swords only. Ranks rise by three",
+      7: "Next turn, swords only. Ranks rise by three; immune to corrosion",
       8: "Next turn: minors only, x4, guards pierced, rotten cards act. The turn after wipes all lasting effects",
       9: "3 turns: enemy interference is wasted entirely",
       10: "3 turns: every card counts as rank 10, and every enemy hit deals exactly 10",
@@ -28224,9 +28224,15 @@ function BattlePanel({ lang, star, stageName, onEnd, theme, rank, zako, startHP,
       const c = MINOR_LIST[Math.floor(Math.random() * MINOR_LIST.length)];
       hand.push({ ...c, reversed: forceRev == null ? Math.random() < 0.5 : forceRev });
     }
-    /* ⚠️ 揃えるのは札の顔だけ。正逆は一枚ずつ引き直す（全部同じだと単調になる） */
+    /*
+      愚者。
+      ⚠️⚠️ 正逆まで揃えること。顔だけ同じで向きがばらばらだと、
+        「同じ札が並んだ」ように見えない。効果も一枚ずつ変わってしまう
+        （正位置と逆位置では働きが違うため）。
+      ★ 一枚目の向きに全部を合わせる。十枚とも寸分違わぬ同じ札になる。
+    */
     let folded = (s.pending && s.pending.fool)
-      ? hand.map(() => ({ ...hand[0], reversed: Math.random() < 0.5 }))
+      ? hand.map(() => ({ ...hand[0] }))
       : hand;
     /*
       ⚠️ 愚者で四枚のどれかが揃ったときは、ここで差し替えないこと。
@@ -28290,8 +28296,15 @@ function BattlePanel({ lang, star, stageName, onEnd, theme, rank, zako, startHP,
          ...dealt.slice(1)]
       : dealt;
 
-    /* ⚠️ 星が効いているあいだは腐食を受けない。回復と合わせて「守りの札」にする */
-    const rotN = (s.fx && s.fx.star > 0)
+    /*
+      腐食を受けない場面。
+      ★ 星 … 回復と合わせて「守りの札」にする。
+      ★ スート指定中（魔術師・女教皇・女帝・戦車）… そのターンは大アルカナが
+        引けないので、腐らされると立て直す手が一枚も無い。
+        揃ったスートを活かす一ターンが、そのまま潰れるのは重すぎる。
+      ⚠️ 愚者で複数ターン続くときほど痛いので、ここを空けておくこと。
+    */
+    const rotN = ((s.fx && s.fx.star > 0) || P0.suit)
       ? 0 : Math.min(sured.length - 1, Math.max(0, s.rotNext || 0));
     const rotIdx = new Set();
     /*
@@ -30238,6 +30251,17 @@ function AdventurePanel({ lang, items, onItem }) {
   */
   /* ⚠️ 確定した行き先。引いてから見せるまでのあいだ、ここだけを信じる */
   const goingRef = useRef(null);
+  /*
+    ⚠️ phase の写し。setPhase は次の描画まで反映されないので、
+      同じ描画の中で二度呼ばれると両方とも "idle" を見てしまう。
+  */
+  const phaseRef = useRef("idle");
+  /*
+    ⚠️⚠️ 段階を変えるときは必ずこれを通すこと。
+      setPhase だけだと写しが古いままになり、入口の守りが効かない。
+    ★ 写しを先に、状態をあとに。同じ描画の中で二度呼ばれても弾ける。
+  */
+  const goPhase = (p) => { phaseRef.current = p; setPhase(p); };
   const battleRef = useRef(null);
   const mapRef = useRef(null);
   const inFight = !!zako;
@@ -30462,7 +30486,7 @@ function AdventurePanel({ lang, items, onItem }) {
       setStage(name);
       setSeed(Math.floor(Math.random() * 100000) + 1);
       setAt(null); setVisited([]); setPool(null); setPicked([]);
-      setPhase("idle"); setLog([]); setSteps(0);
+      goPhase("idle"); setLog([]); setSteps(0);
     };
     /*
       ---- 局所MAP。区分の中を拡大して、名所をステージとして並べる ----
@@ -30983,7 +31007,7 @@ function AdventurePanel({ lang, items, onItem }) {
     const six = deck.slice(0, 6);
     setPool(six);
     setPicked([]);
-    setPhase("pick");
+    goPhase("pick");
     /*
       自動のとき。
       ⚠️⚠️ pick を必要枚数ぶん続けて呼ばないこと。picked は同じ描画の中では
@@ -31125,10 +31149,30 @@ function AdventurePanel({ lang, items, onItem }) {
   walkRef.current = walkOn;
   const commit = (next, forceTo) => {
     /*
+      ⚠️⚠️ 入口で必ず塞ぐこと。
+        commit は「札を配って決める」「一本道を歩く」「自動で進む」の
+        三つから呼ばれる。守りが無いと二つが同時に走り、
+        タイマーが二本積まれて、止まった直後にもう一度動く
+        ―― これが「マスに止まってから別のマスへワープする」の正体。
+      ★ 動いている最中は何があっても受け付けない。
+    */
+    /*
+      ⚠️⚠️ 「idle のときだけ通す」にしないこと。
+        札を配ると段階は "pick" になるので、選び終えて commit を呼んでも
+        入口で弾かれ、画面が止まる（実際そうなった）。
+      ★ 塞ぐのは「すでに動き出しているとき」だけ。
+        idle（何もしていない）と pick（選んでいる最中）からは入れる。
+    */
+    if (goingRef.current) return;
+    if (phaseRef.current !== "idle" && phaseRef.current !== "pick") return;
+    /* ⚠️ 印を先に立てる。setPhase は非同期なので、それを頼りにできない */
+    goingRef.current = { from: cur, to: null, at: Date.now() };
+    phaseRef.current = "flip";
+    /*
       ⚠️ ここで間を置くこと。押した瞬間に駒が動くと、
       何が起きたのか目で追えない。
     */
-    setPhase("flip");
+    goPhase("flip");
     timers.current.push(setTimeout(() => {
       /*
         ⚠️ 行き先が指定されていればそれを使う。札から決めるのは分かれ道のときだけ。
@@ -31157,7 +31201,8 @@ function AdventurePanel({ lang, items, onItem }) {
       if (!okNext) {
         /* ⚠️ 黙って戻さない。何が起きたか残す */
         setLog((l) => [...l, a.cannotGo]);
-        setPhase("idle"); setPool(null); setPicked([]); return;
+        goingRef.current = null; phaseRef.current = "idle";
+        goPhase("idle"); setPool(null); setPicked([]); return;
       }
       /*
         ⚠️⚠️ 行き先をここで確定し、以後は書き換えないこと。
@@ -31165,8 +31210,9 @@ function AdventurePanel({ lang, items, onItem }) {
           決めた後に別の処理が at を触ると、駒が別のマスへ飛ぶ。
         ★ 確定した行き先を控えておき、移動の演出はこれだけを見る。
       */
+      /* ⚠️ 行き先が決まったので、控えを埋める */
       goingRef.current = { from: cur, to, at: Date.now() };
-      setPhase("move");
+      goPhase("move");
       timers.current.push(setTimeout(() => {
         /*
           ⚠️⚠️ 控えた行き先と食い違っていたら動かさないこと。
@@ -31175,13 +31221,14 @@ function AdventurePanel({ lang, items, onItem }) {
         const plan = goingRef.current;
         if (!plan || plan.to !== to || plan.from !== cur) {
           setLog((l) => [...l, a.cannotGo]);
-          setPhase("idle"); setPool(null); setPicked([]); return;
+          goingRef.current = null; phaseRef.current = "idle";
+          goPhase("idle"); setPool(null); setPicked([]); return;
         }
         goingRef.current = null;
         setAt(to);
         setVisited((v) => (v.includes(to) ? v : [...v, to]));
         setSteps((n) => n + 1);
-        setPhase("event");
+        goPhase("event");
         const nd = byKey[to];
         /*
           何かが起きる。
@@ -31259,7 +31306,7 @@ function AdventurePanel({ lang, items, onItem }) {
           setLog((l) => [...l, where + t.advGo]);
         }
         timers.current.push(setTimeout(() => {
-          setPool(null); setPicked([]); setPhase("idle");
+          setPool(null); setPicked([]); goPhase("idle");
           /*
             ⚠️ 終わりの節（主・行き止まり）では次を引かないこと。
               結果の画面を跨いで走り続けると、何が起きたか読めない。
@@ -31285,7 +31332,7 @@ function AdventurePanel({ lang, items, onItem }) {
     setGain(null);
     setSeed(Math.floor(Math.random() * 100000) + 1);
     setAt(null); setVisited([]); setPool(null); setPicked([]);
-    setPhase("idle"); setLog([]); setSteps(0);
+    goPhase("idle"); setLog([]); setSteps(0);
     /* ⚠️ 戦闘の跡も消す。残すと、次の回で主に着いた瞬間に結果が出る */
     setBossEnd(null); setZako(null);
     /* ⚠️ HPも戻す。持ち越すのは一回の探索のあいだだけ */
@@ -31306,7 +31353,7 @@ function AdventurePanel({ lang, items, onItem }) {
         <button type="button" className="adv-back"
           onClick={() => {
             /* ⚠️ ステージを出るだけ。県や区は保つ。毎回選び直させない */
-            setStage(null); setPool(null); setPicked([]); setPhase("idle");
+            setStage(null); setPool(null); setPicked([]); goPhase("idle");
           }}>
           {a.toMap}
         </button>
@@ -32272,7 +32319,7 @@ function AdventurePanel({ lang, items, onItem }) {
                   <Sparkles size={18} />{t.advAgain}
                 </button>
                 <button type="button" className="adv-back"
-                  onClick={() => { setStage(null); setPool(null); setPicked([]); setPhase("idle"); }}>
+                  onClick={() => { setStage(null); setPool(null); setPicked([]); goPhase("idle"); }}>
                   {a.toMap}
                 </button>
               </>
