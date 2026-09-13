@@ -4661,7 +4661,23 @@ const BATTLE = {
     ⚠️ 1.8では足りなかった。実測で★1の剣18に対して棒9（半分）だったため2.2へ。
       敵が1体だと全体攻撃の利点が完全に消えるので、ここで埋める。
   */
-  wandSolo: 2.2,
+  /*
+    棒の散らし方。
+    ★ 一体あたりの威力 = 体数^0.7 ÷ 体数。総量は体数^0.7 で伸びる。
+      2体1.62倍・3体2.16倍・4体2.64倍 ―― 散らす利は残しつつ、体数で壊れない。
+    ⚠️⚠️ 体数ぶん（=1.0固定）にしないこと。体数が増えるほど棒が強くなり、
+      同じ総HPでも勝率が 1体0% ／ 4体86% と振れる（実測）。
+    ★ 0.7 は境目がきれいに出る値（実測）。
+      1〜2体は剣が勝ち、3体以上は棒が勝つ。
+  */
+  wandSpread: (n) => Math.pow(n, 0.7) / n,
+  /*
+    ⚠️⚠️ 「主に対して特効」はやめた。剣は最もHPの低い敵を狙うので、
+      主が最後まで残る編成では終盤にしか効かず、狙いと効果が噛み合わない。
+    ★ 残り一体になったら特効。棒が全体を薙ぎ、剣がとどめを刺す ―― 役割が揃う。
+    ⚠️ 棒の単体倍率は下げること。同じ場面で両方強いと、選ぶ意味が消える。
+  */
+  swordSolo: 2.0,
   /*
     ⚠️⚠️ 倍率で合わせようとしないこと。
       必要な倍率が★ごとに ×0.2〜×13.5 と桁違いになる（実測）。
@@ -4674,11 +4690,13 @@ const BATTLE = {
     ⚠️ 3.0では伸びしろが足りない。敵が「戦慄の轟音」で削ってくるので、
       上限を上げても際限なく強くはならない。
   */
-  multCap: 6.0,
+  multCap: 9.9,
   /*
     ⚠️ 実測：×4で勝率が頭打ちになる（★8で29.8%、×6でも29.8%、×12で28.8%）。
-      轟音が削るので、上限を上げても実際には到達しない。
-      ×6のままにしてあるのは、数字が伸びる見た目のため。意味があるのは×4まで。
+      轟音が超過分の35%を削るので、上限を上げても普通は到達しない。
+    ★ それでも 9.9 まで許す。貨幣が続けて来て、轟音が来ない
+      ―― そういう稀な巡り合わせを、上限で切って無駄にしないため。
+      勝率にはほとんど響かないが、当たった回の手応えが変わる。
   */
   cupHeal: 11,     /* 聖杯＝回復 */
   coinUp: 0.08,    /* 貨幣＝与ダメ倍率。⚠️ 戦闘のあいだだけ */
@@ -4686,6 +4704,8 @@ const BATTLE = {
   selfSword: 2.2,  /* ⚠️ 攻撃は自分も削る。聖杯を引く意味を作る */
   selfWand: 1.6,
   revAtk: 0.6,     /* 逆位置の攻撃は弱い */
+  /* ⚠️ 吊るされた男が効いているあいだ、逆位置はこの倍率になる（弱化ではなく強化） */
+  hangedRev: 2.0,
   revHeal: 0.4,    /* 逆位置の回復は落ちる */
   /* ⚠️ 大アルカナは直接ダメージを持たない。効果だけ（MAJOR_FX）。ここに威力を置かないこと */
   /* ⚠️ 上限は置かない。★1〜2は30前後が要る（短い戦闘で1割負けさせるため）。
@@ -4767,7 +4787,11 @@ function rankMultOf(card, mode) {
   ⚠️ ①は上限で巻き戻る。王(14)→A(1)。A(1)→2 なので、Aを持っていると損をする。
   ⚠️ ②は切り上げ。2→A になり、強い札ほど損をする。①とちょうど逆。
 */
-function rankShiftUp(n) { return n >= 14 ? 1 : n + 1; }
+/*
+  ⚠️ 3つ上げる。1つでは「Aが2になるだけ」で、四枚の性格が立たなかった。
+  ⚠️ 上限で巻き戻る。王(14)→3 になり、高い札ほど大きく損をする。
+*/
+function rankShiftUp(n) { const v = n + 3; return v > 14 ? v - 14 : v; }
 function rankHalve(n) { return Math.max(1, Math.ceil(n / 2)); }
 function rankAfterMods(n, mods) {
   let v = n;
@@ -4798,23 +4822,23 @@ function cardsAfterRevMajor(cards) {
 
 /*
   【審判】
-  ★ 進行度ぶんの、敵の「現在HP」を削る。序盤に引けば小さく、長引くほど大きい。
+  ★ 進行度ぶんの、敵の「最大HP」を削る。序盤に引けば小さく、長引くほど大きい。
   ⚠️⚠️ 分母は BATTLE_TURNS × 枚数（その★の想定総枚数）にすること。
     ★+1.6 のままだと、どの★でも10ターン目には上限に張り付き、
     一枚で敵HPの90%を持っていく（実測でそうなっていた）。
-  ⚠️⚠️ 最大HP基準にしないこと。削れた敵にも満額入り、とどめ専用の壊れ札になる。
-    現在HP基準なら塔（現在HPの25%）と揃い、割合ダメージとして一貫する。
+  ⚠️⚠️ 現在HP基準にしないこと。塔（現在HPの25%）と役割が丸かぶりになる。
+    最大HP基準なら「削れた敵にも満額」なので、硬い相手を強引に落とす札になる。
   ⚠️ 係数は0.22。全体攻撃なので体数ぶん掛かる。
     ★8は4体なので、1回で敵HP合計の6%前後（剣20枚ぶん）。
   ⚠️ 逆位置は弱化しない。同じ量を自分も受ける ―― それがこの札の顔。
   ⚠️ 進行度は1.0で頭打ち。想定を超えて粘っても、それ以上は増えない。
 */
 const JUDGE_RATE = 0.22, JUDGE_CAP = 1.0;
-function judgementDamage(drawnCount, cardsPerTurn, star, foeNowHP) {
+function judgementDamage(drawnCount, cardsPerTurn, star, foeMaxHP) {
   const turns = BATTLE_TURNS[Math.max(1, Math.min(12, star | 0))] || 10;
   const expect = Math.max(1, cardsPerTurn * turns);
   const ratio = Math.min(JUDGE_CAP, drawnCount / expect);
-  return Math.round(foeNowHP * ratio * JUDGE_RATE);
+  return Math.round(foeMaxHP * ratio * JUDGE_RATE);
 }
 
 /** 残りターンから、いまの倍率のはたらき方を出す。⚠️ 輪が優先。両方立つことはない */
@@ -4874,16 +4898,22 @@ const BATTLE_FOE_HP = { 1: 236, 2: 2039, 3: 2074, 4: 2229, 5: 4707, 6: 4942,
   敵の攻撃力（1体あたり）。
   ★ 勝率から二分探索で求めた実測値。各2500回。
     狙い 90/80/70/62/54/46/38/30/23/16/10/5 ％
-    実測 90.4/80.4/71.9/62.4/53.8/47.5/39.9/31.3/25.6/16.7/9.9/5.6 ％
-    ⚠️ この値は「自傷は逆位置のみ・敵の振れ幅±35%」で測ってある。
-      どちらを変えても勝率が動くので、測り直すこと。
+    実測 90.6/79.3/69.6/60.1/54.7/47.2/40.4/30.0/24.0/15.8/9.4/6.4 ％
+    ⚠️ 棒の総量を一定にしたので、体数で勝率が振れない（実測：1体25% / 4体25%）。
+      敵HPも攻撃も「一体あたり」の値。体数が増えれば総量が増える。
+    ⚠️⚠️ この値は次の前提で測ってある。どれを変えても勝率が動く。
+      ・自傷は逆位置のみ／敵の振れ幅±35%
+      ・大アルカナは★に依らず63%で1枚（法王中は100%）
+      ・力×4＋代償／吊るされた男×2.0／法王は逆位置なし＋大アルカナ確定
+      ・星月太陽は4ターン／世界は3回行動／貨幣の上限9.9
+      ・運命の輪は敵の攻撃も10に揃える
   ⚠️⚠️ 整数に丸めないこと。値が小さいので、丸めると勝率が10ポイント単位で飛ぶ。
   ⚠️ 全★で「敵の攻撃で負け」が100%。自傷・塔・審判で死ぬ経路は無い。
   ⚠️ 勝率を動かしたいときは、まず轟音の削り幅（FOE_MOVES.roar.roar）を見ること。
     あちらは単調に効く。轟音の「頻度」は効きが単調でないので調整に使えない。
 */
-const BATTLE_ATK = { 1: 6.24, 2: 4.41, 3: 3.49, 4: 4.14, 5: 4.68, 6: 3.39,
-  7: 2.33, 8: 2.12, 9: 1.85, 10: 2.03, 11: 2.27, 12: 2.46 };
+const BATTLE_ATK = { 1: 6.78, 2: 5.06, 3: 4.32, 4: 5.10, 5: 5.63, 6: 3.72,
+  7: 2.16, 8: 2.01, 9: 1.66, 10: 1.81, 11: 1.95, 12: 2.05 };
 /* ⚠️ ★+1.6 ぶんのHPを持たせる。★ぴったりだと敵が一度も殴れずに終わる */
 const BATTLE_HP_TURNS = 1.6;
 /** 一度に開く枚数。⚠️ 8枚を超えたら二枚ずつ。一枚ずつだとテンポが落ちる */
@@ -4904,23 +4934,45 @@ function battleReveal(cards) { return cards > 8 ? 2 : 1; }
   ⚠️ 編成はマスごとに決める（キーから引く）。入るたびに変わると、
     引き返して有利な編成を探す遊びになる。
 */
+/*
+  雑魚の攻撃の濃さ。
+  ⚠️ 道中の全滅率の調整つまみはここ一つ。一戦で削る最大HPの割合。
+    実測 0.26→1.9% ／ 0.29→10.4% ／ 0.30→14.7% ／ 0.31→18.9%。
+  ⚠️ この帯は急峻。0.01 動かすと全滅率が4ポイント動く。細かく刻むこと。
+*/
+/* ⚠️ 一戦（10ターン）で削る、こちらの最大HPの割合 */
+const ZAKO_ATK_K = 0.30;
 const ZAKO_SIZE = { xl: 4.0, lg: 2.2, md: 1.4, sm: 0.8 };
+/*
+  ⚠️⚠️ 体数を偏らせないこと。八通りのうち3体と4体が六つでは、
+    実測で 3体45.8% ／ 4体37.7% となり、1体と2体がほとんど出ない。
+  ★ 体数ごとに二通りずつ。どの体数も25%で出る。
+*/
 const ZAKO_FORMS = [
+  /* 1体 */
   { key: "xl1", parts: [["xl", 1]] },
+  { key: "lg1", parts: [["lg", 1]] },
+  /* 2体 */
   { key: "lg2", parts: [["lg", 2]] },
+  { key: "md1sm1", parts: [["md", 1], ["sm", 1]] },
+  /* 3体 */
   { key: "md3", parts: [["md", 3]] },
-  { key: "sm4", parts: [["sm", 4]] },
   { key: "lg1sm2", parts: [["lg", 1], ["sm", 2]] },
-  { key: "lg2sm2", parts: [["lg", 2], ["sm", 2]] },
+  /* 4体 */
+  { key: "sm4", parts: [["sm", 4]] },
   { key: "md2sm2", parts: [["md", 2], ["sm", 2]] },
-  { key: "lg2md1", parts: [["lg", 2], ["md", 1]] },
 ];
-/** マスのキーから編成を決める。⚠️ 乱数を使わない。入り直しで変えさせない */
-function zakoFormOf(nodeKey) {
-  return ZAKO_FORMS[hashName(String(nodeKey || "z")) % ZAKO_FORMS.length];
+/*
+  マスのキーから編成を決める。
+  ⚠️ 乱数を使わない。入り直しで編成が変わると、有利な編成を探して往復できる。
+  ⚠️⚠️ 盤の種も混ぜること。マスの位置だけで決めると、雑魚マスのキーが
+    37通りしかないので、盤が変わっても同じ位置なら同じ編成になる（実測）。
+*/
+function zakoFormOf(nodeKey, seed) {
+  return ZAKO_FORMS[hashName(String(nodeKey || "z") + ":" + (seed || 0)) % ZAKO_FORMS.length];
 }
 
-function zakoSetup(star, step, nodeKey) {
+function zakoSetup(star, step, nodeKey, seedKey) {
   const s = Math.max(1, Math.min(12, star | 0));
   /*
     ⚠️⚠️ 手札の枚数は★のまま。半分にしないこと。
@@ -4936,12 +4988,35 @@ function zakoSetup(star, step, nodeKey) {
       特大1体なら全部を一体に、小4体なら四体に散る。
     ⚠️ 総HPは「主の1体ぶん × 体数 × 10/規定ターン」。短い戦いに収める。
   */
-  const form = zakoFormOf(nodeKey);
+  const form = zakoFormOf(nodeKey, seedKey);
   const sizes = [];
   form.parts.forEach(([sz, n2]) => { for (let i = 0; i < n2; i++) sizes.push(ZAKO_SIZE[sz]); });
   const share = sizes.reduce((x, y) => x + y, 0);
-  const totalHP = Math.round(base.foeHP * base.foes * 10 / (BATTLE_TURNS[s] || 10));
-  const totalAtk = Math.max(1, Math.round(base.foeAtk * base.foes * (BATTLE_TURNS[s] || 10) / 10 * 0.25));
+  /*
+    ⚠️⚠️ base.foes（主の体数）を掛けないこと。
+      主のHPは「一体あたり」に直したのに、雑魚だけ古い式のままだった。
+      ★12では四倍硬い雑魚と10ターン戦うことになり、倒しきれないまま
+      殴られ続けて毎回全滅する（実際そうなっていた）。
+    ★ 雑魚も一体あたり。体数ぶんはここで掛ける。
+  */
+  const totalHP = Math.round(base.foeHP * sizes.length * 10 / (BATTLE_TURNS[s] || 10));
+  /*
+    ⚠️⚠️ 道中でも倒れる余地を残すこと。削られるだけで死なないなら、
+      泉も罠も意味が無く、主の前でHPを気にする理由も消える。
+    ★ 一戦で最大HPの30%。実測で、この値のとき道中の全滅率が13%になる。
+      0.25 では全滅率0%、0.50 では52%（道中で半分落ちるのは重すぎる）。
+  */
+  /*
+    雑魚の総攻撃。
+    ⚠️⚠️ 主の攻撃力から導かないこと。主の値は★ごとのターン数（10〜88）で
+      配分されているので、10ターンに直すと★ごとに六倍も開く
+      （実測：★2で最大HPの100%、★9で17%）。
+    ★ こちらの最大HPの割合から直接決める。どの★でも同じ重みになる。
+      一戦（10ターン）で最大HPの30% ―― この値で道中の全滅率が13%。
+    ⚠️ 殴らない手が3〜5割あるので、実際に受けるのはこれより軽い。
+  */
+  const S0 = statsOf(step || 0);
+  const totalAtk = Math.max(1, Math.round(S0.maxHP * ZAKO_ATK_K / 10));
   return {
     ...base, star: s, zako: true,
     /*
@@ -5044,7 +5119,13 @@ function majorEffect(state, card, ctx) {
       P.suitTurns = (P.suitTurns || 0) + 1;
     }
     if (fx.halveRank) P.halve = true;
+    if (fx.allRev) P.allRev = true;
     if (fx.dmgMul) P.dmgMul = fx.dmgMul;
+    /* ⚠️ 力の三つの性質。一つでも落とすと、ただの倍率札に戻る */
+    if (fx.noMajor) P.noMajor = true;
+    if (fx.pierce) P.pierce = true;
+    if (fx.unrot) P.unrot = true;
+    if (fx.wipeAfter) P.wipeAfter = true;
     if (fx.acts) P.acts = fx.acts;
     if (fx.skipFoe) P.skipFoe += fx.skipFoe;
     if (n === 0) P.fool = true;
@@ -5058,9 +5139,9 @@ function majorEffect(state, card, ctx) {
     else if (n === 6) state.fx.lovers += T;
     else if (n === 9) state.fx.hermit += T;
     else if (n === 11) state.fx.justice += T;
-    else if (n === 17) state.fx.star += T;
-    else if (n === 18) state.fx.moon += T;
-    else if (n === 19) state.fx.sun += T;
+    else if (n === 17) state.fx.star += MAJOR_FX_LONG;
+    else if (n === 18) state.fx.moon += MAJOR_FX_LONG;
+    else if (n === 19) state.fx.sun += MAJOR_FX_LONG;
   } else if (n === 16) {
     /* 塔。⚠️ 自傷は最大HPの割合。現在HPだと、瀕死のとき効果がほぼ消える */
     state.foes.forEach((f, i) => {
@@ -5079,25 +5160,26 @@ function majorEffect(state, card, ctx) {
     out.self = Math.floor(state.hp * fx.selfMaxPct);
     state.hp -= out.self;
   } else if (n === 20) {
-    /* ⚠️ 敵ごとに計算する。現在HPが違うので、一律の値を配ると割合にならない */
-    let worst = 0;
-    state.foes.forEach((f, i) => {
-      if (f.hp <= 0) return;
-      const d = judgementDamage(ctx.drawn, ctx.cards, ctx.star, f.hp);
-      f.hp -= d; worst = Math.max(worst, d);
-      out.hits = (out.hits || []).concat([{ i, d }]);
-    });
     /*
-      逆位置の自傷。
-      ⚠️⚠️ 敵に与えた量をそのまま自分に返さないこと。
-        敵のHPは桁が違う（★8で1体10万超）ので、引いた瞬間に即死する。
-        実測では、高い★の負けの9割がこれだった。
-      ★ 「同じ割合」を自分に適用する。自分の現在HPの 進行度×0.22。
-        割合なので0に漸近し、桁の違いに巻き込まれない。
+      審判。
+      ⚠️⚠️ 現在HP基準にしないこと。塔（現在HPの25%）と性格が丸かぶりになる。
+        どちらも「目の前の敵を割合で削る全体攻撃」になってしまう。
+      ★ 最大HPの割合で裁く。削れた敵にも満額入るので、
+        「削り切れない相手を強引に落とす」札になる ―― 塔とは別の軸。
+      ⚠️ 逆位置は与えず、自分のHPが半分になる。
+        裁かれる側が入れ替わる ―― 与えるか、裁かれるか。中間が無い。
     */
     if (rev) {
-      const d = judgementDamage(ctx.drawn, ctx.cards, ctx.star, state.hp);
+      const d = Math.floor(state.hp / 2);
       out.self = d; state.hp -= d;
+      /* ⚠️ 敵には何も起きない。hits を空のままにすること */
+    } else {
+      state.foes.forEach((f, i) => {
+        if (f.hp <= 0) return;
+        const d = judgementDamage(ctx.drawn, ctx.cards, ctx.star, f.max);
+        f.hp -= d;
+        out.hits = (out.hits || []).concat([{ i, d }]);
+      });
     }
   }
   return out;
@@ -5144,6 +5226,11 @@ const BOSS_FORMS = [
 ];
 /* ⚠️ 復活は3ターン後・全快・回数の上限なし。主を倒せば終わるので詰まない */
 const BOSS_REVIVE_TURNS = 3;
+/*
+  ⚠️ 敵HPの全体倍率。表は「体数＝BATTLE_SHAPE の値」で測ってあるので、
+    編成の体数に合わせたぶんを均す。1.0 から動かすときは勝率を測り直すこと。
+*/
+const BOSS_HP_K = 1.0;
 /*
   【主の特殊行動】
   ★ 主のHPが 75% / 50% / 25% を割ったとき、編成ごとに一度だけ起きる。
@@ -5274,8 +5361,17 @@ function battleSetup(star, step, name) {
   const sizes = [];
   form.parts.forEach(([sz, n2]) => { for (let i = 0; i < n2; i++) sizes.push(BOSS_SIZE[sz]); });
   const share = sizes.reduce((x, y) => x + y, 0);
-  const totalHP = (BATTLE_FOE_HP[s] || 236) * shape.foes;
-  const totalAtk = (BATTLE_ATK[s] || 3) * shape.foes;
+  /*
+    ⚠️⚠️ 総HPを体数で掛けないこと。棒の総量を一定にしたので、
+      こちらの総火力は体数でほとんど変わらない。掛けると、
+      体数が多い編成だけ倒すのに何倍もかかる。
+    ★ 一体あたりのHPは体数によらず一定。実測でも、規定ターンで倒せる
+      総HPの倍率は体数にほぼ比例していた（1体0.12 / 4体0.47）。
+    ⚠️ 表の値は「★ごとの一体ぶん」として使う。
+  */
+  const totalHP = (BATTLE_FOE_HP[s] || 236) * sizes.length * BOSS_HP_K;
+  /* ⚠️ 攻撃も一体あたり。体数が増えれば総量も増える */
+  const totalAtk = (BATTLE_ATK[s] || 3) * sizes.length;
   /*
     主の番号。
     ⚠️⚠️ 特大のいない編成（②③④）には主を置かないこと。
@@ -5302,8 +5398,12 @@ function battleSetup(star, step, name) {
     foes: sizes.length,
     /* ⚠️ 体ごとの値。総量は★の表のまま、大きさの比で配る */
     /* ⚠️ 体数の補正を掛ける。掛けないと、体数で勝率が0%〜100%に振れる（実測） */
-    foeHPList: sizes.map((k) =>
-      Math.max(1, Math.round(totalHP * foesHpK(s, sizes.length) * k / share))),
+    /*
+      ⚠️⚠️ 体数の補正はもう掛けない。棒の総量を一定にしたので、
+        体数で難度が変わらなくなった。補正を残すと、1体の敵が
+        HP5%の張りぼてになる（実際そうなっていた）。
+    */
+    foeHPList: sizes.map((k) => Math.max(1, Math.round(totalHP * k / share))),
     foeAtkList: sizes.map((k) => Math.max(0.1, totalAtk * k / share)),
     foeHP: Math.max(1, Math.round(totalHP / sizes.length)),
     /*
@@ -5352,15 +5452,45 @@ function battleApply(state, card) {
     ⚠️ 階位は「1つ上げる → 半分 → 反転／固定」の順で通す。
   */
   const noPenalty = state.fx && state.fx.hiero > 0;
+  /*
+    吊るされた男。
+    ⚠️⚠️ 階位の反転だけでは効果がゼロになる。階段の平均は1.00なので、
+      ひっくり返しても全体の火力は動かない。見た目が変わるだけの札だった。
+    ★ 逆位置が有利になる。弱化（×0.6）が消えるだけでなく、×1.2 の強化に変わる。
+      逆さに吊られた者の視点 ―― 上下が入れ替わるのだから、逆こそ正しい。
+    ⚠️ 正位置は据え置き。両方上げると、ただの強化札になって性格が消える。
+    ⚠️ 平均が 0.80 → 1.10 に上がる。勝率が動くので、触ったら測り直すこと。
+  */
+  /*
+    吊るされた男。
+    ★ 階位が上下逆になるうえ、正逆も入れ替わる。
+      逆位置だった札が正位置になり、その札は ×2.0 で働く。
+      逆さ吊りの視点 ―― 逆に見えていたものが正しくなる。
+    ⚠️ ×2.5 にすると、代償の無い札が力（×4・代償あり）を超える。
+  */
+  const upside = state.fx && state.fx.hanged > 0;
   /* ⚠️ 階位は札のまま読む。変換は配る時点で済んでいる */
   const shifted = card;
   const all = (state.fx && state.fx.death > 0 ? 2 : 1) * (state.fx && state.fx.temperance > 0 ? 0.5 : 1);
-  const my = (state.fx && state.fx.sun > 0 ? 1.4 : 1) * ((state.next && state.next.dmgMul) || 1);
+  /* ⚠️ 力の倍率は攻撃だけでなく、回復にも貨幣にも掛かる（すべての効果が4倍） */
+  const might = (state.next && state.next.dmgMul) || 1;
+  /* ⚠️ 恋人は棒と剣だけを強くする。聖杯や貨幣には乗せない（攻め手の札なので） */
+  const loversMul = (state.fx && state.fx.lovers > 0
+    && (suit === "swords" || suit === "wands")) ? 1.5 : 1;
+  const my = (state.fx && state.fx.sun > 0 ? 1.4 : 1) * might * loversMul;
   /*
     ⚠️⚠️ ここで rankModeOf を掛けないこと。輪と吊るされた男は、
       配る時点で札の階位そのものを差し替えてある。二重に掛かる。
   */
-  const r = ((rev && !noPenalty) ? BATTLE.revAtk : 1) * rankMultOf(shifted, "normal") * all * my;
+  /*
+    ⚠️⚠️ 吊るされた男が効いているあいだは、正逆が入れ替わる。
+      元が逆位置の札 → 正位置として扱い、さらに ×2.0
+      元が正位置の札 → 逆位置として扱う（弱まる）
+  */
+  const r = (upside
+    ? (rev ? BATTLE.hangedRev : BATTLE.revAtk)
+    : (rev ? (noPenalty ? 1 : BATTLE.revAtk) : 1)
+  ) * rankMultOf(shifted, "normal") * all * my;
   const out = { kind: suit, rev, hits: [], heal: 0, self: 0, buff: 0 };
   const alive = () => state.foes.map((f, i) => ({ f, i })).filter((x) => x.f.hp > 0);
   /*
@@ -5384,13 +5514,32 @@ function battleApply(state, card) {
     const t = alive().sort((a, b) => a.f.hp - b.f.hp)[0];
     if (t) {
       const res = foeResistOf(t.i, state.foes.length);
+      /*
+        ⚠️⚠️ 剣と棒の役割を分けること。
+          棒は全体に効くので、体数が多いほど強い。剣は一体にしか当たらない。
+          このままだと剣が常に見劣りする（実際そうなっていた）。
+        ★ 剣は「主を斬る刃」にする。主には強く当たり、構えも半分しか効かない。
+          棒は雑魚を薙ぐ、剣は主を落とす ―― 役割が分かれる。
+      */
       /* ⚠️ 敵の防御はここで効かせる。構えた相手には通りが悪い */
       /* ⚠️ 庇われている主には、お供が生きているあいだ通りが悪い */
       const shield = (state.bossGuard > 0 && t.i === state.bossAt
         && state.foes.some((f2, j) => j !== state.bossAt && f2.hp > 0)) ? 0.5 : 0;
-      const gd = (1 - ((state.foeGuard && state.foeGuard[t.i]) || 0)) * (1 - shield);
+      /* ⚠️ 剣は構えを半分しか受けない。刃は隙間を縫う */
+      /* ⚠️ 力が効いていれば構えを完全に貫く。剣は元から半分しか受けない */
+      /* ⚠️ 月が効いているあいだも構えを貫く。力（1ターン）と違い4ターン続く */
+      const pierce = (state.next && state.next.pierce) || (state.fx && state.fx.moon > 0);
+      /*
+        ★ 吊るされた男のあいだ、正位置になった札（＝元が逆位置）は
+          耐性も構えも無視する。逆さから見れば守りの隙間が見える。
+      */
+      const seeThrough = upside && rev;
+      const gd = (pierce || seeThrough) ? 1
+        : (1 - ((state.foeGuard && state.foeGuard[t.i]) || 0) * 0.5) * (1 - shield);
+      /* ⚠️ 残り一体なら特効。倒しきる一撃が重くなる */
+      const vsBoss = (alive().length === 1) ? BATTLE.swordSolo : 1;
       const d = Math.round(S.power * CARD_COEF.swords * state.mult * r * cm
-        * (1 - defRate(state.foeDefP || 0)) * (1 - res.phys) * gd);
+        * (1 - defRate(state.foeDefP || 0)) * (seeThrough ? 1 : (1 - res.phys)) * gd * vsBoss);
       t.f.hp -= d; out.hits.push({ i: t.i, d });
     }
     /* ⚠️ 現在HPの割合。階位が高いほど反動も大きい */
@@ -5411,15 +5560,26 @@ function battleApply(state, card) {
       ? Math.round(state.hp * 0.044 * rankMultOf(shifted, "normal") * thorn)
       : 0;
   } else if (suit === "wands") {
-    /* ⚠️ 相手が1体なら威力を上げる。全体攻撃の利点が消えるため */
-    const solo = state.foes.length === 1 ? BATTLE.wandSolo : 1;
+    /*
+      棒の総量。
+      ⚠️⚠️ 体数ぶん増やさないこと。体数が増えるほど棒が強くなり、
+        同じ総HPでも勝率が 1体0% ／ 4体86% と振れる（実測）。
+        その帳尻をHPで合わせていたので、1体の敵がHP5%の張りぼてになっていた。
+      ★ 総量を一定にする。生きている体数で割り、少し戻す（散らす利は残す）。
+        こうすると体数で難度が変わらず、HPの補正も要らなくなる。
+      ⚠️ 単体では剣に譲ること。全体攻撃を一体に当てるのは本来の使い方ではない。
+    */
+    const live = Math.max(1, alive().length);
+    const spread = BATTLE.wandSpread(live);
     alive().forEach((x) => {
       const res = foeResistOf(x.i, state.foes.length);
-      const gd = 1 - ((state.foeGuard && state.foeGuard[x.i]) || 0);
+      const seeThroughW = upside && rev;
+      const gd = ((state.next && state.next.pierce) || (state.fx && state.fx.moon > 0) || seeThroughW)
+        ? 1 : (1 - ((state.foeGuard && state.foeGuard[x.i]) || 0));
       /* ⚠️ 起き上がった敵には特攻。棒だけに乗せる */
       const rv = x.f.revived ? BATTLE.wandVsRevived : 1;
-      const d = Math.round(S.mind * CARD_COEF.wands * solo * state.mult * r * cm
-        * (1 - defRate(state.foeDefM || 0)) * (1 - res.mag) * gd * rv);
+      const d = Math.round(S.mind * CARD_COEF.wands * spread * state.mult * r * cm
+        * (1 - defRate(state.foeDefM || 0)) * (seeThroughW ? 1 : (1 - res.mag)) * gd * rv);
       x.f.hp -= d; out.hits.push({ i: x.i, d });
     });
     /* ⚠️ 棒は全体なので、凶刃に構えた相手が一体でもいれば棘を受ける */
@@ -5430,9 +5590,19 @@ function battleApply(state, card) {
       ? Math.round(state.hp * 0.032 * rankMultOf(shifted, "normal") * thornW)
       : 0;
   } else if (suit === "cups") {
-    /* ⚠️ 回復も精神から。固定値だと、育つほど回復が置いていかれる */
-    out.heal = Math.round(S.spirit * CARD_COEF.cups * rankMultOf(shifted, "normal")
-      * (rev ? BATTLE.revHeal : 1));
+    /*
+      ⚠️ 回復も精神から。固定値だと、育つほど回復が置いていかれる。
+      ★ 正義が効いていれば回復量が1.5倍になる。
+      ⚠️⚠️ 溢れた分を捨てないこと。満タンで引いた聖杯が無駄にならず、
+        むしろ溢れたぶんほど強い一撃になる ―― それが正義の顔。
+    */
+    const just = state.fx && state.fx.justice > 0;
+    const raw = Math.round(S.spirit * CARD_COEF.cups * rankMultOf(shifted, "normal")
+      * (rev ? BATTLE.revHeal : 1) * (just ? 1.5 : 1) * might);
+    const room = Math.max(0, S.maxHP - state.hp);
+    out.heal = Math.min(room, raw);
+    /* ⚠️ 溢れた量は別に持つ。清算で4倍のダメージに化ける */
+    out.healOver = Math.max(0, raw - room);
   } else if (suit === "pentacles") {
     /*
       ⚠️⚠️ 倍率に上限を置くこと。長い戦いでは貨幣が何十枚も来るので、
@@ -5442,7 +5612,7 @@ function battleApply(state, card) {
       ⚠️ 階位を掛けること。Aの貨幣とZの貨幣が同じでは、階位の意味が消える。
     */
     const step = BATTLE.coinUp * rankMultOf(shifted, "normal");
-    state.mult = Math.min(BATTLE.multCap, state.mult + step);
+    state.mult = Math.min(BATTLE.multCap, state.mult + step * might);
     state.take += BATTLE.coinTake;
     out.buff = step;
     /* ⚠️ 上限に達したら、そのことを出す。増えていないのに数字が出ると嘘になる */
@@ -5472,30 +5642,66 @@ function battleApply(state, card) {
   ⚠️⚠️ ここを変えたら BATTLE_FOE_HP と BATTLE_ATK を必ず測り直すこと。
     1ターンの平均与ダメが動くと、敵HPの前提が崩れる。
 */
+/*
+  1ターンに大アルカナが出る確率。
+  ⚠️⚠️ ★によって変えないこと。枚数の多い★ほど出やすいと、
+    終盤は常に効果が乗った状態になり、引いた喜びが消える。
+  ★ 63%。★1の自然な出現率に全★を揃えた値。二回に一回では出なさすぎる。
+*/
+const MAJOR_RATE = 0.63;
 const MAJOR_FX_TURNS = 3;
+/* ⚠️ 星・月・太陽だけ4ターン。効果が穏やかなぶん、長く効かせて釣り合わせる */
+const MAJOR_FX_LONG = 4;
 const MAJOR_FX = {
   0:  { key: "fool",     kind: "next",  note: "1枚目と同じ札に全部揃う" },
   1:  { key: "magician", kind: "next",  suit: "wands",     shiftUp: true },
   2:  { key: "priestess",kind: "next",  suit: "cups",      shiftUp: true },
   3:  { key: "empress",  kind: "next",  suit: "pentacles", shiftUp: true },
   4:  { key: "emperor",  kind: "next",  skipFoe: 1 },
-  5:  { key: "hiero",    kind: "last",  noRevPenalty: true },
-  6:  { key: "lovers",   kind: "last",  healByDamage: 1.0 },
+  /* ⚠️ 「弱まりを受けない」では地味。そもそも逆位置が出なくなる */
+  5:  { key: "hiero",    kind: "last",  allUpright: true },
+  /* ⚠️ 回復するだけでは薄い。攻め手そのものを強くして、回復量も一緒に上げる */
+  6:  { key: "lovers",   kind: "last",  healByDamage: 1.0, atkSuitMul: 1.5 },
   7:  { key: "chariot",  kind: "next",  suit: "swords",    shiftUp: true },
-  8:  { key: "strength", kind: "next",  dmgMul: 2.0 },
+  /*
+    力。
+    ⚠️⚠️ 「2倍」だけでは弱い。3ターン続く太陽（+40%×3）に見劣りする。
+      一度きりの札は、その一回で場を塗り替えるくらいでちょうどよい。
+    ★ 次のターンは小アルカナだけを引き、すべてが4倍で働く。
+      防御を貫き、腐らされた札まで動く ―― 力ずくで通す一ターン。
+    ⚠️ 大アルカナは出ない。効果札まで4倍になると、何が起きたか追えない。
+    ⚠️⚠️ ×6では突出していた。★12で10枚×6倍＝60枚ぶんを一度に出し、
+      しかも代償の「継続全消し」は、何も効いていないときに引けば無傷になる。
+      一戦の大半は何も効いていないので、実質ノーリスクの大当たりだった。
+    ★ ×4。40枚ぶんで、世界（3回行動＝30枚ぶん）と並ぶ。
+    ⚠️ 代償は「その次のターン、大アルカナの効果がすべて消える」。
+      休ませるのではない。低いHPで引いたとき敵に一方的に殴られて死に札になる。
+  */
+  8:  { key: "strength", kind: "next",  dmgMul: 6.0, noMajor: true,
+        pierce: true, unrot: true, wipeAfter: true },
   9:  { key: "hermit",   kind: "last",  blockFoeHeal: true },
   10: { key: "wheel",    kind: "last",  rankMode: "fixed10" },
   11: { key: "justice",  kind: "last",  damageByHeal: 1.0 },
   12: { key: "hanged",   kind: "last",  rankMode: "reversed" },
   13: { key: "death",    kind: "last",  allMul: 2.0,  clears: "temperance" },
   14: { key: "temperance", kind: "last", allMul: 0.5, clears: "death" },
-  15: { key: "devil",    kind: "next",  halveRank: true },
+  /* ⚠️ 階位を半分にするだけでは弱い。すべて逆位置にして二重の枷にする */
+  15: { key: "devil",    kind: "next",  halveRank: true, allRev: true },
   16: { key: "tower",    kind: "now",   foePctAll: 0.25, selfMaxPct: 0.25 },
   17: { key: "star",     kind: "last",  regenPct: 0.12 },
   18: { key: "moon",     kind: "last",  foeAtkMul: 0.6 },
   19: { key: "sun",      kind: "last",  myAtkMul: 1.4 },
   20: { key: "judgement",kind: "now",   judgement: true },
-  21: { key: "world",    kind: "next",  acts: 2 },
+  /*
+    世界。
+    ★ 引いた札で三度行動する。手数そのものが三倍になる。
+    ⚠️⚠️ 皇帝との違いを保つこと。
+      皇帝 … 敵の手番を飛ばす。殴られずに一巡ぶん得をする
+      世界 … 自分の手が三度続く。敵の手番はそのまま来る
+      「攻めが増える」のと「守りが要らなくなる」の違い。
+    ⚠️ 2回では皇帝と差が出ない。3回にして、攻めに寄せた札にする。
+  */
+  21: { key: "world",    kind: "next",  acts: 3 },
 };
 /*
   敵の回復。
@@ -5506,6 +5712,8 @@ const MAJOR_FX = {
   ⚠️ ★4以下には持たせない。序盤から回復があると、ただ戦闘が長くなるだけ。
 */
 const FOE_HEAL_STAR = 5, FOE_HEAL_PCT = 0.12, FOE_HEAL_AT = 0.5;
+/* ⚠️ 一体が回復できる回数。無制限だと、割合回復で永久に粘られる */
+const FOE_HEAL_MAX = 3;
 
 /*
   【八つのステータス】
@@ -5667,8 +5875,13 @@ function rotCountOf(star, cards, isZako) {
 
 const FOE_ROTA_BY_TIER = {
   /* ★1〜3。⚠️ 轟音を入れない。序盤から倍率を削ると、積む楽しみが消える */
+  /*
+    ⚠️⚠️ 構えを多用しないこと。殴ってこない手なので、続くと戦いが停滞する。
+      平静の段には置かない ―― 余裕のある相手が守りを固めるのは筋が通らない。
+    ★ 一巡に一つまで。攻勢か死力のどちらかに置く。
+  */
   low: {
-    calm:  ["hit", "hit", "guard", "hit", "combo"],
+    calm:  ["hit", "hit", "combo", "hit", "combo"],
     press: ["hit", "combo", "wind", "heavy", "hit", "guardHi"],
     last:  ["combo", "wind", "heavy", "hit", "combo", "wind", "heavy"],
   },
@@ -5685,10 +5898,15 @@ const FOE_ROTA_BY_TIER = {
       殴らない手の総量は同じでも、二種類あれば読み応えが出る。
     ⚠️ そのぶん殴る回は連撃と大技に寄せる。当たれば一気に持っていかれる。
   */
+  /*
+    ⚠️⚠️ 高い★にも構えを入れること。抜けていると、一体だけの相手が
+      殴るか妨害するかしかせず、守る素振りを見せない。
+    ⚠️ 段階ごとに違う構えを置く。同じ構えばかりだと三段に分けた意味が消える。
+  */
   high: {
-    calm:  ["hit", "roar", "rot", "despair"],
-    press: ["combo", "wind", "heavy", "roar", "rot", "despair", "wind", "heavy"],
-    last:  ["wind", "heavy", "roar", "rot", "wind", "heavy", "despair", "combo"],
+    calm:  ["hit", "roar", "combo", "despair"],
+    press: ["combo", "wind", "heavy", "guardEdge", "rot", "despair", "wind", "heavy"],
+    last:  ["wind", "heavy", "roar", "combo", "wind", "heavy", "despair", "combo"],
   },
 };
 /* ⚠️ ★12まである。帯の境目も伸ばすこと */
@@ -6220,6 +6438,15 @@ function buildTownMap(pref, area, seed, mapNo) {
     /* ⚠️ 宝箱と、ただの行き止まりに分ける。全部が宝箱だと寄る判断が要らない */
     n.kind = rnd() < 0.45 ? "box" : "spot";
   });
+  /*
+    ⚠️⚠️ 袋小路から出る道を必ず断つこと。
+      term を立てたあとに、別の処理がその節へ道を張ることがある。
+      残ると「袋小路に入ったのに、そこから主へ進める」ことになり、
+      瞬間移動したように見える（実測で1200盤中140件）。
+    ★ 終わりの節は next を空にする。ここが最後の砦。
+  */
+  nodes.forEach((n) => { if (n.term) n.next = []; });
+
   /* 関所。⚠️ 中ほどの環に一つだけ。二枚引かせる場所 */
   const mids = nodes.filter((n) => !n.term && n.kind === "road" && hexDist(n.q, n.r) === 2);
   if (mids.length) mids[Math.floor(rnd() * mids.length)].kind = "gate";
@@ -6523,6 +6750,7 @@ const ADV_I18N = {
     toPrefMap: "県の地図へ", toWards: "区をえらぶ",
     progress: (n, all) => `中心から ${n} / ${all} 環め`,
     deadEnd: "行き止まりでした。ここで旅は終わりです。",
+    cannotGo: "道が続いていなかった。",
     viewDrag: "地図は指でなぞると動かせます。一度に見えるのは三マスぶんです。",
     isoLegend: "緑＝名所、金＝宝箱、青＝関所、★＝主。灰の台は何もない道です",
     pickWard: "どの区を歩きますか。", wards: (n) => `${n}区`,
@@ -6534,24 +6762,50 @@ const ADV_I18N = {
     dbgStep: (n, all) => `${n}/${all}段 `,
     foeWind: "力を溜めている", foeHeavy: "渾身の一撃", foeCombo: "連撃",
     foeRoar: "戦慄の轟音",
+    foeRoarFail: "轟音は届かなかった",
     foeRot: "腐食攻撃",
     foeGuardHi: "剛防御", foeGuardEdge: "凶刃防御",
     /* ⚠️ 二行にまたがる定義の途中に差し込まないこと。別の表が壊れる */
     spName: { rage: "猛り", sync: "連携", call: "招集", howl: "群れの咆哮",
       shield: "守護", curse: "呪詛", command: "号令", drain: "吸収" },
     fxHelp: {
+    majorList: "大アルカナ22枚の効果",
+    majorHelp: {
+      0: "次のターン、1枚目と同じ札に全部揃う",
+      1: "次のターン、棒だけを引く。階位が3つ上がる",
+      2: "次のターン、聖杯だけを引く。階位が3つ上がる",
+      3: "次のターン、貨幣だけを引く。階位が3つ上がる。そのあいだ轟音で倍率が削られない",
+      4: "次のターン、敵の手番を飛ばす",
+      5: "3ターン、逆位置が出ない。大アルカナが必ず1枚来る",
+      6: "3ターン、棒と剣が1.5倍。与えた分だけターンの終わりに回復",
+      7: "次のターン、剣だけを引く。階位が3つ上がる",
+      8: "次のターン、小アルカナだけを4倍で引く。防御を貫き、腐った札も動く。その次は継続効果がすべて消える",
+      9: "3ターン、敵の妨害はすべて無駄行動になる（敵は何もできない）",
+      10: "3ターン、引く札の階位がすべて10に。敵の攻撃もすべて10ダメージになる",
+      11: "3ターン、聖杯の回復1.5倍。回復した分の2倍を敵へ（溢れた分は4倍）",
+      12: "3ターン、階位が上下逆＋正逆も反転。正位置になった札は2倍で、敵の耐性も構えも無視。敵の回復は本来の12%のダメージに変わる",
+      13: "3ターン、与える量も受ける量も2倍（節制で解ける）",
+      14: "3ターン、与える量も受ける量も半分（死神で解ける）",
+      15: "次のターン、階位が半分（切り上げ）になり、すべて逆位置になる",
+      16: "敵全体の現在HPを25%削る。自分も現在HPの25%を失う",
+      17: "4ターン、ターンの初めに最大HPの12%を回復。腐食を受けない",
+      18: "4ターン、敵の攻撃が40%弱まる。敵の構えを貫く",
+      19: "4ターン、自分の攻撃が40%強まる。轟音と波動は通常攻撃に変わる",
+      20: "敵全体の最大HP×進行度×22%。逆位置なら自分のHPが半分（敵には無効）",
+      21: "次のターン、引いた札で3回行動する（敵の手番は来る）",
+    },
       despair: "大アルカナが山から外れています。効果札が来ません。",
-      hiero: "逆位置の弱まりを受けません。",
-      lovers: "そのターンに与えた分だけ、終わりに回復します。",
-      hermit: "敵が回復できません。",
-      wheel: "引く札の階位がすべて10になります。",
-      justice: "そのターンに回復した分だけ、終わりに敵へ与えます。",
-      hanged: "階位の強弱が上下逆になります。Aが最弱、2が最強。",
+      hiero: "逆位置が出ません。大アルカナが必ず1枚来ます。",
+      lovers: "棒と剣が1.5倍。そのターンに与えた分だけ、終わりに回復します。",
+      hermit: "敵の妨害はすべて無駄行動に。敵はその手番で何もできません。",
+      wheel: "引く札の階位がすべて10に。敵の攻撃もすべて10ダメージになります。",
+      justice: "聖杯の回復が1.5倍。回復した分の2倍を敵へ。満タンで溢れた分は4倍。",
+      hanged: "階位が上下逆に。正位置になった札は2倍で、耐性も構えも無視。敵の回復は傷に変わります。",
       death: "与える量も受ける量も、すべて2倍になります。",
       temperance: "与える量も受ける量も、すべて半分になります。",
-      star: "ターンの初めに、最大HPの12%を回復します。",
-      moon: "敵の攻撃が40%弱まります。",
-      sun: "こちらの攻撃が40%強まります。",
+      star: "ターンの初めに最大HPの12%を回復。腐食を受けません。",
+      moon: "敵の攻撃が40%弱まり、敵の構えを貫きます。",
+      sun: "こちらの攻撃が40%強まり、轟音と波動は通常攻撃に変わります。",
     },
     foeRevive: "お供が起き上がった", bossTag: "主",
     foeDespair: "絶望の波動",
@@ -6559,6 +6813,7 @@ const ADV_I18N = {
     buffCap: "上限",
     resultDead: "道半ばで倒れた",
     resultConquer: "制覇した",
+    toStages: "制覇する",
     inBattle: "戦闘中",
     logTitle: (n) => `移動履歴（${n}）`,
     trapped: (n) => `罠だった。${n} 受けた。`,
@@ -6578,6 +6833,7 @@ const ADV_I18N = {
     btTurn: (n) => `${n}ターン目`,
     btFoesLeft: (n) => `残り${n}体`,
     btWin: "打ち倒した", btLose: "倒れた", btBack: "地図へ戻る",
+    toResult: "結果を見る",
     walkingOn: "道は一本です。そのまま進みます。",
     walkedOn: "道が一本だったので、そのまま進んだ。",
     weatherName: { clear: "晴れ", cloud: "曇り", rain: "雨", snow: "雪", fog: "霧" },
@@ -6629,6 +6885,7 @@ const ADV_I18N = {
     toPrefMap: "Back to the prefecture", toWards: "Choose a ward",
     progress: (n, all) => `ring ${n} of ${all}`,
     deadEnd: "A dead end. The journey ends here.",
+    cannotGo: "The road did not hold.",
     viewDrag: "Drag the map to look around. About three tiles fit on screen.",
     isoLegend: "green: a place, gold: a chest, blue: a gate, star: the master. Grey tiles are empty road",
     pickWard: "Which ward will you walk?", wards: (n) => `${n} wards`,
@@ -6640,18 +6897,44 @@ const ADV_I18N = {
     dbgStep: (n, all) => `step ${n}/${all} `,
     foeWind: "Gathering force", foeHeavy: "A crushing blow", foeCombo: "A flurry",
     foeRoar: "A terrible roar",
+    foeRoarFail: "The roar found nothing to strip",
     foeRot: "A corroding strike",
     foeGuardHi: "Braced hard", foeGuardEdge: "Bladed stance",
     spName: { rage: "Fury", sync: "In unison", call: "Summons", howl: "Pack howl",
       shield: "Guarded", curse: "Curse", command: "Command", drain: "Drain" },
     fxHelp: {
+    majorList: "The 22 Major Arcana",
+    majorHelp: {
+      0: "Next turn, every card matches the first one drawn",
+      1: "Next turn, wands only. Ranks rise by three",
+      2: "Next turn, cups only. Ranks rise by three",
+      3: "Next turn, pentacles only, ranks rise by three, and roars cannot strip your multiplier",
+      4: "Next turn, the enemy loses its turn",
+      5: "3 turns: no reversed cards, and one Major Arcana is guaranteed each turn",
+      6: "3 turns: swords and wands x1.5, and heal for the damage dealt",
+      7: "Next turn, swords only. Ranks rise by three",
+      8: "Next turn: minors only, x4, guards pierced, rotten cards act. The turn after wipes all lasting effects",
+      9: "3 turns: enemy interference is wasted entirely",
+      10: "3 turns: every card counts as rank 10, and every enemy hit deals exactly 10",
+      11: "3 turns: cups heal 1.5x; deal double what you healed (quadruple for overflow)",
+      12: "3 turns: ranks and orientation invert; newly upright cards deal 2x, ignoring resistances and stances. Enemy healing becomes damage (12% of the amount)",
+      13: "3 turns: all numbers doubled, given and taken (cleared by Temperance)",
+      14: "3 turns: all numbers halved, given and taken (cleared by Death)",
+      15: "Next turn, ranks halve (rounded up) and every card is reversed",
+      16: "Strip 25% of every enemy's current HP. You lose 25% of yours",
+      17: "4 turns: recover 12% of max HP each turn; immune to corrosion",
+      18: "4 turns: enemy attacks are 40% weaker; enemy stances are pierced",
+      19: "4 turns: your attacks are 40% stronger; roars and waves become plain attacks",
+      20: "Enemy max HP x progress x 22%. Reversed: your HP is halved, enemies untouched",
+      21: "Next turn, act three times with the cards you draw (the enemy still acts)",
+    },
       despair: "Major Arcana are removed from the deck.",
-      hiero: "Reversed cards are not weakened.",
+      hiero: "No reversed cards. One Major Arcana is guaranteed each turn.",
       lovers: "Heal for the damage you dealt this turn.",
-      hermit: "Enemies cannot heal.",
-      wheel: "Every card counts as rank 10.",
-      justice: "Deal damage equal to what you healed this turn.",
-      hanged: "Ranks are inverted. Ace is weakest, two is strongest.",
+      hermit: "Enemy interference fails — no healing, roars, waves or stances.",
+      wheel: "Every card counts as rank 10; every enemy hit deals exactly 10.",
+      justice: "Cups heal 1.5x. Deal double what you healed — quadruple for overflow.",
+      hanged: "Ranks invert — ace weakest, two strongest. Reversed cards gain 1.2x.",
       death: "All numbers are doubled, given and taken.",
       temperance: "All numbers are halved, given and taken.",
       star: "Recover 12% of max HP at the start of each turn.",
@@ -6664,6 +6947,7 @@ const ADV_I18N = {
     buffCap: "MAX",
     resultDead: "You fell on the road",
     resultConquer: "Conquered",
+    toStages: "Back to the eight",
     inBattle: "In battle",
     logTitle: (n) => `Log (${n})`,
     trapped: (n) => `A trap. Took ${n} damage.`,
@@ -6682,6 +6966,7 @@ const ADV_I18N = {
     btTurn: (n) => `Turn ${n}`,
     btFoesLeft: (n) => `${n} left`,
     btWin: "You struck them down", btLose: "You fell", btBack: "Back to the map",
+    toResult: "See the result",
     walkingOn: "There is only one way on. Walking on...",
     walkedOn: "The road was single. Walked on.",
     weatherName: { clear: "Clear", cloud: "Cloudy", rain: "Rain", snow: "Snow", fog: "Fog" },
@@ -27771,6 +28056,15 @@ const BATTLE_FOE_MS = 720;
 */
 const SPEED_STEPS = [1, 1.5, 2, 3];
 const LS_BT_SPEED = "tarot_bt_speed";
+/* ⚠️ 地図の速さは別に残す。戦闘と同じ鍵にすると、片方を変えたら両方変わる */
+const LS_ADV_SPEED = "tarot_adv_speed";
+function loadAdvSpeed() {
+  try {
+    const v = Number(localStorage.getItem(LS_ADV_SPEED));
+    return SPEED_STEPS.includes(v) ? v : 1;
+  } catch { return 1; }
+}
+function saveAdvSpeed(v) { try { localStorage.setItem(LS_ADV_SPEED, String(v)); } catch (e) { /* 残せなくても遊べる */ } }
 function loadSpeed() {
   try {
     const v = Number(localStorage.getItem(LS_BT_SPEED));
@@ -27779,14 +28073,14 @@ function loadSpeed() {
 }
 function saveSpeed(v) { try { localStorage.setItem(LS_BT_SPEED, String(v)); } catch (e) { /* 残せなくても遊べる */ } }
 
-function BattlePanel({ lang, star, stageName, onEnd, theme, rank, zako, startHP, startMult }) {
+function BattlePanel({ lang, star, stageName, onEnd, theme, rank, zako, startHP, startMult, seed }) {
   const a = advT(lang);
   /* ⚠️ 土地柄を受け取る。無ければ町。戦っている場所が地図と揃うこと */
   const themeKey = theme || "town";
   /* ⚠️ 引数名を step にしないこと。一枚進める関数 step と衝突する */
   /* ⚠️ 雑魚は軽い設定を使う。主と同じ強さだと、主に着く前に消耗しきる */
   const setup = useMemo(() => (zako
-    ? zakoSetup(star, rank || 0, zako)
+    ? zakoSetup(star, rank || 0, zako, seed)
     : battleSetup(star, rank || 0, stageName)),
     [star, rank, zako, stageName]);
   /*
@@ -27864,19 +28158,71 @@ function BattlePanel({ lang, star, stageName, onEnd, theme, rank, zako, startHP,
         （月なら3ターン×10枚で30ターン。当たれば圧勝、塔なら自滅）。
     */
     /* ⚠️ 絶望の波動が効いているあいだは、大アルカナを山から外す */
-    const noMajor = (s.fx && s.fx.despair > 0);
+    /* ⚠️ 力が効いているあいだも大アルカナは出さない */
+    const noMajor = (s.fx && s.fx.despair > 0) || (s.pending && s.pending.noMajor);
+    /*
+      正逆の一括指定。
+      ⚠️⚠️ 引くより前に決めること。あとで宣言すると、引く処理が
+        初期化前の参照で落ち、ボタンを押しても何も起きない（実際そうなった）。
+      ★ 法王 … 逆位置が出ない（3ターン）
+        悪魔 … すべて逆位置（次の1ターン）
+      ⚠️ 両方効いていたら悪魔が勝つ。得な札を重ねて無効化されないため。
+    */
+    const forceRev = P0.allRev ? true : ((s.fx && s.fx.hiero > 0) ? false : null);
+    /* ⚠️ 山は常に小アルカナだけ。大アルカナは下で確率を見て混ぜる */
     const pool = P0.suit
       ? MINOR_LIST.filter((c) => String(c.id).split("-")[0] === P0.suit)
-      : (noMajor ? MINOR_LIST.slice() : [...MAJOR_LIST, ...MINOR_LIST]);
+      : MINOR_LIST.slice();
     const n = P0.cards || setup.cards;
+    /*
+      ⚠️⚠️ 終わらない繰り返しを作らないこと。
+        山が空（スート指定の綴り違いなど）や、大アルカナしか無い山だと、
+        continue のたびに条件が変わらず永遠に回る。画面は固まり、
+        「戦闘を始めるを押しても始まらない」ように見える（実際そうなっていた）。
+      ★ 空なら78枚に戻し、回数にも上限を置く。
+    */
+    /*
+      【大アルカナの出現率】
+      ⚠️⚠️ 78枚の山から自然に引かせないこと。枚数の多い★ほど出やすくなり、
+        ★12では96%＝ほぼ毎ターン出る。常に何かが効いている状態になり、
+        効果の有り無しの差が消える（実測：★1で63%、★4で73%、★8で86%）。
+      ★ ★に関係なく、ターンごとに一定の確率で一枚混ぜる。
+        出ないターンがあるから、来たときに落差が出る。
+      ⚠️ 63%は「★1の自然な出現率」。そこへ全★を揃えた値。
+      ⚠️ 小アルカナは常に小アルカナの山から引く。混ぜる枚数はここで決める。
+    */
+    const safePool = (pool && pool.length) ? pool : [...MAJOR_LIST, ...MINOR_LIST];
     const hand = [];
     let major = false;
+    /*
+      法王。
+      ★ 逆位置が出ないうえ、大アルカナが必ず一枚来る。
+        三ターンのあいだ、効果札が切れない ―― 「秩序を与える札」。
+      ⚠️⚠️ 一枚だけにすること。1ターンに1枚という上限を崩すと、
+        効果が重なりすぎて何が起きたか追えない。
+      ⚠️ 山を絞られているターン（戦車など）や、大アルカナが出ないターン
+        （力・絶望の波動）では保証しない。そちらの指定が先。
+    */
+    /*
+      ⚠️ 法王が効いていれば必ず、そうでなければ MAJOR_RATE の確率で一枚。
+      ⚠️ 山を絞られているターン（戦車など）や、出さない指定（力・絶望の波動）では混ぜない。
+    */
+    if (!noMajor && !P0.suit
+      && ((s.fx && s.fx.hiero > 0) || Math.random() < MAJOR_RATE)) {
+      const m0 = MAJOR_LIST[Math.floor(Math.random() * MAJOR_LIST.length)];
+      hand.push({ ...m0, reversed: (s.fx && s.fx.hiero > 0) ? false : Math.random() < 0.5 });
+      major = true;
+    }
+    let guard = 0;
+    /* ⚠️ 山は小アルカナだけなので、ここで大アルカナが混じることはない */
+    while (hand.length < n && guard++ < n * 40) {
+      const c = safePool[Math.floor(Math.random() * safePool.length)];
+      hand.push({ ...c, reversed: forceRev == null ? Math.random() < 0.5 : forceRev });
+    }
+    /* ⚠️ 上限に当たっても手札は満たすこと。足りないまま進むと、処理が止まる */
     while (hand.length < n) {
-      const c = pool[Math.floor(Math.random() * pool.length)];
-      const isMajor = String(c.id).split("-")[0] === "major";
-      if (isMajor && major) continue;
-      if (isMajor) major = true;
-      hand.push({ ...c, reversed: Math.random() < 0.5 });
+      const c = MINOR_LIST[Math.floor(Math.random() * MINOR_LIST.length)];
+      hand.push({ ...c, reversed: forceRev == null ? Math.random() < 0.5 : forceRev });
     }
     /* ⚠️ 揃えるのは札の顔だけ。正逆は一枚ずつ引き直す（全部同じだと単調になる） */
     let folded = (s.pending && s.pending.fool)
@@ -27887,7 +28233,7 @@ function BattlePanel({ lang, star, stageName, onEnd, theme, rank, zako, startHP,
         枚数ぶんのターン数として積まれる（majorEffect の suitTurns）。
         10枚揃えば10ターン、剣だけが出続ける。
     */
-    const P = s.pending || emptyNext();
+    const P = P0;
     /*
       ⚠️⚠️ 運命の輪と吊るされた男も、ここで札を差し替えること。
         倍率だけ変えると、画面には元の階位が並んだままになり、
@@ -27944,10 +28290,19 @@ function BattlePanel({ lang, star, stageName, onEnd, theme, rank, zako, startHP,
          ...dealt.slice(1)]
       : dealt;
 
-    const rotN = Math.min(sured.length - 1, Math.max(0, s.rotNext || 0));
+    /* ⚠️ 星が効いているあいだは腐食を受けない。回復と合わせて「守りの札」にする */
+    const rotN = (s.fx && s.fx.star > 0)
+      ? 0 : Math.min(sured.length - 1, Math.max(0, s.rotNext || 0));
     const rotIdx = new Set();
-    /* ⚠️ 保証した一枚目は腐らせない。保証した意味が消える */
-    while (rotIdx.size < rotN) {
+    /*
+      ⚠️ 保証した一枚目は腐らせない。保証した意味が消える。
+      ⚠️⚠️ ここにも上限を置くこと。腐らせる枚数が「保証を除いた枚数」を超えると、
+        条件を満たす場所が無くなって永遠に回る。
+    */
+    const rotRoom = sured.length - (guaranteed ? 1 : 0);
+    const rotWant = Math.min(rotN, Math.max(0, rotRoom));
+    let rotGuard = 0;
+    while (rotIdx.size < rotWant && rotGuard++ < sured.length * 40) {
       const k = Math.floor(Math.random() * sured.length);
       if (guaranteed && k === 0) continue;
       rotIdx.add(k);
@@ -27961,6 +28316,15 @@ function BattlePanel({ lang, star, stageName, onEnd, theme, rank, zako, startHP,
       /* ⚠️ 溜まっていたものを、このターンの持ち物として受け取る */
       /* ⚠️ 敵の構えはこのターンの初めに解ける。持ち越すと永久に硬い */
       foeGuard: {}, foeThorn: {},
+      /*
+        力の代償。
+        ⚠️⚠️ 力が効いたターンの「次」で消すこと。力のターン自体で消すと、
+          力を使う前に積んだものが働かないまま消える。
+        ★ 継続をすべて0に。敵が掛けた絶望の波動も一緒に消える。
+        ⚠️ 休ませる形にはしない。低いHPで引いたとき、敵に一方的に殴られて
+          死に札になる。積み上げた継続を失うほうが代償として釣り合う。
+      */
+      fx: (v.turnNext && v.turnNext.wipeAfter) ? emptyFx() : v.fx,
       turnNext: v.pending || emptyNext(),
       /*
         ⚠️ 受け取ったら空にする。空にしないと永久に効き続ける。
@@ -28014,7 +28378,8 @@ function BattlePanel({ lang, star, stageName, onEnd, theme, rank, zako, startHP,
       const card = s.hand[i % s.hand.length];
       next.drawn = (next.drawn || 0) + 1;
       /* ⚠️ 腐った札は何も起こさない。数字も出さず、印だけ残す */
-      if (card.rotten) { continue; }
+      /* ⚠️ 腐った札は何も起こさない。ただし力が効いていれば動く（unrot） */
+      if (card.rotten && !(s.turnNext && s.turnNext.unrot)) { continue; }
       const out = battleApply(next, card);
       /*
         ⚠️ 形で見分けられるようにする。
@@ -28023,6 +28388,8 @@ function BattlePanel({ lang, star, stageName, onEnd, theme, rank, zako, startHP,
       /* ⚠️ 恋人と正義のために、このターンの合計を数えておく */
       next.dmgSum = (next.dmgSum || 0) + (out.hits || []).reduce((x, h) => x + h.d, 0);
       next.healSum = (next.healSum || 0) + (out.heal || 0);
+      /* ⚠️ 溢れたぶんは別に数える。正義の清算で倍率が違う */
+      next.healOver = (next.healOver || 0) + (out.healOver || 0);
       (out.hits || []).forEach((h) => {
         pop(`foe${h.i}`, `-${h.d}`, "dmg");
         fx(`foe${h.i}`, out.kind === "swords" ? "slash" : "burst");
@@ -28070,8 +28437,12 @@ function BattlePanel({ lang, star, stageName, onEnd, theme, rank, zako, startHP,
         next.note = a.fxName.lovers;
         timers.current.push(setTimeout(() => { pop("me", `＋${h}`, "heal"); fx("me", "heal"); }, 260));
       }
-      if (s.fx.justice > 0 && next.healSum > 0) {
-        const d = Math.round(next.healSum);
+      if (s.fx.justice > 0 && (next.healSum > 0 || next.healOver > 0)) {
+        /*
+          ★ 回復した分の2倍。ただし最大HPを超えて溢れた分は4倍。
+          ⚠️ 満タンのときほど強い。回復札が攻撃札に変わる ―― それが正義の働き。
+        */
+        const d = Math.round(next.healSum * 2 + (next.healOver || 0) * 4);
         const t = next.foes.findIndex((f) => f.hp > 0);
         if (t >= 0) {
           next.foes[t].hp -= d;
@@ -28079,7 +28450,7 @@ function BattlePanel({ lang, star, stageName, onEnd, theme, rank, zako, startHP,
           timers.current.push(setTimeout(() => { pop(`foe${t}`, `-${d}`, "dmg"); fx(`foe${t}`, "burst"); }, 260));
         }
       }
-      next.dmgSum = 0; next.healSum = 0;
+      next.dmgSum = 0; next.healSum = 0; next.healOver = 0;
     }
     /* ⚠️ 次のターンへ渡すのは pending のほう。next（このターンぶん）ではない */
     /*
@@ -28103,8 +28474,23 @@ function BattlePanel({ lang, star, stageName, onEnd, theme, rank, zako, startHP,
     const s = stRef.current;
     const next = { ...s, foes: s.foes.map((f) => ({ ...f })) };
     if ((s.turnNext && s.turnNext.skipFoe > 0)) {
-      next.turnNext = { ...s.turnNext, skipFoe: s.turnNext.skipFoe - 1 };
-      setSt({ ...next, phase: "idle", fx: tickFx(next.fx) });
+      /*
+        皇帝。
+        ⚠️⚠️ 黙って飛ばさないこと。画面上は何も起きないので、
+          「敵が動かなかった」と気づけない（実際そう見えていた）。
+        ★ 名前を大きく出し、続けてもう一度札を配る。
+          手が二度続く ―― それが「敵の手番を飛ばした」ということ。
+        ⚠️ 残り回数も出す。あと何回続くのかで、見え方が変わる。
+      */
+      const left = s.turnNext.skipFoe;
+      next.turnNext = { ...s.turnNext, skipFoe: left - 1 };
+      next.note = left > 1 ? `${a.fxName.emperor}（${left}）` : a.fxName.emperor;
+      fx("all", "major", { shape: "flash", label: a.fxName.emperor });
+      /* ⚠️ 少し待ってから次の手へ。即座だと、二度目の配りが一度に見える */
+      timers.current.push(setTimeout(() => {
+        setSt((v) => ({ ...v, phase: "idle", fx: tickFx(v.fx) }));
+      }, 520 / speed));
+      setSt({ ...next, phase: "skip" });
       return;
     }
     /*
@@ -28116,6 +28502,13 @@ function BattlePanel({ lang, star, stageName, onEnd, theme, rank, zako, startHP,
     */
     const rota = { ...(s.rota || {}) };
     const winding = { ...(s.winding || {}) };
+    /*
+      ⚠️⚠️ 小さい個体まで毎ターン殴らせないこと。
+        一撃が0〜2では、四体いても脅威に見えない（実測：★12の小で0〜1）。
+      ★ 大きい個体だけが毎ターン動く。小さい個体は数ターンに一度、
+        そのぶん一撃を重くする。総量は変えず、山と谷を作る。
+      ⚠️ 休む間隔は大きさから決める。特大は毎ターン、極小は四ターンに一度。
+    */
     /*
       全員が動く。
       ⚠️⚠️ 一体ずつに絞ると、四体いてもダメージが一回しか飛ばず、
@@ -28182,8 +28575,12 @@ function BattlePanel({ lang, star, stageName, onEnd, theme, rank, zako, startHP,
         const h = reviveHPOf(setup.star, rank || 0, f.max);
         pop(`foe${i2}`, `+${h}`, "heal");
         next.note = a.foeRevive;
-        /* ⚠️ 起き上がった印を残す。以後この敵には棒が特攻になる */
-        return { ...f, hp: h, revived: true };
+        /*
+          ⚠️ 起き上がった印を残す。以後この敵には棒が特攻になる。
+          ⚠️⚠️ 起きたターンは動かせないこと。復活は敵の手番の先頭で処理するので、
+            そのまま通すと「倒したのに、その場で殴り返される」ことになる。
+        */
+        return { ...f, hp: h, revived: true, justRose: true };
       });
     }
     if (setup.revive) {
@@ -28193,17 +28590,54 @@ function BattlePanel({ lang, star, stageName, onEnd, theme, rank, zako, startHP,
         if (s.turn - at >= (setup.reviveTurns || 3)) {
           pop(`foe${i2}`, `+${f.max}`, "heal");
           next.note = a.foeRevive;
-          return { ...f, hp: f.max, downAt: undefined, revived: true };
+          /* ⚠️ 起きたターンは動かない。倒した手応えを消さないため */
+          return { ...f, hp: f.max, downAt: undefined, revived: true, justRose: true };
         }
         return { ...f, downAt: at };
       });
     }
     next.foes.forEach((f, i) => {
       if (f.hp <= 0) return;
+      /* ⚠️ 起き上がったばかりの敵は、このターンは動かない。印はここで落とす */
+      if (f.justRose) { next.foes[i] = { ...f, justRose: false }; return; }
+      /*
+        小さい個体は数ターンに一度だけ動く。
+        ⚠️ そのぶん一撃を重くする（gap 倍）。総量は変わらない。
+        ⚠️ 体ごとに位相をずらす。全員が同じターンに休むと、無風のターンができる。
+      */
+      const sz = (setup.sizes && setup.sizes[i]) || 2.2;
+      const gap = sz >= 4 ? 1 : sz >= 2 ? 1 : sz >= 1.2 ? 2 : 3;
+      if (gap > 1 && ((s.turn + i) % gap !== 0)) return;
       const ratio = f.hp / f.max;
       /* 回復は割り込み。⚠️ ローテーションの位置は進めない */
-      if (setup.foeHeal && s.fx.hermit <= 0 && ratio < FOE_HEAL_AT && Math.random() < 0.5) {
+      /*
+        ⚠️⚠️ 回数に上限を置くこと。上限が無いと、割合回復が延々と続き、
+          削り切れない相手になる（★12で手に負えなくなっていた）。
+        ★ 一体につき三回まで。HPの段ごとに一度ずつ使い切る形。
+        ⚠️ 隠者が効いているあいだは数えない。止めた回を消費させない。
+      */
+      const healed = (s.foeHealed && s.foeHealed[i]) || 0;
+      if (setup.foeHeal && s.fx.hermit <= 0 && ratio < FOE_HEAL_AT
+        && healed < FOE_HEAL_MAX && Math.random() < 0.5) {
+        next.foeHealed = { ...(next.foeHealed || {}), [i]: healed + 1 };
         const h = Math.round(f.max * setup.foeHeal * boost);
+        /*
+          吊るされた男。
+          ★ 回復のかわりに、本来回復すべき量の12%を傷として返す。
+            逆さの世界では、癒やそうとした手が自らを削る。
+          ⚠️⚠️ 回復量をそのままダメージにしないこと。
+            3ターン×四体で回復の枠を丸ごと火力に変え、
+            ★12で総HPの4割を持っていく（試算18万）。12%なら約9400で収まる。
+          ⚠️ 隠者（妨害そのものを無駄行動にする）と役割が分かれる。
+            あちらは守り、こちらは攻め。
+        */
+        if (s.fx.hanged > 0) {
+          const back = Math.max(1, Math.round(h * 0.12));
+          f.hp -= back;
+          pop(`foe${i}`, `-${back}`, "dmg");
+          next.note = a.fxName.hanged;
+          return;
+        }
         f.hp = Math.min(f.max, f.hp + h);
         pop(`foe${i}`, `+${h}`, "heal");
         next.note = a.foeHeal;
@@ -28213,6 +28647,31 @@ function BattlePanel({ lang, star, stageName, onEnd, theme, rank, zako, startHP,
       const pos = (rota[i] || 0) + i;
       /* ⚠️ 連携が効いていれば連撃で上書き。使ったら減らす */
       let move = foeNextMove(ratio, pos, setup.star);
+      /*
+        隠者。
+        ⚠️⚠️ 回復を止めるだけでは死に札になる。★4以下の敵は回復しないので、
+          引いても三ターン何も起きない回ができてしまう。
+        ★ 妨害の手をすべて無効にする。轟音・波動・三種の構えが、通常攻撃に化ける。
+          「妨害が効かない三ターン」なら、どの相手にも意味がある。
+        ⚠️ 溜めと大技は止めないこと。殴る手まで消すと、ただの無敵になる。
+      */
+      /*
+        隠者と太陽の違い。
+        ★ 隠者 … 妨害の手が「無駄行動」になる。敵は何もしないまま一手を失う。
+        ★ 太陽 … 妨害の手が「通常攻撃」に変わる。殴られはするが、妨害は受けない。
+        ⚠️⚠️ 二つを同じ扱いにしないこと。隠者のほうが強い札なので、
+          太陽と同じ「通常攻撃に化ける」では隠者の価値が消える。
+        ⚠️ 隠者が優先。両方効いていれば無駄行動になる。
+      */
+      const blocked = (move === "roar" || move === "despair" || move === "rot"
+        || move === "guard" || move === "guardHi" || move === "guardEdge");
+      if (blocked && s.fx.hermit > 0) {
+        next.note = a.fxName.hermit;
+        return;
+      }
+      if (blocked && s.fx.sun > 0 && (move === "roar" || move === "despair")) {
+        move = "hit";
+      }
       if (next.forceCombo > 0 && i === 0) { move = "combo"; next.forceCombo -= 1; }
       rota[i] = pos + 1;
       if (move === "wind") {
@@ -28251,9 +28710,11 @@ function BattlePanel({ lang, star, stageName, onEnd, theme, rank, zako, startHP,
         next.rotNext = Math.max(next.rotNext || 0, nrot);
         next.note = a.foeRot;
         const myAtk2 = ((setup.foeAtkList && setup.foeAtkList[i]) || setup.foeAtk) * (next.foeAtkUp || 1);
-        const d2 = Math.max(1, Math.round(myAtk2 * boost * FOE_MOVES.rot.mul
-          * (FOE_PHASE_MUL_BY_TIER[foeTierOf(setup.star)][foePhaseOf(ratio)] || 1)
-          * next.take * (s.fx.moon > 0 ? 0.6 : 1)));
+        /* ⚠️ 輪が効いていれば腐食の一撃も10。攻撃はすべて平らになる */
+        const d2 = (s.fx && s.fx.wheel > 0) ? 10
+          : Math.max(1, Math.round(myAtk2 * boost * FOE_MOVES.rot.mul
+            * (FOE_PHASE_MUL_BY_TIER[foeTierOf(setup.star)][foePhaseOf(ratio)] || 1)
+            * next.take * (s.fx.moon > 0 ? 0.6 : 1)));
         next.hp -= d2;
         pop("me", `-${d2}`, "dmg");
         return;
@@ -28262,7 +28723,15 @@ function BattlePanel({ lang, star, stageName, onEnd, theme, rank, zako, startHP,
         /*
           ⚠️ 超過分の割合で削る。1に戻さないこと。
           ⚠️ 殴らない。ここが立て直しの機会になる。
+          ⚠️⚠️ 貨幣一色のターンは削らせないこと。
+            積んだ端から削られて丸損になり、女帝を引いた意味が消える。
+            愚者で女帝が複数枚揃うと、その全ターンが無駄になる。
+          ★ 削れなかった回は空振りとして扱う（殴りもしない）。
         */
+        if (s.turnNext && s.turnNext.suit === "pentacles") {
+          next.note = a.foeRoarFail;
+          return;
+        }
         next.mult = 1 + (next.mult - 1) * (1 - FOE_MOVES.roar.roar);
         next.note = a.foeRoar;
         fx("me", "burst");
@@ -28284,13 +28753,22 @@ function BattlePanel({ lang, star, stageName, onEnd, theme, rank, zako, startHP,
       /* ⚠️ 頭数ぶん掛ける。一体しか動かないので、総量はこれで元どおり */
       /* ⚠️ 体ごとの攻撃力を使う。大きい個体ほど痛い */
       /* ⚠️ 特殊行動での上昇を掛ける。掛け忘れると効果が消える */
+      /* ⚠️ 休んだぶんを掛けて返す。総量を保つのはここ */
       const myAtk = ((setup.foeAtkList && setup.foeAtkList[i]) || setup.foeAtk)
-        * (next.foeAtkUp || 1);
+        * (next.foeAtkUp || 1) * gap;
       const list = foeDamages(move, myAtk * boost, ratio, setup.star);
       /* ⚠️ 月は敵の攻撃力、貨幣はこちらの被ダメ。掛ける順は変えない */
       const scale = next.take * (s.fx.moon > 0 ? 0.6 : 1);
+      /*
+        運命の輪。
+        ⚠️⚠️ 階位を10で揃えるだけでは地味だった（実質+7%が3ターン）。
+        ★ 敵の攻撃も10で揃える。輪が回るあいだ、すべてが平らになる。
+          ★1では何も変わらず、★12では致命の一撃が10になる ―― 高い★ほど効く。
+        ⚠️ 倍率は掛けない。10は10のまま。揃えることがこの札の働き。
+      */
+      const flat = (s.fx && s.fx.wheel > 0);
       list.forEach((raw, k) => {
-        const d = Math.max(1, Math.round(raw * scale));
+        const d = flat ? 10 : Math.max(1, Math.round(raw * scale));
         next.hp -= d;
         /* ⚠️ 連撃は一発ずつ数字を出す。まとめると軽く見える */
         timers.current.push(setTimeout(() => pop("me", `-${d}`, "dmg"), k * 130));
@@ -28305,6 +28783,20 @@ function BattlePanel({ lang, star, stageName, onEnd, theme, rank, zako, startHP,
   };
 
   /* 進行。⚠️ 一箇所で回す。場面ごとに別のタイマーを置くと止め損なう */
+  /*
+    ⚠️⚠️ 主に勝ったら、戦闘の結果画面で止めないこと。
+      「打ち倒した → 結果を見る → 制覇する」と三段になり、
+      途中に「旅はここまでです」まで挟まる（実際そうなっていた）。
+    ★ 勝った時点で呼び出し元へ返す。制覇の画面へ直接つながる。
+    ⚠️ 負けたときと雑魚のときは、これまでどおり結果画面を見せる。
+  */
+  useEffect(() => {
+    if (!zako && st.phase === "win") {
+      const id = setTimeout(() => onEnd && onEnd(true, st.hp, st.mult), 900);
+      timers.current.push(id); return () => clearTimeout(id);
+    }
+  }, [st.phase, zako]);
+
   useEffect(() => {
     if (st.phase === "play") {
       const id = setTimeout(step, BATTLE_STEP_MS / speed);
@@ -28318,6 +28810,8 @@ function BattlePanel({ lang, star, stageName, onEnd, theme, rank, zako, startHP,
       const id = setTimeout(dealTurn, 520 / speed);
       timers.current.push(id); return () => clearTimeout(id);
     }
+    /* ⚠️ 皇帝で飛ばしている間。ここでは何もしない（上のタイマーが次へ運ぶ） */
+    if (st.phase === "skip") return;
   }, [st.phase, st.shown, st.turn, speed]);
 
   return (
@@ -28472,6 +28966,28 @@ function BattlePanel({ lang, star, stageName, onEnd, theme, rank, zako, startHP,
         </div>
       )}
 
+      {/*
+        大アルカナの一覧。
+        ⚠️⚠️ 畳んでおくこと。22行を常に出すと、戦場も札も押し出される。
+        ⚠️ 戦いの最中に見るものなので、戦闘の画面の中に置く。
+          別の画面へ移すと、確かめるために戦いを離れることになる。
+      */}
+      <details className="bt-guide">
+        <summary>{a.majorList}</summary>
+        <ul className="bt-guide-list">
+          {Array.from({ length: 22 }, (_, n) => {
+            const fx0 = MAJOR_FX[n];
+            const key = fx0 && fx0.key;
+            return (
+              <li key={n}>
+                <b>{(a.fxName && a.fxName[key]) || n}</b>
+                <span>{(a.majorHelp && a.majorHelp[n]) || ""}</span>
+              </li>
+            );
+          })}
+        </ul>
+      </details>
+
       {/* ⚠️ 説明は一つだけ、札の下に出す。重ねて出すと盤が読めなくなる */}
       {fxOpen && st.fx[fxOpen] > 0 && (
         <p className="bt-fx-help">{a.fxHelp[fxOpen]}</p>
@@ -28493,8 +29009,16 @@ function BattlePanel({ lang, star, stageName, onEnd, theme, rank, zako, startHP,
         <div className={`adv-result${st.phase === "win" ? " win" : ""}`}>
           <p className="adv-result-title">{st.phase === "win" ? a.btWin : a.btLose}</p>
           <p className="adv-result-stage">{a.btTurn(st.turn)}</p>
-          <button type="button" className="adv-back" onClick={() => onEnd && onEnd(st.phase === "win", st.hp, st.mult)}>
-            {a.btBack}
+          {/*
+            ⚠️⚠️ 主に勝ったときは「地図へ戻る」と書かないこと。
+              主を倒したのだから、戻る先は地図ではなく制覇の画面。
+              「地図へ戻る」を押させると、勝ったのに引き返す操作に見える
+              （実際そう見えていた）。
+            ⚠️ 雑魚に勝ったときは地図へ戻るで正しい。文言を分ける。
+          */}
+          <button type="button" className="adv-back"
+            onClick={() => onEnd && onEnd(st.phase === "win", st.hp, st.mult)}>
+            {(!zako && st.phase === "win") ? a.toResult : a.btBack}
           </button>
         </div>
       )}
@@ -29655,8 +30179,16 @@ function AdventurePanel({ lang, items, onItem }) {
       早期 return するので、下の方に useState を書くと画面ごとにフックの数が変わり、
       React が落ちる（実際 #310 で落ちた）。
   */
-  const [fought, setFought] = useState(false);
-  const [won, setWon] = useState(false);
+  /*
+    主との決着。
+    ⚠️⚠️ 「決した」と「勝った」を別の状態で持たないこと。
+      片方だけ書き換わる経路があると、勝ったのに負けの画面が出る
+      （実際そうなっていた）。
+    ★ 一つにまとめる。null＝未決 ／ "win" ／ "lose"。
+  */
+  const [bossEnd, setBossEnd] = useState(null);
+  const fought = bossEnd !== null;
+  const won = bossEnd === "win";
   /*
     道中のHP。
     ⚠️⚠️ 小MAPのあいだ持ち越すこと。マスごとに全快すると、
@@ -29682,11 +30214,30 @@ function AdventurePanel({ lang, items, onItem }) {
   */
   const [usedNodes, setUsedNodes] = useState([]);
   /*
+    地図を進む速さ。
+    ⚠️⚠️ 待ち時間を各所に直書きしないこと。散らばると、速さを変えたときに
+      一部だけ速いという不揃いが起きる。倍率で一括して割る。
+    ⚠️ 戦闘の速さとは別に持つ。地図はゆっくり眺めたいが戦闘は速く、という人がいる。
+  */
+  const [advSpeed, setAdvSpeed] = useState(() => loadAdvSpeed());
+  /* ⚠️ 最新の値をタイマーから読む。state を直に読むと古い値で走る */
+  const advSpeedRef = useRef(advSpeed);
+  advSpeedRef.current = advSpeed;
+  /*
+    ⚠️⚠️ 速さで割っても、下限を切らないこと。
+      ×3だと一本道の送り（820ms）が273msになり、着いた瞬間に次へ動く。
+      札も引かずに移動するので、瞬間移動したようにしか見えない（実際そうなっていた）。
+    ★ 340ms を下限にする。着いたことが分かる最短の間。
+  */
+  const ms = (n) => Math.max(340, Math.round(n / (advSpeedRef.current || 1)));
+  /*
     戦闘の入口。
     ⚠️⚠️ 戦いが始まったら、そこへ視点を移すこと。
       盤の下に出るので、始まったことに気づかないまま画面外で進む。
     ⚠️ 終わったら盤へ戻す。結果だけ見て地図を見失うのを防ぐ。
   */
+  /* ⚠️ 確定した行き先。引いてから見せるまでのあいだ、ここだけを信じる */
+  const goingRef = useRef(null);
   const battleRef = useRef(null);
   const mapRef = useRef(null);
   const inFight = !!zako;
@@ -29724,18 +30275,26 @@ function AdventurePanel({ lang, items, onItem }) {
     ⚠️ 持ち越すのは一回の探索のあいだだけ。踏破しても削られたままだと、
       次のステージが前回の残りHPで始まる。
   */
+  /*
+    ⚠️⚠️ 依存に cleared.length を入れないこと。
+      主を倒すと踏破が記録されて cleared が増え、その瞬間にこの効果が走って
+      fought が false に戻る。戦闘の画面がまた開き、主とやり直しになる
+      （実際そうなっていた）。
+    ★ 見るのはステージと段の上書きだけ。踏破の記録は関係ない。
+    ⚠️ 最大HPは走った時点の段から取る。依存に入れなくても最新の値が読める。
+  */
   useEffect(() => {
     setHp(statsOf(stepOver == null ? cleared.length : stepOver).maxHP);
     /*
-      ⚠️⚠️ 戦闘の状態もここで消すこと。
-        消さないと、戦っている途中で地図を抜けて別のステージへ入ったとき、
-        前のステージの戦いがそのまま続く（実際そうなっていた）。
+      ⚠️ 戦闘の状態もここで消す。消さないと、戦っている途中で地図を抜けて
+        別のステージへ入ったとき、前のステージの戦いがそのまま続く。
       ⚠️ 雑魚・主の決着・勝敗の三つとも消す。一つでも残ると食い違う。
     */
-    setZako(null); setFought(false); setWon(false);
+    setZako(null); setBossEnd(null);
     /* ⚠️ 倍率も戻す。持ち越すのは一回の探索のあいだだけ */
     setCarryMult(1); setUsedNodes([]);
-  }, [stage, cleared.length, stepOver]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [stage, stepOver]);
   /*
     自動で進む。
     ⚠️⚠️ 引く操作そのものを消さないこと。引くのは本人、が冒険の芯にある。
@@ -30385,7 +30944,20 @@ function AdventurePanel({ lang, items, onItem }) {
     ⚠️ 罠でも雑魚でも主でも、行き着く先は同じ。判定は一箇所で持つ。
   */
   const dead = hp <= 0;
-  const over = dead || (node.kind === "boss" && fought) || !(node.next || []).length;
+  /*
+    ⚠️⚠️ 戦っている最中に終わらせないこと。
+      雑魚のマスが袋小路だと、戦いの結果と「旅はここまでです」が同時に出る。
+      勝ったのに旅が終わった画面が並び、制覇の導線も出ない（実際そうなっていた）。
+    ★ 雑魚と戦っているあいだは over を立てない。決着してから判定する。
+  */
+  const over = !zako && (dead || (node.kind === "boss" && fought) || !(node.next || []).length);
+  /*
+    ⚠️⚠️ 主のマスに着いたら、それ以上は絶対に動かさないこと。
+      主は戦う場所であって、通過点ではない。next が残っていると、
+      戦いの前後に一本道の送りが働いて袋小路へ飛ぶ（実際そうなっていた）。
+    ★ 主に着いた時点で、行き先を無いものとして扱う。
+  */
+  const atBoss = node.kind === "boss";
   /* ⚠️ 主に着いて、まだ決していなければ戦闘の画面を出す */
   const inBattle = node.kind === "boss" && !fought && hp > 0;
   /*
@@ -30403,7 +30975,9 @@ function AdventurePanel({ lang, items, onItem }) {
   /* 札を出す。⚠️ 毎回混ぜ直す。同じ並びだと位置で覚えられる */
   const deal = (self) => {
     /* ⚠️ 終わっていたら配らない。戦闘中も配らない（遅れて発火するタイマー対策） */
-    if (over || busy) return;
+    if (over || busy || atBoss) return;
+    /* ⚠️ 移動が決まっている最中は配らない。二重に動く */
+    if (goingRef.current) return;
     /* ⚠️ 78枚から。冒険でも山を絞らない。絞ると出る札に意図が入る */
     const deck = buildPool([...MAJOR_LIST, ...MINOR_LIST]);
     const six = deck.slice(0, 6);
@@ -30422,7 +30996,7 @@ function AdventurePanel({ lang, items, onItem }) {
       timers.current.push(setTimeout(() => {
         setPicked(chosen);
         timers.current.push(setTimeout(() => commit(chosen), 420));
-      }, 460));
+      }, ms(460)));
     }
   };
   /* ⚠️ 毎回の描画で最新に差し替える。待ち時間の中からはこれを呼ぶ */
@@ -30443,17 +31017,23 @@ function AdventurePanel({ lang, items, onItem }) {
   */
   /* ⚠️⚠️ 戦闘中は動かないこと。主のマスにも next があるので、
        戦っている最中に隣へ歩き出す。over だけでは防げない */
-  if (!over && !busy && phase === "idle" && !pool && nexts.length === 1) {
+  /*
+    ⚠️⚠️ マスの効果が起きた直後は送らないこと。
+      泉で回復した、罠を踏んだ、宝を得た ―― その表示が出る前に次へ動くと、
+      何が起きたのか分からないまま盤だけが進む。
+    ★ 直前に着いた節が「まだ効果を見せていない」なら一拍置く。
+  */
+  if (!over && !busy && !atBoss && phase === "idle" && !pool && nexts.length === 1) {
     const mark = `one:${walking}:${seed}:${at}`;
     if (kickRef.current !== mark) {
       kickRef.current = mark;
       /* ⚠️ 少し長めに待つ。短いと、着いたことに気づく前に次へ動く */
       timers.current.push(setTimeout(() => {
         if (walkRef.current) walkRef.current();
-      }, 820));
+      }, ms(820)));
     }
   }
-  if (autoRef.current && !over && !busy && phase === "idle" && !pool && nexts.length >= 2) {
+  if (autoRef.current && !over && !busy && !atBoss && phase === "idle" && !pool && nexts.length >= 2) {
     const mark = `${walking}:${seed}:${at}`;
     if (kickRef.current !== mark) {
       kickRef.current = mark;
@@ -30461,7 +31041,7 @@ function AdventurePanel({ lang, items, onItem }) {
       timers.current.push(setTimeout(() => {
         if (!autoRef.current) return;
         if (dealRef.current) dealRef.current(true);
-      }, 620));
+      }, ms(620)));
     }
   }
   /*
@@ -30484,8 +31064,8 @@ function AdventurePanel({ lang, items, onItem }) {
         setPicked(chosen);
         timers.current.push(setTimeout(() => {
           if (autoRef.current) commit(chosen);
-        }, 420));
-      }, 460));
+        }, ms(420)));
+      }, ms(460)));
     }
   }
   /*
@@ -30516,6 +31096,8 @@ function AdventurePanel({ lang, items, onItem }) {
     ★ 行き先を明示して渡す。道が一本であることをここで確かめる。
   */
   const walkOn = () => {
+    /* ⚠️ すでに移動が決まっているなら、重ねて動かさない */
+    if (goingRef.current) return;
     /*
       ⚠️⚠️ 終わっていたら動かないこと。
         主に着く前に仕掛けたタイマーは、着いたあとに発火する。
@@ -30523,7 +31105,7 @@ function AdventurePanel({ lang, items, onItem }) {
       ⚠️ phase も見ること。札を配っている最中に歩くと、手札が宙に浮く。
     */
     /* ⚠️ 戦闘中も動かない。タイマーは戦いが始まってからも発火する */
-    if (over || busy || phase !== "idle") return;
+    if (over || busy || atBoss || phase !== "idle") return;
     const only = (node.next || []).filter((k) => byKey[k]);
     if (only.length !== 1) return;
     /*
@@ -30558,10 +31140,44 @@ function AdventurePanel({ lang, items, onItem }) {
       /* ⚠️ 実測の対応表から引く。累乗で近似すると狙いの倍になる */
       const go = goForReach(diffOf(rank, mapNo).reach);
       const to = forceTo || advanceOn(map, cur, next, go);
-      /* ⚠️ 行き先が無ければ進めない。null を入れると節を見失う */
-      if (!to || !byKey[to]) { setPhase("idle"); setPool(null); setPicked([]); return; }
+      /*
+        ⚠️⚠️ 行き先が「いまの節の隣」であることを必ず確かめること。
+          隣でない節へ入れると、盤の上を飛んだように見える。
+          辿り着けない節や、前の盤の節を指していると、駒が入口へ戻る
+          （cur の既定が map[0] のため）―― これが「関係のないマスへのワープ」。
+        ★ 三つとも満たさなければ動かさない。
+          ・行き先が地図にある
+          ・いまの節から道が伸びている
+          ・六角として隣り合っている
+      */
+      const okNext = to && byKey[to]
+        && (byKey[cur].next || []).includes(to)
+        && hexDist((byKey[cur].q || 0) - (byKey[to].q || 0),
+                   (byKey[cur].r || 0) - (byKey[to].r || 0)) === 1;
+      if (!okNext) {
+        /* ⚠️ 黙って戻さない。何が起きたか残す */
+        setLog((l) => [...l, a.cannotGo]);
+        setPhase("idle"); setPool(null); setPicked([]); return;
+      }
+      /*
+        ⚠️⚠️ 行き先をここで確定し、以後は書き換えないこと。
+          「引く → 決める → 見せる」の順を守る。
+          決めた後に別の処理が at を触ると、駒が別のマスへ飛ぶ。
+        ★ 確定した行き先を控えておき、移動の演出はこれだけを見る。
+      */
+      goingRef.current = { from: cur, to, at: Date.now() };
       setPhase("move");
       timers.current.push(setTimeout(() => {
+        /*
+          ⚠️⚠️ 控えた行き先と食い違っていたら動かさないこと。
+            途中で別の移動が割り込んだ証拠なので、そのまま進めると飛ぶ。
+        */
+        const plan = goingRef.current;
+        if (!plan || plan.to !== to || plan.from !== cur) {
+          setLog((l) => [...l, a.cannotGo]);
+          setPhase("idle"); setPool(null); setPicked([]); return;
+        }
+        goingRef.current = null;
         setAt(to);
         setVisited((v) => (v.includes(to) ? v : [...v, to]));
         setSteps((n) => n + 1);
@@ -30653,11 +31269,11 @@ function AdventurePanel({ lang, items, onItem }) {
             timers.current.push(setTimeout(() => {
               /* ⚠️ 最新の deal を呼ぶ。古い描画のものだと引く枚数がずれる */
               if (autoRef.current && dealRef.current) dealRef.current(true);
-            }, 520));
+            }, ms(520)));
           }
-        }, 900));
-      }, 700));
-    }, 800));
+        }, ms(900)));
+      }, ms(700)));
+    }, ms(800)));
   };
   /* ⚠️ 種を振り直す。同じ区分でも道が変わる。周回する理由がここにある */
   const restart = () => {
@@ -30671,9 +31287,16 @@ function AdventurePanel({ lang, items, onItem }) {
     setAt(null); setVisited([]); setPool(null); setPicked([]);
     setPhase("idle"); setLog([]); setSteps(0);
     /* ⚠️ 戦闘の跡も消す。残すと、次の回で主に着いた瞬間に結果が出る */
-    setFought(false); setWon(false); setZako(null);
+    setBossEnd(null); setZako(null);
     /* ⚠️ HPも戻す。持ち越すのは一回の探索のあいだだけ */
     setHp(statsOf(stepOver == null ? cleared.length : stepOver).maxHP);
+    /*
+      ⚠️⚠️ 「効果が済んだマス」も必ず消すこと。
+        消さないと、やり直したときに泉も雑魚も罠も一切働かない
+        ―― 盤だけ新しくなって、中身が空の探索になる（実際そうなっていた）。
+      ⚠️ 貨幣の累積も戻す。前の回の倍率を持ち込ませない。
+    */
+    setUsedNodes([]); setCarryMult(1);
   };
   return (
     <div className="adv-wrap">
@@ -31336,6 +31959,19 @@ function AdventurePanel({ lang, items, onItem }) {
         ⚠️⚠️ 製品版では DEBUG_STEP を false にして消すこと。
         ★ 47段のどこでも試せるようにするためだけのもの。
       */}
+      {/*
+        地図を進む速さ。
+        ⚠️ 自動の切り替えと並べる。速さだけ離れた場所にあると見つからない。
+        ⚠️ 三角の数で示す。戦闘の速さと同じ見せ方に揃える。
+      */}
+      <button type="button" className="adv-speed"
+        onClick={() => {
+          const i2 = SPEED_STEPS.indexOf(advSpeed);
+          const v = SPEED_STEPS[(i2 + 1) % SPEED_STEPS.length];
+          setAdvSpeed(v); saveAdvSpeed(v);
+        }}>
+        {"▷".repeat(SPEED_STEPS.indexOf(advSpeed) + 1)}
+      </button>
       <span className="adv-weather-tag">{a.weatherName[weather]}</span>
       <div className="adv-hp-tag">
         <span className="adv-hp-bar">
@@ -31460,7 +32096,7 @@ function AdventurePanel({ lang, items, onItem }) {
         <div ref={battleRef}>
         <BattlePanel
           key={`zako-${rank}-${zako}`}
-          lang={lang} zako startHP={hp} startMult={carryMult}
+          lang={lang} zako startHP={hp} startMult={carryMult} seed={seed}
           star={starOfStage(rank, walking)}
           rank={rank}
           stageName={walking}
@@ -31474,7 +32110,7 @@ function AdventurePanel({ lang, items, onItem }) {
             /* ⚠️ 終わったら盤へ戻す。結果だけ見て地図を見失わないように */
             timers.current.push(setTimeout(() => {
               mapRef.current && mapRef.current.scrollIntoView({ behavior: "smooth", block: "center" });
-            }, 220));
+            }, ms(220)));
           }}
         />
         </div>
@@ -31493,7 +32129,12 @@ function AdventurePanel({ lang, items, onItem }) {
           stageName={walking}
           theme={themeOf(walking)}
           onEnd={(win) => {
-            setFought(true); setWon(win);
+            setBossEnd(win ? "win" : "lose");
+            /* ⚠️ 結果は盤の下に出る。勝った瞬間にそこへ視点を移す */
+            timers.current.push(setTimeout(() => {
+              const el = document.querySelector(".adv-result");
+              el && el.scrollIntoView({ behavior: "smooth", block: "center" });
+            }, 260));
             /*
               ⚠️ 踏破を記録するのは勝ったときだけ。
                 着いただけで記録すると、負けても踏破になる。
@@ -31609,15 +32250,33 @@ function AdventurePanel({ lang, items, onItem }) {
           {won && String(walking).endsWith(a.bossSuffix) && (
             <p className="adv-thanks">{a.thanksTravel(a.pref[pref] || pref)}</p>
           )}
+          {/*
+            制覇したあとの導線。
+            ⚠️⚠️ 「もう一度入口から」「地図へ戻る」を並べないこと。
+              制覇したのに同じ盤へ戻れてしまい、主ともう一度戦うことになる。
+              せっかく勝ったのに、やり直しに見えてやる気を削ぐ（実際そうなっていた）。
+            ★ 制覇したときは一手だけ。押したら8つの画面へ戻り、旗が立つ。
+            ⚠️ 負けたとき・行き止まりのときは、これまでどおり二つ出す。
+          */}
           <div className="adv-result-acts">
-            <button className="draw-btn adv-go" onClick={restart}>
-              <span className="adv-go-shine" />
-              <Sparkles size={18} />{t.advAgain}
-            </button>
-            <button type="button" className="adv-back"
-              onClick={() => { setStage(null); setPool(null); setPicked([]); setPhase("idle"); }}>
-              {a.toMap}
-            </button>
+            {won ? (
+              <button className="draw-btn adv-go"
+                onClick={() => { restart(); setStage(null); }}>
+                <span className="adv-go-shine" />
+                <Sparkles size={18} />{a.toStages}
+              </button>
+            ) : (
+              <>
+                <button className="draw-btn adv-go" onClick={restart}>
+                  <span className="adv-go-shine" />
+                  <Sparkles size={18} />{t.advAgain}
+                </button>
+                <button type="button" className="adv-back"
+                  onClick={() => { setStage(null); setPool(null); setPicked([]); setPhase("idle"); }}>
+                  {a.toMap}
+                </button>
+              </>
+            )}
           </div>
         </div>
       )}
@@ -50523,6 +51182,31 @@ export default function TarotDraw() {
         /* ⚠️ 押せることが分かる形に。ただの札に見えると誰も押さない */
         .bt-fx-chip { border: none; cursor: pointer; font-family: inherit; }
         .bt-fx-chip.open { box-shadow: inset 0 0 0 1.6px #FFF3D6, 0 0 12px rgba(255,243,214,0.4); }
+        /*
+          大アルカナの一覧。
+          ⚠️ 畳んだ状態を既定にする。開いたままだと戦場が押し出される。
+          ⚠️ 名前と効果を二列に。一行に流すと、どこまでが名前か読めない。
+        */
+        .bt-guide { margin: 0 0 10px; }
+        .bt-guide > summary {
+          list-style: none; cursor: pointer; padding: 7px 11px; border-radius: 10px;
+          font-size: 11px; color: var(--gold-soft);
+          background: rgba(26,20,48,0.7);
+          box-shadow: inset 0 0 0 1px rgba(201,162,75,0.22);
+        }
+        .bt-guide > summary::-webkit-details-marker { display: none; }
+        .bt-guide-list {
+          margin: 7px 0 0; padding: 9px 11px; border-radius: 11px; list-style: none;
+          max-height: 240px; overflow-y: auto;
+          background: rgba(14,10,32,0.7);
+          box-shadow: inset 0 0 0 1px rgba(201,162,75,0.2);
+        }
+        .bt-guide-list li {
+          display: grid; grid-template-columns: 5.5em 1fr; gap: 8px;
+          padding: 4px 0; font-size: 11px; line-height: 1.7;
+        }
+        .bt-guide-list b { color: var(--gold-soft); font-weight: 400; }
+        .bt-guide-list span { color: var(--muted); }
         .bt-fx-help {
           margin: 0 0 10px; padding: 9px 12px; border-radius: 11px;
           font-size: 11.5px; line-height: 1.8; color: var(--parchment);
@@ -50637,6 +51321,16 @@ export default function TarotDraw() {
         .adv-dbg button {
           width: 20px; height: 20px; border-radius: 50%; border: none; cursor: pointer;
           background: rgba(154,216,255,0.18); color: #9AD8FF; font-family: inherit; font-size: 11px;
+        }
+        /* 地図の速さ。⚠️ 自動ボタンの下に。重ならない位置に置くこと */
+        .adv-speed {
+          position: absolute; right: 8px; top: 46px; z-index: 3;
+          min-width: 44px; min-height: 28px; padding: 4px 9px;
+          border-radius: 999px; border: none; cursor: pointer;
+          font-size: 12px; letter-spacing: 0.08em;
+          color: #F6DE96; background: rgba(14,10,32,0.72);
+          backdrop-filter: blur(4px); -webkit-backdrop-filter: blur(4px);
+          box-shadow: inset 0 0 0 1px rgba(246,222,150,0.45);
         }
         .adv-weather-tag {
           position: absolute; left: 10px; bottom: 12px; z-index: 3; pointer-events: none;
