@@ -4677,20 +4677,39 @@ const BATTLE = {
     ★ 残り一体になったら特効。棒が全体を薙ぎ、剣がとどめを刺す ―― 役割が揃う。
     ⚠️ 棒の単体倍率は下げること。同じ場面で両方強いと、選ぶ意味が消える。
   */
-  swordSolo: 2.0,
+  /*
+    ⚠️ ×2.0 では段差が大きすぎた。敵が二体になった瞬間、剣の一撃が
+      341→170 と半減する。倒しきる直前だけ急に強くなるのは不自然。
+    ★ ×1.5。段差を1.5倍に抑えつつ、単体では棒（88）の約3倍を保つ。
+  */
+  swordSolo: 1.5,
   /*
     ⚠️⚠️ 倍率で合わせようとしないこと。
       必要な倍率が★ごとに ×0.2〜×13.5 と桁違いになる（実測）。
       敵HPは★で急に伸びるのに、棒の威力は知力に比例してしか伸びないため。
     ★ 復活後のHPを「棒の威力 × 狙いの枚数」で決める。倍率は要らない。
   */
-  wandVsRevived: 1.0,
+  /*
+    ⚠️⚠️ 復活した敵には棒が効くこと。
+      ⑥⑧のお供は全快で起き上がるので、特攻が無いと倒し直しに
+      棒400枚（★12で実測）が要る。
+    ★ ×2.0。一度倒した相手は、魔法に対して脆くなっている。
+    ⚠️ 剣には乗せない。単体で順に倒す遊びに戻ると、全体攻撃で
+      一斉に掃うという場面が消える。
+  */
+  wandVsRevived: 2.0,
   /* ⚠️ 貨幣の累積の上限。実測で決めた値。外すと長い戦いが成立しない */
   /*
     ⚠️ 3.0では伸びしろが足りない。敵が「戦慄の轟音」で削ってくるので、
       上限を上げても際限なく強くはならない。
   */
-  multCap: 9.9,
+  /*
+    ⚠️⚠️ 上限を設けない。奇跡的に貨幣が続いた回を、数字で切らないため。
+    ⚠️ 代償は轟音（超過分の35%を削る）が担う。積むほど削られる量も増えるので、
+      際限なく伸びることは実際には起きない。
+    ★ Infinity を入れると Math.min がそのまま通る。判定を書き換えなくて済む。
+  */
+  multCap: Infinity,
   /*
     ⚠️ 実測：×4で勝率が頭打ちになる（★8で29.8%、×6でも29.8%、×12で28.8%）。
       轟音が超過分の35%を削るので、上限を上げても普通は到達しない。
@@ -4700,13 +4719,24 @@ const BATTLE = {
   */
   cupHeal: 11,     /* 聖杯＝回復 */
   coinUp: 0.08,    /* 貨幣＝与ダメ倍率。⚠️ 戦闘のあいだだけ */
-  coinTake: 0.05,  /* 貨幣＝被ダメ倍率。強くなるぶん脆くなる */
+  /*
+    ⚠️⚠️ 貨幣に被ダメの上昇を持たせないこと。
+      与ダメには上限（9.9）があるのに被ダメには無かったので、
+      上限に達したあとも脆くなり続けた。積むほど不利になる領域があった。
+    ★ 貨幣は純粋な強化札。代償は轟音（超過分の35%を削る）が担う。
+  */
+  coinTake: 0,
   selfSword: 2.2,  /* ⚠️ 攻撃は自分も削る。聖杯を引く意味を作る */
   selfWand: 1.6,
   revAtk: 0.6,     /* 逆位置の攻撃は弱い */
   /* ⚠️ 吊るされた男が効いているあいだ、逆位置はこの倍率になる（弱化ではなく強化） */
   hangedRev: 2.0,
-  revHeal: 0.4,    /* 逆位置の回復は落ちる */
+  revHeal: 0.4,
+  /*
+    ⚠️ 聖杯一枚で戻る量。最大HPに対する割合。
+      敵の一ターンの攻撃とほぼ同じにすること。
+  */
+  cupPct: 0.06,    /* 逆位置の回復は落ちる */
   /* ⚠️ 大アルカナは直接ダメージを持たない。効果だけ（MAJOR_FX）。ここに威力を置かないこと */
   /* ⚠️ 上限は置かない。★1〜2は30前後が要る（短い戦闘で1割負けさせるため）。
        実測で求めた BATTLE_ATK をそのまま使う */
@@ -4821,6 +4851,94 @@ function cardsAfterRevMajor(cards) {
 }
 
 /*
+  【一閃・魔法・恵・青】同じスートが続いたときの特殊行動。
+  ★ 各スートに「できないこと」を補わせる。
+    剣 … 単体しか殴れない → 全体攻撃（一閃／橙）
+    棒 … 全体しか殴れない → 単体攻撃（魔法／赤）
+    聖杯 … 回復しかできない → 倍率のバフ（恵／黄緑）
+    貨幣 … 積むだけ → 回復（青）
+  ⚠️⚠️ 数えるのは「続いた枚数」。腐食で切れたらそこで途切れる。
+    例：棒4枚 → 腐った札 → 棒5枚 なら 5枚として扱う。
+  ⚠️ 3枚から。2枚で出すと、ほぼ毎ターン何かが起きて特別さが消える。
+  ⚠️ 戦車・女帝・女教皇・魔術師のあとは全部が同じスートなので確定で出る。
+    それを見越して、倍率は「枚数ぶんの札を撃つ」より控えめにしてある。
+*/
+/*
+  【盾】
+  ★ 手札の後ろを盾に変える。引ける札が減るかわりに、受ける傷が軽くなる。
+  ⚠️⚠️ 犠牲を直線で増やさないこと。1枚ずつだと、枚数の多い★で
+    「盾3＋7枚」が成立し、ほぼ無敵で殴れてしまう。
+  ★ 1・3・6 と急に増やす。★12（10枚）で盾3なら残り4枚 ―― 攻めがほぼ止まる。
+  ⚠️ 手札が足りない段は、その盾を選べない（下の shieldMax）。
+*/
+const SHIELD_COST = [0, 1, 3, 6];
+const SHIELD_CUT = [0, 0.25, 0.45, 0.65];
+/** その枚数で選べる盾の上限。⚠️ 攻め手を最低2枚は残すこと */
+function shieldMax(cards) {
+  for (let i = SHIELD_COST.length - 1; i >= 0; i--) {
+    if ((cards || 3) - SHIELD_COST[i] >= 2) return i;
+  }
+  return 0;
+}
+
+const FLASH_NAMES = {
+  swords: ["霧雨一閃", "疾風一閃", "紫電一閃", "烈空一閃",
+    "行雲一閃", "風雷一閃", "霹靂一閃", "虚空一閃"],
+  wands: ["爆裂魔法", "灰塵魔法", "紅蓮魔法", "烈火魔法",
+    "業火魔法", "滅失魔法", "神炎魔法", "滅界魔法"],
+  cups: ["自然の恵", "天候の恵", "大地の恵", "四季の恵",
+    "豊穣の恵", "生命の恵", "海山の恵", "地球の恵"],
+  pentacles: ["ブルーサークル", "ブルースフィア", "ブルードーム", "ブルーサンクチュアリ",
+    "ブルーラグーン", "ブルーオーシャン", "ブルーガイア", "ブルーアース"],
+};
+const FLASH_NAMES_EN = {
+  swords: ["Drizzle Edge", "Gale Edge", "Violet Edge", "Skyrend Edge",
+    "Driftcloud Edge", "Wanderer's Edge", "Thunderclap Edge", "Void Edge"],
+  wands: ["Crimson Spell", "Ashfall Spell", "Burst Spell", "Blaze Spell",
+    "Inferno Spell", "Unmaking Spell", "Divine Flame", "World-End Spell"],
+  cups: ["Gift of Nature", "Gift of Weather", "Gift of Earth", "Gift of Seasons",
+    "Gift of Harvest", "Gift of Life", "Gift of Sea and Mountain", "Gift of the Globe"],
+  pentacles: ["Blue Circle", "Blue Sphere", "Blue Dome", "Blue Sanctuary",
+    "Blue Lagoon", "Blue Ocean", "Blue Gaia", "Blue Earth"],
+};
+/* ⚠️ 色はスートに揃える。剣だけは橙（全体攻撃の色）にして、単体の剣と区別する */
+const FLASH_TONE = {
+  swords: "#FFA03A", wands: "#FF3B3B", cups: "#C8E06A", pentacles: "#5AA8FF",
+};
+/*
+  枚数ごとの倍率。
+  ⚠️ 直線で伸ばさないこと。10枚が3枚の3.3倍では、揃えた甲斐がない。
+  ⚠️ 指数にすると★12で桁が壊れる。3枚2.0倍から、緩やかに加速させる。
+*/
+const FLASH_MUL = [2.0, 3.0, 4.4, 6.2, 8.4, 11.0, 14.2, 18.0];
+
+/**
+ * 手札の中で、同じスートが何枚続いたかを数える。
+ * ⚠️ 腐った札で途切れること。大アルカナでも途切れる。
+ * ⚠️ 一番長く続いたものだけを返す。二つ以上は同時に出さない（画面が渋滞する）。
+ */
+function flashRunOf(hand) {
+  /*
+    ⚠️⚠️ 一つだけ返さないこと。剣3枚と棒3枚が並んだときに、
+      片方しか出ないのは不自然（実際そうなっていた）。
+    ★ スートごとに、いちばん長く続いた数を返す。3枚以上なら全部発動する。
+    ⚠️ 同じスートが二箇所で続いたときは、長いほうだけを採る。
+      足し算にすると、間に別の札を挟んで稼げてしまう。
+  */
+  const best = {};
+  let run = 0, cur = null;
+  (hand || []).forEach((c) => {
+    const suit = String(c.id).split("-")[0];
+    if (c.rotten || suit === "major") { run = 0; cur = null; return; }
+    if (suit === cur) run += 1; else { cur = suit; run = 1; }
+    if (run >= 3 && run > (best[suit] || 0)) best[suit] = run;
+  });
+  /* ⚠️ 出す順を決めておく。毎回違う順だと、何が起きたか追えない */
+  return ["swords", "wands", "cups", "pentacles"]
+    .filter((s) => best[s]).map((s) => ({ suit: s, run: best[s] }));
+}
+
+/*
   【審判】
   ★ 進行度ぶんの、敵の「最大HP」を削る。序盤に引けば小さく、長引くほど大きい。
   ⚠️⚠️ 分母は BATTLE_TURNS × 枚数（その★の想定総枚数）にすること。
@@ -4874,8 +4992,8 @@ const BATTLE_SHAPE = {
   敵1体あたりのHP。★ごとの規定ターン数で倒せる量。実測（各回）から。
   ⚠️ 札の威力・階位・大アルカナ・敵の行動を変えたら測り直すこと。
 */
-const BATTLE_FOE_HP = { 1: 236, 2: 2039, 3: 2074, 4: 2229, 5: 4707, 6: 4942,
-  7: 18871, 8: 24201, 9: 35669, 10: 53924, 11: 80275, 12: 109482 };
+const BATTLE_FOE_HP = { 1: 260, 2: 2345, 3: 2365, 4: 2786, 5: 6609, 6: 7749,
+  7: 43781, 8: 61713, 9: 63580, 10: 94906, 11: 148348, 12: 202322 };
 /*
   敵の攻撃力（1体あたり）。
   ★ 狙った勝率になるよう、実測から二分探索で求めた値。
@@ -4898,7 +5016,31 @@ const BATTLE_FOE_HP = { 1: 236, 2: 2039, 3: 2074, 4: 2229, 5: 4707, 6: 4942,
   敵の攻撃力（1体あたり）。
   ★ 勝率から二分探索で求めた実測値。各2500回。
     狙い 90/80/70/62/54/46/38/30/23/16/10/5 ％
-    実測 90.6/79.3/69.6/60.1/54.7/47.2/40.4/30.0/24.0/15.8/9.4/6.4 ％
+    実測 90.3/79.0/69.2/59.5/54.1/46.9/41.2/26.8/23.6/15.9/10.8/5.0 ％
+    ⚠️ 与ダメージの内訳（勝った戦い）
+      小アルカナ 49〜85% ／ 塔 7〜25% ／ 審判 7〜35%
+      塔と審判に★8以上の上限（最大HPの10%）を入れる前は、
+      二つで63%を占め、小アルカナは37%まで落ちていた。
+    ⚠️ 塔に上限（★8以上は最大HPの10%）と逆位置の行動不能を入れたあとの値。
+      入れる前は塔だけで与ダメージの56〜57%を占めていた（★8以上）。
+      いまは26〜32%。
+    ⚠️ 次の三つを入れたあとに測り直した値。
+      ・棒の必殺技を「剣の3倍（一体あたり）」に（前は1.14倍で剣に完敗していた）
+      ・青の回復を「最大HP × 枚数/10」に（前は最大HPの189%まで回復した）
+      ・貨幣の倍率に上限を置かない（Infinity）
+    ⚠️⚠️ 一閃・魔法・恵・青（同スート連続の特殊行動）を入れたぶん、
+      敵HPを1.05〜1.76倍に上げてある。入れる前の値では★7で+26ポイント、
+      ★8で+25ポイント上振れした（実測）。
+    ⚠️ HPの倍率は★が上がるほど大きくする（1.05→1.76）。
+      枚数が増えるほど一閃の段が上がるので、上の★ほど恩恵が大きい。
+    ⚠️⚠️ 貨幣の被ダメ上昇を外した（coinTake=0）ぶん、攻撃力を大きく上げてある。
+      外す前の値のままだと、全★で勝率100%になった（実測）。
+      被ダメ倍率が難度の柱だったので、貨幣まわりを触ったら必ず測り直すこと。
+    ⚠️ 乖離は最大2.6ポイント（★8）。他は±2ポイント内。
+    ⚠️ 次の変更もすべて入れた状態で測ってある。
+      ・剣の単体倍率 ×1.5／棒は体数^0.7で散らす／復活した敵に棒 ×2.0
+      ・恋人 1.3倍＋与ダメの4割／正義 聖杯2倍／節制 聖杯2倍／死神 貨幣2倍
+      ・力 ×4／お供の復活は主が残り20%から、起きるHPは棒数枚ぶん
     ⚠️ 棒の総量を一定にしたので、体数で勝率が振れない（実測：1体25% / 4体25%）。
       敵HPも攻撃も「一体あたり」の値。体数が増えれば総量が増える。
     ⚠️⚠️ この値は次の前提で測ってある。どれを変えても勝率が動く。
@@ -4912,8 +5054,8 @@ const BATTLE_FOE_HP = { 1: 236, 2: 2039, 3: 2074, 4: 2229, 5: 4707, 6: 4942,
   ⚠️ 勝率を動かしたいときは、まず轟音の削り幅（FOE_MOVES.roar.roar）を見ること。
     あちらは単調に効く。轟音の「頻度」は効きが単調でないので調整に使えない。
 */
-const BATTLE_ATK = { 1: 6.78, 2: 5.06, 3: 4.32, 4: 5.10, 5: 5.63, 6: 3.72,
-  7: 2.16, 8: 2.01, 9: 1.66, 10: 1.81, 11: 1.95, 12: 2.05 };
+const BATTLE_ATK = { 1: 7.08, 2: 7.16, 3: 7.02, 4: 9.56, 5: 14.18, 6: 10.65,
+  7: 13.82, 8: 12.26, 9: 13.19, 10: 16.66, 11: 20.86, 12: 25.08 };
 /* ⚠️ ★+1.6 ぶんのHPを持たせる。★ぴったりだと敵が一度も殴れずに終わる */
 const BATTLE_HP_TURNS = 1.6;
 /** 一度に開く枚数。⚠️ 8枚を超えたら二枚ずつ。一枚ずつだとテンポが落ちる */
@@ -4941,7 +5083,27 @@ function battleReveal(cards) { return cards > 8 ? 2 : 1; }
   ⚠️ この帯は急峻。0.01 動かすと全滅率が4ポイント動く。細かく刻むこと。
 */
 /* ⚠️ 一戦（10ターン）で削る、こちらの最大HPの割合 */
-const ZAKO_ATK_K = 0.30;
+/*
+  ⚠️⚠️ 見かけの割合で置かないこと。0.30 と書いても、聖杯の回復が
+    それを大きく上回るので、実際には3〜6%しか減らない
+    （★12で 敵の総攻撃310 対 聖杯の回復1,714。実測）。
+  ★ 回復を織り込んだうえで一戦30%削れる値を、★ごとに実測して表にした。
+    ★が上がるほど枚数が増え、聖杯の回復も増えるので、必要な値も上がる。
+  ⚠️ この値で道中の全滅率は9〜16%（狙い13%）。
+    聖杯の威力・出現率・瘴気の効きを変えたら測り直すこと。
+*/
+const ZAKO_ATK_K_TABLE = { 1: 1.18, 2: 1.12, 3: 1.31, 4: 1.29, 5: 1.50, 6: 1.44,
+  7: 1.67, 8: 1.64, 9: 1.80, 10: 2.04, 11: 2.13, 12: 2.28 };
+function zakoAtkK(star) {
+  return ZAKO_ATK_K_TABLE[Math.max(1, Math.min(12, star | 0))] || 1.3;
+}
+/*
+  一体だけの雑魚が構える割合。
+  ⚠️ 体が一つしかないと、こちらの札の当たり外れがそのまま結果になる。
+    通りの悪い回を挟んで、駆け引きを作る。
+  ⚠️ 上げすぎると殴ってこない的になる。四分の一が上限の目安。
+*/
+const ZAKO_SOLO_GUARD = 0.25;
 const ZAKO_SIZE = { xl: 4.0, lg: 2.2, md: 1.4, sm: 0.8 };
 /*
   ⚠️⚠️ 体数を偏らせないこと。八通りのうち3体と4体が六つでは、
@@ -5016,7 +5178,7 @@ function zakoSetup(star, step, nodeKey, seedKey) {
     ⚠️ 殴らない手が3〜5割あるので、実際に受けるのはこれより軽い。
   */
   const S0 = statsOf(step || 0);
-  const totalAtk = Math.max(1, Math.round(S0.maxHP * ZAKO_ATK_K / 10));
+  const totalAtk = Math.max(1, Math.round(S0.maxHP * zakoAtkK(s) / 10));
   return {
     ...base, star: s, zako: true,
     /*
@@ -5069,7 +5231,9 @@ function zakoSetup(star, step, nodeKey, seedKey) {
 function emptyFx() {
   /* ⚠️ despair は敵が掛けてくるもの。こちらの継続と同じ器に置き、同じ速さで減らす */
   return { hiero: 0, lovers: 0, hermit: 0, wheel: 0, justice: 0, hanged: 0,
-    death: 0, temperance: 0, star: 0, moon: 0, sun: 0, despair: 0 };
+    death: 0, temperance: 0, star: 0, moon: 0, sun: 0, despair: 0, dread: 0,
+    /* ⚠️ 瘴気も敵が掛けてくるもの。こちらの継続と同じ器に置き、同じ速さで減らす */
+    miasma: 0 };
 }
 /** 継続を1つ減らす。⚠️ 呼ぶのは敵の手番のあと一箇所だけ */
 function tickFx(fx) {
@@ -5118,17 +5282,25 @@ function majorEffect(state, card, ctx) {
       P.suit = fx.suit; P.shiftUp = !!fx.shiftUp;
       P.suitTurns = (P.suitTurns || 0) + 1;
     }
-    if (fx.halveRank) P.halve = true;
-    if (fx.allRev) P.allRev = true;
-    if (fx.dmgMul) P.dmgMul = fx.dmgMul;
+    /*
+      ⚠️⚠️ 上書きにしないこと。愚者で十枚揃っても一回ぶんしか効かず、
+        枚数が丸ごと無駄になる（スート指定だけ枚数ぶん積んでいて、
+        悪魔・力・世界・愚者が取り残されていた）。
+      ★ 引いた枚数ぶんのターン数として積む。
+      ⚠️ 倍率そのものは重ねない。力を二枚引いても ×4 のまま、
+        効くターン数だけが二倍になる。重ねると桁が壊れる。
+    */
+    if (fx.halveRank) { P.halve = true; P.halveTurns = (P.halveTurns || 0) + 1; }
+    if (fx.allRev) { P.allRev = true; P.allRevTurns = (P.allRevTurns || 0) + 1; }
+    if (fx.dmgMul) { P.dmgMul = fx.dmgMul; P.mightTurns = (P.mightTurns || 0) + 1; }
     /* ⚠️ 力の三つの性質。一つでも落とすと、ただの倍率札に戻る */
     if (fx.noMajor) P.noMajor = true;
     if (fx.pierce) P.pierce = true;
     if (fx.unrot) P.unrot = true;
     if (fx.wipeAfter) P.wipeAfter = true;
-    if (fx.acts) P.acts = fx.acts;
+    if (fx.acts) { P.acts = fx.acts; P.actsTurns = (P.actsTurns || 0) + 1; }
     if (fx.skipFoe) P.skipFoe += fx.skipFoe;
-    if (n === 0) P.fool = true;
+    if (n === 0) { P.fool = true; P.foolTurns = (P.foolTurns || 0) + 1; }
   } else if (fx.kind === "last") {
     /* ⚠️ 同じ枠を奪い合うのはこの二つだけ */
     if (fx.rankMode === "fixed10") { state.fx.wheel += T; state.fx.hanged = 0; }
@@ -5143,12 +5315,28 @@ function majorEffect(state, card, ctx) {
     else if (n === 18) state.fx.moon += MAJOR_FX_LONG;
     else if (n === 19) state.fx.sun += MAJOR_FX_LONG;
   } else if (n === 16) {
-    /* 塔。⚠️ 自傷は最大HPの割合。現在HPだと、瀕死のとき効果がほぼ消える */
-    state.foes.forEach((f, i) => {
-      if (f.hp <= 0) return;
-      const d = Math.round(f.hp * fx.foePctAll);
-      f.hp -= d; out.hits = (out.hits || []).concat([{ i, d }]);
-    });
+    /*
+      塔。
+      ⚠️⚠️ ★8以上では上限を置くこと。
+        現在HPの25%は、敵HPが大きいほど効きが増す。実測で★8以上は
+        塔だけで与ダメージの56〜57%を占め、小アルカナで削る戦いでなくなっていた。
+      ★ ★8〜12は最大HPの10%まで。★7以下は上限なし（一撃で四分の一の爽快さを残す）。
+      ⚠️ 逆位置は敵に与えず、こちらが1ターン動けなくなる。
+        塔＝崩壊の札。裏返れば自分が崩れる。
+    */
+    if (rev) {
+      /* ⚠️ 与えない。行動不能だけ。中途半端に両方やると、どちらも薄まる */
+      state.stunNext = (state.stunNext || 0) + 1;
+      out.stun = true;
+    } else {
+      const capPct = (ctx.star >= 8) ? 0.10 : null;
+      state.foes.forEach((f, i) => {
+        if (f.hp <= 0) return;
+        let d = Math.round(f.hp * fx.foePctAll);
+        if (capPct) d = Math.min(d, Math.round(f.max * capPct));
+        f.hp -= d; out.hits = (out.hits || []).concat([{ i, d }]);
+      });
+    }
     /*
       塔の自傷。
       ⚠️⚠️ 最大HPの割合にしないこと。長い戦いでは必ず積み上がり、
@@ -5157,8 +5345,11 @@ function majorEffect(state, card, ctx) {
         首の皮一枚が残るので、愚者で塔が並んでも自殺札にならない。
       ⚠️ 敵への割合ダメージは満額のまま。瀕死から押し切る展開が生まれる。
     */
-    out.self = Math.floor(state.hp * fx.selfMaxPct);
-    state.hp -= out.self;
+    /* ⚠️ 逆位置は行動不能が代償なので、HPは削らない */
+    if (!rev) {
+      out.self = Math.floor(state.hp * fx.selfMaxPct);
+      state.hp -= out.self;
+    }
   } else if (n === 20) {
     /*
       審判。
@@ -5174,9 +5365,18 @@ function majorEffect(state, card, ctx) {
       out.self = d; state.hp -= d;
       /* ⚠️ 敵には何も起きない。hits を空のままにすること */
     } else {
+      /*
+        ⚠️⚠️ ★8以上は上限を置くこと。
+          最大HPの22%は、敵HPが大きいほど効きが増す。実測で★8以上は
+          審判だけで与ダメージの44〜47%を占め、小アルカナが37%まで落ちていた。
+        ★ ★8〜12は最大HPの10%まで（塔と同じ）。★7以下は上限なし。
+          これで小アルカナが48%に戻る。
+      */
+      const jCap = (ctx.star >= 8) ? 0.10 : null;
       state.foes.forEach((f, i) => {
         if (f.hp <= 0) return;
-        const d = judgementDamage(ctx.drawn, ctx.cards, ctx.star, f.max);
+        let d = judgementDamage(ctx.drawn, ctx.cards, ctx.star, f.max);
+        if (jCap) d = Math.min(d, Math.round(f.max * jCap));
         f.hp -= d;
         out.hits = (out.hits || []).concat([{ i, d }]);
       });
@@ -5220,12 +5420,48 @@ const BOSS_FORMS = [
   { key: "sm4",          parts: [["sm", 4]], reviveUnlessAll: true, revivePct: 0.05 },
   { key: "xl1sm3",       parts: [["xl", 1], ["sm", 3]] },
   /* ⚠️ 極小は復活する。主を倒すまで湧き続ける */
+  /* ⚠️ 復活は主が残り20%を切ってから。初めから湧くと倒し直しで手が回らない */
   { key: "xl1xs3rev",    parts: [["xl", 1], ["xs", 3]], revive: true },
   { key: "xl1lg1md1sm1", parts: [["xl", 1], ["lg", 1], ["md", 1], ["sm", 1]] },
   { key: "xl1md2rev",    parts: [["xl", 1], ["md", 2]], revive: true },
+  /*
+    ⑨ 区分をすべて制覇したときに現れる主。
+    ★ 特大1＋大1＋中2。お供の三体すべてが起き上がる。
+      ①〜⑧のどれとも違う型にすること。使い回すと、褒美なのに
+      「見たことがある相手」になる。
+    ⚠️ 復活は4ターン後。3ターンだと起き上がりが途切れず、主を削る手が止まる。
+      5ターンだと一巡するあいだに忘れられて、復活する意味が薄れる。
+    ⚠️ 主が残り20%を切ってから湧くのは他と同じ。初めから湧くと倒し直しで手が回らない。
+  */
+  { key: "extra",        parts: [["xl", 1], ["lg", 1], ["md", 2]],
+    revive: true, reviveTurns: 4 },
 ];
 /* ⚠️ 復活は3ターン後・全快・回数の上限なし。主を倒せば終わるので詰まない */
 const BOSS_REVIVE_TURNS = 3;
+/* ⚠️ 主がここまで削れてから、お供が起き上がり始める */
+const BOSS_REVIVE_AT = 0.20;
+/* ⚠️ 区分の主の名前の末尾。ここで⑨かどうかを見分ける */
+const BOSS_SUFFIX = "の主";
+/*
+  県の制覇に必要な区分の数。
+  ⚠️ 県によって区分は3〜8とばらつく（平均4.7）。全部を条件にすると
+    24戦の県と64戦の県ができ、2.7倍の差になる。
+  ★ 三つ。どの区分を選んでもよい ―― 多い県では選ぶ楽しみが生まれる。
+  ⚠️ 区分が三つ未満の県では、その全部で制覇とする。
+*/
+const PREF_DONE_AREAS = 3;
+/*
+  【区分の主の勝率】
+  ★ 通常の主とは別の表を持つ。区分を制覇した先の相手なので、
+    同じ段の通常の主より難しくする。
+    ★1 60% ／★4 30% ／★8 11% ／★12 1%
+  ⚠️ 攻撃力は勝率から二分探索で求めた実測値（各2000回）。
+    実測 61.1/47.3/35.4/29.8/21.1/18.1/14.8/12.2/7.3/5.4/2.5/1.1 ％
+    ⚠️ 貨幣の被ダメを外したあとに測り直した値。
+  ⚠️ 敵HPは通常と同じ表を使う。変えるのは攻撃力だけ。
+*/
+const EXTRA_ATK = { 1: 10.20, 2: 9.23, 3: 8.50, 4: 11.60, 5: 17.83, 6: 12.88,
+  7: 16.03, 8: 13.78, 9: 14.77, 10: 18.50, 11: 22.80, 12: 27.45 };
 /*
   ⚠️ 敵HPの全体倍率。表は「体数＝BATTLE_SHAPE の値」で測ってあるので、
     編成の体数に合わせたぶんを均す。1.0 から動かすときは勝率を測り直すこと。
@@ -5322,6 +5558,10 @@ function reviveHPOf(star, step, maxHP) {
   return Math.max(1, Math.min(Math.round(maxHP * 0.4), Math.round(per * reviveWandsOf(star))));
 }
 
+/*
+  ⚠️ ⑨は一覧から選ばれない。区分の主のときだけ、名前で呼び出す。
+*/
+const BOSS_FORM_EXTRA = BOSS_FORMS[BOSS_FORMS.length - 1];
 function bossFormOf(name, star) {
   const s = Math.max(1, Math.min(12, star | 0));
   /*
@@ -5330,9 +5570,14 @@ function bossFormOf(name, star) {
       全体攻撃が効かず、敵の攻撃も一点に集まるため、HPをいくら下げても届かない。
     ★ 高い★では2体以上の編成だけから選ぶ。
   */
+  /*
+    ⚠️⚠️ ⑨を通常の抽選に混ぜないこと。区分の主だけの編成。
+    ⚠️ 1体編成は★8以上で使わない（勝率が届かない）。
+  */
+  const pool = BOSS_FORMS.filter((f) => f.key !== "extra");
   const list = s >= 8
-    ? BOSS_FORMS.filter((f) => f.parts.reduce((x, p) => x + p[1], 0) >= 2)
-    : BOSS_FORMS;
+    ? pool.filter((f) => f.parts.reduce((x, p) => x + p[1], 0) >= 2)
+    : pool;
   return list[hashName(String(name || "b")) % list.length];
 }
 /*
@@ -5340,6 +5585,26 @@ function bossFormOf(name, star) {
   ⚠️⚠️ 「全滅したか」で判定しないこと。復活するお供がいる編成では終わらない。
   ⚠️ 雑魚には bossAt が無い。そのときは全滅で判定する。
 */
+/*
+  次のターンに効くもののうち、いま残っているものを並べる。
+  ⚠️ 継続（state.fx）とは別の器に入っているので、画面では合わせて出すこと。
+  ⚠️ 残りターン数（○○Turns）を持つものだけ。真偽だけのものは数えない。
+*/
+function nextFxList(P) {
+  if (!P) return [];
+  const out = [];
+  if (P.suitTurns > 0 && P.suit) {
+    const k = { swords: "chariot", wands: "magician", cups: "priestess", pentacles: "empress" };
+    out.push({ key: k[P.suit] || "chariot", turns: P.suitTurns });
+  }
+  if (P.halveTurns > 0) out.push({ key: "devil", turns: P.halveTurns });
+  if (P.mightTurns > 0) out.push({ key: "strength", turns: P.mightTurns });
+  if (P.actsTurns > 0) out.push({ key: "world", turns: P.actsTurns });
+  if (P.foolTurns > 0) out.push({ key: "fool", turns: P.foolTurns });
+  if (P.skipFoe > 0) out.push({ key: "emperor", turns: P.skipFoe });
+  return out;
+}
+
 function bossDown(foes, setup) {
   if (!foes || !foes.length) return true;
   if (setup && typeof setup.bossAt === "number" && foes[setup.bossAt]) {
@@ -5357,7 +5622,9 @@ function battleSetup(star, step, name) {
     編成を組む。⚠️ 総量は★の表のまま。大きさの比で配るだけ。
     ⚠️ 主は最大の個体。②〜④のように特大が無い編成では、いちばん大きいものが主。
   */
-  const form = bossFormOf(name, s);
+  /* ⚠️ 区分の主（名前が主の名で終わる）のときだけ⑨を使う */
+  const form = (name && String(name).endsWith(BOSS_SUFFIX))
+    ? BOSS_FORM_EXTRA : bossFormOf(name, s);
   const sizes = [];
   form.parts.forEach(([sz, n2]) => { for (let i = 0; i < n2; i++) sizes.push(BOSS_SIZE[sz]); });
   const share = sizes.reduce((x, y) => x + y, 0);
@@ -5371,7 +5638,9 @@ function battleSetup(star, step, name) {
   */
   const totalHP = (BATTLE_FOE_HP[s] || 236) * sizes.length * BOSS_HP_K;
   /* ⚠️ 攻撃も一体あたり。体数が増えれば総量も増える */
-  const totalAtk = (BATTLE_ATK[s] || 3) * sizes.length;
+  /* ⚠️ 区分の主は専用の表から。通常の主より難しい */
+  const isExtra = form.key === "extra";
+  const totalAtk = ((isExtra ? EXTRA_ATK[s] : BATTLE_ATK[s]) || 3) * sizes.length;
   /*
     主の番号。
     ⚠️⚠️ 特大のいない編成（②③④）には主を置かないこと。
@@ -5391,7 +5660,8 @@ function battleSetup(star, step, name) {
     /* ⚠️ この番号の敵を倒したら勝ち。お供が残っていても終わる */
     bossAt,
     revive: !!form.revive,
-    reviveTurns: BOSS_REVIVE_TURNS,
+    /* ⚠️ 編成ごとに指定があればそれを使う。⑨は4ターン */
+    reviveTurns: form.reviveTurns || BOSS_REVIVE_TURNS,
     /* ⚠️ 同時に倒さないと起き上がる編成。復活のHPは割合で持つ */
     reviveUnlessAll: !!form.reviveUnlessAll,
     revivePct: form.revivePct || 0.05,
@@ -5476,7 +5746,7 @@ function battleApply(state, card) {
   const might = (state.next && state.next.dmgMul) || 1;
   /* ⚠️ 恋人は棒と剣だけを強くする。聖杯や貨幣には乗せない（攻め手の札なので） */
   const loversMul = (state.fx && state.fx.lovers > 0
-    && (suit === "swords" || suit === "wands")) ? 1.5 : 1;
+    && (suit === "swords" || suit === "wands")) ? 1.3 : 1;
   const my = (state.fx && state.fx.sun > 0 ? 1.4 : 1) * might * loversMul;
   /*
     ⚠️⚠️ ここで rankModeOf を掛けないこと。輪と吊るされた男は、
@@ -5597,10 +5867,37 @@ function battleApply(state, card) {
         むしろ溢れたぶんほど強い一撃になる ―― それが正義の顔。
     */
     const just = state.fx && state.fx.justice > 0;
+    /*
+      ⚠️⚠️ 節制のあいだ、聖杯だけは弱まらない。
+        「すべて半分」に飲み込ませると、守りの札なのに癒やしまで痩せる。
+      ★ ×2.0 を掛けて、半分（all = 0.5）を打ち消したうえで倍にする。
+        実質 ×4.0 ―― 守りに徹するが、癒やしだけは冴える。
+      ⚠️ all は上の r に掛かっているので、ここでは温存の倍率だけを掛けること。
+    */
+    const temper = (state.fx && state.fx.temperance > 0) ? 2.0 : 1;
+    /*
+      聖杯の回復。
+      ⚠️⚠️ 精神（固定値）から出さないこと。最大HPは段で伸びるのに
+        回復は伸びないので、★が上がるほど回復の重みが変わってしまう。
+        逆に回復総量は一戦で最大HPの数倍に達し、溢れて捨てられる。
+      ★ 最大HPの割合にする。★に関わらず「一枚で一ターンぶんの傷が戻る」。
+        引ければ持ち直し、二枚続けて外すと落ちる ―― その綱引きになる。
+      ⚠️ 6%。敵の一ターンの攻撃が最大HPの5〜7%なので、ほぼ拮抗する。
+        これ以上下げると引いても足りず、上げると引かなくても戻る。
+      ⚠️ 階位・正逆・正義・節制・力の倍率は、これまでどおり掛ける。
+    */
+    /*
+      ⚠️⚠️ 最大HPの割合（6%）に変えたところ、勝率が全★で崩れた
+        （★4で62%→13%、★8以上はほぼ0%）。実測済みの敵HP・攻撃力は
+        すべて「精神から出す回復」を前提にしているため。
+      ★ 精神に戻す。割合に変えるなら、敵HPと攻撃力を12段ぶん測り直すこと。
+    */
     const raw = Math.round(S.spirit * CARD_COEF.cups * rankMultOf(shifted, "normal")
-      * (rev ? BATTLE.revHeal : 1) * (just ? 1.5 : 1) * might);
+      * (rev ? BATTLE.revHeal : 1) * (just ? 2.0 : 1) * might * temper);
+    /* ⚠️ 瘴気のぶん回復を削る。深淵（1.0）なら一切戻らない */
+    const mia = (state.fx && state.fx.miasma > 0) ? (1 - (state.miasmaCut || 0)) : 1;
     const room = Math.max(0, S.maxHP - state.hp);
-    out.heal = Math.min(room, raw);
+    out.heal = Math.min(room, Math.round(raw * mia));
     /* ⚠️ 溢れた量は別に持つ。清算で4倍のダメージに化ける */
     out.healOver = Math.max(0, raw - room);
   } else if (suit === "pentacles") {
@@ -5611,12 +5908,21 @@ function battleApply(state, card) {
       ⚠️ 被ダメの倍率には上限を置かない。強くなるほど脆くなる関係を保つ。
       ⚠️ 階位を掛けること。Aの貨幣とZの貨幣が同じでは、階位の意味が消える。
     */
-    const step = BATTLE.coinUp * rankMultOf(shifted, "normal");
+    /*
+      ⚠️⚠️ 死神のあいだ、貨幣の積みが跳ね上がる。
+      ★ ×2.0。すべて2倍（all）と合わせて実質 ×4.0。
+        諸刃の札だが、力を溜める速さは跳ね上がる。
+      ⚠️ 上限（multCap）は変えない。到達が早まるだけ。
+    */
+    const reap = (state.fx && state.fx.death > 0) ? 2.0 : 1;
+    const step = BATTLE.coinUp * rankMultOf(shifted, "normal") * reap;
     state.mult = Math.min(BATTLE.multCap, state.mult + step * might);
+    /* ⚠️ 被ダメは上げない（coinTake は 0）。残してあるのは、
+         もし代償を戻すならここ一箇所で済むようにするため */
     state.take += BATTLE.coinTake;
     out.buff = step;
-    /* ⚠️ 上限に達したら、そのことを出す。増えていないのに数字が出ると嘘になる */
-    out.capped = state.mult >= BATTLE.multCap;
+    /* ⚠️ 上限が無くなったので、頭打ちの表示も出ない */
+    out.capped = false;
   } else {
     /*
       ⚠️⚠️ 大アルカナはここで殴らない。22種すべて効果札で、直接ダメージは持たない。
@@ -5661,7 +5967,14 @@ const MAJOR_FX = {
   /* ⚠️ 「弱まりを受けない」では地味。そもそも逆位置が出なくなる */
   5:  { key: "hiero",    kind: "last",  allUpright: true },
   /* ⚠️ 回復するだけでは薄い。攻め手そのものを強くして、回復量も一緒に上げる */
-  6:  { key: "lovers",   kind: "last",  healByDamage: 1.0, atkSuitMul: 1.5 },
+  /*
+    ⚠️⚠️ 攻撃の強化と全額の回復を両方持たせないこと。
+      与えたダメージがそのまま戻るので、一戦で最大HPの何倍も回復し、
+      聖杯を引かなくても成立してしまう。正義（聖杯が主役）と役割が被る。
+    ★ 攻め寄りにする。倍率を1.3に、戻りは与ダメの4割。
+      削られた分を補う程度で、回復札の代わりにはならない。
+  */
+  6:  { key: "lovers",   kind: "last",  healByDamage: 0.4, atkSuitMul: 1.3 },
   7:  { key: "chariot",  kind: "next",  suit: "swords",    shiftUp: true },
   /*
     力。
@@ -5888,8 +6201,8 @@ const FOE_ROTA_BY_TIER = {
   /* ★4〜6。⚠️ 轟音はおよそ4回に1回。続けて出すと機械に見える */
   mid: {
     calm:  ["hit", "rot", "roar", "hit"],
-    press: ["hit", "combo", "wind", "heavy", "roar", "rot", "guardEdge", "combo"],
-    last:  ["combo", "wind", "heavy", "roar", "rot", "combo", "wind", "heavy"],
+    press: ["hit", "combo", "wind", "heavy", "roar", "dread", "guardEdge", "combo"],
+    last:  ["combo", "wind", "heavy", "roar", "rot", "miasma", "wind", "heavy"],
   },
   /*
     ★7〜8。
@@ -5905,12 +6218,30 @@ const FOE_ROTA_BY_TIER = {
   */
   high: {
     calm:  ["hit", "roar", "combo", "despair"],
-    press: ["combo", "wind", "heavy", "guardEdge", "rot", "despair", "wind", "heavy"],
-    last:  ["wind", "heavy", "roar", "combo", "wind", "heavy", "despair", "combo"],
+    /*
+      ⚠️⚠️ 攻勢の段に轟音を入れ忘れないこと。
+        戦いの大半はこの段（HP33〜66%）なので、抜けていると
+        一戦を通して一度も轟音を見ないまま終わる（実際そうなっていた）。
+      ⚠️ 八手のうち一つ。増やすと殴らない手が多くなりすぎる。
+    */
+    press: ["combo", "wind", "heavy", "roar", "dread", "despair", "wind", "heavy"],
+    last:  ["wind", "heavy", "dread", "miasma", "wind", "heavy", "despair", "combo"],
   },
 };
 /* ⚠️ ★12まである。帯の境目も伸ばすこと */
 function foeTierOf(star) { return star <= 3 ? "low" : star <= 7 ? "mid" : "high"; }
+/*
+  その★が使う瘴気。
+  ⚠️ ★3以下は使わない。序盤から回復を削ると立て直す手立てが無くなる。
+  ⚠️ 深淵（回復不能）は★11から。2ターンに抑えること。
+*/
+function miasmaOf(star) {
+  const s = Math.max(1, Math.min(12, star | 0));
+  if (s <= 3) return null;
+  if (s <= 7) return "miasma1";
+  if (s <= 10) return "miasma2";
+  return "miasma3";
+}
 /* 段階ごとの強さ。⚠️ 平静を抑えて死力を上げる。合計は元のままに近づける */
 /*
   段階ごとの強さ。
@@ -5928,11 +6259,24 @@ const FOE_MOVES = {
       上振れで肝を冷やし、そのぶんを回復で戻す ―― それが回復札の役目。
     ⚠️ 広げすぎると事故だけのゲームになる。通常で±35%が上限の目安。
   */
-  hit:   { mul: 1.0, hits: 1, spread: 0.35 },
-  combo: { mul: 0.30, hits: 4, spread: 0.22 },
+  /*
+    ⚠️⚠️ 大技を重くしすぎないこと。
+      実測で★8以上の負けの75%が大技によるもので、★12では一発が
+      最大HPの41〜63%。満タンから二発で落ちる。
+      「じりじり減って、回復を引けずに負けた」なら納得できるが、
+      「HP満タンから突然落ちた」は理不尽にしかならない。
+    ★ 大技を 2.9→1.5 に下げ、通常を 1.0→1.45、連撃を 0.30→0.38 に上げる。
+      一戦の総量はほぼ同じまま、山を低くして谷を埋める。
+    実測（負けたときの最後の一撃）
+      直す前  通常20% 連撃5% 大技75%
+      直した後 通常50% 連撃21% 大技29%（★12）
+    一発が最大HPに占める割合も 41〜63% → 38%以下になった。
+  */
+  hit:   { mul: 1.45, hits: 1, spread: 0.35 },
+  combo: { mul: 0.38, hits: 4, spread: 0.22 },
   /* 溜め。⚠️ 殴らない一手を挟む。ここで身構えられることが「読める」ということ */
   wind:  { mul: 0, hits: 0, wind: true },
-  heavy: { mul: 2.9, hits: 1, spread: 0.22 },
+  heavy: { mul: 1.5, hits: 1, spread: 0.22 },
   /*
     構えの三段。
     ⚠️⚠️ どれも殴ってこない手なので、出しすぎると戦いが停滞する。
@@ -5980,6 +6324,27 @@ const FOE_MOVES = {
     ⚠️ 手札より多くは封じない。全部不発だと、ただ一ターン飛ばすのと同じになる。
   */
   rot: { mul: 0.5, hits: 1, spread: 0.18, rot: true },
+  /*
+    瘴気。三段。
+    ★ 回復を鈍らせる。★の帯によって、どれを使ってくるかが変わる。
+      魔界 … 回復が四分の一減る（★4〜7）
+      地獄 … 半分減る（★8〜10）
+      深淵 … 一切回復できない（★11〜12）
+    ⚠️⚠️ 累積させないこと。四体が同時に掛けると即座に回復不能になる
+      （絶望の波動で起きた事故と同じ）。上書きにする。
+    ⚠️ 殴らない手。立て直す間はあるのに戻せない、という重さを作る。
+  */
+  /*
+    すさまじい殺気。
+    ★ 数ターン、こちらの必殺技（一閃・魔法・恵・青）が出せなくなる。
+      同じスートを揃えても何も起きない ―― 積み上げを空振りにする手。
+    ⚠️⚠️ 殴らない手。妨害としては重いので、短く（2ターン）に抑える。
+    ⚠️ 累積させない（上書き）。四体が同時に掛けると永久に封じられる。
+  */
+  dread: { mul: 0, hits: 0, dread: 2 },
+  miasma1: { mul: 0, hits: 0, miasma: 0.25, turns: 3 },
+  miasma2: { mul: 0, hits: 0, miasma: 0.50, turns: 3 },
+  miasma3: { mul: 0, hits: 0, miasma: 1.00, turns: 2 },
 };
 function foePhaseOf(ratio) {
   return ratio > FOE_PHASE.calm ? "calm" : ratio > FOE_PHASE.press ? "press" : "last";
@@ -6764,45 +7129,73 @@ const ADV_I18N = {
     foeRoar: "戦慄の轟音",
     foeRoarFail: "轟音は届かなかった",
     foeRot: "腐食攻撃",
+    foeMiasma: { miasma1: "魔界の瘴気", miasma2: "地獄の瘴気", miasma3: "深淵の瘴気" },
+    foeDread: "すさまじい殺気",
+    flashName: FLASH_NAMES,
+    foeMiasmaFail: "瘴気は届かなかった",
     foeGuardHi: "剛防御", foeGuardEdge: "凶刃防御",
     /* ⚠️ 二行にまたがる定義の途中に差し込まないこと。別の表が壊れる */
     spName: { rage: "猛り", sync: "連携", call: "招集", howl: "群れの咆哮",
       shield: "守護", curse: "呪詛", command: "号令", drain: "吸収" },
     fxHelp: {
     majorList: "大アルカナ22枚の効果",
+    debuffList: "敵の行動13種",
+    foeActName: {
+      roar: "戦慄の轟音", rot: "腐食攻撃", despair: "絶望の波動",
+      miasma: "瘴気（魔界・地獄・深淵）", dread: "すさまじい殺気",
+      guard: "防御", guardHi: "剛防御", guardEdge: "凶刃防御",
+      wind: "溜め", heavy: "大技", combo: "連撃", hit: "通常攻撃", heal: "自己回復",
+    },
+    foeActHelp: {
+      roar: "積み上げた貨幣の倍率を35%削ります。殴ってきません。",
+      rot: "威力は半分。次のターンの札を1〜4枚、引けても効かない状態にします。",
+      despair: "2ターン、大アルカナが山から外れます。★7以上。",
+      miasma: "回復が鈍ります。魔界=1/4減、地獄=半分減、深淵=一切回復できない。",
+      dread: "2ターン、必殺技（一閃・魔法・恵・青）が出せなくなります。★4以上。",
+      guard: "こちらの攻撃の通りが55%になります。",
+      guardHi: "通りが28%まで落ちます。",
+      guardEdge: "通りは75%ですが、斬ると自傷が3.5倍になります。",
+      wind: "殴ってきません。次のターンは必ず大技です。",
+      heavy: "最も重い一撃。同じターンに撃てるのは一体までです。",
+      combo: "軽い一撃を4回。総量は通常攻撃と同じくらい。",
+      hit: "最も多く出る手。じりじり削ってきます。",
+      heal: "最大HPの12%を回復。一体につき三回まで。★5以上。",
+    },
     majorHelp: {
       0: "次のターン、1枚目と同じ札に全部揃う",
       1: "次のターン、棒だけを引く。階位が3つ上がる。腐食を受けない",
       2: "次のターン、聖杯だけを引く。階位が3つ上がる。腐食を受けない",
-      3: "次のターン、貨幣だけを引く。階位が3つ上がる。そのあいだ轟音で倍率が削られず、腐食も受けない",
+      3: "次のターン、貨幣だけを引く。階位が3つ上がる。そのあいだ轟音で倍率が削られず、腐食も瘴気も受けない",
       4: "次のターン、敵の手番を飛ばす",
       5: "3ターン、逆位置が出ない。大アルカナが必ず1枚来る",
-      6: "3ターン、棒と剣が1.5倍。与えた分だけターンの終わりに回復",
+      6: "3ターン、棒と剣が1.3倍。与えた分の4割をターンの終わりに回復",
       7: "次のターン、剣だけを引く。階位が3つ上がる。腐食を受けない",
       8: "次のターン、小アルカナだけを4倍で引く。防御を貫き、腐った札も動く。その次は継続効果がすべて消える",
       9: "3ターン、敵の妨害はすべて無駄行動になる（敵は何もできない）",
       10: "3ターン、引く札の階位がすべて10に。敵の攻撃もすべて10ダメージになる",
-      11: "3ターン、聖杯の回復1.5倍。回復した分の2倍を敵へ（溢れた分は4倍）",
+      11: "3ターン、聖杯の回復2倍。回復した分の2倍を敵へ（溢れた分は4倍）",
       12: "3ターン、階位が上下逆＋正逆も反転。正位置になった札は2倍で、敵の耐性も構えも無視。敵の回復は本来の12%のダメージに変わる",
-      13: "3ターン、与える量も受ける量も2倍（節制で解ける）",
-      14: "3ターン、与える量も受ける量も半分（死神で解ける）",
-      15: "次のターン、階位が半分（切り上げ）になり、すべて逆位置になる",
-      16: "敵全体の現在HPを25%削る。自分も現在HPの25%を失う",
-      17: "4ターン、ターンの初めに最大HPの12%を回復。腐食を受けない",
+      13: "3ターン、与える量も受ける量も2倍。貨幣の積みはさらに2倍（節制で解ける）",
+      14: "3ターン、与える量も受ける量も半分。聖杯の回復は2倍、瘴気も受けない（死神で解ける）",
+      15: "次のターン、階位が半分（切り上げ）になり、すべて逆位置に。必殺技も出せない",
+      16: "敵全体の現在HPを25%削る（★8以上は最大HPの10%まで）。自分も現在HPの25%を失う。逆位置なら敵に影響なく、こちらが1ターン行動不能",
+      17: "4ターン、ターンの初めに最大HPの12%を回復。腐食も瘴気も受けない",
       18: "4ターン、敵の攻撃が40%弱まる。敵の構えを貫く",
       19: "4ターン、自分の攻撃が40%強まる。轟音と波動は通常攻撃に変わる",
       20: "敵全体の最大HP×進行度×22%。逆位置なら自分のHPが半分（敵には無効）",
       21: "次のターン、引いた札で3回行動する（敵の手番は来る）",
     },
       despair: "大アルカナが山から外れています。効果札が来ません。",
+      miasma: "聖杯の回復が鈍っています。深淵なら一切戻りません。",
+      dread: "必殺技が出せません。同じスートを揃えても何も起きません。",
       hiero: "逆位置が出ません。大アルカナが必ず1枚来ます。",
-      lovers: "棒と剣が1.5倍。そのターンに与えた分だけ、終わりに回復します。",
+      lovers: "棒と剣が1.3倍。そのターンに与えた分の4割を、終わりに回復します。",
       hermit: "敵の妨害はすべて無駄行動に。敵はその手番で何もできません。",
       wheel: "引く札の階位がすべて10に。敵の攻撃もすべて10ダメージになります。",
-      justice: "聖杯の回復が1.5倍。回復した分の2倍を敵へ。満タンで溢れた分は4倍。",
+      justice: "聖杯の回復が2倍。回復した分の2倍を敵へ。満タンで溢れた分は4倍。",
       hanged: "階位が上下逆に。正位置になった札は2倍で、耐性も構えも無視。敵の回復は傷に変わります。",
-      death: "与える量も受ける量も、すべて2倍になります。",
-      temperance: "与える量も受ける量も、すべて半分になります。",
+      death: "与える量も受ける量も2倍。貨幣の積みはさらに2倍になります。",
+      temperance: "与える量も受ける量も半分。ただし聖杯の回復だけは2倍になります。",
       star: "ターンの初めに最大HPの12%を回復。腐食を受けません。",
       moon: "敵の攻撃が40%弱まり、敵の構えを貫きます。",
       sun: "こちらの攻撃が40%強まり、轟音と波動は通常攻撃に変わります。",
@@ -6822,7 +7215,7 @@ const ADV_I18N = {
     btStart: "戦いを始める",
     fxName: {
       /* ⚠️ 敵が掛けてくるものも、こちらの継続と同じ場所に出す。効いているものは一覧で */
-      despair: "絶望の波動",
+      despair: "絶望の波動", miasma: "瘴気", dread: "殺気",
       hiero: "法王", lovers: "恋人", hermit: "隠者", wheel: "運命の輪",
       justice: "正義", hanged: "吊るされた男", death: "死神", temperance: "節制",
       star: "星", moon: "月", sun: "太陽",
@@ -6831,6 +7224,8 @@ const ADV_I18N = {
       tower: "塔", judgement: "審判", world: "世界",
     },
     btTurn: (n) => `${n}ターン目`,
+    btStun: "行動不能",
+    btLap: (a1, b1) => `${a1}巡目 / ${b1}`,
     btFoesLeft: (n) => `残り${n}体`,
     btWin: "打ち倒した", btLose: "倒れた", btBack: "地図へ戻る",
     toResult: "結果を見る",
@@ -6899,11 +7294,37 @@ const ADV_I18N = {
     foeRoar: "A terrible roar",
     foeRoarFail: "The roar found nothing to strip",
     foeRot: "A corroding strike",
+    foeMiasma: { miasma1: "Demonic miasma", miasma2: "Infernal miasma", miasma3: "Abyssal miasma" },
+    foeDread: "A dreadful killing intent",
+    flashName: FLASH_NAMES_EN,
+    foeMiasmaFail: "The miasma did not take",
     foeGuardHi: "Braced hard", foeGuardEdge: "Bladed stance",
     spName: { rage: "Fury", sync: "In unison", call: "Summons", howl: "Pack howl",
       shield: "Guarded", curse: "Curse", command: "Command", drain: "Drain" },
     fxHelp: {
     majorList: "The 22 Major Arcana",
+    debuffList: "13 enemy actions",
+    foeActName: {
+      roar: "Dread Roar", rot: "Corroding Strike", despair: "Wave of Despair",
+      miasma: "Miasma", dread: "Killing Intent",
+      guard: "Guard", guardHi: "Hard Guard", guardEdge: "Bladed Stance",
+      wind: "Wind-up", heavy: "Heavy Blow", combo: "Combo", hit: "Strike", heal: "Self-heal",
+    },
+    foeActHelp: {
+      roar: "Strips 35% of your accumulated multiplier. Deals no damage.",
+      rot: "Half damage, but rots 1-4 of next turn's cards.",
+      despair: "2 turns without Major Arcana. Star 7 and above.",
+      miasma: "Healing is dulled: a quarter, a half, or none at all.",
+      dread: "2 turns without finishers. Star 4 and above.",
+      guard: "Your attacks land at 55%.",
+      guardHi: "Your attacks land at 28%.",
+      guardEdge: "Lands at 75%, but your recoil is 3.5x.",
+      wind: "No attack. The next turn is always a heavy blow.",
+      heavy: "The heaviest hit. Only one enemy may use it per turn.",
+      combo: "Four light hits. Roughly equal to a plain strike in total.",
+      hit: "The most common move. Wears you down.",
+      heal: "Recovers 12% of max HP. Three times per enemy. Star 5 and above.",
+    },
     majorHelp: {
       0: "Next turn, every card matches the first one drawn",
       1: "Next turn, wands only. Ranks rise by three; immune to corrosion",
@@ -6911,17 +7332,17 @@ const ADV_I18N = {
       3: "Next turn, pentacles only, ranks rise by three, and roars cannot strip your multiplier",
       4: "Next turn, the enemy loses its turn",
       5: "3 turns: no reversed cards, and one Major Arcana is guaranteed each turn",
-      6: "3 turns: swords and wands x1.5, and heal for the damage dealt",
+      6: "3 turns: swords and wands x1.3, and heal 40% of the damage dealt",
       7: "Next turn, swords only. Ranks rise by three; immune to corrosion",
       8: "Next turn: minors only, x4, guards pierced, rotten cards act. The turn after wipes all lasting effects",
       9: "3 turns: enemy interference is wasted entirely",
       10: "3 turns: every card counts as rank 10, and every enemy hit deals exactly 10",
-      11: "3 turns: cups heal 1.5x; deal double what you healed (quadruple for overflow)",
+      11: "3 turns: cups heal 2x; deal double what you healed (quadruple for overflow)",
       12: "3 turns: ranks and orientation invert; newly upright cards deal 2x, ignoring resistances and stances. Enemy healing becomes damage (12% of the amount)",
-      13: "3 turns: all numbers doubled, given and taken (cleared by Temperance)",
-      14: "3 turns: all numbers halved, given and taken (cleared by Death)",
-      15: "Next turn, ranks halve (rounded up) and every card is reversed",
-      16: "Strip 25% of every enemy's current HP. You lose 25% of yours",
+      13: "3 turns: all numbers doubled; pentacles stack twice as fast (cleared by Temperance)",
+      14: "3 turns: all numbers halved, but cups heal double (cleared by Death)",
+      15: "Next turn, ranks halve (rounded up), every card is reversed, and finishers are sealed",
+      16: "Strip 25% of every enemy's current HP (capped at 10% of max from star 8). You lose 25% of yours. Reversed: no effect on enemies, and you lose a turn",
       17: "4 turns: recover 12% of max HP each turn; immune to corrosion",
       18: "4 turns: enemy attacks are 40% weaker; enemy stances are pierced",
       19: "4 turns: your attacks are 40% stronger; roars and waves become plain attacks",
@@ -6929,6 +7350,8 @@ const ADV_I18N = {
       21: "Next turn, act three times with the cards you draw (the enemy still acts)",
     },
       despair: "Major Arcana are removed from the deck.",
+      miasma: "Healing is dulled. Under the abyssal kind, none at all.",
+      dread: "Your finishers are sealed. Runs of a suit do nothing.",
       hiero: "No reversed cards. One Major Arcana is guaranteed each turn.",
       lovers: "Heal for the damage you dealt this turn.",
       hermit: "Enemy interference fails — no healing, roars, waves or stances.",
@@ -6955,7 +7378,7 @@ const ADV_I18N = {
     zakoWin: "Driven off.", zakoLose: "You fell.",
     btStart: "Begin the fight",
     fxName: {
-      despair: "Despair",
+      despair: "Despair", miasma: "Miasma", dread: "Dread",
       hiero: "Hierophant", lovers: "Lovers", hermit: "Hermit", wheel: "Wheel",
       justice: "Justice", hanged: "Hanged Man", death: "Death", temperance: "Temperance",
       star: "Star", moon: "Moon", sun: "Sun",
@@ -6964,6 +7387,8 @@ const ADV_I18N = {
       tower: "Tower", judgement: "Judgement", world: "World",
     },
     btTurn: (n) => `Turn ${n}`,
+    btStun: "Stunned",
+    btLap: (a1, b1) => `lap ${a1}/${b1}`,
     btFoesLeft: (n) => `${n} left`,
     btWin: "You struck them down", btLose: "You fell", btBack: "Back to the map",
     toResult: "See the result",
@@ -7005,7 +7430,19 @@ const ADV_I18N = {
   },
 };
 /** 行き先の文言。⚠️ 未訳は英語へ落とす。空欄を出さない */
-function advT(lang) { return ADV_I18N[lang] || ADV_I18N.en; }
+/*
+  ⚠️⚠️ ADV_I18N は ja と en しか持っていない。
+    他の16言語を選んでいると英語に落ち、冒険の画面だけ英語になる
+    （実際そうなっていた）。
+  ★ 英語圏の言語だけ en、それ以外は ja に落とす。
+    どちらも読めない人には、せめて元の言語（日本語）を見せるほうが筋が通る。
+  ⚠️ 16言語ぶんを書くまでの繋ぎ。書けたらこの関数ごと消すこと。
+*/
+const ADV_EN_LIKE = ["en", "es", "fr", "de", "it", "pt", "nl", "sv", "pl", "tr", "id"];
+function advT(lang) {
+  if (ADV_I18N[lang]) return ADV_I18N[lang];
+  return ADV_EN_LIKE.includes(lang) ? ADV_I18N.en : ADV_I18N.ja;
+}
 /*
   中MAP。47都道府県の隣接。
   ⚠️⚠️ ここは一覧から飛ぶ場所ではない。**隣り合う県にしか進めない。**
@@ -27937,23 +28374,839 @@ function FxBuff() {
     swirl  渦を巻く（場の書き換え）
     flash  白く弾ける（強い一回）
 */
-const MAJOR_FX_SHAPE = {
-  fool: "swirl", magician: "ring", priestess: "ring", empress: "ring",
-  emperor: "flash", hiero: "ring", lovers: "ring", chariot: "slash",
-  strength: "flash", hermit: "ring", wheel: "swirl", justice: "ring",
-  hanged: "swirl", death: "rain", temperance: "ring", devil: "swirl",
-  tower: "rain", star: "ring", moon: "ring", sun: "flash",
-  judgement: "rain", world: "flash",
+/*
+  【大アルカナの色】
+  ★ 性格ごとに色を分ける。形（五つの型）だけでは、放置で眺めていて
+    どの札が効いたのか区別が付かない。色が先に目に入る。
+  ⚠️ スートと揃えること。守りは聖杯の青、積みは貨幣の黄緑。
+    別の色にすると、同じ働きなのに別物に見える。
+  ⚠️ 黒（危険）は背景に沈むので、縁を明るくして抜くこと。
+*/
+const MAJOR_FX_COLOR = {
+  /* 攻め */
+  strength: "#FF5A5A", chariot: "#FF5A5A",
+  /* 守り（聖杯と同じ青） */
+  priestess: "#5AA8FF", temperance: "#5AA8FF",
+  /* トリッキー（虹）。⚠️ 単色では表せないので、下の rainbow で別に扱う */
+  wheel: "rainbow", fool: "rainbow", hanged: "rainbow",
+  /* 両立 */
+  lovers: "#FF8AC4", justice: "#FF8AC4",
+  /* 積み（貨幣と同じ黄緑） */
+  empress: "#C8E06A",
+  /* 妨害返し（銀） */
+  hermit: "#D8DEE9", hiero: "#D8DEE9",
+  /* 魔法 */
+  magician: "#FFA03A",
+  /* 最強（金） */
+  emperor: "#F6DE96", world: "#F6DE96",
+  /* 地味バフ（新緑） */
+  moon: "#7BE36B", sun: "#7BE36B", star: "#7BE36B",
+  /* 危険（黒） */
+  devil: "#2A2438", death: "#2A2438",
+  /* 神聖（紫） */
+  tower: "#B07BE8", judgement: "#B07BE8",
 };
-function FxMajor({ shape, label }) {
+
+/*
+  ⚠️⚠️ 五つの型では足りない。22枚のうち11枚が ring になり、
+    色を分けても形で見分けが付かない。
+  ★ 型を増やして、性格ごとに割り当てる。
+    ring   環が開く      継続がかかる
+    slash  横切る        一撃
+    rain   降りそそぐ    全体
+    swirl  渦を巻く      場の書き換え
+    flash  白く弾ける    強い一回
+    pillar 柱が立つ      守り
+    cross  十字に開く    癒やし
+    spark  火花が散る    積み
+    veil   帳が下りる    妨害返し
+*/
+const MAJOR_FX_SHAPE = {
+  /* 攻め */
+  strength: "flash", chariot: "slash",
+  /* 守り */
+  priestess: "pillar", temperance: "pillar",
+  /* トリッキー */
+  wheel: "swirl", fool: "swirl", hanged: "swirl",
+  /* 両立 */
+  lovers: "cross", justice: "cross",
+  /* 積み */
+  empress: "spark",
+  /* 妨害返し */
+  hermit: "veil", hiero: "veil",
+  /* 魔法 */
+  magician: "ring",
+  /* 最強 */
+  emperor: "flash", world: "flash",
+  /* 地味バフ */
+  moon: "ring", sun: "ring", star: "ring",
+  /* 危険 */
+  devil: "swirl", death: "rain",
+  /* 神聖 */
+  tower: "rain", judgement: "rain",
+};
+function FxMajor({ shape, label, tone }) {
+  /*
+    ⚠️ 色は CSS 変数で渡す。クラスを22種作ると見通しが悪い。
+    ⚠️ 虹だけは単色で表せないので、クラスで分ける。
+  */
+  const rb = tone === "rainbow";
   return (
-    <span className={`fx fx-major fx-${shape}`} aria-hidden="true">
+    <span className={`fx fx-major fx-${shape}${rb ? " fx-rb" : ""}`} aria-hidden="true"
+      style={{ "--fxc": rb ? "#FFF3D6" : (tone || "#F6DE96") }}>
       {shape === "rain" && [0, 1, 2, 3, 4, 5, 6, 7].map((i) => (
         <i key={i} style={{ left: `${6 + i * 12}%`, animationDelay: `${i * 45}ms` }} />
       ))}
-      {shape !== "rain" && <><i /><i style={{ animationDelay: "120ms" }} /></>}
+      {/* ⚠️ 火花は数で見せる。二つだと「点が出た」だけに見える */}
+      {shape === "spark" && [0, 1, 2, 3, 4, 5].map((i) => (
+        <i key={i} style={{ "--a": `${i * 60}deg`, animationDelay: `${i * 40}ms` }} />
+      ))}
+      {shape !== "rain" && shape !== "spark"
+        && <><i /><i style={{ animationDelay: "120ms" }} /></>}
       {/* ⚠️ 札の名前も出す。形だけでは、どの札が効いたか分からない */}
       <b>{label}</b>
+    </span>
+  );
+}
+
+/*
+  【大アルカナ 22枚の演出】
+  ★ 一枚ずつ専用の絵を持たせる。五つの型に寄せていたときは、
+    色を分けても「同じ形が光る」だけで、どの札が効いたのか残らなかった。
+  ⚠️⚠️ すべて 620ms（FX_MS）以内に終わること。残ると次の札の演出と重なる。
+  ⚠️ 画面全体を覆うのは大アルカナだけ。小アルカナは従来どおり小さく出す。
+  ⚠️ 粒を並べるものは8〜12個まで。数十個を動かすと、放置で回す画面が重くなる。
+*/
+/*
+  【一閃・魔法・恵・青】の演出。
+  ★ スートごとに動きを変える。剣は横薙ぎ、棒は集中、聖杯は上昇、貨幣は波。
+  ⚠️ 枚数（run）で数を増やすこと。3枚と10枚が同じ絵では、揃えた甲斐がない。
+*/
+/*
+  止められた印。
+  ★ 敵が何もできなかったときに、その敵の上へ×を出す。
+  ⚠️ 何も起きないままだと、隠者や皇帝が効いていることが伝わらない。
+  ⚠️ 赤で太く。小さいと、殴られたのか止まったのか読めない。
+*/
+function FxBlock() {
+  return (
+    <span className="fx fx-block" aria-hidden="true">
+      <i /><i />
+    </span>
+  );
+}
+
+function FxFlash({ suit, run, label, tone }) {
+  const k = Math.min(10, Math.max(3, run || 3));
+  const dots = (m) => Array.from({ length: m }, (_, i) => i);
+  return (
+    <span className={`fx fx-arcana fx-flash-${suit}`} aria-hidden="true"
+      style={{ "--fxc": tone || "#F6DE96" }}>
+      <span className="ar">
+        {/*
+          剣。
+          ⚠️⚠️ 何本も薙ぐのをやめた。線が増えるほど散漫になり、
+            「一閃」の名に合わない。
+          ★ 画面を白黒に沈め、斜めの一本線だけを走らせる。
+          ⚠️ 枚数は線の太さと閃光の強さで表す。本数は常に一本。
+        */}
+        {suit === "swords" && (
+          <>
+            <i className="fl-void" />
+            <i className="fl-line" style={{ "--w": `${2 + k * 0.8}px` }} />
+            <i className="fl-burst" style={{ "--k": k }} />
+          </>
+        )}
+        {/*
+          棒（魔法）。
+          ⚠️ 集まって終わりにしないこと。単体攻撃なので、一点で爆ぜないと
+            「集めた力がどうなったか」が見えない。
+          ★ 集束 → 中心で爆発（閃光・火球・衝撃波）。
+          ⚠️ 爆発は集束が終わってから。同時だと、ただ中心が光って終わる。
+        */}
+        {suit === "wands" && (
+          <>
+            {dots(k).map((i) => (
+              <i key={`b${i}`} className="fl-bolt"
+                style={{ "--a": `${i * (360 / k)}deg`, animationDelay: `${i * 35}ms` }} />
+            ))}
+            <i className="fl-boom-flash" style={{ "--k": k }} />
+            <i className="fl-boom-ball" style={{ "--k": k }} />
+            {dots(3).map((i) => (
+              <i key={`s${i}`} className="fl-boom-ring"
+                style={{ "--k": k, animationDelay: `${300 + i * 60}ms` }} />
+            ))}
+            {dots(8).map((i) => (
+              <i key={`p${i}`} className="fl-boom-spark"
+                style={{ "--a": `${i * 45}deg`, animationDelay: `${310 + (i % 4) * 30}ms` }} />
+            ))}
+          </>
+        )}
+        {/*
+          聖杯（恵）。
+          ⚠️ 縦線だけでは「立ち上がった」で終わる。恵みは実りの札なので、
+            種が芽吹いて花が開くまでを見せる。
+          ★ 三層。下からの光 → 回る環 → 開く花弁。
+        */}
+        {suit === "cups" && (
+          <>
+            {dots(k).map((i) => (
+              <i key={`g${i}`} className="fl-rise"
+                style={{ left: `${6 + i * (88 / k)}%`, animationDelay: `${i * 40}ms` }} />
+            ))}
+            {dots(3).map((i) => (
+              <i key={`c${i}`} className="fl-ring"
+                style={{ "--r": `${40 + i * 26}px`, animationDelay: `${120 + i * 70}ms` }} />
+            ))}
+            {dots(8).map((i) => (
+              <i key={`p${i}`} className="fl-petal"
+                style={{ "--a": `${i * 45}deg`, animationDelay: `${220 + (i % 4) * 40}ms` }} />
+            ))}
+          </>
+        )}
+        {/*
+          貨幣（青）。
+          ⚠️ その場で広がるだけでは平面に見える。
+          ★ 奥から手前へ迫らせる。小さく暗く現れ、画面いっぱいまで膨らんで
+            通り過ぎる ―― こちらへ向かってくる形にする。
+          ⚠️ 何重にも重ねること。一つだと「輪が広がった」で終わる。
+        */}
+        {suit === "pentacles" && dots(k + 2).map((i) => (
+          <i key={i} className="fl-wave"
+            style={{ animationDelay: `${i * 55}ms` }} />
+        ))}
+      </span>
+      {label && <b className="fx-label">{label}</b>}
+    </span>
+  );
+}
+
+function FxArcana({ n, label, tone }) {
+  /* ⚠️ 色は CSS 変数で渡す。クラスを22種作ると見通しが悪い */
+  const rb = tone === "rainbow";
+  const st = { "--fxc": rb ? "#FFF3D6" : (tone || "#F6DE96") };
+  /* ⚠️ 粒の数はここで決める。中で毎回書くと、枚数を変えるとき全部を直すことになる */
+  const dots = (k) => Array.from({ length: k }, (_, i) => i);
+
+  const body = (() => {
+    switch (n) {
+      /* ⓪ 愚者 … 渦を巻いて混乱する */
+      case 0: return (
+        <span className="ar ar-fool">
+          {/*
+            ⚠️ 中心に重ねるのをやめた。三重の輪は「的」に見えて、混乱が出ない。
+            ★ 十個を画面のあちこちに、大きさも向きも時間もばらばらに出す。
+          */}
+          {dots(10).map((i) => {
+            const px = [12, 74, 38, 88, 56, 22, 66, 44, 8, 82][i];
+            const py = [18, 26, 62, 58, 12, 80, 74, 36, 48, 88][i];
+            const sc = [1.3, 0.7, 1.0, 0.55, 1.5, 0.85, 0.65, 1.15, 0.8, 0.95][i];
+            return (
+              <i key={i} style={{
+                left: `${px}%`, top: `${py}%`, "--s": sc,
+                animationDelay: `${(i * 47) % 260}ms`,
+                animationDirection: i % 2 ? "reverse" : "normal",
+              }} />
+            );
+          })}
+        </span>
+      );
+      /* ① 魔術師 … 六芒星と環が一瞬だけ立つ */
+      case 1: return (
+        <span className="ar ar-magician">
+          <svg viewBox="0 0 100 100" aria-hidden="true">
+            <circle cx="50" cy="50" r="34" fill="none" stroke="currentColor" strokeWidth="1.2" />
+            <circle cx="50" cy="50" r="26" fill="none" stroke="currentColor" strokeWidth="0.8"
+              strokeDasharray="3 4" />
+            <path d="M50 18 L77 66 L23 66 Z" fill="none" stroke="currentColor" strokeWidth="1.6" />
+            <path d="M50 82 L23 34 L77 34 Z" fill="none" stroke="currentColor" strokeWidth="1.6" />
+          </svg>
+        </span>
+      );
+      /* ② 女教皇 … 雨が降る */
+      case 2: return (
+        <span className="ar ar-rain">
+          {/* ⚠️ 線だけだと雨に見えない。雫の形と、落ちた先の波紋を足す */}
+          {dots(14).map((i) => (
+            <i key={i} className="ar-drop"
+              style={{ left: `${3 + i * 7}%`, animationDelay: `${(i % 5) * 60}ms` }} />
+          ))}
+          {dots(5).map((i) => (
+            <i key={`r${i}`} className="ar-ripple"
+              style={{ left: `${12 + i * 19}%`, animationDelay: `${180 + i * 70}ms` }} />
+          ))}
+        </span>
+      );
+      /* ③ 女帝 … 葉が舞い、下から芽が伸びる */
+      case 3: return (
+        <span className="ar ar-empress">
+          {/*
+            ⚠️ 茎が一本では「線が伸びた」だけに見える。
+              五本を時間差で立て、葉を左右に開かせる。
+          */}
+          {dots(5).map((i) => (
+            <b key={i} className="ar-stem"
+              style={{ left: `${18 + i * 16}%`, "--h": `${46 + (i % 3) * 18}%`,
+                animationDelay: `${i * 70}ms` }} />
+          ))}
+          {/*
+            ⚠️ 葉の大きさを揃えないこと。同じ粒が並ぶと紙吹雪に見える。
+            ★ 三段階（大・中・小）。大きいものほどゆっくり、大きく揺れて落ちる。
+          */}
+          {dots(9).map((i) => {
+            const sz = [1.5, 0.7, 1.1, 0.7, 1.5, 1.1, 0.7, 1.1, 1.5][i];
+            return (
+              <i key={i} className={`ar-leaf s${sz === 1.5 ? 3 : sz === 1.1 ? 2 : 1}`}
+                style={{ left: `${6 + i * 10.5}%`, "--z": sz,
+                  animationDelay: `${(i % 4) * 70}ms` }} />
+            );
+          })}
+        </span>
+      );
+      /* ④ 皇帝 … 法王の逆。外から中心へ集まって閉じる */
+      case 4: return (
+        <span className="ar ar-emperor">
+          {/* ⚠️ 床に魔法陣。画面下に敷くと、術が立ち上がる場に見える */}
+          <b className="ar-floor" />
+          {dots(6).map((i) => (
+            <i key={i} style={{ "--a": `${i * 60}deg`, animationDelay: `${i * 40}ms` }} />
+          ))}
+        </span>
+      );
+      /* ⑤ 法王 … 中心で環が回り、外へ弾ける */
+      case 5: return (
+        <span className="ar ar-hiero">
+          <b className="ar-floor" />
+          {dots(6).map((i) => (
+            <i key={i} style={{ "--a": `${i * 60}deg`, animationDelay: `${i * 40}ms` }} />
+          ))}
+        </span>
+      );
+      /* ⑥ 恋人 … 左右から半分ずつ来て、真ん中で心になる */
+      case 6: return (
+        <span className="ar ar-lovers">
+          <svg viewBox="0 0 100 100" aria-hidden="true">
+            <path className="ar-hl" d="M50 78 C22 58 14 40 24 30 C33 21 44 26 50 36 L50 78 Z"
+              fill="currentColor" />
+            <path className="ar-hr" d="M50 78 C78 58 86 40 76 30 C67 21 56 26 50 36 L50 78 Z"
+              fill="currentColor" />
+          </svg>
+          {/*
+            ⚠️ くっついた瞬間に飛び散らせること。最初から出すと、
+              合わさった手応えが消える（遅らせて 300ms から）。
+            ★ 十二方向へ、大きさをばらけさせて散らす。
+          */}
+          {/* ⚠️ 心が合わさる前から立ち上げる。場が温まってから結ばれる順に */}
+          {dots(8).map((i) => {
+            const d = Math.abs(i - 3.5);
+            return (
+              <i key={`u${i}`} className="ar-up"
+                style={{ left: `${8 + i * 11}%`, "--h": `${100 - d * 17}%`,
+                  animationDelay: `${d * 46}ms` }} />
+            );
+          })}
+          {dots(12).map((i) => (
+            <i key={`p${i}`} className="ar-mini"
+              style={{
+                "--a": `${i * 30}deg`,
+                "--s": `${0.6 + (i % 3) * 0.3}`,
+                animationDelay: `${300 + (i % 4) * 30}ms`,
+              }} />
+          ))}
+        </span>
+      );
+      /* ⑦ 戦車 … 炎が下から立つ */
+      case 7: return (
+        <span className="ar ar-chariot">
+          {/*
+            ⚠️⚠️ 炎が立ち上るだけでは「燃えた」で終わる。戦車は突進の札。
+            ★ 手前から奥へ、遠近で縮みながら線が飛ぶ。
+              下から一組、上から一組（下のものを反転）で挟む。
+            ⚠️ 下は画面の下端から、上は上端から出すこと。
+              同じ場所から出すと、ただ真ん中で交差して見える。
+          */}
+          {/*
+            ⚠️⚠️ 中心を通り越させないこと。奥で止まらないと、
+              手前から奥へ直進しているように見えない。
+            ★ 端から出て、中心の手前（消失点）で小さくなって消える。
+            ⚠️ 左右にも寄せる。真上・真下からだけだと平面に見える。
+          */}
+          {dots(7).map((i) => {
+            const dx = (i - 3) * 13;
+            return (
+              <i key={`d${i}`} className="ar-shot down"
+                style={{ left: `${50 + dx * 1.6}%`, "--dx": `${-dx * 0.9}px`,
+                  animationDelay: `${(i % 4) * 60}ms` }} />
+            );
+          })}
+          {dots(7).map((i) => {
+            const dx = (i - 3) * 13;
+            return (
+              <i key={`u${i}`} className="ar-shot up"
+                style={{ left: `${50 + dx * 1.6}%`, "--dx": `${-dx * 0.9}px`,
+                  animationDelay: `${(i % 4) * 60 + 30}ms` }} />
+            );
+          })}
+        </span>
+      );
+      /* ⑧ 力 … 縦の線が一斉に噴き上がる */
+      case 8: return (
+        <span className="ar ar-power">
+          {/* ⚠️ 三度続けて噴き上げる。一度だと「立った」だけで力が出ない */}
+          {/*
+            ⚠️ 全部を同じ高さにしないこと。画面の端まで伸びた線が十本並ぶと、
+              柵に見えて力が出ない。
+            ★ 中央がいちばん高く、外へ向かって段階的に低くする。
+              消えるのも内側から ―― 中心から力が抜けていく形にする。
+          */}
+          {dots(30).map((i) => {
+            const col = i % 10;
+            const d = Math.abs(col - 4.5);
+            return (
+              <i key={i} style={{
+                left: `${5 + col * 10}%`,
+                "--h": `${100 - d * 15}%`,
+                animationDelay: `${Math.floor(i / 10) * 180 + (4.5 - d) * 26}ms`,
+              }} />
+            );
+          })}
+        </span>
+      );
+      /* ⑨ 隠者 … 雲が湧いて視界を覆う */
+      case 9: return (
+        <span className="ar ar-cloud">
+          {dots(7).map((i) => (
+            <i key={i} style={{
+              left: `${5 + i * 13}%`, top: `${20 + (i % 3) * 22}%`,
+              animationDelay: `${i * 60}ms`,
+            }} />
+          ))}
+          {/* ⚠️ 雲だけだと静かすぎる。下から霧が立ち上る動きを足す */}
+          {dots(8).map((i) => {
+            const d = Math.abs(i - 3.5);
+            return (
+              <i key={`u${i}`} className="ar-up"
+                style={{ left: `${8 + i * 11}%`, "--h": `${100 - d * 17}%`,
+                  animationDelay: `${d * 46}ms` }} />
+            );
+          })}
+        </span>
+      );
+      /* ⑩ 運命の輪 … 大きな輪が一瞬だけ */
+      case 10: return (
+        <span className="ar ar-wheel">
+          <svg viewBox="0 0 100 100" aria-hidden="true">
+            <circle cx="50" cy="50" r="38" fill="none" stroke="currentColor" strokeWidth="3" />
+            <circle cx="50" cy="50" r="22" fill="none" stroke="currentColor" strokeWidth="1.6" />
+            {dots(8).map((i) => (
+              <path key={i} d="M50 12 L50 26" stroke="currentColor" strokeWidth="2"
+                transform={`rotate(${i * 45} 50 50)`} />
+            ))}
+          </svg>
+        </span>
+      );
+      /* ⑪ 正義 … 剣と盾 */
+      case 11: return (
+        <span className="ar ar-justice">
+          {/*
+            ★ 赤い剣と青い盾が左右から来て、真ん中で紫の天秤になる。
+            ⚠️ 色をここで直に指定する。正義だけは三色を使うので、
+              札の色（--fxc）では表せない。
+            ⚠️ 天秤は剣と盾が消えてから出すこと。重なると何の絵か分からない。
+          */}
+          {/* ⚠️ 赤は左、青は右から立てる。剣と盾の出どころと揃える */}
+          {/* ⚠️ 左右それぞれ、内側（中央寄り）を高くする */}
+          {dots(5).map((i) => (
+            <i key={`ur${i}`} className="ar-up jr-red"
+              style={{ left: `${8 + i * 8}%`, "--h": `${58 + i * 10}%`,
+                animationDelay: `${(4 - i) * 34}ms` }} />
+          ))}
+          {dots(5).map((i) => (
+            <i key={`ub${i}`} className="ar-up jr-blue"
+              style={{ left: `${56 + i * 8}%`, "--h": `${98 - i * 10}%`,
+                animationDelay: `${i * 34}ms` }} />
+          ))}
+          <svg viewBox="0 0 100 100" aria-hidden="true">
+            {/* 赤い剣。左から */}
+            <g className="ar-jl" stroke="#FF5A5A" fill="none" strokeLinecap="round">
+              <path d="M36 16 L36 60 L30 68 L42 68 L36 60" strokeWidth="3.4" />
+              <path d="M24 28 L48 28" strokeWidth="3.4" />
+            </g>
+            {/* 青い盾。右から */}
+            <g className="ar-jr" stroke="#5AA8FF" fill="none">
+              <path d="M66 20 L84 27 L84 50 C84 63 76 72 66 77
+                C56 72 48 63 48 50 L48 27 Z" strokeWidth="3" />
+            </g>
+            {/*
+              天秤。
+              ⚠️ 紫で塗らないこと。剣と盾が混ざった色にすると、
+                二つが合わさったことが見えなくなる。
+              ★ 左半分を赤、右半分を青。剣と盾がそのまま秤の皿になる。
+            */}
+            <g className="ar-jbal" fill="none" strokeLinecap="round">
+              <g stroke="#FF5A5A">
+                <path d="M50 20 L50 72" strokeWidth="3.4" />
+                <path d="M34 78 L50 78" strokeWidth="3.4" />
+                <path d="M20 32 L50 32" strokeWidth="3.4" />
+                <path d="M20 32 L12 48 L28 48 Z" strokeWidth="2.6" />
+              </g>
+              <g stroke="#5AA8FF">
+                <path d="M50 78 L66 78" strokeWidth="3.4" />
+                <path d="M50 32 L80 32" strokeWidth="3.4" />
+                <path d="M80 32 L72 48 L88 48 Z" strokeWidth="2.6" />
+              </g>
+            </g>
+          </svg>
+        </span>
+      );
+      /* ⑫ 吊るされた男 … 画面が上下に反転する */
+      case 12: return (
+        <span className="ar ar-hanged">
+          {/*
+            ⚠️ 覆いが反転するだけでは何が起きたか分からない。
+            ★ 鉄色の鎖を画面いっぱいに交差させる。吊るされた者の鎖。
+            ⚠️ 斜めに二方向。縦横だと檻に見える。
+          */}
+          {dots(8).map((i) => (
+            <i key={`ch${i}`} className={`ar-chain${i % 2 ? " b" : ""}`}
+              style={{
+                top: `${-10 + i * 16}%`,
+                animationDelay: `${(i % 4) * 55}ms`,
+              }} />
+          ))}
+        </span>
+      );
+      /* ⑬ 死神 … 大鎌が一閃 */
+      case 13: return (
+        <span className="ar ar-death">
+          {/* ⚠️ 黒い縦線を降らせる。鎌だけだと一瞬で終わる */}
+          {dots(10).map((i) => (
+            <i key={`n${i}`} className="ar-noir"
+              style={{ left: `${4 + i * 10}%`, animationDelay: `${(i % 5) * 55}ms` }} />
+          ))}
+          {/*
+            ⚠️⚠️ 刃を小さくしないこと。柄と同じ大きさだと農具に見える。
+            ★ 刃は柄の倍。大きく反らせて、先を鋭く伸ばす。
+            ⚠️ 柄は紫（影の色）、刃は赤。二色に分けると死神の得物に見える。
+          */}
+          {/*
+            ⚠️⚠️ 柄を太く長くしないこと。柄が主役になると農具に見える。
+            ★ 柄は細く短く。刃は画面の半分を占めるほど大きく反らせる。
+            ⚠️ 刃体は黒、刃先だけ赤黒く光らせる。全体が赤いと玩具に見える。
+          */}
+          {/*
+            ⚠️⚠️ 刃を二重に描かないこと。内側の反り返りが二本目の刃に見え、
+              生き物の指のようになる（実際そう見えていた）。
+            ★ 一枚の刃。上の縁（峰）から先端まで一息に伸ばし、
+              下の縁（刃）だけを赤黒く光らせる。
+            ⚠️ 刃体（黒）は広く、刃（赤黒）は細く。面積で主従を付ける。
+          */}
+          {/*
+            鎌に見えなかった原因は三つ。
+            ⚠️⚠️ ① 柄が斜めだった。鎌の柄は縦。斜めだと剣の握りに見える。
+            ⚠️⚠️ ② 柄と刃がつながる角が無かった。鎌は柄の「先端から直角に」
+              刃が伸びる。滑らかに続けると、反った剣になる。
+            ⚠️⚠️ ③ 刃の内側が凹んでいなかった。三日月の内側の弧が浅いと、
+              ただの三角形に見える。
+            ★ 柄は縦（下から上）、天辺で左へ折れ、大きく内へ抉れた三日月を描く。
+          */}
+          <svg viewBox="0 0 100 100" aria-hidden="true">
+            {/* 柄。⚠️ 縦に立てる。ここが斜めだと鎌にならない */}
+            <path d="M68 96 L68 24" stroke="#3A2B4A" strokeWidth="4.5" strokeLinecap="round" />
+            {/* 握りの巻き。⚠️ 二本入れると、持つ道具だと分かる */}
+            <path d="M62 74 L74 70 M62 62 L74 58" stroke="#584070"
+              strokeWidth="2.6" strokeLinecap="round" />
+            {/*
+              刃体（黒）。
+              ⚠️ 外周は柄の天辺から左へ大きく張り出す。
+                内周は深く抉る ―― この凹みが三日月をつくる。
+            */}
+            <path d="M68 22 C50 10 24 14 10 34 C26 26 44 28 56 38 C46 34 34 36 26 42
+              C42 40 58 34 68 22 Z"
+              fill="#120B1E" stroke="#2A1C3A" strokeWidth="1.2" strokeLinejoin="round" />
+            {/* 刃（赤黒）。⚠️ 内側の縁だけ。ここが切っ先へ向かう線になる */}
+            <path d="M10 34 C26 26 44 28 56 38" fill="none"
+              stroke="#B01020" strokeWidth="3.6" strokeLinecap="round" />
+            <path d="M12 35 C27 28 43 30 54 39" fill="none"
+              stroke="#FF4A5A" strokeWidth="1.3" strokeLinecap="round" opacity="0.9" />
+            {/* 石突。⚠️ 柄の根に丸を置くと、武器として据わる */}
+            <circle cx="68" cy="96" r="3.4" fill="#584070" />
+          </svg>
+        </span>
+      );
+      /* ⑭ 節制 … 盃から盃へ水が移る */
+      case 14: return (
+        <span className="ar ar-temper">
+          {/*
+            ⚠️ 盃を近づけないこと。間が詰まると水流が短くなり、
+              「線が一本引かれた」だけに見える。
+            ★ 左上と右下の端に置き、長い弧を描かせる。
+            ⚠️ 水は一本ではなく三本。太さと時間をずらして流れを作る。
+          */}
+          <svg viewBox="0 0 100 100" aria-hidden="true">
+            {/* 左上の盃。⚠️ 傾ける。真っ直ぐだと注いでいるように見えない */}
+            <g transform="rotate(-24 16 26)">
+              <path d="M6 16 L28 16 L23 34 L11 34 Z" fill="none"
+                stroke="currentColor" strokeWidth="2.6" strokeLinejoin="round" />
+              <path d="M13 34 L13 40 M7 41 L19 41" stroke="currentColor" strokeWidth="2.2"
+                strokeLinecap="round" />
+            </g>
+            {/* 右下の盃 */}
+            <g transform="rotate(10 82 76)">
+              <path d="M72 62 L94 62 L89 80 L77 80 Z" fill="none"
+                stroke="currentColor" strokeWidth="2.6" strokeLinejoin="round" />
+              <path d="M79 80 L79 86 M73 87 L85 87" stroke="currentColor" strokeWidth="2.2"
+                strokeLinecap="round" />
+            </g>
+            {/* 水流。⚠️ 三本を時間差で。太い一本だと棒に見える */}
+            <path className="ar-flow f1" d="M24 30 C44 34 52 52 78 62"
+              stroke="currentColor" strokeWidth="4" fill="none" strokeLinecap="round" />
+            <path className="ar-flow f2" d="M24 32 C40 44 60 44 78 64"
+              stroke="currentColor" strokeWidth="2.4" fill="none" strokeLinecap="round" />
+            <path className="ar-flow f3" d="M25 28 C48 30 56 58 77 60"
+              stroke="currentColor" strokeWidth="1.6" fill="none" strokeLinecap="round" />
+          </svg>
+          {/* ⚠️ 受け側で跳ねる雫。着地が見えると流れが完結する */}
+          {dots(5).map((i) => (
+            <i key={i} className="ar-splash"
+              style={{ "--a": `${-60 + i * 30}deg`, animationDelay: `${300 + i * 35}ms` }} />
+          ))}
+          {/* ⚠️ 水が満ちる感じを、下からの湧き上がりで足す */}
+          {/* ⚠️ 中央を高く、外へ低く。力と同じ形にすること（下の共通指定に合わせる） */}
+          {dots(8).map((i) => {
+            const d = Math.abs(i - 3.5);
+            return (
+              <i key={`u${i}`} className="ar-up"
+                style={{ left: `${8 + i * 11}%`, "--h": `${100 - d * 17}%`,
+                  animationDelay: `${120 + d * 46}ms` }} />
+            );
+          })}
+        </span>
+      );
+      /* ⑮ 悪魔 … 髑髏が一瞬 */
+      case 15: return (
+        <span className="ar ar-devil">
+          {/*
+            ⚠️ 髑髏と黒い雨だけでは静か。足元から湧く気配を足す。
+            ★ 沼から泡が上がるように、下から黒い塊がぼこぼこと膨らむ。
+          */}
+          {dots(9).map((i) => (
+            <i key={`bg${i}`} className="ar-bog"
+              style={{
+                left: `${6 + i * 11}%`,
+                "--z": `${0.7 + (i % 3) * 0.45}`,
+                animationDelay: `${(i % 5) * 70}ms`,
+              }} />
+          ))}
+          {dots(10).map((i) => (
+            <i key={`n${i}`} className="ar-noir"
+              style={{ left: `${4 + i * 10}%`, animationDelay: `${(i % 5) * 55}ms` }} />
+          ))}
+          <svg viewBox="0 0 100 100" aria-hidden="true">
+            <path d="M50 18 C68 18 80 32 80 48 C80 58 74 64 68 68 L68 78 L32 78 L32 68
+              C26 64 20 58 20 48 C20 32 32 18 50 18 Z" fill="currentColor" />
+            <circle cx="39" cy="47" r="7" fill="#0E0A1C" />
+            <circle cx="61" cy="47" r="7" fill="#0E0A1C" />
+            <path d="M46 60 L50 68 L54 60 Z" fill="#0E0A1C" />
+          </svg>
+        </span>
+      );
+      /* ⑯ 塔 … 隕石が降る */
+      /*
+        ⑯ 塔。
+        ⚠️⚠️ 隕石は審判へ渡した。塔は「崩れる」札なので、降るより巻き上がる絵が合う。
+        ★ 竜巻。荒々しい風の筋を重ね、輪が下から上へ巻き上がる。
+          縦に伸びた渦は、塔そのものにも見える ―― どちらにも取れる形にする。
+      */
+      case 16: return (
+        <span className="ar ar-twister">
+          {/* 渦の輪。下ほど大きく、上ほど小さく。縦に積むと塔の形になる */}
+          {dots(9).map((i) => (
+            <i key={`r${i}`} className="ar-twring"
+              style={{
+                bottom: `${6 + i * 9}%`,
+                "--w": `${150 - i * 13}px`,
+                animationDelay: `${i * 35}ms`,
+              }} />
+          ))}
+          {/* 風の筋。⚠️ 斜めに流すこと。水平だと線が引かれただけに見える */}
+          {dots(10).map((i) => (
+            <i key={`w${i}`} className="ar-wind"
+              style={{
+                top: `${8 + i * 9}%`,
+                left: `${(i % 2 ? 8 : 34)}%`,
+                "--len": `${40 + (i % 3) * 22}%`,
+                animationDelay: `${(i % 5) * 45}ms`,
+              }} />
+          ))}
+        </span>
+      );
+      case 99: return (
+        <span className="ar ar-meteor">
+          {/*
+            ⚠️⚠️ 落ちるだけで終わらせないこと。塔は「崩れる」札なので、
+              着弾が見えないと、ただ線が流れただけになる。
+            ★ 隕石・着弾の閃光・火球・地を走る衝撃波の四層を重ねる。
+            ⚠️ 時間差は隕石と揃えること。ずれると、落ちていない場所で爆ぜる。
+          */}
+          {/*
+            ⚠️ 大きさを揃えないこと。同じ粒が八つ落ちると、降り注ぐというより
+              定規で引いた線に見える。大中小を混ぜる。
+            ★ 大きいものほど遅く落ち、爆発も大きい（--z で一括して掛ける）。
+          */}
+          {/*
+            ⚠️ React.Fragment は使えない（このファイルは React 本体を取り込んでいない）。
+              配列を返して、鍵を一つずつ振ること。
+          */}
+          {dots(8).reduce((acc, i) => {
+            const z = [1.6, 0.8, 1.15, 0.7, 1.35, 0.9, 1.0, 0.75][i];
+            const x = 2 + i * 13;
+            const d = (i % 4) * 70 + (z > 1.2 ? 40 : 0);
+            acc.push(
+              <i key={`k${i}`} className="ar-rock"
+                style={{ left: `${x}%`, "--z": z, animationDelay: `${d}ms` }} />,
+              <i key={`f${i}`} className="ar-flashpt"
+                style={{ left: `${x - 8}%`, "--z": z, animationDelay: `${d + 300}ms` }} />,
+              <i key={`b${i}`} className="ar-ball"
+                style={{ left: `${x - 8}%`, "--z": z, animationDelay: `${d + 300}ms` }} />,
+              <i key={`w${i}`} className="ar-shock"
+                style={{ left: `${x - 8}%`, "--z": z, animationDelay: `${d + 320}ms` }} />
+            );
+            return acc;
+          }, [])}
+        </span>
+      );
+      /* ⑰⑱⑲ 星・月・太陽 … それぞれの印が降る */
+      case 17: case 18: case 19: return (
+        <span className={`ar ar-fall ar-fall-${n}`}>
+          {/*
+            ⚠️ 降らせるだけでは、三枚の区別が小さな文字だけになる。
+            ★ 右上に大きな印を据える。星は土星、月は三日月、太陽は光条。
+            ⚠️ 動かさないこと。据わっているから「空にある」ものに見える。
+          */}
+          <span className="ar-sky">
+            <svg viewBox="0 0 100 100" aria-hidden="true">
+              {n === 17 && (
+                <g>
+                  <circle cx="50" cy="50" r="22" fill="none" stroke="currentColor" strokeWidth="4" />
+                  <ellipse cx="50" cy="50" rx="40" ry="11" fill="none"
+                    stroke="currentColor" strokeWidth="3.4" transform="rotate(-20 50 50)" />
+                </g>
+              )}
+              {n === 18 && (
+                <path d="M62 16 A36 36 0 1 0 62 84 A29 29 0 1 1 62 16 Z" fill="currentColor" />
+              )}
+              {n === 19 && (
+                <g>
+                  <circle cx="50" cy="50" r="21" fill="currentColor" />
+                  {[0, 45, 90, 135, 180, 225, 270, 315].map((d) => (
+                    <path key={d} d="M50 18 L50 6" stroke="currentColor" strokeWidth="5"
+                      strokeLinecap="round" transform={`rotate(${d} 50 50)`} />
+                  ))}
+                </g>
+              )}
+            </svg>
+          </span>
+          {/*
+            ⚠️ 落とすのをやめた。降る粒は雨（女教皇）や隕石（塔）と紛れる。
+            ★ 下から湧き上がらせる。力と同じ動きで、色だけ新緑にする。
+          */}
+          {dots(10).map((i) => {
+            const d = Math.abs(i - 4.5);
+            return (
+              <i key={i} style={{ left: `${5 + i * 10}%`, "--h": `${100 - d * 15}%`,
+                animationDelay: `${d * 40}ms` }} />
+            );
+          })}
+        </span>
+      );
+      /* ⑳ 審判 … これまでの絵を時間差で四度重ねる */
+      /*
+        ⑳ 審判。
+        ★ 塔から隕石を受け継ぐ。裁きが天から降る、という形。
+        ⚠️ 光の柱と渦は残す。三層（柱・渦・隕石）で、他のどの札より重くする。
+      */
+      case 20: return (
+        <span className="ar ar-judge ar-meteor">
+          {dots(8).reduce((acc, i) => {
+            const z = [1.6, 0.8, 1.15, 0.7, 1.35, 0.9, 1.0, 0.75][i];
+            const x = 2 + i * 13;
+            const d = (i % 4) * 70 + (z > 1.2 ? 40 : 0);
+            acc.push(
+              <i key={`mk${i}`} className="ar-rock"
+                style={{ left: `${x}%`, "--z": z, animationDelay: `${d}ms` }} />,
+              <i key={`mf${i}`} className="ar-flashpt"
+                style={{ left: `${x - 8}%`, "--z": z, animationDelay: `${d + 300}ms` }} />,
+              <i key={`mb${i}`} className="ar-ball"
+                style={{ left: `${x - 8}%`, "--z": z, animationDelay: `${d + 300}ms` }} />,
+              <i key={`mw${i}`} className="ar-shock"
+                style={{ left: `${x - 8}%`, "--z": z, animationDelay: `${d + 320}ms` }} />
+            );
+            return acc;
+          }, [])}
+          {/*
+            ⚠️ 他の札の使い回しはやめた。裁きの札が「見たことのある絵」では軽い。
+            ★ 上から光の柱が落ち、足元から渦が巻き上がる。
+          */}
+          {/* ⚠️ 柱は三本。一本だと中心に線が引かれただけに見える */}
+          <b className="ar-beam" style={{ left: "26%" }} />
+          <b className="ar-beam" style={{ left: "50%" }} />
+          <b className="ar-beam" style={{ left: "74%" }} />
+          {dots(5).map((i) => (
+            <i key={i} className="ar-vortex"
+              style={{ "--s": `${1 - i * 0.16}`, animationDelay: `${i * 70}ms` }} />
+          ))}
+        </span>
+      );
+      /* ㉑ 世界 … 大きな地球 */
+      case 21: return (
+        <span className="ar ar-world">
+          {/*
+            ⚠️ 下からの線は入れないこと。オーブの軌道と交差して、
+              どちらも読めなくなる。
+            ★ オーブを主役にする。数を倍（16）にして二重の輪で回す。
+          */}
+          {/*
+            ⚠️ 八色のオーブ。地球の周りを回らせる。
+            ⚠️ 色は札の色（--fxc）を使わない。八つが同じ色では回っていることしか伝わらない。
+            ⚠️ 半径と速さは揃える。ばらけさせると、軌道ではなく散らばりに見える。
+          */}
+          {["#FF5A5A", "#5AA8FF", "#7BE36B", "#F6DE96",
+            "#B07BE8", "#8FD4E8", "#FFA03A", "#D8DEE9"].map((c, i) => (
+            <i key={`o${i}`} className="ar-orb"
+              style={{ "--a": `${i * 45}deg`, "--r": "96px", background: c,
+                boxShadow: `0 0 18px ${c}, 0 0 34px ${c}`,
+                animationDelay: `${i * 30}ms` }} />
+          ))}
+          {/* ⚠️ 内側にもう一周。逆向きに回すと、球が巡っていることが際立つ */}
+          {["#FF5A5A", "#5AA8FF", "#7BE36B", "#F6DE96",
+            "#B07BE8", "#8FD4E8", "#FFA03A", "#D8DEE9"].map((c, i) => (
+            <i key={`o2${i}`} className="ar-orb in"
+              style={{ "--a": `${i * 45 + 22}deg`, "--r": "58px", background: c,
+                boxShadow: `0 0 12px ${c}`, animationDelay: `${i * 30 + 60}ms` }} />
+          ))}
+          <svg viewBox="0 0 100 100" aria-hidden="true">
+            <circle cx="50" cy="50" r="32" fill="none" stroke="currentColor" strokeWidth="2.6" />
+            <ellipse cx="50" cy="50" rx="13" ry="32" fill="none" stroke="currentColor" strokeWidth="1.6" />
+            <path d="M18 50 L82 50" stroke="currentColor" strokeWidth="1.6" />
+            <path d="M24 34 L76 34 M24 66 L76 66" stroke="currentColor" strokeWidth="1.1" opacity="0.7" />
+          </svg>
+        </span>
+      );
+      default: return <span className="ar ar-wheel" />;
+    }
+  })();
+
+  return (
+    <span className={`fx fx-arcana${rb ? " fx-rb" : ""}`} aria-hidden="true" style={st}>
+      {body}
+      {/* ⚠️ 名前も出す。絵だけでは、どの札が効いたか確信が持てない */}
+      {/*
+        ⚠️⚠️ ここを素の <b> にしないこと。CSS の .fx-arcana b が
+          絵の中の <b>（床の魔法陣など）にも当たり、位置も動きも上書きされる。
+          法王と皇帝の床が左半分しか出なかったのはこれが原因。
+      */}
+      {label && <b className="fx-label">{label}</b>}
     </span>
   );
 }
@@ -28118,6 +29371,16 @@ function BattlePanel({ lang, star, stageName, onEnd, theme, rank, zako, startHP,
   const [speed, setSpeed] = useState(() => loadSpeed());
   /* いま説明を開いている継続。⚠️ 一つだけ。並べて出すと画面が埋まる */
   const [fxOpen, setFxOpen] = useState(null);
+  /*
+    盾の段。
+    ⚠️ 戦闘のあいだ持ち越す。ターンごとに選び直させると、
+      放置で眺める遊びから外れる。
+    ⚠️ 端末には残さない。★によって選べる上限が違うので、
+      前回の値が今回は選べない、ということが起きる。
+  */
+  const [shield, setShield] = useState(0);
+  /* 一時停止。⚠️ 見るための止め。押している間は何も進めない */
+  const [paused, setPaused] = useState(false);
   const timers = useRef([]);
   const stRef = useRef(st);
   stRef.current = st;
@@ -28161,6 +29424,13 @@ function BattlePanel({ lang, star, stageName, onEnd, theme, rank, zako, startHP,
     /* ⚠️ 力が効いているあいだも大アルカナは出さない */
     const noMajor = (s.fx && s.fx.despair > 0) || (s.pending && s.pending.noMajor);
     /*
+      塔の逆位置による行動不能。
+      ⚠️⚠️ 敵には何も起きない。こちらが一ターン、札を一枚も使えないだけ。
+      ★ 手札は配るが、すべて使えない印を付ける。配らないと
+        「何も起きないまま次のターンへ飛んだ」ように見える。
+    */
+    const stunned = (s.stunNext || 0) > 0;
+    /*
       正逆の一括指定。
       ⚠️⚠️ 引くより前に決めること。あとで宣言すると、引く処理が
         初期化前の参照で落ち、ボタンを押しても何も起きない（実際そうなった）。
@@ -28173,7 +29443,13 @@ function BattlePanel({ lang, star, stageName, onEnd, theme, rank, zako, startHP,
     const pool = P0.suit
       ? MINOR_LIST.filter((c) => String(c.id).split("-")[0] === P0.suit)
       : MINOR_LIST.slice();
-    const n = P0.cards || setup.cards;
+    /*
+      ⚠️ 盾のぶんを引いた枚数だけ配る。
+      ⚠️ 上限を超えて選べないようにしてあるが、ここでも守ること
+        （★が下がったときに前の段が残っていると、手札が0になる）。
+    */
+    const sh0 = Math.min(shield, shieldMax(P0.cards || setup.cards));
+    const n = Math.max(1, (P0.cards || setup.cards) - SHIELD_COST[sh0]);
     /*
       ⚠️⚠️ 終わらない繰り返しを作らないこと。
         山が空（スート指定の綴り違いなど）や、大アルカナしか無い山だと、
@@ -28320,11 +29596,15 @@ function BattlePanel({ lang, star, stageName, onEnd, theme, rank, zako, startHP,
       if (guaranteed && k === 0) continue;
       rotIdx.add(k);
     }
-    const marked = sured.map((c, i2) => (rotIdx.has(i2) ? { ...c, rotten: true } : c));
+    /* ⚠️ 行動不能のあいだは全部が使えない。腐食と同じ見た目で示す */
+    const marked = sured.map((c, i2) => (
+      (stunned || rotIdx.has(i2)) ? { ...c, rotten: true } : c));
     setSt((v) => ({
       ...v, hand: marked, shown: 0, phase: "play", turn: v.turn + 1,
       /* ⚠️ 使ったら消す。次のターンへ持ち越さない */
       rotNext: 0,
+      /* ⚠️ 行動不能は一ターンぶん。ここで減らす */
+      stunNext: Math.max(0, (v.stunNext || 0) - 1),
       hp: Math.min(S0.maxHP, v.hp + heal),
       /* ⚠️ 溜まっていたものを、このターンの持ち物として受け取る */
       /* ⚠️ 敵の構えはこのターンの初めに解ける。持ち越すと永久に硬い */
@@ -28337,6 +29617,12 @@ function BattlePanel({ lang, star, stageName, onEnd, theme, rank, zako, startHP,
         ⚠️ 休ませる形にはしない。低いHPで引いたとき、敵に一方的に殴られて
           死に札になる。積み上げた継続を失うほうが代償として釣り合う。
       */
+      /*
+        ⚠️⚠️ 倍率（mult）は消さないこと。
+          「継続をすべて0に」と書いてあるが、消すのは fx だけ。
+          貨幣で積んだ倍率まで消すと、力を引いた次のターンに
+          ×5.0 が ×1.0 へ戻り、何が起きたか分からない。
+      */
       fx: (v.turnNext && v.turnNext.wipeAfter) ? emptyFx() : v.fx,
       turnNext: v.pending || emptyNext(),
       /*
@@ -28347,12 +29633,26 @@ function BattlePanel({ lang, star, stageName, onEnd, theme, rank, zako, startHP,
       */
       pending: (() => {
         const p = emptyNext();
-        const left = ((v.pending && v.pending.suitTurns) || 0) - 1;
-        if (left > 0) {
-          p.suit = v.pending.suit;
-          p.shiftUp = v.pending.shiftUp;
-          p.suitTurns = left;
-        }
+        const q = v.pending || emptyNext();
+        /*
+          ⚠️⚠️ 残りターンのあるものは、すべて次へ持ち越すこと。
+            スートだけ持ち越していたので、愚者で悪魔や力が十枚揃っても
+            一ターンで解けていた。
+          ⚠️ 倍率や真偽の値も一緒に運ぶ。ターン数だけ残しても効かない。
+        */
+        const carry = (key, turnKey, extra) => {
+          const left = (q[turnKey] || 0) - 1;
+          if (left <= 0) return;
+          p[turnKey] = left;
+          p[key] = q[key];
+          (extra || []).forEach((k2) => { p[k2] = q[k2]; });
+        };
+        carry("suit", "suitTurns", ["shiftUp"]);
+        carry("halve", "halveTurns");
+        carry("allRev", "allRevTurns");
+        carry("dmgMul", "mightTurns", ["noMajor", "pierce", "unrot", "wipeAfter"]);
+        carry("acts", "actsTurns");
+        carry("fool", "foolTurns");
         return p;
       })(),
       next: emptyNext(),
@@ -28426,7 +29726,9 @@ function BattlePanel({ lang, star, stageName, onEnd, theme, rank, zako, startHP,
           if (fxOut.self) pop("me", `-${fxOut.self}`, "self");
           next.note = a.fxName[fxOut.key] || "";
           /* ⚠️ 大アルカナだけは画面全体に出す。毎手ごとに全画面が光ると疲れる */
-          fx("all", "major", { shape: MAJOR_FX_SHAPE[fxOut.key] || "ring", label: a.fxName[fxOut.key] });
+          /* ⚠️ 札の番号を渡すこと。22枚それぞれに専用の絵がある */
+          fx("all", "major", { n: Number(String(card.id).split("-")[1]),
+            label: a.fxName[fxOut.key], tone: MAJOR_FX_COLOR[fxOut.key] });
         }
       }
     }
@@ -28444,13 +29746,20 @@ function BattlePanel({ lang, star, stageName, onEnd, theme, rank, zako, startHP,
           その札（多くは貨幣）が回復や攻撃をしたように見える（実際そう見えていた）。
         ★ 少し遅らせ、何の効果かを一行で示してから出す。
       */
-      if (s.fx.lovers > 0 && next.dmgSum > 0) {
-        const h = Math.round(next.dmgSum);
+      /*
+        ⚠️⚠️ s.fx ではなく next.fx を見ること。
+          s はターンの開始時の状態なので、そのターンに引いた正義や恋人が
+          まだ入っていない。引いたターンだけ清算が走らず、
+          「回復したのに敵に入らない」ように見える（実際そうなっていた）。
+      */
+      if (next.fx.lovers > 0 && next.dmgSum > 0) {
+        /* ⚠️ 全額ではなく4割。全額だと聖杯が要らなくなる */
+        const h = Math.round(next.dmgSum * 0.4);
         next.hp = Math.min(next.stats.maxHP, next.hp + h);
         next.note = a.fxName.lovers;
         timers.current.push(setTimeout(() => { pop("me", `＋${h}`, "heal"); fx("me", "heal"); }, 260));
       }
-      if (s.fx.justice > 0 && (next.healSum > 0 || next.healOver > 0)) {
+      if (next.fx.justice > 0 && (next.healSum > 0 || next.healOver > 0)) {
         /*
           ★ 回復した分の2倍。ただし最大HPを超えて溢れた分は4倍。
           ⚠️ 満タンのときほど強い。回復札が攻撃札に変わる ―― それが正義の働き。
@@ -28464,6 +29773,86 @@ function BattlePanel({ lang, star, stageName, onEnd, theme, rank, zako, startHP,
         }
       }
       next.dmgSum = 0; next.healSum = 0; next.healOver = 0;
+
+      /*
+        同じスートが続いたときの特殊行動。
+        ⚠️⚠️ ターンの終わりに一度だけ。札ごとに出すと、同じ絵が何度も走る。
+        ⚠️ 腐った札で途切れる（flashRunOf の中で見ている）。
+      */
+      /*
+        ⚠️⚠️ 必殺技が出せない場面。
+          悪魔 … 階位が半分になり、すべて逆位置になる「枷」の札。
+            そこへ必殺技まで出ると、枷にならない。
+          すさまじい殺気 … 敵が必殺技そのものを封じる手。
+        ★ どちらかが効いていれば、揃えても何も起きない。
+      */
+      const noFlash = (s.turnNext && s.turnNext.halve) || (s.fx && s.fx.dread > 0);
+      /* ⚠️ 複数あれば順に。剣3枚＋棒3枚なら二つとも出る */
+      (noFlash ? [] : flashRunOf(s.hand)).forEach((fr, fi) => {
+        const tier = Math.min(8, fr.run - 2);
+        const mul = FLASH_MUL[tier - 1];
+        const nm = (a.flashName && a.flashName[fr.suit] && a.flashName[fr.suit][tier - 1]) || "";
+        const S2 = next.stats || statsOf(rank || 0);
+        if (fr.suit === "swords") {
+          /* ★ 剣は全体攻撃。単体しか殴れないぶんをここで返す */
+          /*
+            ⚠️ 剣にも割合を少し足す。棒と同じ 0.1%×枚数。
+              全体に当たるので、総量としては棒より大きくなる。
+            ⚠️ 敵ごとに最大HPが違うので、体ごとに計算すること。
+          */
+          const base = Math.round(S2.power * CARD_COEF.swords * next.mult * mul);
+          next.foes.forEach((f2, i2) => {
+            if (f2.hp <= 0) return;
+            const d = base + Math.round(f2.max * 0.001 * fr.run);
+            f2.hp -= d;
+            timers.current.push(setTimeout(() => pop(`foe${i2}`, `-${d}`, "dmg"), 240));
+          });
+        } else if (fr.suit === "wands") {
+          /* ★ 棒は単体攻撃。最もHPの高い敵へ ―― 全体攻撃では届かない相手を狙う */
+          let t2 = -1, top = -1;
+          next.foes.forEach((f2, i2) => { if (f2.hp > top) { top = f2.hp; t2 = i2; } });
+          if (t2 >= 0) {
+            /*
+            ⚠️⚠️ 剣（全体）と同じ威力にしないこと。
+              単体なのに一体あたり1.14倍では、全体で四倍撃つ剣に完敗する。
+              実測で 剣356/体（全体計1424）に対し 棒404 だった。
+            ★ 一体あたり剣の3倍。全体計では剣が上（数で勝る）、
+              一点なら棒が上 ―― 役割が分かれる。
+          */
+/*
+              ⚠️ 基礎ダメージだけだと、★が上がるほど敵HPに置いていかれる。
+                審判（最大HPの22%）のような割合の札に見劣りする。
+              ★ ほんの少しだけ割合を足す。枚数に応じて0.3〜1.0%。
+                「一撃で削り切る」ではなく「厚みが増す」程度に留めること。
+              ⚠️ 1%を超えないこと。★12の敵は20万なので、1%でも2,000。
+                それ以上だと基礎ダメージを上回り、割合の札になってしまう。
+            */
+            const d = Math.round(S2.power * CARD_COEF.swords * next.mult * mul * 3.0
+              + next.foes[t2].max * 0.001 * fr.run);
+            next.foes[t2].hp -= d;
+            timers.current.push(setTimeout(() => pop(`foe${t2}`, `-${d}`, "dmg"), 240));
+          }
+        } else if (fr.suit === "cups") {
+          /* ★ 聖杯はバフ。回復しかできないぶん、倍率を一気に積む */
+          next.mult = Math.min(BATTLE.multCap, next.mult + 0.10 * mul);
+        } else {
+          /*
+            貨幣（青）。
+            ⚠️⚠️ 精神から出さないこと。最大HPを超える量になる
+              （ブルーアースで最大HPの189%。実測）。
+            ★ 最大HPの割合で決める。3枚で3割、10枚で10割。
+              ブルーアースは全快 ―― 名前どおりの働きになる。
+          */
+          const h = Math.round(S2.maxHP * (fr.run / 10));
+          next.hp = Math.min(S2.maxHP, next.hp + h);
+          timers.current.push(setTimeout(() => pop("me", `＋${h}`, "heal"), 240));
+        }
+        next.note = nm;
+        /* ⚠️ 二つ目以降は遅らせる。同時に出すと絵が重なって読めない */
+        timers.current.push(setTimeout(() => {
+          fx("all", "flash", { suit: fr.suit, run: fr.run, label: nm, tone: FLASH_TONE[fr.suit] });
+        }, fi * 380));
+      });
     }
     /* ⚠️ 次のターンへ渡すのは pending のほう。next（このターンぶん）ではない */
     /*
@@ -28497,6 +29886,8 @@ function BattlePanel({ lang, star, stageName, onEnd, theme, rank, zako, startHP,
       */
       const left = s.turnNext.skipFoe;
       next.turnNext = { ...s.turnNext, skipFoe: left - 1 };
+      /* ⚠️ 手番を飛ばされた敵それぞれに×を出す。全体の閃光だけでは伝わらない */
+      next.foes.forEach((f0, i0) => { if (f0.hp > 0) fx(`foe${i0}`, "block"); });
       next.note = left > 1 ? `${a.fxName.emperor}（${left}）` : a.fxName.emperor;
       fx("all", "major", { shape: "flash", label: a.fxName.emperor });
       /* ⚠️ 少し待ってから次の手へ。即座だと、二度目の配りが一度に見える */
@@ -28550,7 +29941,20 @@ function BattlePanel({ lang, star, stageName, onEnd, theme, rank, zako, startHP,
         if (sp.atkUp) next.foeAtkUp = (next.foeAtkUp || 1) + sp.atkUp * w;
         if (sp.allAtkUp) next.foeAtkUp = (next.foeAtkUp || 1) + sp.allAtkUp * w;
         if (sp.forceCombo) next.forceCombo = (next.forceCombo || 0) + sp.forceCombo;
-        if (sp.multCut) next.mult = 1 + (next.mult - 1) * (1 - sp.multCut * w);
+        /*
+          ⚠️⚠️ 削り幅に上限を置くこと。
+            25%の段は効果が1.6倍なので、0.60×1.6＝0.96 となり、
+            ×5.0 が ×1.16 まで落ちる ―― 実質1.0に戻る。
+            積み上げたものが一手で消えるのは、轟音の設計（1に戻さない）と矛盾する。
+          ★ 上限0.70。×5.0 なら ×2.2 まで。痛いが、積んだ甲斐は残る。
+        */
+        if (sp.multCut) {
+          const cut = Math.min(0.70, sp.multCut * w);
+          const before2 = next.mult;
+          next.mult = 1 + (next.mult - 1) * (1 - cut);
+          /* ⚠️ 呪詛も同じ。どれだけ削られたかを出す */
+          pop("me", `×${before2.toFixed(2)}→×${next.mult.toFixed(2)}`, "dmg");
+        }
         if (sp.healAllPct) next.foes = next.foes.map((f) =>
           ({ ...f, hp: f.hp > 0 ? Math.min(f.max, f.hp + f.max * sp.healAllPct * w) : f.hp }));
         if (sp.healPct) b.hp = Math.min(b.max, b.hp + b.max * sp.healPct * w);
@@ -28569,6 +29973,8 @@ function BattlePanel({ lang, star, stageName, onEnd, theme, rank, zako, startHP,
       });
       next.spDone = done;
     }
+    /* ⚠️ 毎ターン戻すこと。持ち越すと二ターン目以降ずっと大技が出ない */
+    next.heavyUsed = false;
     const boost = 1;
     /*
       お供の復活。
@@ -28596,15 +30002,35 @@ function BattlePanel({ lang, star, stageName, onEnd, theme, rank, zako, startHP,
         return { ...f, hp: h, revived: true, justRose: true };
       });
     }
-    if (setup.revive) {
+    /*
+      お供の復活。
+      ⚠️⚠️ 戦いの初めから復活させないこと。
+        後半の★では、お供を一体倒すのに棒400枚が要る（★12で実測）。
+        3ターンごとに全快されると、永久に倒し直すことになり、
+        主へ手が回らない。
+      ★ 主が残り20%を切ってから始める。
+        追い詰めたときだけ湧く ―― 死に際に護衛を呼ぶ、という絵になる。
+      ⚠️ 主が倒れれば戦いは終わるので、詰みにはならない。
+    */
+    const bossLeft = (typeof setup.bossAt === "number" && next.foes[setup.bossAt])
+      ? next.foes[setup.bossAt].hp / next.foes[setup.bossAt].max : 1;
+    if (setup.revive && bossLeft <= BOSS_REVIVE_AT) {
       next.foes = next.foes.map((f, i2) => {
         if (i2 === setup.bossAt || f.hp > 0) return { ...f, downAt: undefined };
         const at = f.downAt == null ? s.turn : f.downAt;
         if (s.turn - at >= (setup.reviveTurns || 3)) {
-          pop(`foe${i2}`, `+${f.max}`, "heal");
+          /*
+            ⚠️⚠️ 全快で起こさないこと。★12の極小は一体21,362あり、
+              棒の特攻（×2.0）を乗せても倒し直しに184枚かかる。
+              3ターンでは到底届かず、事実上の無限湧きになる。
+            ★ 起きるのは「棒で数枚」の量まで。同時撃破の復活と同じ考え方で、
+              棒の威力から逆算する（reviveHPOf）。
+            ⚠️ 起きたターンは動かない。倒した手応えを消さないため。
+          */
+          const back = reviveHPOf(setup.star, rank || 0, f.max);
+          pop(`foe${i2}`, `+${back}`, "heal");
           next.note = a.foeRevive;
-          /* ⚠️ 起きたターンは動かない。倒した手応えを消さないため */
-          return { ...f, hp: f.max, downAt: undefined, revived: true, justRose: true };
+          return { ...f, hp: back, downAt: undefined, revived: true, justRose: true };
         }
         return { ...f, downAt: at };
       });
@@ -28661,6 +30087,35 @@ function BattlePanel({ lang, star, stageName, onEnd, theme, rank, zako, startHP,
       /* ⚠️ 連携が効いていれば連撃で上書き。使ったら減らす */
       let move = foeNextMove(ratio, pos, setup.star);
       /*
+        ⚠️⚠️ 同じターンに大技を撃てるのは一体まで。
+          四体が別々に溜めるので、重なると一度に四発届いて即死する。
+          溜めが見えていても避けようがなく、理不尽になる。
+        ★ 二体目からは溜め直し（wind）。次のターンに回る。
+      */
+      if (move === "heavy") {
+        if (next.heavyUsed) move = "wind";
+        else next.heavyUsed = true;
+      }
+      /*
+        一体だけの雑魚。
+        ⚠️⚠️ 殴るだけの相手にしないこと。体が一つしかないので、
+          こちらの札の当たり外れがそのまま結果になり、駆け引きが無い。
+        ★ 四手に一度、通常攻撃を構えに変える。通りの悪い回が挟まることで、
+          「今のターンは通らなかった」という手応えが出る。
+        ⚠️ 連撃や大技は変えない。殴る回まで削ると、ただの的になる。
+      */
+      /*
+        ⚠️⚠️ 周期（pos % 4）で置き換えないこと。表の長さ（4〜8手）と
+          位置の進み方が噛み合わず、帯によって0%になる（実測：★8以上の平静で0%）。
+        ★ 確率で置き換える。どの帯でも同じ割合になる。
+        ⚠️ 連撃と大技は残す。殴る回まで削ると、ただの的になる。
+      */
+      if (setup.zako && setup.foes === 1
+        && move !== "combo" && move !== "heavy" && move !== "wind"
+        && Math.random() < ZAKO_SOLO_GUARD) {
+        move = "guard";
+      }
+      /*
         隠者。
         ⚠️⚠️ 回復を止めるだけでは死に札になる。★4以下の敵は回復しないので、
           引いても三ターン何も起きない回ができてしまう。
@@ -28680,6 +30135,8 @@ function BattlePanel({ lang, star, stageName, onEnd, theme, rank, zako, startHP,
         || move === "guard" || move === "guardHi" || move === "guardEdge");
       if (blocked && s.fx.hermit > 0) {
         next.note = a.fxName.hermit;
+        /* ⚠️ 何も起きないと「止めた」ことが伝わらない。×を出す */
+        fx(`foe${i}`, "block");
         return;
       }
       if (blocked && s.fx.sun > 0 && (move === "roar" || move === "despair")) {
@@ -28713,6 +30170,48 @@ function BattlePanel({ lang, star, stageName, onEnd, theme, rank, zako, startHP,
         fx("all", "major", { shape: "swirl", label: a.foeDespair });
         return;
       }
+      /*
+        瘴気。
+        ⚠️ ★に応じた段を引く。★3以下は使わないので通常攻撃に化ける。
+        ⚠️ 上書き。重ねると回復が永久に止まる。
+      */
+      /*
+        すさまじい殺気。
+        ⚠️ ★3以下は使わない。序盤で必殺技を封じると、
+          そもそも何が封じられたのか分からない。
+        ⚠️ 上書き。重ねると永久に封じられる。
+      */
+      if (move === "dread") {
+        if (setup.star <= 3) { move = "hit"; }
+        else {
+          next.fx = { ...next.fx, dread: Math.max(next.fx.dread || 0, FOE_MOVES.dread.dread) };
+          next.note = a.foeDread;
+          fx("all", "major", { n: 15, label: a.foeDread, tone: "#FF5A5A" });
+          return;
+        }
+      }
+      if (move === "miasma") {
+        /*
+          ⚠️⚠️ 癒やしの札が効いているあいだは通らないこと。
+            女帝（貨幣を積む最中）・節制（守りに徹している）・星（回復が続く）は、
+            どれも「立て直している」場面。そこへ回復封じを重ねると、
+            せっかく引いた札が丸ごと死ぬ。
+          ★ 空振りにする。殴りもしない。
+        */
+        const warded = (s.fx && (s.fx.temperance > 0 || s.fx.star > 0))
+          || (s.turnNext && s.turnNext.suit === "pentacles");
+        const mk = warded ? null : miasmaOf(setup.star);
+        if (warded) { next.note = a.foeMiasmaFail; fx(`foe${i}`, "block"); return; }
+        if (!mk) { move = "hit"; }
+        else {
+          const m3 = FOE_MOVES[mk];
+          next.fx = { ...next.fx, miasma: Math.max(next.fx.miasma || 0, m3.turns) };
+          next.miasmaCut = m3.miasma;
+          next.note = a.foeMiasma[mk];
+          fx("all", "major", { n: 15, label: a.foeMiasma[mk], tone: "#2A2438" });
+          return;
+        }
+      }
       if (move === "rot") {
         /*
           腐食。
@@ -28724,10 +30223,11 @@ function BattlePanel({ lang, star, stageName, onEnd, theme, rank, zako, startHP,
         next.note = a.foeRot;
         const myAtk2 = ((setup.foeAtkList && setup.foeAtkList[i]) || setup.foeAtk) * (next.foeAtkUp || 1);
         /* ⚠️ 輪が効いていれば腐食の一撃も10。攻撃はすべて平らになる */
+        const shCut2 = 1 - SHIELD_CUT[Math.min(shield, shieldMax(setup.cards))];
         const d2 = (s.fx && s.fx.wheel > 0) ? 10
           : Math.max(1, Math.round(myAtk2 * boost * FOE_MOVES.rot.mul
             * (FOE_PHASE_MUL_BY_TIER[foeTierOf(setup.star)][foePhaseOf(ratio)] || 1)
-            * next.take * (s.fx.moon > 0 ? 0.6 : 1)));
+            * next.take * (s.fx.moon > 0 ? 0.6 : 1) * shCut2));
         next.hp -= d2;
         pop("me", `-${d2}`, "dmg");
         return;
@@ -28743,9 +30243,16 @@ function BattlePanel({ lang, star, stageName, onEnd, theme, rank, zako, startHP,
         */
         if (s.turnNext && s.turnNext.suit === "pentacles") {
           next.note = a.foeRoarFail;
+          fx(`foe${i}`, "block");
           return;
         }
+        /*
+          ⚠️ 削る前と後を残すこと。数字だけ下がると
+            「何かに戻された」としか見えない（実際そう見えた）。
+        */
+        const before = next.mult;
         next.mult = 1 + (next.mult - 1) * (1 - FOE_MOVES.roar.roar);
+        pop("me", `×${before.toFixed(2)}→×${next.mult.toFixed(2)}`, "dmg");
         next.note = a.foeRoar;
         fx("me", "burst");
         return;
@@ -28771,7 +30278,9 @@ function BattlePanel({ lang, star, stageName, onEnd, theme, rank, zako, startHP,
         * (next.foeAtkUp || 1) * gap;
       const list = foeDamages(move, myAtk * boost, ratio, setup.star);
       /* ⚠️ 月は敵の攻撃力、貨幣はこちらの被ダメ。掛ける順は変えない */
-      const scale = next.take * (s.fx.moon > 0 ? 0.6 : 1);
+      /* ⚠️ 盾のぶん軽くする。月（-40%）とは掛け算で重なる */
+      const shCut = 1 - SHIELD_CUT[Math.min(shield, shieldMax(setup.cards))];
+      const scale = next.take * (s.fx.moon > 0 ? 0.6 : 1) * shCut;
       /*
         運命の輪。
         ⚠️⚠️ 階位を10で揃えるだけでは地味だった（実質+7%が3ターン）。
@@ -28804,6 +30313,8 @@ function BattlePanel({ lang, star, stageName, onEnd, theme, rank, zako, startHP,
     ⚠️ 負けたときと雑魚のときは、これまでどおり結果画面を見せる。
   */
   useEffect(() => {
+    /* ⚠️ 止めているあいだは何も進めない。タイマーを積まないこと */
+    if (paused) return;
     if (!zako && st.phase === "win") {
       const id = setTimeout(() => onEnd && onEnd(true, st.hp, st.mult), 900);
       timers.current.push(id); return () => clearTimeout(id);
@@ -28811,6 +30322,7 @@ function BattlePanel({ lang, star, stageName, onEnd, theme, rank, zako, startHP,
   }, [st.phase, zako]);
 
   useEffect(() => {
+    if (paused) return;
     if (st.phase === "play") {
       const id = setTimeout(step, BATTLE_STEP_MS / speed);
       timers.current.push(id); return () => clearTimeout(id);
@@ -28825,7 +30337,7 @@ function BattlePanel({ lang, star, stageName, onEnd, theme, rank, zako, startHP,
     }
     /* ⚠️ 皇帝で飛ばしている間。ここでは何もしない（上のタイマーが次へ運ぶ） */
     if (st.phase === "skip") return;
-  }, [st.phase, st.shown, st.turn, speed]);
+  }, [st.phase, st.shown, st.turn, speed, paused]);
 
   return (
     <div className="bt-wrap">
@@ -28855,10 +30367,30 @@ function BattlePanel({ lang, star, stageName, onEnd, theme, rank, zako, startHP,
           }}>
           {"▷".repeat(SPEED_STEPS.indexOf(speed) + 1)}
         </button>
+        {/*
+          ⚠️ 速さの隣に並べること。見るための道具は一箇所に集める。
+          ★ 止めているあいだに、継続と敵の構えを確かめられる。
+        */}
+        <button type="button" className={`bt-pause${paused ? " on" : ""}`}
+          onClick={() => setPaused((v) => !v)}>
+          {paused ? "▶" : "❚❚"}
+        </button>
+        {/*
+          盾。
+          ⚠️ 押すたびに一段上がり、上限で0へ戻る。上限は手札の枚数で決まる。
+          ⚠️ 選べる段が★で違うので、数字も一緒に出すこと。
+        */}
+        <button type="button" className={`bt-shield${shield ? " on" : ""}`}
+          onClick={() => setShield((v) => (v + 1) % (shieldMax(setup.cards) + 1))}>
+          <span className="bt-shield-mark" />{shield}
+        </button>
 
         {/* 大アルカナ。⚠️ 戦場全体を覆う。敵の上だけだと、場が変わった感じが出ない */}
         {fxs.filter((x) => x.where === "all").map((x) => (
-          <FxMajor key={x.id} shape={x.shape} label={x.label} />
+          x.kind === "block" ? <FxBlock key={x.id} /> :
+          x.kind === "flash"
+            ? <FxFlash key={x.id} suit={x.suit} run={x.run} label={x.label} tone={x.tone} />
+            : <FxArcana key={x.id} n={x.n} label={x.label} tone={x.tone} />
         ))}
         <div className={`bt-foes n${setup.foes}`}>
           {st.foes.map((f, i) => {
@@ -28923,7 +30455,8 @@ function BattlePanel({ lang, star, stageName, onEnd, theme, rank, zako, startHP,
                 弱まりを受けないのだから、見た目も正位置でよい。
                 回したままだと「効いていないのでは」と見える。
             */
-            className={`bt-card${i < st.shown ? " used" : ""}${i === st.shown ? " now" : ""}${(c.reversed && st.fx.hiero <= 0) ? " rev" : ""}${c.rotten ? " rotten" : ""}`}
+            /* ⚠️ 法王のあいだは札そのものが淡く光る。逆位置が出ないことを目で示す */
+            className={`bt-card${st.fx.hiero > 0 ? " blessed" : ""}${i < (st.shown % st.hand.length || (st.shown ? st.hand.length : 0)) ? " used" : ""}${i === st.shown % st.hand.length ? " now" : ""}${(c.reversed && st.fx.hiero <= 0) ? " rev" : ""}${c.rotten ? " rotten" : ""}`}
             style={{ "--accent": c.accent || "var(--gold)" }}>
             <span className="bt-card-corner">{c.corner}</span>
             {c.Icon ? <c.Icon size={13} /> : <Sparkles size={13} />}
@@ -28959,8 +30492,24 @@ function BattlePanel({ lang, star, stageName, onEnd, theme, rank, zako, startHP,
           放置で眺めるものなので、盤の状態は常に見えていること。
         ⚠️ 残りターンも出す。あと何ターン効くかで見え方が変わる。
       */}
-      {Object.keys(st.fx).some((k) => st.fx[k] > 0) && (
+      {/*
+        ⚠️⚠️ st.fx だけを見ないこと。悪魔・力・世界・愚者・スート指定は
+          turnNext に入るので、効いていても一覧に出ない。
+          愚者で十枚揃えても残りターンが見えず、「一ターンで切れた」と見える
+          （実際そう見えていた）。
+        ★ 二つを合わせて出す。残りターン数も一緒に。
+      */}
+      {(Object.keys(st.fx).some((k) => st.fx[k] > 0)
+        || nextFxList(st.turnNext).length > 0) && (
         <div className="bt-fx">
+          {nextFxList(st.turnNext).map((x) => (
+            <button key={x.key} type="button"
+              className={`bt-fx-chip${fxOpen === x.key ? " open" : ""}`}
+              title={(a.fxHelp && a.fxHelp[x.key]) || ""}
+              onClick={() => setFxOpen(fxOpen === x.key ? null : x.key)}>
+              {(a.fxName && a.fxName[x.key]) || x.key}<b>{x.turns}</b>
+            </button>
+          ))}
           {/* ⚠️ 敵が掛けたものは色を分ける。自分の継続と同じ顔だと読み違える */}
           {/*
             ⚠️⚠️ map の中に素のブロックコメントを置かないこと。
@@ -28970,7 +30519,7 @@ function BattlePanel({ lang, star, stageName, onEnd, theme, rank, zako, startHP,
           */}
           {Object.keys(st.fx).filter((k) => st.fx[k] > 0).map((k) => (
             <button key={k} type="button"
-              className={`bt-fx-chip${k === "despair" ? " bad" : ""}${fxOpen === k ? " open" : ""}`}
+              className={`bt-fx-chip${(k === "despair" || k === "miasma" || k === "dread") ? " bad" : ""}${fxOpen === k ? " open" : ""}`}
               title={a.fxHelp[k] || ""}
               onClick={() => setFxOpen(fxOpen === k ? null : k)}>
               {a.fxName[k]}<b>{st.fx[k]}</b>
@@ -28985,6 +30534,24 @@ function BattlePanel({ lang, star, stageName, onEnd, theme, rank, zako, startHP,
         ⚠️ 戦いの最中に見るものなので、戦闘の画面の中に置く。
           別の画面へ移すと、確かめるために戦いを離れることになる。
       */}
+      {/*
+        敵の妨害の一覧。
+        ⚠️⚠️ 味方の効果と混ぜないこと。どちらが自分に良いものか分からなくなる。
+        ★ 別の畳みにして、朱で統一する。
+      */}
+      <details className="bt-guide bad">
+        <summary>{a.debuffList}</summary>
+        <ul className="bt-guide-list">
+          {["roar", "rot", "despair", "miasma", "dread", "guard", "guardHi", "guardEdge",
+            "wind", "heavy", "combo", "hit", "heal"].map((k) => (
+            <li key={k}>
+              <b>{(a.foeActName && a.foeActName[k]) || k}</b>
+              <span>{(a.foeActHelp && a.foeActHelp[k]) || ""}</span>
+            </li>
+          ))}
+        </ul>
+      </details>
+
       <details className="bt-guide">
         <summary>{a.majorList}</summary>
         <ul className="bt-guide-list">
@@ -29008,6 +30575,18 @@ function BattlePanel({ lang, star, stageName, onEnd, theme, rank, zako, startHP,
 
       <p className="adv-legend">
         <span className="adv-legend-key">{a.btTurn(st.turn)}</span>
+        {/* ⚠️ 動けないことを出す。札が全部灰色なだけでは理由が分からない */}
+        {st.stunNext > 0 && <span className="adv-legend-key">{a.btStun}</span>}
+        {/*
+          ⚠️ 何巡目かを出すこと。世界（3回行動）は同じ手札を繰り返すので、
+            画面では一巡目と三巡目の区別が付かず、効いていないように見える。
+        */}
+        {(() => {
+          const acts = (st.turnNext && st.turnNext.acts) || 1;
+          if (acts <= 1 || !st.hand.length) return null;
+          const lap = Math.min(acts, Math.floor(st.shown / st.hand.length) + 1);
+          return <span className="adv-legend-key">{a.btLap(lap, acts)}</span>;
+        })()}
         <span className="adv-legend-key">{a.btFoesLeft(alive)}</span>
         {st.note && <span className="adv-legend-key">{st.note}</span>}
       </p>
@@ -30582,13 +32161,28 @@ function AdventurePanel({ lang, items, onItem }) {
                 一つ一つを踏破する動機が、主を見るための作業に変わる。
               ⚠️ 輪と一緒に回さないこと。中心は動かない。
             */}
-            {allDone ? (
+            {/*
+              ⚠️⚠️ 区分の主は、いつでも挑めること。
+                八つ制覇するまで挑めないと、勝てる見込みのない相手に
+                辿り着くころには、もう区分に用が無い。
+              ★ 常に中心に置く。制覇の有無は見た目で分ける。
+                制覇前は控えめに、制覇後は旗を立てる。
+            */}
+            {true ? (
               <g style={{ cursor: "pointer" }} onClick={() => startStage(bossName)}>
                 <circle cx="50" cy="50" r="15" fill="rgba(20,14,32,0.85)" />
-                <circle cx="50" cy="50" r="15" fill="none" stroke="url(#ringBoss)" strokeWidth="1.4" />
+                <circle cx="50" cy="50" r="15" fill="none" stroke="url(#ringBoss)"
+                  strokeWidth="1.4" opacity={allDone ? 1 : 0.55} />
+                {/* ⚠️ 倒したら旗。八つの丸と同じ形にして、意味を揃える */}
+                {cleared.includes(bossName) && (
+                  <g className="ring-flag">
+                    <path d="M41 40 L41 47" stroke="#C9A24B" strokeWidth="1" strokeLinecap="round" />
+                    <path d="M41.5 40.4 L46 41.5 L41.5 42.6 Z" fill="#C8102E" />
+                  </g>
+                )}
                 {/* ⚠️ 星は使わない。八分野の評価と同じ形になる */}
                 <path d="M50 41 L53.4 47.2 L60 48.2 L55 53 L56.2 60 L50 56.7 L43.8 60 L45 53 L40 48.2 L46.6 47.2 Z"
-                  fill="url(#ringBoss)" opacity="0.92" className="ring-boss-mark" />
+                  fill="url(#ringBoss)" opacity={allDone ? 0.92 : 0.5} className="ring-boss-mark" />
                 <text x="50" y="70" textAnchor="middle"
                   style={{ fontSize: "3.6px", fill: "#F0B4B4", letterSpacing: "0.1em" }}>
                   {a.areaBoss}
@@ -30725,6 +32319,21 @@ function AdventurePanel({ lang, items, onItem }) {
                   <circle cx={q.x} cy={q.y} r={q.off ? 2.6 : 3.2}
                     fill={q.off ? "none" : "#E8C46A"} stroke="#FFE9A8"
                     strokeWidth={q.off ? 0.7 : 0.6} strokeDasharray={q.off ? "1.4 1.4" : ""} />
+                  {/*
+                    区分の旗。
+                    ★ その区分の名所を八つとも制覇したら立てる。
+                      一つでも残っていれば立たない ―― 区分を終えた印。
+                    ⚠️ 円の左上に小さく。名前と数を隠さない位置に。
+                  */}
+                  {(landmarksOf(pref, ar) || []).length > 0
+                    && (landmarksOf(pref, ar) || []).every((nm) => cleared.includes(nm)) && (
+                    <g style={{ pointerEvents: "none" }}>
+                      <path d={`M${q.x - 3.4} ${q.y + 1.2} L${q.x - 3.4} ${q.y - 3.6}`}
+                        stroke="#C9A24B" strokeWidth="0.7" strokeLinecap="round" />
+                      <path d={`M${q.x - 3} ${q.y - 3.2} L${q.x - 0.4} ${q.y - 2.5} L${q.x - 3} ${q.y - 1.8} Z`}
+                        fill="#C8102E" />
+                    </g>
+                  )}
                   <text x={q.x} y={q.y - 4.6} textAnchor={anchor}
                     style={{ fontSize: "3.8px", fill: "var(--parchment)" }}>{ar}</text>
                   <text x={q.x} y={q.y + 7} textAnchor={anchor}
@@ -30804,6 +32413,42 @@ function AdventurePanel({ lang, items, onItem }) {
               );
             })}
           </g>
+          {/*
+            制覇した県の旗。
+            ⚠️⚠️ 県の形より後ろに描くこと。先に描くと塗りに隠れる。
+            ⚠️ view.pos の座標は倍率を掛けたあとの値なので、そのまま使う。
+            ★ その県の区分をすべて終えたときだけ立てる。
+              旗の意味を階層ごとに揃える ―― ステージ／区分／県。
+          */}
+          {view.inside.map((k) => {
+            /*
+              ⚠️⚠️ 「一つでも制覇したら」ではない。県の旗は、その県の
+                区分をすべて終えたときだけ立てること。
+                一つで立ててしまうと、足を踏み入れた県が全部光り、
+                やり終えた県と見分けが付かない。
+            */
+            const ars = areasOf(k);
+            /*
+              ⚠️⚠️ 全区分を条件にしないこと。県ごとの区分は3〜8とばらつきがあり
+                （平均4.7）、全区分だと24戦の県と64戦の県ができる。2.7倍の差。
+              ★ どの区分でもよいので、三つ終えれば県の制覇。
+                区分の多い県では「どの三つを選ぶか」という判断が生まれる。
+            */
+            const doneAreas = ars.filter((ar) => {
+              const ls = landmarksOf(k, ar) || [];
+              return ls.length > 0 && ls.every((nm) => cleared.includes(nm));
+            }).length;
+            const done = doneAreas >= Math.min(PREF_DONE_AREAS, ars.length);
+            if (!done || !view.pos[k]) return null;
+            const p = view.pos[k];
+            return (
+              <g key={`fl${k}`} transform={`translate(${p.x} ${p.y - 4})`}
+                style={{ pointerEvents: "none" }}>
+                <path d="M0 4 L0 -3.4" stroke="#C9A24B" strokeWidth="0.8" strokeLinecap="round" />
+                <path d="M0.4 -3 L3.6 -2.1 L0.4 -1.2 Z" fill="#C8102E" />
+              </g>
+            );
+          })}
           {/* ⚠️ 色だけで分けない。いる県には脈打つ輪も出す */}
           {view.pos[pref] && (
             <circle cx={view.pos[pref].x} cy={view.pos[pref].y} r="9.5" fill="none"
@@ -50988,6 +52633,20 @@ export default function TarotDraw() {
         /* ⚠️ 処理済みは沈める。いま何枚目かが見えること */
         .bt-card.used { opacity: 0.3; }
         /*
+          法王。
+          ⚠️ 札の向きが変わらないので、効いていることが分からない。
+          ★ 札そのものを淡く光らせる。祝福を受けている、という見え方。
+        */
+        .bt-card.blessed {
+          box-shadow: inset 0 0 0 1px rgba(216,222,233,0.7),
+            0 0 14px rgba(216,222,233,0.45);
+          animation: btBlessed 1800ms ease-in-out infinite;
+        }
+        @keyframes btBlessed {
+          0%, 100% { box-shadow: inset 0 0 0 1px rgba(216,222,233,0.55), 0 0 10px rgba(216,222,233,0.3); }
+          50% { box-shadow: inset 0 0 0 1.5px rgba(255,255,255,0.9), 0 0 20px rgba(216,222,233,0.7); }
+        }
+        /*
           腐った札。
           ⚠️ 引けたのに効かない、と分かる形にする。消すと、そもそも引けなかったように見える。
           ⚠️ 斜線を一本。色を変えるだけでは、逆位置と見分けがつかない。
@@ -51091,6 +52750,29 @@ export default function TarotDraw() {
           0%, 100% { transform: translateX(-50%) scale(0.85); opacity: 0.7; }
           50% { transform: translateX(-50%) scale(1.15); opacity: 1; }
         }
+        /*
+          止められた印。
+          ⚠️ 太く赤く。細いと、殴られたのか止まったのか読めない。
+          ⚠️ 敵の上に重ねる。画面全体に出すと、どの敵が止まったか分からない。
+        */
+        .fx-block {
+          position: absolute; inset: -10%; display: block; pointer-events: none;
+        }
+        .fx-block i {
+          position: absolute; left: 50%; top: 50%; width: 76%; height: 5px;
+          margin: -2.5px 0 0 -38%; border-radius: 3px;
+          background: #FF4A4A;
+          box-shadow: 0 0 14px rgba(255,74,74,0.9), 0 0 3px rgba(255,255,255,0.9);
+          animation: fxBlock 520ms cubic-bezier(0.2,0.8,0.25,1) forwards;
+        }
+        .fx-block i:nth-child(1) { transform: rotate(45deg); }
+        .fx-block i:nth-child(2) { transform: rotate(-45deg); animation-delay: 70ms; }
+        @keyframes fxBlock {
+          0% { opacity: 0; }
+          25% { opacity: 1; }
+          70% { opacity: 1; }
+          100% { opacity: 0; }
+        }
         .bt-guard {
           border: 2px solid #9AD8FF;
           box-shadow: 0 0 14px rgba(154,216,255,0.8);
@@ -51166,16 +52848,875 @@ export default function TarotDraw() {
           100% { transform: scale(1.5); opacity: 0; }
         }
         /*
+          【大アルカナ 22枚の演出】
+          ⚠️⚠️ すべて620ms以内に終わること。残ると次の札の演出と重なる。
+          ⚠️ 色は --fxc から取る。ここに色を直接書かないこと（22枚ぶん散る）。
+          ⚠️ 粒は8〜12個まで。数十個を動かすと、放置で回す画面が重くなる。
+        */
+        .fx-arcana { display: flex; align-items: center; justify-content: center; z-index: 4; }
+        /* ⚠️ 絵の中の <b> に当てないこと。クラスで縛る */
+        .fx-arcana > b.fx-label {
+          position: absolute; bottom: 8%; left: 0; right: 0; text-align: center;
+          font-family: 'Shippori Mincho', serif; font-size: 19px; letter-spacing: 0.12em;
+          color: var(--fxc, #FFF3D6);
+          text-shadow: 0 0 16px var(--fxc, rgba(255,243,214,0.9)),
+            0 0 3px rgba(255,255,255,0.9), 0 2px 6px rgba(0,0,0,0.9);
+          animation: fxName 620ms cubic-bezier(0.2, 0.8, 0.25, 1) forwards;
+        }
+        /*
+          ⚠️⚠️ 影を必ず付けること。背景（紫紺の戦場）と同じ明度の色だと、
+            絵が地に溶けて何が出たのか分からない。
+          ★ 外に自分の色の光、内に黒。二重で縁を立てる。
+        */
+        .ar {
+          position: absolute; inset: 0; color: var(--fxc, #F6DE96);
+          filter: drop-shadow(0 0 10px var(--fxc, #F6DE96))
+                  drop-shadow(0 2px 4px rgba(0,0,0,0.85));
+        }
+        .ar svg { width: 100%; height: 100%; display: block; }
+        .ar i, .ar b { position: absolute; display: block; }
+        /* ⚠️ 黒い札（悪魔・死神）は自分の色で光らせても沈む。白で縁を抜く */
+        /* ⚠️ 死神は下で紫の影を別に指定する。ここでは悪魔だけ */
+        .ar-devil {
+          filter: drop-shadow(0 0 8px rgba(255,255,255,0.75))
+                  drop-shadow(0 0 16px rgba(0,0,0,0.9));
+        }
+
+        /* ⓪ 愚者。⚠️ 三重の渦を逆向きに回す。一つだと「輪が出た」だけ */
+        /*
+          ⓪ 愚者。
+          ⚠️ 中心に重ねないこと。同心円は「的」に見えて、混乱が出ない。
+          ★ 十個を画面のあちこちへ。大きさ（--s）も向きも時間もばらばらにする。
+        */
+        .ar-fool i {
+          width: 54px; height: 54px; margin: -27px 0 0 -27px;
+          border: 3px dashed currentColor; border-radius: 50%;
+          border-right-color: transparent; border-bottom-color: transparent;
+          animation: arFool 620ms ease-out forwards;
+        }
+        @keyframes arFool {
+          0% { transform: rotate(0) scale(0.2); opacity: 0; }
+          35% { opacity: 1; }
+          100% { transform: rotate(520deg) scale(var(--s, 1)); opacity: 0; }
+        }
+        /* ① 魔術師。⚠️ 一瞬で消す。魔法陣は残ると図面に見える */
+        .ar-magician { animation: arFlashIn 620ms ease-out forwards; }
+        @keyframes arFlashIn {
+          0% { transform: scale(0.5) rotate(-20deg); opacity: 0; }
+          30% { transform: scale(1) rotate(0); opacity: 1; }
+          70% { opacity: 1; }
+          100% { transform: scale(1.1); opacity: 0; }
+        }
+        /*
+          ② 女教皇。
+          ⚠️ 直線では雨に見えない。下端を丸めた雫にして、落ちた先に波紋を置く。
+        */
+        .ar-rain .ar-drop {
+          top: -12%; width: 5px; height: 16px;
+          border-radius: 50% 50% 60% 60% / 70% 70% 40% 40%;
+          background: linear-gradient(180deg, transparent, currentColor);
+          animation: arFallDown 560ms linear forwards;
+        }
+        @keyframes arFallDown {
+          0% { transform: translateY(0) scaleY(0.7); opacity: 0; }
+          20% { opacity: 1; }
+          100% { transform: translateY(240px) scaleY(1.2); opacity: 0; }
+        }
+        /* ⚠️ 波紋は下端に。遅れて広がることで、落ちた先が分かる */
+        .ar-rain .ar-ripple {
+          bottom: 6%; width: 26px; height: 8px; margin-left: -13px;
+          border: 2px solid currentColor; border-radius: 50%;
+          animation: arRipple 420ms ease-out forwards;
+        }
+        @keyframes arRipple {
+          0% { transform: scale(0.2); opacity: 0; }
+          40% { opacity: 0.9; }
+          100% { transform: scale(2.2); opacity: 0; }
+        }
+        /*
+          ③ 女帝。
+          ⚠️ 茎は複数本。一本だと線が伸びただけに見える。
+          ⚠️ 高さを本ごとに変える（--h）。揃えると柵に見える。
+        */
+        .ar-empress .ar-stem {
+          bottom: 0; width: 4px; height: 0; margin-left: -2px;
+          background: linear-gradient(180deg, currentColor, transparent);
+          border-radius: 2px 2px 0 0;
+          animation: arStem 620ms cubic-bezier(0.2,0.8,0.25,1) forwards;
+        }
+        @keyframes arStem {
+          0% { height: 0; opacity: 0; }
+          45% { height: var(--h, 50%); opacity: 1; }
+          100% { height: calc(var(--h, 50%) + 6%); opacity: 0; }
+        }
+        /*
+          ③ 女帝の葉。
+          ⚠️ 大きさを揃えないこと。同じ粒が並ぶと紙吹雪に見える。
+          ★ 三段階。大きいものほどゆっくり、大きく揺れて落ちる。
+          ⚠️ 影は深緑。札の色（黄緑）で光らせると、葉が発光して見える。
+        */
+        .ar-empress .ar-leaf {
+          top: -8%;
+          width: calc(11px * var(--z, 1)); height: calc(7px * var(--z, 1));
+          margin-left: calc(-5.5px * var(--z, 1));
+          border-radius: 50% 0 50% 0;
+          background: currentColor;
+          filter: drop-shadow(0 2px 3px rgba(20,60,26,0.9));
+        }
+        /* 小。⚠️ 速く落ち、揺れは小さい */
+        .ar-empress .s1 { animation: arLeaf1 520ms ease-in forwards; }
+        @keyframes arLeaf1 {
+          0% { transform: translate(0,0) rotate(0); opacity: 0; }
+          25% { opacity: 1; }
+          50% { transform: translate(-14px, 110px) rotate(180deg); }
+          100% { transform: translate(6px, 230px) rotate(340deg); opacity: 0; }
+        }
+        /* 中 */
+        .ar-empress .s2 { animation: arLeaf2 580ms ease-in forwards; }
+        @keyframes arLeaf2 {
+          0% { transform: translate(0,0) rotate(0); opacity: 0; }
+          25% { opacity: 1; }
+          40% { transform: translate(20px, 80px) rotate(120deg); }
+          70% { transform: translate(-18px, 160px) rotate(250deg); }
+          100% { transform: translate(8px, 235px) rotate(380deg); opacity: 0; }
+        }
+        /* 大。⚠️ いちばんゆっくり、いちばん大きく揺れる */
+        .ar-empress .s3 { animation: arLeaf3 620ms ease-in forwards; }
+        @keyframes arLeaf3 {
+          0% { transform: translate(0,0) rotate(0); opacity: 0; }
+          20% { opacity: 1; }
+          35% { transform: translate(-28px, 70px) rotate(90deg); }
+          60% { transform: translate(26px, 140px) rotate(200deg); }
+          85% { transform: translate(-16px, 200px) rotate(300deg); }
+          100% { transform: translate(4px, 240px) rotate(360deg); opacity: 0; }
+        }
+        /* ④ 皇帝。外から中心へ集まって閉じる（法王の逆） */
+        .ar-emperor i {
+          left: 50%; top: 50%; width: 9px; height: 9px; margin: -4.5px 0 0 -4.5px;
+          border-radius: 50%; background: currentColor;
+          box-shadow: 0 0 12px currentColor;
+          animation: arGather 620ms cubic-bezier(0.3,0,0.2,1) forwards;
+        }
+        @keyframes arGather {
+          0% { transform: rotate(var(--a)) translateX(110px) scale(1); opacity: 0; }
+          30% { opacity: 1; }
+          100% { transform: rotate(var(--a)) translateX(0) scale(0.3); opacity: 0; }
+        }
+        /* ⑤ 法王。中心で回り、外へ弾ける */
+        .ar-hiero i {
+          left: 50%; top: 50%; width: 10px; height: 10px; margin: -5px 0 0 -5px;
+          border-radius: 50%; border: 2px solid currentColor;
+          animation: arBurstOut 620ms cubic-bezier(0.3,0,0.2,1) forwards;
+        }
+        @keyframes arBurstOut {
+          0% { transform: rotate(var(--a)) translateX(0) scale(0.6); opacity: 0; }
+          25% { transform: rotate(calc(var(--a) + 120deg)) translateX(24px) scale(1); opacity: 1; }
+          100% { transform: rotate(calc(var(--a) + 240deg)) translateX(130px) scale(1.2); opacity: 0; }
+        }
+        /* ⑥ 恋人。左右から寄って心になる */
+        .ar-lovers .ar-hl { animation: arHL 620ms cubic-bezier(0.2,0.8,0.25,1) forwards; }
+        .ar-lovers .ar-hr { animation: arHR 620ms cubic-bezier(0.2,0.8,0.25,1) forwards; }
+        @keyframes arHL {
+          0% { transform: translateX(-70px); opacity: 0; }
+          45% { transform: translateX(0); opacity: 1; }
+          100% { transform: translateX(0) scale(1.15); opacity: 0; }
+        }
+        @keyframes arHR {
+          0% { transform: translateX(70px); opacity: 0; }
+          45% { transform: translateX(0); opacity: 1; }
+          100% { transform: translateX(0) scale(1.15); opacity: 0; }
+        }
+        /*
+          ⑥ 恋人。飛び散る小さな心。
+          ⚠️ くっついた後（300ms）から散らすこと。先に出すと合わさった意味が消える。
+          ⚠️ 形は clip-path で作る。画像を持ち込まない。
+        */
+        .ar-lovers .ar-mini {
+          left: 50%; top: 46%; width: 11px; height: 11px; margin: -5.5px 0 0 -5.5px;
+          background: currentColor;
+          clip-path: polygon(50% 100%, 8% 52%, 8% 28%, 28% 12%, 50% 30%, 72% 12%, 92% 28%, 92% 52%);
+          animation: arMini 320ms ease-out forwards;
+        }
+        @keyframes arMini {
+          0% { transform: rotate(var(--a)) translateY(0) scale(0); opacity: 0; }
+          30% { opacity: 1; }
+          100% { transform: rotate(var(--a)) translateY(-56px) scale(var(--s, 1)); opacity: 0; }
+        }
+
+        /*
+          ⑰⑱⑲ 右上の天体。
+          ⚠️⚠️ 動かさないこと。据わっているから空にあるものに見える。
+            回したり跳ねさせたりすると、降ってくる粒と区別が付かなくなる。
+          ⚠️ 画面の三分の一ほどの大きさ。小さいと降る粒に埋もれる。
+        */
+        /*
+          ⚠️ 色は札の色（新緑）ではなく黄色にする。
+            天体は空にあるもので、下から立つ光とは別物だと示すため。
+        */
+        .ar-sky { color: #FFD23F; }
+        .ar-sky {
+          /* ⚠️ 小さいと降る粒に埋もれる。画面の半分を超える大きさで据える */
+          position: absolute; right: -2%; top: -2%; width: 58%; height: 58%;
+          animation: arSky 620ms ease-out forwards;
+        }
+        .ar-sky svg { width: 100%; height: 100%; }
+        @keyframes arSky {
+          0% { opacity: 0; transform: scale(0.85); }
+          25% { opacity: 1; transform: scale(1); }
+          75% { opacity: 1; transform: scale(1); }
+          100% { opacity: 0; transform: scale(1.04); }
+        }
+
+        /*
+          ⑦ 戦車。
+          ★ 手前から奥へ飛ぶ砲弾。遠近は「縮みながら中心へ寄る」で表す。
+          ⚠️⚠️ 上下で出どころを分けること。下は下端から、上は上端から。
+            同じ場所から出すと、真ん中で交差するだけの絵になる。
+          ⚠️ 消えるのは奥（中心）に着いてから。手前で消えると届かなく見える。
+        */
+        .ar-chariot .ar-shot {
+          width: 6px; height: 60px; margin-left: -3px; border-radius: 3px;
+          background: linear-gradient(180deg, transparent, currentColor);
+          box-shadow: 0 0 14px currentColor;
+        }
+        /* 下から奥へ */
+        .ar-chariot .down {
+          bottom: -18%;
+          animation: arShotDown 520ms cubic-bezier(0.25,0,0.5,1) forwards;
+        }
+        @keyframes arShotDown {
+          0% { transform: translate(0, 0) scale(1.7); opacity: 0; }
+          20% { opacity: 1; }
+          /* ⚠️ 消失点で止める。通り越すと、奥へ飛んだのではなく横切ったように見える */
+          85% { transform: translate(var(--dx, 0), -150px) scale(0.22); opacity: 1; }
+          100% { transform: translate(var(--dx, 0), -150px) scale(0.16); opacity: 0; }
+        }
+        /*
+          上から奥へ。
+          ⚠️ 下のものを上下反転させて使う（scaleY(-1)）。
+            別に作ると、太さや速さがずれて別物に見える。
+        */
+        .ar-chariot .up {
+          top: -18%;
+          animation: arShotUp 520ms cubic-bezier(0.25,0,0.5,1) forwards;
+        }
+        @keyframes arShotUp {
+          0% { transform: scaleY(-1) translate(0, 0) scale(1.7); opacity: 0; }
+          20% { opacity: 1; }
+          85% { transform: scaleY(-1) translate(var(--dx, 0), -150px) scale(0.22); opacity: 1; }
+          100% { transform: scaleY(-1) translate(var(--dx, 0), -150px) scale(0.16); opacity: 0; }
+        }
+        /*
+          ⑧ 力。
+          ⚠️⚠️ すべて同じ高さにしないこと。端まで伸びた線が並ぶと柵に見える。
+          ★ 中央が高く、外へ向かって段階的に低い（--h で渡す）。
+          ⚠️ 消えるのも内側から。中心から力が抜けていく形にする。
+        */
+        /*
+          湧き上がり（バフ系すべて共通）。
+          ⚠️⚠️ 同時に立てて消える時間だけずらさないこと。
+            それでは「一斉に立って順に消える」だけで、広がって見えない
+            （実際そうなっていた）。
+          ★ 立ち上がりもずらす。中央が先に立ち、左右へ波が伝わる。
+            遅れは呼ぶ側が渡す（中央ほど小さく、外ほど大きい）。
+          ⚠️ 高さも中央を高く（--h）。波の山が中心にあることが見える。
+          ⚠️ 全体で620msに収めること。外側の遅れが大きいので、
+            一本あたりは短め（420ms）にする。
+        */
+        .ar-power i, .ar .ar-up {
+          bottom: 0; width: 6px; height: var(--h, 100%); margin-left: -3px;
+          background: linear-gradient(180deg, transparent, currentColor);
+          transform-origin: bottom;
+          animation: arPower 420ms cubic-bezier(0.2,0.8,0.25,1) forwards;
+        }
+        @keyframes arPower {
+          0% { transform: scaleY(0); opacity: 0; }
+          30% { transform: scaleY(1.06); opacity: 1; }
+          45% { transform: scaleY(1); opacity: 1; }
+          100% { transform: scaleY(1); opacity: 0; }
+        }
+        /*
+          共通の湧き上がり。
+          ⚠️ 力（ar-power）と同じ動きにすること。別々に作ると、
+            同じ「立ち上る」絵なのに速さが揃わず、別物に見える。
+          ⚠️ 色は札ごとに変える（下の個別指定）。
+        */
+
+        /* ⚠️ 節制は青。水が満ちる色に揃える */
+        .ar-temper .ar-up { background: linear-gradient(180deg, transparent, #5AA8FF); }
+        /* ⚠️ 隠者は銀。雲と同系にする */
+        .ar-cloud .ar-up { background: linear-gradient(180deg, transparent, #D8DEE9); opacity: 0.7; }
+        /* ⚠️ 恋人は桃。心の色に揃える */
+        .ar-lovers .ar-up { background: linear-gradient(180deg, transparent, #FF8AC4); }
+        /* ⚠️ 正義は左が赤、右が青。剣と盾の出どころに揃える */
+        .ar-justice .jr-red { background: linear-gradient(180deg, transparent, #FF5A5A); }
+        .ar-justice .jr-blue { background: linear-gradient(180deg, transparent, #5AA8FF); }
+
+        /* ⑨ 隠者。雲 */
+        .ar-cloud i {
+          width: 44px; height: 20px; border-radius: 999px;
+          background: currentColor; opacity: 0;
+          box-shadow: 14px -7px 0 -3px currentColor, -14px -5px 0 -5px currentColor;
+          animation: arCloud 620ms ease-out forwards;
+        }
+        @keyframes arCloud {
+          0% { transform: translateY(14px) scale(0.6); opacity: 0; }
+          40% { transform: translateY(0) scale(1); opacity: 0.75; }
+          100% { transform: translateY(-10px) scale(1.15); opacity: 0; }
+        }
+        /*
+          ③④⑤ 床の魔法陣。
+          ⚠️ 画面の下に敷くこと。中央に置くと絵と重なって読めない。
+          ⚠️ 平らに見せるため、縦を潰す（scaleY）。
+        */
+        /*
+          ⚠️⚠️ 影を片側だけに出さないこと。左からの光だけだと、
+            右が欠けて見えて「半分だけ描き忘れた」ように見える。
+          ★ 内外の二重の輪で、全周に均等な縁を作る。
+        */
+        /*
+          ⚠️⚠️ ただの輪にしないこと。円は回しても見た目が変わらないので、
+            回転させても「何も起きていない」ように見える（実際そうだった）。
+          ★ 放射状の切れ目を入れる。回ると模様が動き、術が作動して見える。
+          ⚠️ 縁は全周に。片側だけの影は「描き忘れ」に見える。
+        */
+        .ar-floor {
+          left: 50%; bottom: 2%; width: 210px; height: 210px; margin-left: -105px;
+          border-radius: 50%;
+          border: 3px solid currentColor;
+          background:
+            repeating-conic-gradient(from 0deg,
+              currentColor 0deg 3deg, transparent 3deg 15deg);
+          -webkit-mask: radial-gradient(circle, transparent 0 58%, #000 60% 76%, transparent 78%);
+          mask: radial-gradient(circle, transparent 0 58%, #000 60% 76%, transparent 78%);
+          box-shadow: 0 0 22px currentColor, inset 0 0 18px currentColor;
+          transform: scaleY(0.26);
+          animation: arFloor 620ms ease-out forwards;
+        }
+        @keyframes arFloor {
+          0% { transform: scaleY(0.26) scale(0.3) rotate(0); opacity: 0; }
+          35% { transform: scaleY(0.26) scale(1) rotate(60deg); opacity: 0.9; }
+          100% { transform: scaleY(0.26) scale(1.2) rotate(140deg); opacity: 0; }
+        }
+        /* ⑩ 運命の輪 */
+        .ar-wheel { animation: arWheel 620ms cubic-bezier(0.2,0.8,0.25,1) forwards; }
+        @keyframes arWheel {
+          0% { transform: scale(0.3) rotate(-90deg); opacity: 0; }
+          35% { transform: scale(1) rotate(0); opacity: 1; }
+          100% { transform: scale(1.25) rotate(60deg); opacity: 0; }
+        }
+        /* ⑪ 正義。剣と盾が左右から */
+        .ar-justice .ar-jl { animation: arJL 620ms cubic-bezier(0.2,0.8,0.25,1) forwards; }
+        .ar-justice .ar-jr { animation: arJR 620ms cubic-bezier(0.2,0.8,0.25,1) forwards; }
+        @keyframes arJL {
+          0% { transform: translate(-50px, 20px) rotate(-30deg); opacity: 0; }
+          45% { transform: translate(0,0) rotate(0); opacity: 1; }
+          100% { opacity: 0; }
+        }
+        @keyframes arJR {
+          0% { transform: translate(50px, 20px) rotate(30deg); opacity: 0; }
+          45% { transform: translate(0,0) rotate(0); opacity: 1; }
+          100% { opacity: 0; }
+        }
+        /*
+          ⚠️ 天秤は剣と盾が消えてから。重なると何の絵か分からない。
+          ★ 剣と盾が合わさって天秤になった、と見えるよう 340ms から。
+        */
+        .ar-justice .ar-jbal {
+          opacity: 0; transform-origin: 50% 20%;
+          animation: arBalance 620ms cubic-bezier(0.2,0.8,0.25,1) forwards;
+        }
+        @keyframes arBalance {
+          0%, 50% { opacity: 0; transform: scale(0.7) rotate(-8deg); }
+          70% { opacity: 1; transform: scale(1) rotate(3deg); }
+          85% { transform: scale(1) rotate(-2deg); }
+          100% { opacity: 0; transform: scale(1.08) rotate(0); }
+        }
+        /*
+          ⑫ 吊るされた男。
+          ⚠️ 実際に画面を回すのではなく、覆いを回して見せる。
+            戦場そのものを回すと、押せる場所までひっくり返る。
+        */
+        /*
+          ⑫ 吊るされた男の鎖。
+          ⚠️ 縦横に引かないこと。檻に見えて、吊るされた感じが出ない。
+          ⚠️ 輪をつないだ模様にする。ただの線だと鎖に見えない。
+        */
+        .ar-hanged .ar-chain {
+          left: -20%; width: 140%; height: 10px;
+          background:
+            repeating-linear-gradient(90deg,
+              transparent 0 3px, #C9CED6 3px 9px, transparent 9px 12px);
+          box-shadow: 0 0 8px rgba(201,206,214,0.6), inset 0 0 4px rgba(0,0,0,0.6);
+          transform: rotate(24deg);
+          animation: arChain 620ms cubic-bezier(0.2,0.8,0.25,1) forwards;
+        }
+        .ar-hanged .ar-chain.b { transform: rotate(-24deg); }
+        @keyframes arChain {
+          0% { transform: rotate(24deg) translateX(-60%) scaleX(0.3); opacity: 0; }
+          30% { transform: rotate(24deg) translateX(0) scaleX(1); opacity: 1; }
+          75% { opacity: 1; }
+          100% { transform: rotate(24deg) translateX(0) scaleX(1); opacity: 0; }
+        }
+        .ar-hanged .ar-chain.b { animation-name: arChainB; }
+        @keyframes arChainB {
+          0% { transform: rotate(-24deg) translateX(60%) scaleX(0.3); opacity: 0; }
+          30% { transform: rotate(-24deg) translateX(0) scaleX(1); opacity: 1; }
+          75% { opacity: 1; }
+          100% { transform: rotate(-24deg) translateX(0) scaleX(1); opacity: 0; }
+        }
+        .ar-hanged {
+          background: linear-gradient(180deg, rgba(255,243,214,0.28), rgba(0,0,0,0.5));
+          animation: arFlip 620ms cubic-bezier(0.3,0,0.2,1) forwards;
+        }
+        @keyframes arFlip {
+          0% { transform: scaleY(1); opacity: 0; }
+          25% { transform: scaleY(-1); opacity: 0.9; }
+          75% { transform: scaleY(-1); opacity: 0.9; }
+          100% { transform: scaleY(1); opacity: 0; }
+        }
+        /*
+          ⑬ 死神。
+          ⚠️ 影を紫に。黒札の共通指定（白で抜く）だと、赤い刃が沈む。
+        */
+        /*
+          ⚠️⚠️ 黒い刃体が背景（紫紺）に溶ける。影だけでは足りない。
+          ★ 白い縁を一枚重ね、外に紫の光を置く。輪郭が背景から抜ける。
+        */
+        .ar-death {
+          filter:
+            drop-shadow(0 0 2px rgba(255,255,255,0.95))
+            drop-shadow(0 0 5px rgba(255,255,255,0.6))
+            drop-shadow(0 0 16px #6B4A8C)
+            drop-shadow(0 3px 6px rgba(0,0,0,0.95));
+          animation: arScythe 620ms cubic-bezier(0.3,0,0.2,1) forwards;
+        }
+        @keyframes arScythe {
+          0% { transform: rotate(-55deg) scale(0.7); opacity: 0; }
+          30% { transform: rotate(0) scale(1.05); opacity: 1; }
+          100% { transform: rotate(35deg) scale(1.2); opacity: 0; }
+        }
+        /*
+          ⑭ 節制。
+          ⚠️ 盃は画面の端まで離すこと。近いと水流が短く、線一本に見える。
+          ★ 三本の水流を時間差で描く。太→細の順に走らせると、束になって流れる。
+          ⚠️ 消えるときは受け側から。上流から消すと、水が逆流したように見える。
+        */
+        .ar-temper { animation: arFlashIn 620ms ease-out forwards; }
+        .ar-temper .ar-flow {
+          stroke-dasharray: 120; stroke-dashoffset: 120;
+          animation: arFlow 620ms cubic-bezier(0.3,0,0.2,1) forwards;
+        }
+        .ar-temper .f2 { animation-delay: 60ms; opacity: 0.8; }
+        .ar-temper .f3 { animation-delay: 120ms; opacity: 0.6; }
+        @keyframes arFlow {
+          0% { stroke-dashoffset: 120; opacity: 0; }
+          25% { opacity: 1; }
+          55% { stroke-dashoffset: 0; opacity: 1; }
+          100% { stroke-dashoffset: -120; opacity: 0; }
+        }
+        /* 受け側の飛沫。⚠️ 右下の盃の口に合わせる */
+        .ar-temper .ar-splash {
+          left: 78%; top: 62%; width: 5px; height: 5px;
+          border-radius: 50%; background: currentColor;
+          animation: arSplash 320ms ease-out forwards;
+        }
+        @keyframes arSplash {
+          0% { transform: rotate(var(--a)) translateY(0) scale(0.6); opacity: 0; }
+          30% { opacity: 1; }
+          100% { transform: rotate(var(--a)) translateY(-26px) scale(1); opacity: 0; }
+        }
+        /*
+          ⑬⑮ 黒い雨。
+          ⚠️ 黒だけでは背景に沈む。上端を薄い紫にして、線として見えるようにする。
+          ⚠️ 細く速く。太いと墨を流したように見える。
+        */
+        .ar .ar-noir {
+          top: -12%; width: 3px; height: 34px; border-radius: 2px;
+          background: linear-gradient(180deg, rgba(160,140,200,0.55), #0A0714);
+          animation: arFallDown 520ms linear forwards;
+        }
+
+        /*
+          ⑮ 悪魔。沼から湧く泡。
+          ⚠️ 真っ黒だと背景に沈む。縁を紫で抜くこと。
+          ⚠️ 膨らんで潰れる形にする。真上へ飛ばすと泡に見えない。
+        */
+        .ar-devil .ar-bog {
+          bottom: -6%;
+          width: calc(26px * var(--z, 1)); height: calc(26px * var(--z, 1));
+          margin-left: calc(-13px * var(--z, 1));
+          border-radius: 50%;
+          background: radial-gradient(circle at 40% 35%, #3A2B4A, #0A0714 70%);
+          box-shadow: 0 0 10px rgba(122,90,160,0.8), inset 0 0 8px rgba(0,0,0,0.9);
+          animation: arBog 620ms cubic-bezier(0.3,0,0.4,1) forwards;
+        }
+        @keyframes arBog {
+          0% { transform: translateY(10px) scale(0.2); opacity: 0; }
+          30% { transform: translateY(-14px) scale(1); opacity: 1; }
+          70% { transform: translateY(-46px) scale(1.15); opacity: 0.9; }
+          100% { transform: translateY(-64px) scale(0.5); opacity: 0; }
+        }
+
+        /* ⑮ 悪魔。髑髏 */
+        .ar-devil { animation: arSkull 620ms cubic-bezier(0.2,0.8,0.25,1) forwards; }
+        @keyframes arSkull {
+          0% { transform: scale(0.4); opacity: 0; }
+          25% { transform: scale(1.08); opacity: 1; }
+          70% { transform: scale(1); opacity: 1; }
+          100% { transform: scale(1.3); opacity: 0; }
+        }
+        /*
+          ⑯ 塔。
+          ⚠️⚠️ 落ちるだけでは「線が流れた」で終わる。必ず着弾を見せること。
+          ★ 四層。隕石 → 閃光 → 火球 → 衝撃波。
+          ⚠️ 着弾の時刻は隕石の 300ms 後。ずらすと、落ちていない場所で爆ぜる。
+        */
+        /* ⚠️ 大きさは --z で一括。個別に書くと、増やすとき全部を直すことになる */
+        .ar-meteor .ar-rock {
+          top: -14%; width: calc(5px * var(--z, 1)); height: calc(34px * var(--z, 1));
+          border-radius: 3px; margin-left: calc(-2.5px * var(--z, 1));
+          background: linear-gradient(180deg, transparent, currentColor);
+          box-shadow: 0 0 12px currentColor;
+          animation: arMeteor 340ms cubic-bezier(0.5,0,1,1) forwards;
+        }
+        @keyframes arMeteor {
+          0% { transform: translate(0,0) rotate(18deg) scaleY(0.7); opacity: 0; }
+          15% { opacity: 1; }
+          100% { transform: translate(-60px, 260px) rotate(18deg) scaleY(1.4); opacity: 1; }
+        }
+        /*
+          閃光。
+          ⚠️ 中心は白、外は橙。白だけだと光って終わり、橙だけだと爆発に見えない。
+        */
+        .ar-meteor .ar-flashpt {
+          bottom: 4%; width: calc(54px * var(--z, 1)); height: calc(54px * var(--z, 1));
+          margin-left: calc(-27px * var(--z, 1));
+          border-radius: 50%;
+          background: radial-gradient(circle, #FFF 0%, #FFD08A 38%, #FF8A2B 70%, transparent 78%);
+          animation: arBoom 300ms ease-out forwards;
+        }
+        @keyframes arBoom {
+          0% { transform: scale(0.2); opacity: 0; }
+          25% { transform: scale(1); opacity: 0.95; }
+          100% { transform: scale(1.7); opacity: 0; }
+        }
+        /* 火球。⚠️ 上へ伸ばす。丸のままだと煙に見える */
+        /* 火球。⚠️ 橙で立ち上げる。札の紫のままだと煙に見える */
+        .ar-meteor .ar-ball {
+          bottom: 4%; width: calc(46px * var(--z, 1)); height: calc(46px * var(--z, 1));
+          margin-left: calc(-23px * var(--z, 1));
+          border-radius: 50% 50% 45% 45%;
+          background: radial-gradient(circle at 50% 70%, #FFC15E 0%, #FF7A18 45%, transparent 74%);
+          animation: arBall 420ms ease-out forwards;
+        }
+        @keyframes arBall {
+          0% { transform: scale(0.3) translateY(10px); opacity: 0; }
+          30% { transform: scale(1.1) translateY(-6px); opacity: 1; }
+          100% { transform: scale(1.5) translateY(-34px); opacity: 0; }
+        }
+        /* 衝撃波。⚠️ 平たく広げる。地を走る形にすること */
+        /* 衝撃波。⚠️ 橙。地を走る輪も爆発の一部として色を揃える */
+        .ar-meteor .ar-shock {
+          bottom: 3%; width: calc(70px * var(--z, 1)); height: calc(18px * var(--z, 1));
+          margin-left: calc(-35px * var(--z, 1));
+          border: 2.5px solid #FF8A2B; border-radius: 50%;
+          box-shadow: 0 0 12px rgba(255,138,43,0.8);
+          animation: arShock 420ms ease-out forwards;
+        }
+        @keyframes arShock {
+          0% { transform: scale(0.15); opacity: 0; }
+          30% { opacity: 1; }
+          100% { transform: scale(2.6); opacity: 0; }
+        }
+                /*
+          【一閃・魔法・恵・青】
+          ⚠️ スートごとに動きを変えること。同じ絵に色だけ違うと、
+            四種を作った意味が消える。
+          ⚠️ 枚数で数が増える（呼ぶ側で制御）。3枚と10枚の差が見えること。
+        */
+        /*
+          剣（一閃）。
+          ⚠️⚠️ 線を何本も走らせないこと。増やすほど散漫になり、一閃に見えない。
+          ★ 画面を沈め、斜めの一本線だけを走らせる。枚数は太さで表す。
+          ⚠️ 暗転は半分まで。真っ暗にすると盤が読めなくなる。
+        */
+        .fx-flash-swords .fl-void {
+          position: absolute; inset: 0;
+          background: #05030B;
+          animation: flVoid 420ms ease-out forwards;
+        }
+        @keyframes flVoid {
+          0% { opacity: 0; }
+          20% { opacity: 0.55; }
+          70% { opacity: 0.4; }
+          100% { opacity: 0; }
+        }
+        .fx-flash-swords .fl-line {
+          position: absolute; left: -20%; top: 50%; width: 140%;
+          height: var(--w, 4px); margin-top: calc(var(--w, 4px) / -2);
+          background: linear-gradient(90deg, transparent, #FFF 18%, #FFF 82%, transparent);
+          box-shadow: 0 0 22px #FFF, 0 0 44px currentColor;
+          transform: rotate(-26deg);
+          animation: flLine 380ms cubic-bezier(0.1,0.9,0.2,1) forwards;
+        }
+        @keyframes flLine {
+          0% { transform: rotate(-26deg) scaleX(0); opacity: 0; }
+          25% { transform: rotate(-26deg) scaleX(1); opacity: 1; }
+          70% { opacity: 1; }
+          100% { transform: rotate(-26deg) scaleX(1); opacity: 0; }
+        }
+        /* ⚠️ 走り終えた直後に一度だけ閃く。枚数（--k）で強さを変える */
+        .fx-flash-swords .fl-burst {
+          position: absolute; inset: 0; background: #FFF;
+          animation: flBurst 260ms ease-out 200ms forwards; opacity: 0;
+        }
+        @keyframes flBurst {
+          0% { opacity: 0; }
+          20% { opacity: calc(0.05 * var(--k, 3)); }
+          100% { opacity: 0; }
+        }
+        /* 棒。⚠️ 外から中心へ集める。単体攻撃なので一点に収束させる */
+        .fx-flash-wands .fl-bolt {
+          left: 50%; top: 50%; width: 7px; height: 46px; margin: -23px 0 0 -3.5px;
+          border-radius: 4px; background: linear-gradient(180deg, transparent, currentColor);
+          box-shadow: 0 0 14px currentColor;
+          animation: flBolt 440ms cubic-bezier(0.3,0,0.2,1) forwards;
+        }
+        @keyframes flBolt {
+          0% { transform: rotate(var(--a)) translateY(-130px) scale(1.2); opacity: 0; }
+          30% { opacity: 1; }
+          100% { transform: rotate(var(--a)) translateY(-10px) scale(0.5); opacity: 0; }
+        }
+        /*
+          聖杯（恵）。
+          ★ 三層。下からの光 → 広がる環 → 開く花弁。
+          ⚠️ 順に時間をずらすこと。同時だと、ただ真ん中が光って終わる。
+        */
+        .fx-flash-cups .fl-rise {
+          bottom: 0; width: 8px; height: 100%; margin-left: -4px;
+          background: linear-gradient(180deg, transparent, currentColor);
+          transform-origin: bottom;
+          animation: arPower 460ms cubic-bezier(0.2,0.8,0.25,1) forwards;
+        }
+        /* 環。⚠️ 平たく。地面に広がる形にする */
+        .fx-flash-cups .fl-ring {
+          left: 50%; bottom: 16%;
+          width: var(--r, 60px); height: calc(var(--r, 60px) * 0.32);
+          margin-left: calc(var(--r, 60px) / -2);
+          border: 2.5px solid currentColor; border-radius: 50%;
+          animation: flRing 420ms ease-out forwards;
+        }
+        @keyframes flRing {
+          0% { transform: scale(0.2); opacity: 0; }
+          35% { opacity: 0.95; }
+          100% { transform: scale(1.9); opacity: 0; }
+        }
+        /* 花弁。⚠️ 八方へ開く。丸のままだと光の粒に見える */
+        .fx-flash-cups .fl-petal {
+          left: 50%; top: 46%; width: 14px; height: 26px; margin: -13px 0 0 -7px;
+          border-radius: 50% 50% 50% 50% / 62% 62% 38% 38%;
+          background: linear-gradient(180deg, currentColor, transparent);
+          animation: flPetal 400ms cubic-bezier(0.2,0.8,0.25,1) forwards;
+        }
+        @keyframes flPetal {
+          0% { transform: rotate(var(--a)) translateY(0) scale(0.2); opacity: 0; }
+          40% { transform: rotate(var(--a)) translateY(-34px) scale(1); opacity: 1; }
+          100% { transform: rotate(var(--a)) translateY(-54px) scale(1.15); opacity: 0; }
+        }
+        /*
+          貨幣（青）。
+          ⚠️⚠️ その場で広がるだけでは平面に見える。奥から手前へ迫らせること。
+          ★ 小さく暗く現れ、画面いっぱいまで膨らんで通り過ぎる。
+          ⚠️ 線を太くしていくと、近づくにつれ迫る感じが出る。
+        */
+        .fx-flash-pentacles .fl-wave {
+          left: 50%; top: 50%; width: 120px; height: 120px; margin: -60px 0 0 -60px;
+          border: 3px solid currentColor; border-radius: 50%;
+          box-shadow: 0 0 20px currentColor, inset 0 0 20px currentColor;
+          animation: flWave 620ms cubic-bezier(0.45,0,0.7,1) forwards;
+        }
+        @keyframes flWave {
+          0% { transform: scale(0.06); opacity: 0; border-width: 1px; }
+          25% { opacity: 0.9; border-width: 3px; }
+          70% { opacity: 1; border-width: 7px; }
+          100% { transform: scale(4.2); opacity: 0; border-width: 12px; }
+        }
+
+        /*
+          棒（魔法）の爆発。
+          ⚠️ 集束が終わってから（300ms）。同時だと中心が光って終わる。
+          ⚠️ 大きさは枚数（--k）で変える。3枚と10枚が同じでは揃えた意味がない。
+        */
+        /* ⚠️ 隕石の爆発と同じ組み立て。大きさだけ二倍にする */
+        .fx-flash-wands .fl-boom-flash {
+          left: 50%; top: 50%;
+          width: calc(60px + 18px * var(--k, 3)); height: calc(60px + 18px * var(--k, 3));
+          margin-left: calc((60px + 18px * var(--k, 3)) / -2);
+          margin-top: calc((60px + 18px * var(--k, 3)) / -2);
+          border-radius: 50%;
+          background: radial-gradient(circle, #FFF 0%, #FFD08A 34%, currentColor 68%, transparent 76%);
+          animation: arBoom 300ms ease-out 290ms forwards; opacity: 0;
+        }
+        .fx-flash-wands .fl-boom-ball {
+          left: 50%; top: 50%;
+          width: calc(50px + 16px * var(--k, 3)); height: calc(50px + 16px * var(--k, 3));
+          margin-left: calc((50px + 16px * var(--k, 3)) / -2);
+          margin-top: calc((50px + 16px * var(--k, 3)) / -2);
+          border-radius: 50%;
+          background: radial-gradient(circle at 50% 60%, #FFC15E 0%, currentColor 48%, transparent 74%);
+          animation: arBall 420ms ease-out 290ms forwards; opacity: 0;
+        }
+        .fx-flash-wands .fl-boom-ring {
+          left: 50%; top: 50%;
+          width: calc(80px + 20px * var(--k, 3)); height: calc(80px + 20px * var(--k, 3));
+          margin-left: calc((80px + 20px * var(--k, 3)) / -2);
+          margin-top: calc((80px + 20px * var(--k, 3)) / -2);
+          border: 3px solid currentColor; border-radius: 50%;
+          box-shadow: 0 0 16px currentColor;
+          animation: flBoomRing 380ms ease-out forwards; opacity: 0;
+        }
+        @keyframes flBoomRing {
+          0% { transform: scale(0.2); opacity: 0; }
+          30% { opacity: 1; }
+          100% { transform: scale(2.4); opacity: 0; }
+        }
+        /* 飛び散る火花。⚠️ 八方へ。爆ぜた実感はここで出る */
+        .fx-flash-wands .fl-boom-spark {
+          left: 50%; top: 50%; width: 7px; height: 7px; margin: -3.5px 0 0 -3.5px;
+          border-radius: 50%; background: #FFC15E;
+          box-shadow: 0 0 12px #FF7A18;
+          animation: flBoomSpark 340ms ease-out forwards; opacity: 0;
+        }
+        @keyframes flBoomSpark {
+          0% { transform: rotate(var(--a)) translateX(0) scale(0.5); opacity: 0; }
+          25% { opacity: 1; }
+          100% { transform: rotate(var(--a)) translateX(150px) scale(1.3); opacity: 0; }
+        }
+
+        /*
+          ㉑ 世界。八色のオーブ。
+          ⚠️ 中心からの距離を揃えること。ばらけると軌道に見えない。
+          ⚠️ 色は個別に指定（--fxc は使わない）。八色であることが意味を持つ。
+          ⚠️ 一周では足りない。一周半ほど回して、巡っていると分かるようにする。
+        */
+        .ar-world .ar-orb {
+          left: 50%; top: 50%; width: 14px; height: 14px; margin: -7px 0 0 -7px;
+          border-radius: 50%;
+          animation: arOrb 620ms cubic-bezier(0.2,0.8,0.25,1) forwards;
+        }
+        @keyframes arOrb {
+          0% { transform: rotate(var(--a)) translateX(0) scale(0.3); opacity: 0; }
+          30% { transform: rotate(calc(var(--a) + 120deg)) translateX(var(--r, 86px)) scale(1.2); opacity: 1; }
+          75% { transform: rotate(calc(var(--a) + 320deg)) translateX(var(--r, 86px)) scale(1.2); opacity: 1; }
+          100% { transform: rotate(calc(var(--a) + 440deg)) translateX(calc(var(--r, 86px) + 20px)) scale(0.9); opacity: 0; }
+        }
+        /* ⚠️ 内側は逆向きに回す。同じ向きだと二重に見えず、太い輪になる */
+        .ar-world .ar-orb.in { animation-direction: reverse; width: 9px; height: 9px; margin: -4.5px 0 0 -4.5px; }
+
+        /*
+
+          ⑯ 塔。竜巻。
+          ⚠️⚠️ 輪を縦に積むこと。横に散らすとただの渦で終わる。
+            下を太く上を細くすると、竜巻にも塔にも見える。
+          ⚠️ 風の筋は斜めに。水平だと線が引かれただけに見える。
+        */
+        .ar-twister .ar-twring {
+          left: 50%; width: var(--w, 100px); height: 18px;
+          margin-left: calc(var(--w, 100px) / -2);
+          border: 2.5px solid currentColor; border-radius: 50%;
+          border-top-color: transparent;
+          animation: arTwring 620ms cubic-bezier(0.2,0.8,0.25,1) forwards;
+        }
+        @keyframes arTwring {
+          0% { transform: scaleX(0.2) rotate(0); opacity: 0; }
+          30% { transform: scaleX(1) rotate(120deg); opacity: 1; }
+          100% { transform: scaleX(1.15) rotate(420deg) translateY(-30px); opacity: 0; }
+        }
+        .ar-twister .ar-wind {
+          height: 3px; width: var(--len, 50%); border-radius: 2px;
+          background: linear-gradient(90deg, transparent, currentColor, transparent);
+          animation: arWind 520ms cubic-bezier(0.3,0,0.4,1) forwards;
+        }
+        @keyframes arWind {
+          0% { transform: rotate(-12deg) translateX(-80px) scaleX(0.4); opacity: 0; }
+          25% { opacity: 1; }
+          100% { transform: rotate(-12deg) translateX(120px) scaleX(1.3); opacity: 0; }
+        }
+
+        /*
+          ⑰⑱⑲ 星・月・太陽。
+          ⚠️ 落とさない。降る粒は雨（女教皇）や隕石（塔）と紛れる。
+          ★ 力と同じ湧き上がり。色は新緑で揃える（地味バフの三枚は同じ色）。
+        */
+        .ar-fall i {
+          bottom: 0; width: 6px; height: 100%; margin-left: -3px;
+          background: linear-gradient(180deg, transparent, #7BE36B);
+          transform-origin: bottom;
+          animation: arPower 520ms cubic-bezier(0.2,0.8,0.25,1) forwards;
+        }
+        /*
+          ⑳ 審判。
+          ★ 上から光の柱が落ち、足元から渦が巻き上がる。
+          ⚠️ 柱は幅を持たせること。細い線だと、ただの区切りに見える。
+        */
+        .ar-judge .ar-beam {
+          left: 50%; top: 0; width: 86px; margin-left: -43px; height: 100%;
+          background: linear-gradient(180deg, currentColor, transparent 78%);
+          opacity: 0; filter: blur(1px);
+          animation: arBeam 620ms cubic-bezier(0.2,0.8,0.25,1) forwards;
+        }
+        @keyframes arBeam {
+          0% { transform: scaleY(0); transform-origin: top; opacity: 0; }
+          30% { transform: scaleY(1); transform-origin: top; opacity: 0.85; }
+          100% { transform: scaleY(1); transform-origin: top; opacity: 0; }
+        }
+        /* ⚠️ 渦は輪を重ねて表す。大きさを変えて回すと巻き上がって見える */
+        .ar-judge .ar-vortex {
+          left: 50%; bottom: 8%; width: 120px; height: 34px; margin-left: -60px;
+          border: 2.5px solid currentColor; border-radius: 50%;
+          border-top-color: transparent;
+          transform: scale(var(--s, 1));
+          animation: arVortex 620ms ease-out forwards;
+        }
+        @keyframes arVortex {
+          0% { transform: scale(calc(var(--s, 1) * 0.4)) translateY(0) rotate(0); opacity: 0; }
+          35% { opacity: 1; }
+          100% { transform: scale(var(--s, 1)) translateY(-110px) rotate(320deg); opacity: 0; }
+        }
+        /* ㉑ 世界。地球 */
+        .ar-world { animation: arWorld 620ms cubic-bezier(0.2,0.8,0.25,1) forwards; }
+        @keyframes arWorld {
+          0% { transform: scale(0.3) rotate(-30deg); opacity: 0; }
+          35% { transform: scale(1) rotate(0); opacity: 1; }
+          100% { transform: scale(1.2) rotate(20deg); opacity: 0; }
+        }
+
+        /*
           大アルカナ。
           ⚠️ 戦場全体を覆う。ここだけ派手にしてよい。毎手ごとに全画面が光ると疲れる。
         */
         .fx-major { display: flex; align-items: center; justify-content: center; z-index: 4; }
+        /*
+          ⚠️ 名前も札の色で出すこと。形と色が揃って初めて、
+            どの札が効いたのか一目で分かる。
+          ⚠️ 黒（危険）は沈むので、縁を明るく抜く。
+        */
         .fx-major b {
           position: relative; font-family: 'Shippori Mincho', serif; font-size: 22px;
-          letter-spacing: 0.12em; color: #FFF3D6;
-          text-shadow: 0 0 18px rgba(255,243,214,0.9), 0 2px 6px rgba(0,0,0,0.8);
+          letter-spacing: 0.12em; color: var(--fxc, #FFF3D6);
+          text-shadow: 0 0 18px var(--fxc, rgba(255,243,214,0.9)),
+            0 0 3px rgba(255,255,255,0.9), 0 2px 6px rgba(0,0,0,0.9);
           animation: fxName 620ms cubic-bezier(0.2, 0.8, 0.25, 1) forwards;
         }
+        /* 虹。⚠️ 単色では表せないので、文字に階調を流す */
+        .fx-rb > b.fx-label {
+          color: transparent;
+          background: linear-gradient(90deg, #FF6B6B, #FFD166, #7BE36B, #4CC9F0, #B07BE8, #FF8AC4);
+          -webkit-background-clip: text; background-clip: text;
+          text-shadow: 0 0 22px rgba(255,255,255,0.7), 0 2px 6px rgba(0,0,0,0.9);
+        }
+        .fx-rb i { border-color: #FFF3D6 !important; }
         @keyframes fxName {
           0% { transform: scale(0.7); opacity: 0; }
           40% { transform: scale(1.08); opacity: 1; }
@@ -51183,17 +53724,71 @@ export default function TarotDraw() {
         }
         .fx-ring i {
           position: absolute; left: 50%; top: 50%; width: 40px; height: 40px; margin: -20px 0 0 -20px;
-          border-radius: 50%; border: 2.5px solid #F6DE96;
+          border-radius: 50%; border: 2.5px solid var(--fxc, #F6DE96);
           animation: fxBurst 620ms ease-out forwards;
         }
+        /* 柱。⚠️ 縦に立てる。守りは上下の動きで見せる */
+        .fx-pillar i {
+          position: absolute; left: 50%; bottom: 0; width: 64px; margin-left: -32px; height: 100%;
+          background: linear-gradient(180deg, transparent, var(--fxc, #5AA8FF));
+          opacity: 0.5; animation: fxPillar 620ms ease-out forwards;
+        }
+        @keyframes fxPillar {
+          0% { transform: scaleY(0); opacity: 0; }
+          40% { transform: scaleY(1); opacity: 0.6; }
+          100% { transform: scaleY(1); opacity: 0; }
+        }
+        /* 十字。⚠️ 癒やしの印。環や柱と形が被らない */
+        .fx-cross i {
+          position: absolute; left: 50%; top: 50%; width: 90px; height: 4px; margin: -2px 0 0 -45px;
+          background: var(--fxc, #FF8AC4); border-radius: 2px;
+          animation: fxCross 620ms ease-out forwards;
+        }
+        .fx-cross i:nth-child(2) { transform: rotate(90deg); }
+        @keyframes fxCross {
+          0% { transform: scale(0.2) rotate(0deg); opacity: 0; }
+          40% { opacity: 1; }
+          100% { transform: scale(1.6) rotate(0deg); opacity: 0; }
+        }
+        .fx-cross i:nth-child(2) { animation-name: fxCross2; }
+        @keyframes fxCross2 {
+          0% { transform: scale(0.2) rotate(90deg); opacity: 0; }
+          40% { opacity: 1; }
+          100% { transform: scale(1.6) rotate(90deg); opacity: 0; }
+        }
+        /* 火花。⚠️ 六方向へ飛ばす。積みの札は「増える」感じを数で出す */
+        .fx-spark i {
+          position: absolute; left: 50%; top: 50%; width: 6px; height: 6px; margin: -3px 0 0 -3px;
+          border-radius: 50%; background: var(--fxc, #C8E06A);
+          box-shadow: 0 0 10px var(--fxc, #C8E06A);
+          transform: rotate(var(--a)) translateX(0);
+          animation: fxSpark 620ms ease-out forwards;
+        }
+        @keyframes fxSpark {
+          0% { transform: rotate(var(--a)) translateX(0) scale(0.6); opacity: 0; }
+          30% { opacity: 1; }
+          100% { transform: rotate(var(--a)) translateX(70px) scale(1); opacity: 0; }
+        }
+        /* 帳。⚠️ 上から下りる。妨害を遮る動き */
+        .fx-veil i {
+          position: absolute; inset: 0;
+          background: linear-gradient(180deg, var(--fxc, #D8DEE9), transparent);
+          opacity: 0.45; animation: fxVeil 620ms ease-out forwards;
+        }
+        @keyframes fxVeil {
+          0% { transform: translateY(-100%); opacity: 0; }
+          40% { transform: translateY(0); opacity: 0.5; }
+          100% { transform: translateY(0); opacity: 0; }
+        }
         .fx-flash i {
-          position: absolute; inset: 0; background: rgba(255,243,214,0.55);
+          position: absolute; inset: 0; background: var(--fxc, rgba(255,243,214,0.55));
+          opacity: 0.55;
           animation: fxFlash 420ms ease-out forwards;
         }
         @keyframes fxFlash { 0% { opacity: 0; } 20% { opacity: 1; } 100% { opacity: 0; } }
         .fx-swirl i {
           position: absolute; left: 50%; top: 50%; width: 90px; height: 90px; margin: -45px 0 0 -45px;
-          border-radius: 50%; border: 3px dashed rgba(216,192,240,0.9);
+          border-radius: 50%; border: 3px dashed var(--fxc, rgba(216,192,240,0.9));
           animation: fxSwirl 620ms ease-in-out forwards;
         }
         @keyframes fxSwirl {
@@ -51204,7 +53799,7 @@ export default function TarotDraw() {
         .fx-slash.fx-major i, .fx-major.fx-slash i { top: 50%; }
         .fx-rain i {
           top: -10%; width: 3px; height: 22px; border-radius: 2px;
-          background: linear-gradient(180deg, rgba(255,243,214,0), #FFF3D6);
+          background: linear-gradient(180deg, transparent, var(--fxc, #FFF3D6));
           animation: fxRain 560ms linear forwards;
         }
         @keyframes fxRain {
@@ -51242,6 +53837,13 @@ export default function TarotDraw() {
           box-shadow: inset 0 0 0 1px rgba(201,162,75,0.22);
         }
         .bt-guide > summary::-webkit-details-marker { display: none; }
+        /* ⚠️ 敵の妨害は朱で統一する。味方の効果と見分けが付くように */
+        .bt-guide.bad > summary {
+          color: #FF8A8A;
+          background: linear-gradient(180deg, rgba(255,90,90,0.2), rgba(255,90,90,0.06));
+          box-shadow: inset 0 0 0 1px rgba(255,138,138,0.45);
+        }
+        .bt-guide.bad .bt-guide-list b { color: #FF8A8A; }
         .bt-guide-list {
           margin: 7px 0 0; padding: 9px 11px; border-radius: 11px; list-style: none;
           max-height: 240px; overflow-y: auto;
@@ -51275,10 +53877,47 @@ export default function TarotDraw() {
           box-shadow: inset 0 0 0 1px rgba(246,222,150,0.45);
         }
         .bt-speed:active { transform: translateY(1px); }
+        /*
+          一時停止と盾。
+          ⚠️ 速さと同じ見た目に揃える。並べたときに別物に見えないこと。
+          ⚠️ 指で押せる大きさ（28px以上）を保つ。
+        */
+        .bt-pause, .bt-shield {
+          position: absolute; top: 8px; z-index: 5;
+          min-width: 44px; min-height: 28px; padding: 4px 9px;
+          border-radius: 999px; border: none; cursor: pointer;
+          font-size: 12px; letter-spacing: 0.06em;
+          color: #F6DE96; background: rgba(14,10,32,0.72);
+          backdrop-filter: blur(4px); -webkit-backdrop-filter: blur(4px);
+          box-shadow: inset 0 0 0 1px rgba(246,222,150,0.45);
+        }
+        .bt-pause { right: 60px; }
+        .bt-shield { right: 112px; display: flex; align-items: center; gap: 4px; }
+        /* ⚠️ 止めているあいだは色を変える。押したか分からないと不安になる */
+        .bt-pause.on {
+          color: #2A1020; background: linear-gradient(180deg, #F6DE96, #C9A24B);
+        }
+        .bt-shield.on {
+          color: #2A1020; background: linear-gradient(180deg, #9AD8FF, #4C8BC9);
+          box-shadow: inset 0 0 0 1px rgba(154,216,255,0.7), 0 0 12px rgba(154,216,255,0.4);
+        }
+        /* 盾の印。⚠️ 文字ではなく形で出す。数字と並べて読めるように */
+        .bt-shield-mark {
+          display: block; width: 11px; height: 13px; background: currentColor;
+          clip-path: polygon(50% 0, 100% 22%, 100% 62%, 50% 100%, 0 62%, 0 22%);
+        }
         /* ⚠️ 敵が掛けたもの。朱で分ける */
+        /*
+          ⚠️ 文字だけ色を変えても、並ぶと区別が付かない。
+          ★ 背景にも色を敷く。良いものは金、敵が掛けたものは朱。
+        */
+        .bt-fx-chip {
+          background: linear-gradient(180deg, rgba(246,222,150,0.18), rgba(246,222,150,0.06));
+        }
         .bt-fx-chip.bad {
           color: #FF8A8A;
-          box-shadow: inset 0 0 0 1px rgba(255,138,138,0.5), 0 0 10px rgba(255,138,138,0.2);
+          background: linear-gradient(180deg, rgba(255,90,90,0.26), rgba(255,90,90,0.08));
+          box-shadow: inset 0 0 0 1px rgba(255,138,138,0.6), 0 0 12px rgba(255,90,90,0.25);
         }
         /* 自分の帯。⚠️ 画面下に浮かせる。戦場と地続きにすると、どちらのHPか迷う */
         .bt-me {
