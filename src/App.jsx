@@ -3961,9 +3961,11 @@ const AREA_LANDMARKS = {
   },
   /* 千葉。東葛飾・千葉・印旛・香取・海匝・安房・君津 */
   chiba: {
-    "東葛飾": ["本土寺", "戸定邸", "手賀沼", "あけぼの山農業公園",
+    /* ⚠️ 東京ディズニーランドは浦安市。東京ではなく千葉の東葛飾 */
+    "東葛飾": ["本土寺", "戸定邸", "手賀沼", "東京ディズニーランド",
       "ふなばしアンデルセン公園", "法華経寺", "一茶双樹記念館", "清水公園"],
-    "千葉": ["千葉城", "稲毛海浜公園", "千葉ポートタワー", "加曽利貝塚",
+    /* ⚠️ 幕張メッセは千葉市美浜区。東京湾岸の千葉側がまるごと抜けていた */
+    "千葉": ["千葉城", "幕張メッセ", "千葉ポートタワー", "加曽利貝塚",
       "昭和の森", "千葉市動物公園", "検見川神社", "青葉の森公園"],
     "印旛": ["成田山新勝寺", "宗吾霊堂", "佐倉城址公園", "国立歴史民俗博物館",
       "印旛沼", "房総のむら", "吉高の大桜", "本佐倉城跡"],
@@ -3980,6 +3982,16 @@ const AREA_LANDMARKS = {
   tokyo: {
     /* ⚠️ 区部そのものには名所を置かない。中身は TOKYO_WARDS（23区）にある */
     "区部": [],
+    /*
+      ⚠️⚠️ 区をまたぐ海沿いとして別立てにすること。
+        区部の名所を移してこないこと ―― 区部は全国制覇後のやりこみなので、
+        中身を削ると向こうが痩せる。
+      ★ これで区部スタート以外でも東京が三区分になり、
+        他県と同じ条件（三つで制覇）に揃う。
+      ⚠️ 幕張メッセと東京ディズニーランドは千葉県。ここへ入れない。
+    */
+    "湾岸": ["お台場海浜公園", "東京ゲートブリッジ", "東京ビッグサイト", "晴海ふ頭公園",
+      "東京国際クルーズターミナル", "若洲海浜公園", "大井ふ頭中央海浜公園", "城南島海浜公園"],
     "多摩": ["高尾山", "国営昭和記念公園", "深大寺", "多摩動物公園",
       "御岳山", "奥多摩湖", "大國魂神社", "江戸東京たてもの園"],
     "島しょ": ["三原山", "地層大切断面", "羽伏浦海岸", "天上山",
@@ -4539,6 +4551,47 @@ function stagePoints(pref, list) {
   return pts;
 }
 function areasOf(pref) { return Object.keys(AREA_LANDMARKS[pref] || {}); }
+/*
+  【東京の区部】
+  ★ 47都道府県を制覇したあとに開く48番目の土地。中に23区ぶんの小MAPが入る。
+    ★12固定。やりこみなので、消耗戦でよい ―― やらなくてもいい場所。
+  ⚠️⚠️ 東京の制覇には数えないこと。区部が開くのは全国制覇のあとなので、
+    東京の制覇に要ると、東京が終わらず全国制覇にも届かない（堂々巡り）。
+  ⚠️ 区部スタートで選んだ一区だけは、独立した区分として東京に並ぶ。
+    そちらは普通の土地なので、制覇にも難度にも数える。
+*/
+const WARDS_AREA = "区部";
+const LS_ADV_WARD = "tarot_adv_ward";
+function loadStartWard() {
+  try { return localStorage.getItem(LS_ADV_WARD) || ""; } catch { return ""; }
+}
+function saveStartWard(v) {
+  try { localStorage.setItem(LS_ADV_WARD, v || ""); } catch (e) { /* 覚えられなくても旅はできる */ }
+}
+/* 地図に並べる区分。⚠️ 区部スタートの一区を先頭に足す */
+function areasShown(pref) {
+  const base = areasOf(pref);
+  if (pref !== "tokyo") return base;
+  const w = loadStartWard();
+  return w ? [w, ...base] : base;
+}
+/* 制覇に数える区分。⚠️ 区部は数えない */
+function areasCountable(pref) {
+  return areasShown(pref).filter((ar) => !(pref === "tokyo" && ar === WARDS_AREA));
+}
+/* 区部が開いているか。⚠️ 47に届くまでは名前も伏せる */
+function wardsOpen(cleared) { return prefDoneCount(cleared) >= 47; }
+/*
+  区部に並ぶ区。⚠️ 区部スタートで選んだ一区は抜く（独立した区分として東京に出ている）。
+*/
+function wardsListOf() {
+  const w = loadStartWard();
+  return Object.keys(TOKYO_WARDS).filter((k) => k !== w);
+}
+/* その区分が★12固定か（区部の中だけ） */
+function isWardStage(pref, area) {
+  return pref === "tokyo" && area === WARDS_AREA;
+}
 /** その区分の名所 */
 function landmarksOf(pref, area) {
   /* ⚠️ 東京の区は AREA_LANDMARKS ではなく TOKYO_WARDS の側にある */
@@ -4582,19 +4635,19 @@ function powerRank(power, n) {
 */
 const STAGE_THEMES = {
   mountain: { sky: ["#1E1A3C", "#2A2450", "#141026"], land: "rgba(96,104,88,0.62)",
-    tile: [96, 92, 116], mix: [["rock", 5], ["tree", 4], ["grass", 1]] },
+    tile: [96, 92, 116], mix: [["rock", 4], ["tree", 4], ["cedar", 3], ["hut", 1], ["sign", 1], ["grass", 2]] },
   coast: { sky: ["#16223E", "#1E3050", "#101828"], land: "rgba(86,120,138,0.55)",
-    tile: [92, 108, 128], mix: [["wave", 4], ["rock", 3], ["grass", 2], ["tree", 1]] },
+    tile: [92, 108, 128], mix: [["wave", 4], ["rock", 3], ["boat", 2], ["tree", 2], ["hut", 1], ["grass", 2]] },
   river: { sky: ["#161E38", "#22304C", "#0E1424"], land: "rgba(78,116,116,0.55)",
-    tile: [88, 104, 118], mix: [["wave", 3], ["reed", 4], ["rock", 2], ["tree", 2]] },
+    tile: [88, 104, 118], mix: [["wave", 3], ["reed", 4], ["paddy", 3], ["boat", 1], ["sakura", 2], ["tree", 2], ["flower", 2]] },
   shrine: { sky: ["#241636", "#341E48", "#170E2A"], land: "rgba(110,90,96,0.55)",
-    tile: [112, 90, 112], mix: [["torii", 3], ["tree", 4], ["rock", 2], ["grass", 2]] },
+    tile: [112, 90, 112], mix: [["torii", 2], ["cedar", 4], ["lantern", 4], ["sakura", 2], ["stone", 1], ["grass", 2]] },
   town: { sky: ["#1B1436", "#241A44", "#16102C"], land: "rgba(96,100,80,0.55)",
-    tile: [92, 86, 122], mix: [["house", 3], ["tree", 4], ["grass", 3], ["rock", 1]] },
+    tile: [92, 86, 122], mix: [["house", 4], ["tree", 3], ["sakura", 2], ["paddy", 2], ["flower", 2], ["lantern", 1], ["sign", 1], ["grass", 2]] },
   city: { sky: ["#1A1638", "#262046", "#14102A"], land: "rgba(92,92,100,0.55)",
-    tile: [100, 96, 124], mix: [["house", 4], ["block", 3], ["tree", 2], ["grass", 1]] },
+    tile: [100, 96, 124], mix: [["house", 3], ["block", 4], ["light", 3], ["tree", 2], ["flower", 1]] },
   metro: { sky: ["#191634", "#2A2450", "#120E26"], land: "rgba(86,88,104,0.6)",
-    tile: [104, 102, 132], mix: [["block", 6], ["house", 2], ["tree", 1]] },
+    tile: [104, 102, 132], mix: [["block", 6], ["light", 3], ["house", 1], ["tree", 1]] },
   /* ⚠️ 空の色まで変えること。景物だけ差し替えても、同じ場所の模様替えに見える */
   snow: { sky: ["#1C2340", "#2C3A5A", "#141A2E"], land: "rgba(196,206,224,0.55)",
     tile: [138, 148, 172], mix: [["snowtree", 5], ["rock", 3], ["ice", 2]] },
@@ -4876,6 +4929,17 @@ function cardsAfterRevMajor(cards) {
   ★ 1・3・6 と急に増やす。★12（10枚）で盾3なら残り4枚 ―― 攻めがほぼ止まる。
   ⚠️ 手札が足りない段は、その盾を選べない（下の shieldMax）。
 */
+/*
+  演出の間。
+  ⚠️⚠️ 倒した瞬間に結果を出さないこと。敵が消える前に文字が出ると、
+    勝った実感の前に結論が来る（実際そう見えた）。
+  ⚠️ 長すぎると待たされる。震えて消えるのに要るぶんだけ。
+*/
+const BT_DIE_MS = 760;
+/* ⚠️ 合体・分裂の間。消える → 場が白む → 現れる、の三拍を入れる */
+const BT_MORPH_MS = 900;
+/* ⚠️ 最後の演出が消えてから決着を出すまでの間。短いと連撃の切れ目で出てしまう */
+const BT_QUIET_MS = 320;
 const SHIELD_COST = [0, 1, 3, 6];
 const SHIELD_CUT = [0, 0.25, 0.45, 0.65];
 /** その枚数で選べる盾の上限。⚠️ 攻め手を最低2枚は残すこと */
@@ -5070,8 +5134,53 @@ const BATTLE_FOE_HP = { 1: 260, 2: 980, 3: 1482, 4: 4294, 5: 10988, 6: 18124,
   ⚠️ 勝率を動かしたいときは、まず轟音の削り幅（FOE_MOVES.roar.roar）を見ること。
     あちらは単調に効く。轟音の「頻度」は効きが単調でないので調整に使えない。
 */
-const BATTLE_ATK = { 1: 7.08, 2: 7.16, 3: 7.02, 4: 9.56, 5: 14.18, 6: 10.65,
-  7: 13.82, 8: 12.26, 9: 13.19, 10: 16.66, 11: 20.86, 12: 25.08 };
+/*
+  ⚠️⚠️ ★1〜3を測り直した（2026-09-18）。
+    直す前は ★1 18.0% ／ ★2 33.7% ／ ★3 57.8%（狙い 90/80/70）。
+    原因は下の【体数の正規化】。総HPも総攻撃も体数に比例させていたのに、
+    こちらの火力は体数でほとんど増えないため、同じ★でも編成で三倍違った。
+      ★1 lg2 41.0% ／ md3 10.0% ／ sm4 7.2%（実測）
+  ★ 体数の正規化と、★1〜2で復活編成を出さない措置を入れたうえで、
+    ★1〜3だけ二分探索で引き直した。★4以降は従前の実測値のまま触っていない。
+    実測 ★1 91.3% ／ ★2 78.3% ／ ★3 71.4%（各1,200回・平均9.3/16.3/19.6ターン）
+    負けは全件が「敵の攻撃で負け」。編成ごとの幅は★1で89〜94%に収まった。
+  ⚠️ 測定は App.jsx のトップレベル関数をそのまま切り出した headless の器で行う。
+    ★1〜2は低tier（轟音・腐食・瘴気なし）で主の特殊行動も発動しないので実機と一致する。
+    ★4以降は瘴気・殺気・盾を省いた分だけずれる。あちらを触るときは器に足すこと。
+*/
+/*
+  ⚠️⚠️ ★4〜12を測り直した（段と復活を入れたあと）。
+    八編成すべてに復活が付き、①特大1は四段に分裂、③中3は合体するので、
+    以前の値（体数比例のまま測ったもの）はすべて無効になった。
+    直す前 ★4 37.1% ／★8 64.1% ／★12 40.0%（狙い 62/30/5）。
+  ★ 実測 ★4 63.2 ／★5 51.7 ／★6 44.0 ／★7 37.5 ／★8 32.5
+        ★9 21.4 ／★10 14.5 ／★11 9.3 ／★12 4.2 ％（各2,000回）
+  ⚠️⚠️ 防御・体力・すばやさを効かせたあとの値。
+    それまで三つとも一度も使われておらず、受けるダメージに一切掛かっていなかった。
+    効かせたら★8が27.9% → 59.0% まで緩んだので、攻撃力を全部引き直してある。
+    ★12で 108 → 237。倍以上になるのは当然の動き。
+  ⚠️ 編成ごとの弱点・hpK・atkK を入れたあとの値。
+    編成別の勝率は 26.5〜36.4% に収まった（以前は 1.7〜79.9%）。
+  ⚠️ ②の均し・⑤の同時復活・⑦の合体・⑧の不死身を入れ、
+    主の特殊行動が②③④でも発動するよう直したあとの値。
+    それ以前の表（★4 7.21 など）はすべて無効。
+  ⚠️ 器に盾・瘴気・殺気を足したうえで測り直した値。省いたまま測ると
+    ★8以上が甘く出る（省いた版では★8 33.6%だった）。
+  ⚠️ ★1〜3は復活しない（★3以下は復活なし）ので据え置き。
+    90.5 / 78.7 / 70.9% はそのまま生きている。
+  ⚠️ 器（headless）の盾は「HPが半分を切ったら構える」で代用している。
+    実機は手で選ぶので、うまい人はこれより勝ち、構えない人はこれより負ける。
+*/
+/*
+  ⚠️⚠️ 器（sim.js）が回復と自傷を二重に数えていた。battleApply が中で反映済みなのに、
+    器があとでもう一度足し引きしていた。それ以前の値はすべて二重の世界で測ったもの。
+    直したあと★4〜12を測り直した（器の修正は skills/battle-balance にも反映済み）。
+  ⚠️⚠️ ★11・12が★8〜10より低いのは異常ではない。瘴気が最強段（回復100%封じ・5ターン）に
+    上がるのが★11からで、回復を封じられるぶん弱い攻撃でも削り負ける。
+    ★12は負けるまで平均43ターン（瘴気を強める前は19ターンで即死していた）。
+*/
+const BATTLE_ATK = { 1: 11.38, 2: 11.03, 3: 9.07, 4: 11.73, 5: 14.89, 6: 16.99,
+  7: 29.55, 8: 28.20, 9: 48.87, 10: 48.87, 11: 63.16, 12: 164.10 };
 /* ⚠️ ★+1.6 ぶんのHPを持たせる。★ぴったりだと敵が一度も殴れずに終わる */
 const BATTLE_HP_TURNS = 1.6;
 /** 一度に開く枚数。⚠️ 8枚を超えたら二枚ずつ。一枚ずつだとテンポが落ちる */
@@ -5115,8 +5224,22 @@ function battleReveal(cards) { return cards > 8 ? 2 : 1; }
   ★ ★1〜4 を 0.55〜0.95 に下げる。枚数が増える★5以降は据え置き。
     引ける枚数が多いほど、聖杯を引く機会も増えて平準化されるため。
 */
-const ZAKO_ATK_K_TABLE = { 1: 0.55, 2: 0.62, 3: 0.80, 4: 0.95, 5: 1.50, 6: 1.44,
-  7: 1.67, 8: 1.64, 9: 1.80, 10: 2.04, 11: 2.13, 12: 2.28 };
+/*
+  ⚠️⚠️ 主の表（BATTLE_ATK）を触ったら、必ずここも測り直すこと。
+    今日それを忘れて、道中の死亡率が★12で 99.6%（＝主に辿り着けない）になった。
+    雑魚の攻撃は主の値からは導いていないが、雑魚のHPは主の表を土台にしているので、
+    主を動かすと道中の釣り合いは必ず崩れる。
+  ⚠️⚠️ 防御・体力・回避を効かせたら、道中の4戦通しの生存が 95〜96% まで緩んだ
+    （狙いは87%）。道中を合わせたあとで受ける側を変えたのに、ここを直していなかった。
+    受ける側（防御・体力・回避・盾）を触ったら、必ずここも測り直すこと。
+  ★ 一戦あたりの死亡率が 3.4% になるよう二分探索で求めた値（各1,000〜1,500回）。
+    小MAPで雑魚と四回戦う前提で、通しの全滅率が13%に乗る。
+    実測 2.2 / 2.0 / 2.5 / 3.0 / 3.7 / 3.7 / 2.8 / 4.8 / 3.9 / 4.1 / 4.6 / 4.3 ％
+  ⚠️ 上がり続ける表ではない。★が上がるとこちらのHPも札の枚数も増えるので、
+    係数そのものは行き来する。並びが単調でないことを異常と見ないこと。
+*/
+const ZAKO_ATK_K_TABLE = { 1: 1.40, 2: 1.44, 3: 2.00, 4: 1.51, 5: 1.22, 6: 1.18,
+  7: 1.41, 8: 1.11, 9: 1.57, 10: 1.31, 11: 0.68, 12: 0.82 };
 function zakoAtkK(star) {
   return ZAKO_ATK_K_TABLE[Math.max(1, Math.min(12, star | 0))] || 1.3;
 }
@@ -5135,16 +5258,16 @@ const ZAKO_SIZE = { xl: 4.0, lg: 2.2, md: 1.4, sm: 0.8 };
 */
 const ZAKO_FORMS = [
   /* 1体 */
-  { key: "xl1", parts: [["xl", 1]] },
+  { key: "xl1", hpK: 5, atkK: 2.45, parts: [["xl", 1]] },
   { key: "lg1", parts: [["lg", 1]] },
   /* 2体 */
-  { key: "lg2", parts: [["lg", 2]] },
+  { key: "lg2", hpK: 5, atkK: 2.93, parts: [["lg", 2]] },
   { key: "md1sm1", parts: [["md", 1], ["sm", 1]] },
   /* 3体 */
-  { key: "md3", parts: [["md", 3]] },
+  { key: "md3", hpK: 0.9, parts: [["md", 3]] },
   { key: "lg1sm2", parts: [["lg", 1], ["sm", 2]] },
   /* 4体 */
-  { key: "sm4", parts: [["sm", 4]] },
+  { key: "sm4", hpK: 5, atkK: 1.37, parts: [["sm", 4]] },
   { key: "md2sm2", parts: [["md", 2], ["sm", 2]] },
 ];
 /*
@@ -5157,7 +5280,7 @@ function zakoFormOf(nodeKey, seed) {
   return ZAKO_FORMS[hashName(String(nodeKey || "z") + ":" + (seed || 0)) % ZAKO_FORMS.length];
 }
 
-function zakoSetup(star, step, nodeKey, seedKey) {
+function zakoSetup(star, step, nodeKey, seedKey, sk) {
   const s = Math.max(1, Math.min(12, star | 0));
   /*
     ⚠️⚠️ 手札の枚数は★のまま。半分にしないこと。
@@ -5166,7 +5289,8 @@ function zakoSetup(star, step, nodeKey, seedKey) {
       「いつまでも5枚のまま」に見える（実際そうなっていた）。
     ★ 軽くするのは敵の側だけ ―― 数を減らし、HPを削る。
   */
-  const base = battleSetup(s, step || 0);
+  /* ⚠️ 育ちを渡すこと。渡さないと道中だけ振り切った人向けの強さになる */
+  const base = battleSetup(s, step || 0, undefined, sk);
   /*
     編成を組む。
     ★ 総量を保つため、大きさの比の合計で割る。
@@ -5184,7 +5308,14 @@ function zakoSetup(star, step, nodeKey, seedKey) {
       殴られ続けて毎回全滅する（実際そうなっていた）。
     ★ 雑魚も一体あたり。体数ぶんはここで掛ける。
   */
-  const totalHP = Math.round(base.foeHP * sizes.length * 10 / (BATTLE_TURNS[s] || 10));
+  /*
+    ⚠️⚠️ base.foeHP には編成ごとのHP係数（hpK・最大5.0）が乗っている。
+      主の釣り合いのために入れた値なので、道中へ持ち込まないこと。
+      持ち込むと、①②④を引いた盤だけ雑魚が五倍硬くなる。
+    ★ 係数を外してから使う。雑魚は編成の都合と無関係。
+  */
+  const hpKOfBoss = (BOSS_FORMS.find((x) => x.key === base.form) || {}).hpK || 1;
+  const totalHP = Math.round(base.foeHP / hpKOfBoss * sizes.length * 10 / (BATTLE_TURNS[s] || 10));
   /*
     ⚠️⚠️ 道中でも倒れる余地を残すこと。削られるだけで死なないなら、
       泉も罠も意味が無く、主の前でHPを気にする理由も消える。
@@ -5213,6 +5344,14 @@ function zakoSetup(star, step, nodeKey, seedKey) {
     bossAt: null,
     revive: false,
     reviveUnlessAll: false,
+    /*
+      ⚠️⚠️ 今日足したものを消し忘れて、道中に不死身の敵が出ていた。
+        段（stageOf）まで引き継いでいたので、雑魚が合体も分裂もしていた。
+        ★12の雑魚の勝率が 0.4%（＝主に辿り着けない）だったのはこれ。
+      ⚠️ 主の編成に何かを足したら、必ずここへ一行足すこと。
+    */
+    stageParts: null, stageHP: null, stageOf: null,
+    reviveTogether: false, mergeAdds: false, immortalAdds: false, weak: null,
     form: form.key,
     /* ⚠️ 体ごとのHPと攻撃。大きさの比で配る */
     sizes,
@@ -5288,6 +5427,35 @@ function emptyNext() {
   ⚠️ 戻り値は「何が起きたか」。画面はこれを読んで一行出す。
   ⚠️ 逆位置の罰（次ターン枚数半分）はここで積む。審判だけ例外。
 */
+/*
+  悪魔を解く。
+  ⚠️⚠️ 三つとも落とすこと。halve だけ落とすと逆位置が残り、
+    allRev だけ落とすと階位が半分のまま残る。
+  ⚠️ next（いま効いている）と pending（次ターン）の両方から落とす。
+    片方だけだと、このターンか次のターンのどちらかが悪魔のまま進む。
+*/
+/*
+  ⑧の不死身。
+  ⚠️⚠️ 主以外はHPが1で止まる。器（headless）にしか入っていなかったので、
+    実機では中が普通に死んでいた ―― 剣殺しが成立していなかった。
+  ★ 剣は「最もHPの低い相手」を狙うので、1で止まる体が常に的を吸う。
+    これが編成の芯。ここが効かないと⑧はただの三体の敵になる。
+  ⚠️ 主には掛けない。主が死ななければ戦いが終わらない。
+  ⚠️ ダメージを与えるところすべてのあとで呼ぶこと（札・必殺技の両方）。
+*/
+function clampImmortal(state) {
+  if (!state || !state.immortalAdds || !state.foes) return;
+  state.foes.forEach((f, i) => {
+    if (i !== state.bossAt && f.hp < 1) f.hp = 1;
+  });
+}
+function clearDevil(state) {
+  [state.next, state.pending, state.turnNext].forEach((P) => {
+    if (!P) return;
+    P.halve = false; P.halveTurns = 0;
+    P.allRev = false; P.allRevTurns = 0;
+  });
+}
 function majorEffect(state, card, ctx) {
   const n = Number(String(card.id).split("-")[1]);
   const fx = MAJOR_FX[n];
@@ -5328,13 +5496,27 @@ function majorEffect(state, card, ctx) {
         効くターン数だけが二倍になる。重ねると桁が壊れる。
     */
     /* ⚠️ turns があればその数だけ積む。愚者で揃えば枚数ぶん掛かる */
-    if (fx.halveRank) { P.halve = true; P.halveTurns = (P.halveTurns || 0) + (fx.turns || 1); }
-    if (fx.allRev) { P.allRev = true; P.allRevTurns = (P.allRevTurns || 0) + (fx.turns || 1); }
+    /*
+      ⚠️⚠️ 法王が効いているあいだは悪魔が乗らない。
+        法王は「逆位置が出ない」札なので、「全部逆位置」とは真っ向からぶつかる。
+        両方効いていると、どちらが勝つのか画面から読めない。
+      ★ 法王が先。悪魔は不発になる（引いた一枚が無駄になる）。
+      ⚠️ 逆に、悪魔が効いているところへ法王が来たら悪魔は消える
+        （下の clearDevil を法王でも呼ぶ）。後から来たほうが勝つのではなく、
+        常に法王が勝つ、で統一する。
+    */
+    const hieroOn = (state.fx && state.fx.hiero > 0);
+    if (fx.halveRank && !hieroOn) { P.halve = true; P.halveTurns = (P.halveTurns || 0) + (fx.turns || 1); }
+    if (fx.allRev && !hieroOn) { P.allRev = true; P.allRevTurns = (P.allRevTurns || 0) + (fx.turns || 1); }
     if (fx.dmgMul) { P.dmgMul = fx.dmgMul; P.mightTurns = (P.mightTurns || 0) + 1; }
     /* ⚠️ 力の三つの性質。一つでも落とすと、ただの倍率札に戻る */
     if (fx.noMajor) P.noMajor = true;
     if (fx.pierce) P.pierce = true;
     if (fx.unrot) P.unrot = true;
+    /* ⚠️ 戦車。どれだけ食らってもHPが1残る（そのターンだけ） */
+    if (fx.endure) P.endure = true;
+    /* ⚠️ 受ける量の倍率。節制（継続）とは別物で、こちらは次の1ターンだけ */
+    if (fx.takeMul && fx.kind === "next") P.takeMul = fx.takeMul;
     if (fx.wipeAfter) P.wipeAfter = true;
     if (fx.acts) { P.acts = fx.acts; P.actsTurns = (P.actsTurns || 0) + 1; }
     /* ⚠️ 敵の行動不能。ターン数で積む（愚者で揃えば枚数ぶん重なる） */
@@ -5368,6 +5550,13 @@ function majorEffect(state, card, ctx) {
     else if (n === 14) {
       state.fx.temperance += T; state.fx.death = 0;
       /*
+        ⚠️⚠️ 悪魔を解く。節制は「混ざったものを整える」札なので、
+          階位を半分にして全部逆位置にする悪魔と正面から打ち消し合う。
+        ⚠️ 解くのは次ターンの持ち物（pending）ではなく、いま効いているほう（next）。
+          両方消さないと、このターンは悪魔のまま進む。
+      */
+      clearDevil(state);
+      /*
         ⚠️⚠️ 効いていないものだけを選ぶこと。重ねても延びるだけで、
           「新しいものが生まれる」という札の意味に合わない。
         ★ 星・月・太陽のうち、まだ効いていないものから一つ。2ターン。
@@ -5381,9 +5570,17 @@ function majorEffect(state, card, ctx) {
         out.blend = pick;
       }
     }
-    else if (n === 5) state.fx.hiero += T;
+    else if (n === 5) { state.fx.hiero += T; clearDevil(state); }
     else if (n === 6) state.fx.lovers += T;
-    else if (n === 9) state.fx.hermit += T;
+    else if (n === 9) {
+      state.fx.hermit += T;
+      /*
+        ⚠️ 隠者も悪魔を解く。敵の妨害を無駄行動にする札なので、
+          こちらに掛かった呪いも落とす。節制と役目が重なるが、
+          隠者は敵側、節制は自分側から解く、と読める。
+      */
+      clearDevil(state);
+    }
     else if (n === 11) state.fx.justice += T;
     else if (n === 17) state.fx.star += MAJOR_FX_LONG;
     else if (n === 18) state.fx.moon += MAJOR_FX_LONG;
@@ -5481,10 +5678,49 @@ const BATTLE_TURNS = { 1: 10, 2: 32, 3: 37, 4: 43, 5: 48, 6: 53,
   ⚠️ 編成はステージ名から引く。入り直しても変わらない。
 */
 const BOSS_SIZE = { xl: 7.0, lg: 2.2, md: 1.4, sm: 0.8, xs: 0.4 };
+/*
+  【段】
+  ★ 倒し切ると次の形に置き換わる編成がある。合体も分裂も中身は同じ ――
+    「段が進む」一つの仕組みで書く。
+  ⚠️⚠️ 置き換わった体は「復活した敵」扱いにすること。
+    HPが戻るわけではないが、破魔矢（復活した敵に特攻）と
+    祓串（復活HPを削る）が噛み合う相手になる。
+  ⚠️ 破魔矢は一段目には乗らない。全段に乗せると、ただの攻撃力になる。
+  ⚠️ 総HPは段で分ける。同じHPを段の数だけ持たせると、戦いが四倍長くなる
+    （★8は平均109ターンなので436ターン）。
+*/
 const BOSS_FORMS = [
-  { key: "xl1",          parts: [["xl", 1]] },
-  { key: "lg2",          parts: [["lg", 2]] },
-  { key: "md3",          parts: [["md", 3]] },
+  /*
+    ① 特大1 → 大2 → 小3 → 極小4。
+    ⚠️⚠️ 「特大1体・復活なし・お供なし」に戻さないこと。
+      平均68ターン同じ手を繰り返すだけで、中身が空だった（実測）。
+    ★ 一戦のうちに盤面が三回変わる。分裂するたびに体が増え、小さくなる。
+  */
+  /*
+    【弱点】
+    ⚠️⚠️ どの編成にも「これが効く」を一つ置くこと。
+      置かないと、編成を引いた時点で勝敗がほぼ決まる（実測で 79.9% と 1.7% が並んだ）。
+      強さを均すだけだと、どれも同じ相手になる。
+    ★ 効く手を編成ごとに変える。倒し方を探すこと自体が遊びになる。
+    ⚠️ 弱点は倍率で書く。1.0 が素。ここを触ったら★4〜12を測り直すこと。
+  */
+  { key: "xl1", parts: [["xl", 1]],
+    stages: [[["lg", 2]], [["sm", 3]], [["xs", 4]]], stageHP: [0.40, 0.28, 0.20, 0.12] },
+  /*
+    ② 大2。同時に倒さないとだめ。
+    ⚠️ 一体だけ落としても、次のターンにわずかなHPで起き上がる。
+    ★ 棒（全体）で揃えて削り、最後に落とす戦いになる。
+  */
+  { key: "lg2", parts: [["lg", 2]], reviveUnlessAll: true, revivePct: 0.05 },
+  /*
+    ③ 中3 → 倒すと合体して特大1。
+    ★ 分裂の逆。散らばっていたものが一つにまとまる。
+      合体後は一体なので、棒の必殺（最もHPの高い相手を狙う）が必ず刺さる。
+  */
+  /* ③ ⚠️ 合体した直後は身構えられない。一つにまとまった隙を突ける */
+  { key: "md3", parts: [["md", 3]],
+    stages: [[["xl", 1]]], stageHP: [0.55, 0.45],
+    weak: { afterMerge: 1.5 } },
   /*
     ⚠️ 小四体は「同時に倒す」ことが条件。一体でも生き残っていると、
       倒した個体が次のターンにわずかなHPで起き上がる。
@@ -5492,12 +5728,58 @@ const BOSS_FORMS = [
     ⚠️ 復活のHPは5%。そこからでも起き上がられると、削り直しが重すぎる。
   */
   { key: "sm4",          parts: [["sm", 4]], reviveUnlessAll: true, revivePct: 0.05 },
-  { key: "xl1sm3",       parts: [["xl", 1], ["sm", 3]] },
+  /*
+    ⑤ ⚠️ お供が「一斉に」起き上がる。庇護（主が硬くなる）と噛み合わせる。
+    ★ 三体そろって落とせば、次の同時復活までが主を殴る窓になる。
+      一体ずつ戻る形だと、最初の一体が起き上がった瞬間に庇護が戻って窓が生まれない。
+  */
+  /*
+    ⑤ ★ 弱点は復活特攻。一斉に戻ってくるので、破魔矢を積んだ人ほど楽になる。
+      同時復活＝三体まとめて起き上がる＝まとめて特攻が乗る。
+  */
+  { key: "xl1sm3", hpK: 0.26, parts: [["xl", 1], ["sm", 3]], revive: true, reviveTogether: true,
+    weak: { revived: 2.2 } },
   /* ⚠️ 極小は復活する。主を倒すまで湧き続ける */
   /* ⚠️ 復活は主が残り20%を切ってから。初めから湧くと倒し直しで手が回らない */
-  { key: "xl1xs3rev",    parts: [["xl", 1], ["xs", 3]], revive: true },
-  { key: "xl1lg1md1sm1", parts: [["xl", 1], ["lg", 1], ["md", 1], ["sm", 1]] },
-  { key: "xl1md2rev",    parts: [["xl", 1], ["md", 2]], revive: true },
+  /*
+    ⑥ ★ 弱点は貨幣。呪詛で削られるが、この編成では積みが二倍に伸びる。
+      削られても取り返せる ―― 削り合いそのものが戦いになる。
+    ⚠️ 呪詛を弱めないこと。弱めると編成の性格が消える。積みのほうを強くする。
+  */
+  { key: "xl1xs3rev", hpK: 0.22, parts: [["xl", 1], ["xs", 3]], revive: true,
+    weak: { coin: 2.0 } },
+  /*
+    ⑦ 合体の連鎖。
+    ★ お供が全部倒れると、その場で次の形にまとまる。
+        特大1+大1+中1+小1  →（中と小が落ちる）→ 特大1+大2
+                          →（大2が落ちる）  → 特大2
+    ⚠️⚠️ 主を倒せば勝ちのまま。合体は「放っておくと厄介になる」という脅しで、
+      急いで主を落とせば避けられる ―― 急ぐか、片付けてから挑むかの判断が生まれる。
+      全滅を条件にすると、その判断が消えて、ただ長い戦いになる。
+    ⚠️ 段の進行はお供の全滅で起きる（mergeAdds）。主の死では進まない。
+  */
+  { key: "xl1lg1md1sm1", hpK: 0.43, parts: [["xl", 1], ["lg", 1], ["md", 1], ["sm", 1]],
+    revive: true, mergeAdds: true,
+    stages: [[["xl", 1], ["lg", 2]], [["xl", 2]]], stageHP: [0.45, 0.33, 0.22],
+    /* ★ 弱点は剣。合体するほど体が減り、最後は特大だけになる ―― 剣の土俵 */
+    weak: { sword: 1.8, swordFlash: 1.6 } },
+  /*
+    ⑧ 剣殺し。
+    ★ 中2が不死身（HPが1で止まる）。剣は「最もHPの低い相手」を狙うので、
+      通常の剣は永久に中を叩き、主に一度も届かない。
+      抜け道は必殺技（剣の必殺は全体、棒の必殺は最高HP）と大アルカナだけ。
+    ⚠️⚠️ 攻撃力を弱くすること。剣が死ぬぶん戦いが長くなるので、
+      同じ火力だと削り負ける。ここだけ 0.7 を掛ける。
+    ⚠️ 不死身は主には掛けない。主が死ななければ戦いが終わらない。
+  */
+  { key: "xl1md2rev", hpK: 0.59, atkK: 0.70, parts: [["xl", 1], ["md", 2]], revive: true,
+    immortalAdds: true,
+    /*
+      ★ 弱点は棒。剣が死ぬぶん、棒と棒の必殺が突き抜けて効く。
+      ⚠️ 剣を通すようにしないこと。それをやると剣殺しでなくなる。
+        塞いだ道の代わりに、別の道を太くする。
+    */
+    weak: { wand: 2.4, wandFlash: 2.2 } },
   /*
     ⑨ 区分をすべて制覇したときに現れる主。
     ★ 特大1＋大1＋中2。お供の三体すべてが起き上がる。
@@ -5555,8 +5837,17 @@ const BOSS_SPECIAL_K = 1.0;
 const BOSS_SPECIALS = {
   /* ① 特大1 … 自らを高める。長い殴り合いなので、後半ほど痛くなる */
   xl1:          { key: "rage",    atkUp: 0.30 },
-  /* ② 大2 … 二体で揃えて撃つ。次のターンは必ず連撃 */
-  lg2:          { key: "sync",    forceCombo: 1 },
+  /*
+    ② 大2 … 二体がHPを出し合って半々にする。
+    ★ 総量は増えない。置き場所が変わるだけなので「削った意味が消える」不快さが無い。
+      それでいて各個撃破は完全に潰れる。一手を捨てる代償と釣り合う。
+    ⚠️⚠️ 倒れた体にも効く。片方が0でも半々に戻る。
+      これは「復活」ではないので、祓串も破魔矢も効かない ―― 復活まわりを
+      揃えた人ほど刺さる編成として置いてある。意図した穴なので塞がないこと。
+    ⚠️ 四回まで。毎ターン均されると各個撃破が原理的に不可能になり、
+      同時討伐と二重掛けになる。
+  */
+  lg2:          { key: "even",    evenOut: true, at: [0.75, 0.50, 0.25, 0.125] },
   /* ③ 中3 … 倒れたお供を呼び戻す。居なければ自らを癒やす */
   md3:          { key: "call",    reviveOne: true, healPct: 0.10 },
   /* ④ 小4 … 群れで吠える。全員が少し回復する */
@@ -5571,6 +5862,74 @@ const BOSS_SPECIALS = {
   xl1md2rev:    { key: "drain",   drainPct: 0.12 },
 };
 const BOSS_SPECIAL_AT = [0.75, 0.50, 0.25];
+/*
+  ⚠️⚠️ 主が居ない編成（②大2・③中3・④小4）でも発動させること。
+    これまで「主のHPがしきい値を割ったとき」で判定していたので、
+    特大を持たない三つは一度も発動していなかった（定義だけがあった）。
+  ★ 主が居なければ、編成ぜんたいの残りHPの割合で見る。
+*/
+function bossRatioOf(foes, bossAt) {
+  if (!foes || !foes.length) return 0;
+  if (typeof bossAt === "number" && foes[bossAt]) {
+    return Math.max(0, foes[bossAt].hp) / foes[bossAt].max;
+  }
+  const now = foes.reduce((x, f) => x + Math.max(0, f.hp), 0);
+  const max = foes.reduce((x, f) => x + f.max, 0);
+  return max > 0 ? now / max : 0;
+}
+/*
+  【復活】
+  ★ ★4以上の全編成が復活を持つ。★3以下は復活しない
+    （引ける札が3〜5枚しかないので、起き上がられると成立しない）。
+    区切りは foeTierOf と同じ★3／★4。覚える線を二本にしない。
+
+  ⚠️⚠️ 起き上がるまでのターンを、装備の段で伸ばさないこと。
+    祓串の段で遅延が変わる形にしたら、釣り合わなかった。
+    遅らせると「殴られない時間が増える」と同時に「削る時間が減る」ので、
+    ★4〜7（短い殴り合い）では不利、★8以上（長丁場）では有利になり、
+    同じ装備が序盤は罠、終盤は当たりになる。
+    しかも待っているあいだに聖杯の必殺を引けるかどうかで跳ねるので、
+    平均を合わせても手触りが合わない（回復を引けた回だけ無敵になる）。
+  ★ 遅延は敵の★だけで決める。装備では動かない。
+    規定ターンのおよそ 6% に置いてある ―― 戦いが長いほど長く待つ。
+*/
+const REVIVE_TURNS_BY_STAR = {
+  4: 3, 5: 3, 6: 3, 7: 4, 8: 4, 9: 4, 10: 5, 11: 5, 12: 5,
+};
+/*
+  ⚠️⚠️ 起き上がるたびにHPを落とすこと。満タンで戻ると、
+    こちらの毎ターンの火力が「復活HP ÷ 復活ターン」を下回った瞬間、
+    永久に決着しない。★12の敵は最大HPが十万を超えるので、必ず踏む。
+  ★ ★が高いほど厚く戻る。低い★は軽く、高い★は重い。
+    一度目 → 二度目 → 三度目 と半分ずつ落ちるのは全★共通。
+  ⚠️ 回数の上限も置くこと。落ちていく一方でも、0にならない限り終わらない。
+*/
+const REVIVE_HP_BY_STAR = {
+  4: 0.40, 5: 0.44, 6: 0.48, 7: 0.52, 8: 0.56,
+  9: 0.60, 10: 0.66, 11: 0.72, 12: 0.80,
+};
+const REVIVE_FALL = 0.5;   /* ⚠️ 二度目以降。半分ずつ */
+const REVIVE_MAX = 3;      /* ⚠️ 上限。外すと終わらない戦いができる */
+/*
+  何ターンで起き上がるか。
+  ⚠️ 装備は関わらない。段で変わるのは「戻るHPの量」だけ（下の reviveHpOf）。
+*/
+function reviveTurnsOf(star) {
+  return REVIVE_TURNS_BY_STAR[Math.max(4, Math.min(12, star | 0))] || 3;
+}
+/*
+  何割で戻るか。
+  ★ 祓串（reviveCut）はここを削る。時間ではなく相手のHPに掛かるので、
+    引き運で跳ねない。破魔矢（復活した敵に特攻）と役割が並ぶ ――
+    片方は相手を減らし、片方はこちらの一撃を増やす。
+  ⚠️ 0にしないこと。0にすると復活が消え、破魔矢が死に札になる。下限を8%に置く。
+*/
+function reviveHpOf(star, times, bonus) {
+  const base = REVIVE_HP_BY_STAR[Math.max(4, Math.min(12, star | 0))] || 0.40;
+  const fall = Math.pow(REVIVE_FALL, Math.max(0, (times | 0) - 1));
+  const cut = 1 - Math.min(0.60, ((bonus && bonus.reviveCut) || 0) / 100);
+  return Math.max(0.08, base * fall * cut);
+}
 
 /*
   【体数の補正】
@@ -5648,7 +6007,14 @@ function bossFormOf(name, star) {
     ⚠️⚠️ ⑨を通常の抽選に混ぜないこと。区分の主だけの編成。
     ⚠️ 1体編成は★8以上で使わない（勝率が届かない）。
   */
-  const pool = BOSS_FORMS.filter((f) => f.key !== "extra");
+  /*
+    ⚠️⚠️ ★1〜2では復活する編成を出さないこと。
+      sm4（同時に倒さないと起き上がる）は、3枚しか引けない★1では条件が成立しない。
+      ★1の三通りのうち一つがこれで、実測7.2%だった。
+    ★ 復活と同時討伐は★3から。それまでは素直に削り切れる編成だけにする。
+  */
+  const pool = BOSS_FORMS.filter((f) => f.key !== "extra")
+    .filter((f) => !(s <= 2 && (f.revive || f.reviveUnlessAll)));
   /*
     ⚠️⚠️ ★1〜2では特大を含む編成を使わないこと。
       最大HPが100〜180しかないのに、特大に攻撃が集中すると一発29。
@@ -5709,6 +6075,12 @@ function foeLabelOf(i, setup, a) {
   return `${nm}${i + 1}`;
 }
 
+/*
+  いまの段を倒し切ったか。
+  ⚠️⚠️ これは「勝った」ではない。段が残っていれば次の形に置き換わる。
+    勝ちの判定は battleWon で行うこと。
+  ⚠️ 特大のいない編成には主が居ない。全滅で段が終わる。
+*/
 function bossDown(foes, setup) {
   if (!foes || !foes.length) return true;
   if (setup && typeof setup.bossAt === "number" && foes[setup.bossAt]) {
@@ -5716,8 +6088,16 @@ function bossDown(foes, setup) {
   }
   return foes.every((f) => f.hp <= 0);
 }
+/* 段がいくつあるか。⚠️ stages を持たない編成は一段 */
+function stageCountOf(setup) {
+  return 1 + ((setup && setup.stageParts && setup.stageParts.length) || 0);
+}
+/* 最後の段を倒し切ったら勝ち */
+function battleWon(foes, setup, stageIdx) {
+  return bossDown(foes, setup) && (stageIdx | 0) >= stageCountOf(setup) - 1;
+}
 
-function battleSetup(star, step, name) {
+function battleSetup(star, step, name, sk) {
   const s = Math.max(1, Math.min(12, star | 0));
   const shape = BATTLE_SHAPE[s];
   const S = statsOf(step || 0);
@@ -5740,11 +6120,38 @@ function battleSetup(star, step, name) {
       総HPの倍率は体数にほぼ比例していた（1体0.12 / 4体0.47）。
     ⚠️ 表の値は「★ごとの一体ぶん」として使う。
   */
-  const totalHP = (BATTLE_FOE_HP[s] || 236) * sizes.length * BOSS_HP_K;
+  /*
+    【体数の正規化】
+    ⚠️⚠️ 序盤では体数をそのまま掛けないこと。
+      棒の総量を一定にしてあるので、こちらの火力は体数でほとんど増えない。
+      なのに総HPも総攻撃も体数に比例させると、体が増えるほど
+      「削る量は同じで殴られる量だけ倍」になる。
+      ★1の実測 ―― lg2 41.0% ／ md3 10.0% ／ sm4 7.2%。
+      すぐ上のコメントに「編成が違っても難度は同じ」と書いてあるのに、
+      実装がそうなっていなかった。
+    ★ 体数に掛ける指数を★で動かす。★1は体数を無視し、★4以降は従前どおり。
+        e = (★-1)/3   ★1:0 ／ ★2:1/3 ／ ★3:2/3 ／ ★4以降:1
+    ⚠️ ★4以降を1.0で止めること。あちらの攻撃力は体数比例のまま実測してある。
+      指数を伸ばすと★4〜12の勝率が全部ずれる。
+  */
+  const evenE = Math.max(0, Math.min(1, (s - 1) / 3));
+  const nBody = Math.pow(sizes.length, evenE);
+  /*
+    ⚠️⚠️ 編成ごとのHP係数。弱点を足しても、編成の勝率は 79.9% と 10.2% まで開いた。
+      攻撃力だけでは揃わない（①②は短くて素直、⑤⑥は長くて手数が要る）。
+      時間そのものを動かすほうが効く。
+    ⚠️ ここを触ったら★4〜12を測り直すこと。
+  */
+  /*
+    ⚠️⚠️ 育ちで敵のHPや攻撃力を動かさないこと。47段の実測が毎回ずれる。
+      育ちは大アルカナの出方（pickMajor）にだけ反映する。
+  */
+  const totalHP = (BATTLE_FOE_HP[s] || 236) * nBody * BOSS_HP_K * (form.hpK || 1);
   /* ⚠️ 攻撃も一体あたり。体数が増えれば総量も増える */
   /* ⚠️ 区分の主は専用の表から。通常の主より難しい */
   const isExtra = form.key === "extra";
-  const totalAtk = ((isExtra ? EXTRA_ATK[s] : BATTLE_ATK[s]) || 3) * sizes.length;
+  /* ⚠️ 編成ごとの係数。⑧は剣が死ぬぶん戦いが長いので弱める */
+  const totalAtk = ((isExtra ? EXTRA_ATK[s] : BATTLE_ATK[s]) || 3) * nBody * (form.atkK || 1);
   /*
     主の番号。
     ⚠️⚠️ 特大のいない編成（②③④）には主を置かないこと。
@@ -5763,11 +6170,21 @@ function battleSetup(star, step, name) {
     sizes,
     /* ⚠️ この番号の敵を倒したら勝ち。お供が残っていても終わる */
     bossAt,
-    revive: !!form.revive,
+    /* ⚠️ ★3以下は復活しない。引ける札が3〜5枚では、起き上がられると成立しない */
+    revive: s >= 4 && !!form.revive,
     /* ⚠️ 編成ごとに指定があればそれを使う。⑨は4ターン */
-    reviveTurns: form.reviveTurns || BOSS_REVIVE_TURNS,
+    reviveTurns: form.reviveTurns || reviveTurnsOf(s),
+    /* ⚠️ 復活HPは戦闘中に引く（装備が要るので setup では確定しない）。reviveHpOf を使うこと */
     /* ⚠️ 同時に倒さないと起き上がる編成。復活のHPは割合で持つ */
-    reviveUnlessAll: !!form.reviveUnlessAll,
+    reviveUnlessAll: s >= 4 && !!form.reviveUnlessAll,
+    /* ⚠️ ⑤だけ。倒れたお供が全員そろってから一斉に戻る */
+    reviveTogether: !!form.reviveTogether,
+    /* ⚠️ ⑦だけ。お供の全滅で段が進む。主の死では進まない */
+    mergeAdds: !!form.mergeAdds,
+    /* ⚠️ ⑧だけ。主以外はHPが1で止まる。主に掛けると戦いが終わらない */
+    immortalAdds: !!form.immortalAdds,
+    /* ⚠️ 弱点。battleApply が state.weak で読む。計算側で編成名を見ない */
+    weak: form.weak || null,
     revivePct: form.revivePct || 0.05,
     foes: sizes.length,
     /* ⚠️ 体ごとの値。総量は★の表のまま、大きさの比で配る */
@@ -5777,7 +6194,37 @@ function battleSetup(star, step, name) {
         体数で難度が変わらなくなった。補正を残すと、1体の敵が
         HP5%の張りぼてになる（実際そうなっていた）。
     */
-    foeHPList: sizes.map((k) => Math.max(1, Math.round(totalHP * k / share))),
+    /*
+      段。
+      ⚠️⚠️ 総HPを段で割ること。段ごとに満額を持たせると、四段の編成は
+        戦いが四倍になる（★8は平均109ターンなので436ターン）。
+      ★ 配分は前ほど厚く（40/28/20/12）。最初の形がいちばん長く、
+        分裂するほど短くなる ―― 崩れていく感じが出る。
+      ⚠️ 攻撃は段で割らない。体の大きさの比で配るだけ。
+        割ると、進むほど弱い相手になって緊張が落ちる。
+      ⚠️ 二段目以降は「復活した敵」。破魔矢が乗り、祓串がHPを削る。
+    */
+    stageParts: form.stages || null,
+    stageHP: form.stageHP || null,
+    stageOf: (i) => {
+      const w = form.stageHP || [1];
+      const parts = (i | 0) === 0 ? form.parts : (form.stages || [])[(i | 0) - 1];
+      if (!parts) return null;
+      const sz = [];
+      parts.forEach(([k, n3]) => { for (let j = 0; j < n3; j++) sz.push(BOSS_SIZE[k]); });
+      const sh = sz.reduce((x, y) => x + y, 0);
+      const hp = totalHP * (w[i | 0] !== undefined ? w[i | 0] : 1);
+      const hasX = parts.some(([k]) => k === "xl");
+      return {
+        sizes: sz,
+        bossAt: hasX ? sz.indexOf(Math.max(...sz)) : null,
+        hpList: sz.map((k) => Math.max(1, Math.round(hp * k / sh))),
+        atkList: sz.map((k) => Math.max(0.1, totalAtk * k / sh)),
+        revived: (i | 0) > 0,
+      };
+    },
+    foeHPList: sizes.map((k) => Math.max(1,
+      Math.round(totalHP * (form.stageHP ? form.stageHP[0] : 1) * k / share))),
     foeAtkList: sizes.map((k) => Math.max(0.1, totalAtk * k / share)),
     foeHP: Math.max(1, Math.round(totalHP / sizes.length)),
     /*
@@ -5886,7 +6333,11 @@ function battleApply(state, card) {
       呼び出し側の入れ忘れを、ここで黙って直す。
   */
   const S = state.stats || statsOf(0);
-  const crit = Math.random() < critRate(S.skill, state.foeLuck || 0);
+  /* ⚠️ 敵の強化を読む。会心耐性UPは会心を、防御UPは与ダメージを下げる */
+  const fb0 = state.foeBuff || {};
+  const foeDef = (fb0.def && fb0.def.t > 0) ? (1 - fb0.def.amt) : 1;
+  const crit = Math.random() < critRate(S.skill, state.foeLuck || 0)
+    * (1 - ((fb0.critRes && fb0.critRes.t > 0) ? fb0.critRes.amt : 0));
   const cm = crit ? CRIT_MUL : 1;
   out.crit = crit;
   if (suit === "swords") {
@@ -5918,9 +6369,16 @@ function battleApply(state, card) {
         : (1 - ((state.foeGuard && state.foeGuard[t.i]) || 0) * 0.5) * (1 - shield);
       /* ⚠️ 残り一体なら特効。倒しきる一撃が重くなる */
       const vsBoss = (alive().length === 1) ? BATTLE.swordSolo : 1;
+      /* ⚠️ 破魔矢は剣にも乗る。棒の特攻（札の性格）とは別物 */
+      /* ⚠️ 編成の弱点。剣が効く相手（⑦）ではここが伸びる */
+      const wk = (state.weak && state.weak.sword) || 1;
+      const wkRev = (state.weak && t.f.revived && state.weak.revived) || 1;
       const d = Math.round(S.power * CARD_COEF.swords * state.mult * r * cm
-        * (1 - defRate(state.foeDefP || 0)) * (seeThrough ? 1 : (1 - res.phys)) * gd * vsBoss);
-      t.f.hp -= d; out.hits.push({ i: t.i, d });
+        * (1 - defRate(state.foeDefP || 0)) * (seeThrough ? 1 : (1 - res.phys)) * gd * vsBoss
+        * vsRevivedMul(state.eq, t.f) * wk * wkRev * foeDef);
+      /* ⚠️ 敵の回避。外れたら0（必殺技と大アルカナはここを通らない） */
+      if (Math.random() < foeEvadeOf(state.star || 1) + ((fb0.evade && fb0.evade.t > 0) ? fb0.evade.amt : 0)) { out.hits.push({ i: t.i, d: 0, miss: true }); }
+      else { t.f.hp -= d; out.hits.push({ i: t.i, d }); }
     }
     /* ⚠️ 現在HPの割合。階位が高いほど反動も大きい */
     /*
@@ -5957,10 +6415,16 @@ function battleApply(state, card) {
       const gd = ((state.next && state.next.pierce) || (state.fx && state.fx.moon > 0) || seeThroughW)
         ? 1 : (1 - ((state.foeGuard && state.foeGuard[x.i]) || 0));
       /* ⚠️ 起き上がった敵には特攻。棒だけに乗せる */
-      const rv = x.f.revived ? BATTLE.wandVsRevived : 1;
+      /* ⚠️ 棒の特攻（札の性格）と破魔矢（装備）は別。掛け合わせる */
+      const rv = (x.f.revived ? BATTLE.wandVsRevived : 1) * vsRevivedMul(state.eq, x.f) * foeDef;
+      /* ⚠️ 編成の弱点。棒が効く相手（⑧）ではここが伸びる */
+      const wkW = (state.weak && state.weak.wand) || 1;
+      const wkWRev = (state.weak && x.f.revived && state.weak.revived) || 1;
       const d = Math.round(S.mind * CARD_COEF.wands * spread * state.mult * r * cm
-        * (1 - defRate(state.foeDefM || 0)) * (seeThroughW ? 1 : (1 - res.mag)) * gd * rv);
-      x.f.hp -= d; out.hits.push({ i: x.i, d });
+        * (1 - defRate(state.foeDefM || 0)) * (seeThroughW ? 1 : (1 - res.mag)) * gd * rv
+        * wkW * wkWRev);
+      if (Math.random() < foeEvadeOf(state.star || 1) + ((fb0.evade && fb0.evade.t > 0) ? fb0.evade.amt : 0)) { out.hits.push({ i: x.i, d: 0, miss: true }); }
+      else { x.f.hp -= d; out.hits.push({ i: x.i, d }); }
     });
     /* ⚠️ 棒は全体なので、凶刃に構えた相手が一体でもいれば棘を受ける */
     /* ⚠️ 棒も逆位置のときだけ。凶刃に構えた相手が一体でもいれば棘が乗る */
@@ -6042,7 +6506,10 @@ function battleApply(state, card) {
     */
     const reap = (state.fx && state.fx.death > 0) ? COIN_BOOST
       : ((state.turnNext && state.turnNext.halve) ? COIN_BOOST : 1);
-    const step = BATTLE.coinUp * rankMultOf(shifted, "normal") * reap;
+    /* ⚠️ 編成の弱点。貨幣が効く相手（⑥）ではここが伸びる。呪詛は弱めない */
+    const wkC = (state.weak && state.weak.coin) || 1;
+    /* ⚠️ たいりょくが貨幣の倍率の伸びを受け持つ（statK） */
+    const step = BATTLE.coinUp * rankMultOf(shifted, "normal") * reap * wkC * statK(S.vital);
     state.mult = Math.min(BATTLE.multCap, state.mult + step * might);
     /* ⚠️ 被ダメは上げない（coinTake は 0）。残してあるのは、
          もし代償を戻すならここ一箇所で済むようにするため */
@@ -6058,8 +6525,14 @@ function battleApply(state, card) {
     */
     out.major = true;
   }
+  /*
+    ⚠️ せいしんが高いほど、逆位置の自傷が少し重くなる（育ち切りで約+7%）。
+      回復（聖杯）が強すぎて戦いの軸が偏っていたので、代償を一つ持たせる。
+  */
+  if (out.self) out.self = Math.round(out.self * (1 + 0.12 * ((S.spirit || 0) / ((S.spirit || 0) + 100))));
   /* ⚠️ 上限は育った最大HP。固定の100にしないこと */
   state.hp = Math.min(S.maxHP, state.hp - out.self + out.heal);
+  clampImmortal(state);
   return out;
 }
 
@@ -6120,7 +6593,18 @@ const MAJOR_FX = {
       削られた分を補う程度で、回復札の代わりにはならない。
   */
   6:  { key: "lovers",   kind: "last",  healByDamage: 0.4, atkSuitMul: 1.3 },
-  7:  { key: "chariot",  kind: "next",  suit: "swords",    shiftUp: true },
+  /*
+    戦車。
+    ⚠️⚠️ 剣だけに絞ると弱い。剣は「最もHPの低い相手」を狙うので、
+      体が三つ四つ並ぶ★8以上では主に一撃も届かない回が出る。
+      実測で★8のワースト（16.9%／基準27.8%）だった。
+    ★ 突っ込む札なので、突っ込んだターンは耐える。
+      被ダメージを半分にし、どれだけ食らってもHPが1残る。
+    ⚠️ 1残るのは★に関係なく同じ意味を持つ。割合だけだと★12の一撃で落ちる。
+    ⚠️ 覚醒（二つ目）ではなく基礎に持たせること。覚醒しないと弱いままの札を残さない。
+  */
+  7:  { key: "chariot",  kind: "next",  suit: "swords",    shiftUp: true,
+        takeMul: 0.5, endure: true },
   /*
     力。
     ⚠️⚠️ 「2倍」だけでは弱い。3ターン続く太陽（+40%×3）に見劣りする。
@@ -6181,7 +6665,8 @@ const MAJOR_FX = {
       「攻めが増える」のと「守りが要らなくなる」の違い。
     ⚠️ 2回では皇帝と差が出ない。3回にして、攻めに寄せた札にする。
   */
-  21: { key: "world",    kind: "next",  acts: 3 },
+  /* ⚠️ 覚醒で4回。基礎は2回（未覚醒でも役に立つが、完成すると跳ねる） */
+  21: { key: "world",    kind: "next",  acts: 4 },
 };
 /*
   敵の回復。
@@ -6225,7 +6710,11 @@ function statsOf(step) {
   const out = {};
   STAT_KEYS.forEach((k) => { out[k] = Math.round(STAT_BASE[k] + STAT_GROW[k] * n); });
   /* ⚠️ 最大HPも段で伸ばす。長い戦いを耐えるために要る */
-  out.maxHP = Math.round(100 + 20 * n);
+  /*
+    ⚠️ たいりょくが最大HPに上乗せする（育ち切りで約+9%）。
+      上乗せぶん、敵の一撃の上限（最大HPの40%）も少し上がる ―― 比は変わらない。
+  */
+  out.maxHP = Math.round((100 + 20 * n) * (1 + 0.15 * (out.vital / (out.vital + 100))));
   return out;
 }
 /*
@@ -6236,6 +6725,203 @@ function statsOf(step) {
 */
 const DEF_K = 200;
 function defRate(def) { return def / (def + DEF_K); }
+/*
+  【敵の型】
+  ★ 体ごとに物理型と魔法型がある。foeResistOf の耐性と揃える ――
+    鎧（物理耐性）は物理で殴ってくる、護符（魔法耐性）は魔法で撃ってくる。
+  ⚠️⚠️ 見た目（FoeFigure の armor / ward）と一致させること。
+    盤面を見た瞬間に「こいつには何で殴るか」が決まるのが狙い。
+  ★ 裏返しになっている ―― 物理で殴る相手には棒（魔法）が通り、
+    魔法で撃つ相手には剣（物理）が通る。
+*/
+function foeKindOf(i, total) {
+  const r = foeResistOf(i, total);
+  if (r.phys > 0) return "phys";
+  if (r.mag > 0) return "mag";
+  return "phys";
+}
+/*
+  振れ幅。
+  ★ 物理は上下に大きく振れる（±35%）。当たると痛いが、軽く済む回もある。
+    魔法は振れが小さい（±10%）。読めるが、避けにくい。
+  ⚠️ 手ごとの spread より、型のほうを優先すること。
+    手で分けると13種すべてに型を決める必要があり、増やすたびに破綻する。
+*/
+const FOE_SWING = { phys: 0.35, mag: 0.10 };
+/*
+  回避。
+  ⚠️⚠️ 上限を置くこと。三回連続で外れると、勝率の実測がぶれる。
+  ★ すばやさで上がる。振り切って15%。隠者が効いていれば +12%。
+  ⚠️ 必中の手は避けられない（FOE_MOVES の sure）。
+*/
+const EVADE_MAX = 0.15, EVADE_K = 220;
+/*
+  【うん】
+  ⚠️⚠️ うんは長いあいだ何にも効いていなかった（敵の運を作る目盛りに借りていただけ）。
+  ★ 二つに効かせる。どちらも「運が良い」と直感で結び付くもの。
+      敵の会心を受けにくい … 敵の一撃が 1.5倍 になる会心の確率が下がる
+      逆位置が出にくい     … 札が逆位置で出る確率が下がる（自傷や代償が減る）
+  ⚠️ どちらも控えめに。育ち切って（うん95）敵の会心が約半分、逆位置が約5ポイント減る程度。
+    強くすると、うんだけ振れば済む形になる。
+*/
+/*
+  能力を「効き目の倍率」に直す。
+  ⚠️ 0.6〜1.4 の幅に収める。能力値そのものを掛けると、育ちで何倍にも跳ねて釣り合いが壊れる。
+  ★ 段0（能力18前後）で約0.7、育ち切り（130前後）で約1.05。
+*/
+function statK(v) { return 0.6 + 0.8 * ((v || 0) / ((v || 0) + 100)); }
+/*
+  敵の回避。⚠️ こちらの攻撃がそのまま外れる。★で少しずつ上がる（最大8%）。
+  ⚠️ 必殺技と大アルカナは外れない。外れると大当たりが無駄になって腹が立つ。
+  ★ 敵の会心耐性は、敵の運（foeLuck）がこちらの会心率を削る形で既にある。
+*/
+function foeEvadeOf(star) { return Math.min(0.08, 0.005 * Math.max(1, star | 0) + 0.015); }
+/* ⚠️ LUCK_K は別にある（敵の運がこちらの会心を削る式）。名前を分けること */
+const FOE_CRIT_BASE = 0.10, FOE_CRIT_MUL = 1.5, MY_LUCK_K = 110;
+function foeCritRate(luck) { return FOE_CRIT_BASE * (1 - (luck || 0) / ((luck || 0) + MY_LUCK_K)); }
+function revRateOf(luck) { return 0.5 - 0.10 * ((luck || 0) / ((luck || 0) + MY_LUCK_K)); }
+/*
+  【粘り】
+  ★ HPが減るほど、受けるダメージが減る。四段。
+    黄（60%以下）−10% ／ 橙（30%以下）−20% ／ 赤（15%以下）−35%
+  ⚠️⚠️ 帯の色と同じ境目にすること。色が変わった瞬間に効き始めるから、
+    見ているだけで「ここから粘れる」と分かる。数字と色が食い違うと嘘になる。
+  ⚠️ 強くしすぎない。減らしすぎると、わざと削られたほうが得になる。
+*/
+const GRIT_BANDS = [[0.15, 0.35], [0.30, 0.20], [0.60, 0.10]];
+function gritCutOf(hp, maxHP) {
+  const r = (maxHP > 0 ? hp / maxHP : 1);
+  for (const [th, cut] of GRIT_BANDS) if (r <= th) return cut;
+  return 0;
+}
+function hpBandOf(hp, maxHP) {
+  const r = (maxHP > 0 ? hp / maxHP : 1);
+  return r <= 0.15 ? "crit" : r <= 0.30 ? "low" : r <= 0.60 ? "warn" : "ok";
+}
+/*
+  【道中の腐食】
+  ★ 道中の敵は、通常攻撃の一部を腐食（札が腐る）に替えてくる。
+  ⚠️⚠️ 道中は戦いが短く、敵がほとんど「平静」の段のまま終わる。平静の段には
+    腐食がほぼ無いので、道中では滅多に使ってこなかった。
+  ⚠️ ★3以下では使わせない。序盤から札を腐らせると、札を覚える前に嫌になる。
+  ⚠️ 主戦には効かせない（主戦の釣り合いは別に取ってある）。
+*/
+/*
+  【タイプごとの妨害の好み】
+  ★ 妨害の番が来たとき、どの妨害を選ぶかをタイプで偏らせる。
+      轟音（倍率を削る）・腐食（札が腐る）・波動（大アルカナ封じ）・瘴気（回復封じ）・殺気（必殺封じ）
+    例：どくは腐食と瘴気、エスパーは波動、かくとうは殺気、じめんは轟音。
+  ⚠️⚠️ 妨害を使う「回数」は変えないこと。選ぶ「種類」だけを変える。
+    回数まで変えると、タイプごとに強さが割れて★4〜12を測り直すことになる。
+  ⚠️ その★でまだ使えない妨害（★3以下の瘴気など）は選ばない。
+*/
+const DEBUFF_KEYS = ["roar", "rot", "despair", "miasma", "dread"];
+/* ⚠️ 器用にタイプの一覧だけ置く（本体の FOE_ELEMS は絵の近くにあって切り出せない） */
+const FOE_ELEMS_SIM = ["normal", "fire", "water", "electric", "grass", "ice", "fight", "poison",
+  "ground", "fly", "psychic", "bug", "rock", "ghost", "dragon", "dark", "steel", "fairy"];
+/*
+  ⚠️⚠️ 重みを散らすだけにしないこと。どのタイプも似たような顔になり、個性が出なかった。
+  ★ 各タイプに「得意2つ・不得意1つ」を持たせる。得意は重み4、普通は1、不得意は0（使わない）。
+    相手のタイプが分かれば「何を封じられそうか」「何は来ないか」が読める。
+  ⚠️ 得意・不得意がどこかの妨害に偏らないこと。不得意は五種にほぼ均等に散らしてある。
+*/
+const DEBUFF_STYLE = {
+  normal:   { fav: ["roar", "dread"],     weak: "despair" },
+  fire:     { fav: ["miasma", "roar"],    weak: "rot" },
+  water:    { fav: ["rot", "despair"],    weak: "roar" },
+  electric: { fav: ["roar", "dread"],     weak: "miasma" },
+  grass:    { fav: ["miasma", "rot"],     weak: "roar" },
+  ice:      { fav: ["dread", "despair"],  weak: "miasma" },
+  fight:    { fav: ["dread", "roar"],     weak: "despair" },
+  poison:   { fav: ["rot", "miasma"],     weak: "dread" },
+  ground:   { fav: ["roar", "rot"],       weak: "despair" },
+  fly:      { fav: ["roar", "despair"],   weak: "rot" },
+  psychic:  { fav: ["despair", "dread"],  weak: "rot" },
+  bug:      { fav: ["rot", "miasma"],     weak: "despair" },
+  rock:     { fav: ["roar", "dread"],     weak: "miasma" },
+  ghost:    { fav: ["despair", "miasma"], weak: "roar" },
+  dragon:   { fav: ["roar", "dread"],     weak: "rot" },
+  dark:     { fav: ["dread", "despair"],  weak: "roar" },
+  steel:    { fav: ["dread", "rot"],      weak: "miasma" },
+  fairy:    { fav: ["despair", "miasma"], weak: "dread" },
+};
+/*
+  【タイプの性格（強化・構え・回復）】
+  ★ 妨害の得意・不得意に加えて、三つの癖を持たせる。十八タイプすべて違う組み合わせにする。
+      強化 … 看板の強化を一つだけ使う（crit=会心UP / evade=回避UP / critRes=会心耐性UP / def=防御UP / atk=攻撃UP）
+      構え … 得意な構えを一つ（guard=防御 / guardHi=剛防御 / guardEdge=凶刃防御）。null は構えずに殴る
+      回復 … 0=しない / 1=ふつう / 2=よくする（回数も量も増える）
+  ⚠️⚠️ 「その種類の番が来たときに何を選ぶか」だけを変えること。番の回数は変えない。
+    構えない・回復しないタイプは、その番で殴る。
+  ⚠️ 組み合わせが重ならないこと（TYPE_STYLE の一意性は器で確かめてある）。
+*/
+const TYPE_STYLE = {
+  normal:   { buff: "atk",     guard: "guard",     heal: 1 },
+  fire:     { buff: "atk",     guard: null,        heal: 0 },
+  water:    { buff: "def",     guard: "guard",     heal: 2 },
+  electric: { buff: "evade",   guard: null,        heal: 0 },
+  grass:    { buff: "def",     guard: "guardHi",   heal: 2 },
+  ice:      { buff: "critRes", guard: "guardHi",   heal: 0 },
+  fight:    { buff: "atk",     guard: "guardEdge", heal: 0 },
+  poison:   { buff: "evade",   guard: "guardEdge", heal: 1 },
+  ground:   { buff: "def",     guard: "guardHi",   heal: 1 },
+  fly:      { buff: "evade",   guard: null,        heal: 1 },
+  psychic:  { buff: "crit",    guard: "guard",     heal: 1 },
+  bug:      { buff: "evade",   guard: "guard",     heal: 2 },
+  rock:     { buff: "critRes", guard: "guardHi",   heal: 1 },
+  ghost:    { buff: "evade",   guard: null,        heal: 2 },
+  dragon:   { buff: "atk",     guard: "guardHi",   heal: 1 },
+  dark:     { buff: "crit",    guard: "guardEdge", heal: 0 },
+  steel:    { buff: "critRes", guard: "guardEdge", heal: 0 },
+  fairy:    { buff: "def",     guard: "guard",     heal: 2 },
+};
+const BUFF_MOVE_OF = { crit: "sharpen", evade: "blur", critRes: "harden", def: "guardUp", atk: "atkUp" };
+const GUARD_MOVES = ["guard", "guardHi", "guardEdge"];
+/* 手をタイプの性格で置き換える。⚠️ 種類の中だけで入れ替える（強化は強化、構えは構え） */
+function styleMove(move, elem) {
+  const st = TYPE_STYLE[elem];
+  if (!st) return move;
+  if (FOE_MOVES[move] && FOE_MOVES[move].buff) return BUFF_MOVE_OF[st.buff] || move;
+  if (GUARD_MOVES.includes(move)) return st.guard || "hit";
+  return move;
+}
+/* 回復の癖。⚠️ 0 は一度も回復しない。2 は起こりやすく、量も多い */
+function healStyleOf(elem) {
+  const h = (TYPE_STYLE[elem] || {}).heal;
+  return h === 0 ? { p: 0, amt: 0, max: 0 } : h === 2 ? { p: 0.7, amt: 1.4, max: 1 } : { p: 0.5, amt: 1, max: 0 };
+}
+const DEBUFF_BY_ELEM = Object.fromEntries(Object.entries(DEBUFF_STYLE).map(([k, v]) =>
+  [k, DEBUFF_KEYS.map((d) => (v.fav.includes(d) ? 4 : v.weak === d ? 0 : 1))]));
+function debuffPick(elem, star) {
+  const w = (DEBUFF_BY_ELEM[elem] || [1, 1, 1, 1, 1]).slice();
+  /* ⚠️ まだ使えない妨害は外す。瘴気は★4から（miasmaOf が null を返す） */
+  if (!miasmaOf(star)) w[3] = 0;
+  const tot = w.reduce((x, y) => x + y, 0);
+  if (tot <= 0) return "roar";
+  let t = Math.random() * tot;
+  for (let i = 0; i < w.length; i++) { t -= w[i]; if (t <= 0) return DEBUFF_KEYS[i]; }
+  return DEBUFF_KEYS[0];
+}
+function zakoRotRate(star) {
+  const s = star | 0;
+  return s <= 3 ? 0 : s <= 7 ? 0.22 : 0.28;
+}
+/* ⚠️ 敵の一撃の上限（最大HPに対する割合）。ここを触ったら★4〜12と道中を測り直すこと */
+const FOE_HIT_CAP = 0.40;
+/*
+  轟音の削り幅（★ごと）。
+  ⚠️⚠️ ★12の主は、敵を弱くすると「時間さえあれば削り切れる」ので勝率が5%を大きく超え、
+    合わせ込みが敵を強くする側へ倒れて、平均23ターンで即死する形になっていた。
+  ★ 高い★ほど、こちらの削る力そのもの（積んだ倍率）を封じる。
+    封じられて削り負ける ―― 一撃で死ぬのではなく、終盤まで戦える形にする。
+  ⚠️ ★7以下は従来どおり35%。上げると積む楽しみが消える。
+*/
+const ROAR_CUT_BY_STAR = { 8: 0.42, 9: 0.48, 10: 0.54, 11: 0.60, 12: 0.66 };
+function roarCutOf(star) { return ROAR_CUT_BY_STAR[star | 0] || 0.35; }
+function evadeRate(speed, hermitOn) {
+  const base = Math.min(EVADE_MAX, (speed || 0) / ((speed || 0) + EVADE_K));
+  return Math.min(0.42, base + (hermitOn ? 0.12 : 0));
+}
 /*
   会心。
   ★ 器用さで上がり、相手の運で下がる。倍率は1.75。
@@ -6360,16 +7046,21 @@ const FOE_ROTA_BY_TIER = {
       平静の段には置かない ―― 余裕のある相手が守りを固めるのは筋が通らない。
     ★ 一巡に一つまで。攻勢か死力のどちらかに置く。
   */
+  /*
+    ⚠️ 必中（sure）を一巡に一つ入れること。避けられる手ばかりだと、
+      すばやさを振り切った人に何も当たらなくなる。
+    ⚠️ 平静の段には置かない。余裕のある相手が本気の一撃を出すのは筋が通らない。
+  */
   low: {
     calm:  ["hit", "hit", "combo", "hit", "combo"],
-    press: ["hit", "combo", "wind", "heavy", "hit", "guardHi"],
-    last:  ["combo", "wind", "heavy", "hit", "combo", "wind", "heavy"],
+    press: ["hit", "combo", "wind", "heavy", "sure", "guardHi"],
+    last:  ["combo", "wind", "heavy", "sure", "combo", "wind", "heavy"],
   },
   /* ★4〜6。⚠️ 轟音はおよそ4回に1回。続けて出すと機械に見える */
   mid: {
-    calm:  ["hit", "rot", "roar", "hit"],
-    press: ["hit", "combo", "wind", "heavy", "roar", "dread", "guardEdge", "combo"],
-    last:  ["combo", "wind", "heavy", "roar", "rot", "miasma", "wind", "heavy"],
+    calm:  ["hit", "hit", "rot", "hit", "sharpen", "roar"],
+    press: ["hit", "combo", "hit", "wind", "heavy", "atkUp", "roar", "dread", "hit", "combo"],
+    last:  ["sure", "hit", "combo", "wind", "heavy", "guardUp", "roar", "rot", "miasma", "hit"],
   },
   /*
     ★7〜8。
@@ -6383,16 +7074,25 @@ const FOE_ROTA_BY_TIER = {
       殴るか妨害するかしかせず、守る素振りを見せない。
     ⚠️ 段階ごとに違う構えを置く。同じ構えばかりだと三段に分けた意味が消える。
   */
+  /*
+    ⚠️⚠️ ★8〜12は、殴る手より妨害を厚くすること。
+      殴る手が多いと、勝率を5%に合わせたとき一撃が重くなり、
+      ★12では平均19ターンで即死していた（押し切るか、すぐ死ぬか）。
+    ★ 轟音（倍率を削る）・腐食（札を腐らせる）・波動（大アルカナ封じ）・
+      瘴気（回復を削る）・殺気（必殺封じ）で手を封じ、攻撃は控えめにする。
+      負けるなら、封じられて削り負ける ―― 終盤まで戦える形にする。
+    ⚠️ 大技（wind→heavy）は各段に一組だけ残す。予告のある一撃は駆け引きになる。
+  */
   high: {
-    calm:  ["hit", "roar", "combo", "despair"],
+    calm:  ["hit", "roar", "hit", "guardUp", "miasma", "hit", "sharpen"],
     /*
       ⚠️⚠️ 攻勢の段に轟音を入れ忘れないこと。
         戦いの大半はこの段（HP33〜66%）なので、抜けていると
         一戦を通して一度も轟音を見ないまま終わる（実際そうなっていた）。
       ⚠️ 八手のうち一つ。増やすと殴らない手が多くなりすぎる。
     */
-    press: ["combo", "wind", "heavy", "roar", "dread", "despair", "wind", "heavy"],
-    last:  ["wind", "heavy", "dread", "miasma", "wind", "heavy", "despair", "combo"],
+    press: ["hit", "roar", "dread", "hit", "atkUp", "despair", "rot", "wind", "heavy", "hit", "blur"],
+    last:  ["sure", "hit", "harden", "roar", "dread", "miasma", "wind", "heavy", "atkUp", "hit"],
   },
 };
 /* ⚠️ ★12まである。帯の境目も伸ばすこと */
@@ -6444,6 +7144,29 @@ const FOE_MOVES = {
   /* 溜め。⚠️ 殴らない一手を挟む。ここで身構えられることが「読める」ということ */
   wind:  { mul: 0, hits: 0, wind: true },
   heavy: { mul: 1.5, hits: 1, spread: 0.22 },
+  /*
+    必中。
+    ⚠️⚠️ 避けられる手ばかりにしないこと。すばやさを振り切った人に
+      何も当たらなくなる。
+    ★ 予告のない、確実に入る一撃。そのぶん威力は控えめ。
+  */
+  sure: { mul: 1.1, hits: 1, spread: 0.12, sure: true },
+  /*
+    敵の強化。
+    ⚠️⚠️ 殴る手と構える手だけだと、戦いの途中で状況が変わらず単調になる
+      （★6で「あっけない」と感じた）。敵が自分を研ぎ澄ます手を足す。
+    ★ 三種。どれも3ターンで切れる。その手番は殴らない（研ぐ間が隙になる）。
+      研ぐ   … 敵の会心率が上がる
+      霞む   … 敵の回避が上がる（こちらの攻撃が外れやすい）
+      鎧う   … こちらの会心が出にくくなる
+    ⚠️ 敵の頭上に札を出すこと。見えない強化は理不尽に感じる。
+  */
+  sharpen: { mul: 0, hits: 0, buff: "crit", amt: 0.15, turns: 3 },
+  blur: { mul: 0, hits: 0, buff: "evade", amt: 0.10, turns: 3 },
+  harden: { mul: 0, hits: 0, buff: "critRes", amt: 0.60, turns: 3 },
+  /* 防御UP … こちらの与ダメージが下がる ／ 攻撃UP … 敵の一撃が上がる */
+  guardUp: { mul: 0, hits: 0, buff: "def", amt: 0.25, turns: 3 },
+  atkUp: { mul: 0, hits: 0, buff: "atk", amt: 0.30, turns: 3 },
   /*
     構えの三段。
     ⚠️⚠️ どれも殴ってこない手なので、出しすぎると戦いが停滞する。
@@ -6510,8 +7233,15 @@ const FOE_MOVES = {
   */
   dread: { mul: 0, hits: 0, dread: 2 },
   miasma1: { mul: 0, hits: 0, miasma: 0.25, turns: 3 },
-  miasma2: { mul: 0, hits: 0, miasma: 0.50, turns: 3 },
-  miasma3: { mul: 0, hits: 0, miasma: 1.00, turns: 2 },
+  /*
+    ⚠️⚠️ ★8〜12の瘴気は長く効かせること。★12では回復が1ターンに最大HPの7%あり、
+      敵はそれを上回るために攻撃力を上げるしかなく、一撃が重くなって即死していた。
+    ★ 回復を封じる時間を長くして、攻撃力を下げられるようにする。
+      封じられて削り負ける ―― デバフで押し込む形。
+    ⚠️ 節制・星・貨幣指定で防げる（warded）。長くしても対抗手段は残してある。
+  */
+  miasma2: { mul: 0, hits: 0, miasma: 0.50, turns: 4 },
+  miasma3: { mul: 0, hits: 0, miasma: 1.00, turns: 5 },
 };
 function foePhaseOf(ratio) {
   return ratio > FOE_PHASE.calm ? "calm" : ratio > FOE_PHASE.press ? "press" : "last";
@@ -6528,13 +7258,19 @@ function foeNextMove(ratio, i, star) {
   return rota[i % rota.length];
 }
 /** 一回ぶんのダメージ列。⚠️ 溜めと防御は空を返す */
-function foeDamages(move, atk, ratio, star) {
+function foeDamages(move, atk, ratio, star, kind) {
   const m = FOE_MOVES[move];
   if (!m || !m.hits) return [];
   const p = FOE_PHASE_MUL_BY_TIER[foeTierOf(star || 1)][foePhaseOf(ratio)] || 1;
   const out = [];
+  /*
+    ⚠️⚠️ 振れ幅は敵の型で決める。手ごとの spread より優先すること。
+      手で分けると13種すべてに型を決める必要があり、増やすたびに破綻する。
+    ★ 物理は±35%で大きく振れ、魔法は±10%で読める。
+  */
+  const sw = kind ? FOE_SWING[kind] : (m.spread || 0);
   for (let k = 0; k < m.hits; k++) {
-    const r = 1 + (Math.random() * 2 - 1) * (m.spread || 0);
+    const r = 1 + (Math.random() * 2 - 1) * sw;
     out.push(Math.max(1, Math.round(atk * m.mul * p * r)));
   }
   return out;
@@ -6644,6 +7380,400 @@ const hexDist = (q, r) => (Math.abs(q) + Math.abs(q + r) + Math.abs(r)) / 2;
   ⚠️ mapNo（1〜8）を渡すこと。局所MAPの何番目かで、道中の重さを変える。
     渡さなければ4番（真ん中）として扱う。
 */
+/*
+  【名産品】
+  ★ 旅先で「買ってみたい」と思えるように、食べ物を多めにする（1県4〜6品、過半が食）。
+  ★ 一行の説明は「いつ・どう食べるとうまいか」。棚を見たときに旅の気分を作る。
+  ⚠️⚠️ 企業の商品名を入れないこと。一般名に限る（讃岐うどん・南部鉄器など）。
+  ⚠️ 正しさは Aki の確認が要る。いまは試作の4県だけ。
+    データの無い県ではお店マスを置かない（空の店は出さない）。
+  ⚠️ 絵は分類（kind）ごと。品ごとに描くと「それらしいが伝わらない」ものが量産される。
+    品ごとの本物の絵は img に後から差し込めるようにしてある。
+*/
+const MEIBUTSU = {
+  hokkaido: [
+    { id: "hk_jingisukan", name: "ジンギスカン", kind: "meat", line: "鉄鍋の縁に野菜を並べ、脂を落としながら" },
+    { id: "hk_kaisendon", name: "海鮮丼", kind: "sea", line: "朝の市場で、その日揚がったものを" },
+    { id: "hk_soupcurry", name: "スープカレー", kind: "pot", line: "大ぶりの野菜ごと、さらさらのルーで" },
+    { id: "hk_melon", name: "夕張メロン", kind: "fruit", line: "夏の盛り、冷やして半分に割って" },
+    { id: "hk_kuma", name: "木彫りの熊", kind: "craft", line: "旅の土産の定番、玄関の守りに" },
+  ],
+  kyoto: [
+    { id: "ky_yudofu", name: "湯豆腐", kind: "pot", line: "冬の寺町で、昆布だしにくぐらせて" },
+    { id: "ky_senmaizuke", name: "千枚漬け", kind: "pickle", line: "薄く切った聖護院かぶを、冬の白いご飯に" },
+    { id: "ky_matcha", name: "抹茶", kind: "tea", line: "点てたての泡とともに、干菓子を添えて" },
+    { id: "ky_yatsuhashi", name: "八ツ橋", kind: "sweet", line: "ニッキの香り、焼いたものと生の両方を" },
+    { id: "ky_kiyomizu", name: "清水焼", kind: "craft", line: "坂道の窯元で、手に馴染む湯のみを" },
+  ],
+  kagawa: [
+    { id: "kg_udon", name: "讃岐うどん", kind: "noodle", line: "朝、立ち食いの店で一杯目を" },
+    { id: "kg_honetsukidori", name: "骨付鳥", kind: "meat", line: "にんにくの効いた親鳥を、手で割いて" },
+    { id: "kg_wasanbon", name: "和三盆", kind: "sweet", line: "口に入れた瞬間ほどける、上品な甘さ" },
+    { id: "kg_olive", name: "小豆島のオリーブ", kind: "fruit", line: "秋の収穫どき、新漬けを" },
+    { id: "kg_uchiwa", name: "丸亀うちわ", kind: "craft", line: "夏の縁側で、風をひとつ" },
+  ],
+  fukuoka: [
+    { id: "fk_ramen", name: "博多ラーメン", kind: "noodle", line: "屋台で、替え玉を頼むまでが一杯" },
+    { id: "fk_motsunabe", name: "もつ鍋", kind: "pot", line: "にらを山盛りに、締めはちゃんぽん麺で" },
+    { id: "fk_mentaiko", name: "明太子", kind: "sea", line: "炊きたてのご飯に、ひと腹そのまま" },
+    { id: "fk_mizutaki", name: "水炊き", kind: "pot", line: "白く濁った鶏のスープを、まず一口" },
+    { id: "fk_hakataori", name: "博多織", kind: "craft", line: "締めるたびに鳴る、献上柄の帯" },
+  ],
+};
+const LS_MEIBUTSU = "tarot_meibutsu";
+function loadMeibutsu() {
+  try {
+    const v = JSON.parse(localStorage.getItem(LS_MEIBUTSU) || "{}");
+    return (v && typeof v === "object") ? v : {};
+  } catch { return {}; }
+}
+function saveMeibutsu(v) {
+  try { localStorage.setItem(LS_MEIBUTSU, JSON.stringify(v || {})); } catch (e) { /* 残せなくても遊べる */ }
+}
+/*
+  お店で一枚もらう。
+  ★ その県の品から等しく一つ。被ってよい（数が増える）。
+  ⚠️ 被りを捨てないこと。数は残しておく ―― 後で「遠方の品が欲しい人」に
+    渡す依頼を足すとき、そのまま在庫になる。
+*/
+/*
+  出やすさ。
+  ★ 県ごとに階段状にする。並びの先頭がいちばん出やすく、末尾がいちばん稀。
+    五品なら 5:4:3:2:1（33% / 27% / 20% / 13% / 7%）。
+  ⚠️ 並べ順が確率になる。稀にしたい品（その県の「目玉」）を末尾に置くこと。
+  ⚠️ 品数が違っても同じ規則で段を作る。県ごとに表を持たない。
+*/
+function meiWeights(n) { return Array.from({ length: n }, (_, i) => n - i); }
+function meiOdds(pref) {
+  const list = MEIBUTSU[pref] || [];
+  const w = meiWeights(list.length);
+  const tot = w.reduce((x, y) => x + y, 0) || 1;
+  return w.map((x) => x / tot);
+}
+function drawMeibutsu(pref) {
+  const list = MEIBUTSU[pref];
+  if (!list || !list.length) return null;
+  const w = meiWeights(list.length);
+  let t = Math.random() * w.reduce((x, y) => x + y, 0);
+  let idx = list.length - 1;
+  for (let i = 0; i < list.length; i++) { t -= w[i]; if (t <= 0) { idx = i; break; } }
+  const it = list[idx];
+  const have = loadMeibutsu();
+  const n = (have[it.id] || 0) + 1;
+  saveMeibutsu({ ...have, [it.id]: n });
+  return { ...it, pref, count: n, fresh: n === 1 };
+}
+/*
+  名産品の絵（分類ごと）。
+  ⚠️⚠️ 品ごとに描かないこと。235枚をSVGで描くと「それらしいが伝わらない」ものが並ぶ。
+  ★ 分類で描き、品の違いは名前と一行で出す。同じ手で描くので調子が揃う。
+  ⚠️ 輪郭は太め・塗りは二段まで。小さく並べたときに潰れない。
+*/
+function MeiArt({ kind }) {
+  const W = "#FFF3D6", S = "rgba(20,12,30,0.55)";
+  switch (kind) {
+    /* 麺 … どんぶりと箸、湯気 */
+    case "noodle": return (
+      <g>
+        <path d="M8 26 H40 C40 36 33 42 24 42 C15 42 8 36 8 26 Z" fill="#C0364E" />
+        <path d="M8 26 H40 C40 29 33 31 24 31 C15 31 8 29 8 26 Z" fill="#F2E3C0" />
+        <path d="M14 27 C18 29 22 26 26 28 C30 30 33 27 36 28" stroke="#E8C46A" strokeWidth="1.4" fill="none" />
+        <path d="M30 8 L38 24 M34 7 L41 22" stroke="#8A5A2E" strokeWidth="1.6" strokeLinecap="round" />
+        <path d="M17 20 C15 16 19 14 17 10 M23 19 C21 15 25 13 23 9" stroke={W} strokeWidth="1.1" opacity="0.6" fill="none" />
+      </g>
+    );
+    /* 鍋 … 土鍋と蓋 */
+    case "pot": return (
+      <g>
+        <path d="M7 24 H41 L38 38 C36 41 12 41 10 38 Z" fill="#6A4A34" />
+        <path d="M7 24 H41 L40 28 H8 Z" fill="#8A6246" />
+        <path d="M10 24 C12 14 36 14 38 24 Z" fill="#A87A56" />
+        <circle cx="24" cy="15" r="2.6" fill="#E8C46A" />
+        <path d="M18 11 C16 7 20 6 18 2 M29 11 C27 7 31 6 29 2" stroke={W} strokeWidth="1.1" opacity="0.55" fill="none" />
+      </g>
+    );
+    /* 海鮮 … 魚 */
+    case "sea": return (
+      <g>
+        <path d="M8 24 C14 14 30 14 36 24 C30 34 14 34 8 24 Z" fill="#4FA3D8" />
+        <path d="M8 24 C14 18 30 18 36 24 C30 22 14 22 8 24 Z" fill="#8FD0F0" />
+        <path d="M36 24 L44 17 L43 24 L44 31 Z" fill="#3A86B8" />
+        <circle cx="15" cy="22" r="1.8" fill={S} />
+        <path d="M22 18 C24 22 24 26 22 30" stroke="#2E6E98" strokeWidth="1" fill="none" />
+      </g>
+    );
+    /* 肉 … 骨付き肉 */
+    case "meat": return (
+      <g>
+        <path d="M14 30 C8 24 12 12 22 12 C32 12 38 20 34 28 C31 34 20 36 14 30 Z" fill="#B8563A" />
+        <path d="M16 26 C14 20 18 15 24 15 C29 15 31 19 29 23" fill="#D8784E" />
+        <path d="M32 30 L41 39" stroke="#F2E3C0" strokeWidth="3.4" strokeLinecap="round" />
+        <circle cx="42" cy="37" r="2.4" fill="#F2E3C0" /><circle cx="39" cy="41" r="2.4" fill="#F2E3C0" />
+      </g>
+    );
+    /* 甘味 … 和菓子と皿 */
+    case "sweet": return (
+      <g>
+        <ellipse cx="24" cy="36" rx="17" ry="4" fill="#7FA890" />
+        <path d="M12 33 C12 22 36 22 36 33 Z" fill="#F2B8C8" />
+        <path d="M14 31 C16 25 32 25 34 31" fill="#FBE0E8" />
+        <circle cx="24" cy="24" r="2.2" fill="#8FCF7A" />
+      </g>
+    );
+    /* 果物 … 丸い実と葉 */
+    case "fruit": return (
+      <g>
+        <circle cx="24" cy="28" r="12" fill="#8FC24A" />
+        <circle cx="20" cy="24" r="4" fill="#C8E88A" opacity="0.7" />
+        <path d="M24 16 L25 10" stroke="#6A4A34" strokeWidth="1.6" strokeLinecap="round" />
+        <path d="M25 12 C30 8 35 10 34 14 C30 15 27 14 25 12 Z" fill="#4FA860" />
+        <path d="M14 26 C18 30 18 34 16 38 M34 26 C30 30 30 34 32 38" stroke="#6E9A34" strokeWidth="0.9" fill="none" opacity="0.7" />
+      </g>
+    );
+    /* 茶 … 茶碗と泡 */
+    case "tea": return (
+      <g>
+        <path d="M9 22 H39 C39 34 32 40 24 40 C16 40 9 34 9 22 Z" fill="#3A2A22" />
+        <ellipse cx="24" cy="22" rx="15" ry="4" fill="#7BAA3E" />
+        <ellipse cx="24" cy="22" rx="10" ry="2.4" fill="#A8D06A" />
+        <path d="M18 40 H30 L28 43 H20 Z" fill="#2A1E18" />
+      </g>
+    );
+    /* 漬物 … 小鉢と薄切り */
+    case "pickle": return (
+      <g>
+        <path d="M9 28 H39 C39 36 33 40 24 40 C15 40 9 36 9 28 Z" fill="#2E4A6E" />
+        <ellipse cx="18" cy="26" rx="7" ry="3" fill="#F4F0E4" />
+        <ellipse cx="27" cy="25" rx="7" ry="3" fill="#EDE8D6" />
+        <ellipse cx="33" cy="27" rx="5" ry="2.4" fill="#F4F0E4" />
+        <path d="M11 25 L16 21 M36 23 L40 19" stroke="#6FA84E" strokeWidth="1.6" strokeLinecap="round" />
+      </g>
+    );
+    /* 工芸 … 器と模様 */
+    default: return (
+      <g>
+        <path d="M13 12 H35 L32 38 C31 41 17 41 16 38 Z" fill="#5A6E9A" />
+        <path d="M13 12 H35 L34.5 16 H13.5 Z" fill="#8FA4CC" />
+        <path d="M16 24 C20 20 28 28 32 24" stroke="#E8C46A" strokeWidth="1.4" fill="none" />
+        <circle cx="24" cy="31" r="2" fill="#E8C46A" />
+      </g>
+    );
+  }
+}
+/*
+  名産品のカード。
+  ⚠️ 大きさは二つだけ（盤の上の大きな札、収集帳の小さな札）。途中の大きさを作らない。
+  ⚠️ 県名を必ず出す。どこの名物か分からないと宣伝にならない。
+*/
+function MeiCard({ it, pref, lang, big, count }) {
+  const a = advT(lang);
+  return (
+    <div className={`mei-card${big ? " big" : ""}${count ? "" : " none"}`}>
+      <svg viewBox="0 0 48 48" className="mei-art" aria-hidden="true">
+        {count ? <MeiArt kind={it.kind} /> : (
+          <text x="24" y="31" textAnchor="middle" fontSize="20" fill="rgba(255,243,214,0.25)">？</text>
+        )}
+      </svg>
+      <b className="mei-name">{count ? it.name : "？？？"}</b>
+      <span className="mei-pref">{a.pref[pref] || pref}</span>
+      {count ? <i className="mei-line">{it.line}</i> : null}
+      {count > 1 && <u className="mei-n">×{count}</u>}
+    </div>
+  );
+}
+/*
+  【名所の主役】小MAPの名前そのものがモニュメントなら、盤の中央に主役として据える。
+  ★ 型（テンプレート）で広く当てる。名前の言葉で型を決める（城・寺・神社・大仏…）。
+  ⚠️ 並び順が優先順位。「〇〇城跡公園」は公園ではなく城、「〇〇寺の滝」は滝より寺…ではなく、
+    より目立つ方を先に置く（大仏 → 五重塔 → 城 → 滝 → …）。
+  ⚠️ 当てはまらない名前は主役なし（いつもの放射型の盤のまま）。
+*/
+const HERO_RULES = [
+  ["daibutsu", /大仏|観音|大観音/],
+  ["pagoda", /五重塔|三重塔|塔(?!のへつり)/],
+  ["castle", /城(?!山)|城跡|城址|五稜郭/],
+  ["amuse", /ランド|遊園|テーマパーク|フラワーパーク/],
+  ["falls", /滝(?!桜)/],
+  ["dam", /ダム/],
+  ["bridge", /橋(?!野)/],
+  ["tower", /タワー|通天閣/],
+  ["lighthouse", /灯台|岬/],
+  ["onsen", /温泉|湯/],
+  ["shrine", /神社|大社|神宮|稲荷|八幡|宮$/],
+  ["temple", /寺|院$/],
+];
+function heroOf(name) {
+  const n = String(name || "");
+  for (const [k, re] of HERO_RULES) if (re.test(n)) return k;
+  return null;
+}
+/*
+  【合流型の盤】名所の主役がある小MAPだけ。
+  ★ 入口は外周の片側。道はいくつにも分かれ、中央へ向かって合流し、中央の主（名所の足元）に着く。
+    どの道を選んでも、最後は名所に辿り着く。歩くあいだ中央の名所がずっと見えている。
+  ⚠️⚠️ いつもの盤（buildTownMap）の約束事を引き継ぐこと。
+    ・一手目に外れ（袋小路）を置かない ・主の手前は必ず分かれ道 ・袋小路は隣り合わせない
+    ・途中で一度は合流する ・入口から辿り着けない節は落とす
+  ⚠️ 環の代わりに「入口からの段」で数える（段0が入口、最後の段が主）。
+*/
+function buildConvergeMap(pref, area, seed, mapNo) {
+  let s = (seed || 1) * 7 + 3;
+  const rnd = () => (s = (s * 1103515245 + 12345) & 0x7fffffff) / 0x7fffffff;
+  const R = MAP_RINGS - 1;
+  const d0 = HEX_DIRS[Math.floor(rnd() * 6)];
+  const S = { q: d0[0] * R, r: d0[1] * R };
+  const dist = (a, b) => hexDist(a.q - b.q, a.r - b.r);
+  const at = {};
+  let nodes = [];
+  const add = (q, r, kind) => {
+    const n = { key: `h${q}_${r}`, q, r, kind, name: "", next: [] };
+    nodes.push(n); at[`${q},${r}`] = n; return n;
+  };
+  /* 入口と主のあいだの帯。⚠️ 帯を広げすぎると盤が散り、狭すぎると一本道になる */
+  const inBand = (q, r) => hexDist(q, r) <= MAP_RINGS - 1
+    && dist({ q, r }, S) + hexDist(q, r) <= R + 6;
+  add(S.q, S.r, "start");
+  let prev = [at[`${S.q},${S.r}`]];
+  for (let k = 1; k < R; k++) {
+    const cand = {};
+    prev.forEach((p) => HEX_DIRS.forEach(([dq, dr]) => {
+      const q = p.q + dq, r = p.r + dr;
+      if (at[`${q},${r}`] || !inBand(q, r)) return;
+      if (dist({ q, r }, S) !== k) return;
+      /* ⚠️ 中央へ近づく向きだけ（戻れる道を作らない） */
+      if (hexDist(q, r) > hexDist(p.q, p.r)) return;
+      (cand[`${q},${r}`] = cand[`${q},${r}`] || { q, r, from: [] }).from.push(p);
+    }));
+    const keys = Object.keys(cand);
+    if (!keys.length) break;
+    /* 段の太さ。⚠️ 入口のそばは細く、中ほどを太く、主の手前でまた絞る（菱形） */
+    const want = k === 1 ? 1 : Math.max(2, Math.round(3.2 * Math.min(k, R - k + 1)));
+    const picked = [];
+    /*
+      ⚠️⚠️ 各段で、いちばん中央寄りのマスを必ず一つ選ぶこと。
+        選ばないと、道が帯の外側を回って中央まで届かず、主に着けない盤になる（四割そうなった）。
+    */
+    keys.sort((a, b) => hexDist(cand[a].q, cand[a].r) - hexDist(cand[b].q, cand[b].r));
+    picked.push(keys.shift());
+    while (keys.length && picked.length < want) picked.push(keys.splice(Math.floor(rnd() * keys.length), 1)[0]);
+    if (k >= 3 && !picked.some((key) => cand[key].from.length >= 2)) {
+      const j = keys.findIndex((key) => cand[key].from.length >= 2);
+      if (j >= 0) picked[picked.length - 1] = keys.splice(j, 1)[0];
+    }
+    const ring = picked.map((key) => {
+      const c = cand[key];
+      const n = add(c.q, c.r, "road");
+      c.from.forEach((p) => { if (rnd() < 0.8 || !n.next.length) p.next.push(n.key); });
+      if (!c.from.some((p) => p.next.includes(n.key))) c.from[0].next.push(n.key);
+      return n;
+    });
+    prev = ring;
+  }
+  /*
+    合流を増やす。⚠️ 隣り合う二つの節が、同じ次の節へつながる形を作る。
+      合流が少ないと、分かれたきり戻れない木になり、外れを引いた瞬間に終わる。
+  */
+  nodes.forEach((n) => {
+    if (n.kind === "start" || dist(n, S) < 2) return;
+    HEX_DIRS.forEach(([dq, dr]) => {
+      const m = at[`${n.q + dq},${n.r + dr}`];
+      if (!m || m === n || m.kind === "start") return;
+      if (dist(m, S) !== dist(n, S) + 1 || hexDist(m.q, m.r) > hexDist(n.q, n.r)) return;
+      if (!n.next.includes(m.key) && rnd() < 0.55) n.next.push(m.key);
+    });
+  });
+  /* 主は中央。⚠️ 最後の段から中央へ二本以上つなぐ（一本道で主に着くと重みが消える） */
+  const boss = add(0, 0, "boss");
+  const near = nodes.filter((n) => n.kind !== "boss" && hexDist(n.q, n.r) === 1);
+  near.forEach((n) => n.next.push(boss.key));
+  let guard = 0;
+  while (nodes.filter((n) => (n.next || []).includes(boss.key)).length < 2 && guard++ < 20) {
+    const [dq, dr] = HEX_DIRS[Math.floor(rnd() * 6)];
+    if (at[`${dq},${dr}`]) { if (!at[`${dq},${dr}`].next.includes(boss.key)) at[`${dq},${dr}`].next.push(boss.key); continue; }
+    const gp = nodes.find((m) => m.kind !== "boss" && hexDist(m.q, m.r) === 2 && hexDist(dq - m.q, dr - m.r) === 1);
+    if (!gp) continue;
+    const p = add(dq, dr, "road"); gp.next.push(p.key); p.next.push(boss.key);
+  }
+  /* 主へ届かない枝は、一マスの袋小路に切り詰める */
+  const toBoss = new Set([boss.key]);
+  for (let pass = 0; pass < R + 4; pass++) {
+    nodes.forEach((n) => { if ((n.next || []).some((k2) => toBoss.has(k2))) toBoss.add(n.key); });
+  }
+  const leaf = new Set();
+  nodes.forEach((n) => { if (toBoss.has(n.key)) (n.next || []).forEach((k2) => { if (!toBoss.has(k2)) leaf.add(k2); }); });
+  nodes.forEach((n) => {
+    if (toBoss.has(n.key)) return;
+    n.next = [];
+    if (!leaf.has(n.key) || dist(n, S) < 2) { n.drop = true; return; }
+    n.term = true;
+  });
+  nodes = nodes.filter((n) => !n.drop);
+  nodes.forEach((n) => { n.next = (n.next || []).filter((k2) => nodes.some((m) => m.key === k2)); });
+  /* 袋小路を足す。⚠️ 段0〜1には付けない（出発してすぐ外れる道を作らない） */
+  nodes.slice().forEach((n) => {
+    if (n.kind === "boss" || n.term || dist(n, S) < 2) return;
+    /* ⚠️ 合流型は道が少ないぶん、袋小路を控えめに（多いと主に着く率が半分に落ちた） */
+    if (rnd() >= 0.3) return;
+    for (let g2 = 0; g2 < 10; g2++) {
+      const [dq, dr] = HEX_DIRS[Math.floor(rnd() * 6)];
+      const q = n.q + dq, r = n.r + dr;
+      if (at[`${q},${r}`] || hexDist(q, r) > MAP_RINGS - 1 || hexDist(q, r) === 0) continue;
+      const t = add(q, r, "road"); t.term = true; n.next.push(t.key); break;
+    }
+  });
+  /* 袋小路どうしを隣り合わせない */
+  const keep = [];
+  nodes.filter((n) => n.kind !== "boss" && !(n.next || []).length).forEach((t) => {
+    if (keep.some((u) => dist(t, u) === 1)) { t.cull = true; return; }
+    keep.push(t);
+  });
+  nodes = nodes.filter((n) => !n.cull);
+  nodes.forEach((n) => { n.next = (n.next || []).filter((k2) => nodes.some((m) => m.key === k2)); });
+  nodes.forEach((n) => {
+    if (n.kind === "boss" || (n.next || []).length) return;
+    n.term = true; n.kind = rnd() < 0.45 ? "box" : "spot";
+  });
+  nodes.forEach((n) => { if (n.term) n.next = []; });
+  /* 関所・お店・道中（いつもの盤と同じ割合。環の代わりに入口からの段で数える） */
+  const mids = nodes.filter((n) => !n.term && n.kind === "road" && dist(n, S) === 2);
+  if (mids.length) mids[Math.floor(rnd() * mids.length)].kind = "gate";
+  if (MEIBUTSU[pref] && MEIBUTSU[pref].length) {
+    const roads = nodes.filter((n) => !n.term && n.kind === "road" && dist(n, S) >= 1 && dist(n, S) <= 3);
+    if (roads.length) roads[Math.floor(rnd() * roads.length)].kind = "shop";
+  }
+  const walk = nodes.filter((n) => !n.term && n.kind === "road" && dist(n, S) >= 2);
+  const no = Math.max(1, Math.min(8, mapNo || 4));
+  const t = (no - 1) / 7;
+  let zakoN = Math.round(walk.length * (0.16 + 0.28 * t));
+  let healN = Math.round(walk.length * (0.18 - 0.10 * t));
+  let trapN = Math.round(walk.length * (0.06 + 0.08 * t));
+  walk.slice().sort(() => rnd() - 0.5).forEach((n, k) => {
+    const c = k % 10;
+    if ((c < 3 || c === 5) && zakoN > 0) { n.kind = "zako"; zakoN--; }
+    else if ((c === 3 || c === 7) && healN > 0) { n.kind = "heal"; healN--; }
+    else if (c === 4 && trapN > 0) { n.kind = "trap"; trapN--; }
+  });
+  if (rnd() < 0.5) {
+    const plain = nodes.filter((n) => !n.term && n.kind === "road" && (n.next || []).includes(boss.key));
+    if (plain.length) plain[Math.floor(rnd() * plain.length)].kind = "heal";
+  }
+  /* 入口から辿り着けない節を落とす。⚠️ 入口を配列の先頭に置く（呼び出し側が map[0] を入口とみなす） */
+  const startKey = `h${S.q}_${S.r}`;
+  const live = new Set([startKey]);
+  const queue = [startKey];
+  while (queue.length) {
+    const key = queue.shift();
+    const n = nodes.find((m) => m.key === key);
+    if (!n) continue;
+    (n.next || []).forEach((k2) => { if (!live.has(k2)) { live.add(k2); queue.push(k2); } });
+  }
+  if (!live.has(boss.key)) return null;
+  const kept = nodes.filter((n) => live.has(n.key));
+  kept.forEach((n) => { n.next = (n.next || []).filter((k2) => live.has(k2)); });
+  kept.sort((a, b) => (a.key === startKey ? -1 : b.key === startKey ? 1 : 0));
+  kept.converge = true;
+  return kept;
+}
 function buildTownMap(pref, area, seed, mapNo) {
   /*
     ⚠️ 区分を渡すこと。県ごとにまとめて引くと、
@@ -6983,6 +8113,17 @@ function buildTownMap(pref, area, seed, mapNo) {
   const mids = nodes.filter((n) => !n.term && n.kind === "road" && hexDist(n.q, n.r) === 2);
   if (mids.length) mids[Math.floor(rnd() * mids.length)].kind = "gate";
   /*
+    お店。
+    ★ 道の途中に一つ。止まると、その土地の名産品が一枚もらえる。
+    ⚠️ 袋小路に置かないこと。寄り道の判断（宝箱か、行き止まりか）と混ざる。
+    ⚠️ 名産品の無い県には置かない。空の店は出さない。
+  */
+  if (MEIBUTSU[pref] && MEIBUTSU[pref].length) {
+    const roads = nodes.filter((n) => !n.term && n.kind === "road"
+      && hexDist(n.q, n.r) >= 1 && hexDist(n.q, n.r) <= 3);
+    if (roads.length) roads[Math.floor(rnd() * roads.length)].kind = "shop";
+  }
+  /*
     道中の雑魚と回復。
     ★ ただの道が続くと、主に着くまで何も起きない。途中に山と谷を置く。
       雑魚 … 短い戦い（★の半分・10ターン前後）。HPは主まで持ち越す
@@ -7270,6 +8411,82 @@ const ADV_I18N = {
   ja: {
     pick: "行き先", back: "選び直す",
     pickStart: "旅の始まり", restart: "旅をやり直す", toMap: "地図へ戻る",
+    equipTitle: "装備", equipNone: "まだ何も持っていない", close: "閉じる",
+    eqPocket: { amp: "増幅", atk: "攻め", def: "守り", aid: "導き", use: "消耗品" },
+    eqSlots: "装備スロット", eqEmpty: "空き",
+    /* ⚠️ 外し方を書く。付け方だけ書いて外し方が無いと詰まる */
+    eqHowOff: "スロットを押すと外せます", eqOn: "装備中",
+    /* ⚠️ 置き方を一行で。タップ・長押し・二度押しの三つだけ */
+    eqHow: "タップで装着／長押しで枠へ運ぶ／枠を二度押しで外す",
+    optMain: "メインオプション：", optSub: "サブオプション：", optNone: "なし",
+    optMainS: "メイン：", optSubS: "サブ：", eqShortLabel: "端的な表示に切り替え",
+    stashTitle: "倉庫", handTitle: "手持", toStash: "倉庫へ", toHand: "手持へ",
+    stashNote: "保留の置き場。消えません。使うときは手持へ移すと装備できます",
+    handNote: "主に使う装備。装備できるのはここにある物だけです",
+    trash: "捨てる", trashAsk: "本当に破棄してよろしいですか？", trashYes: "破棄する", cancel: "やめる",
+    useDesc: { lastHP: "倒れるときに一度だけHPが1残る", meal: "押すとHPが回復する",
+      cure: "押すと瘴気（回復封じ）を消す", whet: "押すとそのターンの与ダメージが上がる" },
+    boxTitle: "宝箱", boxNone: "開けたものはまだ無い", boxKeep: "残す",
+    boxSealed: "未開封", boxOpened: "開けたもの",
+    boxNoChest: "まだ拾っていない",
+    boxSealedNote: "段の数だけ引いて、いちばん良いものが出ます（★12なら12回）",
+    boxDraw: (i, n) => `${i} / ${n} 回`,
+    skillTitle: "技",
+    skPt: (l, all) => `このシートに ${l} 点（得た ${all}）`,
+    skTrunk: { swords: "剣", wands: "棒", cups: "聖杯", pentacles: "貨幣",
+      major: "大アルカナ", body: "身体", ward: "守り", luck: "運" },
+    skCards: "カードの枠 +1",
+    skSlot: "装備の枠 +1",
+    skWard: (nm, n) => `${nm} +${n}%`,
+    skLuck: { box: "宝箱の出やすさ", eye: "宝箱を引く回数", reach: "主への到達率" },
+    suit: { swords: "剣", wands: "棒", cups: "聖杯", pentacles: "貨幣" },
+    skFlash: (su, n) => `${su}の必殺・${n}枚`,
+    skPower: (su, n) => `${su}の威力 +${n}%`,
+    skStat: (nm) => `${nm}の伸び`,
+    skMajor: (nm) => `${nm}を完成させる`,
+    skBlast: (n) => `エレメンタルブラストの段 ${n}`,
+    skDance: (n) => `秘剣・剣の舞の段 ${n}`,
+    skNeed: "前の段が要る",
+    skNowFlash: (n) => `必殺が使える系統 ${n}/4`,
+    skNowBlast: (n) => `ブラスト ${n}枚`,
+    skNowMajor: (n) => `完成した大アルカナ ${n}/22`,
+    /* ⚠️ ★ごとに分かれていることを最初に伝える。通算だと思われると点が余る */
+    skSheetNote: "★ごとに別のシート。その★のMAPで得た点だけが振れます",
+    skCost: "消費", skGet: "開放する", skDone: "開放済み",
+    skLocked: "前提が足りない", skShort: "点が足りない",
+    skLeftLabel: "使える点", skOfGot: (n) => `このシートで得た ${n} 点のうち`,
+    skViewSky: "星図", skViewList: "一覧",
+    zodiac: ["牡羊", "牡牛", "双子", "蟹", "獅子", "乙女",
+      "天秤", "蠍", "射手", "山羊", "水瓶", "魚"],
+    wardsLocked: "47都道府県の制覇で開く",
+    startWards: "東京・区部から始める",
+    wardsHard: "ここはすべて★12。装備を整えてから挑むこと",
+    meiTitle: "名産品",
+    meiNew: (nm) => `お店で「${nm}」を手に入れた（はじめて）`,
+    meiAgain: (nm, n) => `お店で「${nm}」を手に入れた（${n}つ目）`,
+    meiNone: "まだ何も集めていない",
+    meiFirst: "はじめて",
+    meiHave: (a2, b) => `${a2} / ${b} 品`,
+    foeMiss: "かわした", foeCrit: "会心！", myMiss: "かわされた", resisted: "防いだ",
+    gritTag: (n) => `粘り −${n}%`,
+    elemName: { normal: "ノーマル", fire: "ほのお", water: "みず", electric: "でんき",
+      grass: "くさ", ice: "こおり", fight: "かくとう", poison: "どく", ground: "じめん",
+      fly: "ひこう", psychic: "エスパー", bug: "むし", rock: "いわ", ghost: "ゴースト",
+      dragon: "ドラゴン", dark: "あく", steel: "はがね", fairy: "フェアリー" },
+    /* ⚠️ 何を拾ったか必ず文で残す。宝箱を開かないと分からないと、溜まっても気づかない */
+    advGear: (nm, st) => `${nm}（${st}）を手に入れた`,
+    /* ⚠️ 段だけ出す。中身はまだ決まっていない */
+    advChest: (st) => `宝箱（${st}）を手に入れた`,
+    /* ⚠️ ★13以上は★の数で書かない。12段の名前を持たないので、数字で出す */
+    advChestHi: (n) => `★${n}の宝箱を手に入れた`,
+    /* ⚠️ 開ける場所を必ず書く。占い側で開くと思われると、探しても見つからない */
+    itemChestGot: (st) => `宝箱（${st}）を手に入れた。冒険の「宝箱」で開けられます`,
+    chestFloor: (nm) => `この箱は${nm}より下が出ません`,
+    chestTwin: "二本出ました",
+    /* ⚠️ 消える側から数える。「あと何個で古いものが消えるか」を出す */
+    boxNote: (n) => (n > 0
+      ? `あと${n}個でいっぱい。溢れると古いものから消えます`
+      : "いっぱいです。次に拾うと、いちばん古いものが消えます"),
     startNote: "旅を始める地方を選んでください。ここから先は、隣り合う県にしか進めません。",
     pickNext: "隣の県へ", pickRegion: "どの地方へ向かいますか。", pickPref: "どの県から始めますか。",
     regionLabel: {
@@ -7336,7 +8553,7 @@ const ADV_I18N = {
     },
     majorList: "大アルカナ22枚の効果",
     debuffList: "敵の行動13種",
-    histList: "戦いの記録",
+    histList: "戦闘ログ",
     suitName: { swords: "剣", wands: "棒", cups: "聖杯", pentacles: "貨幣" },
     foeSizeName: { xl: "特大", lg: "大", md: "中", sm: "小", xs: "極小" },
     histNone: "まだ何も起きていません。",
@@ -7344,9 +8561,14 @@ const ADV_I18N = {
       hit: "通常攻撃", combo: "連撃", wind: "溜め", heavy: "大技",
       roar: "戦慄の轟音", rot: "腐食攻撃", despair: "絶望の波動",
       miasma: "瘴気", dread: "殺気",
+      sharpen: "会心UP", blur: "回避UP", harden: "会心耐性UP",
+      guardUp: "防御UP", atkUp: "攻撃UP",
       guard: "防御", guardHi: "剛防御", guardEdge: "凶刃防御",
+      /* ⚠️ 必中は名前で分かるようにする。避けられなかった理由が伝わらない */
+      sure: "必中の一撃",
     },
     blastName: "エレメンタルブラスト",
+    danceName: "秘剣・剣の舞",
     foeActName: {
       roar: "戦慄の轟音", rot: "腐食攻撃", despair: "絶望の波動",
       miasma: "瘴気（魔界・地獄・深淵）", dread: "すさまじい殺気",
@@ -7416,11 +8638,24 @@ const ADV_I18N = {
       tower: "塔", judgement: "審判", world: "世界",
     },
     btTurn: (n) => `${n}ターン目`,
+    /* ⚠️ 合体も分裂も同じ文言でよい。「形が変わった」ことだけ伝われば足りる */
+    btStage: (n) => `敵が姿を変えた（${n}）`,
+    /* ⚠️ 敵のHPの下に出す札。短く。長いと敵の絵より札が大きくなる */
+    foeTag: { guard: "防御", guardHi: "剛防御", guardEdge: "凶刃",
+      wind: "溜め", revived: "復活", shield: "庇護",
+      buff_crit: "会心UP", buff_evade: "回避UP", buff_critRes: "会心耐性UP",
+      buff_def: "防御UP", buff_atk: "攻撃UP" },
+    /* ⚠️ 強化した瞬間に出す名前。何をされたか一言で分かること */
+    /* ⚠️ 名前は「◯◯UP」で統一。毎回ちがう言い回しが出ると気が散る */
+    foeBuffName: { crit: "会心UP", evade: "回避UP", critRes: "会心耐性UP",
+      def: "防御UP", atk: "攻撃UP" },
     btStun: "行動不能",
     btLap: (a1, b1) => `${a1}巡目 / ${b1}`,
     btFoesLeft: (n) => `残り${n}体`,
     btWin: "打ち倒した", btLose: "倒れた", btBack: "地図へ戻る",
     toResult: "結果を見る",
+    /* ⚠️ 勝った手をここで完結させる。画面を移してから押させない */
+    toConquer: "制覇する",
     walkingOn: "道は一本です。そのまま進みます。",
     walkedOn: "道が一本だったので、そのまま進んだ。",
     weatherName: { clear: "晴れ", cloud: "曇り", rain: "雨", snow: "雪", fog: "霧" },
@@ -7460,6 +8695,74 @@ const ADV_I18N = {
   en: {
     pick: "Destination", back: "Choose again",
     pickStart: "Where the journey begins", restart: "Start over", toMap: "Back to the map",
+    equipTitle: "Gear", equipNone: "Nothing yet", close: "Close",
+    eqPocket: { amp: "Amplify", atk: "Offense", def: "Defense", aid: "Support", use: "Consumable" },
+    eqSlots: "Gear slots", eqEmpty: "Empty",
+    eqHowOff: "Tap a slot to remove", eqOn: "Equipped",
+    eqHow: "Tap to equip / hold and drag to a slot / tap a slot twice to remove",
+    optMain: "Main: ", optSub: "Sub: ", optNone: "none",
+    optMainS: "M: ", optSubS: "S: ", eqShortLabel: "Toggle short labels",
+    stashTitle: "Storage", handTitle: "Carried", toStash: "To storage", toHand: "To carried",
+    stashNote: "Items on hold. They never expire. Move to Carried to equip them.",
+    handNote: "Your main gear. Only these can be equipped.",
+    trash: "Discard", trashAsk: "Really discard this?", trashYes: "Discard", cancel: "Cancel",
+    useDesc: { lastHP: "Survive one lethal hit with 1 HP", meal: "Tap to restore HP",
+      cure: "Tap to clear Miasma", whet: "Tap to boost damage this turn" },
+    boxTitle: "Chest", boxNone: "Nothing opened yet", boxKeep: "Keep",
+    boxSealed: "Sealed", boxOpened: "Opened",
+    boxNoChest: "None found yet",
+    boxSealedNote: "Draws once per star, and keeps the best (★12 draws 12 times)",
+    boxDraw: (i, n) => `${i} / ${n}`,
+    skillTitle: "Skills",
+    skPt: (l, all) => `${l} pts on this sheet (of ${all})`,
+    skTrunk: { swords: "Swords", wands: "Wands", cups: "Cups", pentacles: "Pentacles",
+      major: "Major", body: "Body", ward: "Ward", luck: "Luck" },
+    skCards: "Hand size +1",
+    skSlot: "Gear slot +1",
+    skWard: (nm, n) => `${nm} +${n}%`,
+    skLuck: { box: "Chest rate", eye: "Chest draws", reach: "Reach the boss" },
+    suit: { swords: "Swords", wands: "Wands", cups: "Cups", pentacles: "Pentacles" },
+    skFlash: (su, n) => `${su} finisher — ${n} cards`,
+    skPower: (su, n) => `${su} power +${n}%`,
+    skStat: (nm) => `${nm} growth`,
+    skMajor: (nm) => `Complete ${nm}`,
+    skBlast: (n) => `Elemental Blast — tier ${n}`,
+    skDance: (n) => `Sword Dance — tier ${n}`,
+    skNeed: "Needs the previous step",
+    skNowFlash: (n) => `Finishers unlocked ${n}/4`,
+    skNowBlast: (n) => `Blast ${n} cards`,
+    skNowMajor: (n) => `Major arcana completed ${n}/22`,
+    skSheetNote: "One sheet per star. Points only spend on the star that earned them.",
+    skCost: "Cost", skGet: "Unlock", skDone: "Unlocked",
+    skLocked: "Needs a prior node", skShort: "Not enough points",
+    skLeftLabel: "Points", skOfGot: (n) => `of ${n} earned here`,
+    skViewSky: "Star map", skViewList: "List",
+    zodiac: ["Aries", "Taurus", "Gemini", "Cancer", "Leo", "Virgo",
+      "Libra", "Scorpio", "Sagittarius", "Capricorn", "Aquarius", "Pisces"],
+    wardsLocked: "Opens after all 47 prefectures",
+    startWards: "Start in the wards of Tokyo",
+    wardsHard: "Every stage here is ★12. Bring your gear.",
+    meiTitle: "Specialties",
+    meiNew: (nm) => `Got "${nm}" at the shop (new)`,
+    meiAgain: (nm, n) => `Got "${nm}" at the shop (#${n})`,
+    meiNone: "Nothing collected yet",
+    meiFirst: "New",
+    meiHave: (a2, b) => `${a2} / ${b}`,
+    foeMiss: "Dodged", foeCrit: "Crit! ", myMiss: "Missed", resisted: "Resisted",
+    gritTag: (n) => `Grit −${n}%`,
+    elemName: { normal: "Normal", fire: "Fire", water: "Water", electric: "Electric",
+      grass: "Grass", ice: "Ice", fight: "Fighting", poison: "Poison", ground: "Ground",
+      fly: "Flying", psychic: "Psychic", bug: "Bug", rock: "Rock", ghost: "Ghost",
+      dragon: "Dragon", dark: "Dark", steel: "Steel", fairy: "Fairy" },
+    advGear: (nm, st) => `Found ${nm} (${st})`,
+    advChest: (st) => `Found a chest (${st})`,
+    advChestHi: (n) => `Found a ★${n} chest`,
+    itemChestGot: (st) => `Got a chest (${st}). Open it from Chest in Adventure.`,
+    chestFloor: (nm) => `This chest never drops below ${nm}`,
+    chestTwin: "Two at once",
+    boxNote: (n) => (n > 0
+      ? `${n} more until full. The oldest will be dropped.`
+      : "Full. The next find will push out the oldest."),
     startNote: "Choose where you start. From there you can only move to a neighbouring prefecture.",
     pickNext: "To a neighbouring prefecture",
     regionLabel: {
@@ -7536,9 +8839,13 @@ const ADV_I18N = {
       guard: "Guard", guardHi: "Hard guard", guardEdge: "Bladed stance",
     },
     blastName: "ELEMENTAL BLAST",
+    /* ⚠️ ブラストと同じ格で見せる。片方だけ日本語だと格が下がって見える */
+    danceName: "秘剣・剣の舞",
     foeActName: {
       roar: "Dread Roar", rot: "Corroding Strike", despair: "Wave of Despair",
       miasma: "Miasma", dread: "Killing Intent",
+      sharpen: "Crit UP", blur: "Evade UP", harden: "Crit-res UP",
+      guardUp: "Defense UP", atkUp: "Attack UP",
       guard: "Guard", guardHi: "Hard Guard", guardEdge: "Bladed Stance",
       wind: "Wind-up", heavy: "Heavy Blow", combo: "Combo", hit: "Strike", heal: "Self-heal",
     },
@@ -7604,11 +8911,19 @@ const ADV_I18N = {
       tower: "Tower", judgement: "Judgement", world: "World",
     },
     btTurn: (n) => `Turn ${n}`,
+    btStage: (n) => `The enemy changed form (${n})`,
+    foeTag: { guard: "Guard", guardHi: "Hard", guardEdge: "Thorns",
+      wind: "Winding", revived: "Revived", shield: "Shielded",
+      buff_crit: "Crit UP", buff_evade: "Evade UP", buff_critRes: "Crit-res UP",
+      buff_def: "Def UP", buff_atk: "Atk UP" },
+    foeBuffName: { crit: "Crit UP", evade: "Evade UP", critRes: "Crit-res UP",
+      def: "Defense UP", atk: "Attack UP" },
     btStun: "Stunned",
     btLap: (a1, b1) => `lap ${a1}/${b1}`,
     btFoesLeft: (n) => `${n} left`,
     btWin: "You struck them down", btLose: "You fell", btBack: "Back to the map",
     toResult: "See the result",
+    toConquer: "Claim it",
     walkingOn: "There is only one way on. Walking on...",
     walkedOn: "The road was single. Walked on.",
     weatherName: { clear: "Clear", cloud: "Cloudy", rain: "Rain", snow: "Snow", fog: "Fog" },
@@ -7978,8 +9293,22 @@ const AREA_POS = {
   tochigi: { "県央": { x: 51.6, y: 46.8 }, "県南": { x: 43.6, y: 83.6 }, "県北": { x: 66, y: 14.8 } },
   gunma: { "中毛": { x: 43.6, y: 50 }, "西毛": { x: 29.2, y: 83.6 }, "東毛": { x: 66, y: 66 }, "北毛": { x: 53.2, y: 14.8 } },
   saitama: { "さいたま": { x: 53.2, y: 51.6 }, "東部": { x: 88.4, y: 64.4 }, "南部": { x: 77.2, y: 66 }, "西部": { x: 11.6, y: 56.4 }, "北部": { x: 38.8, y: 32.4 }, "秩父": { x: 22.8, y: 58 } },
-  chiba: { "東葛飾": { x: 27.6, y: 22.8 }, "千葉": { x: 24.4, y: 75.6 }, "印旛": { x: 61.2, y: 22.8 }, "香取": { x: 72.4, y: 29.2 }, "海匝": { x: 64.4, y: 40.4 }, "安房": { x: 26, y: 83.6 }, "君津": { x: 32.4, y: 67.6 } },
-  tokyo: { "区部": { x: 94.8, y: 43.6 }, "多摩": { x: 10, y: 32.4 }, "島しょ": { x: 50, y: 94, off: 1 } },
+  /*
+    ⚠️⚠️ 千葉市を南へ置かないこと。y:75.6 では君津（67.6）より南になり、
+      房総の真ん中に千葉市があることになっていた。
+    ★ 千葉市は県の北西部・東京湾岸。東葛飾（22.8）と君津（67.6）のあいだ。
+  */
+  chiba: { "東葛飾": { x: 27.6, y: 22.8 }, "千葉": { x: 24.4, y: 40.0 }, "印旛": { x: 61.2, y: 22.8 }, "香取": { x: 72.4, y: 29.2 }, "海匝": { x: 64.4, y: 40.4 }, "安房": { x: 26, y: 83.6 }, "君津": { x: 32.4, y: 67.6 } },
+  /*
+    ⚠️⚠️ 区部は真ん中。47都道府県を制覇するまで「？？？」で伏せる。
+      東京の制覇には数えない（区部が開くのは全国制覇のあとなので、
+      要ると堂々巡りになって東京が永久に終わらない）。
+    ⚠️ 区部スタートで選んだ一区は、区部が元いた東の位置に置く。
+  */
+  /* ⚠️ 湾岸は東の海沿い。区部（真ん中）と多摩（西）のあいだに挟まない */
+  tokyo: { "区部": { x: 50, y: 50 }, "多摩": { x: 10, y: 32.4 },
+    "湾岸": { x: 80, y: 66 },
+    "島しょ": { x: 50, y: 94, off: 1 }, "__ward": { x: 94.8, y: 43.6 } },
   kanagawa: { "横浜": { x: 86.8, y: 35.6 }, "川崎": { x: 75.6, y: 24.4 }, "横須賀三浦": { x: 82, y: 67.6 }, "湘南": { x: 21.2, y: 77.2 }, "県央": { x: 45.2, y: 46.8 }, "県西": { x: 14.8, y: 45.2 } },
   niigata: { "下越": { x: 83.6, y: 10 }, "中越": { x: 59.6, y: 58 }, "上越": { x: 19.6, y: 83.6 }, "佐渡": { x: 37.2, y: 32.4 } },
   toyama: { "新川": { x: 93.2, y: 24.4 }, "富山": { x: 51.6, y: 50 }, "高岡": { x: 11.6, y: 69.2 }, "砺波": { x: 21.2, y: 77.2 } },
@@ -8126,9 +9455,16 @@ const LMC_TIERS = [
   { key: "legendary", star: 7,  w:  300 },  // レジェンダリー 歴史や英雄譚にその名を残す伝説の装備
   { key: "ultimate",  star: 8,  w:  150 },  // アルティメット 到達しうる極点。⚠️ 図鑑のホロ枠と混ざるので「ホロ」にしない
   { key: "divine",    star: 9,  w:   70 },  // ディヴァイン 神々の加護を宿した、信仰の対象となる領域
-  { key: "eternal",   star: 10, w:   40 },  // エターナル   時の流れや因果律から切り離された、永久不滅の存在
+  /*
+    ⚠️⚠️ ★10 を genesis、★12 を eternal にしてある。並びを戻さないこと。
+      18言語の訳が key に紐づいているので、名前を入れ替えるには
+      key ではなく star と w を入れ替える。key を書き換えると訳が全部ずれる。
+    ⚠️ 重みは段に付いている（★10=40／★11=20／★12=10）。名前ではなく段の側。
+      1000万回の実測はこの並びのままなので、重みは動かしていない。
+  */
+  { key: "genesis",   star: 10, w:   40 },  // ジェネシス   世界の創造や理の書き換えをも可能にする、全ての源流
   { key: "cosmo",     star: 11, w:   20 },  // コスモ       星々や銀河の理を内包する、宇宙的スケールの力
-  { key: "genesis",   star: 12, w:   10 },  // ジェネシス   世界の創造や理の書き換えをも可能にする、全ての源流
+  { key: "eternal",   star: 12, w:   10 },  // エターナル   時の流れや因果律から切り離された、永久不滅の存在
 ];
 const LMC_TIER_TOTAL = LMC_TIERS.reduce((s, x) => s + x.w, 0);   // 10000
 /*
@@ -8178,6 +9514,1426 @@ function rollLandmark(pref) {
   if (!pool.length) return ALL_LANDMARKS[0].name;
   return pool[Math.floor(Math.random() * pool.length)];
 }
+/*
+  【装備】
+  ★ レア度は LMC_TIERS をそのまま使う。★1ブロンズ〜★12ジェネシス。
+    ⚠️⚠️ 装備だけの段を作らないこと。梯子が二本になると、どちらが上か説明できない。
+      v5で「★8をホロにしない」と決めたのと同じ理由。
+  ★ 一つの装備は【主効果ひとつ】＋【サブオプション0〜6】で出来ている。
+  ⚠️ 勝率の実測（BATTLE_ATK など）は装備なしの数字。装備は遊ぶ側の上積みで、
+    難度の側では勘定していない。装備の倍率を上げても敵は強くならない。
+*/
+/*
+  段の引き方。
+  ★ 【★nの土地では n 回引いて、いちばん良いものを採る】。上限も下限も置かない。
+    ⚠️⚠️ ★でキャップを付けないこと。窓（★−2〜★+1）で切って正規化すると、
+      ★12でジェネシスが14.3%になり、0.10%という希少さの設計が壊れる。
+      上限だけ切ると今度は終盤までブロンズが29%出続ける。
+    ★ 良いほうを採る形なら、下は自然に消え、上は最後まで希少なまま。
+      実測（LMC_TIERS の重みから厳密に計算）
+        ★     平均段   ★8以上   ジェネシス
+        ★1    2.91     2.90%    0.100%
+        ★4    5.05     11.1%    0.399%
+        ★8    6.15     21.0%    0.797%
+        ★12   6.76     29.8%    1.193%
+      ブロンズは ★1で29.1% → ★4で0.7% → ★6以降はほぼ出ない。
+  ⚠️ ★1でもジェネシスは0.1%で出る。塞がないこと。塞ぐと「この土地では絶対に出ない」
+    という乾いた事実だけが残る。リセマラは「通算の初回クリアでしか報酬が出ない」で
+    既に塞がっているので、キャップを二重に置く必要はない。
+*/
+function rollEquipTier(star, draws) {
+  const n = Math.max(1, Math.min(14, (star | 0) + (draws | 0)));
+  let best = LMC_TIERS[0];
+  for (let i = 0; i < n; i++) {
+    const t = lmcTierOf(rollLandmarkTier());
+    if (t.star > best.star) best = t;
+  }
+  return best.key;
+}
+/*
+  【主効果】10種。
+  ⚠️ 型は段では増えない。増えるのは値だけ。型まで増やすと、低い段が
+    「できないことがある装備」になり、拾う意味が消える。
+  ⚠️ unit は★1あたりの量。値は unit × 段 × 振れ（下の EQUIP_ROLL）。
+*/
+const EQUIP_MAINS = [
+  /* ① 主に辿り着く率。⚠️ 気持ち程度に留める。到達率は難度表の柱なので動かしすぎない */
+  { key: "reach",   unit: 0.5,  pct: true,  w: 8 },
+  /* ② 札の効果。⚠️ これだけ形が違う。スートと階位を指定して倍率が乗る（下の rollEquipSpec） */
+  { key: "cardMul", unit: 0,    pct: false, w: 22 },
+  /* ③ 復活する敵の起き上がりが遅れる（ターン） */
+  { key: "reviveCut", unit: 4.0, pct: true, w: 8 },
+  /* ④ 敵のHPが数値で見える／残量で色が変わる。⚠️ 段で強くならない。付くか付かないか */
+  { key: "foeInfo", unit: 0,    pct: false, w: 6 },
+  /* ⑤ 敵が回復した量の一部を自分にも */
+  { key: "drain",   unit: 2.0,  pct: true,  w: 8 },
+  /* ⑥ 妨害の無効化。⚠️ 確率なので、効いたときは画面に出すこと */
+  { key: "nullify", unit: 3.0,  pct: true,  w: 10 },
+  /* ⑦ 轟音（倍率削り）と瘴気（回復削り）の効きを弱める */
+  { key: "soften",  unit: 3.5,  pct: true,  w: 10 },
+  /* ⑧ 3の倍数のターン、被ダメージを減らす */
+  { key: "cycle",   unit: 2.5,  pct: true,  w: 10 },
+  /* ⑨ 稼ぎ。⚠️ 戦闘に寄与しない。報酬は初回クリアでしか出ないので、引く回数に効かせる */
+  { key: "seek",    unit: 0.2,  pct: false, w: 12 },
+  /*
+    ⑩ 自傷の軽減。
+    ⚠️⚠️ 全部は消さないこと。逆位置は「効果が大きい代わりに自分を削る」札で、
+      代償が消えると逆位置が上位互換になり、向きを選ぶ意味が無くなる。
+    ⚠️ 上限を置く。段12で最大54%（unit 4.5 × 12）。半分より少し多い程度で止める。
+  */
+  { key: "selfCut", unit: 4.5,  pct: true,  w: 10 },
+  /*
+    ⑪ 指定したスートが、低い確率で二回働く。
+    ⚠️⚠️ 確率を上げすぎないこと。二回働くのは「たまに起きる嬉しいこと」で、
+      計算に入れられる頻度にすると、その一本以外を装備する意味が消える。
+      段12で 0.9%×12 = 10.8%。十回に一回。
+    ⚠️ 大アルカナには乗らない（1ターン1枚という上限が壊れる）。
+  */
+  { key: "twice",   unit: 0.9,  pct: true,  w: 8 },
+  /*
+    ⑫ リジェネ。ターンの初めに最大HPの一部が戻る。
+    ⚠️ 星（4ターン12%）と食い合う。星より弱く、そのかわり切れない。
+      段12で 0.35×12 = 4.2%／ターン。
+  */
+  { key: "regen",   unit: 0.35, pct: true,  w: 10 },
+  /*
+    ⑬⑭ 背水と万全。★ 互いに逆を向いている。両方は積めない（積んでも片方しか効かない）。
+    ⚠️⚠️ 12種はどれも足し算で強くなるだけだった。戦い方が変わる軸を一本入れる。
+    ⚠️ しきい値は動かしやすい。体感で変えるときはここだけ触ること。
+  */
+  { key: "lastStand", unit: 2.5, pct: true, w: 8, at: 0.30 },  /* HPが3割以下 */
+  { key: "fullPower", unit: 2.0, pct: true, w: 8, at: 0.90 },  /* HPが9割以上 */
+  /*
+    ⑮ 反射。★ 受けたダメージの一部を敵へ返す。
+    ⚠️ 返す先は殴ってきた敵。全体に返すと、複数体の編成だけ極端に有利になる。
+  */
+  { key: "reflect", unit: 1.5, pct: true, w: 8 },
+  /*
+    ⑯ 構え貫通。★ 防御・剛防御・凶刃防御を確率で無視する。
+    ⚠️ 凶刃防御（棘）も無視する。棘で自滅する事故を装備で避けられる形にしておく。
+  */
+  { key: "pierce",  unit: 2.5, pct: true, w: 8 },
+  /*
+    ⑰⑱ 孤戦と群戦。★ 敵の数で効く。剣（単体）と棒（全体）のどちらに寄せるかが分かれる。
+    ⚠️ 境目を「1体」と「3体以上」にすること。2体をどちらにも入れない。
+      全部の編成にどちらかが効くと、ただの攻撃力になる。
+  */
+  { key: "solo",    unit: 2.2, pct: true, w: 8 },
+  { key: "crowd",   unit: 2.2, pct: true, w: 8 },
+  /*
+    ⑲ 是正。★ 逆位置で出た札が、確率で正位置になる。
+    ⚠️⚠️ 高くしないこと。吊るされた男（逆位置が×3.0）と悪魔（全部逆位置）は
+      逆位置を前提にした札で、是正が厚いとこの二枚が死に札になる。
+    ⚠️ 継続の延長は入れない。22種すべてに効くうえ、星・月・太陽が4→5ターンになると
+      常時掛かっている状態に近づき、「出ないターンがあるから落差が出る」設計とぶつかる。
+  */
+  { key: "upright", unit: 1.8, pct: true, w: 8 },
+  /*
+    ⑳ 復活した敵に特攻。
+    ★ 一度でも起き上がった相手に与えるダメージが増える。
+    ⚠️⚠️ 復活しない編成が無くなったので、これは「たまに刺さる札」ではなく
+      常に仕事がある札になる。倍率を上げすぎないこと。段12で 2.0×12 = 24%。
+    ⚠️ 復活する前の相手には乗らない。乗せると、ただの攻撃力になる。
+  */
+  { key: "vsRevived", unit: 2.0, pct: true, w: 10 },
+  /*
+    ㉑ 必殺技の威力。
+    ⚠️ 少しでよい。必殺技は32種のうち一つが出る「事件」なので、
+      倍率を厚くすると、それ以外のターンがただの待ち時間になる。
+    ⚠️ サブの burst（必殺の伸び）と同じ軸。両方載ると足し算で伸びるので、
+      主のほうを控えめにしてある。
+  */
+  { key: "burstMul", unit: 1.2, pct: true, w: 9 },
+  /*
+    ㉒ 大アルカナの出やすさ。
+    ⚠️⚠️ 微量に留めること。「かかってるんだかかかってないんだか分からない」
+      くらいがちょうどいい ―― 昔のゲームの手触り。
+    ⚠️ 点で足す（63% に +3pt で 66%）。倍率にすると段12で一気に跳ねる。
+    ⚠️ 塔と審判に直結する。厚くすると、盾を封じたのと同じ穴がここに開く。
+  */
+  { key: "majorRate", unit: 0.25, pct: false, w: 6 },
+];
+const EQUIP_MAIN_TOTAL = EQUIP_MAINS.reduce((s, x) => s + x.w, 0);
+/*
+  【サブオプション】12種。
+  ⚠️⚠️ 主効果と同じ種類を並べないこと。主が「札の効果」ならサブは「剣の刃」のような
+    薄く効くものにする。同じ軸を二枚重ねると、厳選が一種類の作業になる。
+  ⚠️ 同じ種類は一つの装備に二つ付かない。
+  ⚠️ pt は割合ではなく点（会心率のように、元が％のもの）。
+*/
+const EQUIP_SUBS = [
+  { key: "atk",    unit: 1.2, pct: true },   /* 攻      攻撃力（剣と棒の両方） */
+  { key: "def",    unit: 1.0, pct: true },   /* 守      防御力（被ダメージを減らす） */
+  { key: "sword",  unit: 1.2, pct: true },   /* 剣の刃   剣の威力 */
+  { key: "wand",   unit: 1.2, pct: true },   /* 棒の火   棒の威力 */
+  { key: "cup",    unit: 1.2, pct: true },   /* 杯の水   聖杯の回復 */
+  { key: "coin",   unit: 1.2, pct: true },   /* 貨の重み 貨幣の積み */
+  { key: "crit",   unit: 0.6, pt: true },    /* 会心     会心率（点） */
+  { key: "critMul", unit: 0.8, pct: true },  /* 会心の芯 会心の倍率 */
+  { key: "first",  unit: 2.0, pct: true },   /* 先手     1〜3ターン目の与ダメ */
+  { key: "burst",  unit: 1.5, pct: true },   /* 必殺の伸び 必殺技の威力 */
+  /*
+    ⚠️⚠️ ここから下の二つは慎重に。
+      HPと耐性は、他の数値と違って「負ける経路そのもの」を消してしまう。
+      勝率は47段すべてを実測して並べてあるので、ここが伸びると
+      ★12まで一本調子で楽になり、難度の梯子が消える。
+    ★ HP  段12で最大 0.55×12 = 6.6%。満枠でもHPは一割増えない。
+      ⚠️ 他のサブの半分以下に抑えてある。上げないこと。上げるなら47段を測り直す。
+  */
+  { key: "body",   unit: 0.55, pct: true },  /* 体      最大HP */
+  /*
+    ★ 耐性は妨害ごとに別の枠。まとめて一つにしない。
+      ⚠️⚠️ 一つの「耐性」にすると、どれを引いても全部に効いてしまい、
+        五種類の妨害を作り分けた意味が消える。
+        轟音を切りたい人と瘴気を切りたい人が、同じ一本で満たされてはいけない。
+      ★ 一種類ぶんなので、まとめてより厚くしてよい。段12で最大 0.9×12 = 10.8%。
+      ⚠️ それでも上限は置く（下の関所で各30%）。妨害は「勝てるはずの戦いを崩す」役目で、
+        ここが三割を超えると★8以上の設計が成り立たない。
+      ⚠️ 主効果の nullify（段12で36%）は全部に効く。あちらは一本まるごと使う代償がある。
+  */
+  { key: "resRoar",   unit: 0.9, pct: true },  /* 耐性・轟音  貨幣の倍率削り */
+  { key: "resRot",    unit: 0.9, pct: true },  /* 耐性・腐食  札の不発 */
+  { key: "resDread",  unit: 0.9, pct: true },  /* 耐性・波動  大アルカナ封じ */
+  { key: "resMiasma", unit: 0.9, pct: true },  /* 耐性・瘴気  回復の減衰 */
+  { key: "resKill",   unit: 0.9, pct: true },  /* 耐性・殺気  必殺技の封じ */
+  /*
+    ★ 宝箱。二段ある。
+      box … 宝箱そのものが出る確率（マスの抽選）。段12で最大 0.8×12 = 9.6%。
+      eye … 中身の段。引く回数を増やす。⚠️ ほんの少しだけ。
+        段12でも +1.2回。★12の土地で 12回 → 13.2回。ジェネシスは 1.19% → 1.29%。
+        ⚠️⚠️ ここを厚くしないこと。掘る回数で段が買えるようになると、
+          「★の高い土地へ行く」という一本道の理由が消える。
+  */
+  { key: "box",    unit: 0.8, pct: true },   /* 宝箱     宝箱の出る確率 */
+  { key: "eye",    unit: 0.1, pt: true },    /* 目利き   宝箱を引く回数 */
+];
+/*
+  【サブの枠数】段ごとに上限がある。
+  ⚠️⚠️ 上限まで必ず付くわけではない。一枠ずつ独立に開き、閉じたらそこで止まる。
+    上限まで埋まった一本を探すのが厳選。
+  ★ 実測（枠の分布）
+      ★3  上限1  0枠 28.0% ／ 1枠 72.0%
+      ★5  上限2  0枠 28.0% ／ 1枠 20.2% ／ 2枠 51.8%
+      ★8  上限3  0枠 28.0% ／ … ／ 3枠 37.3%
+      ★12 上限6  0枠 28.0% ／ … ／ 6枠 13.9%
+  ⚠️ 0枠が28%で一定なのは意図どおり。ジェネシスでも三割は素のまま出る。
+    ここが緩いと、上の段を引いた時点で完成品になり、厳選が消える。
+*/
+const EQUIP_SUB_CAP = { 1: 0, 2: 0, 3: 1, 4: 1, 5: 2, 6: 2, 7: 3, 8: 3, 9: 4, 10: 5, 11: 5, 12: 6 };
+/* ⚠️ 一枠が開く確率。ここを上げると満枠が増え、厳選が浅くなる */
+const EQUIP_SUB_OPEN = 0.72;
+/*
+  値の振れ。
+  ⚠️⚠️ 同じ種類・同じ段でも値が違う。ここが厳選のもう一本の軸。
+  ★ 0.55〜1.00 を 0.05 刻みで。10通りなので、最大値は10本に1本。
+*/
+const EQUIP_ROLL_MIN = 0.55, EQUIP_ROLL_STEP = 0.05, EQUIP_ROLL_N = 10;
+function rollEquipRoll() {
+  return EQUIP_ROLL_MIN + EQUIP_ROLL_STEP * Math.floor(Math.random() * EQUIP_ROLL_N);
+}
+/*
+  ②札の効果の中身。
+  ⚠️⚠️ 指定が狭いほど倍率を高くすること。狭いほど噛み合わない回が増えるので、
+    当たったときの跳ね方で釣り合わせる。
+  ★ スート1〜4種 × 階位1〜14種。「棒の2と5とKが×2.2」のような一本が出る。
+  ⚠️ 大アルカナには階位が無いので、この効果は乗らない。
+*/
+const EQUIP_SUIT_KEYS = ["swords", "wands", "cups", "pentacles"];
+const EQUIP_RANKS = [1, 14, 13, 12, 11, 10, 9, 8, 7, 6, 5, 4, 3, 2];
+function rollEquipSpec(star) {
+  const ns = 1 + Math.floor(Math.random() * 4);
+  const nr = 1 + Math.floor(Math.random() * 14);
+  const suits = EQUIP_SUIT_KEYS.slice().sort(() => Math.random() - 0.5).slice(0, ns);
+  const ranks = EQUIP_RANKS.slice().sort(() => Math.random() - 0.5).slice(0, nr);
+  /*
+    ⚠️ 覆う広さで倍率を割る。1種×1階位なら 56/1、4種×14階位なら 56/56。
+    ⚠️ 平方根で丸めること。そのまま割ると、1種1階位が56倍になって桁が壊れる。
+  */
+  const cover = ns * nr;
+  const mul = 1 + (0.06 * star) * Math.sqrt(56 / cover) * rollEquipRoll();
+  return { suits, ranks: ranks.sort((a, b) => a - b), mul: Math.round(mul * 100) / 100 };
+}
+/*
+  【装備の種類と名前】
+  ★ 名前は「地名＋種類」で決まる。拾った土地の区分をそのまま冠する。
+      「茨城県南の刀」「茨城鹿行の鏡」「石狩の羅針盤」
+    ⚠️⚠️ 種類は主効果と一対一。名前を見ただけで何が付いているか分かること。
+      名前が飾りになると、持ち物が「同じ見た目の列」になって選べなくなる。
+    ⚠️ 札の効果（cardMul）だけはスートで四つに分かれる。
+      剣＝刀、棒＝杖、聖杯＝盃、貨幣＝小判。指定スートが複数なら一番目を採る。
+  ⚠️ 地名は日本語のまま全言語で使う。固有名詞なので訳さない。
+    区分名（鹿行・県南・石狩）は各県が実際に使っている呼び名で、対訳が無い。
+  ⚠️ 県名から「県・府・都」を落とす。「茨城県県南」になる。
+*/
+/*
+  ⚠️⚠️ 分かる言葉で名づけること。
+    楔・双玉・霊泉・独鈷・分銅・手甲・錐は、何の道具か伝わらなかった。
+    名前と効果が一対一なのに、名前のほうが読めなければ意味がない。
+  ★ 分からなかった八つは祭囃子の楽器にした。効果が音から連想できるもので当てる。
+      拍子木 拍で調子を戻す → 減衰緩和     すりがね 拍を刻む → 周期
+      鼓 自分の手で打つ → 自傷の軽減       ちゃんぽん 二枚を打ち合わせる → 二度働く
+      琴 余韻が長い → リジェネ             しの笛 高音が突き抜ける → 構え貫通
+      胡弓 独りで弾く → 孤戦               三味線 調子を合わせる → 是正
+  ⚠️ 羅針盤・鏡・御守・提灯はそのまま。伝わる言葉なので替えない。
+*/
+const EQUIP_KINDS = {
+  /*
+    ⚠️ 復活まわりの二つは祭具にしてある。楽器では「祓う」意味が出ない。
+      祓串 起き上がるHPを削る ／ 破魔矢 起き上がった相手を射る
+      ⚠️ 祓串は時間ではなくHPに掛ける。待ち時間は敵の★だけで決まる（reviveTurnsOf）
+    ⚠️ 拍子木は必殺技の倍率へ。打ち合わせて拍を作る道具なので、
+      「ここぞ」の一発に掛かるほうが合う。減衰緩和は羽織に戻した。
+  */
+  reach: "compass", reviveCut: "harae", foeInfo: "mirror", drain: "fang",
+  nullify: "charm", soften: "cloak", cycle: "surigane", seek: "lantern",
+  vsRevived: "hamaya", burstMul: "hyoshigi", majorRate: "card",
+  selfCut: "tsuzumi", twice: "chanpon", regen: "koto",
+  lastStand: "oniMask", fullPower: "crown", reflect: "armor", pierce: "shinobue",
+  solo: "kokyu", crowd: "drum", upright: "shamisen",
+  /* ⚠️ 消耗品も同じ名前の作りにする。持ち物の列で浮かないこと */
+  lastHP: "effigy", meal: "bento", cure: "medicine", whet: "whetstone",
+  /* ⚠️ 未開封の箱そのものにも絵が要る。段の色は枠が持つので、箱は素のまま */
+  chest: "chest",
+  /* ⚠️ cardMul はここに入れない。スートで分かれるので equipKindOf で解く */
+};
+const EQUIP_KIND_BY_SUIT = {
+  swords: "blade", wands: "staff", cups: "chalice", pentacles: "koban",
+};
+/*
+  効果の名前。⚠️ 装備種（EQUIP_KIND_I18N）とは別。あちらは道具の名、こちらは効き目。
+  ⚠️ ja / en の二つだけ持つ。T には足さない（18言語ぶんの空欄が増える）。
+*/
+const EQUIP_LABEL_I18N = {
+  ja: {
+    power: "力", guard: "防御", vital: "体力", skill: "器用さ",
+    mind: "知力", spirit: "精神", luck: "運", speed: "すばやさ", maxHP: "最大HP",
+    reach: "主へのたどり着きやすさ", reviveCut: "起き上がった敵のHP減", foeInfo: "敵の情報", drain: "敵の回復を奪う",
+    nullify: "妨害を打ち消す", soften: "轟音・瘴気を弱める", cycle: "3の倍数ターン被ダメ減", seek: "道中の引く回数",
+    selfCut: "自傷を減らす", regen: "毎ターン回復", lastStand: "HP3割以下で与ダメ", fullPower: "HP9割以上で与ダメ",
+    reflect: "ダメージを返す", pierce: "構えを無視", solo: "敵1体で与ダメ", crowd: "敵3体以上で与ダメ", upright: "逆位置が戻る",
+    vsRevived: "起き上がった敵へ与ダメ", burstMul: "必殺技の威力", majorRate: "大アルカナの出やすさ",
+    atk: "攻撃", def: "防御", sword: "剣", wand: "棒", cup: "聖杯", coin: "貨幣",
+    crit: "会心率", critMul: "会心ダメージ", first: "1〜3ターン目の与ダメ", body: "体力", burst: "必殺技の威力",
+    box: "宝箱マスの出やすさ", eye: "宝箱の引く回数", resRoar: "轟音耐性", resRot: "腐食耐性",
+    resDread: "波動耐性", resMiasma: "瘴気耐性", resKill: "殺気耐性",
+  },
+  en: {
+    power: "Power", guard: "Guard", vital: "Vitality", skill: "Dexterity",
+    mind: "Mind", spirit: "Spirit", luck: "Luck", speed: "Speed", maxHP: "Max HP",
+    reach: "Reach", reviveCut: "Revive HP down", foeInfo: "Foe info", drain: "Drain",
+    nullify: "Nullify", soften: "Soften", cycle: "Cycle guard", seek: "Seek",
+    selfCut: "Self-harm down", regen: "Regen", lastStand: "Last stand", fullPower: "Full power",
+    reflect: "Reflect", pierce: "Pierce", solo: "Solo", crowd: "Crowd", upright: "Upright",
+    vsRevived: "Vs revived", burstMul: "Burst power", majorRate: "Major rate",
+    atk: "Attack", def: "Defense", sword: "Swords", wand: "Wands", cup: "Cups", coin: "Pentacles",
+    crit: "Crit", critMul: "Crit power", first: "First strike", body: "Max HP", burst: "Burst",
+    box: "Chests", eye: "Chest depth", resRoar: "Roar res", resRot: "Rot res",
+    resDread: "Dread res", resMiasma: "Miasma res", resKill: "Killing-intent res",
+  },
+};
+const EQUIP_KIND_I18N = {
+  ja: {
+    compass: "羅針盤", hyoshigi: "拍子木", mirror: "鏡", fang: "牙", charm: "御守",
+    harae: "祓串", hamaya: "破魔矢", card: "カード", cloak: "羽織",
+    surigane: "すりがね", lantern: "提灯", tsuzumi: "鼓", chanpon: "ちゃんぽん",
+    koto: "琴", oniMask: "鬼面", crown: "宝冠", armor: "鎧", shinobue: "しの笛",
+    kokyu: "胡弓", drum: "太鼓", shamisen: "三味線",
+    blade: "刀", staff: "杖", chalice: "盃", koban: "小判",
+    effigy: "身代わり", bento: "弁当", medicine: "薬", whetstone: "砥石", chest: "宝箱",
+  },
+  en: {
+    compass: "Compass", hyoshigi: "Hyoshigi", mirror: "Mirror", fang: "Fang", charm: "Charm",
+    harae: "Haraegushi", hamaya: "Hamaya", card: "Card", cloak: "Cloak",
+    surigane: "Surigane", lantern: "Lantern", tsuzumi: "Tsuzumi", chanpon: "Chanpon",
+    koto: "Koto", oniMask: "Oni Mask", crown: "Crown", armor: "Armor", shinobue: "Shinobue",
+    kokyu: "Kokyu", drum: "Taiko", shamisen: "Shamisen",
+    blade: "Blade", staff: "Staff", chalice: "Chalice", koban: "Koban",
+    effigy: "Effigy", bento: "Bento", medicine: "Medicine", whetstone: "Whetstone", chest: "Chest",
+  },
+};
+/*
+  拾った場所を決める。
+  ⚠️ いま立っている県の区分から選ぶ。旅をしていなければ全国から。
+    宝箱の中身（rollLandmark）と同じ考え方に揃えること。
+*/
+function randomWhere(pref) {
+  const pool = pref
+    ? ALL_LANDMARKS.filter((x) => x.pref === pref)
+    : ALL_LANDMARKS;
+  const src = pool.length ? pool : ALL_LANDMARKS;
+  const x = src[Math.floor(Math.random() * src.length)];
+  return { pref: x.pref, area: x.area };
+}
+/*
+  【ポケット】
+  ⚠️⚠️ 22種＋消耗品を一列に並べないこと。何が何だか分からない
+    （実際そう見えた）。系統ごとに分ける。
+  ★ 五つ。増幅・攻め・守り・導き・消耗品。
+  ⚠️ 「どの幹の枝か」ではなく「何をする装備か」で分けること。
+    ツリーの幹と揃えると、装備を持たない幹が空のポケットになる。
+*/
+const EQUIP_POCKETS = ["amp", "atk", "def", "aid", "use"];
+const EQUIP_POCKET_OF = {
+  cardMul: "amp",
+  burstMul: "atk", vsRevived: "atk", lastStand: "atk", fullPower: "atk",
+  solo: "atk", crowd: "atk", pierce: "atk", twice: "atk", drain: "atk",
+  selfCut: "def", soften: "def", cycle: "def", nullify: "def",
+  regen: "def", reflect: "def", reviveCut: "def",
+  reach: "aid", foeInfo: "aid", seek: "aid", majorRate: "aid", upright: "aid",
+};
+function equipPocketOf(it) {
+  if (!it) return "use";
+  /* ⚠️ 消耗品は main を持たない。key で判る */
+  if (!it.main && it.key) return "use";
+  return EQUIP_POCKET_OF[it.main] || "aid";
+}
+function equipKindOf(e) {
+  if (!e) return "charm";
+  /* ⚠️ 消耗品は main を持たない。key で引く */
+  if (!e.main && e.key) return EQUIP_KINDS[e.key] || "charm";
+  if (e.main === "cardMul") {
+    const su = (e.spec && e.spec.suits && e.spec.suits[0]) || "swords";
+    return EQUIP_KIND_BY_SUIT[su] || "blade";
+  }
+  return EQUIP_KINDS[e.main] || "charm";
+}
+/* ⚠️ 県名から末尾の「県・府・都」を落とす。北海道はそのまま */
+function prefShort(name) {
+  const t = String(name || "");
+  return /(県|府|都)$/.test(t) ? t.slice(0, -1) : t;
+}
+function equipPlace(e, lang) {
+  const a = advT(lang);
+  const pn = prefShort((a.pref && a.pref[e.pref]) || e.pref || "");
+  const ar = e.area || "";
+  /*
+    ⚠️ 区分名が県名で始まるときは重ねないこと。「千葉」県の「千葉」区分が
+      「千葉千葉の鏡」になっていた。区分名だけで足りる（京都市・千葉など）。
+  */
+  if (ar && pn && ar.indexOf(pn) === 0) return ar;
+  return `${pn}${ar}`;
+}
+function equipName(e, lang) {
+  const dict = EQUIP_KIND_I18N[lang] || EQUIP_KIND_I18N.en;
+  const kind = dict[equipKindOf(e)] || equipKindOf(e);
+  const place = equipPlace(e, lang);
+  /*
+    ⚠️ 日本語だけ「〜の〜」。他の言語は of でつなぐ。
+    ⚠️ 日本語以外では県名と区分名のあいだに空白を入れること。
+      「Hokkaido十勝」は語が切れずに読めない。
+  */
+  if (lang === "ja") return `${place}の${kind}`;
+  const a2 = advT(lang);
+  const pn = prefShort((a2.pref && a2.pref[e.pref]) || e.pref || "");
+  return `${kind} of ${pn}${e.area ? " " + e.area : ""}`;
+}
+/*
+  一本を作る。
+  ⚠️⚠️ 乱数は「作る瞬間」に一度だけ。持っているあいだに揺れると、厳選が成り立たない。
+  ⚠️ id は保存に使う。名前で持たないこと（同じ型が何本も出る）。
+*/
+/*
+  段を一回ずつ引いて、引いた順に返す。
+  ⚠️⚠️ 裏で一度に済ませないこと。「★の数だけ引いて最良を採る」は、
+    一回ずつ見せて初めて遊びになる。更新のたびに段が上がる梯子が、
+    この仕組みのいちばん面白いところ。
+  ⚠️ 返すのは引いた全部。最良だけ返すと演出が作れない。
+*/
+function drawTierSeq(n) {
+  const out = [];
+  const k = Math.max(1, Math.min(16, n | 0));
+  for (let i = 0; i < k; i++) out.push(lmcTierOf(rollLandmarkTier()).key);
+  return out;
+}
+function bestTierOf(seq) {
+  let best = LMC_TIERS[0].key;
+  (seq || []).forEach((t) => { if (lmcTierOf(t).star > lmcTierOf(best).star) best = t; });
+  return best;
+}
+/* 段を決めて一本組む。⚠️ 段は外から渡す（宝箱が引いた結果を使う） */
+function buildEquip(tierKey, where, subCapOver) {
+  const w = (where && where.area) ? where : randomWhere(where && where.pref);
+  const s = lmcTierOf(tierKey).star;
+  let r = Math.floor(Math.random() * EQUIP_MAIN_TOTAL);
+  let main = EQUIP_MAINS[0];
+  for (const m of EQUIP_MAINS) { if (r < m.w) { main = m; break; } r -= m.w; }
+  const out = {
+    id: `eq${Date.now().toString(36)}${Math.floor(Math.random() * 1e6).toString(36)}`,
+    tier: tierKey, star: s, main: main.key,
+    /*
+      ⚠️⚠️ 拾った土地を必ず残すこと。名前がここから決まるので、
+        残し忘れると名前を作り直せない（持ち物が全部「の刀」になる）。
+      ⚠️ 立っていない県で拾うことはないが、無ければ全国から選ぶ。
+    */
+    pref: w.pref, area: w.area,
+    val: Math.round(main.unit * s * rollEquipRoll() * 10) / 10,
+    subs: [],
+  };
+  if (main.key === "cardMul") out.spec = rollEquipSpec(s);
+  /* ⚠️ 二回働くスートは一つだけ。複数にすると事実上の全体強化になる */
+  if (main.key === "twice") out.suit = EQUIP_SUIT_KEYS[Math.floor(Math.random() * 4)];
+  /* ⚠️ 消耗品もここから出る。段で量が変わるので同じ器に乗せる */
+  /* ⚠️ 枠は一つずつ開く。閉じたらそこで止める（途中だけ空く形にしない） */
+  /* ⚠️ ★13以上の箱から出たものは枠が一つ多い。段そのものは12までのまま */
+  const cap = subCapOver || EQUIP_SUB_CAP[s] || 0;
+  const pool = EQUIP_SUBS.slice();
+  for (let i = 0; i < cap; i++) {
+    if (Math.random() >= EQUIP_SUB_OPEN) break;
+    const j = Math.floor(Math.random() * pool.length);
+    const sub = pool.splice(j, 1)[0];
+    out.subs.push({ key: sub.key, val: Math.round(sub.unit * s * rollEquipRoll() * 10) / 10 });
+  }
+  return out;
+}
+/* 旧来の入口。⚠️ 段を自分で引いてから組む。演出が要らない場所だけで使う */
+function rollEquip(star, seek, where) {
+  return buildEquip(bestTierOf(drawTierSeq((star | 0) + (seek | 0))), where);
+}
+/*
+  【スロット】12枠まで。
+  ⚠️⚠️ 段で解放しないこと。強い装備を拾った人だけ枠が増えると、差が二乗で開く。
+  ★ 制覇した都道府県の数で解放する。4県ごとに一枠、47県で12枠。
+*/
+const EQUIP_SLOT_MAX = 12;
+/*
+  制覇した都道府県の数。
+  ⚠️⚠️ 中MAPの旗と同じ式で数えること。式を二つ持つと、
+    旗は立っているのに枠が増えない、が起きる。
+  ★ どの区分でもよいので三つ終えれば制覇（PREF_DONE_AREAS）。
+*/
+function prefDoneCount(cleared) {
+  const done = cleared || loadAdvDone() || [];
+  let n = 0;
+  Object.keys(AREA_LANDMARKS).forEach((k) => {
+    /*
+      ⚠️⚠️ 区部を数に入れないこと。区部が開くのは全国制覇のあとなので、
+        東京の制覇に要ると、東京が終わらず全国制覇にも届かない（堂々巡り）。
+      ⚠️ 分母（ars.length）からも外す。外さないと「三つのうち二つ」で止まり、
+        東京だけ永久に制覇できない。
+      ★ 区部スタートで選んだ一区は普通の土地なので、こちらには数える。
+    */
+    const ars = areasCountable(k);
+    if (!ars.length) return;
+    const ok = ars.filter((ar) => {
+      const ls = landmarksOf(k, ar) || [];
+      return ls.length > 0 && ls.every((nm) => done.indexOf(nm) >= 0);
+    }).length;
+    if (ok >= Math.min(PREF_DONE_AREAS, ars.length)) n++;
+  });
+  return n;
+}
+/*
+  【スキルツリー】
+  ★ 成長は「後から足す」のではなく「最初は欠けている」で作る。
+    必殺技は使えない。大アルカナは効果が一つしかない。
+    ★が上がってもステータスは勝手には伸びない。
+  ⚠️⚠️ 全部振り切った状態を「いまの数値」に合わせること。
+    47段の勝率は★で自動に伸びるステータスを前提に実測してある。
+    伸びを止めると全部ずれるので、上限＝従来値にして、
+    実測値を「基準の育ち方」として生かす。測り直しが要らなくなる。
+  ⚠️ 点は通算の初回クリアから配る。再クリアでは増えない（リセマラを塞ぐ）。
+  ★ 全部で432点ぶん。手に入るのは242点（区部まで含めて）―― およそ56%。
+    ⚠️⚠️ 全部取れるようにしないこと。取れるなら選んでいない。
+    ⚠️ 半分を大きく下回らせないこと。40%で組んだら
+      「身体を全部＋一系統の必殺」で打ち止めになり、大アルカナに一枚も届かなかった。
+*/
+const LS_SKILL = "tarot_skill";
+/* ⚠️ 8ステージで1点。1,755ステージ＋区部184で、およそ242点 */
+/*
+  ⚠️⚠️ 自動で開いていたものを全部ツリーへ移したので、枝が298点ぶんに増えた。
+    8ステージで1点のままだと235点しか手に入らず、上のシートが埋め切れない。
+  ★ 6ステージで1点にする。★1が15点、★2〜11が各25点、★12が46点。
+*/
+const SKILL_PER = 6;
+function loadSkill() {
+  try {
+    const v = JSON.parse(localStorage.getItem(LS_SKILL) || "{}");
+    return (v && typeof v === "object") ? v : {};
+  } catch { return {}; }
+}
+function saveSkill(v) {
+  try { localStorage.setItem(LS_SKILL, JSON.stringify(v || {})); } catch (e) { /* 残せなくても遊べる */ }
+}
+/* 持っている点。⚠️ 使った分を引く */
+/*
+  ★ごとの点。
+  ⚠️⚠️ 通算で数えないこと。★1の点は★1のMAPでしか手に入らない。
+    まとめて数えると、シートを12枚に分けた意味が消える。
+  ⚠️ 何ステージ目の初回クリアかで★が決まる（starOfStage）ので、
+    クリア済みの名所を一つずつ★に振り分けて数える。
+  ⚠️ 再クリアでは増えない。cleared は初回クリアの一覧。
+*/
+/*
+  ⚠️⚠️ デバッグ用。全シートの点を満額で配る。
+    出すときは必ず false に戻すこと ―― true のままだと、
+    点の溜まり方も「未完成のまま先へ行く」も一切試せない。
+*/
+const SKILL_DEBUG_FULL = true;
+/*
+  ⚠️⚠️ デバッグ用。戦闘では「いま遊んでいる★までのシート」を全部取った扱いにする。
+    ★3の土地なら★1〜3のシートの枝がすべて効く。★4以降は効かない。
+    出すときは必ず false に戻すこと ―― true のままだと、
+    実際に振った枝が戦闘に一切反映されない。
+*/
+const SKILL_DEBUG_BY_STAR = true;
+function skillTakenUpTo(star) {
+  const t = {};
+  SKILL_NODES.forEach((nd) => { if (nd.sheet <= (star | 0)) t[nd.key] = 1; });
+  return t;
+}
+function battleSkillOf(star) {
+  return skillBonus(SKILL_DEBUG_BY_STAR ? skillTakenUpTo(star) : undefined);
+}
+function skillPointsBySheet(cleared) {
+  if (SKILL_DEBUG_FULL) {
+    const d = {};
+    for (let i = 1; i <= 12; i++) d[i] = SKILL_SHEET_PT[i] * SKILL_PER;
+    return Object.fromEntries(Object.keys(d).map((k) => [k, SKILL_SHEET_PT[k]]));
+  }
+  const done = cleared || loadAdvDone() || [];
+  const n = {};
+  for (let i = 1; i <= 12; i++) n[i] = 0;
+  done.forEach((nm, i) => {
+    /* ⚠️ 並び順を通算の段として使う。何番目に取ったかで★が決まる */
+    const step = Math.min(ADV_STEPS - 1, Math.floor(i / Math.max(1, SKILL_PER)) % ADV_STEPS);
+    const st = Math.max(1, Math.min(12, starOfStage(step, nm)));
+    n[st] += 1;
+  });
+  const out = {};
+  for (let i = 1; i <= 12; i++) out[i] = Math.floor(n[i] / SKILL_PER);
+  return out;
+}
+function skillPointsOf(cleared, taken, sheet) {
+  const by = skillPointsBySheet(cleared);
+  const t = taken || loadSkill();
+  if (sheet) {
+    const all = by[sheet] || 0;
+    const used = SKILL_NODES.filter((nd) => nd.sheet === sheet)
+      .reduce((x, nd) => x + nd.cost * (t[nd.key] || 0), 0);
+    return { all, used, left: all - used };
+  }
+  /* 全部の合計。⚠️ 帯の数字にだけ使う。振るときはシートごとに見ること */
+  let all = 0, used = 0;
+  for (let i = 1; i <= 12; i++) {
+    all += by[i] || 0;
+    used += SKILL_NODES.filter((nd) => nd.sheet === i)
+      .reduce((x, nd) => x + nd.cost * (t[nd.key] || 0), 0);
+  }
+  return { all, used, left: all - used, by };
+}
+/*
+  枝。
+  ⚠️⚠️ これまで自動で開いていたものを、すべてここへ移してある。
+      ★で statsOf が伸びる          → 身体（HPは12段、他の八能力は四段）
+      4県ごとに装備スロット +1       → 身体（装備枠12段）
+      手札が★で増える（3→10枚）     → 身体（カード枠）
+      妨害の耐性は装備のサブだけ      → 守り（5種）
+      宝箱の確率・目利きは装備だけ    → 運
+  ⚠️ 耐性と稼ぎを身体へ混ぜないこと。身体だけ巨大になって選択にならない。
+*/
+const SKILL_TRUNKS = [
+  { key: "swords", color: "#EDF2FA" },
+  { key: "wands", color: "#FFAE5C" },
+  { key: "cups", color: "#7FC7E8" },
+  { key: "pentacles", color: "#E8C46A" },
+  { key: "major", color: "#B79AF0" },
+  { key: "body", color: "#9FE0A6" },
+  { key: "ward", color: "#8FD8F0" },
+  { key: "luck", color: "#F2D64B" },
+];
+/*
+  大アルカナ22枚の「二つ目の効果」。
+  ⚠️⚠️ 22枚すべてが、最初は一つ目の効果しか持たない。
+    太陽なら攻撃+40%だけで、鳴動と轟音を無駄行動にしない。
+    星なら回復だけで、腐食も瘴気も受ける。
+  ★ 二つ目を開けると札が完成する。「同じ札なのに前より効く」が成長の実感になる。
+*/
+const MAJOR_LV2 = {
+  0: "fool2", 1: "magician2", 2: "priestess2", 3: "empress2", 4: "emperor2",
+  5: "hiero2", 6: "lovers2", 7: "chariot2", 8: "strength2", 9: "hermit2",
+  10: "wheel2", 11: "justice2", 12: "hanged2", 13: "death2", 14: "temperance2",
+  15: "devil2", 16: "tower2", 17: "star2", 18: "moon2", 19: "sun2",
+  20: "judgement2", 21: "world2",
+};
+/*
+  【12星座】
+  ★ ★1の牡羊から★12の魚まで。シートごとに違う形にする。
+  ⚠️⚠️ 点は「星座の線を辿る順」に並べること。隣り合う点を線で結ぶので、
+    順がばらばらだと図がぐしゃぐしゃになる。
+  ⚠️ 実在の星だけでは足りない。後ろに架空の星を足して数を合わせる。
+  ⚠️ 0〜100 の枠に収める。端から6は空けること（星の光条がはみ出す）。
+*/
+const SKILL_SKY = {
+  1: [[74, 28], [62, 35], [53, 41], [46, 46],
+    [40, 54], [36, 63], [45, 71], [56, 67], [66, 58], [72, 47], [30, 46],
+    [24, 34], [62, 72], [80, 40], [30, 72], [52, 24], [78, 64]],
+  2: [[28, 64], [38, 56], [48, 50], [58, 52], [68, 45], [78, 30],
+    [46, 42], [36, 36], [64, 66], [24, 48], [72, 60],
+    [32, 26], [58, 72], [80, 54], [22, 74], [54, 28], [70, 74]],
+  3: [[32, 20], [52, 24], [34, 36], [52, 38], [28, 52], [46, 54],
+    [24, 68], [42, 72], [60, 58], [66, 38], [64, 74],
+    [20, 34], [70, 62], [38, 84], [58, 82], [76, 50], [26, 84]],
+  4: [[50, 28], [48, 43], [36, 55], [62, 57], [28, 68], [72, 70],
+    [52, 55], [41, 49], [59, 47], [30, 40], [70, 40],
+    [24, 52], [76, 54], [44, 80], [62, 80], [38, 32], [64, 28]],
+  5: [[34, 63], [31, 50], [37, 39], [48, 32], [57, 39], [55, 50],
+    [78, 58], [63, 67], [46, 67], [24, 72], [70, 32],
+    [22, 40], [66, 50], [42, 80], [62, 80], [80, 44], [28, 28]],
+  6: [[57, 76], [48, 61], [39, 48], [29, 39], [46, 37], [61, 43],
+    [70, 52], [35, 67], [26, 56], [68, 68], [50, 26],
+    [36, 28], [72, 34], [24, 70], [60, 66], [78, 42], [42, 82]],
+  7: [[35, 38], [61, 34], [48, 47], [28, 58], [67, 58], [41, 71],
+    [59, 73], [50, 60], [30, 26], [70, 24], [50, 84],
+    [24, 44], [72, 44], [34, 84], [68, 84], [44, 24], [60, 24]],
+  8: [[28, 28], [35, 37], [44, 44], [56, 57], [67, 69], [58, 79],
+    [24, 40], [40, 27], [70, 55], [44, 68], [30, 62],
+    [48, 32], [66, 40], [78, 44], [46, 84], [30, 74], [20, 52]],
+  9: [[33, 45], [44, 36], [55, 43], [63, 36], [70, 50], [59, 59],
+    [44, 59], [33, 59], [26, 32], [72, 66], [48, 72],
+    [26, 50], [76, 38], [40, 74], [62, 72], [50, 26], [78, 58]],
+  10: [[26, 36], [43, 32], [61, 37], [74, 46], [67, 59], [54, 68],
+    [41, 65], [33, 54], [50, 49], [63, 50], [37, 45], [78, 32], [24, 66],
+    [56, 26], [80, 62], [30, 76], [66, 76], [18, 48]],
+  11: [[33, 28], [44, 35], [55, 30], [64, 39], [52, 47], [43, 56],
+    [56, 63], [68, 72], [35, 47], [45, 72], [26, 62], [72, 26], [58, 82],
+    [24, 38], [78, 52], [32, 76], [66, 84], [46, 20]],
+  12: [[22, 26], [31, 33], [40, 28], [33, 21],
+    [47, 41], [57, 50], [67, 59], [75, 67],
+    [82, 74], [75, 82], [66, 77], [73, 68],
+    [52, 35], [62, 47], [24, 46], [40, 62], [86, 58],
+    [30, 56], [46, 72], [58, 66], [20, 68], [88, 42],
+    [36, 44], [70, 34], [84, 26], [26, 14], [56, 86],
+    [44, 84], [14, 38], [90, 66], [18, 82], [62, 22],
+    [50, 14], [78, 14], [12, 60], [34, 88], [88, 88], [10, 20]],
+};
+/*
+  ⚠️⚠️ ★12だけは「47段の★12ぶん（93）＋区部（184）」なので、
+    6ステージで1点なら 277/6 = 46。ここに入り切らないものは
+    枝の側を削ること ―― 点を水増しすると、埋め切れないシートができる。
+  ⚠️ 実測では47点ぶんになったので、ちょうど1点だけ足りない。
+    区部は184「以上」（東京23区×8）なので、端数を切り上げて47とする。
+*/
+const SKILL_SHEET_PT = { 1: 15, 2: 25, 3: 25, 4: 25, 5: 25, 6: 25,
+  7: 25, 8: 25, 9: 25, 10: 25, 11: 25, 12: 47 };
+const SKILL_STAT_STEPS = 4;
+/* ⚠️ HPだけ12段。★ごとに必ず一つ置く。四段だと八枚のシートにHPが無くなる */
+const SKILL_HP_STEPS = 12;
+/* ⚠️ 装備枠も12段。これまで「4県ごとに +1」で自動に開いていたぶん */
+const SKILL_SLOT_STEPS = 12;
+/* 妨害の耐性。⚠️ 五種を別々に。まとめると作り分けた意味が消える */
+const SKILL_WARDS = ["resRoar", "resRot", "resDread", "resMiasma", "resKill"];
+const SKILL_NODES = (() => {
+  const pool = [];
+  const SU = ["swords", "wands", "cups", "pentacles"];
+  const ST = ["power", "mind", "spirit", "guard", "vital", "skill", "speed", "luck"];
+  /*
+    必殺。
+    ⚠️⚠️ 手札の枚数に合わせること。★3で5枚必殺を開けても、手札が4枚なので
+      絶対に発動しない ―― 開けた瞬間に死んでいる枝になる。
+    ★ BATTLE_SHAPE の cards が n になる最初の★に、n枚必殺を置く。
+  */
+  const firstStarFor = (n) => {
+    for (let st = 1; st <= 12; st++) if ((BATTLE_SHAPE[st] || {}).cards >= n) return st;
+    return 12;
+  };
+  SU.forEach((su, k) => {
+    for (let n = 3; n <= 10; n++) {
+      pool.push({ key: `${su}F${n}`, trunk: su, kind: "flash", run: n,
+        /* ⚠️ 上の枚数を重くしすぎない。手札の都合で★11〜12へ固まるので、
+             コストまで重いと最上位のシートが埋め切れない */
+        cost: n >= 9 ? 1 : Math.ceil((n - 2) / 2),
+        min: firstStarFor(n), ord: k * 100 + n, near: 1,
+        need: n > 3 ? [`${su}F${n - 1}`] : [] });
+    }
+    for (let i = 1; i <= 3; i++) {
+      pool.push({ key: `${su}P${i}`, trunk: su, kind: "power", per: 3,
+        cost: 1, min: Math.min(11, 9 + i), ord: 900 + k * 10 + i, near: 3,
+        need: i === 1 ? [`${su}F10`] : [`${su}P${i - 1}`] });
+    }
+  });
+  /*
+    身体。
+    ⚠️⚠️ HPとカード枠は序盤（near 0）に置くこと。ここが「基準の育ち方」で、
+      普通に進めば取る。取らずに先へ行くのは、意図してそうする人だけ。
+    ⚠️ 上限＝従来の値。全部取っていまの数値になる（47段の実測がそのまま生きる）。
+  */
+  for (let i = 1; i <= SKILL_HP_STEPS; i++) {
+    pool.push({ key: `st_maxHP_${i}`, trunk: "body", kind: "stat", stat: "maxHP",
+      cost: 1, min: i, ord: i, near: 0,
+      need: i === 1 ? [] : [`st_maxHP_${i - 1}`] });
+  }
+  /*
+    カード枠。⚠️ 手札が増える★にだけ置く（3→4→5→6→7→8→9→10）。
+    ⚠️ 取らなければ増えない。取れば従来どおり。
+  */
+  [3, 5, 6, 8, 9, 10, 11, 12].forEach((st, i) => {
+    pool.push({ key: `cards_${i + 1}`, trunk: "body", kind: "cards",
+      cost: 2, min: st, ord: 20 + i, near: 0,
+      need: i === 0 ? [] : [`cards_${i}`] });
+  });
+  /* 装備枠。⚠️ これまで4県ごとに自動で開いていたぶん */
+  for (let i = 1; i <= SKILL_SLOT_STEPS; i++) {
+    pool.push({ key: `slot_${i}`, trunk: "body", kind: "slot",
+      cost: 1, min: i, ord: 40 + i, near: 2,
+      need: i === 1 ? [] : [`slot_${i - 1}`] });
+  }
+  ST.forEach((st, j) => {
+    for (let i = 1; i <= SKILL_STAT_STEPS; i++) {
+      pool.push({ key: `st_${st}_${i}`, trunk: "body", kind: "stat", stat: st,
+        cost: 1, min: [1, 4, 7, 10][i - 1] + (j % 3), ord: 100 + (i - 1) * 100 + j, near: 2,
+        need: i === 1 ? [] : [`st_${st}_${i - 1}`] });
+    }
+  });
+  /* 守り。⚠️ 五種を別々に。段12で各12%（装備のサブと足し算になる） */
+  SKILL_WARDS.forEach((w, j) => {
+    for (let i = 1; i <= 3; i++) {
+      pool.push({ key: `w_${w}_${i}`, trunk: "ward", kind: "ward", ward: w, per: 4,
+        /* ⚠️ min を11で止める。12を超えると★12へ全部落ちて、あそこが埋まらない */
+        cost: 2, min: Math.min(11, 2 + (i - 1) * 4 + (j % 3)), ord: j * 10 + i, near: 3,
+        need: i === 1 ? [] : [`w_${w}_${i - 1}`] });
+    }
+  });
+  /* 運。⚠️ 宝箱・目利き・到達率。戦いを直接強くしないので、後ろに置く */
+  [["box", 3], ["eye", 0.2], ["reach", 1]].forEach(([k, per], j) => {
+    for (let i = 1; i <= 4; i++) {
+      pool.push({ key: `lk_${k}_${i}`, trunk: "luck", kind: "luck", luck: k, per,
+        cost: 2, min: Math.min(11, 2 + (i - 1) * 3 + j), ord: j * 10 + i, near: 4,
+        need: i === 1 ? [] : [`lk_${k}_${i - 1}`] });
+    }
+  });
+  /*
+    大アルカナ。
+    ⚠️⚠️ 必殺が伸びない★（手札が増えない★）に厚く置くこと。
+      全シートに全部を少しずつ入れると、★ごとの性格が消えてのっぺりする。
+    ★ ★2・★4・★7 は必殺が伸びない ―― そこが札を完成させる★になる。
+  */
+  const majorStars = [2, 2, 4, 4, 4, 7, 7, 7, 2, 4, 7, 5, 6, 8, 9, 10, 11, 12, 12, 11, 10, 9];
+  Object.keys(MAJOR_LV2).forEach((n, i) => {
+    pool.push({ key: MAJOR_LV2[n], trunk: "major", kind: "major", major: Number(n),
+      cost: 2, min: majorStars[i] || 2, ord: 500 + i, near: 3, need: [] });
+  });
+  /*
+    秘剣・剣の舞。
+    ⚠️⚠️ 剣の幹に置くこと。悪魔と死神で出る札だが、中身は剣の技。
+      大アルカナの幹へ置くと、いちばん弱い剣に最上位の見返りが無くなる。
+    ★ 段を開けるごとに斬る回数が増える。七段で★の数ぶん（＝満額）。
+    ⚠️ 開けていなければ出ない。悪魔と死神が重なっても何も起きない。
+    ⚠️ 剣の必殺（3枚）を開けていないと意味が無いので、そこを前提にする。
+  */
+  for (let i = 1; i <= 7; i++) {
+    pool.push({ key: `dance${i}`, trunk: "swords", kind: "dance", per: 0.1,
+      /* ⚠️ 3点だと★12のシートが52点ぶんになって埋め切れなかった */
+      cost: 2, min: Math.min(11, 4 + i), ord: 800 + i, near: 4,
+      need: i === 1 ? ["swordsF3"] : [`dance${i - 1}`] });
+  }
+  /* ⚠️ 七段で3枚→10枚に届く。八段目は上限に当たって効かない */
+  for (let i = 1; i <= 7; i++) {
+    pool.push({ key: `blast${i}`, trunk: "major", kind: "blast", per: 1,
+      cost: 3, min: Math.min(11, 4 + i), ord: 700 + i, near: 4,
+      need: i === 1 ? ["swordsF3", "wandsF3", "cupsF3", "pentaclesF3"] : [`blast${i - 1}`] });
+  }
+  /*
+    シートへ詰める。
+    ⚠️⚠️ 前提（min）を守りながら、下の★から順に埋める。
+    ⚠️ near の小さいものを先に入れること。基準の育ち方（HP・カード枠・必殺）が
+      星座の中心寄りに来て、前提の鎖がそのまま道筋になる。
+    ⚠️ 乱数を使わない。人によってツリーの形が変わると、引き継ぎも相談も成り立たない。
+  */
+  pool.sort((x, y) => (x.min - y.min) || (x.near - y.near) || (x.ord - y.ord));
+  const left = pool.slice();
+  const out = [];
+  for (let sh = 1; sh <= 12; sh++) {
+    let c = 0, guard = 0;
+    while (guard++ < 600) {
+      const i = left.findIndex((n) => n.min <= sh && c + n.cost <= SKILL_SHEET_PT[sh]);
+      if (i < 0) break;
+      const n = left.splice(i, 1)[0];
+      n.sheet = sh; c += n.cost; out.push(n);
+    }
+  }
+  left.forEach((n) => { n.sheet = 12; out.push(n); });
+  /*
+    星座へ置く。
+    ⚠️ near の小さい順（＝基準の育ち方）から、星座の内側の星へ。
+      SKILL_SKY は内側から並べてある。
+  */
+  /*
+    ⚠️⚠️ 始点はシートに一つ。幹ごとの鎖をやめる。
+      幹で鎖にすると「剣の4枚は3枚の次」だが、3枚は別のシートにあるので
+      そのシートの中だけでは前提が閉じず、入口が六つも八つもできていた。
+    ★ 星座の連なりを鎖にする。内側の星から外へ。
+    ★ 始点は根本 ―― カード枠（手札が増える★なら）。無ければHP。
+    ⚠️ 手札より多い枚数の必殺は min（シートの★）で既に塞いである。
+      鎖を外しても★3に5枚必殺は並ばない。
+  */
+  const used = {};
+  const startRank = (nd) => (nd.kind === "cards" ? 0 : nd.stat === "maxHP" ? 1 : 2);
+  out.sort((x, y) => (x.sheet - y.sheet)
+    || (startRank(x) - startRank(y))
+    || (x.near - y.near)
+    || (SKILL_TRUNKS.findIndex((t) => t.key === x.trunk)
+      - SKILL_TRUNKS.findIndex((t) => t.key === y.trunk))
+    || (x.ord - y.ord));
+  out.forEach((nd) => {
+    const sky = SKILL_SKY[nd.sheet] || SKILL_SKY[1];
+    const i = (used[nd.sheet] = (used[nd.sheet] || 0) + 1) - 1;
+    const pt = sky[i % sky.length];
+    nd.x = pt[0]; nd.y = pt[1];
+    nd.armI = i;
+    /* ⚠️ 前提は「一つ内側の星」。始点（i===0）だけ前提なし */
+    nd.need = i === 0 ? [] : ["@prev"];
+  });
+  /* ⚠️ @prev を実際のキーに置き換える。並べ終わってからでないと引けない */
+  const bySheet = {};
+  out.forEach((nd) => { (bySheet[nd.sheet] = bySheet[nd.sheet] || []).push(nd); });
+  Object.keys(bySheet).forEach((sh) => {
+    const arr = bySheet[sh].slice().sort((x, y) => x.armI - y.armI);
+    arr.forEach((nd, i) => { nd.need = i === 0 ? [] : [arr[i - 1].key]; });
+  });
+  /*
+    間隔をあける。
+    ⚠️⚠️ 実在の星の並びのままだと重なる（魚座で最小 2.2 だった）。
+    ★ 近すぎる組を押し合う。形は少しだけ崩れるが、骨は残る。
+    ⚠️ 乱数を使わない。毎回同じ形になること。
+  */
+  const MIN = 14, LO = 9, HI = 91;
+  for (let sh = 1; sh <= 12; sh++) {
+    const ns = out.filter((n) => n.sheet === sh);
+    for (let it = 0; it < 160; it++) {
+      for (let i = 0; i < ns.length; i++) {
+        for (let j = i + 1; j < ns.length; j++) {
+          const dx = ns[j].x - ns[i].x, dy = ns[j].y - ns[i].y;
+          let d = Math.hypot(dx, dy);
+          const ux = d < 0.001 ? 1 : dx / d, uy = d < 0.001 ? 0 : dy / d;
+          if (d < 0.001) d = 0.001;
+          if (d >= MIN) continue;
+          const push = (MIN - d) / 2;
+          ns[i].x -= ux * push; ns[i].y -= uy * push;
+          ns[j].x += ux * push; ns[j].y += uy * push;
+        }
+      }
+      ns.forEach((n) => {
+        n.x = Math.max(LO, Math.min(HI, n.x));
+        n.y = Math.max(LO, Math.min(HI, n.y));
+      });
+    }
+    ns.forEach((n) => {
+      n.x = Math.round(n.x * 10) / 10;
+      n.y = Math.round(n.y * 10) / 10;
+    });
+  }
+  return out;
+})();
+/*
+  取っているものをまとめる。
+  ⚠️⚠️ 戦闘の計算から直接 loadSkill を呼ばないこと。読む場所が散ると、
+    どこで効いているか追えなくなる。まとめた一つの器を渡す。
+*/
+function skillBonus(taken) {
+  const t = taken || loadSkill();
+  const b = {
+    /* ⚠️ 開けていない系統は 0。0 のときは必殺が出ない */
+    flashMax: { swords: 0, wands: 0, cups: 0, pentacles: 0 },
+    power: { swords: 0, wands: 0, cups: 0, pentacles: 0 },
+    /* ⚠️ 0 が素、1 が従来。途中は割合 */
+    statRate: {},
+    major2: {},
+    /* ⚠️ 3 が最小。段を開けるごとに 1 ずつ */
+    blastRun: 3,
+    /*
+      秘剣・剣の舞の斬る回数（★に対する割合）。
+      ⚠️⚠️ 0 のときは出ない。悪魔と死神が重なっても何も起きない。
+      ★ 一段目で0.4、七段で1.0（★の数ぶん）。
+    */
+    danceRate: 0,
+    /* ⚠️ 0 のとき手札は3枚（BATTLE_SHAPE の最小）。取るごとに +1 */
+    cards: 0,
+    /* ⚠️ 1 が最小。これまで「4県ごとに +1」で自動に開いていたぶん */
+    slots: 1,
+    ward: {}, luck: { box: 0, eye: 0, reach: 0 },
+  };
+  STAT_KEYS.concat(["maxHP"]).forEach((k) => { b.statRate[k] = 0; });
+  SKILL_WARDS.forEach((k) => { b.ward[k] = 0; });
+  SKILL_NODES.forEach((nd) => {
+    if (!t[nd.key]) return;
+    if (nd.kind === "flash") {
+      b.flashMax[nd.trunk] = Math.max(b.flashMax[nd.trunk], nd.run);
+    } else if (nd.kind === "power") {
+      b.power[nd.trunk] += nd.per;
+    } else if (nd.kind === "stat") {
+      /* ⚠️ HPだけ12段。ほかは四段。段数が違うので割る数も分ける */
+      b.statRate[nd.stat] += 1 / (nd.stat === "maxHP" ? SKILL_HP_STEPS : SKILL_STAT_STEPS);
+    } else if (nd.kind === "cards") {
+      b.cards += 1;
+    } else if (nd.kind === "slot") {
+      b.slots += 1;
+    } else if (nd.kind === "ward") {
+      b.ward[nd.ward] = (b.ward[nd.ward] || 0) + nd.per;
+    } else if (nd.kind === "luck") {
+      b.luck[nd.luck] = (b.luck[nd.luck] || 0) + nd.per;
+    } else if (nd.kind === "major") {
+      b.major2[nd.major] = true;
+    } else if (nd.kind === "blast") {
+      b.blastRun = Math.min(10, b.blastRun + nd.per);
+    } else if (nd.kind === "dance") {
+      /* ⚠️ 一段目で0.4、以降0.1ずつ。七段で1.0 */
+      b.danceRate = Math.min(1, (b.danceRate || 0) + (b.danceRate ? nd.per : 0.4));
+    }
+  });
+  /* ⚠️ 上限を超えさせない。12段とも取って従来の最大（10枚・12枠） */
+  b.cards = Math.min(7, b.cards);
+  b.slots = Math.min(EQUIP_SLOT_MAX, b.slots);
+  return b;
+}
+/*
+  手札の枚数。
+  ⚠️⚠️ BATTLE_SHAPE を直に読まないこと。★で自動に増えていたぶんは
+    カード枠の枝へ移した。取らなければ3枚のまま。
+  ★ 全部取れば従来どおり（★12で10枚）。47段の実測はこの状態で生きる。
+  ⚠️ その★の上限は超えない。★1で10枚にはならない。
+*/
+/*
+  【育ちで大アルカナの出方が変わる】
+  ★ 伸ばした能力の札が出やすくなる。育て方が引く札に現れる。
+  ⚠️⚠️ 出る確率（MAJOR_RATE）も、一枚ごとの効果も、敵の強さも変えないこと。
+    22枚の中の引き分けが変わるだけなので、47段の実測がそのまま生きる。
+    敵のHPや攻撃に係数を掛ける方法は、測り直しが毎回付いてくるので捨てた。
+  ⚠️ 偏りは最大でも均等の1.6倍。それ以上だと女教皇・力のような最強格を
+    狙って引けるようになり、勝率が跳ねる。
+  ⚠️ 除外の六枚（愚者・悪魔・死神・塔・審判・世界）は偏らせない。
+    一発で盤面が変わる札を育ちで呼べると壊れる。
+*/
+const MAJOR_BY_STAT = {
+  power:  [7, 8],    /* ちから      戦車・力 */
+  mind:   [1, 19],   /* ちりょく    魔術師・太陽 */
+  guard:  [18, 11],  /* ぼうぎょ    月・正義 */
+  vital:  [3, 4],    /* たいりょく  女帝・皇帝 */
+  skill:  [12, 6],   /* きようさ    吊るされた男・恋人 */
+  spirit: [17, 2],   /* せいしん    星・女教皇 */
+  luck:   [5, 10],   /* うん        法王・運命の輪 */
+  speed:  [9, 14],   /* すばやさ    隠者・節制 */
+};
+const MAJOR_BIAS_MAX = 0.6;
+/*
+  22枚の重み。
+  ★ 能力ごとの伸び（スキルツリーで開けた割合）を平均と比べ、
+    平均より伸びている能力の札を重く、遅れている能力の札を軽くする。
+  ⚠️ 全部同じだけ伸ばしていれば、偏りはゼロ（均等）。偏らせたのが報われる形。
+*/
+function majorWeightsOf(sk) {
+  const b = sk || skillBonus();
+  const keys = Object.keys(MAJOR_BY_STAT);
+  const r = keys.map((k) => (b.statRate && b.statRate[k]) || 0);
+  const mean = r.reduce((x, y) => x + y, 0) / keys.length;
+  const w = new Array(22).fill(1);
+  keys.forEach((k, i) => {
+    const d = mean > 0.001 ? (r[i] - mean) / mean : 0;
+    const f = 1 + MAJOR_BIAS_MAX * Math.max(-1, Math.min(1, d));
+    MAJOR_BY_STAT[k].forEach((n) => { w[n] = f; });
+  });
+  return w;
+}
+function pickMajor(sk) {
+  const w = majorWeightsOf(sk);
+  const tot = w.reduce((x, y) => x + y, 0);
+  let t = Math.random() * tot;
+  for (let i = 0; i < 22; i++) { t -= w[i]; if (t <= 0) return i; }
+  return 21;
+}
+function cardsOf(star, sk) {
+  const cap = (BATTLE_SHAPE[Math.max(1, Math.min(12, star | 0))] || {}).cards || 3;
+  const b = sk || skillBonus();
+  return Math.max(3, Math.min(cap, 3 + (b.cards || 0)));
+}
+/* 取れるか。⚠️ 前提と点の両方を見ること */
+function skillCanTake(key, taken, left) {
+  const nd = SKILL_NODES.find((x) => x.key === key);
+  if (!nd) return false;
+  const t = taken || loadSkill();
+  if (t[key]) return false;
+  if ((nd.need || []).some((k) => !t[k])) return false;
+  return (left | 0) >= nd.cost;
+}
+
+/* ⚠️ 使っていない。装備枠はスキルツリーへ移した（skillBonus().slots）。上限だけ残す */
+function equipSlotsOf(prefDone) {
+  return Math.max(1, Math.min(EQUIP_SLOT_MAX, 1 + Math.floor((prefDone | 0) / 4)));
+}
+/*
+  装着している分をまとめる。
+  ⚠️⚠️ 戦闘の計算から直接 equip を読まないこと。読む場所が散ると、
+    どこで効いているか追えなくなる。まとめた一つの器を渡す。
+  ⚠️ 同じ種類は足し算。掛け算にすると、同じ装備を並べただけで指数に伸びる。
+*/
+function equipBonus(list) {
+  const b = {
+    reach: 0, reviveCut: 0, drain: 0, nullify: 0, soften: 0, cycle: 0, seek: 0,
+    selfCut: 0, regen: 0,
+    lastStand: 0, fullPower: 0, reflect: 0, pierce: 0, solo: 0, crowd: 0, upright: 0,
+    vsRevived: 0, burstMul: 0, majorRate: 0,
+    foeInfo: false, cardMuls: [], twice: {},
+    atk: 0, def: 0, sword: 0, wand: 0, cup: 0, coin: 0, crit: 0, critMul: 0,
+    first: 0, body: 0, burst: 0, box: 0, eye: 0,
+    resRoar: 0, resRot: 0, resDread: 0, resMiasma: 0, resKill: 0,
+  };
+  (list || []).forEach((e) => {
+    if (!e) return;
+    if (e.main === "foeInfo") b.foeInfo = true;
+    else if (e.main === "cardMul") { if (e.spec) b.cardMuls.push(e.spec); }
+    else if (e.main === "twice") { if (e.suit) b.twice[e.suit] = (b.twice[e.suit] || 0) + (e.val || 0); }
+    else if (b[e.main] !== undefined) b[e.main] += e.val || 0;
+    (e.subs || []).forEach((s) => { if (b[s.key] !== undefined) b[s.key] += s.val || 0; });
+  });
+  /*
+    ⚠️⚠️ 上限を必ず通すこと。12枠すべてを同じ軸で揃えられると、
+      耐性とHPは満枠で 79%／79% まで伸びる。妨害が置物になり、
+      47段の勝率が全部ずれる。ここが最後の関所。
+    ⚠️ 上限は「一本で取れる最大値のおよそ3倍」。揃える意味は残し、壊れる手前で止める。
+  */
+  /* ⚠️ 妨害ごとに別々に頭を打たせる。合算して一つの上限にしないこと */
+  ["resRoar", "resRot", "resDread", "resMiasma", "resKill"]
+    .forEach((k) => { b[k] = Math.min(30, b[k]); });
+  b.body = Math.min(20, b.body);
+  b.def = Math.min(30, b.def);
+  /*
+    【同じ主効果を重ねたとき】
+    ⚠️⚠️ 重複そのものは禁じないこと。いちばん出やすい cardMul は
+      「棒の2と5とKが×2.2」のように狭く指定されたものを複数集めて
+      盤面を覆うのが遊び方で、1本しか持てないとそこで終わる。
+    ★ かわりに種類ごとに頭を打たせる。おおむね一本で取れる最大値の1.5〜2倍。
+    ⚠️ cardMul と seek には上限を置かない。
+      前者は覆う広さで自然に頭打ちになる（狭いほど倍率が高い）。後者は戦闘に効かない。
+    ⚠️ foeInfo と lastHP は真偽値。2本目は素直に無駄になる。
+  */
+  b.selfCut = Math.min(54, b.selfCut);
+  b.nullify = Math.min(36, b.nullify);
+  b.reach = Math.min(9, b.reach);
+  /* ⚠️ 60%まで。これ以上削ると復活が消え、破魔矢が死に札になる */
+  b.reviveCut = Math.min(60, b.reviveCut);
+  b.drain = Math.min(36, b.drain);
+  b.soften = Math.min(63, b.soften);
+  b.cycle = Math.min(45, b.cycle);
+  b.regen = Math.min(6, b.regen);
+  b.lastStand = Math.min(45, b.lastStand);
+  b.fullPower = Math.min(36, b.fullPower);
+  b.reflect = Math.min(27, b.reflect);
+  b.pierce = Math.min(45, b.pierce);
+  b.solo = Math.min(40, b.solo);
+  b.crowd = Math.min(40, b.crowd);
+  b.upright = Math.min(32, b.upright);
+  b.vsRevived = Math.min(36, b.vsRevived);
+  b.burstMul = Math.min(30, b.burstMul);
+  /* ⚠️⚠️ 大アルカナは 6pt まで。63% → 69% が上限。緩めると塔審判が主役になる */
+  b.majorRate = Math.min(6, b.majorRate);
+  return b;
+}
+/*
+  【消耗する装備】
+  ⚠️⚠️ 装備しても、使えば消える。枠を占めたまま一回しか働かない。
+    だから強くしてよい。持ち続けられる装備と同じ土俵で釣り合わせない。
+  ★ ダメコンはここに移した。常時持てる保険にすると、負ける経路が一本消える。
+    「今日は一回ぶんの保険がある」という持ち物にする。
+  ⚠️ 段で量が変わる。型は変わらない。
+*/
+const EQUIP_USES = [
+  /*
+    ダメコン。⚠️ 自動で働く。押す操作はいらない（押し忘れで死ぬのは理不尽）。
+    ★ 致命の一撃を一度だけ無効にし、HPを最大値の一割残す。働いたら消える。
+  */
+  { key: "lastHP", unit: 0,   auto: true },
+  /*
+    料理。⚠️ 押して使う。盾の隣に置く。
+    ★ 最大HPの割合で戻る。段12で 2.2×12 = 26.4%。
+    ⚠️⚠️ 半分も戻すと、負ける経路が一本消える。★1で測った「じりじり減って、
+      回復を引けず、足りずに負ける」という負け方が、料理一つで無かったことになる。
+      枠を一つ食う代償があっても、一回で戦況がひっくり返る量にしない。
+    ⚠️ ターンを消費しない。回復札を引けないことへの保険なので、
+      引き直しの機会まで奪うと、持っていても出番が来ない。
+  */
+  { key: "meal",   unit: 2.2, heal: true },
+  /*
+    解毒。★ 瘴気を消す。⚠️ 予防はしない。掛かってから使うもの。
+  */
+  { key: "cure",   unit: 0,   clears: "miasma" },
+  /*
+    研ぎ。★ そのターンの与ダメージが増える。段12で 1.4×12 = 16.8%。
+  */
+  { key: "whet",   unit: 1.4, boost: true },
+];
+/* ⚠️ 装備と消耗品は同じ枠を食う。別枠にすると、消耗品は常に持つだけの物になる */
+/*
+  【宝箱】
+  ★ 拾ったものは、まず宝箱に入る。倉庫（owned）へ移したものだけが装備できる。
+  ⚠️⚠️ 溢れたら古いものから黙って消えること。
+    「要らないものを捨てる」作業を人にやらせないための仕組みなので、
+    容量が一杯ですと止めてしまっては意味がない。
+  ⚠️ 消えるのは宝箱の中だけ。倉庫に移したものは消えない。
+  ⚠️ 消える順に並べ、残りいくつかを画面に出すこと。
+    黙って消えるのと、消えると分かっていて消えるのは別物。
+*/
+const EQUIP_BOX_MAX = 30;
+/*
+  ⚠️⚠️ 未開封の箱と、開けた装備は別々に数えること。
+    合わせて数えると「箱を溜めていたら装備が消えた」が起き、溜める判断が濁る。
+*/
+const EQUIP_CHEST_MAX = 30;
+/*
+  【★13〜15の宝箱】
+  ⚠️⚠️ 装備のレア度を13段にしないこと。ブロンズ〜ジェネシスの12段は
+    名前も色も枠の作りもランドマークカードと共有している。13段目を足すと
+    梯子が二本になる（v5で「★8をホロと呼ばない」と決めたのと同じ話）。
+  ★ 箱の★だけを13〜15まで伸ばす。出る装備は相変わらず12段。
+    箱の★は「引く回数」なので、13回・14回・15回引くという意味になる。
+  ⚠️ 回数を増やすだけでは薄い（★12 1.17% → ★15 1.45%。ほぼ変わらない）。
+    上振れをいじるより、下振れを消すほうが体感に出る。
+  ★ 四つ重ねる。
+      floor  この段より下は出ない（外れが消える）
+      subCap サブの枠が一つ多い
+      twin   装備が二本出る（★15だけ。滅多に出ないから事件になる）
+*/
+const CHEST_HIGH = {
+  13: { floor: "gold",     subCap: 7, twin: false },
+  14: { floor: "platinum", subCap: 7, twin: false },
+  15: { floor: "diamond",  subCap: 7, twin: true },
+};
+/* ⚠️ 出どころを絞ること。★15が頻繁に出ると、二本出しがただの管理の倍増になる */
+const CHEST_HIGH_AT = {
+  boxSpot12: 13,   /* ★12の土地の宝箱マスから低確率 */
+  extraBoss: 14,   /* 区分の主（EXTRA）を倒したとき */
+  wardBoss: 15,    /* 区部の主を倒したとき */
+};
+const CHEST_HIGH_RATE = 0.08;   /* ⚠️ ★12の土地でのみ。8% */
+const LS_EQUIP = "tarot_equip";
+function loadEquip() {
+  try {
+    const raw = localStorage.getItem(LS_EQUIP);
+    const v = raw ? JSON.parse(raw) : null;
+    if (!v || typeof v !== "object") return { owned: [], on: [], uses: [], box: [], chests: [] };
+    return {
+      owned: Array.isArray(v.owned) ? v.owned : [],
+      on: Array.isArray(v.on) ? v.on : [],
+      uses: Array.isArray(v.uses) ? v.uses : [],
+      box: Array.isArray(v.box) ? v.box : [],
+      chests: Array.isArray(v.chests) ? v.chests : [],
+    };
+  } catch { return { owned: [], on: [], uses: [], box: [], chests: [] }; }
+}
+/*
+  拾ったものを宝箱へ入れる。
+  ⚠️⚠️ 倉庫（owned）へ直接入れないこと。厳選のたびに捨てる作業が発生する。
+  ★ 溢れたぶんは古いほうから落とす。slice(-MAX) の一行で済む。
+*/
+/*
+  【未開封の宝箱】
+  ★ 箱そのものが持ち物。段（ブロンズ〜ジェネシス）を持ち、
+    開けるときの「引く回数」になる ―― ジェネシスの箱は12回引いて最良を採る。
+  ⚠️⚠️ 拾った瞬間に中身を決めないこと。それだと箱を取っておく意味が消える。
+  ★ 入手は四つ。主を倒す（確率）／社（鳥居マス）／占い／袋小路マス。
+*/
+function pushChest(star, where, seek, force) {
+  const eq = loadEquip();
+  const w = (where && where.area) ? where : randomWhere(where && where.pref);
+  /*
+    ⚠️ ★13以上は段の抽選を通さない。箱の★がそのまま引く回数になる。
+      12以下は従来どおり、箱の段そのものを LMC_TIERS から引く。
+  */
+  const hi = force && CHEST_HIGH[force] ? (force | 0) : 0;
+  const tierKey = hi ? "genesis" : rollEquipTier(star, seek || 0);
+  const c = {
+    id: `cb${Date.now().toString(36)}${Math.floor(Math.random() * 1e6).toString(36)}`,
+    tier: tierKey, star: hi || lmcTierOf(tierKey).star, hi: hi || 0,
+    pref: w.pref, area: w.area,
+  };
+  const next = [...(eq.chests || []), c];
+  /*
+    ⚠️⚠️ 溢れたら「段の低いほうから」捨てること。古い順にすると、
+      取っておいたジェネシスが消える。一度それが起きた人は二度と箱を溜めない
+      ―― 溜めるという判断そのものが死ぬ。
+    ⚠️ 開けた装備のほうは古い順でよい。あちらは中身が見えているので。
+  */
+  if (next.length > EQUIP_CHEST_MAX) {
+    next.sort((a, b) => (a.star - b.star) || (a.id < b.id ? -1 : 1));
+    next.splice(0, next.length - EQUIP_CHEST_MAX);
+  }
+  saveEquip({ ...eq, chests: next });
+  return c;
+}
+/*
+  箱を開ける。
+  ★ 段の数だけ引いて、いちばん良いものを採る。引いた順を返すので、
+    画面側で一回ずつ見せられる（更新のたびに段が上がる梯子）。
+  ⚠️ 開けた装備は倉庫ではなく宝箱（box）へ。眼鏡に適ったものだけが倉庫へ行く。
+*/
+function openChest(id, seek) {
+  const eq = loadEquip();
+  const c = (eq.chests || []).find((x) => x.id === id);
+  if (!c) return null;
+  const hi = CHEST_HIGH[c.hi] || null;
+  /*
+    ⚠️ 下限は引いたあとに持ち上げる。引く前に絞ると、
+      梯子の棒が全部同じ高さから始まって、更新が見えなくなる。
+    ★ 引いた結果は正直に見せて、最後に「この箱はここまでしか下がらない」を効かせる。
+  */
+  const seq = drawTierSeq((c.star | 0) + (seek | 0));
+  let best = bestTierOf(seq);
+  if (hi && lmcTierOf(best).star < lmcTierOf(hi.floor).star) best = hi.floor;
+  const where = { pref: c.pref, area: c.area };
+  const items = [buildEquip(best, where, hi && hi.subCap)];
+  /* ⚠️ 二本目も同じ段で組む。片方だけ良いと「もう一本はおまけ」に見える */
+  if (hi && hi.twin) items.push(buildEquip(best, where, hi.subCap));
+  saveEquip({
+    ...eq,
+    chests: (eq.chests || []).filter((x) => x.id !== id),
+    box: [...(eq.box || []), ...items].slice(-EQUIP_BOX_MAX),
+  });
+  return { seq, item: items[0], items, chest: c, floor: hi ? hi.floor : null };
+}
+function pushToBox(item) {
+  if (!item) return;
+  const eq = loadEquip();
+  saveEquip({ ...eq, box: [...(eq.box || []), item].slice(-EQUIP_BOX_MAX) });
+}
+/*
+  宝箱から倉庫へ移す。
+  ⚠️ 消耗品は uses へ、装備は owned へ。同じ箱から出るが行き先が違う。
+*/
+/*
+  【倉庫と手持】
+  ★ 宝箱 → 倉庫 → 手持 → 装備 の流れ。
+      倉庫 … 保留。「もしかしたら使うかも」を消えずに置いておく場所
+      手持 … 主に使う装備。装備できるのはここに入っているものだけ
+  ★ 倉庫と手持の区別は stash の旗一つ（true＝倉庫）。持ち物の並びは分けない。
+  ⚠️ 倉庫へ移したら装備からは外すこと。倉庫の物が枠に残ると、使っていないはずの物が効く。
+*/
+function keepFromBox(id) {
+  const eq = loadEquip();
+  const it = (eq.box || []).find((x) => x.id === id);
+  if (!it) return;
+  const box = (eq.box || []).filter((x) => x.id !== id);
+  const isUse = !it.main && !!it.key;
+  /* ⚠️ 宝箱から出したものは倉庫へ。手持へ直に入れない（まず保留に置く） */
+  const kept = { ...it, stash: true };
+  saveEquip({
+    ...eq, box,
+    owned: isUse ? (eq.owned || []) : [...(eq.owned || []), kept],
+    uses: isUse ? [...(eq.uses || []), kept] : (eq.uses || []),
+  });
+}
+/* 宝箱から捨てる。⚠️ 確かめてから呼ぶこと（画面側で「本当に破棄しますか」を出す） */
+function discardFromBox(id) {
+  const eq = loadEquip();
+  saveEquip({ ...eq, box: (eq.box || []).filter((x) => x.id !== id) });
+}
+/* 倉庫 ⇄ 手持。⚠️ 倉庫へ移すときは枠から外す */
+function setStash(id, toStash) {
+  const eq = loadEquip();
+  const flip = (arr) => (arr || []).map((x) => (x.id === id ? { ...x, stash: !!toStash } : x));
+  const on = (eq.on || []).map((x) => (toStash && x === id ? null : x));
+  saveEquip({ ...eq, owned: flip(eq.owned), uses: flip(eq.uses), on });
+}
+function saveEquip(v) {
+  try { localStorage.setItem(LS_EQUIP, JSON.stringify(v)); } catch (e) { /* 記録できなくても遊べる */ }
+}
+/*
+  消耗品を一つ減らす。
+  ⚠️⚠️ 減らしてから効かせること。効かせてから減らすと、
+    途中で画面が落ちたときに使い得になる。
+  ⚠️ 持っていなければ null。呼ぶ側で必ず見ること。
+*/
+/*
+  装着している消耗品だけを返す。
+  ⚠️⚠️ 持っているだけでは使えない。装備スロットに入れて初めて使える。
+    別枠にすると、消耗品は「常に全部持っている物」になり、
+    枠を何に使うかという選択そのものが消える。
+  ⚠️ ダメコンも同じ。自動で働くが、入れていなければ働かない。
+*/
+function equippedUses(eq) {
+  const e = eq || loadEquip();
+  const on = e.on || [];
+  return (e.uses || []).filter((u) => on.indexOf(u.id) >= 0);
+}
+function spendUse(id) {
+  const eq = loadEquip();
+  const i = eq.uses.findIndex((u) => u.id === id);
+  if (i < 0) return null;
+  const used = eq.uses[i];
+  const next = { ...eq, uses: eq.uses.filter((_, k) => k !== i) };
+  saveEquip(next);
+  return used;
+}
+/*
+  妨害が通るか。
+  ⚠️⚠️ 判定はここ一箇所に集めること。敵の手ごとに書くと、
+    どの妨害に耐性が効いていないのか追えなくなる。
+  ⚠️ 妨害ごとの耐性と、全部に効く nullify を足す。掛けない。
+  ★ 通らなかったことは必ず画面に出す。見えない無効は、運が良かったのと区別が付かない。
+*/
+const EQUIP_RESIST_KEY = {
+  roar: "resRoar", rot: "resRot", dread: "resDread",
+  miasma: "resMiasma", kill: "resKill",
+};
+/*
+  【妨害を防ぐ判定（まとめ）】
+  ⚠️⚠️ これまで耐性の装備（equipBlocks）も技の「守り」も、戦闘の中で一度も読まれていなかった。
+  ★ 一か所で合算する。装備の耐性＋打ち消し、技の守り、能力の小さな耐性。
+  ★ 能力は八つとも平等に、ちょっぴり耐性を持つ（一つあたり育ち切りで約0.7%、合計約5%）。
+    どの能力を伸ばしても、少しずつ妨害に強くなる ―― 伸ばして損な能力を作らない。
+  ⚠️ 上限を置く（60%）。積み切ると妨害が効かず、★8〜12の敵が殴るだけに戻る。
+*/
+const STAT_RESIST_EACH = 0.012;
+const DEBUFF_WARD_KEY = { roar: "resRoar", rot: "resRot", despair: "resDread",
+  miasma: "resMiasma", dread: "resKill" };
+function statResistOf(S) {
+  if (!S) return 0;
+  return ["power", "guard", "speed", "vital", "skill", "mind", "spirit", "luck"]
+    .reduce((x, k) => x + STAT_RESIST_EACH * ((S[k] || 0) / ((S[k] || 0) + 100)), 0);
+}
+function debuffBlockRate(move, eqb, sk, S) {
+  const k = DEBUFF_WARD_KEY[move];
+  if (!k) return 0;
+  const eqP = (((eqb && eqb[k]) || 0) + ((eqb && eqb.nullify) || 0)) / 100;
+  const skP = ((sk && sk.ward && sk.ward[k]) || 0) / 100;
+  return Math.min(0.60, eqP + skP + statResistOf(S));
+}
+function equipBlocks(bonus, moveKind) {
+  if (!bonus) return false;
+  const k = EQUIP_RESIST_KEY[moveKind];
+  const p = (k ? (bonus[k] || 0) : 0) + (bonus.nullify || 0);
+  return Math.random() * 100 < p;
+}
+/*
+  起き上がった相手への特攻（破魔矢）。
+  ⚠️⚠️ 一段目には乗らないこと。①特大1は四段あるので、乗せると
+    戦いのほとんどで乗りっぱなしになり、ただの攻撃力になる。
+  ⚠️ 棒の特攻（BATTLE.wandVsRevived）とは別物。あちらは札の性格、
+    こちらは装備。掛け合わせてよい。
+*/
+function vsRevivedMul(bonus, foe) {
+  if (!bonus || !foe || !foe.revived) return 1;
+  return 1 + (bonus.vsRevived || 0) / 100;
+}
+/*
+  装着している装備（消耗品を除く）。
+  ⚠️ 持っているだけでは効かない。装備スロットに入っているものだけ。
+*/
+function equippedGear(eq) {
+  const e = eq || loadEquip();
+  const on = e.on || [];
+  return (e.owned || []).filter((x) => on.indexOf(x.id) >= 0);
+}
+/* 札一枚に乗る倍率。⚠️ 重なったら足す。掛けると厳選が一本で終わる */
+function equipCardMul(bonus, card) {
+  if (!bonus || !bonus.cardMuls.length) return 1;
+  const p = String(card && card.id).split("-");
+  if (p[0] === "major") return 1;
+  const n = Number(p[1]);
+  let add = 0;
+  bonus.cardMuls.forEach((sp) => {
+    if (sp.suits.indexOf(p[0]) >= 0 && sp.ranks.indexOf(n) >= 0) add += sp.mul - 1;
+  });
+  return 1 + add;
+}
+
 function loadItems() {
   try {
     const raw = localStorage.getItem(LS_ITEMS);
@@ -13022,6 +15778,25 @@ function SpreadSelect({ lang, onSelect, onShard, canUse, items, onOpenBox }) {
     });
   return (
     <div style={{ width: "100%", maxWidth: "460px", margin: "0 auto" }}>
+      {/*
+        とにかく占う。
+        ⚠️⚠️ いちばん上に置くこと。50種の配置を前にして
+          「どれを選べばいいか分からない」で止まる人がいる。
+        ★ 迷ったらこれ、の一枚。スリーカード（過去・現在・未来）へ直行する。
+          三枚は最も短く、最も分かりやすく、相談の主題も選ばない。
+        ⚠️ 流派（SCHOOLS）には入れないこと。絞り込みが壊れる。
+      */}
+      <button type="button" className="fortune-entry just"
+        onClick={() => onSelect("three")}>
+        <span className="fortune-entry-main">
+          <Sparkles size={17} />
+          {T[lang] && T[lang].justRead ? T[lang].justRead : T.ja.justRead}
+        </span>
+        <span className="fortune-entry-note">
+          {T[lang] && T[lang].justReadNote ? T[lang].justReadNote : T.ja.justReadNote}
+        </span>
+        <span className="adv-choice-go">›</span>
+      </button>
       {/*
         今の運勢。
         ★ 一覧の最上段に、単独で置く。日課にしてほしい入口なので、
@@ -28565,20 +31340,33 @@ function FxBurst() {
   );
 }
 /** 回復。⚠️ 下から上へ。ダメージの数字が上へ抜けるので、粒は太く短く */
+/*
+  回復。
+  ⚠️⚠️ 強化と見分けが付くこと。回復＝緑・十字・下から上、強化＝金・矢・足元の環。
+  ★ 十字の粒が下から湧き上がり、緑の輪が一度広がる。
+*/
 function FxHeal() {
   return (
     <span className="fx fx-heal" aria-hidden="true">
       {[0, 1, 2, 3, 4].map((i) => (
         <i key={i} style={{ left: `${12 + i * 18}%`, animationDelay: `${i * 70}ms` }} />
       ))}
+      <u />
     </span>
   );
 }
-/** 強化。⚠️ 足元の環。上に出すと回復と紛れる */
+/*
+  強化。
+  ⚠️ 足元の環。上に出すと回復と紛れる。
+  ★ 金の矢が三本立ちのぼり、環が二重に広がる。色は金で統一。
+*/
 function FxBuff() {
   return (
     <span className="fx fx-buff" aria-hidden="true">
       <i /><i style={{ animationDelay: "140ms" }} />
+      {[0, 1, 2].map((k) => (
+        <b key={k} style={{ left: `${26 + k * 24}%`, animationDelay: `${k * 110}ms` }} />
+      ))}
     </span>
   );
 }
@@ -28814,6 +31602,22 @@ function FxFlash({ suit, run, label, tone }) {
             {dots(8).map((i) => (
               <i key={`p${i}`} className="fl-petal"
                 style={{ "--a": `${i * 45}deg`, animationDelay: `${220 + (i % 4) * 40}ms` }} />
+            ))}
+            {/*
+              葉。
+              ⚠️⚠️ 中心を軸に回すこと。舞い散らすと「風が吹いた」になり、
+                恵み（実り）ではなく別の札に見える。
+              ⚠️ 距離を三段に分ける。同じ半径に並べると輪が一本増えるだけ。
+              ⚠️ 葉そのものも自転させる。公転だけだと板が回って見える。
+            */}
+            {dots(12).map((i) => (
+              <i key={`lf${i}`} className="fl-leaf"
+                style={{
+                  "--a": `${i * 30}deg`,
+                  "--d": `${34 + (i % 3) * 22}px`,
+                  animationDelay: `${180 + (i % 6) * 34}ms`,
+                  animationDuration: `${560 + (i % 3) * 90}ms`,
+                }} />
             ))}
           </>
         )}
@@ -29056,6 +31860,33 @@ function FxArcana({ n, label, tone }) {
                 transform={`rotate(${i * 45} 50 50)`} />
             ))}
           </svg>
+          {/*
+            周りの風車。
+            ⚠️⚠️ 向きと速さを一つずつ変えること。全部同じだと、
+              大きな輪が一つ回っているようにしか見えない。
+            ⚠️ 中央の輪と重ねない。外周に散らす ―― 主役は真ん中の輪。
+            ⚠️ 六つまで。輪を含めて七つ回るので、これ以上は騒がしい。
+          */}
+          {dots(6).map((i) => {
+            const px = [8, 82, 14, 88, 46, 66][i];
+            const py = [12, 8, 74, 68, 88, 24][i];
+            const sz = [26, 20, 23, 17, 21, 15][i];
+            return (
+              <svg key={`pw${i}`} className={`ar-pinwheel ${i % 2 ? "rev" : ""}`}
+                viewBox="0 0 40 40" aria-hidden="true"
+                style={{
+                  left: `${px}%`, top: `${py}%`, width: `${sz}%`, height: `${sz}%`,
+                  animationDuration: `${620 + i * 190}ms`,
+                  animationDelay: `${i * 45}ms`,
+                }}>
+                {[0, 1, 2, 3].map((k) => (
+                  <path key={k} d="M20 20 L20 3 Q31 5 28 15 Z" fill="currentColor"
+                    opacity={0.55 + k * 0.1} transform={`rotate(${k * 90} 20 20)`} />
+                ))}
+                <circle cx="20" cy="20" r="2.6" fill="currentColor" />
+              </svg>
+            );
+          })}
         </span>
       );
       /* ⑪ 正義 … 剣と盾 */
@@ -29224,6 +32055,26 @@ function FxArcana({ n, label, tone }) {
             <i key={i} className="ar-splash"
               style={{ "--a": `${-60 + i * 30}deg`, animationDelay: `${300 + i * 35}ms` }} />
           ))}
+          {/*
+            泡。
+            ⚠️⚠️ 大きさも速さも位置もばらばらにすること。
+              揃えると「点が一列で上がった」だけに見えて、水にならない。
+            ⚠️ 横にも揺らす。まっすぐ上がると気泡ではなく弾に見える。
+            ⚠️ 14個まで。数十個を動かすと、放置で回す画面が重くなる。
+          */}
+          {dots(14).map((i) => {
+            const px = [10, 26, 44, 62, 78, 90, 18, 36, 54, 70, 86, 30, 50, 68][i];
+            const sc = [1.4, 0.7, 1.1, 0.55, 1.6, 0.9, 0.65, 1.25, 0.8, 1.45, 0.6, 1.0, 1.3, 0.75][i];
+            return (
+              <i key={`bb${i}`} className="ar-bubble"
+                style={{
+                  left: `${px}%`, "--s": sc,
+                  "--sw": `${6 + (i % 4) * 4}px`,
+                  animationDelay: `${(i * 43) % 380}ms`,
+                  animationDuration: `${520 + (i % 5) * 70}ms`,
+                }} />
+            );
+          })}
           {/* ⚠️ 水が満ちる感じを、下からの湧き上がりで足す */}
           {/* ⚠️ 中央を高く、外へ低く。力と同じ形にすること（下の共通指定に合わせる） */}
           {dots(8).map((i) => {
@@ -29291,6 +32142,19 @@ function FxArcana({ n, label, tone }) {
                 "--len": `${40 + (i % 3) * 22}%`,
                 animationDelay: `${(i % 5) * 45}ms`,
               }} />
+          ))}
+          {/*
+            雷。塔の左右に落とす。
+            ⚠️⚠️ 中央に落とさないこと。渦と重なって、どちらも見えなくなる。
+            ⚠️ 折れ線で描く。まっすぐだと棒が立っただけに見える。
+            ⚠️ 左右で時間をずらす。同時に光ると一枚の板に見える。
+            ⚠️ 620ms（FX_MS）の中で終わること。残ると次の札の演出と重なる。
+          */}
+          {[0, 1, 2, 3].map((i) => (
+            <svg key={`b${i}`} className={`ar-bolt s${i}`} viewBox="0 0 40 200"
+              preserveAspectRatio="none" aria-hidden="true">
+              <path d="M22 0 L10 78 L20 74 L6 200 L20 96 L11 100 Z" />
+            </svg>
           ))}
         </span>
       );
@@ -29471,7 +32335,2371 @@ function FxArcana({ n, label, tone }) {
   ⚠️⚠️ 敵の絵は描かず、印と器で表す。顔を描くと、78枚の札に顔が無いことと食い違う。
   ⚠️ 土地柄の色をそのまま使う。戦っている場所が地図と同じ土地に見えること。
 */
-function BattleScene({ theme, foes, star }) {
+/*
+  【遠景】土地柄ごとの景色。小MAPと戦闘の両方で使う。
+  ★ 見下ろし型の盤で奥行きを出す要点は二つ ―― 奥から手前の順に重ねること、
+    光の向きを一つに決めて影を揃えること（左上から光、右下に影）。
+  ⚠️⚠️ 何も動かない景色にしないこと。完全に止まると「壊れている」に見える。
+    ただし速い点滅は使わない。呼吸くらい（2〜4秒）で動かす。
+  ⚠️ 重いものは鈍く、軽いものは速く。山は動かさず、霧と雲だけを流す。
+  ⚠️ id を固定しないこと。同じ画面に小MAPと戦闘が並ぶと、グラデの id がぶつかる。
+*/
+function Panorama({ kind, w, h, uid, hz }) {
+  const U = uid || "pn";
+  const R = (i, k) => ((Math.sin(i * 12.9898 + k * 78.233) * 43758.5453) % 1 + 1) % 1;
+  /*
+    ⚠️⚠️ 地平線は呼び出し側で合わせられるようにすること（hz）。
+      戦闘の画面は地面が低い位置にあり、地平線が高いままだと、その間に建物の胴が
+      伸びて見え、細長い塔のように不自然になった。
+  */
+  const horizon = hz != null ? hz : h * 0.62;
+  const layer = (n, base, amp, seedK) => {
+    let d = `M0 ${h} L0 ${base}`;
+    for (let i = 0; i <= n; i++) {
+      const x = (w / n) * i;
+      const y = base - amp * (0.35 + R(i, seedK) * 0.65);
+      d += ` L${x.toFixed(1)} ${y.toFixed(1)}`;
+    }
+    return `${d} L${w} ${h} Z`;
+  };
+  switch (kind) {
+    /* 山 … 三重の稜線。奥ほど淡く、奥の峰だけ雪を戴く。霧が流れる */
+    case "mountain": return (
+      <g className="pn">
+        <path d={layer(7, horizon - 6, h * 0.42, 1)} fill="rgba(150,170,210,0.35)" />
+        {Array.from({ length: 7 }, (_, i) => {
+          const x = (w / 7) * i + w / 14, y = horizon - 6 - h * 0.42 * (0.35 + R(i, 1) * 0.65) + 6;
+          return <path key={i} d={`M${x - 10} ${y + 12} L${x} ${y - 2} L${x + 10} ${y + 12} Z`} fill="rgba(240,245,255,0.55)" />;
+        })}
+        <path d={layer(9, horizon + 4, h * 0.3, 2)} fill="rgba(70,90,130,0.6)" />
+        <rect className="pn-mist" x={-w * 0.3} y={horizon - 10} width={w * 1.6} height={h * 0.14} fill="rgba(220,230,255,0.16)" rx="20" />
+        <path d={layer(12, horizon + 16, h * 0.18, 3)} fill="rgba(30,40,60,0.85)" />
+        {Array.from({ length: 9 }, (_, i) => {
+          const x = (w / 9) * i + R(i, 4) * 20;
+          return (
+            <g key={`p${i}`} className={`pn-sway s${i % 3}`}>
+              <path d={`M${x} ${horizon + 6} l6 12 h-12 Z M${x} ${horizon + 12} l8 14 h-16 Z`} fill="rgba(20,40,34,0.9)" />
+            </g>
+          );
+        })}
+      </g>
+    );
+    /* 海辺 … 水平線、寄せる波、灯台の光がゆっくり回る */
+    case "coast": return (
+      <g className="pn">
+        <circle cx={w * 0.72} cy={horizon - h * 0.2} r={h * 0.1} fill="rgba(255,236,190,0.55)" />
+        <circle className="pn-glow" cx={w * 0.72} cy={horizon - h * 0.2} r={h * 0.2} fill="rgba(255,220,160,0.12)" />
+        <rect x="0" y={horizon} width={w} height={Math.max(8, h - horizon)} fill="rgba(40,90,150,0.7)" />
+        {/* ⚠️ 伸縮（位置決め）は外側の g、流れる動きは内側 */}
+        {[0, 1, 2, 3].map((k) => (
+          <g key={k} transform={`scale(${w / 400} 1)`}>
+            <path className={`pn-wave w${k}`}
+              d={`M-40 ${horizon + 6 + k * 9} q20-4 40 0 t40 0 t40 0 t40 0 t40 0 t40 0 t40 0 t40 0 t40 0 t40 0 t40 0 t40 0`}
+              fill="none" stroke="rgba(200,230,255,0.45)" strokeWidth="1.4" />
+          </g>
+        ))}
+        <path d={`M${w * 0.72 - 20} ${horizon + 2} h40`} stroke="rgba(255,236,190,0.6)" strokeWidth="2" className="pn-glint" />
+        <g transform={`translate(${w * 0.14} ${horizon - 2})`}>
+          <path d="M-4 0 L-3 -26 L3 -26 L4 0 Z" fill="rgba(230,225,215,0.85)" />
+          <rect x="-5" y="-31" width="10" height="5" fill="rgba(60,50,60,0.9)" />
+          <path className="pn-beam" d="M0 -28 L60 -40 L60 -16 Z" fill="rgba(255,240,180,0.18)" />
+        </g>
+      </g>
+    );
+    /* 川 … 遠い丘、きらめく川面、揺れる葦 */
+    case "river": return (
+      <g className="pn">
+        <path d={layer(6, horizon - 2, h * 0.24, 5)} fill="rgba(90,120,110,0.55)" />
+        <path d={`M0 ${horizon + 10} Q${w * 0.3} ${horizon - 2} ${w * 0.55} ${horizon + 8} T${w} ${horizon + 4} V${horizon + 24} Q${w * 0.6} ${horizon + 30} ${w * 0.3} ${horizon + 20} T0 ${horizon + 26} Z`}
+          fill="rgba(70,130,180,0.65)" />
+        {[0, 1, 2, 3, 4].map((k) => (
+          <path key={k} className={`pn-glint g${k}`} d={`M${w * (0.12 + k * 0.18)} ${horizon + 14 + (k % 2) * 4} h14`}
+            stroke="rgba(230,245,255,0.7)" strokeWidth="1.4" strokeLinecap="round" />
+        ))}
+        {Array.from({ length: 14 }, (_, i) => {
+          const x = (w / 14) * i + R(i, 6) * 10;
+          return (
+            <g key={i} className={`pn-sway s${i % 3}`}>
+              <path d={`M${x} ${h} q-2 -18 2 -${22 + R(i, 7) * 10}`} fill="none" stroke="rgba(40,70,50,0.85)" strokeWidth="1.6" />
+            </g>
+          );
+        })}
+      </g>
+    );
+    /* 社 … 鎮守の森、鳥居、灯籠の火がゆっくり揺れる */
+    case "shrine": return (
+      <g className="pn">
+        {Array.from({ length: 11 }, (_, i) => {
+          const x = (w / 10) * i, r = h * (0.14 + R(i, 8) * 0.08);
+          return <circle key={i} cx={x} cy={horizon - r * 0.4} r={r} fill="rgba(30,60,50,0.75)" />;
+        })}
+        <rect x="0" y={horizon} width={w} height={Math.max(8, h - horizon)} fill="rgba(40,30,40,0.6)" />
+        <g transform={`translate(${w * 0.5} ${horizon + 4})`}>
+          <path d={`M-34 -38 h68 l-4 6 h-60 Z`} fill="rgba(190,50,40,0.9)" />
+          <rect x="-28" y="-30" width="56" height="4" fill="rgba(170,40,32,0.9)" />
+          <rect x="-24" y="-32" width="5" height="34" fill="rgba(170,40,32,0.95)" />
+          <rect x="19" y="-32" width="5" height="34" fill="rgba(170,40,32,0.95)" />
+        </g>
+        {[0.22, 0.78].map((fx, k) => (
+          <g key={k} transform={`translate(${w * fx} ${horizon + 2})`}>
+            <path d="M-6 0 h12 l-2 -4 h-8 Z M-4 -4 h8 v-8 h-8 Z M-7 -12 h14 l-7 -6 Z" fill="rgba(150,145,140,0.9)" />
+            <circle className={`pn-flame f${k}`} cx="0" cy="-8" r="2.6" fill="rgba(255,200,110,0.95)" />
+            <circle className={`pn-glow f${k}`} cx="0" cy="-8" r="9" fill="rgba(255,190,100,0.22)" />
+          </g>
+        ))}
+      </g>
+    );
+    /* 街 … ビル群。窓明かりがゆっくり灯る、航空灯がゆっくり明滅 */
+    case "city": return (
+      <g className="pn">
+        <path className="pn-moon" d={`M${w * 0.82} ${h * 0.16} a${h * 0.07} ${h * 0.07} 0 1 0 ${h * 0.05} ${h * 0.12} a${h * 0.055} ${h * 0.055} 0 1 1 -${h * 0.05} -${h * 0.12} Z`} fill="rgba(255,240,200,0.7)" />
+        {Array.from({ length: 16 }, (_, i) => {
+          /* ⚠️ 胴は地平線まで。地面の下へ伸ばすと、地面が低い画面で塔のように細長く見える */
+          const bw = w / 16, x = bw * i, bh = h * (0.14 + R(i, 9) * 0.28), y = horizon + 4 - bh;
+          return (
+            <g key={i}>
+              <rect x={x + 1} y={y} width={bw - 2} height={bh + 6} fill={`rgba(${34 + (i % 3) * 8},${34 + (i % 2) * 6},${60 + (i % 3) * 8},0.92)`} />
+              {Array.from({ length: Math.floor(bh / 9) }, (_, r) => Array.from({ length: 2 }, (_, c) => (
+                <rect key={`${r}${c}`} className={R(i * 7 + r, c) > 0.55 ? `pn-win v${(i + r + c) % 4}` : undefined}
+                  x={x + 4 + c * (bw / 2 - 2)} y={y + 4 + r * 9} width={bw / 2 - 6} height="4"
+                  fill={R(i * 7 + r, c) > 0.55 ? "rgba(255,220,140,0.85)" : "rgba(80,90,130,0.5)"} />
+              )))}
+              {R(i, 10) > 0.7 && <circle className="pn-beacon" cx={x + bw / 2} cy={y - 2} r="1.8" fill="#FF6A6A" />}
+            </g>
+          );
+        })}
+      </g>
+    );
+    /* 地下 … 奥へ続く連なるアーチと、流れる灯り */
+    case "metro": return (
+      <g className="pn">
+        <rect x="0" y="0" width={w} height={h} fill="rgba(10,10,20,0.4)" />
+        {[0, 1, 2, 3].map((k) => {
+          const s = 1 - k * 0.2, cx = w / 2, bw = w * 0.9 * s, bh = h * 0.8 * s;
+          return <path key={k} d={`M${cx - bw / 2} ${horizon + 20} V${horizon + 20 - bh * 0.5} A${bw / 2} ${bh * 0.5} 0 0 1 ${cx + bw / 2} ${horizon + 20 - bh * 0.5} V${horizon + 20}`}
+            fill="none" stroke={`rgba(120,130,170,${0.5 - k * 0.1})`} strokeWidth={4 - k} />;
+        })}
+        {[0, 1, 2].map((k) => (
+          <circle key={k} className={`pn-lamp l${k}`} cx={w * (0.3 + k * 0.2)} cy={horizon - h * 0.28} r="3" fill="rgba(255,230,170,0.9)" />
+        ))}
+        <path d={`M${w * 0.1} ${h} L${w * 0.46} ${horizon + 20} M${w * 0.9} ${h} L${w * 0.54} ${horizon + 20}`} stroke="rgba(170,170,190,0.6)" strokeWidth="2" />
+        <rect className="pn-train" x={-w * 0.3} y={horizon + 4} width={w * 0.25} height="6" rx="3" fill="rgba(255,240,200,0.5)" />
+      </g>
+    );
+    /* 町 … 瓦屋根の連なり、灯る窓、煙突の煙 */
+    default: return (
+      <g className="pn">
+        <path d={layer(5, horizon - 10, h * 0.18, 11)} fill="rgba(110,100,140,0.4)" />
+        {Array.from({ length: 12 }, (_, i) => {
+          const bw = w / 12, x = bw * i, bh = h * (0.12 + R(i, 12) * 0.1), y = horizon + 4 - bh;
+          return (
+            <g key={i}>
+              <rect x={x + 2} y={y} width={bw - 4} height={bh + 6} fill="rgba(60,50,70,0.9)" />
+              <path d={`M${x} ${y + 2} L${x + bw / 2} ${y - bw * 0.3} L${x + bw} ${y + 2} Z`} fill="rgba(90,60,70,0.95)" />
+              {R(i, 13) > 0.4 && <rect className={`pn-win v${i % 4}`} x={x + bw / 2 - 3} y={y + 6} width="6" height="5" fill="rgba(255,210,130,0.85)" />}
+              {R(i, 14) > 0.7 && <circle className={`pn-smoke s${i % 3}`} cx={x + bw * 0.7} cy={y - bw * 0.2} r="3" fill="rgba(220,220,230,0.35)" />}
+            </g>
+          );
+        })}
+      </g>
+    );
+  }
+}
+
+/*
+  【属性の空気】その土地で出やすい二つの属性の粒子を漂わせる。
+  ★ 属性ごとに違う動かし方をする（基準：同じ動きだと形が違うだけの同じものに見える）。
+    火の粉は昇る、雪は降る、葉は斜めに流れる、蛍はさまよう、鬼火は浮いて消える。
+  ⚠️ 判定を持たせない。盤のマスを押せなくなる。
+  ⚠️ 粒は少なめに（二属性で計24粒まで）。多いと盤が読めない。
+*/
+const AMB_OF = {
+  normal: ["mote", "#FFF3D6"], fire: ["ember", "#FF9A4A"], water: ["bubble", "#8FD0FF"],
+  electric: ["spark", "#FFE866"], grass: ["leaf", "#8FE05A"], ice: ["snow", "#FFFFFF"],
+  fight: ["mote", "#FFB090"], poison: ["bubble", "#C87AF0"], ground: ["dust", "#E0C48A"],
+  fly: ["feather", "#E8F2FF"], psychic: ["twinkle", "#FFA8E0"], bug: ["firefly", "#D8F07A"],
+  rock: ["dust", "#C8B49A"], ghost: ["wisp", "#B8A0FF"], dragon: ["ember", "#9AA8FF"],
+  dark: ["mote", "#8A70A8"], steel: ["twinkle", "#E8EEF8"], fairy: ["twinkle", "#FFD0F0"],
+};
+function ElemAmbience({ elems, w, h }) {
+  const R = (i, k) => ((Math.sin(i * 91.7 + k * 37.1) * 9973.13) % 1 + 1) % 1;
+  const out = [];
+  (elems || []).forEach((e, ei) => {
+    const [kind, col] = AMB_OF[e] || AMB_OF.normal;
+    for (let i = 0; i < 12; i++) {
+      const x = R(i + ei * 31, 1) * w, y = R(i + ei * 31, 2) * h;
+      const dl = `${(R(i + ei * 31, 3) * 4).toFixed(2)}s`;
+      const du = `${(3 + R(i + ei * 31, 4) * 3).toFixed(2)}s`;
+      const sz = 1.4 + R(i + ei * 31, 5) * 2.2;
+      const st = { animationDelay: dl, animationDuration: du };
+      if (kind === "leaf" || kind === "feather") {
+        out.push(<path key={`${e}${i}`} className={`amb amb-${kind}`} style={st}
+          d={`M${x} ${y} q${sz * 2} -${sz * 1.6} ${sz * 4} 0 q-${sz * 2} ${sz * 1.6} -${sz * 4} 0 Z`} fill={col} />);
+      } else if (kind === "snow") {
+        out.push(<circle key={`${e}${i}`} className="amb amb-snow" style={st} cx={x} cy={y} r={sz * 0.8} fill={col} />);
+      } else if (kind === "twinkle" || kind === "spark") {
+        out.push(<path key={`${e}${i}`} className={`amb amb-${kind}`} style={st}
+          d={`M${x} ${y - sz * 2} L${x + sz * 0.5} ${y - sz * 0.5} L${x + sz * 2} ${y} L${x + sz * 0.5} ${y + sz * 0.5} L${x} ${y + sz * 2} L${x - sz * 0.5} ${y + sz * 0.5} L${x - sz * 2} ${y} L${x - sz * 0.5} ${y - sz * 0.5} Z`} fill={col} />);
+      } else {
+        out.push(<circle key={`${e}${i}`} className={`amb amb-${kind}`} style={st} cx={x} cy={y} r={sz} fill={col} />);
+      }
+    }
+  });
+  return <g className="amb-layer" pointerEvents="none">{out}</g>;
+}
+
+/*
+  【空きマスの地形】
+  ⚠️⚠️ 小物を「マスから離れた所」に撒かないこと。小MAPの窓はマス三つ分ほどしか映らず、
+    離れた所に置いた景色はほぼ一度も画面に入らない（何を足しても変わって見えなかった）。
+  ★ 道の通っていない空きマスを、一つ残らず景色で埋める。窓に必ず景色が入る。
+  ★ 光は左上から。面の明るさは向きで決める（左上の面を明るく、右下を暗く）。
+  ⚠️ 重いものは動かさない（山・鉄塔・棚田）。動かすのは水・灯・葉だけ。
+*/
+const TERRAIN_MIX = {
+  mountain: [["peak", 4], ["forest", 4], ["terrace", 2], ["pylon", 1], ["orchard", 1], ["kominka", 1],
+             ["reservoir", 1], ["pasture", 1], ["golf", 1], ["bamboo", 1], ["waterfall", 2], ["windmill", 1], ["michinoeki", 1], ["teafield", 1]],
+  /*
+    ⚠️⚠️ 川と町は「日本の平野の田舎」にすること。水田・ビニールハウス・ソーラーパネル・
+      貯水池・ゴルフ場・牛の牧場・池・倉庫が無いと、それらしく見えない。
+  */
+  river:    [["paddy", 4], ["greenhouse", 2], ["field", 2], ["terrace", 1], ["orchard", 1], ["reservoir", 1],
+             ["pond", 1], ["pasture", 1], ["warehouse", 1], ["solar", 1], ["village", 1], ["kominka", 1], ["pylon", 1],
+             ["bamboo", 1], ["garage", 1], ["konbini", 1], ["concrete", 1], ["apartment", 1], ["windmill", 1], ["michinoeki", 1], ["teafield", 1]],
+  town:     [["village", 3], ["kominka", 2], ["paddy", 2], ["greenhouse", 1], ["solar", 1], ["warehouse", 1],
+             ["golf", 1], ["pasture", 1], ["pond", 1], ["sento", 1], ["temple", 1], ["school", 1], ["pylon", 1],
+             ["apartment", 2], ["konbini", 1], ["garage", 1], ["bamboo", 1], ["concrete", 1], ["castle", 1], ["michinoeki", 1]],
+  coast:    [["sea", 4], ["beach", 2], ["containers", 2], ["kombinat", 2], ["lighthouse", 1], ["warehouse", 1],
+             ["village", 1], ["orchard", 1], ["pylon", 1], ["windmill", 2], ["ferris", 1]],
+  shrine:   [["grove", 4], ["forest", 2], ["temple", 2], ["pagoda", 1], ["cemetery", 1], ["kominka", 1], ["pond", 1], ["bamboo", 2], ["waterfall", 1], ["daibutsu", 1]],
+  city:     [["tower", 5], ["apartment", 3], ["konbini", 2], ["park", 2], ["school", 1], ["sento", 1], ["containers", 1], ["warehouse", 1], ["pylon", 1], ["castle", 1], ["ferris", 1]],
+  metro:    [["tower", 5], ["apartment", 1], ["konbini", 1], ["factory", 1], ["containers", 1], ["warehouse", 1], ["park", 1]],
+};
+/*
+  小MAPの属性で配合を足す。
+  ★ 属性と景色が噛み合うと、そのマップの顔がはっきりする（ゴーストなら墓地、はがねなら工場）。
+  ⚠️ 土地柄の配合に「足す」だけ。置き換えると、社でも街でも同じ景色になる。
+*/
+const ELEM_TERRAIN = {
+  normal:   [["village", 3], ["park", 2]],
+  fire:     [["incinerator", 3], ["factory", 2], ["sento", 2], ["gasstation", 2]],
+  water:    [["pond", 2], ["reservoir", 2], ["paddy", 1], ["containers", 1]],
+  electric: [["powerplant", 2], ["solar", 2], ["neon", 2], ["denkigai", 2], ["lighthouse", 1], ["pylon", 2]],
+  grass:    [["grassland", 3], ["forest", 2], ["orchard", 1]],
+  ice:      [["frozenlake", 2], ["snowfield", 2], ["juhyo", 1]],
+  fight:    [["framing", 3], ["construction", 3], ["school", 1]],
+  poison:   [["swamp", 3], ["wasteyard", 3], ["waterworks", 2], ["factory", 1]],
+  ground:   [["sandpit", 3], ["field", 2], ["quarry", 1]],
+  /* ⚠️ ひこうは高いもの全般（高層の建物・モニュメント・巨木） */
+  fly:      [["radiotower", 3], ["bigtree", 3], ["pylon", 2], ["lighthouse", 1], ["clocktower", 1], ["pagoda", 1], ["tower", 1]],
+  psychic:  [["clocktower", 3], ["school", 2], ["observatory", 2]],
+  /* ⚠️ むしは枯れた系の自然。青々とした森はくさ・フェアリーに任せる */
+  bug:      [["deadwood", 3], ["withered", 2], ["roots", 3]],
+  rock:     [["quarry", 4], ["peak", 1]],
+  ghost:    [["cemetery", 5], ["temple", 2]],
+  dragon:   [["peak", 3], ["cloud", 3], ["pagoda", 1]],
+  dark:     [["alley", 3], ["ruin", 3], ["bikes", 2]],
+  steel:    [["containers", 3], ["factory", 3]],
+  fairy:    [["flowerfield", 4], ["forest", 2]],
+};
+/* 高速道路を通す土地柄。⚠️ 社と地下には通さない */
+const HIGHWAY_ON = { city: 1, town: 1, river: 1, coast: 1, mountain: 1 };
+/* 線路を通す土地柄。⚠️ 電車が走る。山・社には通さない */
+const RAIL_ON = { city: 1, town: 1, metro: 1, river: 1, coast: 1 };
+/* 川を流す土地柄。⚠️ 海辺は海のマスがあるので川は流さない */
+const RIVER_W = { river: 16, mountain: 9, town: 8, shrine: 7 };
+
+/*
+  【雪国】
+  ★ 北海道は極端に、東北はほどほどに雪の景色へ寄せる。
+  ⚠️ 北海道はいつもの配合を三割まで薄め、雪の配合を上から足す（ほぼ全面が雪の土地になる）。
+  ⚠️ 東北はいつもの配合のまま、雪のものを足すだけ（いつもの景色に雪が混ざる）。
+*/
+const TOHOKU = ["aomori", "iwate", "miyagi", "akita", "yamagata", "fukushima"];
+const SNOW_MIX = {
+  hokkaido: {
+    mountain: [["snowfield", 3], ["birch", 3], ["skislope", 3], ["juhyo", 2], ["frozenlake", 1]],
+    river:    [["snowfield", 4], ["birch", 3], ["silo", 3], ["frozenlake", 2], ["snowhouse", 1]],
+    town:     [["snowhouse", 4], ["silo", 2], ["snowfield", 2], ["birch", 2], ["snowstatue", 1], ["frozenlake", 1]],
+    coast:    [["driftice", 5], ["snowfield", 2], ["snowhouse", 1], ["birch", 1]],
+    shrine:   [["birch", 3], ["snowfield", 3], ["snowhouse", 1], ["frozenlake", 1]],
+    city:     [["snowstatue", 3], ["snowhouse", 3], ["snowfield", 1]],
+    metro:    [["snowhouse", 2], ["snowstatue", 1]],
+  },
+  tohoku: {
+    mountain: [["juhyo", 3], ["skislope", 2], ["birch", 1]],
+    river:    [["snowhouse", 1], ["frozenlake", 1], ["birch", 1]],
+    town:     [["kamakura", 2], ["snowhouse", 2]],
+    coast:    [["snowhouse", 1]],
+    shrine:   [["juhyo", 1], ["kamakura", 1]],
+    city:     [["snowhouse", 1]],
+    metro:    [],
+  },
+};
+/*
+  【特別な島】沖縄・長崎・佐渡島・小笠原（東京の島しょ）。
+  ★ 盤の外周を海、そのすぐ内側を浜、中央を陸にして、島の形に並べる。
+  ★ 陸と浜と海は、それぞれの島だけの景色から選ぶ（土地柄の配合は使わない）。
+  ⚠️ 東京の島しょは伊豆諸島と小笠原を含む。ここではまとめて亜熱帯の島として扱う。
+*/
+const ISLAND_MIX = {
+  okinawa: {
+    sea: [["coralsea", 6]], shore: [["whitebeach", 4], ["rockyshore", 1]],
+    land: [["redroof", 4], ["sugarcane", 3], ["gajumaru", 2], ["gusuku", 1]],
+  },
+  nagasaki: {
+    sea: [["sea", 6], ["gunkanjima", 1]], shore: [["harbor", 3], ["seawall", 1], ["rockyshore", 1]],
+    land: [["slopehouse", 4], ["church", 3], ["terrace", 1], ["fishingvillage", 1]],
+  },
+  sado: {
+    sea: [["sea", 6], ["taraibune", 1]], shore: [["rockyshore", 2], ["fishingvillage", 2], ["taraibune", 1]],
+    land: [["terrace", 3], ["toki", 2], ["goldmine", 2], ["kominka", 2]],
+  },
+  ogasawara: {
+    sea: [["boninsea", 5], ["whale", 1]], shore: [["whitebeach", 3], ["rockyshore", 2]],
+    land: [["jungle", 4], ["gajumaru", 1], ["village", 1]],
+  },
+};
+function islandOf(pref, area) {
+  const a = String(area || "");
+  if (pref === "okinawa") return "okinawa";
+  if (pref === "nagasaki") return "nagasaki";
+  if (pref === "niigata" && a.indexOf("佐渡") >= 0) return "sado";
+  if (pref === "tokyo" && (a.indexOf("島") >= 0 || a.indexOf("小笠原") >= 0)) return "ogasawara";
+  return null;
+}
+function snowRegionOf(pref) { return pref === "hokkaido" ? "hokkaido" : TOHOKU.includes(pref) ? "tohoku" : null; }
+function terrainPlan(map, seed, themeKey, iso, elems, pref, area, plaza) {
+  let s = (seed || 1) * 2654435761 >>> 0;
+  const rnd = () => ((s = (s * 1103515245 + 12345) >>> 0) / 4294967296);
+  const used = new Set(map.map((n) => `${n.q},${n.r}`));
+  const cells = [];
+  for (let q = -MAP_RINGS; q <= MAP_RINGS; q++) {
+    for (let r = -MAP_RINGS; r <= MAP_RINGS; r++) {
+      if (hexDist(q, r) > MAP_RINGS || used.has(`${q},${r}`)) continue;
+      /* ⚠️ 名所の盤は中央のまわり（環1）を広場として空ける。主役の足元に景色を被せない */
+      if (plaza && hexDist(q, r) <= 1) continue;
+      const P = iso({ q, r });
+      cells.push({ q, r, x: P.x, y: P.y });
+    }
+  }
+  /* 川。⚠️ 盤を左から右へ、二度曲がって横切る。種で形を決める（毎回同じ） */
+  /* ⚠️ 名所の盤（plaza）は中央に主役が立つので、川・線路・高速道路を通さない */
+  const rw = (islandOf(pref, area) || plaza) ? 0 : (RIVER_W[themeKey] || 0);
+  let river = null;
+  if (rw) {
+    const y0 = MAP_H * (0.3 + rnd() * 0.4), y1 = MAP_H * (0.3 + rnd() * 0.4);
+    const c1 = MAP_H * (0.15 + rnd() * 0.7), c2 = MAP_H * (0.15 + rnd() * 0.7);
+    river = { d: `M-20 ${y0} C${MAP_W * 0.33} ${c1} ${MAP_W * 0.66} ${c2} ${MAP_W + 20} ${y1}`, w: rw, y0, y1, c1, c2 };
+    /*
+      橋。⚠️ 川の上に二本。川の向き（接線）に直角に架ける。向きを揃えないと川に浮いて見える。
+    */
+    const at = (t) => {
+      const u = 1 - t;
+      const X = [-20, MAP_W * 0.33, MAP_W * 0.66, MAP_W + 20], Y = [y0, c1, c2, y1];
+      const bz = (A) => u * u * u * A[0] + 3 * u * u * t * A[1] + 3 * u * t * t * A[2] + t * t * t * A[3];
+      const dz = (A) => 3 * u * u * (A[1] - A[0]) + 6 * u * t * (A[2] - A[1]) + 3 * t * t * (A[3] - A[2]);
+      return { x: bz(X), y: bz(Y), a: Math.atan2(dz(Y), dz(X)) * 180 / Math.PI };
+    };
+    river.bridges = [at(0.3 + rnd() * 0.1), at(0.62 + rnd() * 0.1)];
+    /* 堰と水門。⚠️ 橋と重ならない位置に置く（橋は0.3〜0.72） */
+    river.weir = at(0.48 + rnd() * 0.06);
+    river.sluice = at(0.84 + rnd() * 0.06);
+  }
+  /* 川に近い空きマスは空けておく（地形を川の上に被せない） */
+  const nearRiver = (x, y) => {
+    if (!river) return false;
+    /* ⚠️ 線路と同じ理由で、上側を広く空ける（建物の高さぶん） */
+    for (let t = 0; t <= 1; t += 0.01) {
+      const u = 1 - t;
+      const px = u * u * u * -20 + 3 * u * u * t * MAP_W * 0.33 + 3 * u * t * t * MAP_W * 0.66 + t * t * t * (MAP_W + 20);
+      const py = u * u * u * river.y0 + 3 * u * u * t * river.c1 + 3 * u * t * t * river.c2 + t * t * t * river.y1;
+      const dy = py - y;
+      if (Math.abs(px - x) < 40 && dy > -66 - river.w / 2 && dy < 20 + river.w / 2) return true;
+    }
+    return false;
+  };
+  /*
+    線路。⚠️ 川と同じく盤を横切る。川とは向きを変える（上から下へ斜めに）。
+    ⚠️ 線路のそばのマスは空けて、駅だけを一つ置く。
+  */
+  let rail = null;
+  if (RAIL_ON[themeKey] && !islandOf(pref, area) && !plaza) {
+    const x0 = MAP_W * (0.2 + rnd() * 0.25), x1 = MAP_W * (0.55 + rnd() * 0.25);
+    rail = { d: `M${x0} -20 C${x0 + 40} ${MAP_H * 0.35} ${x1 - 40} ${MAP_H * 0.65} ${x1} ${MAP_H + 20}`, x0, x1 };
+  }
+  /*
+    高速道路。⚠️ 川（左→右）とも線路（上→下）とも向きを変え、斜めに横切る。
+    ⚠️ そばのマスは空ける（建物の高さぶん上を広く）。
+  */
+  let highway = null;
+  if (HIGHWAY_ON[themeKey] && !islandOf(pref, area) && !plaza) {
+    const flip = rnd() < 0.5;
+    const ya = MAP_H * (0.08 + rnd() * 0.18), yb = MAP_H * (0.74 + rnd() * 0.18);
+    const y0 = flip ? yb : ya, y1 = flip ? ya : yb;
+    const c1 = MAP_H * (0.25 + rnd() * 0.5), c2 = MAP_H * (0.25 + rnd() * 0.5);
+    highway = { d: `M-30 ${y0} C${MAP_W * 0.35} ${c1} ${MAP_W * 0.65} ${c2} ${MAP_W + 30} ${y1}`, y0, y1, c1, c2 };
+  }
+  const nearHw = (x, y) => {
+    if (!highway) return false;
+    for (let t = 0; t <= 1; t += 0.01) {
+      const u = 1 - t;
+      const px = u * u * u * -30 + 3 * u * u * t * MAP_W * 0.35 + 3 * u * t * t * MAP_W * 0.65 + t * t * t * (MAP_W + 30);
+      const py = u * u * u * highway.y0 + 3 * u * u * t * highway.c1 + 3 * u * t * t * highway.c2 + t * t * t * highway.y1;
+      const dy = py - y;
+      if (Math.abs(px - x) < 42 && dy > -66 && dy < 26) return true;
+    }
+    return false;
+  };
+  const nearRail = (x, y) => {
+    if (!rail) return false;
+    /*
+      ⚠️⚠️ 上側を広く空けること。建物は上へ高く伸びる（ビル・寺・鉄塔で40px以上）ので、
+        線路がマスの中心から少し上を通るだけで建物と重なっていた。
+      ★ 横は±42、縦はマスの中心から上へ56・下へ24の範囲に線路が来たら空ける。
+      ⚠️ 刻みを細かく（0.01）。粗いと、曲がり目で線路が判定の間をすり抜ける。
+    */
+    for (let t = 0; t <= 1; t += 0.01) {
+      const u = 1 - t;
+      const px = u * u * u * rail.x0 + 3 * u * u * t * (rail.x0 + 40) + 3 * u * t * t * (rail.x1 - 40) + t * t * t * rail.x1;
+      const py = u * u * u * -20 + 3 * u * u * t * MAP_H * 0.35 + 3 * u * t * t * MAP_H * 0.65 + t * t * t * (MAP_H + 20);
+      const dy = py - y;
+      /* ⚠️ 電波塔・巨木は60px近く高いので、上側は66まで空ける */
+      if (Math.abs(px - x) < 42 && dy > -66 && dy < 24) return true;
+    }
+    return false;
+  };
+  /*
+    土地柄に合わないブロックは、属性の足し込みから外す。
+    ⚠️⚠️ 川や町の田舎に、でんきのネオン街・電気街が並んでいた。
+  */
+  const NOT_ON = {
+    river: ["neon", "denkigai", "tower", "containers", "kombinat", "onsen"],
+    town: ["neon", "denkigai", "tower", "containers", "kombinat", "onsen"],
+    mountain: ["neon", "denkigai", "tower", "containers", "apartment", "konbini", "gasstation", "kombinat"],
+    shrine: ["neon", "denkigai", "tower", "containers", "factory"],
+  };
+  const deny = NOT_ON[themeKey] || [];
+  /*
+    土地柄と属性の組み合わせでだけ出るもの。
+    ★ 山のほのおは温泉、田舎のほのおはガソリンスタンド、海のはがね・ほのおはコンビナート。
+  */
+  const PAIR = {
+    "fire:mountain": [["onsen", 5]], "fire:river": [["gasstation", 3]], "fire:town": [["gasstation", 2]],
+    "fire:coast": [["kombinat", 3]], "steel:coast": [["kombinat", 3]],
+    "electric:mountain": [["powerplant", 2]], "electric:river": [["powerplant", 2]],
+  };
+  const mix = (TERRAIN_MIX[themeKey] || TERRAIN_MIX.town).map((m) => m.slice());
+  (elems || []).forEach((e) => (ELEM_TERRAIN[e] || []).concat(PAIR[`${e}:${themeKey}`] || []).forEach((m) => {
+    if (!deny.includes(m[0])) mix.push(m.slice());
+  }));
+  /* 雪国の配合。⚠️ 北海道は元の配合を三割に薄めてから足す */
+  const snowReg = snowRegionOf(pref);
+  /*
+    ⚠️ 北海道は元の配合を一割強まで薄め、雪の重みを1.6倍にして足す（雪が八割前後になる）。
+      三割のままだと雪が五〜六割で、「極端」にならなかった。
+    ⚠️ 東北は雪の重みを1.8倍にして足す（雪が二〜三割）。
+  */
+  if (snowReg === "hokkaido") mix.forEach((m) => { m[1] = m[1] * 0.12; });
+  const snowK = snowReg === "hokkaido" ? 1.6 : 1.8;
+  if (snowReg) ((SNOW_MIX[snowReg] || {})[themeKey] || []).forEach((m) => mix.push([m[0], m[1] * snowK]));
+  /*
+    田舎度（川・町だけ）。0が郊外、1が奥深い田舎。小MAPごとに決まる。
+    ★ 平野の田舎らしさは水田の多さで決まる。田舎度が高いほど水田・ビニールハウス・牧場が広がり、
+      低いほどアパート・コンビニが増える。
+    ⚠️ 種から決める（同じ土地は毎回同じ田舎度）。
+  */
+  if (themeKey === "river" || themeKey === "town") {
+    const rural = rnd();
+    const K = { paddy: 0.4 + 2.4 * rural, greenhouse: 0.6 + 1.2 * rural, pasture: 0.5 + 1.5 * rural,
+      field: 0.6 + 1.0 * rural, apartment: 1.6 - 1.3 * rural, konbini: 1.5 - 1.1 * rural,
+      school: 1.3 - 0.6 * rural };
+    mix.forEach((m) => { if (K[m[0]] != null) m[1] = m[1] * K[m[0]]; });
+  }
+  const tot = mix.reduce((a, m) => a + m[1], 0);
+  const out = [];
+  /*
+    【海岸線】海辺の小MAPだけ。
+    ⚠️⚠️ 海のマスを盤にばら撒かないこと。点々と散って、海に見えなかった。
+    ★ 盤の片側を沖、その手前を浜の帯、奥を陸にする。向きは種で決める（毎回同じ）。
+  */
+  let coastOf = null;
+  if (themeKey === "coast") {
+    const ang = rnd() * Math.PI * 2, ca = Math.cos(ang), sa = Math.sin(ang);
+    const R0 = MAP_RINGS * XSTEP;
+    coastOf = (x, y) => {
+      const p = ((x - MAP_W / 2) * ca + (y - MAP_H / 2) * sa) / R0;
+      return p > 0.28 ? "sea" : p > 0.02 ? "shore" : "land";
+    };
+  }
+  const SEA_MIX = snowRegionOf(pref) === "hokkaido"
+    ? [["driftice", 5], ["sea", 2]] : [["sea", 6], ["raft", 1]];
+  const SHORE_MIX = [["harbor", 3], ["seawall", 2], ["tetrapod", 3], ["rockyshore", 2], ["beach", 2], ["fishingvillage", 2]];
+  const LAND_MIX = [["fishingvillage", 4], ["fishmarket", 2], ["warehouse", 2], ["village", 2], ["lighthouse", 1],
+    ["kombinat", 1], ["orchard", 1], ["pylon", 1]];
+  const pickFrom = (mx) => {
+    const t = mx.reduce((a, m) => a + m[1], 0);
+    let p = rnd() * t;
+    for (const [k, w] of mx) { if (p < w) return k; p -= w; }
+    return mx[0][0];
+  };
+  /*
+    特別な島。⚠️ 外周からの距離で海・浜・陸に分ける（海岸線の帯より優先）。
+    ⚠️ 島では川・線路・高速道路を通さない（小さな島に三本は入らない）。
+  */
+  const isle = islandOf(pref, area);
+  const isleBand = (x, y) => {
+    const dx = (x - MAP_W / 2) / (MAP_RINGS * XSTEP), dy = (y - MAP_H / 2) / (MAP_RINGS * YSTEP);
+    const r = Math.sqrt(dx * dx + dy * dy);
+    return r > 0.74 ? "sea" : r > 0.56 ? "shore" : "land";
+  };
+  let station = false;
+  cells.forEach((c) => {
+    if (nearRiver(c.x, c.y) || nearHw(c.x, c.y)) return;
+    /* ⚠️ 線路のそばは空ける。ただし最初の一つは駅にする */
+    if (nearRail(c.x, c.y)) {
+      /* ⚠️ 駅は線路の上に建てない。線路から横に一マスずれた所（判定の外）に置く */
+      return;
+    }
+    if (!station && rail && c.y > MAP_H * 0.35 && c.y < MAP_H * 0.65
+      && (nearRail(c.x - 62, c.y) || nearRail(c.x + 62, c.y))) {
+      station = true; out.push({ ...c, kind: "station", v: 0 }); return;
+    }
+    let p = rnd() * tot, kind = mix[0][0];
+    for (const [k, w] of mix) { if (p < w) { kind = k; break; } p -= w; }
+    /* ⚠️ 特別な島は、島だけの景色で選び直す */
+    if (isle) {
+      const b = isleBand(c.x, c.y);
+      kind = pickFrom(ISLAND_MIX[isle][b]);
+      out.push({ ...c, kind, v: rnd() });
+      return;
+    }
+    /* ⚠️ 海辺は海岸線の帯で選び直す。陸の帯だけ、属性の足し込み（mix）も混ぜる */
+    if (coastOf) {
+      const band = coastOf(c.x, c.y);
+      if (band === "sea") kind = pickFrom(SEA_MIX);
+      else if (band === "shore") kind = pickFrom(SHORE_MIX);
+      else if (rnd() < 0.55) kind = pickFrom(LAND_MIX);
+    }
+    out.push({ ...c, kind, v: rnd() });
+  });
+  out.sort((a, b) => a.y - b.y);
+  const pylons = out.filter((c) => c.kind === "pylon").sort((a, b) => a.x - b.x);
+  /* ⚠️ どくの小MAPでは川が濁る（汚れた川） */
+  if (river && (elems || []).includes("poison")) river.dirty = true;
+  return { cells: out, river, pylons, rail, highway };
+}
+
+/* 一マスぶんの地形。⚠️ マスの大きさ（横62×縦52）に収める。はみ出すと隣と潰し合う */
+function TerrainCell({ c }) {
+  const { x, y, kind, v } = c;
+  const P = (d, ex) => {
+    /* ⚠️ key は広げて渡さない（React が警告を出す）。取り出して直に渡す */
+    const { key, ...rest } = ex || {};
+    return <path key={key} d={d} {...rest} />;
+  };
+  const g = (children) => <g transform={`translate(${x.toFixed(1)} ${y.toFixed(1)})`}>{children}</g>;
+  switch (kind) {
+    /* 山 … 左の面を明るく、右を暗く。頂に雪。麓に木 */
+    case "peak": return g(
+      <g>
+        <ellipse cx="4" cy="10" rx="30" ry="8" fill="rgba(10,6,20,0.35)" />
+        {P("M-28 10 L-2 -34 L28 10 Z", { fill: "#6A6A82" })}
+        {P("M-28 10 L-2 -34 L-2 10 Z", { fill: "#8A8AA4" })}
+        {P("M-10 -20 L-2 -34 L6 -20 L2 -22 L-2 -18 L-6 -22 Z", { fill: "#EEF2FA" })}
+        {[-18, -8, 10, 20].map((dx, k) => P(`M${dx} 12 l4 -9 l4 9 Z`, { key: k, fill: k % 2 ? "#2E5A3C" : "#3E7050" }))}
+      </g>
+    );
+    /* 森 … 高さの違う松を六本 */
+    case "forest": return g(
+      <g>
+        <ellipse cx="2" cy="10" rx="28" ry="8" fill="rgba(10,6,20,0.3)" />
+        {[[-18, 4, 1], [-6, -2, 1.3], [8, 2, 1.1], [18, 6, 0.9], [-12, 10, 0.8], [4, 10, 1]].map(([dx, dy, k], i) => (
+          <g key={i} transform={`translate(${dx} ${dy}) scale(${k})`}>
+            {P("M0 -22 L7 -8 L-7 -8 Z M0 -14 L9 2 L-9 2 Z", { fill: i % 2 ? "#2E5A3C" : "#3A6A48" })}
+            {P("M0 -22 L7 -8 L0 -8 Z M0 -14 L9 2 L0 2 Z", { fill: "#4E8A5E" })}
+          </g>
+        ))}
+      </g>
+    );
+    /* 棚田 … 五段の段々。段ごとに水面が光る。畦が段を分ける */
+    case "terrace": return g(
+      <g>
+        {[0, 1, 2, 3, 4].map((k) => {
+          const yy = -18 + k * 7, rx = 26 - k * 1.5;
+          return (
+            <g key={k}>
+              <ellipse cx="0" cy={yy + 3} rx={rx} ry="5.6" fill="#6A5A3A" />
+              <ellipse cx="0" cy={yy} rx={rx} ry="5.6" fill={k % 2 ? "#7ABA5A" : "#8ACA66"} />
+              <path className="mv-glint2" d={`M${-rx + 6} ${yy - 1} q${rx - 6} -3 ${rx * 2 - 12} 0`}
+                fill="none" stroke="rgba(200,235,255,0.55)" strokeWidth="1" style={{ animationDelay: `${k * 0.4}s` }} />
+            </g>
+          );
+        })}
+      </g>
+    );
+    /* 棚の果樹園 … 段々に果樹。実の色は種で三通り（みかん・りんご・もも） */
+    case "orchard": {
+      const fruit = v < 0.34 ? "#FF9A2A" : v < 0.67 ? "#E83A3A" : "#FFA8B8";
+      return g(
+        <g>
+          {[0, 1, 2].map((row) => (
+            <g key={row}>
+              <path d={`M-26 ${-8 + row * 10} h52 l-3 4 h-46 Z`} fill="#8A6A40" />
+              {[0, 1, 2, 3].map((col) => (
+                <g key={col} transform={`translate(${-18 + col * 12 + (row % 2) * 4} ${-12 + row * 10})`}>
+                  <rect x="-0.8" y="0" width="1.6" height="4" fill="#5A3A20" />
+                  <circle cx="0" cy="-2" r="5" fill="#3E8A42" />
+                  <circle cx="-1.4" cy="-3.4" r="2.4" fill="#58A85A" />
+                  <circle cx="2" cy="-1" r="1.3" fill={fruit} />
+                  <circle cx="-2.4" cy="0" r="1.2" fill={fruit} />
+                </g>
+              ))}
+            </g>
+          ))}
+        </g>
+      );
+    }
+    /* 畑 … 畝の列。二色の作物 */
+    case "field": return g(
+      <g>
+        {P("M-28 0 L0 -16 L28 0 L0 16 Z", { fill: "#8A6A44" })}
+        {[-3, -1, 1, 3].map((k) => P(`M${-20 + k * 2} ${k * 3} L${20 + k * 2} ${k * 3 - 12}`,
+          { key: k, stroke: k % 2 ? "#7ACA5A" : "#C8D060", strokeWidth: "3", strokeLinecap: "round" }))}
+      </g>
+    );
+    /* 集落 … 家が三軒、窓に灯 */
+    case "village": return g(
+      <g>
+        {[[-14, 2, 1], [8, -4, 1.1], [14, 10, 0.9]].map(([dx, dy, k], i) => (
+          <g key={i} transform={`translate(${dx} ${dy}) scale(${k})`}>
+            <ellipse cx="2" cy="4" rx="10" ry="3" fill="rgba(10,6,20,0.35)" />
+            <rect x="-8" y="-8" width="16" height="11" fill="#9C8A70" />
+            <rect x="-8" y="-8" width="8" height="11" fill="#B4A084" />
+            {P("M-10 -8 L0 -17 L10 -8 Z", { fill: i === 1 ? "#5A6A8A" : "#8A4A3A" })}
+            {P("M-10 -8 L0 -17 L0 -8 Z", { fill: i === 1 ? "#6E80A2" : "#A05A46" })}
+            <rect className="mv-winlit" x="2" y="-5" width="4" height="4" fill="#FFD890" style={{ animationDelay: `${i}s` }} />
+          </g>
+        ))}
+      </g>
+    );
+    /* 海 … 水のマス。波が流れる */
+    case "sea": return g(
+      <g>
+        {P("M-31 0 L-15 -26 L15 -26 L31 0 L15 26 L-15 26 Z", { fill: "#2E6EA8" })}
+        {[0, 1, 2].map((k) => (
+          <path key={k} className="mv-wave2" d={`M-20 ${-12 + k * 12} q5 -3 10 0 t10 0 t10 0 t10 0`}
+            fill="none" stroke="rgba(200,230,255,0.5)" strokeWidth="1.3" style={{ animationDelay: `${k * 0.7}s` }} />
+        ))}
+      </g>
+    );
+    /* 浜 … 砂浜と松 */
+    case "beach": return g(
+      <g>
+        {P("M-28 4 Q0 -14 28 4 Q0 18 -28 4 Z", { fill: "#E8D6A8" })}
+        {[-10, 8].map((dx, k) => (
+          <g key={k} transform={`translate(${dx} ${k * 4})`}>
+            <path d="M0 0 q-2 -10 1 -18" stroke="#5A4030" strokeWidth="1.6" fill="none" />
+            <ellipse cx="2" cy="-18" rx="8" ry="3.2" fill="#2E6A44" />
+            <ellipse cx="-2" cy="-14" rx="6" ry="2.6" fill="#3E7A50" />
+          </g>
+        ))}
+      </g>
+    );
+    /* 鎮守の森 … 杉の木立と小さな鳥居 */
+    case "grove": return g(
+      <g>
+        {[-20, -8, 6, 18].map((dx, k) => (
+          <g key={k} transform={`translate(${dx} ${(k % 2) * 6})`}>
+            <rect x="-1" y="-4" width="2" height="6" fill="#4A3020" />
+            {P("M0 -32 L5 -4 L-5 -4 Z", { fill: "#2E5A3C" })}
+            {P("M0 -32 L5 -4 L0 -4 Z", { fill: "#3E7050" })}
+          </g>
+        ))}
+        <g transform="translate(0 12)">
+          <rect x="-8" y="-12" width="2" height="12" fill="#C8403A" />
+          <rect x="6" y="-12" width="2" height="12" fill="#C8403A" />
+          <rect x="-11" y="-14" width="22" height="2.6" fill="#D8483E" />
+        </g>
+      </g>
+    );
+    /* ビル … 窓明かりが灯る */
+    case "tower": {
+      const h = 30 + Math.round(v * 22);
+      return g(
+        <g>
+          <ellipse cx="6" cy="10" rx="20" ry="6" fill="rgba(10,6,20,0.4)" />
+          <rect x="-12" y={10 - h} width="12" height={h} fill="#5E5A82" />
+          <rect x="0" y={10 - h} width="12" height={h} fill="#48446A" />
+          {Array.from({ length: Math.floor(h / 7) }, (_, r) => (
+            <g key={r}>
+              <rect className={(r + Math.round(v * 5)) % 3 === 0 ? "mv-winlit" : undefined}
+                x="-9" y={13 - h + r * 7} width="3" height="3" fill={(r + 1) % 2 ? "#FFD890" : "#8A86B0"} />
+              <rect x="3" y={13 - h + r * 7} width="3" height="3" fill={r % 3 ? "#6A668E" : "#E8C070"} />
+            </g>
+          ))}
+        </g>
+      );
+    }
+    /* 公園 … 丸い木と池 */
+    case "park": return g(
+      <g>
+        {P("M-28 0 L0 -16 L28 0 L0 16 Z", { fill: "#5A8A4A" })}
+        <ellipse cx="6" cy="3" rx="9" ry="4" fill="#4A8ACA" />
+        {[[-14, -2], [-4, -8], [16, -4]].map(([dx, dy], k) => (
+          <g key={k} transform={`translate(${dx} ${dy})`}>
+            <rect x="-0.8" y="-2" width="1.6" height="5" fill="#5A3A20" />
+            <circle cx="0" cy="-5" r="5" fill="#3E8A42" />
+          </g>
+        ))}
+      </g>
+    );
+    /* 古民家 … 茅葺きの厚い屋根、縁側、柿の木 */
+    case "kominka": return g(
+      <g>
+        <ellipse cx="4" cy="10" rx="26" ry="7" fill="rgba(10,6,20,0.35)" />
+        <rect x="-16" y="-6" width="30" height="14" fill="#7A5A3A" />
+        <rect x="-16" y="-6" width="15" height="14" fill="#8C6A46" />
+        {P("M-22 -6 L-1 -26 L20 -6 Z", { fill: "#A8905A" })}
+        {P("M-22 -6 L-1 -26 L-1 -6 Z", { fill: "#C0A66C" })}
+        {P("M-18 -10 h34 M-14 -14 h26 M-9 -19 h16", { stroke: "rgba(90,70,40,0.5)", strokeWidth: "0.8" })}
+        <rect x="-14" y="4" width="26" height="2" fill="#5A3A20" />
+        <rect className="mv-winlit" x="-10" y="-2" width="5" height="5" fill="#FFD890" />
+        <g transform="translate(20 2)">
+          <rect x="-0.8" y="-2" width="1.6" height="8" fill="#5A3A20" />
+          <circle cx="0" cy="-6" r="6" fill="#4A8A3A" />
+          {[[-2, -7], [2, -4], [1, -9]].map(([fx, fy], k) => <circle key={k} cx={fx} cy={fy} r="1.3" fill="#FF8A2A" />)}
+        </g>
+      </g>
+    );
+    /* 寺 … 大屋根の本堂。屋根の反りと、灯籠 */
+    case "temple": return g(
+      <g>
+        <ellipse cx="4" cy="10" rx="28" ry="7" fill="rgba(10,6,20,0.35)" />
+        <rect x="-18" y="-4" width="34" height="12" fill="#6A4A3A" />
+        {P("M-26 -4 Q-1 -12 24 -4 L18 -14 Q-1 -22 -20 -14 Z", { fill: "#3A3A48" })}
+        {P("M-26 -4 Q-13 -8 -1 -8 L-1 -18 Q-10 -20 -20 -14 Z", { fill: "#4E4E60" })}
+        <rect x="-4" y="0" width="7" height="8" fill="#2A1A14" />
+        <g transform="translate(-24 6)">
+          <path d="M-2 4 h4 v-6 h-4 Z M-3 -2 h6 l-3 -3 Z" fill="#9C968A" />
+          <circle className="mv-flame" cx="0" cy="-0.6" r="1" fill="#FFD27A" />
+        </g>
+      </g>
+    );
+    /* 五重塔 … 五つの屋根、上ほど小さく。相輪 */
+    case "pagoda": return g(
+      <g>
+        <ellipse cx="3" cy="10" rx="14" ry="4" fill="rgba(10,6,20,0.35)" />
+        {[0, 1, 2, 3, 4].map((k) => {
+          const w = 16 - k * 2.2, yy = 6 - k * 9;
+          return (
+            <g key={k}>
+              <rect x={-w * 0.45} y={yy - 5} width={w * 0.9} height="5" fill="#8A4A3A" />
+              {P(`M${-w} ${yy - 5} Q0 ${yy - 9} ${w} ${yy - 5} L${w * 0.7} ${yy - 8} Q0 ${yy - 11} ${-w * 0.7} ${yy - 8} Z`, { fill: "#3A3A48" })}
+            </g>
+          );
+        })}
+        <path d="M0 -40 v-10" stroke="#C8A850" strokeWidth="1.4" />
+      </g>
+    );
+    /* 墓地 … 墓石の列、卒塔婆、漂う鬼火 */
+    case "cemetery": return g(
+      <g>
+        {P("M-28 0 L0 -16 L28 0 L0 16 Z", { fill: "#5A5A5A" })}
+        {[[-16, -2], [-6, -8], [4, -4], [14, 0], [-8, 4], [6, 8]].map(([dx, dy], k) => (
+          <g key={k} transform={`translate(${dx} ${dy})`}>
+            <rect x="-2.6" y="-8" width="5.2" height="8" fill="#9A9A9C" />
+            <rect x="-2.6" y="-8" width="2.6" height="8" fill="#B4B4B6" />
+            <rect x="-3.6" y="0" width="7.2" height="1.6" fill="#7A7A7C" />
+          </g>
+        ))}
+        {[-20, 20].map((dx, k) => <path key={k} d={`M${dx} 2 v-14 M${dx - 1} -10 h2`} stroke="#C8B89A" strokeWidth="1" />)}
+        <circle className="amb amb-wisp" cx="0" cy="-16" r="2.4" fill="#B8A0FF" style={{ animationDuration: "4s" }} />
+      </g>
+    );
+    /* 銭湯 … 唐破風の屋根と高い煙突、湯気 */
+    case "sento": return g(
+      <g>
+        <ellipse cx="4" cy="10" rx="26" ry="7" fill="rgba(10,6,20,0.35)" />
+        <rect x="-16" y="-6" width="28" height="14" fill="#C8B89A" />
+        <rect x="-16" y="-6" width="14" height="14" fill="#D8CAAC" />
+        {P("M-20 -6 Q-2 -18 16 -6 Q-2 -12 -20 -6 Z", { fill: "#4A4A5A" })}
+        <rect x="-6" y="0" width="8" height="8" fill="#5A7ABA" />
+        <rect x="16" y="-34" width="5" height="40" fill="#8A7A6A" />
+        <rect x="16" y="-34" width="2.5" height="40" fill="#9C8C7A" />
+        <circle className="mv-smoke" cx="18.5" cy="-37" r="3" fill="rgba(235,235,245,0.55)" />
+        <circle className="mv-smoke" cx="18.5" cy="-37" r="3" fill="rgba(235,235,245,0.45)" style={{ animationDelay: "-1.9s" }} />
+      </g>
+    );
+    /* 学校 … 横長の校舎、時計、校庭 */
+    case "school": return g(
+      <g>
+        {P("M-30 6 L-6 -6 L22 6 L-2 18 Z", { fill: "#B89A6A" })}
+        <rect x="-24" y="-16" width="40" height="16" fill="#D8D0C0" />
+        <rect x="-24" y="-16" width="20" height="16" fill="#E8E0D0" />
+        {[0, 1].map((r) => [0, 1, 2, 3, 4, 5].map((cc) => (
+          <rect key={`${r}${cc}`} x={-21 + cc * 6} y={-13 + r * 6} width="4" height="3.4" fill={cc === 2 ? "#FFD890" : "#6A8AB8"} />
+        )))}
+        <rect x="-8" y="-24" width="8" height="8" fill="#C8C0B0" />
+        <circle cx="-4" cy="-20" r="2.6" fill="#FFFFFF" stroke="#4A4A5A" strokeWidth="0.6" />
+      </g>
+    );
+    /* コンテナ … 色とりどりの箱を積む、港のクレーン */
+    case "containers": return g(
+      <g>
+        <ellipse cx="2" cy="10" rx="28" ry="7" fill="rgba(10,6,20,0.35)" />
+        {[[-18, 4, "#C84A3A"], [-6, 4, "#3A7AC8"], [6, 4, "#E8A83A"], [-12, -3, "#4AA05A"], [0, -3, "#C84A3A"], [-6, -10, "#3A7AC8"]].map(([dx, dy, col], k) => (
+          <g key={k} transform={`translate(${dx} ${dy})`}>
+            <rect x="0" y="0" width="12" height="7" fill={col} />
+            <rect x="0" y="0" width="12" height="2" fill="rgba(255,255,255,0.2)" />
+            {[3, 6, 9].map((xx) => <path key={xx} d={`M${xx} 1 v5`} stroke="rgba(0,0,0,0.25)" strokeWidth="0.6" />)}
+          </g>
+        ))}
+        <g stroke="#E8B83A" strokeWidth="1.4" fill="none">
+          {P("M20 10 V-26 M20 -26 H-4 M20 -20 L10 -26")}
+        </g>
+        <path d="M2 -26 v8" stroke="#8A8A9A" strokeWidth="0.8" />
+      </g>
+    );
+    /* 工場 … 二本の煙突、のこぎり屋根 */
+    case "factory": return g(
+      <g>
+        <ellipse cx="4" cy="10" rx="28" ry="7" fill="rgba(10,6,20,0.35)" />
+        <rect x="-22" y="-6" width="40" height="14" fill="#7A7A8A" />
+        {P("M-22 -6 l8 -8 v8 l8 -8 v8 l8 -8 v8 l8 -8 v8 l8 -8 v8 Z", { fill: "#5A5A6A" })}
+        {[-12, 10].map((dx, k) => (
+          <g key={k}>
+            <rect x={dx} y="-30" width="4" height="26" fill="#8A6A5A" />
+            <rect x={dx} y="-26" width="4" height="2" fill="#E8E0D0" />
+            <circle className="mv-smoke" cx={dx + 2} cy="-33" r="3" fill="rgba(200,200,210,0.5)" style={{ animationDelay: `${-k * 1.6}s` }} />
+          </g>
+        ))}
+      </g>
+    );
+    /* 駅 … 線路の脇の駅舎とホーム */
+    case "station": return g(
+      <g>
+        <ellipse cx="4" cy="10" rx="24" ry="6" fill="rgba(10,6,20,0.35)" />
+        <rect x="-22" y="4" width="40" height="4" fill="#B8B0A0" />
+        <rect x="-14" y="-10" width="24" height="14" fill="#E0D6C0" />
+        {P("M-18 -10 L-2 -20 L14 -10 Z", { fill: "#3A5A8A" })}
+        <rect x="-8" y="-6" width="10" height="4" fill="#3A5A8A" />
+        <rect x="-4" y="-2" width="4" height="6" fill="#FFD890" className="mv-winlit" />
+      </g>
+    );
+    /* 採石場 … 段々に削られた岩肌と、砕石の山 */
+    case "quarry": return g(
+      <g>
+        {[0, 1, 2].map((k) => (
+          <g key={k}>
+            {P(`M${-26 + k * 4} ${4 - k * 8} h${52 - k * 8} l-4 5 h${-44 + k * 8} Z`, { fill: k % 2 ? "#9A8A78" : "#AE9E8A" })}
+            {P(`M${-26 + k * 4} ${4 - k * 8} h${52 - k * 8} l-2 -2 h${-48 + k * 8} Z`, { fill: "#C8B8A2" })}
+          </g>
+        ))}
+        {P("M10 12 l8 -8 l8 8 Z", { fill: "#8A7A6A" })}
+        {P("M10 12 l8 -8 l0 8 Z", { fill: "#A0907C" })}
+      </g>
+    );
+    /* 砂場 … 砂の囲いと、小さな山とバケツ */
+    case "sandpit": return g(
+      <g>
+        {P("M-24 2 L0 -12 L24 2 L0 16 Z", { fill: "#8A6A44" })}
+        {P("M-20 2 L0 -10 L20 2 L0 13 Z", { fill: "#E8D2A0" })}
+        {P("M-6 4 q6 -10 12 0 Z", { fill: "#D8C08A" })}
+        <rect x="8" y="-2" width="4" height="4" fill="#E84A3A" />
+      </g>
+    );
+    /* ごみ処理場 … 焼却炉の太い煙突と、炉の火 */
+    case "incinerator": return g(
+      <g>
+        <ellipse cx="4" cy="10" rx="26" ry="7" fill="rgba(10,6,20,0.35)" />
+        <rect x="-20" y="-8" width="30" height="16" fill="#8A8A96" />
+        <rect x="-20" y="-8" width="15" height="16" fill="#9C9CA8" />
+        <rect x="-14" y="-2" width="8" height="6" fill="#FF8A3A" className="mv-flame" />
+        <rect x="12" y="-40" width="7" height="48" fill="#C8C0B8" />
+        <rect x="12" y="-36" width="7" height="3" fill="#E84A3A" />
+        <rect x="12" y="-28" width="7" height="3" fill="#E84A3A" />
+        <circle className="mv-smoke" cx="15.5" cy="-43" r="3.4" fill="rgba(210,210,220,0.55)" />
+        <circle className="mv-smoke" cx="15.5" cy="-43" r="3.4" fill="rgba(210,210,220,0.45)" style={{ animationDelay: "-1.9s" }} />
+      </g>
+    );
+    /* 沼 … 濁った水、泡が浮く、枯れ木 */
+    case "swamp": return g(
+      <g>
+        <ellipse cx="0" cy="2" rx="26" ry="12" fill="#3A4A2A" />
+        <ellipse cx="0" cy="1" rx="22" ry="9" fill="#5A6A3A" />
+        {[0, 1, 2].map((k) => <circle key={k} className="amb amb-bubble" cx={-8 + k * 8} cy="2" r="1.6" fill="#A8C86A"
+          style={{ animationDuration: `${3 + k}s`, animationDelay: `${-k}s` }} />)}
+        <path d="M16 6 V-14 M16 -8 l-5 -4 M16 -11 l4 -5" stroke="#4A3A2A" strokeWidth="1.6" fill="none" strokeLinecap="round" />
+      </g>
+    );
+    /* 廃棄物処理場 … ドラム缶と、積まれた廃材、フェンス */
+    case "wasteyard": return g(
+      <g>
+        {P("M-28 2 L0 -14 L28 2 L0 18 Z", { fill: "#6A6A5A" })}
+        {P("M-16 6 l10 -12 l12 10 l8 -6 l6 10 Z", { fill: "#7A6A5A" })}
+        {[[-18, -2, "#C8A83A"], [-11, 0, "#3A7AC8"], [10, 4, "#C84A3A"]].map(([dx, dy, col], k) => (
+          <g key={k} transform={`translate(${dx} ${dy})`}>
+            <rect x="-3" y="-7" width="6" height="8" fill={col} />
+            <ellipse cx="0" cy="-7" rx="3" ry="1.2" fill="rgba(255,255,255,0.3)" />
+          </g>
+        ))}
+        {P("M-28 -2 h56", { stroke: "#9A9AA8", strokeWidth: "0.8", strokeDasharray: "2 2" })}
+      </g>
+    );
+    /* 花畑 … 色とりどりの花の列、蝶が舞う（フェアリー） */
+    case "flowerfield": return g(
+      <g>
+        {P("M-28 0 L0 -16 L28 0 L0 16 Z", { fill: "#6AAA5A" })}
+        {Array.from({ length: 14 }, (_, k) => {
+          const fx = -18 + (k % 5) * 9, fy = -8 + Math.floor(k / 5) * 7 + (k % 2) * 2;
+          const col = ["#F48AA8", "#F4D060", "#FFFFFF", "#C88AF0", "#FF9A7A"][k % 5];
+          return <circle key={k} cx={fx} cy={fy} r="2" fill={col} />;
+        })}
+        <path className="mv-petal" d="M4 -12 l3 -2 l1 3 Z M4 -12 l-3 -2 l-1 3 Z" fill="#FFD0F0" style={{ animationDuration: "4s" }} />
+      </g>
+    );
+    /* 草原 … 風になびく草、ぽつんと一本の木（くさ） */
+    case "grassland": return g(
+      <g>
+        {P("M-28 0 L0 -16 L28 0 L0 16 Z", { fill: "#7ABA5A" })}
+        {Array.from({ length: 9 }, (_, k) => (
+          <g key={k} className={`pn-sway s${k % 3}`}>
+            <path d={`M${-16 + (k % 3) * 12 + Math.floor(k / 3) * 3} ${-4 + Math.floor(k / 3) * 6} q-1 -5 1 -8`}
+              stroke="#4F8A42" strokeWidth="1.4" fill="none" strokeLinecap="round" />
+          </g>
+        ))}
+        <g transform="translate(14 -2)">
+          <rect x="-1" y="-6" width="2" height="8" fill="#5A3A20" />
+          <circle cx="0" cy="-10" r="7" fill="#3E8A42" />
+          <circle cx="-2" cy="-12" r="3.4" fill="#58A85A" />
+        </g>
+      </g>
+    );
+    /* 雲海 … 山の頂が雲の上に出る。雲がゆっくり流れる（ドラゴン） */
+    case "cloud": return g(
+      <g>
+        {P("M-10 0 L4 -30 L18 0 Z", { fill: "#6A6A82" })}
+        {P("M-10 0 L4 -30 L4 0 Z", { fill: "#8A8AA4" })}
+        {P("M-2 -18 L4 -30 L10 -18 Z", { fill: "#EEF2FA" })}
+        <g className="pn-mist" style={{ animationDuration: "12s" }}>
+          {[[-18, 2, 10], [-4, 6, 12], [12, 3, 10], [-12, 10, 9], [8, 11, 11]].map(([cx, cy, r], k) => (
+            <circle key={k} cx={cx} cy={cy} r={r} fill="rgba(240,244,255,0.85)" />
+          ))}
+        </g>
+      </g>
+    );
+    /* 建前（棟上げ）… 木の骨組みと、屋根の上の幣串 */
+    case "framing": return g(
+      <g>
+        <ellipse cx="3" cy="10" rx="24" ry="6" fill="rgba(10,6,20,0.35)" />
+        <g stroke="#C8A070" strokeWidth="2" fill="none">
+          {P("M-16 8 V-8 M-4 8 V-8 M8 8 V-8 M16 8 V-8 M-18 -8 H18 M-18 0 H18")}
+          {P("M-20 -8 L0 -22 L20 -8")}
+        </g>
+        <path d="M0 -22 v-8" stroke="#8A6A40" strokeWidth="1.4" />
+        <path d="M0 -30 l6 2 l-6 2 Z" fill="#FFFFFF" />
+        <path d="M0 -26 l-5 2 l5 2 Z" fill="#E84A3A" />
+      </g>
+    );
+    /* 工事現場 … 足場、黄と黒の柵、クレーン */
+    case "construction": return g(
+      <g>
+        {P("M-28 2 L0 -14 L28 2 L0 18 Z", { fill: "#8A7A5A" })}
+        <g stroke="#9AA0B0" strokeWidth="1.2" fill="none">
+          {P("M-14 8 V-20 M-2 8 V-20 M10 8 V-20 M-14 -6 H10 M-14 -20 H10 M-14 8 L-2 -6 M-2 8 L10 -6")}
+        </g>
+        {[-20, -14, -8].map((dx, k) => <rect key={k} x={dx} y="8" width="6" height="3" fill={k % 2 ? "#1A1A1A" : "#F4C83A"} />)}
+        <g stroke="#F4C83A" strokeWidth="1.6" fill="none">
+          {P("M18 12 V-30 M18 -30 H-6 M18 -24 L8 -30")}
+        </g>
+      </g>
+    );
+    /* 発電所 … 丸い冷却塔から湯気、建屋 */
+    case "powerplant": return g(
+      <g>
+        <ellipse cx="4" cy="10" rx="28" ry="7" fill="rgba(10,6,20,0.35)" />
+        {P("M-22 8 Q-18 -8 -20 -22 H-4 Q-6 -8 -2 8 Z", { fill: "#B8B8C4" })}
+        {P("M-22 8 Q-18 -8 -20 -22 H-12 Q-12 -8 -12 8 Z", { fill: "#CCCCD6" })}
+        <circle className="mv-smoke" cx="-12" cy="-26" r="5" fill="rgba(240,240,248,0.6)" />
+        <rect x="2" y="-6" width="22" height="14" fill="#6A7A9A" />
+        {[4, 10, 16].map((wx) => <rect key={wx} x={wx} y="-2" width="4" height="3" fill="#FFE070" className="mv-winlit" />)}
+        <path d="M13 -6 l-3 -6 h4 l-3 -6" stroke="#FFE070" strokeWidth="1.4" fill="none" />
+      </g>
+    );
+    /* ネオン街 … 縦長の看板が色を変えて光る */
+    case "neon": return g(
+      <g>
+        <rect x="-18" y="-24" width="36" height="32" fill="#2A2438" />
+        {[[-14, "#FF4AA8"], [-4, "#4AE8FF"], [6, "#FFE84A"]].map(([nx, col], k) => (
+          <rect key={k} className="mv-neon" x={nx} y="-20" width="7" height="22" rx="1.4" fill="none"
+            stroke={col} strokeWidth="1.6" style={{ animationDelay: `${-k * 0.9}s`, filter: `drop-shadow(0 0 3px ${col})` }} />
+        ))}
+        <rect x="-18" y="4" width="36" height="4" fill="#3A3448" />
+      </g>
+    );
+    /* 電気街 … 大きな看板と、ずらりと並ぶ店の灯 */
+    case "denkigai": return g(
+      <g>
+        <rect x="-20" y="-26" width="18" height="34" fill="#4A4A6A" />
+        <rect x="2" y="-18" width="18" height="26" fill="#5A5A7A" />
+        <rect x="-18" y="-24" width="14" height="8" fill="#E84A3A" className="mv-winlit" />
+        <rect x="4" y="-16" width="14" height="6" fill="#3A8AE8" className="mv-winlit" style={{ animationDelay: "-2s" }} />
+        {[0, 1, 2].map((r) => <rect key={r} x="-18" y={-12 + r * 6} width="14" height="3" fill={r % 2 ? "#FFE070" : "#8AF0FF"} />)}
+        <rect x="-20" y="4" width="40" height="4" fill="#FFD890" opacity="0.7" />
+      </g>
+    );
+    /* 灯台 … 白黒の塔、回る光の帯 */
+    case "lighthouse": return g(
+      <g>
+        <ellipse cx="3" cy="10" rx="14" ry="4" fill="rgba(10,6,20,0.35)" />
+        {P("M-5 8 L-3 -26 H3 L5 8 Z", { fill: "#F0ECE4" })}
+        {P("M-4.4 -4 H4.4 L4 -12 H-4 Z M-3.6 -18 H3.6 L3.4 -24 H-3.4 Z", { fill: "#C84A3A" })}
+        <rect x="-4" y="-31" width="8" height="5" fill="#3A3A48" />
+        <path className="pn-beam" d="M0 -29 L40 -38 L40 -20 Z" fill="rgba(255,240,180,0.25)" />
+      </g>
+    );
+    /*
+      枯れ木 … 葉の落ちた木、地面から浮いた根、朽ちた倒木と茸（むし）。
+      ⚠️ 枝は細く折れ曲がらせる。まっすぐだと電柱に見える。
+    */
+    case "deadwood": return g(
+      <g>
+        <ellipse cx="2" cy="10" rx="26" ry="7" fill="rgba(10,6,20,0.35)" />
+        {P("M-28 2 L0 -12 L28 2 L0 16 Z", { fill: "#6A5A40" })}
+        <g stroke="#5A4630" strokeWidth="2.4" fill="none" strokeLinecap="round">
+          {P("M-6 8 V-12 M-6 -4 l-8 -8 l-2 -6 M-6 -8 l7 -8 l5 -2 M-6 -12 l-2 -8")}
+        </g>
+        <g stroke="#6A5238" strokeWidth="1.4" fill="none" strokeLinecap="round">
+          {P("M-6 8 q-6 2 -12 0 M-6 8 q5 3 10 1 M-6 8 q-2 4 -6 6 M-6 8 q3 4 6 6")}
+        </g>
+        {P("M6 10 L24 2 l2 3 L8 13 Z", { fill: "#7A6448" })}
+        <ellipse cx="7" cy="11.5" rx="1.6" ry="1" fill="#5A4630" />
+        {[[12, 5], [17, 3], [21, 6]].map(([mx, my], k) => (
+          <g key={k}>
+            <rect x={mx - 0.5} y={my - 2} width="1" height="2.4" fill="#E8DCC0" />
+            <path d={`M${mx - 2.4} ${my - 2} q2.4 -3 4.8 0 Z`} fill={k % 2 ? "#C8783A" : "#A85A2A"} />
+          </g>
+        ))}
+      </g>
+    );
+    /* 枯れ野 … 色の抜けた草、折れた穂、ところどころ地面がのぞく（むし） */
+    case "withered": return g(
+      <g>
+        {P("M-28 0 L0 -16 L28 0 L0 16 Z", { fill: "#9A8A5A" })}
+        <ellipse cx="-8" cy="4" rx="7" ry="3" fill="#7A6A44" />
+        {Array.from({ length: 10 }, (_, k) => {
+          const bx = -18 + (k % 4) * 11 + Math.floor(k / 4) * 3, by = -6 + Math.floor(k / 4) * 6;
+          return (
+            <path key={k} d={`M${bx} ${by} q${k % 2 ? 2 : -2} -5 ${k % 2 ? 5 : -4} -6`}
+              stroke={k % 3 ? "#C8B078" : "#A89060"} strokeWidth="1.3" fill="none" strokeLinecap="round" />
+          );
+        })}
+        <path d="M14 -2 v-10 l-3 4" stroke="#6A5A40" strokeWidth="1.4" fill="none" strokeLinecap="round" />
+      </g>
+    );
+    /* 根の露わな倒木 … 崩れた土手、むき出しの根、倒れた幹（むし） */
+    case "roots": return g(
+      <g>
+        {P("M-26 6 Q-10 -16 14 -10 L26 6 Z", { fill: "#6A5238" })}
+        {P("M-26 6 Q-10 -16 -2 -12 L-2 6 Z", { fill: "#7C6244" })}
+        <path d="M-6 -8 q-4 6 -2 12 M-2 -10 q2 7 -1 14 M2 -9 q6 5 5 12 M6 -8 q8 3 10 8"
+          stroke="#3A2A1A" strokeWidth="1.3" fill="none" strokeLinecap="round" />
+        <path d="M-2 -12 L22 -22" stroke="#5A4028" strokeWidth="5" strokeLinecap="round" />
+        <path d="M-2 -12 L22 -22" stroke="#6E5234" strokeWidth="2" strokeLinecap="round" />
+      </g>
+    );
+    /* 時計台 … 塔の上の時計、針がゆっくり回る（エスパー） */
+    case "clocktower": return g(
+      <g>
+        <ellipse cx="3" cy="10" rx="16" ry="4" fill="rgba(10,6,20,0.35)" />
+        <rect x="-7" y="-30" width="14" height="38" fill="#C8B89A" />
+        <rect x="-7" y="-30" width="7" height="38" fill="#D8CAAC" />
+        {P("M-9 -30 L0 -42 L9 -30 Z", { fill: "#3A5A6A" })}
+        <circle cx="0" cy="-22" r="5" fill="#FFF8E8" stroke="#4A4A5A" strokeWidth="0.8" />
+        <g transform="translate(0 -22)">
+          <path className="mv-hand" d="M0 0 V-4" stroke="#2A2A3A" strokeWidth="0.9" strokeLinecap="round" />
+        </g>
+        <path d="M0 -22 H3" stroke="#2A2A3A" strokeWidth="0.9" strokeLinecap="round" />
+        <rect x="-3" y="0" width="6" height="8" fill="#6A4A3A" />
+      </g>
+    );
+    /* 天文台 … 丸屋根、望遠鏡が空を向く（エスパー） */
+    case "observatory": return g(
+      <g>
+        <ellipse cx="3" cy="10" rx="20" ry="5" fill="rgba(10,6,20,0.35)" />
+        <rect x="-14" y="-6" width="28" height="14" fill="#D8D8E0" />
+        <path d="M-14 -6 a14 12 0 0 1 28 0 Z" fill="#E8E8F0" />
+        <path d="M-2 -17 L2 -17 L4 -6 L-4 -6 Z" fill="#2A2A3A" />
+        <path d="M0 -12 L10 -24" stroke="#5A5A6A" strokeWidth="2.6" strokeLinecap="round" />
+        <circle className="amb amb-twinkle" cx="14" cy="-30" r="1.6" fill="#FFF3D6" style={{ animationDuration: "3.4s" }} />
+      </g>
+    );
+    /* 裏路地 … 落書きの壁、ゴミ袋、弱々しく揺らぐ街灯（あく） */
+    case "alley": return g(
+      <g>
+        <rect x="-22" y="-26" width="16" height="34" fill="#2E2A34" />
+        <rect x="8" y="-22" width="16" height="30" fill="#34303A" />
+        {P("M-20 -12 q4 -4 8 0 t6 -2", { stroke: "#E84AA8", strokeWidth: "1.6", fill: "none" })}
+        {P("M10 -6 l4 -4 l3 5 l4 -5", { stroke: "#4AE8A8", strokeWidth: "1.4", fill: "none" })}
+        {[[-4, 6], [2, 8], [-1, 4]].map(([bx, by], k) => <circle key={k} cx={bx} cy={by} r="2.6" fill="#1A1A22" />)}
+        <rect x="-1" y="-24" width="1.4" height="30" fill="#4A4A54" />
+        <circle className="mv-dim" cx="0" cy="-24" r="2" fill="#E8D890" />
+        <circle className="mv-dim" cx="0" cy="-24" r="7" fill="rgba(232,216,144,0.18)" />
+      </g>
+    );
+    /* 廃ビル … 割れた窓、打ち付けた板、崩れた角（あく） */
+    case "ruin": return g(
+      <g>
+        <ellipse cx="4" cy="10" rx="22" ry="6" fill="rgba(10,6,20,0.45)" />
+        {P("M-14 8 V-30 L-2 -30 L2 -24 L6 -30 L14 -30 V8 Z", { fill: "#3A3842" })}
+        {P("M-14 8 V-30 L-2 -30 L0 -27 V8 Z", { fill: "#46444E" })}
+        {[0, 1, 2].map((r) => [0, 1].map((cc) => (
+          <g key={`${r}${cc}`}>
+            <rect x={-10 + cc * 12} y={-24 + r * 10} width="6" height="5" fill="#15131A" />
+            {(r + cc) % 2 === 0 && <path d={`M${-10 + cc * 12} ${-24 + r * 10} l6 5`} stroke="#6A6070" strokeWidth="0.8" />}
+          </g>
+        )))}
+        <g transform="rotate(-8 -7 -3)"><rect x="-12" y="-4" width="10" height="2" fill="#6A5A40" /></g>
+        {P("M-6 8 l4 -4 l4 4 Z", { fill: "#5A5660" })}
+      </g>
+    );
+    /* たむろするバイク … 並んだバイク、ライトがぼんやり灯る（あく） */
+    case "bikes": return g(
+      <g>
+        {P("M-28 2 L0 -14 L28 2 L0 18 Z", { fill: "#3A3842" })}
+        {[[-14, -2], [0, 2], [14, -1]].map(([bx, by], k) => (
+          <g key={k} transform={`translate(${bx} ${by})`}>
+            <circle cx="-5" cy="4" r="3" fill="none" stroke="#1A1A20" strokeWidth="1.8" />
+            <circle cx="5" cy="4" r="3" fill="none" stroke="#1A1A20" strokeWidth="1.8" />
+            <path d="M-5 4 L-1 -2 H4 L5 4 M-1 -2 L-3 -5 M4 -2 L6 -5" stroke={k === 1 ? "#C83A3A" : "#4A4A5A"} strokeWidth="2" fill="none" strokeLinecap="round" />
+            <circle className="mv-dim" cx="7" cy="-3" r="1.4" fill="#FFE8A0" style={{ animationDelay: `${-k}s` }} />
+          </g>
+        ))}
+      </g>
+    );
+    /*
+      水田 … 平らな田が四枚。水面に空が映り、苗の列が並ぶ。
+      ⚠️ 棚田（段々）とは別物。平野の田は平らで、畦で区切る。
+    */
+    case "paddy": return g(
+      <g>
+        {P("M-30 0 L0 -17 L30 0 L0 17 Z", { fill: "#6A5A3A" })}
+        {[[-14, -8], [0, 0], [14, -8], [0, -16]].map(([dx, dy], k) => (
+          <g key={k} transform={`translate(${dx} ${dy + 8})`}>
+            {P("M-13 0 L0 -7.4 L13 0 L0 7.4 Z", { fill: k % 2 ? "#6A9ACA" : "#7AAAD4" })}
+            {[-6, -2, 2, 6].map((rx) => <path key={rx} d={`M${rx - 5} ${rx * 0.2} l10 -5.6`} stroke="#6AB84A" strokeWidth="0.9" />)}
+            <path className="mv-glint2" d="M-8 -1 l8 -4.4" stroke="rgba(230,245,255,0.7)" strokeWidth="0.9" style={{ animationDelay: `${k * 0.7}s` }} />
+          </g>
+        ))}
+      </g>
+    );
+    /* ビニールハウス … かまぼこ形の半透明の屋根が三棟並ぶ */
+    case "greenhouse": return g(
+      <g>
+        {[-12, 0, 12].map((dx, k) => (
+          <g key={k} transform={`translate(${dx} ${k * 4 - 4})`}>
+            <ellipse cx="3" cy="6" rx="10" ry="3" fill="rgba(10,6,20,0.3)" />
+            <path d="M-8 6 V-2 Q0 -12 8 -2 V6 Z" fill="rgba(230,240,245,0.75)" stroke="rgba(170,190,200,0.9)" strokeWidth="0.8" />
+            <path d="M-8 -2 Q0 -12 0 -12 V6 H-8 Z" fill="rgba(255,255,255,0.35)" />
+            {[-4, 0, 4].map((rx) => <path key={rx} d={`M${rx} -${6 - Math.abs(rx) * 0.4} V6`} stroke="rgba(140,160,170,0.6)" strokeWidth="0.5" />)}
+            <path d="M-6 4 h12" stroke="#5AAA4A" strokeWidth="1.6" />
+          </g>
+        ))}
+      </g>
+    );
+    /* ソーラーパネル … 斜めに並んだ青い板。光が一枚ずつ走る */
+    case "solar": return g(
+      <g>
+        {P("M-30 2 L0 -15 L30 2 L0 19 Z", { fill: "#7A8A5A" })}
+        {[0, 1, 2].map((r) => [0, 1, 2].map((cc) => (
+          <g key={`${r}${cc}`} transform={`translate(${-14 + cc * 10 + r * 4} ${-6 + r * 6 - cc * 5})`}>
+            <path d="M-5 2 L5 -3 L6 1 L-4 6 Z" fill="#2A4A8A" />
+            <path d="M-5 2 L5 -3 L5.4 -1.6 L-4.6 3.4 Z" fill="#4A6AAA" />
+            <path className="mv-glint2" d="M-3 3 L4 -0.6" stroke="rgba(200,230,255,0.8)" strokeWidth="0.7"
+              style={{ animationDelay: `${(r * 3 + cc) * 0.25}s` }} />
+          </g>
+        )))}
+      </g>
+    );
+    /* 貯水池 … コンクリートの縁、四角い水面 */
+    case "reservoir": return g(
+      <g>
+        {P("M-28 0 L0 -16 L28 0 L0 16 Z", { fill: "#B8B4A8" })}
+        {P("M-22 0 L0 -12.6 L22 0 L0 12.6 Z", { fill: "#3A7AB8" })}
+        {[0, 1].map((k) => <path key={k} className="mv-wave2" d={`M-10 ${-2 + k * 5} q3 -2 6 0 t6 0 t6 0`}
+          stroke="rgba(210,235,255,0.5)" strokeWidth="0.8" fill="none" style={{ animationDelay: `${k}s` }} />)}
+        <rect x="20" y="-4" width="3" height="6" fill="#8A8A8A" />
+      </g>
+    );
+    /* 池 … 丸い水面、蓮の葉、岸の石 */
+    case "pond": return g(
+      <g>
+        <ellipse cx="0" cy="2" rx="24" ry="11" fill="#5A7A4A" />
+        <ellipse cx="0" cy="1" rx="20" ry="8.5" fill="#4A8ABA" />
+        {[[-8, 0], [6, 3], [10, -3]].map(([lx, ly], k) => <ellipse key={k} cx={lx} cy={ly} rx="3" ry="1.6" fill="#5AAA5A" />)}
+        <circle cx="-8" cy="-0.6" r="1" fill="#F4A8C8" />
+        {[[-20, 4], [18, 6], [-14, 9]].map(([sx, sy], k) => <ellipse key={`s${k}`} cx={sx} cy={sy} rx="2.4" ry="1.4" fill="#9A9A96" />)}
+        <path className="mv-glint2" d="M-6 -3 h8" stroke="rgba(230,245,255,0.7)" strokeWidth="0.9" />
+      </g>
+    );
+    /* ゴルフ場 … 明るい芝のフェアウェイ、グリーンの旗、バンカー */
+    case "golf": return g(
+      <g>
+        {P("M-30 2 L0 -15 L30 2 L0 19 Z", { fill: "#5A9A4A" })}
+        <path d="M-24 6 Q-6 -10 20 -4" stroke="#8ACA6A" strokeWidth="9" strokeLinecap="round" fill="none" />
+        <ellipse cx="18" cy="-4" rx="6" ry="3" fill="#A8E08A" />
+        <path d="M18 -4 V-16" stroke="#E8E8E8" strokeWidth="0.8" />
+        <path className="pn-sway s1" d="M18 -16 l5 1.6 l-5 1.6 Z" fill="#E84A3A" />
+        <ellipse cx="-4" cy="6" rx="5" ry="2.4" fill="#E8D8A8" />
+      </g>
+    );
+    /* 牛の牧場 … 木の柵、白黒の牛が草を食む */
+    case "pasture": return g(
+      <g>
+        {P("M-30 2 L0 -15 L30 2 L0 19 Z", { fill: "#7AB05A" })}
+        {P("M-28 2 L0 -14 L28 2", { stroke: "#8A6A44", strokeWidth: "1", fill: "none" })}
+        {[-22, -12, -2, 8, 18].map((fx) => <path key={fx} d={`M${fx} ${2 - (fx + 28) * 0.57 + (fx > 0 ? (fx) * 1.14 : 0)} v-5`} stroke="#8A6A44" strokeWidth="1" />)}
+        {[[-8, 4], [8, 8], [2, -2]].map(([cx, cy], k) => (
+          /* ⚠️ 位置は外側の g、揺れは内側。同じ要素に置くと揺れが位置を消して隅へ飛ぶ */
+          <g key={k} transform={`translate(${cx} ${cy})`}>
+          <g className={k === 1 ? "pn-sway s2" : undefined}>
+            <ellipse cx="0" cy="0" rx="5" ry="3" fill="#F4F2EC" />
+            <ellipse cx="-1.6" cy="-0.6" rx="1.6" ry="1.2" fill="#1A1A1A" />
+            <ellipse cx="2" cy="0.6" rx="1.2" ry="1" fill="#1A1A1A" />
+            <ellipse cx="5.6" cy="1" rx="1.8" ry="1.4" fill="#F4F2EC" />
+            <path d="M-3 2.6 v2.4 M3 2.6 v2.4" stroke="#3A3A3A" strokeWidth="0.9" />
+          </g>
+          </g>
+        ))}
+      </g>
+    );
+    /* 倉庫 … トタンの大屋根、シャッター */
+    case "warehouse": return g(
+      <g>
+        <ellipse cx="4" cy="10" rx="26" ry="7" fill="rgba(10,6,20,0.35)" />
+        <rect x="-20" y="-8" width="36" height="16" fill="#9AA0A8" />
+        <rect x="-20" y="-8" width="18" height="16" fill="#AEB4BC" />
+        {P("M-23 -8 Q-2 -20 19 -8 Z", { fill: "#6A7A8A" })}
+        {[-16, -10, -4, 2, 8, 14].map((rx) => <path key={rx} d={`M${rx} -8 q1 -${6 - Math.abs(rx + 2) * 0.25} 0 -${7 - Math.abs(rx + 2) * 0.3}`} stroke="rgba(40,50,60,0.3)" strokeWidth="0.6" fill="none" />)}
+        <rect x="-10" y="-2" width="12" height="10" fill="#7A8088" />
+        {[0, 1, 2, 3].map((k) => <path key={k} d={`M-10 ${k * 2.4} h12`} stroke="rgba(0,0,0,0.2)" strokeWidth="0.5" />)}
+      </g>
+    );
+    /* 竹藪 … 細い竹がびっしり。葉がさやさや揺れる */
+    case "bamboo": return g(
+      <g>
+        <ellipse cx="2" cy="10" rx="26" ry="7" fill="rgba(10,6,20,0.3)" />
+        {Array.from({ length: 11 }, (_, k) => {
+          const bx = -22 + k * 4.4, bh = 30 + ((k * 7) % 11);
+          return (
+            <g key={k} className={`pn-sway s${k % 3}`}>
+              <path d={`M${bx} ${8 + (k % 2) * 3} V${8 - bh}`} stroke={k % 2 ? "#6AA84A" : "#7ABA56"} strokeWidth="1.6" />
+              {[0.3, 0.6].map((t, j) => <path key={j} d={`M${bx - 1} ${8 - bh * t} h2`} stroke="#4A8A3A" strokeWidth="0.8" />)}
+              <path d={`M${bx} ${8 - bh} l-5 3 M${bx} ${8 - bh + 4} l5 2 M${bx} ${8 - bh + 8} l-4 3`}
+                stroke="#5AA04A" strokeWidth="1.4" strokeLinecap="round" />
+            </g>
+          );
+        })}
+      </g>
+    );
+    /* 集合住宅 … 四階建ての箱。ベランダと窓明かり（アパート・マンション） */
+    case "apartment": {
+      const fl = v < 0.5 ? 4 : 6;
+      const h = fl * 7;
+      return g(
+        <g>
+          <ellipse cx="4" cy="10" rx="24" ry="6" fill="rgba(10,6,20,0.4)" />
+          <rect x="-18" y={8 - h} width="32" height={h} fill="#C8C4B8" />
+          <rect x="-18" y={8 - h} width="16" height={h} fill="#DAD6CA" />
+          {Array.from({ length: fl }, (_, r) => (
+            <g key={r}>
+              <rect x="-18" y={8 - h + r * 7 + 5} width="32" height="1.4" fill="#9A968C" />
+              {[0, 1, 2, 3].map((cc) => (
+                <rect key={cc} className={(r + cc + Math.round(v * 4)) % 4 === 0 ? "mv-winlit" : undefined}
+                  x={-15 + cc * 8} y={8 - h + r * 7 + 1} width="5" height="3.4"
+                  fill={(r + cc) % 3 === 0 ? "#FFD890" : "#6A7A9A"} />
+              ))}
+            </g>
+          ))}
+        </g>
+      );
+    }
+    /* 生コン工場 … 背の高いサイロと、ミキサー車 */
+    case "concrete": return g(
+      <g>
+        <ellipse cx="4" cy="10" rx="28" ry="7" fill="rgba(10,6,20,0.35)" />
+        {[-16, -6].map((sx, k) => (
+          <g key={k}>
+            <rect x={sx} y="-28" width="8" height="34" fill="#B8B8C0" />
+            <rect x={sx} y="-28" width="4" height="34" fill="#CACAD2" />
+            <path d={`M${sx} -28 l4 -4 l4 4 Z`} fill="#9A9AA4" />
+          </g>
+        ))}
+        <path d="M2 -20 L18 -4" stroke="#8A8A94" strokeWidth="2" />
+        <g transform="translate(14 4)">
+          <rect x="-8" y="-2" width="6" height="6" fill="#E8E0D0" />
+          <g className="mv-drum"><ellipse cx="4" cy="0" rx="6" ry="4" fill="#E8B83A" /></g>
+          <path d="M-2 0 l12 -3" stroke="#C89830" strokeWidth="0.8" />
+          <circle cx="-5" cy="5" r="1.8" fill="#2A2A2A" /><circle cx="6" cy="5" r="1.8" fill="#2A2A2A" />
+        </g>
+      </g>
+    );
+    /* コンビニ … 平屋、帯の看板が灯り、駐車場 */
+    case "konbini": return g(
+      <g>
+        {P("M-30 4 L-4 -10 L26 4 L0 18 Z", { fill: "#8A8A8A" })}
+        {[-12, -4, 4].map((lx) => <path key={lx} d={`M${lx} ${10 - (lx + 12) * 0.3} l6 -3`} stroke="#E8E8E8" strokeWidth="0.8" />)}
+        <rect x="-16" y="-12" width="30" height="12" fill="#F0F0F0" />
+        <rect x="-16" y="-12" width="30" height="3" fill="#3AA05A" />
+        <rect x="-16" y="-9" width="30" height="1.4" fill="#E88A3A" />
+        <rect x="-14" y="-6" width="26" height="6" fill="#FFF3C0" className="mv-winlit" />
+        <rect x="-4" y="-6" width="6" height="6" fill="#DDE8F0" />
+      </g>
+    );
+    /* 自動車整備工場 … 大きな開口、持ち上げられた車、積まれたタイヤ */
+    case "garage": return g(
+      <g>
+        <ellipse cx="4" cy="10" rx="26" ry="7" fill="rgba(10,6,20,0.35)" />
+        <rect x="-20" y="-10" width="34" height="18" fill="#8A94A8" />
+        <rect x="-20" y="-10" width="17" height="18" fill="#9CA6BA" />
+        <rect x="-16" y="-4" width="26" height="12" fill="#2A2E38" />
+        <g className="mv-bob">
+          <path d="M-10 -1 h14 l-2 -4 h-10 Z" fill="#C84A3A" />
+          <circle cx="-7" cy="0" r="1.6" fill="#1A1A1A" /><circle cx="1" cy="0" r="1.6" fill="#1A1A1A" />
+        </g>
+        <path d="M-8 1 v6 M2 1 v6" stroke="#E8C83A" strokeWidth="1" />
+        {[0, 1, 2].map((k) => <ellipse key={k} cx="18" cy={6 - k * 3} rx="4" ry="1.6" fill="#1A1A1A" stroke="#4A4A4A" strokeWidth="0.6" />)}
+        <rect x="-20" y="-14" width="34" height="4" fill="#E84A3A" />
+      </g>
+    );
+    /* ガソリンスタンド … 大きな屋根、給油機、灯る看板（田舎のほのお） */
+    case "gasstation": return g(
+      <g>
+        {P("M-30 4 L-2 -12 L28 4 L0 20 Z", { fill: "#8A8A8A" })}
+        <rect x="-18" y="-18" width="30" height="4" fill="#E84A3A" />
+        <rect x="-18" y="-14" width="30" height="1.4" fill="#F4D03A" />
+        {[-14, 8].map((px) => <rect key={px} x={px} y="-14" width="1.6" height="16" fill="#C8C8C8" />)}
+        {[-8, 2].map((px, k) => (
+          <g key={px}>
+            <rect x={px} y="-4" width="4" height="7" fill="#F0F0F0" />
+            <rect x={px + 0.6} y="-3" width="2.8" height="2" fill="#3AA05A" className="mv-winlit" style={{ animationDelay: `${-k}s` }} />
+          </g>
+        ))}
+        <rect x="18" y="-24" width="2" height="26" fill="#9A9AA0" />
+        <rect x="14" y="-30" width="10" height="7" fill="#E84A3A" className="mv-winlit" />
+      </g>
+    );
+    /* 浄水場 … 丸い沈殿池が並び、水がゆっくり渦を巻く（どく） */
+    case "waterworks": return g(
+      <g>
+        {P("M-30 2 L0 -15 L30 2 L0 19 Z", { fill: "#A8A8A0" })}
+        {[[-12, 0], [4, -6], [10, 6]].map(([cx, cy], k) => (
+          <g key={k} transform={`translate(${cx} ${cy})`}>
+            <ellipse cx="0" cy="0" rx="8" ry="4.4" fill="#8A8A84" />
+            <ellipse cx="0" cy="-0.6" rx="6.6" ry="3.6" fill={k === 1 ? "#6A9A6A" : "#5A8AB0"} />
+            <g className="fa-spin slow" style={{ animationDuration: "6s" }}>
+              <path d="M-4 -0.6 a4 2 0 1 0 8 0" stroke="rgba(220,240,255,0.6)" strokeWidth="0.7" fill="none" />
+            </g>
+          </g>
+        ))}
+        <rect x="-26" y="-8" width="8" height="7" fill="#C8C4B8" />
+      </g>
+    );
+    /* 巨大電波塔 … 紅白の鉄塔、頂の赤い灯（ひこう） */
+    case "radiotower": return g(
+      <g>
+        <ellipse cx="3" cy="10" rx="12" ry="3.4" fill="rgba(10,6,20,0.4)" />
+        <g strokeWidth="1.3" fill="none">
+          {P("M-9 8 L-1.4 -56 M9 8 L1.4 -56", { stroke: "#E8E8E8" })}
+          {[0, 1, 2, 3, 4, 5].map((k) => {
+            const y1 = 4 - k * 10, w1 = 8.4 - k * 1.2;
+            return P(`M${-w1} ${y1} L${w1 - 1.2} ${y1 - 10} M${w1} ${y1} L${-w1 + 1.2} ${y1 - 10} M${-w1} ${y1} H${w1}`,
+              { key: k, stroke: k % 2 ? "#E84A3A" : "#F0F0F0" });
+          })}
+        </g>
+        <rect x="-4" y="-44" width="8" height="3" fill="#E84A3A" />
+        <circle className="mv-beacon2" cx="0" cy="-58" r="2" fill="#FF5A5A" />
+      </g>
+    );
+    /* 巨木 … 太い幹、広がる大きな樹冠、根元の祠（ひこう） */
+    case "bigtree": return g(
+      <g>
+        <ellipse cx="4" cy="10" rx="24" ry="6" fill="rgba(10,6,20,0.4)" />
+        <path d="M-5 10 Q-4 -14 -2 -30 L2 -30 Q4 -14 5 10 Z" fill="#5A3A24" />
+        <path d="M-5 10 Q-4 -14 -2 -30 L0 -30 Q0 -14 0 10 Z" fill="#6E4A2E" />
+        <path d="M-5 8 q-6 2 -10 6 M5 8 q6 2 10 6" stroke="#5A3A24" strokeWidth="2" fill="none" />
+        <g className="mv-sway">
+          <circle cx="-12" cy="-34" r="12" fill="#2E6A38" />
+          <circle cx="10" cy="-36" r="13" fill="#3A7A44" />
+          <circle cx="-2" cy="-48" r="12" fill="#468A50" />
+          <circle cx="-6" cy="-40" r="6" fill="#5AA060" opacity="0.8" />
+        </g>
+        <path d="M-2 -18 q2 -1 4 0" stroke="#F0E8D0" strokeWidth="1.6" />
+      </g>
+    );
+    /* コンビナート … 球形のタンク、配管、夜に灯る塔（海） */
+    case "kombinat": return g(
+      <g>
+        <ellipse cx="4" cy="10" rx="28" ry="7" fill="rgba(10,6,20,0.4)" />
+        {[[-14, 2], [0, 6]].map(([tx, ty], k) => (
+          <g key={k} transform={`translate(${tx} ${ty})`}>
+            <circle cx="0" cy="-6" r="7" fill="#C8C8D0" />
+            <circle cx="-2" cy="-8" r="3.4" fill="#E0E0E8" />
+            <path d="M-5 0 v4 M5 0 v4" stroke="#8A8A94" strokeWidth="1" />
+          </g>
+        ))}
+        <g stroke="#9A9AA4" strokeWidth="1.2" fill="none">
+          {P("M12 8 V-34 M18 8 V-26 M12 -18 H18 M12 -8 H18 M-8 -2 H12")}
+        </g>
+        {[-30, -22, -14].map((ly, k) => <circle key={k} className="mv-winlit" cx="12" cy={ly} r="1.2" fill="#FFE8A0" style={{ animationDelay: `${-k}s` }} />)}
+        <circle className="mv-smoke" cx="12" cy="-37" r="2.4" fill="rgba(230,230,240,0.5)" />
+      </g>
+    );
+    /* 温泉 … 岩に囲まれた湯、立ちのぼる湯気、湯の看板（山のほのお） */
+    case "onsen": return g(
+      <g>
+        <ellipse cx="0" cy="2" rx="24" ry="11" fill="#7A6A5A" />
+        <ellipse cx="0" cy="1" rx="19" ry="8" fill="#8ACAD8" />
+        {[[-20, 3], [18, 5], [-10, 9], [8, 10], [-18, -4]].map(([rx, ry], k) => <ellipse key={k} cx={rx} cy={ry} rx="3.4" ry="2.2" fill="#8A7A6A" />)}
+        {[-6, 0, 6].map((sx, k) => (
+          <path key={k} className="mv-smoke" d={`M${sx} -2 q-3 -6 0 -12 q3 -6 0 -12`} fill="none"
+            stroke="rgba(255,255,255,0.6)" strokeWidth="1.4" style={{ animationDelay: `${-k * 1.2}s` }} />
+        ))}
+        <rect x="16" y="-18" width="8" height="10" fill="#E8E0D0" />
+        <path d="M18 -15 q2 -2 4 0 M18 -12 q2 -2 4 0" stroke="#E84A3A" strokeWidth="0.9" fill="none" />
+      </g>
+    );
+    /* 雪原 … 真っ白な雪面、吹きだまりの影、ぽつんと立つ白樺（雪国・こおり） */
+    case "snowfield": return g(
+      <g>
+        {P("M-30 2 L0 -15 L30 2 L0 19 Z", { fill: "#EEF2F8" })}
+        {P("M-18 6 q8 -5 16 0 M4 -4 q7 -4 14 0", { stroke: "#C8D4E4", strokeWidth: "1.6", fill: "none" })}
+        <path className="mv-glint2" d="M-8 -2 h10" stroke="rgba(255,255,255,0.95)" strokeWidth="1" />
+        <g transform="translate(12 4)">
+          <rect x="-0.9" y="-14" width="1.8" height="16" fill="#F4F4F0" />
+          {[-10, -6, -2].map((yy) => <path key={yy} d={`M-0.9 ${yy} h1.8`} stroke="#3A3A3A" strokeWidth="0.7" />)}
+          <path d="M0 -12 l-4 -3 M0 -9 l3 -3" stroke="#6A6A6A" strokeWidth="0.8" />
+        </g>
+      </g>
+    );
+    /* 白樺林 … 白い幹に黒い節、薄い黄緑の葉（北海道・東北） */
+    case "birch": return g(
+      <g>
+        {P("M-30 2 L0 -15 L30 2 L0 19 Z", { fill: "#E8EEF4" })}
+        {[[-16, 4, 1], [-4, -4, 1.2], [8, 2, 1], [18, 8, 0.9], [-10, 10, 0.8]].map(([dx, dy, k], i) => (
+          <g key={i} transform={`translate(${dx} ${dy}) scale(${k})`}>
+            <rect x="-1" y="-24" width="2" height="26" fill="#F4F4F0" />
+            {[-20, -14, -8, -3].map((yy) => <path key={yy} d={`M-1 ${yy} h2`} stroke="#2A2A2A" strokeWidth="0.8" />)}
+            <g className="mv-sway"><ellipse cx="0" cy="-26" rx="5" ry="7" fill="#B8D48A" opacity="0.85" /></g>
+          </g>
+        ))}
+      </g>
+    );
+    /* サイロと牛舎 … 円筒のサイロ、赤い大屋根の牛舎（北海道の牧場） */
+    case "silo": return g(
+      <g>
+        {P("M-30 2 L0 -15 L30 2 L0 19 Z", { fill: "#E8EEF4" })}
+        <ellipse cx="4" cy="10" rx="24" ry="6" fill="rgba(10,6,20,0.3)" />
+        <rect x="-22" y="-30" width="9" height="36" fill="#C8B8A0" />
+        <rect x="-22" y="-30" width="4.5" height="36" fill="#D8CAB0" />
+        <path d="M-22 -30 a4.5 4 0 0 1 9 0 Z" fill="#6A7A8A" />
+        <rect x="-8" y="-8" width="26" height="14" fill="#B83A2E" />
+        <rect x="-8" y="-8" width="13" height="14" fill="#C84A3A" />
+        {P("M-11 -8 Q5 -22 21 -8 Z", { fill: "#8A2A22" })}
+        <rect x="1" y="-2" width="6" height="8" fill="#F0E8D8" />
+        <path d="M1 -2 l6 8 M7 -2 l-6 8" stroke="#B83A2E" strokeWidth="0.8" />
+      </g>
+    );
+    /* 凍った湖 … 青白い氷面のひび、ワカサギ釣りの色とりどりのテント */
+    case "frozenlake": return g(
+      <g>
+        <ellipse cx="0" cy="2" rx="26" ry="12" fill="#C8D8E8" />
+        <ellipse cx="0" cy="1" rx="22" ry="9.4" fill="#DDEAF6" />
+        {P("M-14 -2 l6 3 l4 -4 l7 4 M2 6 l5 -3 l6 2", { stroke: "rgba(130,160,190,0.7)", strokeWidth: "0.8", fill: "none" })}
+        <path className="mv-glint2" d="M-10 -4 h12" stroke="rgba(255,255,255,0.95)" strokeWidth="1" />
+        {[[-10, 2, "#E84A3A"], [4, -2, "#3A7AC8"], [12, 5, "#E8B83A"]].map(([tx, ty, col], k) => (
+          <path key={k} d={`M${tx - 3.6} ${ty + 2} L${tx} ${ty - 5} L${tx + 3.6} ${ty + 2} Z`} fill={col} />
+        ))}
+      </g>
+    );
+    /* スキー場 … 白い斜面、リフトの支柱と椅子がゆっくり昇る */
+    case "skislope": return g(
+      <g>
+        {P("M-30 10 L10 -30 L30 10 Z", { fill: "#E8EEF6" })}
+        {P("M-30 10 L10 -30 L10 10 Z", { fill: "#F6F8FC" })}
+        {P("M-8 8 q6 -10 14 -20 M-18 8 q8 -8 16 -22", { stroke: "#C8D4E4", strokeWidth: "1.2", fill: "none" })}
+        <g stroke="#6A6A7A" strokeWidth="1">
+          {P("M-20 8 V-2 M-6 -6 V-16 M8 -20 V-30")}
+          {P("M-20 -2 L8 -30")}
+        </g>
+        <g className="mv-lift"><rect x="-20" y="-1" width="3" height="3" fill="#E84A3A" /></g>
+        <g className="mv-lift" style={{ animationDelay: "-3s" }}><rect x="-20" y="-1" width="3" height="3" fill="#3A7AC8" /></g>
+      </g>
+    );
+    /* 樹氷 … 雪と氷をまとった「スノーモンスター」の群れ（東北の山） */
+    case "juhyo": return g(
+      <g>
+        {P("M-30 2 L0 -15 L30 2 L0 19 Z", { fill: "#E8EEF4" })}
+        {[[-16, 4, 1], [-4, -6, 1.2], [10, 0, 1.1], [18, 8, 0.8]].map(([dx, dy, k], i) => (
+          <g key={i} transform={`translate(${dx} ${dy}) scale(${k})`}>
+            <path d="M0 -24 q-8 6 -7 12 q-3 4 -2 10 h18 q1 -6 -2 -10 q1 -6 -7 -12 Z" fill="#F4F8FC" />
+            <path d="M0 -24 q-8 6 -7 12 q-3 4 -2 10 h9 V-24 Z" fill="#FFFFFF" />
+            <path d="M-3 -10 q3 -1 6 0 M-4 -4 q4 -1 8 0" stroke="#C8D8E8" strokeWidth="0.8" fill="none" />
+          </g>
+        ))}
+      </g>
+    );
+    /* かまくら … 雪のドーム、中に灯（東北の町） */
+    case "kamakura": return g(
+      <g>
+        {P("M-30 2 L0 -15 L30 2 L0 19 Z", { fill: "#EEF2F8" })}
+        {[[-10, 2], [10, 6]].map(([kx, ky], k) => (
+          <g key={k} transform={`translate(${kx} ${ky})`}>
+            <path d="M-10 4 a10 11 0 0 1 20 0 Z" fill="#F8FAFC" />
+            <path d="M-10 4 a10 11 0 0 1 10 -10 V4 Z" fill="#FFFFFF" />
+            <path d="M-3.4 4 a3.4 4 0 0 1 6.8 0 Z" fill="#FFB860" className="mv-winlit" style={{ animationDelay: `${-k}s` }} />
+          </g>
+        ))}
+      </g>
+    );
+    /* 雪の積もった家 … 急な三角屋根に厚い雪、軒のつらら */
+    case "snowhouse": return g(
+      <g>
+        {P("M-30 2 L0 -15 L30 2 L0 19 Z", { fill: "#E8EEF4" })}
+        {[[-12, 2], [10, 6]].map(([hx, hy], i) => (
+          <g key={i} transform={`translate(${hx} ${hy})`}>
+            <ellipse cx="2" cy="4" rx="10" ry="3" fill="rgba(10,6,20,0.25)" />
+            <rect x="-8" y="-8" width="16" height="11" fill="#8A6A50" />
+            <rect x="-8" y="-8" width="8" height="11" fill="#9C7A5C" />
+            {P("M-10 -8 L0 -22 L10 -8 Z", { fill: "#F6F8FC" })}
+            {P("M-10 -8 L0 -22 L0 -8 Z", { fill: "#FFFFFF" })}
+            {[-8, -4, 0, 4, 8].map((ix) => <path key={ix} d={`M${ix} -8 l0.6 3 l0.6 -3`} fill="#DDEEFA" />)}
+            <rect className="mv-winlit" x="2" y="-5" width="4" height="4" fill="#FFD890" />
+          </g>
+        ))}
+      </g>
+    );
+    /* 雪像 … 雪で作った大きな像（城の形）と、照らす光（北海道の街） */
+    case "snowstatue": return g(
+      <g>
+        {P("M-30 2 L0 -15 L30 2 L0 19 Z", { fill: "#E8EEF4" })}
+        <ellipse cx="0" cy="8" rx="22" ry="5" fill="rgba(140,180,230,0.3)" className="mv-flame" />
+        <rect x="-14" y="-14" width="28" height="20" fill="#F4F8FC" />
+        <rect x="-14" y="-14" width="14" height="20" fill="#FFFFFF" />
+        {[-14, -4, 6].map((tx) => <rect key={tx} x={tx} y="-20" width="8" height="8" fill="#F8FAFC" />)}
+        {[-14, -4, 6].map((tx) => <path key={`r${tx}`} d={`M${tx - 1} -20 L${tx + 4} -27 L${tx + 9} -20 Z`} fill="#EAF2FA" />)}
+        <path d="M-4 6 v-8 a4 4 0 0 1 8 0 v8" fill="#C8D8E8" />
+      </g>
+    );
+    /* 流氷 … 海に浮かぶ白い氷の塊が、ゆっくり漂う（北海道の海） */
+    case "driftice": return g(
+      <g>
+        {P("M-31 0 L-15 -26 L15 -26 L31 0 L15 26 L-15 26 Z", { fill: "#2E5E90" })}
+        {[[-12, -8, 1], [8, -12, 0.8], [-4, 6, 1.2], [14, 8, 0.9], [-18, 10, 0.7]].map(([ix, iy, k], i) => (
+          <g key={i} transform={`translate(${ix} ${iy}) scale(${k})`}>
+            <g className="mv-bob" style={{ animationDelay: `${-i * 0.6}s` }}>
+              <path d="M-7 1 L-4 -3 L4 -4 L8 0 L5 4 L-5 4 Z" fill="#F4F8FC" />
+              <path d="M-7 1 L-4 -3 L0 -3.6 L0 4 L-5 4 Z" fill="#FFFFFF" />
+            </g>
+          </g>
+        ))}
+      </g>
+    );
+    /* 漁村 … 瓦屋根の家並み、干物を干す竿、網 */
+    case "fishingvillage": return g(
+      <g>
+        {[[-14, 0], [6, -6], [12, 8]].map(([hx, hy], i) => (
+          <g key={i} transform={`translate(${hx} ${hy})`}>
+            <ellipse cx="2" cy="4" rx="9" ry="2.6" fill="rgba(10,6,20,0.3)" />
+            <rect x="-7" y="-7" width="14" height="10" fill="#8A7A66" />
+            <rect x="-7" y="-7" width="7" height="10" fill="#9C8C76" />
+            {P("M-9 -7 L0 -15 L9 -7 Z", { fill: "#4A5060" })}
+            {P("M-9 -7 L0 -15 L0 -7 Z", { fill: "#5C6274" })}
+          </g>
+        ))}
+        <g transform="translate(-4 12)">
+          <path d="M-10 0 V-8 M10 0 V-8 M-10 -7 H10" stroke="#7A5A3A" strokeWidth="1" />
+          {[-7, -3, 1, 5].map((fx) => <path key={fx} d={`M${fx} -7 v4`} stroke="#C8A878" strokeWidth="2.2" />)}
+        </g>
+        <path d="M18 -2 q4 4 0 8 q-4 -4 0 -8" fill="none" stroke="rgba(120,140,110,0.8)" strokeWidth="0.8" />
+      </g>
+    );
+    /* 港 … 岸壁、桟橋、もやった漁船が揺れる */
+    case "harbor": return g(
+      <g>
+        {P("M-31 0 L-15 -26 L15 -26 L31 0 L15 26 L-15 26 Z", { fill: "#2E6EA8" })}
+        {P("M-28 -4 L-4 -18 L2 -14 L-22 0 Z", { fill: "#B8B4A8" })}
+        {P("M-28 -4 L-4 -18 L-4 -15 L-26 -2 Z", { fill: "#CCC8BC" })}
+        <path d="M-6 -12 L14 0" stroke="#8A7A64" strokeWidth="3" />
+        {[[2, 2, "#E8E0D0"], [12, -8, "#D8D0C0"]].map(([bx, by, col], k) => (
+          <g key={k} transform={`translate(${bx} ${by})`}>
+            <g className="mv-bob" style={{ animationDelay: `${-k * 0.8}s` }}>
+              <path d="M-9 0 Q0 5 9 0 L7 -2 H-7 Z" fill={col} />
+              <rect x="-2" y="-7" width="6" height="5" fill="#3A5A8A" />
+              <path d="M-5 -2 V-10" stroke="#6A5A4A" strokeWidth="0.8" />
+            </g>
+          </g>
+        ))}
+      </g>
+    );
+    /* 堤防 … 長いコンクリートの壁と、打ち寄せる波の白い泡 */
+    case "seawall": return g(
+      <g>
+        {P("M-31 0 L-15 -26 L15 -26 L31 0 L15 26 L-15 26 Z", { fill: "#2E6EA8" })}
+        {P("M-28 6 L20 -22 L26 -18 L-22 10 Z", { fill: "#A8A49A" })}
+        {P("M-28 6 L20 -22 L20 -19 L-26 8 Z", { fill: "#C8C4BA" })}
+        {[0, 1, 2].map((k) => <path key={k} className="mv-wave2" d={`M${-18 + k * 14} ${10 - k * 8} q3 -3 6 0 q3 3 6 0`}
+          fill="none" stroke="rgba(255,255,255,0.8)" strokeWidth="1.2" style={{ animationDelay: `${k * 0.6}s` }} />)}
+        <g transform="translate(22 -22)">
+          <rect x="-2" y="-12" width="4" height="12" fill="#E84A3A" />
+          <rect x="-2" y="-15" width="4" height="3" fill="#F0E8D8" />
+        </g>
+      </g>
+    );
+    /* テトラポッド … 波打ち際に積み上がった四つ脚のブロック */
+    case "tetrapod": return g(
+      <g>
+        {P("M-31 0 L-15 -26 L15 -26 L31 0 L15 26 L-15 26 Z", { fill: "#2E6EA8" })}
+        {P("M-30 4 Q0 -10 30 4 L30 26 L-30 26 Z", { fill: "#D8CCAA" })}
+        {[[-16, 2], [-6, -2], [4, 0], [14, 2], [-10, 8], [0, 6], [10, 8]].map(([tx, ty], k) => (
+          <g key={k} transform={`translate(${tx} ${ty})`}>
+            <path d="M0 0 L-4 3 M0 0 L4 3 M0 0 L0 -4.6 M0 0 L1 2" stroke="#B4B0A6" strokeWidth="3" strokeLinecap="round" />
+            <path d="M0 0 L-4 3 M0 0 L0 -4.6" stroke="#CCC8BE" strokeWidth="1.6" strokeLinecap="round" />
+          </g>
+        ))}
+        <path className="mv-wave2" d="M-24 -6 q4 -3 8 0 t8 0 t8 0 t8 0 t8 0" fill="none" stroke="rgba(255,255,255,0.75)" strokeWidth="1.2" />
+      </g>
+    );
+    /* 岩場 … 黒い磯の岩、潮だまり、打ち寄せる白波 */
+    case "rockyshore": return g(
+      <g>
+        {P("M-31 0 L-15 -26 L15 -26 L31 0 L15 26 L-15 26 Z", { fill: "#2E6EA8" })}
+        {[[-14, 2, 1.2], [4, -4, 1], [14, 6, 0.9], [-4, 10, 0.8]].map(([rx, ry, k], i) => (
+          <g key={i} transform={`translate(${rx} ${ry}) scale(${k})`}>
+            {P("M-8 3 L-5 -4 L2 -6 L8 -1 L6 4 Z", { fill: "#3A3A42" })}
+            {P("M-8 3 L-5 -4 L0 -5 L0 4 Z", { fill: "#4E4E58" })}
+          </g>
+        ))}
+        <ellipse cx="-4" cy="-2" rx="3" ry="1.4" fill="#5A9ACA" />
+        <path className="mv-wave2" d="M-22 -10 q3 -2 6 0 t6 0 t6 0" fill="none" stroke="rgba(255,255,255,0.8)" strokeWidth="1.1" />
+      </g>
+    );
+    /* 養殖いかだ … 沖に並ぶ四角いいかだと浮き */
+    case "raft": return g(
+      <g>
+        {P("M-31 0 L-15 -26 L15 -26 L31 0 L15 26 L-15 26 Z", { fill: "#2E6EA8" })}
+        {[[-10, -6], [8, 2], [-4, 10]].map(([ax, ay], k) => (
+          <g key={k} transform={`translate(${ax} ${ay})`}>
+            <g className="mv-bob" style={{ animationDelay: `${-k * 0.9}s` }}>
+              <path d="M-8 0 L0 -4.4 L8 0 L0 4.4 Z" fill="none" stroke="#C8A878" strokeWidth="1.2" />
+              <path d="M-4 -2.2 L4 2.2 M-4 2.2 L4 -2.2" stroke="#C8A878" strokeWidth="0.8" />
+              {[[-8, 0], [8, 0], [0, -4.4], [0, 4.4]].map(([fx, fy], j) => <circle key={j} cx={fx} cy={fy} r="1.2" fill="#F0F0F0" />)}
+            </g>
+          </g>
+        ))}
+      </g>
+    );
+    /* 魚市場 … 大屋根の市場、並んだ発泡スチロールの箱 */
+    case "fishmarket": return g(
+      <g>
+        <ellipse cx="4" cy="10" rx="26" ry="7" fill="rgba(10,6,20,0.35)" />
+        <rect x="-22" y="-4" width="40" height="10" fill="#8A94A4" />
+        {P("M-26 -4 L-2 -16 L22 -4 Z", { fill: "#6A7A8C" })}
+        {P("M-26 -4 L-2 -16 L-2 -4 Z", { fill: "#7C8C9E" })}
+        {[-18, -12, -6, 0, 6, 12].map((bx, k) => <rect key={bx} x={bx} y="2" width="5" height="3.4" fill={k % 2 ? "#F4F4F4" : "#E8EEF4"} />)}
+        <rect x="-20" y="-2" width="36" height="2" fill="#E84A3A" />
+      </g>
+    );
+    /* 珊瑚礁の海 … エメラルドから群青へ、浅瀬の珊瑚、きらめく水面（沖縄） */
+    case "coralsea": return g(
+      <g>
+        {P("M-31 0 L-15 -26 L15 -26 L31 0 L15 26 L-15 26 Z", { fill: "#1E8AB0" })}
+        <ellipse cx="0" cy="2" rx="22" ry="14" fill="#3AC8C8" opacity="0.7" />
+        {[[-8, 2], [6, -4], [4, 8], [-12, -6]].map(([cx, cy], k) => (
+          <g key={k} transform={`translate(${cx} ${cy})`}>
+            <circle r="2.2" fill="#F48A9A" opacity="0.8" /><circle cx="3" cy="1" r="1.6" fill="#F4C87A" opacity="0.8" />
+          </g>
+        ))}
+        {[0, 1, 2].map((k) => <path key={k} className="mv-glint2" d={`M${-14 + k * 10} ${-10 + k * 7} h8`}
+          stroke="rgba(255,255,255,0.9)" strokeWidth="0.9" style={{ animationDelay: `${k * 0.6}s` }} />)}
+      </g>
+    );
+    /* 白い砂浜 … まぶしい白砂、打ち寄せる透明な波、ヤシ（沖縄・小笠原） */
+    case "whitebeach": return g(
+      <g>
+        {P("M-31 0 L-15 -26 L15 -26 L31 0 L15 26 L-15 26 Z", { fill: "#3AC8C8" })}
+        {P("M-30 -2 Q0 -18 30 -2 L30 26 L-30 26 Z", { fill: "#FAF6EA" })}
+        <path className="mv-wave2" d="M-24 -6 q4 -3 8 0 t8 0 t8 0 t8 0 t8 0" fill="none" stroke="rgba(255,255,255,0.95)" strokeWidth="1.2" />
+        <g transform="translate(10 8)">
+          <path d="M0 0 q-3 -12 2 -22" stroke="#8A6A44" strokeWidth="1.8" fill="none" />
+          <g className="mv-sway">
+            {[-60, -20, 20, 60, 100].map((a) => <path key={a} d="M2 -22 q8 -2 14 4" stroke="#3E9A4A" strokeWidth="2" fill="none"
+              strokeLinecap="round" transform={`rotate(${a} 2 -22)`} />)}
+          </g>
+        </g>
+      </g>
+    );
+    /* 赤瓦の家 … 赤い瓦屋根、白い漆喰、屋根の上のシーサー、石垣（沖縄） */
+    case "redroof": return g(
+      <g>
+        {[[-12, 2], [10, 6]].map(([hx, hy], i) => (
+          <g key={i} transform={`translate(${hx} ${hy})`}>
+            <ellipse cx="2" cy="4" rx="10" ry="3" fill="rgba(10,6,20,0.3)" />
+            <rect x="-8" y="-6" width="16" height="9" fill="#F0ECE0" />
+            <rect x="-8" y="-6" width="8" height="9" fill="#FAF6EC" />
+            {P("M-10 -6 L-6 -13 L6 -13 L10 -6 Z", { fill: "#C8503A" })}
+            {P("M-10 -6 L-6 -13 L0 -13 L0 -6 Z", { fill: "#D8604A" })}
+            {[-7, -3, 1, 5].map((lx) => <path key={lx} d={`M${lx} -12.4 v6`} stroke="#F0ECE0" strokeWidth="0.5" />)}
+            <circle cx="0" cy="-14.6" r="1.6" fill="#B8703A" />
+          </g>
+        ))}
+        {P("M-26 12 h52", { stroke: "#B8A888", strokeWidth: "2.6" })}
+      </g>
+    );
+    /* サトウキビ畑 … 背の高い茎が風にそよぐ（沖縄） */
+    case "sugarcane": return g(
+      <g>
+        {P("M-30 2 L0 -15 L30 2 L0 19 Z", { fill: "#8A7A4A" })}
+        {Array.from({ length: 12 }, (_, k) => {
+          const x0 = -20 + (k % 6) * 8, y0 = -2 + Math.floor(k / 6) * 9;
+          return (
+            <g key={k} className={`pn-sway s${k % 3}`}>
+              <path d={`M${x0} ${y0} V${y0 - 18}`} stroke="#8AB84A" strokeWidth="1.4" />
+              <path d={`M${x0} ${y0 - 18} l-5 3 M${x0} ${y0 - 14} l5 2 M${x0} ${y0 - 10} l-4 2`} stroke="#6AA03A" strokeWidth="1.2" strokeLinecap="round" />
+            </g>
+          );
+        })}
+      </g>
+    );
+    /* ガジュマル … 太い幹から垂れる気根、こんもりした樹冠（沖縄・小笠原） */
+    case "gajumaru": return g(
+      <g>
+        <ellipse cx="4" cy="10" rx="22" ry="6" fill="rgba(10,6,20,0.35)" />
+        <path d="M-6 10 Q-4 -6 0 -12 Q4 -6 6 10 Z" fill="#6A5A48" />
+        {[-10, -6, 6, 10, 14].map((rx) => <path key={rx} d={`M${rx} -16 q1 12 0 26`} stroke="#7A6A56" strokeWidth="0.9" fill="none" />)}
+        <g className="mv-sway">
+          <ellipse cx="-4" cy="-20" rx="16" ry="9" fill="#2E7A3A" />
+          <ellipse cx="6" cy="-24" rx="12" ry="7" fill="#3E8A48" />
+          <ellipse cx="-2" cy="-26" rx="8" ry="4" fill="#58A060" />
+        </g>
+      </g>
+    );
+    /* グスク … 曲線を描く石垣の城跡（沖縄） */
+    case "gusuku": return g(
+      <g>
+        {P("M-30 2 L0 -15 L30 2 L0 19 Z", { fill: "#7AA85A" })}
+        {P("M-24 4 Q-12 -14 4 -12 Q20 -10 24 4 L20 6 Q16 -4 4 -6 Q-10 -8 -20 6 Z", { fill: "#C8B894" })}
+        {P("M-24 4 Q-12 -14 4 -12 L4 -6 Q-10 -8 -20 6 Z", { fill: "#D8CAA8" })}
+        {[-16, -8, 0, 8, 16].map((lx) => <path key={lx} d={`M${lx} ${-6 + Math.abs(lx) * 0.2} v4`} stroke="rgba(120,100,70,0.5)" strokeWidth="0.6" />)}
+      </g>
+    );
+    /* 軍艦島 … 沖に浮かぶ、コンクリートの廃墟が密集した島（長崎） */
+    case "gunkanjima": return g(
+      <g>
+        {P("M-31 0 L-15 -26 L15 -26 L31 0 L15 26 L-15 26 Z", { fill: "#2E5E88" })}
+        {P("M-22 6 L-18 -2 L16 -8 L24 0 L20 8 Z", { fill: "#6A6A70" })}
+        {[[-16, -2, 12], [-8, -4, 18], [0, -6, 22], [8, -7, 16], [14, -6, 10]].map(([bx, by, bh], k) => (
+          <g key={k}>
+            <rect x={bx} y={by - bh} width="7" height={bh} fill="#5A5860" />
+            <rect x={bx} y={by - bh} width="3.5" height={bh} fill="#6E6C74" />
+            {Array.from({ length: Math.floor(bh / 5) }, (_, r) => <rect key={r} x={bx + 1} y={by - bh + 2 + r * 5} width="5" height="1.6" fill="#2A2830" />)}
+          </g>
+        ))}
+        <path className="mv-wave2" d="M-24 10 q4 -3 8 0 t8 0 t8 0 t8 0 t8 0" fill="none" stroke="rgba(255,255,255,0.6)" strokeWidth="1" />
+      </g>
+    );
+    /* 坂の町 … 斜面にひしめく家々、段々の石段（長崎） */
+    case "slopehouse": return g(
+      <g>
+        {P("M-30 10 L-30 -4 L30 -26 L30 10 Z", { fill: "#8A9A6A" })}
+        {[[-20, 2], [-10, -2], [0, -6], [10, -10], [20, -14], [-14, 8], [4, 2], [16, -4]].map(([hx, hy], i) => (
+          <g key={i} transform={`translate(${hx} ${hy})`}>
+            <rect x="-4" y="-4" width="8" height="5" fill={i % 3 ? "#E8E0D0" : "#F4D0B0"} />
+            {P("M-5 -4 L0 -8 L5 -4 Z", { fill: i % 2 ? "#6A5A8A" : "#8A4A3A" })}
+          </g>
+        ))}
+        {P("M-24 12 L22 -10", { stroke: "#C8C0B0", strokeWidth: "1.4", strokeDasharray: "2 1.4" })}
+      </g>
+    );
+    /* 教会 … 尖塔と十字架、ステンドグラスが灯る（長崎） */
+    case "church": return g(
+      <g>
+        <ellipse cx="4" cy="10" rx="22" ry="6" fill="rgba(10,6,20,0.35)" />
+        <rect x="-14" y="-10" width="24" height="18" fill="#C8B8A0" />
+        <rect x="-14" y="-10" width="12" height="18" fill="#D8CAB4" />
+        {P("M-16 -10 L-2 -18 L12 -10 Z", { fill: "#5A4A48" })}
+        <rect x="-8" y="-30" width="10" height="20" fill="#D0C0A8" />
+        {P("M-10 -30 L-3 -40 L4 -30 Z", { fill: "#4A3A38" })}
+        <path d="M-3 -40 v-6 M-5.4 -43.4 h4.8" stroke="#E8D8B0" strokeWidth="1.2" />
+        <circle className="mv-winlit" cx="-3" cy="-22" r="2.6" fill="#8AC8F0" />
+        <rect x="-6" y="0" width="6" height="8" fill="#4A3A30" />
+      </g>
+    );
+    /* たらい舟 … 丸い桶の舟を、女性が櫂で漕ぐ（佐渡） */
+    case "taraibune": return g(
+      <g>
+        {P("M-31 0 L-15 -26 L15 -26 L31 0 L15 26 L-15 26 Z", { fill: "#2E6EA8" })}
+        {[[-8, 2], [10, -6]].map(([tx, ty], k) => (
+          <g key={k} transform={`translate(${tx} ${ty})`}>
+            <g className="mv-bob" style={{ animationDelay: `${-k}s` }}>
+              <ellipse cx="0" cy="2" rx="7" ry="3" fill="#8A6A44" />
+              <ellipse cx="0" cy="0.6" rx="6" ry="2.2" fill="#A8845A" />
+              <circle cx="0" cy="-3" r="1.6" fill="#E8C8A0" />
+              <path d="M0 -1.4 v2" stroke="#E84A3A" strokeWidth="2" />
+              <path d="M1 -1 L6 5" stroke="#6A4A2A" strokeWidth="0.8" />
+            </g>
+          </g>
+        ))}
+      </g>
+    );
+    /* トキの舞う田 … 田の上を、淡い朱鷺色の鳥が舞う（佐渡） */
+    case "toki": return g(
+      <g>
+        {P("M-30 2 L0 -15 L30 2 L0 19 Z", { fill: "#7AAAD4" })}
+        {[-6, -2, 2, 6].map((rx) => <path key={rx} d={`M${rx - 12} ${rx * 0.2 + 2} l24 -13`} stroke="#6AB84A" strokeWidth="0.8" />)}
+        {[[-6, -10], [8, -16]].map(([bx, by], k) => (
+          <g key={k} transform={`translate(${bx} ${by})`}>
+            <path className="mv-wing" d="M-6 0 Q-3 -4 0 0 Q3 -4 6 0" fill="none" stroke="#F4B8A8" strokeWidth="1.8" strokeLinecap="round" />
+            <path d="M0 0 l2 2" stroke="#C83A3A" strokeWidth="0.9" />
+          </g>
+        ))}
+      </g>
+    );
+    /* 金山 … 山肌に口を開けた坑道、トロッコのレール、割れた山（佐渡金山の道遊の割戸） */
+    case "goldmine": return g(
+      <g>
+        {P("M-28 10 L-4 -26 L6 -18 L10 -28 L28 10 Z", { fill: "#7A6A5A" })}
+        {P("M-28 10 L-4 -26 L2 -18 L2 10 Z", { fill: "#8C7C6A" })}
+        {P("M2 -20 L6 -18 L10 -28", { stroke: "#4A3A2A", strokeWidth: "1.2", fill: "none" })}
+        <path d="M-6 10 a6 7 0 0 1 12 0 Z" fill="#1A1410" />
+        <path d="M-6 10 V3 M6 10 V3 M-6 3 H6" stroke="#8A6A40" strokeWidth="1.4" fill="none" />
+        {P("M-2 10 L-10 20 M2 10 L10 20", { stroke: "#9A9AA0", strokeWidth: "0.9" })}
+        <circle className="amb amb-twinkle" cx="0" cy="6" r="1.4" fill="#F4D03A" style={{ animationDuration: "3s" }} />
+      </g>
+    );
+    /* ボニンブルーの海 … 深く澄んだ青、光の筋（小笠原） */
+    case "boninsea": return g(
+      <g>
+        {P("M-31 0 L-15 -26 L15 -26 L31 0 L15 26 L-15 26 Z", { fill: "#0E4AA8" })}
+        <ellipse cx="0" cy="0" rx="18" ry="10" fill="#1E6AC8" opacity="0.7" />
+        {[0, 1].map((k) => <path key={k} className="mv-glint2" d={`M${-10 + k * 8} ${-8 + k * 10} l10 -3`}
+          stroke="rgba(200,230,255,0.85)" strokeWidth="1" style={{ animationDelay: `${k}s` }} />)}
+      </g>
+    );
+    /* クジラ … 海面に背を出し、潮を吹く（小笠原） */
+    case "whale": return g(
+      <g>
+        {P("M-31 0 L-15 -26 L15 -26 L31 0 L15 26 L-15 26 Z", { fill: "#0E4AA8" })}
+        <g className="mv-bob">
+          <path d="M-14 4 Q-4 -6 10 2 Q4 6 -14 4 Z" fill="#2A3A52" />
+          <path d="M10 2 l6 -5 l1 4 l-5 3 Z" fill="#2A3A52" />
+        </g>
+        <g className="mv-smoke" style={{ animationDuration: "3s" }}>
+          <path d="M-4 -4 q-3 -5 0 -9 M-4 -4 q3 -5 0 -9" stroke="rgba(255,255,255,0.9)" strokeWidth="1.4" fill="none" />
+        </g>
+      </g>
+    );
+    /* 亜熱帯の森 … 大きな葉のシダと木、濃い緑（小笠原） */
+    case "jungle": return g(
+      <g>
+        {P("M-30 2 L0 -15 L30 2 L0 19 Z", { fill: "#2E6A38" })}
+        {[[-14, 2], [0, -6], [12, 4], [-4, 10]].map(([jx, jy], i) => (
+          <g key={i} transform={`translate(${jx} ${jy})`} >
+            <path d="M0 4 V-12" stroke="#5A4A30" strokeWidth="1.4" />
+            <g className={`pn-sway s${i % 3}`}>
+              {[-70, -30, 10, 50, 90].map((a) => <path key={a} d="M0 -12 q7 -1 12 4" stroke={i % 2 ? "#3E9A48" : "#58B060"} strokeWidth="2.4"
+                fill="none" strokeLinecap="round" transform={`rotate(${a} 0 -12)`} />)}
+            </g>
+          </g>
+        ))}
+      </g>
+    );
+    /* 滝 … 岩の崖から落ちる白い水、滝つぼのしぶき */
+    case "waterfall": return g(
+      <g>
+        {P("M-26 12 L-20 -30 L20 -30 L26 12 Z", { fill: "#6A6A6A" })}
+        {P("M-26 12 L-20 -30 L-4 -30 L-6 12 Z", { fill: "#7E7E80" })}
+        <rect x="-5" y="-30" width="10" height="36" fill="#DDEEFA" />
+        <rect className="mv-fall" x="-5" y="-30" width="10" height="36" fill="url(#none)" stroke="none" />
+        {[-3, 0, 3].map((wx, k) => <path key={k} className="mv-fall" d={`M${wx} -30 V6`} stroke="rgba(255,255,255,0.95)"
+          strokeWidth="1" strokeDasharray="4 5" style={{ animationDelay: `${-k * 0.3}s` }} />)}
+        <ellipse cx="0" cy="9" rx="14" ry="4" fill="#5A9ACA" />
+        {[0, 1, 2].map((k) => <circle key={k} className="amb amb-bubble" cx={-6 + k * 6} cy="6" r="1.8" fill="#FFFFFF"
+          style={{ animationDuration: `${1.6 + k * 0.4}s` }} />)}
+        {[-18, 16].map((tx) => <path key={tx} d={`M${tx} -28 l5 10 h-10 Z`} fill="#2E5A3C" />)}
+      </g>
+    );
+    /* 風車 … 白い風力発電の塔、三枚羽がゆっくり回る */
+    case "windmill": return g(
+      <g>
+        <ellipse cx="3" cy="10" rx="10" ry="3" fill="rgba(10,6,20,0.35)" />
+        <path d="M-1.6 10 L-0.8 -40 L0.8 -40 L1.6 10 Z" fill="#F0F0F0" />
+        <g transform="translate(0 -40)">
+          <g className="mv-rotor">
+            {/* ⚠️ 見えない輪。三枚羽だけだと外形が軸に対して偏り、回転の中心がずれる */}
+            <circle r="20" fill="none" stroke="none" />
+            {[0, 120, 240].map((a) => <path key={a} d="M0 0 L-1.4 -2 L0 -20 L1.4 -2 Z" fill="#FAFAFA"
+              stroke="#C8C8D0" strokeWidth="0.4" transform={`rotate(${a})`} />)}
+          </g>
+          <circle r="1.8" fill="#D8D8E0" />
+        </g>
+      </g>
+    );
+    /* 城 … 石垣の上の天守閣、白壁と黒い屋根の重なり、金の鯱 */
+    case "castle": return g(
+      <g>
+        <ellipse cx="4" cy="12" rx="28" ry="7" fill="rgba(10,6,20,0.4)" />
+        {P("M-26 12 L-20 -2 L20 -2 L26 12 Z", { fill: "#8A8478" })}
+        {P("M-26 12 L-20 -2 L0 -2 L0 12 Z", { fill: "#A09A8C" })}
+        {[0, 1, 2].map((k) => {
+          const w = 16 - k * 4, y0 = -2 - k * 11;
+          return (
+            <g key={k}>
+              <rect x={-w * 0.7} y={y0 - 8} width={w * 1.4} height="8" fill="#F4F2EC" />
+              <rect x={-w * 0.7} y={y0 - 8} width={w * 0.7} height="8" fill="#FFFFFF" />
+              {P(`M${-w} ${y0 - 8} Q0 ${y0 - 13} ${w} ${y0 - 8} L${w * 0.7} ${y0 - 11} Q0 ${y0 - 15} ${-w * 0.7} ${y0 - 11} Z`, { fill: "#3A3A48" })}
+              {[-4, 0, 4].map((wx) => <rect key={wx} x={wx - 1} y={y0 - 6} width="2" height="3" fill="#4A4A58" />)}
+            </g>
+          );
+        })}
+        {[-4, 4].map((sx) => <path key={sx} d={`M${sx} -37 q1 -3 2 0`} stroke="#E8C040" strokeWidth="1.4" fill="none" />)}
+      </g>
+    );
+    /* 観覧車 … 大きな輪、ゴンドラがゆっくり回る */
+    case "ferris": return g(
+      <g>
+        <ellipse cx="3" cy="12" rx="18" ry="4" fill="rgba(10,6,20,0.35)" />
+        <path d="M-10 12 L0 -18 L10 12" stroke="#C8C8D0" strokeWidth="1.6" fill="none" />
+        <g transform="translate(0 -18)">
+          <g className="mv-rotor" style={{ animationDuration: "24s" }}>
+            <circle r="18" fill="none" stroke="#E0E0E8" strokeWidth="1.4" />
+            {Array.from({ length: 8 }, (_, k) => {
+              const a = k * Math.PI / 4;
+              return (
+                <g key={k}>
+                  <path d={`M0 0 L${(Math.cos(a) * 18).toFixed(1)} ${(Math.sin(a) * 18).toFixed(1)}`} stroke="#C8C8D0" strokeWidth="0.6" />
+                  <circle cx={(Math.cos(a) * 18).toFixed(1)} cy={(Math.sin(a) * 18).toFixed(1)} r="2.4"
+                    fill={["#E84A3A", "#3A7AC8", "#F4D03A", "#3AA05A"][k % 4]} />
+                </g>
+              );
+            })}
+          </g>
+          <circle r="2" fill="#9A9AA4" />
+        </g>
+      </g>
+    );
+    /* 道の駅 … 大屋根の休憩所、のぼり旗、駐車場の車 */
+    case "michinoeki": return g(
+      <g>
+        {P("M-30 4 L-4 -10 L26 4 L0 18 Z", { fill: "#8A8A8A" })}
+        {[[-12, 6, "#E84A3A"], [0, 10, "#3A7AC8"], [8, 4, "#F0F0F0"]].map(([cx, cy, col], k) => (
+          <rect key={k} x={cx} y={cy} width="6" height="3" rx="0.8" fill={col} />
+        ))}
+        <rect x="-16" y="-12" width="28" height="10" fill="#C8A878" />
+        <rect x="-16" y="-12" width="14" height="10" fill="#D8BA8A" />
+        {P("M-20 -12 L-2 -22 L16 -12 Z", { fill: "#6A4A30" })}
+        <rect x="-8" y="-8" width="10" height="6" fill="#FFE6A8" className="mv-winlit" />
+        {[-24, -20].map((fx, k) => (
+          <g key={k}>
+            <path d={`M${fx} 2 V-16`} stroke="#8A8A8A" strokeWidth="0.7" />
+            <rect className="pn-sway s1" x={fx} y="-16" width="3" height="10" fill={k ? "#E84A3A" : "#3AA05A"} />
+          </g>
+        ))}
+      </g>
+    );
+    /* 大仏 … 蓮の台座に座る大きな仏さま（社の見どころ） */
+    case "daibutsu": return g(
+      <g>
+        <ellipse cx="3" cy="12" rx="22" ry="5" fill="rgba(10,6,20,0.4)" />
+        <ellipse cx="0" cy="8" rx="16" ry="5" fill="#7A8A7A" />
+        <path d="M-14 6 Q0 -2 14 6 Q0 10 -14 6 Z" fill="#6A7A6A" />
+        <path d="M-12 4 Q-10 -14 0 -16 Q10 -14 12 4 Z" fill="#5A7A6A" />
+        <path d="M-12 4 Q-10 -14 0 -16 L0 4 Z" fill="#6E8C7C" />
+        <circle cx="0" cy="-22" r="6.6" fill="#5A7A6A" />
+        <circle cx="-2" cy="-24" r="3" fill="#6E8C7C" />
+        <circle cx="0" cy="-28" r="3.4" fill="#4E6A5E" />
+        <circle className="mv-winlit" cx="0" cy="-22" r="10" fill="rgba(255,230,160,0.12)" />
+      </g>
+    );
+    /* 茶畑 … 丸く刈り込んだ茶の畝が、斜面に何列も並ぶ */
+    case "teafield": return g(
+      <g>
+        {P("M-30 2 L0 -15 L30 2 L0 19 Z", { fill: "#7A6A44" })}
+        {[0, 1, 2, 3].map((r) => (
+          <path key={r} d={`M${-24 + r * 4} ${6 - r * 5} Q0 ${-4 - r * 5} ${24 - r * 4} ${6 - r * 5}`}
+            stroke={r % 2 ? "#3E8A3A" : "#4E9A48"} strokeWidth="5" fill="none" strokeLinecap="round" />
+        ))}
+        {[0, 1, 2, 3].map((r) => (
+          <path key={`h${r}`} d={`M${-20 + r * 4} ${4 - r * 5} Q0 ${-5 - r * 5} ${20 - r * 4} ${4 - r * 5}`}
+            stroke="#6AB858" strokeWidth="1.2" fill="none" />
+        ))}
+      </g>
+    );
+    /* 鉄塔 … 格子の塔。電線は別に引く（TerrainCables） */
+    case "pylon": return g(
+      <g>
+        <ellipse cx="3" cy="8" rx="10" ry="3" fill="rgba(10,6,20,0.4)" />
+        <g stroke="#B8BCC8" strokeWidth="1.2" fill="none">
+          {P("M-8 8 L-2 -40 M8 8 L2 -40")}
+          {P("M-7 0 L7 -8 M7 0 L-7 -8 M-6 -10 L6 -18 M6 -10 L-6 -18 M-4 -20 L4 -28 M4 -20 L-4 -28")}
+          {P("M-14 -34 H14 M-11 -26 H11")}
+        </g>
+        <circle className="mv-beacon2" cx="0" cy="-41" r="1.6" fill="#FF6A6A" />
+      </g>
+    );
+    default: return null;
+  }
+}
+
+/* 電線。⚠️ 隣の鉄塔どうしを、垂れた線でつなぐ（まっすぐ張ると糸に見える） */
+function TerrainCables({ pylons }) {
+  const out = [];
+  for (let i = 0; i + 1 < pylons.length; i++) {
+    const a = pylons[i], b = pylons[i + 1];
+    if (Math.hypot(b.x - a.x, b.y - a.y) > 420) continue;
+    [[-14, -34], [14, -34], [-11, -26], [11, -26]].forEach(([dx, dy], k) => {
+      const x1 = a.x + dx, y1 = a.y + dy, x2 = b.x + dx, y2 = b.y + dy;
+      const mx = (x1 + x2) / 2, my = (y1 + y2) / 2 + 16;
+      out.push(<path key={`${i}-${k}`} d={`M${x1} ${y1} Q${mx} ${my} ${x2} ${y2}`}
+        fill="none" stroke="rgba(30,26,40,0.7)" strokeWidth="0.8" />);
+    });
+  }
+  return <g>{out}</g>;
+}
+
+/*
+  線路と電車。
+  ★ 枕木と二本のレール。電車が線路に沿って走り抜ける（animateMotion で道の形に沿わせる）。
+  ⚠️ 電車は線路の向きに回す（rotate="auto"）。回さないと横滑りして見える。
+*/
+function TerrainRail({ rail }) {
+  if (!rail) return null;
+  return (
+    <g>
+      <path d={rail.d} fill="none" stroke="#6A5A4A" strokeWidth="14" strokeLinecap="round" />
+      <path d={rail.d} fill="none" stroke="#8A7A6A" strokeWidth="12" strokeDasharray="2 5" />
+      <path d={rail.d} fill="none" stroke="#C8C8D0" strokeWidth="1.2" transform="translate(-3 0)" />
+      <path d={rail.d} fill="none" stroke="#C8C8D0" strokeWidth="1.2" transform="translate(3 0)" />
+      <g>
+        {[0, 1, 2].map((k) => (
+          <g key={k}>
+            <animateMotion dur="11s" repeatCount="indefinite" rotate="auto" path={rail.d}
+              begin={`${-k * 0.32}s`} />
+            <rect x="-9" y="-4" width="17" height="8" rx="2" fill={k === 0 ? "#E8E0D0" : "#D8D0C0"} />
+            <rect x="-9" y="-1" width="17" height="2" fill="#3A7AC8" />
+            {[-6, -1, 4].map((wx) => <rect key={wx} x={wx} y="-3" width="3" height="2" fill="#6A8AB8" />)}
+          </g>
+        ))}
+      </g>
+    </g>
+  );
+}
+/*
+  高速道路と車。
+  ★ 高架の道路（橋脚・ガードレール・車線の破線）。上下二車線を、普通車と大型トラックが走る。
+  ⚠️ 車は道の向きに回す（rotate="auto"）。対向車線は keyPoints を逆にして逆向きに走らせる。
+  ⚠️ 車線のずれは、動く g の中で上下にずらす（道の向きに直角になる）。
+*/
+function TerrainHighway({ hw }) {
+  if (!hw) return null;
+  const cars = [
+    { dir: 1, lane: 2.6, k: "car", col: "#E84A3A", dur: 9, at: 0 },
+    { dir: 1, lane: 2.6, k: "truck", col: "#F0F0F0", dur: 13, at: -4 },
+    { dir: 1, lane: 2.6, k: "car", col: "#3A7AC8", dur: 9, at: -6 },
+    { dir: -1, lane: -2.6, k: "car", col: "#F4D03A", dur: 10, at: -2 },
+    { dir: -1, lane: -2.6, k: "truck", col: "#3AA05A", dur: 14, at: -8 },
+    { dir: -1, lane: -2.6, k: "car", col: "#F0F0F0", dur: 10, at: -7 },
+  ];
+  return (
+    <g>
+      {/* 影と橋脚 … 高架に見せる。⚠️ 道より先（奥）に描く */}
+      <path d={hw.d} fill="none" stroke="rgba(10,6,20,0.3)" strokeWidth="16" transform="translate(4 8)" />
+      <path d={hw.d} fill="none" stroke="#8A8A92" strokeWidth="4" strokeDasharray="3 38" transform="translate(0 6)" />
+      <path d={hw.d} fill="none" stroke="#C8C8CE" strokeWidth="14" />
+      <path d={hw.d} fill="none" stroke="#4A4A54" strokeWidth="11" />
+      <path d={hw.d} fill="none" stroke="rgba(255,255,255,0.7)" strokeWidth="0.8" strokeDasharray="5 6" />
+      {cars.map((c, i) => (
+        <g key={i}>
+          <animateMotion dur={`${c.dur}s`} repeatCount="indefinite" rotate="auto" path={hw.d}
+            begin={`${c.at}s`} keyPoints={c.dir > 0 ? "0;1" : "1;0"} keyTimes="0;1" calcMode="linear" />
+          <g transform={`translate(0 ${c.lane})`}>
+            {c.k === "truck" ? (
+              <g>
+                <rect x="-7" y="-1.9" width="10" height="3.8" fill={c.col} />
+                <rect x="3.4" y="-1.7" width="3.2" height="3.4" fill="#3A5A8A" />
+              </g>
+            ) : (
+              <g>
+                <rect x="-3" y="-1.5" width="6" height="3" rx="0.8" fill={c.col} />
+                <rect x="-0.6" y="-1.2" width="2.2" height="2.4" fill="rgba(180,210,240,0.9)" />
+              </g>
+            )}
+          </g>
+        </g>
+      ))}
+    </g>
+  );
+}
+/* 川。⚠️ 岸・水・流れの三層。流れは破線を動かす（水面が止まっていると池に見える） */
+function TerrainRiver({ river }) {
+  if (!river) return null;
+  return (
+    <g>
+      <path d={river.d} fill="none" stroke="#5A4A3A" strokeWidth={river.w + 8} strokeLinecap="round" />
+      <path d={river.d} fill="none" stroke={river.dirty ? "#5A6A3A" : "#3A7AB8"} strokeWidth={river.w} strokeLinecap="round" />
+      <path d={river.d} className="mv-flow" fill="none"
+        stroke={river.dirty ? "rgba(170,200,90,0.5)" : "rgba(210,235,255,0.55)"}
+        strokeWidth={Math.max(1.2, river.w * 0.14)} strokeDasharray="10 16" strokeLinecap="round" />
+      {/* 堰。⚠️ 川を横切る低い壁と、越えて落ちる白い水 */}
+      {river.weir && (
+        <g transform={`translate(${river.weir.x.toFixed(1)} ${river.weir.y.toFixed(1)}) rotate(${(river.weir.a + 90).toFixed(1)})`}>
+          <rect x={-(river.w / 2 + 4)} y="-2" width={river.w + 8} height="4" fill="#B8B4A8" />
+          <rect className="mv-weir" x={-(river.w / 2)} y="2" width={river.w} height="3" fill="rgba(240,248,255,0.85)" />
+        </g>
+      )}
+      {/* 水門。⚠️ 両岸の塔と、上げ下げする扉 */}
+      {river.sluice && (
+        <g transform={`translate(${river.sluice.x.toFixed(1)} ${river.sluice.y.toFixed(1)}) rotate(${(river.sluice.a + 90).toFixed(1)})`}>
+          {[-(river.w / 2 + 5), river.w / 2 + 1].map((tx, k) => (
+            <g key={k}>
+              <rect x={tx} y="-14" width="4" height="16" fill="#C8C4BA" />
+              <rect x={tx} y="-17" width="4" height="3" fill="#3A6A9A" />
+            </g>
+          ))}
+          <rect x={-(river.w / 2 + 5)} y="-15" width={river.w + 10} height="2.4" fill="#9A9690" />
+          <g className="mv-gate"><rect x={-(river.w / 2)} y="-8" width={river.w} height="7" fill="#5A7A9A" /></g>
+        </g>
+      )}
+      {/* 橋。⚠️ 流れの線より手前に描く（先に描くと流れが橋の上を走る）。川の向きに直角に架ける */}
+      {(river.bridges || []).map((b, k) => (
+        <g key={`br${k}`} transform={`translate(${b.x.toFixed(1)} ${b.y.toFixed(1)}) rotate(${(b.a + 90).toFixed(1)})`}>
+          <rect x={-(river.w / 2 + 8)} y="-5" width={river.w + 16} height="10" fill="#9A8A74" />
+          <rect x={-(river.w / 2 + 8)} y="-5" width={river.w + 16} height="2" fill="#B8A890" />
+          <rect x={-(river.w / 2 + 8)} y="3" width={river.w + 16} height="2" fill="#6A5A48" />
+          {[-(river.w / 2 + 6), 0, river.w / 2 + 6].map((px, j) => <rect key={j} x={px - 1} y="-7" width="2" height="4" fill="#C8B8A0" />)}
+        </g>
+      ))}
+    </g>
+  );
+}
+
+/*
+  【名所の主役（型）】盤の中央に、主のマスの奥に大きくそびえる。
+  ★ マスの2倍強の大きさ。主のマスが足元に重なる（名所の足元で主と戦う）。
+  ★ 光は左上から。左の面を明るく、右を暗く。
+  ⚠️ 大きいぶん、動きは控えめに（灯・水・煙・旗だけ）。
+*/
+function HeroMonument({ kind, x, y }) {
+  const P = (d, ex) => {
+    const { key, ...rest } = ex || {};
+    return <path key={key} d={d} {...rest} />;
+  };
+  const body = (() => {
+    switch (kind) {
+      /* 大仏 … 立ち姿の巨大な仏さま。光背、蓮の台座 */
+      case "daibutsu": return (
+        <g>
+          <ellipse cx="6" cy="10" rx="46" ry="10" fill="rgba(10,6,20,0.4)" />
+          <circle className="mv-winlit" cx="0" cy="-92" r="40" fill="rgba(255,230,160,0.14)" />
+          <path d="M-30 8 Q0 -6 30 8 Q0 16 -30 8 Z" fill="#8A9A8A" />
+          <path d="M-22 4 L-18 -70 Q0 -80 18 -70 L22 4 Z" fill="#7A9488" />
+          <path d="M-22 4 L-18 -70 Q-6 -76 0 -76 L0 4 Z" fill="#8EAA9C" />
+          <path d="M-10 -40 Q0 -34 10 -40" stroke="#6A8478" strokeWidth="1.4" fill="none" />
+          <circle cx="0" cy="-88" r="14" fill="#7A9488" />
+          <circle cx="-4" cy="-92" r="7" fill="#8EAA9C" />
+          <circle cx="0" cy="-102" r="7" fill="#6A8478" />
+          <path d="M-5 -88 h3 M2 -88 h3" stroke="#4A6458" strokeWidth="1.2" />
+        </g>
+      );
+      /* 五重塔 … 五つの屋根が上ほど小さく、相輪が天を突く */
+      case "pagoda": return (
+        <g>
+          <ellipse cx="6" cy="10" rx="30" ry="8" fill="rgba(10,6,20,0.4)" />
+          {[0, 1, 2, 3, 4].map((k) => {
+            const w = 30 - k * 4, yy = 4 - k * 20;
+            return (
+              <g key={k}>
+                <rect x={-w * 0.5} y={yy - 12} width={w} height="12" fill="#9A4A3A" />
+                <rect x={-w * 0.5} y={yy - 12} width={w * 0.5} height="12" fill="#B05A48" />
+                {P(`M${-w - 6} ${yy - 12} Q0 ${yy - 20} ${w + 6} ${yy - 12} L${w * 0.7} ${yy - 17} Q0 ${yy - 24} ${-w * 0.7} ${yy - 17} Z`, { fill: "#3A3A48" })}
+              </g>
+            );
+          })}
+          <path d="M0 -96 v-28" stroke="#C8A850" strokeWidth="2.4" />
+          {[0, 1, 2, 3].map((k) => <path key={k} d={`M-4 ${-100 - k * 6} h8`} stroke="#C8A850" strokeWidth="1.4" />)}
+        </g>
+      );
+      /* 城 … 高い石垣に五層の天守、白壁と黒い屋根、金の鯱 */
+      case "castle": return (
+        <g>
+          <ellipse cx="6" cy="12" rx="56" ry="12" fill="rgba(10,6,20,0.4)" />
+          {P("M-50 12 L-38 -18 L38 -18 L50 12 Z", { fill: "#8A8478" })}
+          {P("M-50 12 L-38 -18 L0 -18 L0 12 Z", { fill: "#A09A8C" })}
+          {[-40, -24, -8, 8, 24].map((lx) => <path key={lx} d={`M${lx} -14 l6 22`} stroke="rgba(90,84,74,0.4)" strokeWidth="0.8" />)}
+          {[0, 1, 2, 3, 4].map((k) => {
+            const w = 32 - k * 5, y0 = -18 - k * 16;
+            return (
+              <g key={k}>
+                <rect x={-w * 0.72} y={y0 - 11} width={w * 1.44} height="11" fill="#F4F2EC" />
+                <rect x={-w * 0.72} y={y0 - 11} width={w * 0.72} height="11" fill="#FFFFFF" />
+                {P(`M${-w} ${y0 - 11} Q0 ${y0 - 18} ${w} ${y0 - 11} L${w * 0.72} ${y0 - 15} Q0 ${y0 - 21} ${-w * 0.72} ${y0 - 15} Z`, { fill: "#3A3A48" })}
+                {[-8, 0, 8].map((wx) => <rect key={wx} x={wx - 1.4} y={y0 - 8} width="2.8" height="4" fill="#4A4A58" />)}
+              </g>
+            );
+          })}
+          {[-6, 6].map((sx) => <path key={sx} d={`M${sx} -104 q2 -5 4 0`} stroke="#E8C040" strokeWidth="2" fill="none" />)}
+        </g>
+      );
+      /* 遊園地 … 観覧車とジェットコースター、花火（固有の意匠は使わない） */
+      case "amuse": return (
+        <g>
+          <ellipse cx="6" cy="12" rx="56" ry="12" fill="rgba(10,6,20,0.35)" />
+          <path d="M-50 10 Q-30 -40 -10 -10 Q10 20 30 -30 Q40 -50 50 6" stroke="#E84A3A" strokeWidth="3" fill="none" />
+          {[-40, -20, 0, 20, 40].map((px) => <path key={px} d={`M${px} 10 V${-20 + Math.abs(px) * 0.2}`} stroke="#C8C8D0" strokeWidth="1.2" />)}
+          <g transform="translate(24 -52)">
+            <g className="mv-rotor" style={{ animationDuration: "30s" }}>
+              <circle r="34" fill="none" stroke="#E0E0E8" strokeWidth="2" />
+              {Array.from({ length: 10 }, (_, k) => {
+                const a = k * Math.PI / 5;
+                return <circle key={k} cx={(Math.cos(a) * 34).toFixed(1)} cy={(Math.sin(a) * 34).toFixed(1)} r="4"
+                  fill={["#E84A3A", "#3A7AC8", "#F4D03A", "#3AA05A", "#C84AE8"][k % 5]} />;
+              })}
+            </g>
+            <circle r="3" fill="#9A9AA4" />
+          </g>
+          {[[-30, -90, "#F4D03A"], [0, -110, "#E84AA8"], [-50, -70, "#4AE8FF"]].map(([fx, fy, col], k) => (
+            /* ⚠️ 位置は外側の g、瞬きは内側。同じ要素に置くと瞬きが位置を消して隅へ飛ぶ */
+            <g key={k} transform={`translate(${fx} ${fy})`}>
+              <g className="amb amb-twinkle" style={{ animationDuration: `${2.6 + k * 0.5}s`, animationDelay: `${-k}s` }}>
+                {[0, 45, 90, 135, 180, 225, 270, 315].map((a) => <path key={a} d="M0 0 L0 -10" stroke={col} strokeWidth="1.6" transform={`rotate(${a})`} />)}
+              </g>
+            </g>
+          ))}
+        </g>
+      );
+      /* 滝 … 高い崖から落ちる白い帯、滝つぼの霧 */
+      case "falls": return (
+        <g>
+          {P("M-52 14 L-40 -120 L40 -120 L52 14 Z", { fill: "#5A5A5E" })}
+          {P("M-52 14 L-40 -120 L-10 -120 L-12 14 Z", { fill: "#6E6E72" })}
+          <rect x="-12" y="-120" width="24" height="126" fill="#DDEEFA" />
+          {[-8, -3, 2, 7].map((wx, k) => <path key={k} className="mv-fall" d={`M${wx} -120 V6`} stroke="rgba(255,255,255,0.95)"
+            strokeWidth="1.4" strokeDasharray="6 7" style={{ animationDelay: `${-k * 0.25}s` }} />)}
+          <ellipse cx="0" cy="12" rx="36" ry="9" fill="#5A9ACA" />
+          <ellipse className="pn-mist" cx="0" cy="4" rx="40" ry="10" fill="rgba(240,248,255,0.5)" style={{ animationDuration: "10s" }} />
+          {[-40, 36].map((tx) => <path key={tx} d={`M${tx} -118 l8 18 h-16 Z M${tx} -108 l10 22 h-20 Z`} fill="#2E5A3C" />)}
+        </g>
+      );
+      /* ダム … 巨大なコンクリートの堤、放流の白い水、湖面 */
+      case "dam": return (
+        <g>
+          <path d="M-60 -60 Q0 -76 60 -60 L60 -50 Q0 -64 -60 -50 Z" fill="#3A7AB8" />
+          {P("M-60 -50 Q0 -64 60 -50 L48 12 Q0 4 -48 12 Z", { fill: "#B8B4AA" })}
+          {P("M-60 -50 Q-30 -60 0 -60 L0 6 Q-24 6 -48 12 Z", { fill: "#CCC8BE" })}
+          {[-30, -10, 10, 30].map((gx, k) => (
+            <g key={k}>
+              <rect x={gx - 4} y="-50" width="8" height="10" fill="#6A7A8A" />
+              <path className="mv-fall" d={`M${gx} -40 V10`} stroke="rgba(255,255,255,0.9)" strokeWidth="3" strokeDasharray="6 6" style={{ animationDelay: `${-k * 0.2}s` }} />
+            </g>
+          ))}
+          <ellipse className="pn-mist" cx="0" cy="12" rx="50" ry="8" fill="rgba(240,248,255,0.55)" style={{ animationDuration: "8s" }} />
+        </g>
+      );
+      /* 橋 … 大きく弧を描く橋、欄干、下を流れる水 */
+      case "bridge": return (
+        <g>
+          <ellipse cx="0" cy="10" rx="70" ry="14" fill="#3A7AB8" />
+          <path className="mv-wave2" d="M-50 10 q10 -4 20 0 t20 0 t20 0 t20 0 t20 0" fill="none" stroke="rgba(220,240,255,0.6)" strokeWidth="1.4" />
+          <path d="M-66 0 Q0 -60 66 0" stroke="#9A6A44" strokeWidth="10" fill="none" />
+          <path d="M-66 -4 Q0 -64 66 -4" stroke="#B8845A" strokeWidth="3" fill="none" />
+          {[-44, -22, 0, 22, 44].map((px) => {
+            const yy = -((1 - (px / 66) ** 2) * 30);
+            return <path key={px} d={`M${px} ${yy - 4} v-10`} stroke="#8A5A38" strokeWidth="1.6" />;
+          })}
+          <path d="M-66 -12 Q0 -72 66 -12" stroke="#8A5A38" strokeWidth="1.4" fill="none" />
+        </g>
+      );
+      /* 塔 … 展望のある鉄塔、頂の赤い灯 */
+      case "tower": return (
+        <g>
+          <ellipse cx="6" cy="10" rx="28" ry="7" fill="rgba(10,6,20,0.4)" />
+          <g stroke="#D8D8DE" strokeWidth="1.8" fill="none">
+            {P("M-22 8 L-3 -120 M22 8 L3 -120")}
+            {[0, 1, 2, 3, 4, 5, 6].map((k) => {
+              const y1 = 4 - k * 18, w1 = 20 - k * 2.6;
+              return P(`M${-w1} ${y1} L${w1 - 2.6} ${y1 - 18} M${w1} ${y1} L${-w1 + 2.6} ${y1 - 18}`, { key: k });
+            })}
+          </g>
+          <rect x="-12" y="-66" width="24" height="10" fill="#E8E0D0" />
+          {[-8, -2, 4].map((wx) => <rect key={wx} x={wx} y="-63" width="4" height="4" fill="#FFD890" className="mv-winlit" />)}
+          <circle className="mv-beacon2" cx="0" cy="-124" r="3" fill="#FF5A5A" />
+        </g>
+      );
+      /* 灯台 … 白い高い塔、回る光の帯、岩場 */
+      case "lighthouse": return (
+        <g>
+          <ellipse cx="0" cy="10" rx="40" ry="10" fill="#4A4A52" />
+          {P("M-12 8 L-7 -96 H7 L12 8 Z", { fill: "#F4F0E8" })}
+          {P("M-12 8 L-7 -96 H0 L0 8 Z", { fill: "#FFFFFF" })}
+          <rect x="-10" y="-106" width="20" height="10" fill="#3A3A48" />
+          <path d="M-12 -106 L0 -116 L12 -106 Z" fill="#C84A3A" />
+          <path className="pn-beam" d="M0 -101 L110 -126 L110 -76 Z" fill="rgba(255,240,180,0.28)" />
+        </g>
+      );
+      /* 温泉 … 湯の湧く大きな湯船、立ちのぼる湯気、湯殿の屋根 */
+      case "onsen": return (
+        <g>
+          <ellipse cx="0" cy="8" rx="56" ry="18" fill="#7A6A5A" />
+          <ellipse cx="0" cy="6" rx="46" ry="13" fill="#8ACAD8" />
+          {[-24, -8, 8, 24].map((sx, k) => <path key={k} className="mv-smoke" d={`M${sx} 0 q-4 -10 0 -20 q4 -10 0 -20`} fill="none"
+            stroke="rgba(255,255,255,0.65)" strokeWidth="2" style={{ animationDelay: `${-k * 0.9}s` }} />)}
+          <rect x="-40" y="-40" width="36" height="24" fill="#8A6A4A" />
+          {P("M-46 -40 L-22 -58 L2 -40 Z", { fill: "#4A3A30" })}
+          <rect x="-30" y="-34" width="16" height="10" fill="#E8D8B8" />
+          <path d="M-26 -31 q3 -3 6 0 M-26 -27 q3 -3 6 0" stroke="#C84A3A" strokeWidth="1.2" fill="none" />
+        </g>
+      );
+      /* 神社 … 朱の大鳥居、その奥に本殿、しめ縄 */
+      case "shrine": return (
+        <g>
+          <ellipse cx="6" cy="12" rx="56" ry="12" fill="rgba(10,6,20,0.35)" />
+          <rect x="-34" y="-52" width="68" height="28" fill="#E8DCC0" />
+          <rect x="-34" y="-52" width="34" height="28" fill="#F4EAD0" />
+          {P("M-44 -52 Q0 -76 44 -52 L36 -60 Q0 -82 -36 -60 Z", { fill: "#4A5A48" })}
+          <path d="M-30 -40 q30 8 60 0" stroke="#C8A850" strokeWidth="2" fill="none" />
+          <g transform="translate(0 12)">
+            <rect x="-30" y="-58" width="6" height="58" fill="#D0402E" />
+            <rect x="24" y="-58" width="6" height="58" fill="#D0402E" />
+            <rect x="-38" y="-64" width="76" height="7" fill="#E04A38" />
+            <path d="M-42 -66 Q0 -72 42 -66" stroke="#2A2A2A" strokeWidth="2.4" fill="none" />
+            <rect x="-26" y="-50" width="52" height="4" fill="#C8382A" />
+          </g>
+        </g>
+      );
+      /* 寺 … 大屋根の本堂、灯籠、参道 */
+      default: return (
+        <g>
+          <ellipse cx="6" cy="12" rx="60" ry="12" fill="rgba(10,6,20,0.35)" />
+          <rect x="-44" y="-30" width="88" height="36" fill="#6A4A3A" />
+          <rect x="-44" y="-30" width="44" height="36" fill="#7C5A46" />
+          {P("M-62 -30 Q0 -48 62 -30 L48 -54 Q0 -72 -48 -54 Z", { fill: "#3A3A48" })}
+          {P("M-62 -30 Q-30 -40 0 -40 L0 -64 Q-26 -66 -48 -54 Z", { fill: "#4E4E60" })}
+          <rect x="-10" y="-16" width="20" height="22" fill="#2A1A14" />
+          {[-52, 52].map((lx, k) => (
+            <g key={k} transform={`translate(${lx} 8)`}>
+              <path d="M-4 6 h8 v-12 h-8 Z M-6 -6 h12 l-6 -6 Z" fill="#9C968A" />
+              <circle className="mv-flame" cx="0" cy="-1" r="2" fill="#FFD27A" />
+            </g>
+          ))}
+        </g>
+      );
+    }
+  })();
+  return <g transform={`translate(${x.toFixed(1)} ${y.toFixed(1)})`} style={{ pointerEvents: "none" }}>{body}</g>;
+}
+
+function BattleScene({ theme, foes, star, elems }) {
   const th = STAGE_THEMES[theme] || STAGE_THEMES.town;
   return (
     <svg viewBox="0 0 320 150" className="bt-scene" aria-hidden="true">
@@ -29487,12 +34715,15 @@ function BattleScene({ theme, foes, star }) {
         </radialGradient>
       </defs>
       <rect x="0" y="0" width="320" height="150" fill="url(#btSky)" />
-      {/* 遠景。⚠️ 二重にして奥行きを出す */}
-      <path d="M0 104 L54 78 L96 100 L142 70 L196 102 L246 82 L320 106 L320 150 L0 150 Z"
-        fill="rgba(0,0,0,0.3)" />
-      <path d="M0 116 L44 98 L88 114 L138 92 L192 118 L242 100 L320 120 L320 150 L0 150 Z"
-        fill="rgba(0,0,0,0.45)" />
+      {/*
+        遠景。⚠️⚠️ 土地柄ごとに違う景色にすること。これまで全部同じ二枚の山影で、
+          敵の背景が一種類しかなく寂しかった。小MAPと同じ景色を使う。
+      */}
+      {/* ⚠️ 地平線を地面（y=120）の少し上に合わせる。高いままだと建物の胴が伸びて見える */}
+      <Panorama kind={theme} w={320} h={112} uid="bt" hz={116} />
       <rect x="0" y="120" width="320" height="30" fill="url(#btGround)" />
+      {/* 属性の空気。⚠️ 敵の後ろに置く。前に置くと敵が見えにくい */}
+      <ElemAmbience elems={elems} w={320} h={120} />
       {/*
         敵の立ち位置。
         ⚠️ 影を必ず置く。影が無いと、地面から浮いて紙に見える。
@@ -29518,10 +34749,10 @@ function BattleScene({ theme, foes, star }) {
   ⚠️ 倒れたら傾けて沈める。消すと並びが動いて目が迷う。
   ⚠️ 攻撃を受けた瞬間だけ揺らす。常時動かすと、どれが今殴られたのか分からない。
 */
-function FoeFigure({ res, ratio, down, hit, size }) {
+function FoeFigure({ res, ratio, down, hit, size, dying }) {
   const kind = res.phys > 0 ? "armor" : res.mag > 0 ? "ward" : "plain";
   return (
-    <div className={`bt-fig ${kind}${down ? " down" : ""}${hit ? " hit" : ""}`}
+    <div className={`bt-fig ${kind}${down ? " down" : ""}${hit ? " hit" : ""}${dying ? " dying" : ""}`}
       style={{ "--fig": `${size}px` }}>
       <svg viewBox="0 0 60 68" aria-hidden="true">
         {/* 六角の器。⚠️ 札と同じ形にする。別の形だと世界が割れる */}
@@ -29585,10 +34816,17 @@ function BattlePanel({ lang, star, stageName, onEnd, theme, rank, zako, startHP,
   const themeKey = theme || "town";
   /* ⚠️ 引数名を step にしないこと。一枚進める関数 step と衝突する */
   /* ⚠️ 雑魚は軽い設定を使う。主と同じ強さだと、主に着く前に消耗しきる */
+  /*
+    ⚠️⚠️ 育ちを渡すこと。敵のHPと攻撃力が育ちの6割ぶん追う。
+      渡さないと「振り切った人向けの強さ」で固定され、
+      未完成のまま先へ行った人が理不尽に殺される。
+    ⚠️ 戦闘の間に読み直さない。始まってから振り直したのと同じになる。
+  */
+  const skNow = useMemo(() => battleSkillOf(star), [star]);
   const setup = useMemo(() => (zako
-    ? zakoSetup(star, rank || 0, zako, seed)
-    : battleSetup(star, rank || 0, stageName)),
-    [star, rank, zako, stageName]);
+    ? zakoSetup(star, rank || 0, zako, seed, skNow)
+    : battleSetup(star, rank || 0, stageName, skNow)),
+    [star, rank, zako, stageName, seed, skNow]);
   /*
     ⚠️⚠️ ステータスを state に必ず入れること。battleApply が state.stats を読む。
       入れ忘れると一枚目の処理で例外が出て、1ターン目のまま止まる（実際そうなった）。
@@ -29601,11 +34839,31 @@ function BattlePanel({ lang, star, stageName, onEnd, theme, rank, zako, startHP,
     mult: startMult && startMult > 1 ? startMult : 1, take: 1,
     /* ⚠️ 計算に要るものは全部ここに置く。画面側で別に持たない */
     stats: statsOf(rank || 0),
-    foeDefP: battleSetup(star, rank || 0).defP,
-    foeDefM: battleSetup(star, rank || 0).defM,
-    foeLuck: battleSetup(star, rank || 0).luck,
+    /* ⚠️ setup を作り直さない。三度呼ぶと乱数の絡む値がずれる */
+    foeDefP: setup.defP,
+    foeDefM: setup.defM,
+    foeLuck: setup.luck,
     /* ⚠️ 継続（残りターン）と次ターンの持ち物は別に持つ。混ぜると順序が追えない */
     fx: emptyFx(), next: emptyNext(), pending: emptyNext(), turnNext: emptyNext(),
+    /* ⚠️ いまの段。合体・分裂で進む。0 が最初の形 */
+    stage: 0,
+    /* ⚠️ ★。敵の回避（foeEvadeOf）が battleApply の中で読む */
+    star,
+    /* ⚠️ 装備はここに入れて、battleApply から state.eq で読む。計算側で loadEquip しない */
+    eq: equipBonus(equippedGear()),
+    /* ⚠️ 編成の弱点。段が変わっても同じものを持ち回る */
+    weak: setup.weak,
+    /* ⚠️ ⑧の不死身。battleApply と必殺技のあとで clampImmortal が読む */
+    immortalAdds: setup.immortalAdds,
+    /*
+      スキルツリー。
+      ⚠️⚠️ 戦闘が始まってから一度だけ読むこと。毎ターン読み直すと、
+        戦いの途中で振り直したのと同じことになり、計算が食い違う。
+    */
+    /* ⚠️ デバッグ中は、遊んでいる★までのシートを取った扱い（battleSkillOf） */
+    sk: battleSkillOf(star),
+    /* ⚠️ 主の番号も状態に持つ。段で変わるので setup の値を直に見ない */
+    bossAt: setup.bossAt,
     /* ⚠️ 雑魚は体ごとにHPが違う（編成）。一律で作らないこと */
     foes: Array.from({ length: setup.foes }, (_, i) => {
       const h = (setup.foeHPList && setup.foeHPList[i]) || setup.foeHP;
@@ -29614,6 +34872,10 @@ function BattlePanel({ lang, star, stageName, onEnd, theme, rank, zako, startHP,
     turn: 0, phase: "ready", hand: [], shown: 0, drawn: 0, note: "",
   }));
   const [pops, setPops] = useState([]);   /* 飛ぶ数字 */
+  /* ⚠️ 受けた一撃の衝撃（段階と、揺れを出し直すための番号） */
+  const [jolt, setJolt] = useState(null);
+  /* ⚠️ 敵の手を札の場所に出す。自分の技と見分けが付くように赤黒い札で */
+  const [foeAct, setFoeAct] = useState(null);
   /*
     エフェクト。
     ⚠️ 数字と別に持つこと。数字は900ms、エフェクトは620msで消えるので、
@@ -29632,6 +34894,55 @@ function BattlePanel({ lang, star, stageName, onEnd, theme, rank, zako, startHP,
       前回の値が今回は選べない、ということが起きる。
   */
   const [shield, setShield] = useState(0);
+  /*
+    消耗する装備。
+    ⚠️⚠️ 戦闘が始まってから読むこと。戦闘中に別の画面で減ることはないので、
+      毎ターン読み直すと、押した直後に元へ戻って見える。
+    ⚠️ 自動で働くもの（ダメコン）はここに並べない。押す物だけ。
+  */
+  /*
+    装着している装備をまとめる。
+    ⚠️⚠️ 戦闘が始まってから一度だけ読むこと。毎ターン読み直すと、
+      戦いの途中で装備を替えたのと同じことになり、計算が食い違う。
+    ⚠️ 勝率の実測（BATTLE_ATK）は装備なしの数字。装備は遊ぶ側の上積みで、
+      難度の側では勘定していない。ここを厚くしても敵は強くならない。
+  */
+  const eqb = useMemo(() => equipBonus(equippedGear()), []);
+  const [uses, setUses] = useState(() => {
+    const auto = EQUIP_USES.filter((x) => x.auto).map((x) => x.key);
+    /* ⚠️ 装着しているものだけ。持ち物にあるだけでは戦場に出さない */
+    return equippedUses().filter((u) => auto.indexOf(u.key) < 0);
+  });
+  /*
+    ⚠️⚠️ 一つの戦いで使えるのは一つだけ。
+      枠を食う代償があっても、三つ入れて三回使えると、回復札を引く必要が消える。
+      「一回ぶんの保険」という位置に留めること。
+    ⚠️ 戦いごとに戻す（key で作り直されるので state で持てば足りる）。
+  */
+  const [usedThisFight, setUsedThisFight] = useState(false);
+  /*
+    消耗品を使う。
+    ⚠️⚠️ 減らしてから効かせる。逆にすると、途中で落ちたときに使い得になる。
+    ⚠️ ターンを消費しない。回復札を引けないことへの保険なので、
+      引き直しの機会まで奪うと持っていても出番が来ない。
+  */
+  const spendItem = (u) => {
+    if (st.phase === "win" || st.phase === "lose") return;
+    if (usedThisFight) return;
+    if (!spendUse(u.id)) return;
+    setUsedThisFight(true);
+    setUses((v) => v.filter((x) => x.id !== u.id));
+    const def = EQUIP_USES.find((x) => x.key === u.key);
+    if (def && def.heal) {
+      const add = Math.round(S0.maxHP * ((u.val || 0) / 100));
+      setSt((v) => ({ ...v, hp: Math.min(S0.maxHP, v.hp + add) }));
+      /* ⚠️ 記録に残すこと。押して回復したのに記録に出ないと、効いたか分からない */
+      pushHist("heal", st.turn, `+${add}`);
+    }
+    if (def && def.clears) {
+      setSt((v) => ({ ...v, fx: { ...v.fx, [def.clears]: 0 } }));
+    }
+  };
   /* 一時停止。⚠️ 見るための止め。押している間は何も進めない */
   const [paused, setPaused] = useState(false);
   /*
@@ -29653,18 +34964,66 @@ function BattlePanel({ lang, star, stageName, onEnd, theme, rank, zako, startHP,
   const alive = st.foes.filter((f) => f.hp > 0).length;
   const done = st.phase === "win" || st.phase === "lose";
 
+  /*
+    演出が鳴っている数と、最後に鳴った時刻。
+    ⚠️⚠️ 決着の画面は、これが静まってから出すこと。
+      倒した瞬間に出すと、剣の舞の連撃や必殺技の数字が飛んでいる最中に
+      「打ち倒した」が被さり、敵が沈黙する前に結論が出ていた。
+  */
+  const busy = useRef({ n: 0, last: 0 });
+  const mark = (ms) => {
+    busy.current.n += 1;
+    busy.current.last = Date.now();
+    timers.current.push(setTimeout(() => {
+      busy.current.n = Math.max(0, busy.current.n - 1);
+      busy.current.last = Date.now();
+    }, ms));
+  };
   /* 数字を飛ばす。⚠️ 消えるまで持たない。溜まると重くなる */
   const pop = (where, text, tone) => {
     const id = Math.random().toString(36).slice(2);
     setPops((p) => [...p, { id, where, text, tone }]);
-    timers.current.push(setTimeout(() => setPops((p) => p.filter((x) => x.id !== id)), 900));
+    /* ⚠️ 必殺技の数字は長く残す。CSS の btPopHolo と秒を合わせること */
+    timers.current.push(setTimeout(() => setPops((p) => p.filter((x) => x.id !== id)),
+      tone === "holo" ? 1500 : 900));
+    mark(tone === "holo" ? 1500 : 900);
   };
   /* エフェクトを出す。⚠️ 一枚ぶんの間で必ず消す。残ると次の札と重なる */
   const fx = (where, kind, extra) => {
     const id = Math.random().toString(36).slice(2);
-    setFxs((v) => [...v, { id, where, kind, ...extra }]);
+    /*
+      ⚠️⚠️ 戦場ぜんたいを覆う演出は、同時に一つだけにすること。
+        愚者が効いたターンに1枚目が大アルカナだと、引いた枚数ぶん
+        同じ札が並ぶ（★8なら10枚）。その全部が演出を出すので、
+        札の名前が同じ場所に十重に重なり、文字化けのように見えていた。
+      ★ 新しいものを出すとき、前の「all」を捨てる。最後の一つだけが残る。
+      ⚠️ 敵や自分に付く演出（where が foeN / me）は捨てないこと。
+        当たった相手ごとに要るので、重なっても困らない。
+    */
+    setFxs((v) => [...(where === "all" ? v.filter((x) => x.where !== "all") : v),
+      { id, where, kind, ...extra }]);
     timers.current.push(setTimeout(() => setFxs((v) => v.filter((x) => x.id !== id)),
       kind === "blast" ? FX_MS_BLAST : FX_MS));
+    mark(kind === "blast" ? FX_MS_BLAST : FX_MS);
+  };
+  /*
+    静まったら決着を出す。
+    ★ 倒れる演出（BT_DIE_MS）が終わり、かつ演出が一つも鳴っておらず、
+      最後の音から少し間が空いたら出す。
+    ⚠️ 間（BT_QUIET_MS）を置くこと。連撃の数字は110msおきに出るので、
+      ちょうど途切れた瞬間を「静まった」と取り違える。
+    ⚠️ 上限を置くこと。何かが鳴り続けても、3.5秒で必ず出す（止まって見えないように）。
+  */
+  const whenQuiet = (fn) => {
+    const t0 = Date.now();
+    const tick = () => {
+      const now = Date.now();
+      const calm = busy.current.n === 0 && now - busy.current.last >= BT_QUIET_MS;
+      if ((now - t0 >= BT_DIE_MS && calm) || now - t0 >= 3500) { fn(); return; }
+      timers.current.push(setTimeout(tick, 80));
+    };
+    /* ⚠️ 同じ手番で予約された数字が出揃うまで、最初の判定を少し遅らせる */
+    timers.current.push(setTimeout(tick, 120));
   };
 
   /*
@@ -29748,22 +35107,33 @@ function BattlePanel({ lang, star, stageName, onEnd, theme, rank, zako, startHP,
       ⚠️ 法王が効いていれば必ず、そうでなければ MAJOR_RATE の確率で一枚。
       ⚠️ 山を絞られているターン（戦車など）や、出さない指定（力・絶望の波動）では混ぜない。
     */
-    if (!noMajor && !P0.suit
+    /*
+      【盾を構えたターンは大アルカナが出ない】
+      ⚠️⚠️ ここを外さないこと。塔と審判は敵の最大HPに対する割合で削るので、
+        引いた小アルカナの枚数に関係なく効く。盾3で枠を6つ潰しても、
+        大アルカナが63%で来るなら「守りを固めたまま割合で削り切る」が最適手になり、
+        盾＝攻めを捨てる選択という釣り合いが崩れる（塔審判ハック）。
+      ★ 盾を構えた瞬間、そのターンは効果札が来ない。守るターンは守るだけにする。
+      ⚠️ 法王が効いていても出さない。盾の指定が先。
+    */
+    if (!noMajor && !P0.suit && sh0 <= 0
       && ((s.fx && s.fx.hiero > 0) || Math.random() < MAJOR_RATE)) {
-      const m0 = MAJOR_LIST[Math.floor(Math.random() * MAJOR_LIST.length)];
-      hand.push({ ...m0, reversed: (s.fx && s.fx.hiero > 0) ? false : Math.random() < 0.5 });
+      /* ⚠️ 育ちで偏らせる。出る確率そのものは上の MAJOR_RATE のまま */
+      const m0 = MAJOR_LIST[pickMajor(s.sk)];
+      /* ⚠️ うんが高いほど逆位置が出にくい（revRateOf）。法王が効いていれば出ない */
+      hand.push({ ...m0, reversed: (s.fx && s.fx.hiero > 0) ? false : Math.random() < revRateOf(S0.luck) });
       major = true;
     }
     let guard = 0;
     /* ⚠️ 山は小アルカナだけなので、ここで大アルカナが混じることはない */
     while (hand.length < n && guard++ < n * 40) {
       const c = safePool[Math.floor(Math.random() * safePool.length)];
-      hand.push({ ...c, reversed: forceRev == null ? Math.random() < 0.5 : forceRev });
+      hand.push({ ...c, reversed: forceRev == null ? Math.random() < revRateOf(S0.luck) : forceRev });
     }
     /* ⚠️ 上限に当たっても手札は満たすこと。足りないまま進むと、処理が止まる */
     while (hand.length < n) {
       const c = MINOR_LIST[Math.floor(Math.random() * MINOR_LIST.length)];
-      hand.push({ ...c, reversed: forceRev == null ? Math.random() < 0.5 : forceRev });
+      hand.push({ ...c, reversed: forceRev == null ? Math.random() < revRateOf(S0.luck) : forceRev });
     }
     /*
       愚者。
@@ -29925,6 +35295,14 @@ function BattlePanel({ lang, star, stageName, onEnd, theme, rank, zako, startHP,
         carry("halve", "halveTurns");
         carry("allRev", "allRevTurns");
         carry("dmgMul", "mightTurns", ["noMajor", "pierce", "unrot", "wipeAfter"]);
+        /*
+          戦車の耐え。
+          ⚠️⚠️ ここは pending を組み立てている最中。next はまだ無い。
+            書き込み先は p（＝これから pending になるもの）。
+          ⚠️ ターン数を持たない一回きりの旗なので、carry ではなく直に移す。
+        */
+        if (q.endure) p.endure = true;
+        if (q.takeMul) p.takeMul = q.takeMul;
         carry("acts", "actsTurns");
         carry("fool", "foolTurns");
         return p;
@@ -29981,9 +35359,16 @@ function BattlePanel({ lang, star, stageName, onEnd, theme, rank, zako, startHP,
       next.healOver = (next.healOver || 0) + (out.healOver || 0);
       (out.hits || []).forEach((h) => {
         /* ⚠️ 何で、誰に当てたのかを残す。数字だけでは読み取れない */
+        /* ⚠️ 外れたら「かわされた」と出す。0と出すと壊れたように見える */
+        if (h.miss) {
+          pushHist("deal", s.turn, `${cardLabelOf(card, a)} → ${foeLabelOf(h.i, setup, a)} ${a.myMiss}`);
+          pop(`foe${h.i}`, a.myMiss, "info");
+          return;
+        }
         pushHist("deal", s.turn,
           `${cardLabelOf(card, a)} → ${foeLabelOf(h.i, setup, a)} -${h.d}`);
-        pop(`foe${h.i}`, `-${h.d}`, "dmg");
+        /* ⚠️ 会心は色を分ける。同じ朱だと、跳ねたことが数字の大きさでしか分からない */
+        pop(`foe${h.i}`, `-${h.d}`, out.crit ? "crit" : "dmg");
         fx(`foe${h.i}`, out.kind === "swords" ? "slash" : "burst");
       });
       /*
@@ -30073,6 +35458,20 @@ function BattlePanel({ lang, star, stageName, onEnd, theme, rank, zako, startHP,
         ⚠️ 発動したターンは、通常の必殺技を出さない（下の noFlash に混ぜる）。
       */
       const blast = next.fx.star > 0 && next.fx.moon > 0 && next.fx.sun > 0;
+      /*
+        秘剣・剣の舞。
+        ★ エレメンタルブラストと対をなす物理版。
+          あちらは星・月・太陽（地味バフ三枚）、こちらは悪魔・死神（危険札二枚）。
+        ⚠️⚠️ 悪魔は必殺技を封じる札。そこへ死神が重なったときだけ封が破れる。
+          「枷が極まると逆に解ける」。ここが剣の舞の芯なので、
+          必殺封じの判定より前に置くこと。
+        ⚠️ 悪魔は turnNext.halveTurns、死神は fx.death。持ち場所が違う。
+        ★ 実測（★8）剣の舞 0.121% ／ ブラスト 0.190%。出にくいぶん強くてよい。
+      */
+      /* ⚠️ 技を開けていなければ出ない。悪魔と死神が重なっても何も起きない */
+      const danceRate = (next.sk && next.sk.danceRate) || 0;
+      const dance = danceRate > 0
+        && (s.turnNext && s.turnNext.halveTurns > 0) && next.fx.death > 0;
 
       /*
         エレメンタルブラストの本体。
@@ -30118,6 +35517,47 @@ function BattlePanel({ lang, star, stageName, onEnd, theme, rank, zako, startHP,
       }
 
       /*
+        秘剣・剣の舞の本体。
+        ★ ★の数だけ斬る。敵の数ではない ―― 一体しか残っていないと
+          一回きりになって、必殺どころか通常の一撃と変わらない。
+        ★ 一撃ごとに「いま最もHPの低い相手」を選び直す。
+          まとめて一体に入れるとオーバーキルが出る。
+          落ちたら次へ移るので、斬り進んで最後は主に集中する。
+        ⚠️⚠️ 一撃の重さは (6.5 + 0.1×★) ÷ ★。
+          ブラストの総ダメージ（編成平均）の1.1倍になるよう実測で合わせた値。
+          ★4 19,509 ／★8 40,572 ／★12 62,561 が基準。ここを触ったら測り直すこと。
+        ⚠️ 撃ったあと、悪魔と死神が消える。ブラストの「全快」に当たる見返り。
+      */
+      if (dance) {
+        const S4 = next.stats || statsOf(rank || 0);
+        const topMul2 = FLASH_MUL[7];
+        /* ⚠️ 段で斬る回数が変わる。七段で★の数ぶん（満額） */
+        const hits = Math.max(1, Math.round((setup.star | 0) * danceRate));
+        const k = (6.5 + 0.1 * setup.star) / Math.max(1, setup.star);
+        for (let h = 0; h < hits; h++) {
+          let t2 = -1, low = Infinity;
+          next.foes.forEach((f2, i2) => {
+            if (f2.hp <= 0) return;
+            if (f2.hp < low) { low = f2.hp; t2 = i2; }
+          });
+          if (t2 < 0) break;
+          const d = Math.round(S4.power * CARD_COEF.swords * next.mult * topMul2 * k);
+          next.foes[t2].hp -= d;
+          /* ⚠️ 一撃ずつ遅らせる。まとめて出すと数字が重なって読めない */
+          timers.current.push(setTimeout(() => pop(`foe${t2}`, `-${d}`, "holo"), 120 + h * 110));
+        }
+        /*
+          ⚠️⚠️ 消すのは悪魔と死神だけ。ブラストのように全部消さないこと。
+            星や太陽まで消えると、危険札を抜けた見返りが帳消しになる。
+        */
+        next.fx = { ...next.fx, death: 0 };
+        next.pending = { ...next.pending, halve: false, halveTurns: 0,
+          allRev: false, allRevTurns: 0 };
+        next.note = a.danceName;
+        fx("all", "blast", { label: a.danceName });
+      }
+
+      /*
         同じスートが続いたときの特殊行動。
         ⚠️⚠️ ターンの終わりに一度だけ。札ごとに出すと、同じ絵が何度も走る。
         ⚠️ 腐った札で途切れる（flashRunOf の中で見ている）。
@@ -30150,7 +35590,8 @@ function BattlePanel({ lang, star, stageName, onEnd, theme, rank, zako, startHP,
             f2.hp -= d;
             /* ⚠️ 剣も同じ。遅らせると、倒した敵のぶんが出ない */
             pushHist("deal", s.turn, `${nm} → ${foeLabelOf(i2, setup, a)} -${d}`);
-            pop(`foe${i2}`, `-${d}`, "dmg");
+            /* ⚠️ 必殺技の数字は holo。札一枚ぶんの数字と見分けが付かないと、効いた実感が出ない */
+            pop(`foe${i2}`, `-${d}`, "holo");
           });
         } else if (fr.suit === "wands") {
           /* ★ 棒は単体攻撃。最もHPの高い敵へ ―― 全体攻撃では届かない相手を狙う */
@@ -30182,7 +35623,8 @@ function BattlePanel({ lang, star, stageName, onEnd, theme, rank, zako, startHP,
               ⚠️ 1%を超えないこと。★12の敵は20万なので、1%でも2,000。
                 それ以上だと基礎ダメージを上回り、割合の札になってしまう。
             */
-            const d = Math.round(S2.power * CARD_COEF.swords * next.mult * mul * 3.0
+            /* ⚠️ 棒の必殺はちりょく（mind）。ちからではない */
+            const d = Math.round(S2.mind * CARD_COEF.swords * next.mult * mul * 3.0
               + next.foes[t2].max * 0.001 * fr.run);
             next.foes[t2].hp -= d;
             /*
@@ -30191,11 +35633,22 @@ function BattlePanel({ lang, star, stageName, onEnd, theme, rank, zako, startHP,
               ★ その場で出す。演出（FxFlash）のほうが後から重なる。
             */
             pushHist("deal", s.turn, `${nm} → ${foeLabelOf(t2, setup, a)} -${d}`);
-            pop(`foe${t2}`, `-${d}`, "dmg");
+            pop(`foe${t2}`, `-${d}`, "holo");
           }
         } else if (fr.suit === "cups") {
           /* ★ 聖杯はバフ。回復しかできないぶん、倍率を一気に積む */
-          next.mult = Math.min(BATTLE.multCap, next.mult + 0.10 * mul);
+          const before3 = next.mult;
+          /* ⚠️ 聖杯の必殺（倍率を積む）はせいしんが受け持つ */
+          next.mult = Math.min(BATTLE.multCap, next.mult + 0.10 * mul * statK(S2.spirit));
+          /*
+            ⚠️⚠️ 倍率が上がったことを数字で出すこと。
+              盤の帯の数字が静かに変わるだけでは、必殺技が効いたのか分からない
+              （聖杯の必殺だけ何も起きないように見えていた）。
+          */
+          if (next.mult > before3) {
+            const up = next.mult;
+            timers.current.push(setTimeout(() => pop("me", `×${up.toFixed(2)}`, "holo"), 240));
+          }
         } else {
           /*
             貨幣（青）。
@@ -30204,9 +35657,10 @@ function BattlePanel({ lang, star, stageName, onEnd, theme, rank, zako, startHP,
             ★ 最大HPの割合で決める。3枚で3割、10枚で10割。
               ブルーアースは全快 ―― 名前どおりの働きになる。
           */
-          const h = Math.round(S2.maxHP * (fr.run / 10));
+          /* ⚠️ 貨幣の必殺（回復）はたいりょくが受け持つ */
+          const h = Math.round(S2.maxHP * (fr.run / 10) * statK(S2.vital));
           next.hp = Math.min(S2.maxHP, next.hp + h);
-          timers.current.push(setTimeout(() => pop("me", `＋${h}`, "heal"), 240));
+          timers.current.push(setTimeout(() => pop("me", `＋${h}`, "holo"), 240));
         }
         next.note = nm;
         /* ⚠️ 二つ目以降は遅らせる。同時に出すと絵が重なって読めない */
@@ -30215,13 +35669,71 @@ function BattlePanel({ lang, star, stageName, onEnd, theme, rank, zako, startHP,
         }, fi * 380));
       });
     }
+    /* ⚠️ 不死身は必殺技のあとにも掛ける。札のあとだけだと必殺で死ぬ */
+    clampImmortal(next);
     /* ⚠️ 次のターンへ渡すのは pending のほう。next（このターンぶん）ではない */
     /*
       ⚠️⚠️ 主を倒したら勝ち。お供が残っていても終わる。
         そうしないと、自動復活のお供がいる編成で戦いが終わらない。
       ⚠️ 主のいない編成（②〜④）では、最大の個体が主。全滅でも勝ち。
     */
-    if (bossDown(next.foes, setup)) { setSt({ ...next, phase: "win" }); return; }
+    /*
+      ⚠️⚠️ 段が残っていれば勝ちではない。次の形に置き換える。
+        合体（中3→特大1）も分裂（特大1→大2→小3→極小4）も同じ道を通る。
+      ⚠️ 置き換えた体は「復活した敵」扱い。破魔矢が乗り、祓串がHPを削る。
+      ⚠️ 継続（fx）と倍率は持ち越すこと。段が変わるたびに素に戻ると、
+        積んだ意味が消えて、長い戦いが四回の短い戦いになる。
+    */
+    /*
+      ⚠️⚠️ 主の番号は段ごとに変わる。setup.bossAt（最初の形の主）を見ないこと。
+        見ていると、特大1が大2に分かれたあと、大の一体目を倒しただけで
+        次の段へ進んでいた。
+    */
+    if (bossDown(next.foes, { ...setup, bossAt: next.bossAt })) {
+      const si = (next.stage | 0) + 1;
+      /*
+        ⚠️⚠️ 倒した瞬間に「打ち倒した」を出さないこと。
+          敵が消える前に文字が出るので、勝った実感の前に結果が来る。
+        ★ 震えて消えるぶんの間を置いてから決着を出す（BT_DIE_MS）。
+        ⚠️⚠️ 待つ間は手番を「dying」にして止めること。play のままだと、
+          残りの札を死んだ敵へ出し続け、決着を何度も予約する。
+      */
+      if (si >= stageCountOf(setup)) {
+        setSt({ ...next, phase: "dying" });
+        whenQuiet(() => setSt((v) => ({ ...v, phase: "win" })));
+        return;
+      }
+      const sg = setup.stageOf(si);
+      pushHist("fx", next.turn, a.btStage ? a.btStage(si + 1) : `→ ${si + 1}`);
+      /*
+        ⚠️⚠️ 置き換えを即座にやらないこと。倒した形と次の形が同じ瞬間に
+          入れ替わると、何が起きたのか読めない（合体も分裂も一瞬で終わる）。
+        ★ 震えて消える → 場が白む → 次の形が現れる、の三拍にする。
+      */
+      fx("all", "morph");
+      /*
+        ⚠️⚠️ 切り替えの間は手番を「morph」にして止めること。
+          play のままにしていたら、残りの札を死んだ敵へ出し続けて切り替えを
+          何度も予約し、最後の札のところで進行の条件が変わらなくなって
+          戦闘が永久に止まっていた。
+        ★ 次の形が出たら、札が残っていれば play に戻して続きを新しい形へ出し、
+          出し切っていれば敵の手番へ渡す（器の測り方と同じ流れ）。
+      */
+      const resume = to >= total ? "foe" : "play";
+      setSt({ ...next, phase: "morph" });
+      timers.current.push(setTimeout(() => setSt((v) => ({
+        ...v, stage: si, phase: resume,
+        foes: sg.hpList.map((h) => ({ hp: h, max: h, revived: true, rev: 0, down: 0, born: 1 })),
+        foeAtkList: sg.atkList.slice(),
+        foeGuard: sg.hpList.map(() => 0),
+        foeThorn: sg.hpList.map(() => 1),
+        winding: sg.hpList.map(() => false),
+        rota: sg.hpList.map(() => 0),
+        foeHealed: {},
+        bossAt: sg.bossAt, spDone: {},
+      })), BT_MORPH_MS));
+      return;
+    }
     if (next.hp <= 0) { setSt({ ...next, phase: "lose" }); return; }
     if (to >= total) { setSt({ ...next, phase: "foe" }); return; }
     setSt(next);
@@ -30271,13 +35783,24 @@ function BattlePanel({ lang, star, stageName, onEnd, theme, rank, zako, startHP,
         （done に段の番号を積む）。
       ⚠️ 敵の手番の頭で判定する。札の処理の途中に挟むと、順序が追えない。
     */
+    /*
+      ⚠️⚠️ 主の番号は段ごとの値（next.bossAt）を見ること。
+      ⚠️⚠️ 主の居ない編成（②大2・③中3・④小4）でも発動させること。
+        「主のHPがしきい値を割ったら」だけで判定していたので、
+        三つとも一度も発動していなかった（器だけ直して、画面側が残っていた）。
+      ★ 主が居なければ、編成ぜんたいの残りHPの割合で見る（bossRatioOf）。
+      ★ しきい値は編成ごとに持てる（②は 75/50/25/12.5 の四回）。
+    */
     const sp = BOSS_SPECIALS[setup.form];
-    if (sp && typeof setup.bossAt === "number" && next.foes[setup.bossAt]) {
-      const b = next.foes[setup.bossAt];
-      const ratio = b.hp / b.max;
+    const bIdx = typeof next.bossAt === "number" ? next.bossAt : null;
+    if (sp && next.foes.length) {
+      const hasBoss = bIdx !== null && next.foes[bIdx];
+      const b = hasBoss ? next.foes[bIdx] : next.foes[0];
+      const ratio = bossRatioOf(next.foes, bIdx);
       const done = { ...(s.spDone || {}) };
-      BOSS_SPECIAL_AT.forEach((th, k) => {
-        if (done[k] || ratio > th || b.hp <= 0) return;
+      (sp.at || BOSS_SPECIAL_AT).forEach((th, k) => {
+        if (done[k] || ratio > th) return;
+        if (hasBoss && b.hp <= 0) return;
         done[k] = true;
         /* ⚠️ 25%の手は重くする。死に際の一撃として記憶に残す */
         const w = BOSS_SPECIAL_K * (k === 2 ? 1.6 : 1);
@@ -30302,7 +35825,7 @@ function BattlePanel({ lang, star, stageName, onEnd, theme, rank, zako, startHP,
           ({ ...f, hp: f.hp > 0 ? Math.min(f.max, f.hp + f.max * sp.healAllPct * w) : f.hp }));
         if (sp.healPct) b.hp = Math.min(b.max, b.hp + b.max * sp.healPct * w);
         if (sp.reviveOne) {
-          const i2 = next.foes.findIndex((f, j) => j !== setup.bossAt && f.hp <= 0);
+          const i2 = next.foes.findIndex((f, j) => j !== bIdx && f.hp <= 0);
           if (i2 >= 0) next.foes[i2] = { ...next.foes[i2], hp: next.foes[i2].max, revived: true };
         }
         if (sp.guardBoss) next.bossGuard = (next.bossGuard || 0) + (sp.turns || 3);
@@ -30310,6 +35833,18 @@ function BattlePanel({ lang, star, stageName, onEnd, theme, rank, zako, startHP,
           const d = Math.round(next.hp * sp.drainPct * w);
           next.hp -= d; b.hp = Math.min(b.max, b.hp + d);
           pop("me", `-${d}`, "dmg");
+        }
+        /*
+          ② 大2 … HPを出し合って半々に。
+          ⚠️ 総量は増やさない。倒れた体にも効く（これは復活ではない）。
+          ⚠️ その手番は攻撃しない（一手を捨てる代償）。
+        */
+        if (sp.evenOut) {
+          const tot = next.foes.reduce((x, f) => x + Math.max(0, f.hp), 0);
+          const each = Math.round(tot / next.foes.length);
+          next.foes = next.foes.map((f) => ({ ...f, hp: Math.min(f.max, Math.max(1, each)) }));
+          /* ⚠️ 行動不能（foeStun）を使わないこと。あれは次の手番から効くので一手ずれる */
+          next.evenSkip = true;
         }
         next.note = a.spName[sp.key];
         fx("all", "major", { shape: "flash", label: a.spName[sp.key] });
@@ -30321,6 +35856,12 @@ function BattlePanel({ lang, star, stageName, onEnd, theme, rank, zako, startHP,
       ⚠️⚠️ 敵全体が動かない。一体ずつ判定しないこと（皇帝は場に掛かる札）。
       ⚠️ ここで減らす。減らし忘れると永久に動かない。
     */
+    /* ② の均し。⚠️ HPを出し合ったこの手番は、攻撃せずに終える */
+    if (next.evenSkip) {
+      next.evenSkip = false;
+      setSt({ ...next, phase: "idle", fx: tickFx(next.fx) });
+      return;
+    }
     if ((s.foeStun || 0) > 0) {
       next.foeStun = (s.foeStun || 0) - 1;
       next.note = a.fxName.emperor;
@@ -30367,11 +35908,12 @@ function BattlePanel({ lang, star, stageName, onEnd, theme, rank, zako, startHP,
         追い詰めたときだけ湧く ―― 死に際に護衛を呼ぶ、という絵になる。
       ⚠️ 主が倒れれば戦いは終わるので、詰みにはならない。
     */
-    const bossLeft = (typeof setup.bossAt === "number" && next.foes[setup.bossAt])
-      ? next.foes[setup.bossAt].hp / next.foes[setup.bossAt].max : 1;
+    /* ⚠️ 段ごとの主の番号を見る（next.bossAt） */
+    const bossLeft = (bIdx !== null && next.foes[bIdx])
+      ? next.foes[bIdx].hp / next.foes[bIdx].max : 1;
     if (setup.revive && bossLeft <= BOSS_REVIVE_AT) {
       next.foes = next.foes.map((f, i2) => {
-        if (i2 === setup.bossAt || f.hp > 0) return { ...f, downAt: undefined };
+        if (i2 === bIdx || f.hp > 0) return { ...f, downAt: undefined };
         const at = f.downAt == null ? s.turn : f.downAt;
         if (s.turn - at >= (setup.reviveTurns || 3)) {
           /*
@@ -30411,10 +35953,12 @@ function BattlePanel({ lang, star, stageName, onEnd, theme, rank, zako, startHP,
         ⚠️ 隠者が効いているあいだは数えない。止めた回を消費させない。
       */
       const healed = (s.foeHealed && s.foeHealed[i]) || 0;
+      /* ⚠️ 回復の癖（タイプ）。しないタイプは一度も回復しない */
+      const hs = healStyleOf(foeElemOf(i, stageName));
       if (setup.foeHeal && s.fx.hermit <= 0 && ratio < FOE_HEAL_AT
-        && healed < FOE_HEAL_MAX && Math.random() < 0.5) {
+        && healed < FOE_HEAL_MAX + hs.max && Math.random() < hs.p) {
         next.foeHealed = { ...(next.foeHealed || {}), [i]: healed + 1 };
-        const h = Math.round(f.max * setup.foeHeal * boost);
+        const h = Math.round(f.max * setup.foeHeal * boost * hs.amt);
         /*
           吊るされた男。
           ★ 回復のかわりに、本来回復すべき量の12%を傷として返す。
@@ -30441,6 +35985,15 @@ function BattlePanel({ lang, star, stageName, onEnd, theme, rank, zako, startHP,
       const pos = (rota[i] || 0) + i;
       /* ⚠️ 連携が効いていれば連撃で上書き。使ったら減らす */
       let move = foeNextMove(ratio, pos, setup.star);
+      /* ⚠️ 道中だけ、通常攻撃の一部を妨害へ（zakoRotRate）。種類はタイプで決まる */
+      if (zako && move === "hit" && Math.random() < zakoRotRate(setup.star)) move = "rot";
+      /*
+        ⚠️ 妨害の番なら、どの妨害にするかをタイプで選び直す（回数は変えない）。
+        ⚠️ 隠者・太陽などで妨害を止める判定は、このあとに来る。選び直しを先にすること。
+      */
+      if (DEBUFF_KEYS.includes(move)) move = debuffPick(foeElemOf(i, stageName), setup.star);
+      /* ⚠️ 強化と構えもタイプの性格で選び直す（構えないタイプは殴る） */
+      move = styleMove(move, foeElemOf(i, stageName));
       /*
         ⚠️⚠️ 同じターンに大技を撃てるのは一体まで。
           四体が別々に溜めるので、重なると一度に四発届いて即死する。
@@ -30497,8 +36050,65 @@ function BattlePanel({ lang, star, stageName, onEnd, theme, rank, zako, startHP,
       if (blocked && s.fx.sun > 0 && (move === "roar" || move === "despair")) {
         move = "hit";
       }
+      /*
+        耐性で防ぐ。⚠️ 防いだら何も起きない（殴りもしない）。
+        ⚠️ 防いだことを必ず画面に出す。見えない耐性は、効いていないのと同じに感じる。
+      */
+      if (DEBUFF_WARD_KEY[move]
+        && Math.random() < debuffBlockRate(move, s.eq, s.sk, next.stats || S0)) {
+        next.note = a.resisted;
+        pop("me", a.resisted, "info");
+        fx(`foe${i}`, "block");
+        return;
+      }
+      /*
+        敵の強化（研ぐ・霞む・鎧う）。
+        ⚠️ その手番は殴らない。研ぐ間が隙になる。
+        ⚠️ 同じ強化を重ねたら、長さだけ延ばす（強さは重ねない）。重ねると青天井になる。
+      */
+      {
+        /*
+          ⚠️⚠️ 強化は主だけが使う（主がいなければ先頭の一体）。
+            体ごとに使わせると、三体四体の編成では誰かが常に掛け直して、
+            回避↑などが切れ目なく続いていた。お供は代わりに殴る。
+        */
+        const leader = (typeof next.bossAt === "number") ? next.bossAt : 0;
+        const mb0 = FOE_MOVES[move] || {};
+        /*
+          ⚠️⚠️ 強化を続けて使わせないこと。五種を順に掛け直して、
+            一度も殴ってこない戦いになっていた（実際そうなった）。
+          ★ 三つの条件を全部満たしたときだけ強化する。
+            ・主（いなければ先頭）である
+            ・前の強化から4ターン空いている
+            ・その強化がまだ効いていない
+          ⚠️ 満たさなければ殴る。手番を無駄にしない。
+        */
+        if (mb0.buff) {
+          const cd = next.buffCD || 0;
+          const already = next.foeBuff && next.foeBuff[mb0.buff] && next.foeBuff[mb0.buff].t > 0;
+          if (i !== leader || cd > 0 || already) move = "hit";
+        }
+        const mb = FOE_MOVES[move] || {};
+        if (mb.buff) {
+          next.buffCD = 4;
+          next.foeBuff = { ...(next.foeBuff || {}), [mb.buff]: { amt: mb.amt, t: mb.turns } };
+          next.note = a.foeBuffName[mb.buff];
+          pop(`foe${i}`, a.foeBuffName[mb.buff], "buff");
+          fx(`foe${i}`, "buff");
+          return;
+        }
+      }
       if (next.forceCombo > 0 && i === 0) { move = "combo"; next.forceCombo -= 1; }
       rota[i] = pos + 1;
+      /*
+        ⚠️ 何をしてきたかを札の場所へ出す。体ごとに少しずらして、順に見えるようにする。
+        ⚠️ 出しっぱなしにしない。次の手番まで残ると、いつの手か分からなくなる。
+      */
+      {
+        const mv = move;
+        timers.current.push(setTimeout(() => setFoeAct({ id: Date.now() + i, move: mv, i }), i * 260));
+        timers.current.push(setTimeout(() => setFoeAct((v) => (v && v.i === i ? null : v)), i * 260 + 1100));
+      }
       if (move === "wind") {
         /* ⚠️ 溜めた敵に印を付ける。次の一撃が来ることを画面で示す */
         winding[i] = true;
@@ -30618,7 +36228,7 @@ function BattlePanel({ lang, star, stageName, onEnd, theme, rank, zako, startHP,
             「何かに戻された」としか見えない（実際そう見えた）。
         */
         const before = next.mult;
-        next.mult = 1 + (next.mult - 1) * (1 - FOE_MOVES.roar.roar);
+        next.mult = 1 + (next.mult - 1) * (1 - roarCutOf(setup.star));
         pop("me", `×${before.toFixed(2)}→×${next.mult.toFixed(2)}`, "dmg");
         next.note = a.foeRoar;
         fx("me", "burst");
@@ -30643,13 +36253,54 @@ function BattlePanel({ lang, star, stageName, onEnd, theme, rank, zako, startHP,
       /* ⚠️ 休んだぶんを掛けて返す。総量を保つのはここ */
       const myAtk = ((setup.foeAtkList && setup.foeAtkList[i]) || setup.foeAtk)
         * (next.foeAtkUp || 1) * gap;
-      const list = foeDamages(move, myAtk * boost, ratio, setup.star);
+      /*
+        ⚠️⚠️ kind は foeDamages より前で宣言すること。
+          後ろで const 宣言したまま前で読んでいて（TDZ）、敵が攻撃するたびに
+          例外で落ち、戦闘がそこで止まっていた。未定義の検査では拾えない。
+      */
+      const kind = foeKindOf(i, setup.foes);
+      const list = foeDamages(move, myAtk * boost, ratio, setup.star, kind);
       /* ⚠️ 月は敵の攻撃力、貨幣はこちらの被ダメ。掛ける順は変えない */
       /* ⚠️ 盾のぶん軽くする。月（-40%）とは掛け算で重なる */
       const shCut = 1 - SHIELD_CUT[Math.min(shield, shieldMax(setup.cards))];
       /* ⚠️ 節制はここで効かせる。受ける量だけが半分になる */
       const tmp = (s.fx && s.fx.temperance > 0) ? 0.5 : 1;
-      const scale = next.take * (s.fx.moon > 0 ? 0.6 : 1) * shCut * tmp;
+      /*
+        戦車。
+        ⚠️ 剣だけになるターンに限って、受ける量が半分になる。
+          継続にしないこと。引くたびに無敵の時間が伸びて別の札になる。
+      */
+      const chr = (s.turnNext && s.turnNext.takeMul) ? s.turnNext.takeMul : 1;
+      /*
+        型ごとの受け方。
+        ⚠️⚠️ 防御（guard）と体力（vital）は、ここまで一度も使われていなかった。
+          敵の防御を計算するのに、こちらの育ちの表を目盛りとして借りていただけ。
+        ★ 物理は防御で、魔法は体力で減らす。どちらを伸ばすかが分かれる。
+      */
+      const S5 = next.stats || statsOf(rank || 0);
+      /*
+        ⚠️⚠️ ぼうぎょが物理も魔法も受け持つ。たいりょくは貨幣の倍率の伸びへ移した。
+          型（物理／魔法）で変わるのは振れ幅だけ。
+      */
+      const cut = defRate(S5.guard);
+      /* ⚠️ 敵の攻撃UP。上限（最大HPの40%）は掛かったままなので即死は戻らない */
+      const fba = (next.foeBuff && next.foeBuff.atk && next.foeBuff.atk.t > 0) ? next.foeBuff.atk.amt : 0;
+      /* ⚠️ 粘り。受ける直前のHPで決める（同じターンの連撃は同じ帯で受ける） */
+      const grit = 1 - gritCutOf(next.hp, S0.maxHP);
+      const scale = next.take * (s.fx.moon > 0 ? 0.6 : 1) * shCut * tmp * chr * (1 - cut) * (1 + fba) * grit;
+      /*
+        回避。
+        ⚠️ 必中の手は避けられない。避けられるものばかりだと、
+          育て切った人に何も当たらなくなる。
+        ⚠️ 外したことを必ず画面に出す。見えない回避は、運が良かったのと区別が付かない。
+      */
+      const sure = (FOE_MOVES[move] || {}).sure;
+      if (!sure && list.length
+        && Math.random() < evadeRate(S5.speed, s.fx && s.fx.hermit > 0)) {
+        pushHist("fx", s.turn, a.foeMiss);
+        timers.current.push(setTimeout(() => pop("me", a.foeMiss, "info"), 60));
+        return;
+      }
       /*
         運命の輪。
         ⚠️⚠️ 階位を10で揃えるだけでは地味だった（実質+7%が3ターン）。
@@ -30659,20 +36310,62 @@ function BattlePanel({ lang, star, stageName, onEnd, theme, rank, zako, startHP,
       */
       const flat = (s.fx && s.fx.wheel > 0);
       list.forEach((raw, k) => {
-        const d = flat ? 10 : Math.max(1, Math.round(raw * scale));
+        /*
+          ⚠️⚠️ 一撃は最大HPの40%まで（FOE_HIT_CAP）。
+            ★12では主の一撃が最大HPとほぼ同じになり、道中で削られて着くと
+            大技一発で消し飛んでいた（茨城県陶芸美術館・段44で毎回即死）。
+            勝率が同じでも、一撃で死ぬのと削り合いで負けるのとでは手触りが違う。
+          ★ 上限を置いたうえで攻撃力を合わせ直し、「削り合いで負ける5%」にしてある。
+          ⚠️ 上限は最大HPから取る。いまのHPから取ると、瀕死ほど軽くなって死ななくなる。
+        */
+        const cap = Math.round(S0.maxHP * FOE_HIT_CAP);
+        /*
+          敵の会心。⚠️ うんが高いほど受けにくい（foeCritRate）。
+          ⚠️ 上限（40%）は会心にも掛ける。会心で一撃死を戻さない。
+        */
+        const fbc = (next.foeBuff && next.foeBuff.crit && next.foeBuff.crit.t > 0) ? next.foeBuff.crit.amt : 0;
+        const fcrit = !flat && Math.random() < foeCritRate(S0.luck) + fbc;
+        const d = flat ? 10 : Math.min(cap, Math.max(1, Math.round(raw * scale * (fcrit ? FOE_CRIT_MUL : 1))));
       /* ⚠️ 自分が受けた傷。誰の何の手かも残す */
       pushHist("take", s.turn, `${a.foeMoveName && a.foeMoveName[move] ? a.foeMoveName[move] : move} -${d}`);
         next.hp -= d;
         /* ⚠️ 連撃は一発ずつ数字を出す。まとめると軽く見える */
-        timers.current.push(setTimeout(() => pop("me", `-${d}`, "dmg"), k * 130));
+        timers.current.push(setTimeout(() => pop("me", `${fcrit ? a.foeCrit : ""}-${d}`, fcrit ? "crit" : "dmg"), k * 130));
+        /*
+          衝撃。⚠️ 最大HPに対する重さで三段階。
+            軽い（〜8%）小さく震える ／ 中（〜20%）強く揺れる ／ 重い（20%〜）画面ごと揺れて赤く閃く
+          ⚠️ 会心は一段重く扱う。同じ量でも「やられた」感が違う。
+        */
+        {
+          const rr = d / S0.maxHP;
+          let lv = rr >= 0.2 ? 3 : rr >= 0.08 ? 2 : 1;
+          if (fcrit) lv = Math.min(3, lv + 1);
+          timers.current.push(setTimeout(() => setJolt({ id: Date.now() + k, lv }), k * 130));
+        }
       });
       if (move === "heavy") { next.note = a.foeHeavy; fx("me", "burst"); }
       else if (move === "combo") next.note = a.foeCombo;
     });
     next.rota = rota; next.winding = winding;
+    /*
+      戦車の耐え。
+      ⚠️⚠️ 負け判定の手前で止めること。あとに置くと、1残す前に負けが確定する。
+      ★ どれだけ食らってもHPが1残る。★に関係なく同じ意味を持つ
+        （割合だけだと★12の一撃で落ちる）。
+      ⚠️ そのターン限り。turnNext に入っているので、次のターンには消えている。
+    */
+    if (s.turnNext && s.turnNext.endure && next.hp <= 0) {
+      next.hp = 1;
+      pushHist("fx", s.turn, a.fxName.chariot);
+    }
     if (next.hp <= 0) { setSt({ ...next, phase: "lose" }); return; }
     /* ⚠️ 継続を1つ減らすのはここだけ。何箇所かで減らすと倍の速さで切れる */
-    setSt({ ...next, phase: "idle", fx: tickFx(next.fx) });
+    /* ⚠️ 敵の強化も同じ所で減らす。別の所で減らすと、こちらの継続とずれる */
+    const fbN = {};
+    Object.entries(next.foeBuff || {}).forEach(([k, v]) => { if (v && v.t > 1) fbN[k] = { ...v, t: v.t - 1 }; });
+    setSt({ ...next, phase: "idle", fx: tickFx(next.fx), foeBuff: fbN,
+      /* ⚠️ 強化の間合いもここで減らす */
+      buffCD: Math.max(0, (next.buffCD || 0) - 1) });
   };
 
   /* 進行。⚠️ 一箇所で回す。場面ごとに別のタイマーを置くと止め損なう */
@@ -30723,8 +36416,17 @@ function BattlePanel({ lang, star, stageName, onEnd, theme, rank, zako, startHP,
           地図を歩いてきた続きに見えない。
         ⚠️ 影は背景側に描く。敵の中に入れると、倒れたとき影も傾く。
       */}
-      <div className="bt-field">
-        <BattleScene theme={themeKey} foes={setup.foes} star={setup.star} />
+      {/* ⚠️ 始める前は中身をぼかす。ボタンと敵が同じ層に見えると字が読めない */}
+      {/*
+        ⚠️ 悪魔が効いているあいだは場の色を落とす。数字もそれに従う。
+        ⚠️⚠️ st.fx.devil は無い。悪魔は turnNext.halveTurns で持っている
+          （階位を半分にする指定なので、継続ではなく次ターンの持ち物の側）。
+      */}
+      {/* ⚠️ 重い一撃だけ、画面の縁を赤く閃かせる。毎回だとうるさい */}
+      {jolt && jolt.lv >= 3 && <div key={`hurt${jolt.id}`} className="bt-hurt" aria-hidden="true" />}
+      <div className={`bt-field${st.phase === "ready" ? " ready" : ""}${((st.turnNext && st.turnNext.halveTurns > 0) || (st.next && st.next.halveTurns > 0)) ? " devil" : ""}`}>
+        <BattleScene theme={themeKey} foes={setup.foes} star={setup.star}
+          elems={mapElemsOf(stageName)} />
         {/*
           速さ。
           ⚠️ 戦場の右に重ねる。下に置くと、盤を見ている視野から外れる。
@@ -30755,6 +36457,47 @@ function BattlePanel({ lang, star, stageName, onEnd, theme, rank, zako, startHP,
         </button>
         </div>
 
+        {/*
+          始めると終わるの二つ。
+          ⚠️⚠️ 盤の下に置かないこと。札・自分のHP・継続・三つの畳みを
+            越えた先にあるので、押すたびにスクロールが要る。
+            雑魚を倒すたびに下まで送って「地図へ戻る」を探すことになっていた。
+          ★ 敵のいる画面に重ねる。戦いが始まる場所と終わる場所を同じにする。
+          ⚠️ 戦場の下端に置く。敵の足元より下なので、姿を隠さない。
+        */}
+        {st.phase === "ready" && (
+          <div className="bt-cta">
+            <button className="draw-btn adv-go" onClick={dealTurn}>
+              <span className="adv-go-shine" />
+              <Sparkles size={18} />{a.btStart}
+            </button>
+          </div>
+        )}
+        {/*
+          ⚠️⚠️ 主に勝ったときは「地図へ戻る」と書かないこと。
+            主を倒したのだから、戻る先は地図ではなく制覇の画面。
+            「地図へ戻る」を押させると、勝ったのに引き返す操作に見える
+            （実際そう見えていた）。
+          ⚠️ 雑魚に勝ったときは地図へ戻るで正しい。文言を分ける。
+          ⚠️ 盤を暗く伏せてから出すこと。敵の上に文字を重ねると読めない。
+        */}
+        {done && (
+          <div className={`bt-over${st.phase === "win" ? " win" : ""}`}>
+            <p className="adv-result-title">{st.phase === "win" ? a.btWin : a.btLose}</p>
+            <p className="adv-result-stage">{a.btTurn(st.turn)}</p>
+            {/*
+              ⚠️⚠️ 主に勝ったときに「地図へ戻る」と書かないこと。
+                主を倒したのだから、戻る先は地図ではない。
+              ★ 制覇そのものをここで押させる。画面を移してから
+                もう一度押させると、勝った手が二度に割れる。
+            */}
+            <button type="button" className={`adv-back${(!zako && st.phase === "win") ? " win" : ""}`}
+              onClick={() => onEnd && onEnd(st.phase === "win", st.hp, st.mult)}>
+              {(!zako && st.phase === "win") ? a.toConquer : a.btBack}
+            </button>
+          </div>
+        )}
+
         {/* 大アルカナ。⚠️ 戦場全体を覆う。敵の上だけだと、場が変わった感じが出ない */}
         {fxs.filter((x) => x.where === "all").map((x) => (
           x.kind === "blast" ? <FxBlast key={x.id} label={x.label} /> :
@@ -30767,8 +36510,21 @@ function BattlePanel({ lang, star, stageName, onEnd, theme, rank, zako, startHP,
           {st.foes.map((f, i) => {
             const res = foeResistOf(i, setup.foes);
             const ratio = Math.max(0, f.hp / f.max);
+            /*
+              ⚠️ 姿の大きさを行にも渡すこと。数字を出す高さをここから決める。
+                行に無いと、数字だけ姿と無関係な位置に出る。
+            */
+            const figPx = setup.sizes
+              ? Math.round(30 + 12 * (setup.sizes[i] || 1))
+              : (setup.foes <= 2 ? 62 : setup.foes === 3 ? 54 : 48);
             return (
-              <div key={i} className="bt-foe">
+              /*
+                ⚠️ 枠の縁を属性の色にする。どのタイプか一目で分かれば、
+                  得意な妨害・構え・回復の癖（TYPE_STYLE）を読んで備えられる。
+                ⚠️ 色は縁だけ。中まで塗ると敵の絵が沈む。
+              */
+              <div key={i} className={`bt-foe el-${foeElemOf(i, stageName)}${f.born ? " born" : ""}`}
+                style={{ "--fig": `${figPx}px`, "--elc2": ELEM_COLOR[foeElemOf(i, stageName)] }}>
                 {/* ⚠️ 溜めている敵は光らせる。次に大技が来ることを示す */}
                 {st.winding && st.winding[i] && <span className="bt-wind" aria-hidden="true" />}
                 {/* ⚠️ 構えの強さで色を分ける。同じ印だと、どの構えか読めない */}
@@ -30778,18 +36534,47 @@ function BattlePanel({ lang, star, stageName, onEnd, theme, rank, zako, startHP,
                 )}
                 {/* ⚠️ 大きさは編成から。特大は目に見えて大きく、小は小さく */}
                 {/* ⚠️ 主に印を付ける。どれを倒せば終わるのか分からないと狙いようがない */}
-                {setup.bossAt === i && <span className="bt-bosstag">{a.bossTag}</span>}
+                {st.bossAt === i && <span className="bt-bosstag">{a.bossTag}</span>}
                 {/* ⚠️ 起き上がった敵は見て分かるように。棒が効く相手だと示す */}
                 {f.revived && <span className="bt-revived" aria-hidden="true" />}
                 <FoeFigure res={res} ratio={ratio} down={f.hp <= 0}
+                  dying={f.hp <= 0}
                   hit={pops.some((p) => p.where === `foe${i}` && p.tone === "dmg")}
-                  size={setup.sizes
-                    ? Math.round(30 + 12 * (setup.sizes[i] || 1))
-                    : (setup.foes <= 2 ? 62 : setup.foes === 3 ? 54 : 48)} />
+                  size={figPx} />
                 <div className="bt-bar">
                   <span className="bt-bar-fill foe" style={{ width: `${ratio * 100}%` }} />
                 </div>
                 <span className="bt-hp">{Math.max(0, Math.round(f.hp))}</span>
+                {/*
+                  ⚠️⚠️ その体に掛かっているものを、その体のHPの下に出すこと。
+                    構えも腐食も轟音も、これまで画面のどこにも出ていなかった。
+                    「なぜ通らないのか」が分からないまま殴ることになっていた。
+                  ⚠️ 数は絞る。四つを超えると敵の絵より札のほうが大きくなる。
+                */}
+                {(() => {
+                  const tags = [];
+                  if (st.foeGuard && st.foeGuard[i] > 0) {
+                    tags.push([(st.foeThorn && st.foeThorn[i] > 1) ? "guardEdge"
+                      : st.foeGuard[i] >= 0.7 ? "guardHi" : "guard", null]);
+                  }
+                  if (st.winding && st.winding[i]) tags.push(["wind", null]);
+                  if (f.revived) tags.push(["revived", null]);
+                  /* ⚠️ 敵の強化は全員に掛かる。どの体の頭上にも出す */
+                  Object.entries(st.foeBuff || {}).forEach(([k, v]) => {
+                    if (v && v.t > 0) tags.push([`buff_${k}`, null]);
+                  });
+                  if (st.bossGuard > 0 && st.bossAt === i) tags.push(["shield", null]);
+                  if (!tags.length) return null;
+                  return (
+                    <span className="bt-foe-tags">
+                      {tags.slice(0, 4).map(([k]) => (
+                        <i key={k} className={`bt-foe-tag ${k}`}>
+                          {(a.foeTag && a.foeTag[k]) || (a.foeActName && a.foeActName[k]) || k}
+                        </i>
+                      ))}
+                    </span>
+                  );
+                })()}
                 {pops.filter((p) => p.where === `foe${i}`).map((p) => (
                   <span key={p.id} className={`bt-pop ${p.tone}`}>{p.text}</span>
                 ))}
@@ -30823,7 +36608,89 @@ function BattlePanel({ lang, star, stageName, onEnd, theme, rank, zako, startHP,
           と同じ場所に並べると、何を削るのか結び付かない。
         ★ 札の右下。押すたびに一段上がり、上限で0へ戻る。
       */}
+      {/*
+        敵の手。
+        ⚠️⚠️ 札の場所に出すこと。盤の上で光らせるだけでは、自分の技か敵の手か分からない。
+        ⚠️ 自分の札の上に重ねる（並べない）。並べると札の枠がずれて数が読めない。
+      */}
       <div className="bt-hand-wrap">
+      {/*
+        敵の手の枠。
+        ⚠️⚠️ 札の上に重ねないこと。自分の札が隠れて、何が残っているか読めない。
+        ★ 札の横に専用の枠を一つ置く。敵が動いていないときは心の形だけ。
+        ⚠️ 枠は常に置いておく。出たり消えたりすると札の並びがずれる。
+      */}
+      <div className="bt-side">
+      {/*
+        ⚠️⚠️ 枠の中に文字を入れないこと。絵が小さくなる。
+        ★ 絵は枠いっぱいに大きく。手の名前は枠の「下」に別の行として出す。
+      */}
+      {/*
+        ⚠️⚠️ 色で役割を分けること。
+          敵の通常攻撃＝朱 ／ 敵の特殊行動＝紫 ／ 自分の回復＝緑 ／ 自分の強化＝金。
+          全部同じ色だと、誰に何が起きたのか一瞬で読めない。
+      */}
+      {/*
+        ⚠️ 攻撃のときは枠そのものを揺らす。絵だけ動いても「殴られた」感じが出ない。
+        ⚠️ 揺れを出し直すには名前を交互に替える（a/b）。key で作り直すと絵が途切れる。
+      */}
+      <div className={`bt-slotx${foeAct
+        ? (["hit", "combo", "heavy", "sure"].includes(foeAct.move)
+          ? ` act atk shake-${foeAct.move === "hit"
+            ? (["ground", "rock"].includes(foeElemOf(foeAct.i, stageName)) ? "q"
+              : foeElemOf(foeAct.i, stageName) === "fight" ? "j" : "o")
+            : "o"}${foeAct.id % 2 ? "b" : ""} el-${foeElemOf(foeAct.i, stageName)}`
+          : foeAct.move === "wind" ? " act atk" : " act sp")
+        : ""}`}>
+        {/* ⚠️ ここに文字を置かない。絵だけ。手の名前は盤の下の一行に出る */}
+        {/*
+          ⚠️⚠️ viewBox に余白を持たせること。48×48ぴったりだと、動いた絵が
+            枠の外へ出て切れる（実際ほとんどが見切れていた）。
+          ★ 上下左右に10ずつ空ける。絵の座標はそのままでよい。
+        */}
+        {foeAct ? (
+          <svg key={foeAct.id} viewBox="-10 -10 68 68" className="bt-foeact-art" aria-hidden="true">
+            <FoeActArt move={foeAct.move} elem={foeElemOf(foeAct.i, stageName)} />
+          </svg>
+        ) : (
+          <svg viewBox="0 0 48 48" className="bt-heart" aria-hidden="true">
+            <path d="M24 42 C6 30 4 18 12 12 C18 7.5 22 11 24 15 C26 11 30 7.5 36 12 C44 18 42 30 24 42 Z" />
+          </svg>
+        )}
+      </div>
+      {/* ⚠️ 枠の下に一行。高さは常に取っておく（出入りで下の盾がずれない） */}
+      <span className={`bt-slotx-name${foeAct ? " on" : ""}`}>
+        {/* ⚠️ 属性を書かないこと。絵で分かるので、字にすると読む手間が増えるだけ */}
+        {foeAct ? ((a.foeMoveName && a.foeMoveName[foeAct.move]) || foeAct.move) : ""}
+      </span>
+      {/*
+        盾と消耗品。
+        ⚠️⚠️ 札の列に並べないこと。札の枠を横から圧迫して、札が細くなっていた。
+        ★ ハートの枠の下へ。守りの手段を一箇所にまとめる。
+      */}
+      <div className="bt-side-btns">
+        <button type="button" className={`bt-shield${shield ? " on" : ""}`}
+          onClick={() => setShield((v) => (v + 1) % (shieldMax(setup.cards) + 1))}>
+          <span className="bt-shield-mark" />{shield}
+        </button>
+        {/*
+          消耗する装備。
+          ⚠️⚠️ 盾の隣に置くこと。守りの手段は一箇所に集める。
+            持ち物の画面へ戻らないと使えないと、戦いの途中では誰も使わない。
+          ⚠️ 三つまで。四つ以上並べると幅が伸びて盤に被る（速さの▷で一度やった）。
+          ⚠️ 段を出す。同じ料理でも段で戻る量が違う。
+        */}
+        {uses.slice(0, 3).map((u) => (
+          <button key={u.id} type="button"
+            className={`bt-use ${u.key}${usedThisFight ? " spent" : ""}`}
+            disabled={usedThisFight}
+            onClick={() => spendItem(u)}
+            title={`${tierStars(u.tier || "bronze")}`}>
+            {u.key === "meal" ? "🍲" : u.key === "cure" ? "🧪" : "🔥"}
+          </button>
+        ))}
+      </div>
+      </div>
       <div className={`bt-hand${setup.cards >= 6 ? " two" : ""}`}
         style={setup.cards >= 6 ? { "--cols": Math.ceil(setup.cards / 2) } : undefined}>
         {st.hand.map((c, i) => (
@@ -30845,15 +36712,26 @@ function BattlePanel({ lang, star, stageName, onEnd, theme, rank, zako, startHP,
           </span>
         ))}
       </div>
-        <button type="button" className={`bt-shield${shield ? " on" : ""}`}
-          onClick={() => setShield((v) => (v + 1) % (shieldMax(setup.cards) + 1))}>
-          <span className="bt-shield-mark" />{shield}
-        </button>
       </div>
 
       {/* 自分 */}
-      <div className="bt-me">
-        <div className="bt-bar tall">
+      {/*
+        自分のHP。
+        ⚠️⚠️ 数字が減るだけにしないこと。スリルが無かった。
+        ★ 三つで手触りを作る。
+          ・残りで色が変わる（緑 → 黄 → 橙 → 赤。赤では鼓動する）
+          ・削られた跡を一瞬白く残してから縮める（どれだけ持っていかれたか目で分かる）
+          ・一撃の重さで揺れの強さが変わる（最大HPの何%か）
+        ⚠️ 揺れは帯と数字だけ。画面ぜんたいを揺らすのは重い一撃のときだけにする。
+      */}
+      {/* ⚠️ 色の境目は粘りの境目と同じ（50% / 25%）。食い違うと嘘になる */}
+      <div className={`bt-me hp-${hpBandOf(st.hp, S0.maxHP)}`}>
+        {/*
+          ⚠️⚠️ key で帯を作り直さないこと。作り直すと削れ跡（遅れて縮む白）が
+            新しい幅から始まって消える。揺れを出し直すには、名前を交互に替える（a/b）。
+        */}
+        <div className={`bt-bar tall${jolt ? ` jolt-${jolt.lv}${jolt.id % 2 ? "b" : ""}` : ""}`}>
+          <span className="bt-bar-lag" style={{ width: `${Math.max(0, (st.hp / S0.maxHP) * 100)}%` }} />
           <span className="bt-bar-fill me" style={{ width: `${Math.max(0, (st.hp / S0.maxHP) * 100)}%` }} />
         </div>
         {/*
@@ -30863,6 +36741,10 @@ function BattlePanel({ lang, star, stageName, onEnd, theme, rank, zako, startHP,
         */}
         <div className="bt-me-row">
           <span className="bt-hp">{Math.max(0, Math.round(st.hp))} / {S0.maxHP}</span>
+          {/* ⚠️ 粘っていることを数字で出す。見えない補正は無いのと同じ */}
+          {gritCutOf(st.hp, S0.maxHP) > 0 && (
+            <span className="bt-grit">{a.gritTag(Math.round(gritCutOf(st.hp, S0.maxHP) * 100))}</span>
+          )}
           {st.mult > 1.001 && <span className="bt-mult">×{st.mult.toFixed(2)}</span>}
         </div>
         {pops.filter((p) => p.where === "me").map((p) => (
@@ -30920,6 +36802,17 @@ function BattlePanel({ lang, star, stageName, onEnd, theme, rank, zako, startHP,
               {a.fxName[k]}<b>{st.fx[k]}</b>
             </button>
           ))}
+          {/*
+            ⚠️⚠️ 説明は押した札の直下に出すこと。
+              札は盤のすぐ下、説明は戦闘ログのさらに下にあったので、
+              押してから目で探すことになっていた。
+            ⚠️ 一つだけ。重ねて出すと盤が読めなくなる。
+            ⚠️ st.fx だけを見ないこと。力・世界・愚者・スート指定は turnNext に入るので、
+              押しても説明が出なかった（実際そうなっていた）。
+          */}
+          {fxOpen && (a.fxHelp && a.fxHelp[fxOpen]) && (
+            <p className="bt-fx-help">{a.fxHelp[fxOpen]}</p>
+          )}
         </div>
       )}
 
@@ -30991,11 +36884,6 @@ function BattlePanel({ lang, star, stageName, onEnd, theme, rank, zako, startHP,
       </details>
 
 
-      {/* ⚠️ 説明は一つだけ、札の下に出す。重ねて出すと盤が読めなくなる */}
-      {fxOpen && st.fx[fxOpen] > 0 && (
-        <p className="bt-fx-help">{a.fxHelp[fxOpen]}</p>
-      )}
-
       <p className="adv-legend">
         <span className="adv-legend-key">{a.btTurn(st.turn)}</span>
         {/* ⚠️ 動けないことを出す。札が全部灰色なだけでは理由が分からない */}
@@ -31014,29 +36902,6 @@ function BattlePanel({ lang, star, stageName, onEnd, theme, rank, zako, startHP,
         {st.note && <span className="adv-legend-key">{st.note}</span>}
       </p>
 
-      {st.phase === "ready" && (
-        <button className="draw-btn adv-go" onClick={dealTurn}>
-          <span className="adv-go-shine" />
-          <Sparkles size={18} />{a.btStart}
-        </button>
-      )}
-      {done && (
-        <div className={`adv-result${st.phase === "win" ? " win" : ""}`}>
-          <p className="adv-result-title">{st.phase === "win" ? a.btWin : a.btLose}</p>
-          <p className="adv-result-stage">{a.btTurn(st.turn)}</p>
-          {/*
-            ⚠️⚠️ 主に勝ったときは「地図へ戻る」と書かないこと。
-              主を倒したのだから、戻る先は地図ではなく制覇の画面。
-              「地図へ戻る」を押させると、勝ったのに引き返す操作に見える
-              （実際そう見えていた）。
-            ⚠️ 雑魚に勝ったときは地図へ戻るで正しい。文言を分ける。
-          */}
-          <button type="button" className="adv-back"
-            onClick={() => onEnd && onEnd(st.phase === "win", st.hp, st.mult)}>
-            {(!zako && st.phase === "win") ? a.toResult : a.btBack}
-          </button>
-        </div>
-      )}
     </div>
   );
 }
@@ -32181,6 +38046,1888 @@ function LegalPanel({ lang }) {
   ⚠️ 小MAPは入るたびに組み直す。同じ区分でも道が変わる。
   ⚠️ 名所の名前は地図に全部は出さない。8つ並べると必ず重なって見切れる。
 */
+/*
+  【装備の画面】
+  ★ 地図の三層（地方・県・区分の8つ）の一番下から開ける。
+    戦いに入る前ならどこからでも触れること ―― 戦闘中に替えさせない。
+  ⚠️⚠️ 枠は制覇した県の数で開く。拾った装備の強さでは開かないこと。
+    強い装備を拾った人だけ枠が増えると、差が二乗で開く。
+  ⚠️ 装着は入れ替えではなく付け外し。外す操作が無いと、
+    枠が埋まったあとに拾った一本を試せない。
+*/
+/*
+  持ち物の画面の上の切り替え（装備 ／ 宝箱）。
+  ⚠️⚠️ 画面を閉じずに行き来できること。宝箱で残したものをすぐ装備したいのに、
+    一度閉じて帯から開き直す必要があった。
+*/
+/*
+  【オプションの書き方】
+  ⚠️⚠️ 名前だけで効果が分かる言葉にすること。「万全」「会心」「目利き」「是正」のような
+    二字の呼び名は、何が起きるのか伝わらなかった。
+  ★ 「いつ／何が／どれだけ」を名前に入れる（例：HP9割以上のとき与ダメージ）。
+  ⚠️ 減るものは −、増えるものは ＋。単位は % か 回。
+*/
+const EQUIP_OPT_I18N = {
+  ja: {
+    reach: ["主までたどり着きやすさ", "+", "%"],
+    reviveCut: ["起き上がった敵のHP", "−", "%"],
+    foeInfo: ["敵のHPが数値で見える", "", ""],
+    drain: ["敵が回復した量を奪う", "+", "%"],
+    nullify: ["敵の妨害を打ち消す確率", "+", "%"],
+    soften: ["轟音・瘴気の効き", "−", "%"],
+    cycle: ["3の倍数のターンに受けるダメージ", "−", "%"],
+    seek: ["道中で札を引く回数", "+", "回"],
+    selfCut: ["逆位置の自傷ダメージ", "−", "%"],
+    twice: ["札が二回働く確率", "+", "%"],
+    regen: ["毎ターン回復（最大HPの）", "+", "%"],
+    lastStand: ["HP3割以下のとき与ダメージ", "+", "%"],
+    fullPower: ["HP9割以上のとき与ダメージ", "+", "%"],
+    reflect: ["受けたダメージを敵へ返す", "+", "%"],
+    pierce: ["敵の構えを無視する確率", "+", "%"],
+    solo: ["敵が1体のとき与ダメージ", "+", "%"],
+    crowd: ["敵が3体以上のとき与ダメージ", "+", "%"],
+    upright: ["逆位置が正位置に戻る確率", "+", "%"],
+    vsRevived: ["起き上がった敵へのダメージ", "+", "%"],
+    burstMul: ["必殺技の威力", "+", "%"],
+    majorRate: ["大アルカナが出る確率", "+", "%"],
+    atk: ["攻撃力（剣・棒）", "+", "%"],
+    def: ["受けるダメージ", "−", "%"],
+    sword: ["剣の威力", "+", "%"],
+    wand: ["棒の威力", "+", "%"],
+    cup: ["聖杯の回復量", "+", "%"],
+    coin: ["貨幣の倍率の伸び", "+", "%"],
+    crit: ["会心が出る確率", "+", "%"],
+    critMul: ["会心のダメージ", "+", "%"],
+    first: ["1〜3ターン目の与ダメージ", "+", "%"],
+    burst: ["必殺技の威力", "+", "%"],
+    body: ["最大HP", "+", "%"],
+    resRoar: ["轟音（倍率削り）を防ぐ確率", "+", "%"],
+    resRot: ["腐食（札が腐る）を防ぐ確率", "+", "%"],
+    resDread: ["波動（大アルカナ封じ）を防ぐ確率", "+", "%"],
+    resMiasma: ["瘴気（回復封じ）を防ぐ確率", "+", "%"],
+    resKill: ["殺気（必殺封じ）を防ぐ確率", "+", "%"],
+    box: ["宝箱マスが出る確率", "+", "%"],
+    eye: ["宝箱を開けるとき引く回数", "+", "回"],
+  },
+  en: {
+    reach: ["Chance to reach the boss", "+", "%"],
+    reviveCut: ["HP of revived foes", "−", "%"],
+    foeInfo: ["Shows foe HP as numbers", "", ""],
+    drain: ["Steal part of foe healing", "+", "%"],
+    nullify: ["Chance to cancel foe debuffs", "+", "%"],
+    soften: ["Roar and miasma strength", "−", "%"],
+    cycle: ["Damage taken on every 3rd turn", "−", "%"],
+    seek: ["Draws on the road", "+", ""],
+    selfCut: ["Self-damage from reversed cards", "−", "%"],
+    twice: ["Chance a card acts twice", "+", "%"],
+    regen: ["HP regen per turn (of max)", "+", "%"],
+    lastStand: ["Damage while HP ≤ 30%", "+", "%"],
+    fullPower: ["Damage while HP ≥ 90%", "+", "%"],
+    reflect: ["Reflect damage taken", "+", "%"],
+    pierce: ["Chance to ignore foe guard", "+", "%"],
+    solo: ["Damage vs a single foe", "+", "%"],
+    crowd: ["Damage vs 3+ foes", "+", "%"],
+    upright: ["Chance reversed turns upright", "+", "%"],
+    vsRevived: ["Damage vs revived foes", "+", "%"],
+    burstMul: ["Finisher power", "+", "%"],
+    majorRate: ["Major Arcana chance", "+", "%"],
+    atk: ["Attack (Swords & Wands)", "+", "%"],
+    def: ["Damage taken", "−", "%"],
+    sword: ["Swords power", "+", "%"],
+    wand: ["Wands power", "+", "%"],
+    cup: ["Cups healing", "+", "%"],
+    coin: ["Pentacles multiplier gain", "+", "%"],
+    crit: ["Critical chance", "+", "%"],
+    critMul: ["Critical damage", "+", "%"],
+    first: ["Damage on turns 1–3", "+", "%"],
+    burst: ["Finisher power", "+", "%"],
+    body: ["Max HP", "+", "%"],
+    resRoar: ["Chance to resist Roar", "+", "%"],
+    resRot: ["Chance to resist Rot", "+", "%"],
+    resDread: ["Chance to resist Despair", "+", "%"],
+    resMiasma: ["Chance to resist Miasma", "+", "%"],
+    resKill: ["Chance to resist Killing intent", "+", "%"],
+    box: ["Chest square chance", "+", "%"],
+    eye: ["Draws when opening a chest", "+", ""],
+  },
+};
+/*
+  端的な呼び名（🎓で切り替え）。
+  ★ 慣れた人向け。「聖杯 +12%」「会心率」「殺気耐性」のように一語で済ませる。
+  ⚠️ 詳しい呼び名（EQUIP_OPT_I18N）と一対一にすること。片方にしか無い効果を作らない。
+*/
+const EQUIP_OPT_SHORT = {
+  ja: {
+    reach: "到達率", reviveCut: "復活HP減", foeInfo: "敵HP表示", drain: "吸収",
+    nullify: "妨害無効", soften: "轟音・瘴気軽減", cycle: "3T毎被ダメ減", seek: "道中ドロー",
+    selfCut: "自傷軽減", twice: "二回発動", regen: "リジェネ", lastStand: "低HP時攻撃",
+    fullPower: "高HP時攻撃", reflect: "反射", pierce: "構え貫通", solo: "単体戦攻撃",
+    crowd: "多体戦攻撃", upright: "正位置化", vsRevived: "復活特攻", burstMul: "必殺",
+    majorRate: "大アルカナ率",
+    atk: "攻撃", def: "防御", sword: "剣", wand: "棒", cup: "聖杯", coin: "貨幣",
+    crit: "会心率", critMul: "会心ダメ", first: "先制", burst: "必殺", body: "HP",
+    resRoar: "轟音耐性", resRot: "腐食耐性", resDread: "波動耐性", resMiasma: "瘴気耐性",
+    resKill: "殺気耐性", box: "宝箱率", eye: "装備のレア率UP",
+  },
+  en: {
+    reach: "Reach", reviveCut: "Revive HP−", foeInfo: "Foe HP", drain: "Drain",
+    nullify: "Nullify", soften: "Roar/Miasma−", cycle: "3rd-turn guard", seek: "Road draws",
+    selfCut: "Self-dmg−", twice: "Double act", regen: "Regen", lastStand: "Low-HP atk",
+    fullPower: "High-HP atk", reflect: "Reflect", pierce: "Pierce", solo: "Solo atk",
+    crowd: "Crowd atk", upright: "Upright", vsRevived: "Vs revived", burstMul: "Finisher",
+    majorRate: "Major rate",
+    atk: "ATK", def: "DEF", sword: "Swords", wand: "Wands", cup: "Cups", coin: "Pentacles",
+    crit: "Crit rate", critMul: "Crit dmg", first: "Opener", burst: "Finisher", body: "HP",
+    resRoar: "Roar res", resRot: "Rot res", resDread: "Despair res", resMiasma: "Miasma res",
+    resKill: "Intent res", box: "Chest rate", eye: "Gear rarity up",
+  },
+};
+const LS_EQ_SHORT = "tarot_eq_short";
+function loadEqShort() {
+  try { return localStorage.getItem(LS_EQ_SHORT) === "1"; } catch { return false; }
+}
+/*
+  端的表示の切り替え。
+  ⚠️⚠️ 一つ押したら全部の装備の書き方が変わること。画面ごと・一本ごとにばらばらだと混乱する。
+  ★ 保存して、画面を開き直しても続くようにする。
+*/
+function useEqShort() {
+  const [v, setV] = useState(loadEqShort);
+  useEffect(() => {
+    const f = () => setV(loadEqShort());
+    window.addEventListener("eqshort", f);
+    return () => window.removeEventListener("eqshort", f);
+  }, []);
+  const toggle = () => {
+    try { localStorage.setItem(LS_EQ_SHORT, loadEqShort() ? "0" : "1"); } catch (e) { /* 残せなくても切り替わる */ }
+    window.dispatchEvent(new Event("eqshort"));
+  };
+  return [v, toggle];
+}
+function EqShortBtn({ lang }) {
+  const a = advT(lang);
+  const [v, toggle] = useEqShort();
+  return (
+    <button type="button" className={`eq-cap${v ? " on" : ""}`}
+      aria-label={a.eqShortLabel} title={a.eqShortLabel}
+      onClick={(e) => { e.stopPropagation(); toggle(); }}>🎓</button>
+  );
+}
+const RANK_SHORT = { 1: "A", 11: "小姓", 12: "騎士", 13: "女王", 14: "王" };
+/* 一つのオプションを文にする。⚠️ 札の効果（cardMul）だけ形が違う：スートと階位を名前に入れる */
+function equipOptText(key, val, lang, it, short) {
+  const d = EQUIP_OPT_I18N[lang] || EQUIP_OPT_I18N.en;
+  /* ⚠️ 端的表示。符号と単位は詳しい表示と同じものを使う（値の読み方を変えない） */
+  if (short) {
+    const sd = EQUIP_OPT_SHORT[lang] || EQUIP_OPT_SHORT.en;
+    if (key === "cardMul" && it && it.spec) {
+      const a = advT(lang);
+      const su = it.spec.suits.map((k) => (a.suit && a.suit[k]) || k).join("・");
+      return lang === "ja" ? `${su}の効果 ×${it.spec.mul}` : `${su} effect ×${it.spec.mul}`;
+    }
+    const e = d[key];
+    const nm = sd[key] || key;
+    if (!e || !e[1]) return nm;
+    return `${nm} ${e[1]}${val}${e[2]}`;
+  }
+  if (key === "cardMul" && it && it.spec) {
+    const a = advT(lang);
+    const su = it.spec.suits.map((k) => (a.suit && a.suit[k]) || k).join("・");
+    const rk = it.spec.ranks.length >= 14 ? (lang === "ja" ? "全階位" : "all ranks")
+      : it.spec.ranks.map((r) => RANK_SHORT[r] || String(r)).join("・");
+    return lang === "ja" ? `${su}の札（${rk}）の効果 ×${it.spec.mul}`
+      : `${su} cards (${rk}) effect ×${it.spec.mul}`;
+  }
+  if (key === "twice" && it && it.suit) {
+    const a = advT(lang);
+    const su = (a.suit && a.suit[it.suit]) || it.suit;
+    return lang === "ja" ? `${su}の札が二回働く確率 +${val}%` : `${su} acts twice +${val}%`;
+  }
+  const e = d[key];
+  if (!e) return `${key} +${val}`;
+  if (!e[1]) return e[0];
+  return `${e[0]} ${e[1]}${val}${e[2]}`;
+}
+/*
+  メインとサブを二行で出す。
+  ⚠️⚠️ どちらがメインか分からない書き方をしないこと。見出しを必ず付ける。
+  ⚠️ サブが無いときは「なし」と書く。黙って消すと「付け忘れ」に見える。
+*/
+function EquipOpts({ it, lang }) {
+  const a = advT(lang);
+  const [short] = useEqShort();
+  if (!it) return null;
+  if (!it.main) {
+    /* 消耗品。⚠️ メイン・サブを持たない。何に使うかを一行で出す */
+    return <i className="eq-opt">{(a.useDesc && a.useDesc[it.key]) || ""}</i>;
+  }
+  const subs = (it.subs || []).map((x) => equipOptText(x.key, x.val, lang, it, short));
+  return (
+    <span className="eq-opts">
+      <i className="eq-opt main">{short ? a.optMainS : a.optMain}{equipOptText(it.main, it.val, lang, it, short)}</i>
+      <i className="eq-opt sub">{short ? a.optSubS : a.optSub}{subs.length ? subs.join(" ／ ") : a.optNone}</i>
+    </span>
+  );
+}
+function GearTabs({ lang, now, onSwitch }) {
+  const a = advT(lang);
+  /* ⚠️ 並びは流れの順（宝箱 → 倉庫 → 手持 → 装備）。順が崩れると行き先が読めない */
+  return (
+    <div className="gt-tabs">
+      {[["box", a.boxTitle], ["stash", a.stashTitle], ["hand", a.handTitle],
+        ["equip", a.equipTitle]].map(([k, nm]) => (
+        <button key={k} type="button" className={`gt-tab${now === k ? " on" : ""}`}
+          onClick={() => now !== k && onSwitch && onSwitch(k)}>{nm}</button>
+      ))}
+    </div>
+  );
+}
+/*
+  倉庫と手持の一覧（共通）。
+  ★ 系統ごとの横の切り替え＋格子。一つずつ移すボタンだけを持つ。
+  ⚠️⚠️ 手持にはゴミ箱を出さないこと。主に使う物なので、うっかり捨てる事故を作らない。
+    捨てられるのは宝箱だけ。
+*/
+function GearListPanel({ lang, onClose, onSwitch, which }) {
+  const a = advT(lang);
+  const [eq, setEq] = useState(() => loadEquip());
+  const toStash = which === "hand";
+  const all = [...(eq.owned || []), ...(eq.uses || [])]
+    .filter((x) => (which === "stash" ? !!x.stash : !x.stash));
+  const on = eq.on || [];
+  const dict = EQUIP_KIND_I18N[lang] || EQUIP_KIND_I18N.en;
+  const pocket = {};
+  EQUIP_POCKETS.forEach((k) => { pocket[k] = []; });
+  /* ⚠️ 段の高い順に並べる。整理するときは良い物から見たい */
+  all.slice().sort((x, y) => (lmcTierOf(y.tier || "bronze").star - lmcTierOf(x.tier || "bronze").star))
+    .forEach((it) => { pocket[equipPocketOf(it)].push(it); });
+  const [pk, setPk] = useState(() => EQUIP_POCKETS.find((k) => pocket[k].length) || "amp");
+  const move = (id) => { setStash(id, toStash); setEq(loadEquip()); };
+  return (
+    <div className="eq-sheet">
+      <div className="eq-sheet-head">
+        <GearTabs lang={lang} now={which} onSwitch={onSwitch} />
+        <span className="eq-slot-n">{all.length}</span>
+        <button type="button" className="adv-back" onClick={onClose}>{a.close}</button>
+      </div>
+      <p className="eq-sum">{which === "stash" ? a.stashNote : a.handNote}</p>
+      <div className="eq-pk-tabs">
+        {EQUIP_POCKETS.map((k) => (
+          <button key={k} type="button" className={`eq-pk${pk === k ? " on" : ""}`}
+            onClick={() => setPk(k)}>
+            {a.eqPocket[k]}<b>{pocket[k].length}</b>
+          </button>
+        ))}
+      </div>
+      {!pocket[pk].length && <p className="eq-empty">{a.equipNone}</p>}
+      <div className="eq-grid">
+        {pocket[pk].map((it) => {
+          const at = on.indexOf(it.id);
+          return (
+            <div key={it.id} className={`eq-cell${at >= 0 ? " on" : ""}`}>
+              {at >= 0 && <span className="eq-cell-at">{at + 1}</span>}
+              <EquipIcon item={it} size={46} />
+              <b className="eq-name-row c">
+                {it.main ? equipName(it, lang) : (dict[equipKindOf(it)] || "")}
+                <EqShortBtn lang={lang} />
+              </b>
+              <em>{tierStars(it.tier || "bronze")}</em>
+              <EquipOpts it={it} lang={lang} />
+              <button type="button" className="eq-keep sm" onClick={() => move(it.id)}>
+                {toStash ? a.toStash : a.toHand}
+              </button>
+            </div>
+          );
+        })}
+      </div>
+    </div>
+  );
+}
+function EquipPanel({ lang, onClose, onSwitch }) {
+  const a = advT(lang);
+  const [eq, setEq] = useState(() => loadEquip());
+  /*
+    ⚠️⚠️ 枠は12まで番号付きで全部見せること。開いていない枠も鍵付きで並べる。
+      開いている枠だけだと、あと何枠あるのか・どこまで伸びるのかが分からない。
+  */
+  const open = skillBonus().slots;
+  /* ⚠️ 装備できるのは手持だけ。倉庫の物は並べない（保留の物で迷わせない） */
+  const all = [...(eq.owned || []), ...(eq.uses || [])].filter((x) => !x.stash);
+  const byId = {}; all.forEach((x) => { byId[x.id] = x; });
+  /*
+    枠の中身。
+    ⚠️ 位置を持たせること（空きは null）。詰めて持つと、3番に置いたつもりが1番へ寄る。
+    ⚠️ 消耗品を使い切った跡（持ち物に無いid）は空きとして扱う。
+  */
+  const slotsOf = (e) => {
+    const on = (e.on || []).slice(0, EQUIP_SLOT_MAX);
+    const out = [];
+    for (let i = 0; i < EQUIP_SLOT_MAX; i++) out.push(on[i] && byId[on[i]] ? on[i] : null);
+    return out;
+  };
+  const cur = slotsOf(eq);
+  const save = (arr) => { const next = { ...eq, on: arr }; setEq(next); saveEquip(next); };
+  /* 置く。⚠️ 置き先に何かあれば入れ替える（元の場所へ戻す）。鍵の枠には置かない */
+  const placeAt = (id, to) => {
+    if (to < 0 || to >= open) return;
+    const arr = cur.slice();
+    const from = arr.indexOf(id);
+    const there = arr[to];
+    if (from >= 0) arr[from] = there;   /* 枠どうしなら入れ替え */
+    arr[to] = id;
+    save(arr);
+  };
+  const removeAt = (i) => { const arr = cur.slice(); arr[i] = null; save(arr); };
+  /* タップで付ける。⚠️ 枠を選んでいればそこへ、無ければ空いている最初の枠へ */
+  const [sel, setSel] = useState(null);
+  const tapItem = (id) => {
+    const at = cur.indexOf(id);
+    if (at >= 0 && sel === null) { removeAt(at); return; }
+    if (sel !== null) { placeAt(id, sel); setSel(null); return; }
+    const empty = cur.findIndex((x, i) => i < open && !x);
+    if (empty >= 0) placeAt(id, empty);
+  };
+  const tapSlot = (i) => {
+    if (i >= open) return;
+    /* ⚠️ 選んでいる枠をもう一度押したら外す。二度押しで外れる、が覚えやすい */
+    if (sel === i) { if (cur[i]) removeAt(i); setSel(null); return; }
+    setSel(i);
+  };
+  /*
+    長押しで掴んで、枠へ落とす。
+    ⚠️⚠️ 掴んでいるあいだは画面を動かさないこと。指で引いた瞬間に一覧が流れて、
+      落とす先がずれる。touchmove を止める（passive: false）。
+    ⚠️ 短く触れただけならタップとして扱う。掴むのは 220ms 押し続けたときだけ。
+    ⚠️ マウスは少し動かしたら即座に掴む（長押しを待たせない）。
+  */
+  const [drag, setDrag] = useState(null);
+  const press = useRef(null);
+  /* ⚠️ 落とすときは ref から読む。state の更新関数の中で保存すると二度走ることがある */
+  const dragRef = useRef(null);
+  dragRef.current = drag;
+  const dragging = !!drag;
+  useEffect(() => {
+    if (!dragging) return undefined;
+    const move = (e) => {
+      const p = e.touches ? e.touches[0] : e;
+      setDrag((d) => (d ? { ...d, x: p.clientX, y: p.clientY } : d));
+    };
+    const stopScroll = (e) => { e.preventDefault(); };
+    const up = (e) => {
+      const p = e.changedTouches ? e.changedTouches[0] : e;
+      const el = document.elementFromPoint(p.clientX, p.clientY);
+      const slotEl = el && el.closest && el.closest("[data-slot]");
+      const d = dragRef.current;
+      if (d && slotEl) placeAt(d.id, Number(slotEl.getAttribute("data-slot")));
+      setDrag(null);
+    };
+    window.addEventListener("pointermove", move);
+    window.addEventListener("pointerup", up);
+    window.addEventListener("touchmove", stopScroll, { passive: false });
+    return () => {
+      window.removeEventListener("pointermove", move);
+      window.removeEventListener("pointerup", up);
+      window.removeEventListener("touchmove", stopScroll);
+    };
+  }, [dragging]);
+  const onDown = (id) => (e) => {
+    const x = e.clientX, y = e.clientY;
+    const mouse = e.pointerType === "mouse";
+    press.current = { id, x, y, t: setTimeout(() => {
+      press.current = null; setDrag({ id, x, y });
+    }, 220), mouse };
+  };
+  const onMoveDown = (e) => {
+    const p = press.current;
+    if (!p || !p.mouse) return;
+    if (Math.hypot(e.clientX - p.x, e.clientY - p.y) > 6) {
+      clearTimeout(p.t); press.current = null; setDrag({ id: p.id, x: e.clientX, y: e.clientY });
+    }
+  };
+  const onUpItem = (id) => () => {
+    const p = press.current;
+    if (!p) return;   /* 掴んだあと（ドラッグ）ならタップにしない */
+    clearTimeout(p.t); press.current = null;
+    tapItem(id);
+  };
+  const lab = EQUIP_LABEL_I18N[lang] || EQUIP_LABEL_I18N.en;
+  const dict = EQUIP_KIND_I18N[lang] || EQUIP_KIND_I18N.en;
+  const bonus = equipBonus(equippedGear({ ...eq, on: cur }));
+  /* ⚠️ 合計も同じ書き方にする。一覧と合計で呼び名が違うと別の効果に見える */
+  const lines2 = Object.entries(bonus)
+    .filter(([k, v]) => typeof v === "number" && v > 0 && EQUIP_OPT_I18N.ja[k])
+    .map(([k, v]) => equipOptText(k, Math.round(v * 10) / 10, lang));
+  /*
+    ポケット。
+    ⚠️⚠️ 縦に全部並べないこと。装備が増えると、下の系統まで延々と送ることになる。
+    ★ 横の切り替えにして、一度に一つの系統だけを見せる。
+  */
+  const pocket = {};
+  EQUIP_POCKETS.forEach((k) => { pocket[k] = []; });
+  all.forEach((it) => { pocket[equipPocketOf(it)].push(it); });
+  const [pk, setPk] = useState(() => EQUIP_POCKETS.find((k) => pocket[k].length) || "amp");
+  const nameOf = (it) => (it.main ? equipName(it, lang) : (dict[equipKindOf(it)] || ""));
+  const dragIt = drag ? byId[drag.id] : null;
+  return (
+    <div className="eq-sheet">
+      <div className="eq-sheet-head">
+        <GearTabs lang={lang} now="equip" onSwitch={onSwitch} />
+        <span className="eq-slot-n">{cur.filter(Boolean).length} / {open}</span>
+        <button type="button" className="adv-back" onClick={onClose}>{a.close}</button>
+      </div>
+
+      {/* ===== 装備スロット（1〜12） ===== */}
+      <p className="eq-sub">{a.eqSlots}<span className="eq-slot-n">{a.eqHow}</span></p>
+      <div className="eq-slots12">
+        {cur.map((id, i) => {
+          const it = id ? byId[id] : null;
+          const locked = i >= open;
+          return (
+            <button key={i} type="button" data-slot={locked ? undefined : i}
+              className={`eq-s12${locked ? " lock" : it ? " full" : " empty"}${sel === i ? " sel" : ""}`}
+              onClick={() => tapSlot(i)}>
+              <u className="eq-s12-no">{i + 1}</u>
+              {locked ? <i className="eq-s12-lock">🔒</i>
+                : it ? <EquipIcon item={it} size={40} />
+                : <i className="eq-s12-empty">{a.eqEmpty}</i>}
+            </button>
+          );
+        })}
+      </div>
+      {!!lines2.length && <p className="eq-sum">{lines2.join(" ／ ")}</p>}
+
+      {/* ===== ポケット（横の切り替え） ===== */}
+      <div className="eq-pk-tabs">
+        {EQUIP_POCKETS.map((k) => (
+          <button key={k} type="button" className={`eq-pk${pk === k ? " on" : ""}`}
+            onClick={() => setPk(k)}>
+            {a.eqPocket[k]}<b>{pocket[k].length}</b>
+          </button>
+        ))}
+      </div>
+      {!pocket[pk].length && <p className="eq-empty">{a.equipNone}</p>}
+      <div className="eq-grid">
+        {pocket[pk].map((it) => {
+          const at = cur.indexOf(it.id);
+          return (
+            <div key={it.id}
+              className={`eq-cell${at >= 0 ? " on" : ""}${drag && drag.id === it.id ? " held" : ""}`}
+              onPointerDown={onDown(it.id)} onPointerMove={onMoveDown}
+              onPointerUp={onUpItem(it.id)}
+              onPointerCancel={() => { if (press.current) clearTimeout(press.current.t); press.current = null; }}
+              onContextMenu={(e) => e.preventDefault()}>
+              {/* ⚠️ 何番の枠に入っているかを出す。「装備中」だけでは場所が分からない */}
+              {at >= 0 && <span className="eq-cell-at">{at + 1}</span>}
+              <EquipIcon item={it} size={46} />
+              <b className="eq-name-row c">
+                {nameOf(it)}
+                {/* ⚠️ 押しても装着に取られないこと（掴む・タップの判定から外す） */}
+                <span onPointerDown={(e) => e.stopPropagation()} onPointerUp={(e) => e.stopPropagation()}>
+                  <EqShortBtn lang={lang} />
+                </span>
+              </b>
+              <em>{tierStars(it.tier || "bronze")}</em>
+              <EquipOpts it={it} lang={lang} />
+            </div>
+          );
+        })}
+      </div>
+      {/* 掴んでいる絵。⚠️ 判定を持たせない。持たせると落とす先の枠を拾えない */}
+      {dragIt && (
+        <div className="eq-ghost" style={{ left: drag.x, top: drag.y }}>
+          <EquipIcon item={dragIt} size={52} />
+        </div>
+      )}
+    </div>
+  );
+}
+/*
+  【宝箱の画面】
+  ★ 古い順に並べる。上にあるものほど先に消える。
+  ⚠️⚠️ 捨てるボタンを置かないこと。捨てる作業を無くすための仕組みなので、
+    置いた時点で元の負担に戻る。残すものだけを選ぶ。
+  ⚠️ 残りいくつで溢れるかを必ず出す。黙って消えるのと、
+    消えると分かっていて消えるのは別物。
+*/
+function BoxPanel({ lang, onClose, onSwitch }) {
+  const a = advT(lang);
+  const [eq, setEq] = useState(() => loadEquip());
+  /*
+    開けている最中。
+    ⚠️⚠️ 引いた結果を一度に出さないこと。「段の数だけ引いて最良を採る」は、
+      一回ずつ見せて初めて遊びになる。更新のたびに段が上がる梯子が芯。
+    ⚠️ 開けているあいだは他を押させない。途中で閉じられると、
+      引いた結果だけ消えて箱も戻らない。
+  */
+  const [open, setOpen] = useState(null);   /* { seq, item, chest, at } */
+  const timers = useRef([]);
+  useEffect(() => () => timers.current.forEach(clearTimeout), []);
+  const box = eq.box || [];
+  const chests = eq.chests || [];
+  const dict = EQUIP_KIND_I18N[lang] || EQUIP_KIND_I18N.en;
+  const lab = EQUIP_LABEL_I18N[lang] || EQUIP_LABEL_I18N.en;
+
+  const doOpen = (id) => {
+    if (open) return;
+    const bonus = equipBonus(equippedGear(eq));
+    const r = openChest(id, Math.round(bonus.eye || 0));
+    if (!r) return;
+    setEq(loadEquip());
+    setOpen({ ...r, at: 0 });
+    /* ⚠️ 一回ぶん 260ms。速いと梯子が読めず、遅いと待たされる */
+    r.seq.forEach((_, i) => {
+      timers.current.push(setTimeout(() => setOpen((v) => (v ? { ...v, at: i + 1 } : v)), 260 * (i + 1)));
+    });
+  };
+  const keep = (id) => { keepFromBox(id); setEq(loadEquip()); };
+  /* ⚠️ 捨てる前に必ず確かめる。一度押しただけで消えると取り返しがつかない */
+  const [trash, setTrash] = useState(null);
+  const doTrash = () => { if (trash) discardFromBox(trash.id); setTrash(null); setEq(loadEquip()); };
+
+  /* 段ごとにまとめる。⚠️ 高い順。押すのはたいてい良い箱から */
+  const byTier = {};
+  /* ⚠️ ★13以上は段ではなく hi でまとめる。ジェネシスの箱と混ぜない */
+  chests.forEach((c) => {
+    const k = c.hi ? `hi${c.hi}` : c.tier;
+    (byTier[k] = byTier[k] || []).push(c);
+  });
+  const rankOf = (k) => (byTier[k][0].hi || lmcTierOf(byTier[k][0].tier).star);
+  const tiers = Object.keys(byTier).sort((x, y) => rankOf(y) - rankOf(x));
+
+  return (
+    <div className="eq-sheet">
+      <div className="eq-sheet-head">
+        <GearTabs lang={lang} now="box" onSwitch={onSwitch} />
+        <button type="button" className="adv-back" onClick={onClose}>{a.close}</button>
+      </div>
+
+      {/* ===== 開けている最中 ===== */}
+      {open && (() => {
+        const shown = open.seq.slice(0, open.at);
+        let best = 0; const marks = shown.map((t) => {
+          const st = lmcTierOf(t).star; const up = st > best; if (up) best = st;
+          return { t, st, up };
+        });
+        const done = open.at >= open.seq.length;
+        return (
+          <div className="cb-open">
+            <p className="cb-count">{a.boxDraw(open.at, open.seq.length)}</p>
+            {/* ⚠️ 引いた順に並べる。更新した回だけ光らせる ―― そこが梯子の段 */}
+            <div className="cb-seq">
+              {marks.map((m, i) => (
+                <i key={i} className={`cb-pip${m.up ? " up" : ""}`}
+                  style={{ height: `${10 + m.st * 7}px`,
+                    background: EQ_TIER_COLOR[m.t] || "#B0764A" }} />
+              ))}
+            </div>
+            {done && (
+              <div className="cb-got">
+                {/* ⚠️ 下限が効いたことを書く。書かないと「運が良かった」と区別が付かない */}
+                {open.floor && (
+                  <p className="cb-floor">{a.chestFloor(
+                    (EQUIP_KIND_I18N[lang] ? "" : "") + tierStars(open.floor))}</p>
+                )}
+                {(open.items || [open.item]).length > 1 && (
+                  <p className="cb-twin">{a.chestTwin}</p>
+                )}
+                <div className="cb-items">
+                  {(open.items || [open.item]).map((it) => (
+                    <span key={it.id} className="cb-item">
+                      <EquipIcon item={it} size={72} />
+                      <b>{it.main ? equipName(it, lang) : (dict[equipKindOf(it)] || "")}</b>
+                      <em>{tierStars(it.tier)}</em>
+                      <EquipOpts it={it} lang={lang} />
+                    </span>
+                  ))}
+                </div>
+                <button type="button" className="adv-back win"
+                  onClick={() => setOpen(null)}>{a.close}</button>
+              </div>
+            )}
+          </div>
+        );
+      })()}
+
+      {trash && (
+        <div className="eq-confirm" onClick={() => setTrash(null)}>
+          <div className="eq-confirm-in" onClick={(e) => e.stopPropagation()}>
+            <p>{a.trashAsk}</p>
+            <b>{trash.main ? equipName(trash, lang) : (dict[equipKindOf(trash)] || "")}</b>
+            <div className="eq-confirm-btns">
+              <button type="button" className="adv-back" onClick={() => setTrash(null)}>{a.cancel}</button>
+              <button type="button" className="adv-back danger" onClick={doTrash}>{a.trashYes}</button>
+            </div>
+          </div>
+        </div>
+      )}
+      {/* ===== 未開封の箱 ===== */}
+      <p className="eq-sub">{a.boxSealed} <span className="eq-slot-n">{chests.length} / {EQUIP_CHEST_MAX}</span></p>
+      {/* ⚠️ 何が起きるか先に書く。開けてから知らせると、取っておく判断ができない */}
+      <p className="eq-sum">{a.boxSealedNote}</p>
+      {!chests.length && <p className="eq-empty">{a.boxNoChest}</p>}
+      <div className="cb-grid">
+        {tiers.map((t) => (
+          <button key={t} type="button" className="cb-chest" disabled={!!open}
+            onClick={() => doOpen(byTier[t][0].id)}>
+            <EquipIcon item={{ tier: byTier[t][0].tier, key: "chest" }} size={52} />
+            {/* ⚠️ ★13以上は12段の名前を持たない。★の数ではなく数字で出す */}
+            <b>{byTier[t][0].hi ? `★${byTier[t][0].hi}` : tierStars(t)}</b>
+            <em>×{byTier[t].length}</em>
+          </button>
+        ))}
+      </div>
+
+      {/* ===== 開けた装備 ===== */}
+      <p className="eq-sub">{a.boxOpened} <span className="eq-slot-n">{box.length} / {EQUIP_BOX_MAX}</span></p>
+      <p className="eq-sum">{a.boxNote(Math.max(0, EQUIP_BOX_MAX - box.length))}</p>
+      {!box.length && <p className="eq-empty">{a.boxNone}</p>}
+      <div className="eq-list">
+        {box.map((it, i) => {
+          const soon = i < Math.max(0, box.length - (EQUIP_BOX_MAX - 3));
+          return (
+            <div key={it.id} className={`eq-row box${soon ? " soon" : ""}`}>
+              <EquipIcon item={it} size={44} />
+              <span className="eq-row-body">
+                <b className="eq-name-row">
+                  {it.main ? equipName(it, lang) : (dict[equipKindOf(it)] || "")}
+                  {/* ⚠️ ゴミ箱は名前の横。押すと確かめてから捨てる。手持には出さない */}
+                  <button type="button" className="eq-trash" aria-label={a.trash}
+                    onClick={() => setTrash(it)}>🗑</button>
+                  <EqShortBtn lang={lang} />
+                </b>
+                <em>{tierStars(it.tier || "bronze")}</em>
+                {/* ⚠️ メインを必ず出す。出していなかったので「何も付いていない」に見えた */}
+                <EquipOpts it={it} lang={lang} />
+              </span>
+              <button type="button" className="eq-keep" onClick={() => keep(it.id)}>
+                {a.toStash}
+              </button>
+            </div>
+          );
+        })}
+      </div>
+    </div>
+  );
+}
+/*
+  【スキルツリーの画面】
+  ★ 幹ごとに縦に並べる。前提が済んでいないものは触れない。
+  ⚠️⚠️ 何が欠けているかを見せること。「まだ使えない」が見えて初めて、
+    開けたときに成長が実感される。取れるものだけ並べると、
+    最初から全部持っていたのと変わらない。
+  ⚠️ 取り消しは置かない。振り直せると、選ぶという行為が消える。
+*/
+/*
+  十二宮の記号。
+  ⚠️ ★1〜★12 の文字よりこちらを使う。小さく並べられて、
+    シートの中身（星座）と一致する。
+*/
+const ZODIAC_MARK = ["♈", "♉", "♊", "♋", "♌", "♍", "♎", "♏", "♐", "♑", "♒", "♓"];
+/*
+  シートの色。
+  ⚠️⚠️ 軌跡と輪は、そのシートで一色にすること。
+    幹ごとに色を変えると、一つの星座が六色にも八色にも割れて、
+    どこからどこまでが一つの図なのか読めない。
+  ★ 牡羊から魚まで、星座ごとに一色を持たせる。
+  ⚠️ 紺は暗い空に沈む。名前は紺のまま、明度だけ上げてある。
+*/
+const ZODIAC_COLOR = [
+  "#E03A3A", /* ★1  牡羊   赤       */
+  "#3FBF6A", /* ★2  牡牛   緑       */
+  "#E8D24A", /* ★3  双子   黄       */
+  "#C9D2DC", /* ★4  蟹     銀       */
+  "#F0954A", /* ★5  獅子   橙       */
+  "#4A63C8", /* ★6  乙女   紺       */
+  "#F06A9A", /* ★7  天秤   ピンク   */
+  "#D63AC8", /* ★8  蠍     マゼンタ */
+  "#8A4FD0", /* ★9  射手   紫       */
+  "#A0703A", /* ★10 山羊   茶       */
+  "#4FD2F5", /* ★11 水瓶   水色     */
+  "#9ACD32", /* ★12 魚     黄緑     */
+];
+/*
+  背景の微星。
+  ⚠️⚠️ 乱数で置かないこと。開くたびに星空が変わると落ち着かない。
+  ★ シート番号から決まる並びにする。同じ★なら毎回同じ空。
+*/
+function skyDust(sheet) {
+  const out = [];
+  let h = 2166136261 ^ sheet;
+  for (let i = 0; i < 70; i++) {
+    h = Math.imul(h ^ (h >>> 13), 16777619);
+    const x = (h >>> 8) % 1000 / 10;
+    h = Math.imul(h ^ (h >>> 13), 16777619);
+    const y = (h >>> 8) % 1000 / 10;
+    h = Math.imul(h ^ (h >>> 13), 16777619);
+    const r = 0.25 + ((h >>> 8) % 60) / 100;
+    out.push([Math.round(x * 10) / 10, Math.round(y * 10) / 10, r, i % 7]);
+  }
+  return out;
+}
+/*
+  星の中の印。
+  ⚠️⚠️ 丸だけでは何の枝か分からない。色（幹）しか手がかりが無かった。
+    FF10のスフィア盤は中身が字で出るし、ライザ2のノードには道具の絵が入る。
+    どちらも「押す前に何か分かる」ようにしてある。
+  ★ 種類ごとに印を置く。大アルカナはローマ数字 ―― タロットなので字がいちばん早い。
+  ⚠️ 線は細く、形は単純に。半径3.6の中なので、描き込むと潰れる。
+  ⚠️ 色は currentColor。星の状態（取った／取れる／前提不足）に合わせて変わる。
+*/
+/*
+  五芒星の形。
+  ⚠️ 半径と中心から作ること。座標を手で並べると、星ごとに形が揃わない。
+  ⚠️ 内側の半径は外の 0.42。0.5 だと膨れて花に見える。
+*/
+function starPath(cx, cy, r) {
+  const p = [];
+  for (let i = 0; i < 10; i++) {
+    const rr = i % 2 ? r * 0.42 : r;
+    const t = (-90 + i * 36) * Math.PI / 180;
+    p.push(`${(cx + Math.cos(t) * rr).toFixed(2)} ${(cy + Math.sin(t) * rr).toFixed(2)}`);
+  }
+  return `M${p.join(" L")} Z`;
+}
+const ROMAN = ["0", "I", "II", "III", "IV", "V", "VI", "VII", "VIII", "IX", "X",
+  "XI", "XII", "XIII", "XIV", "XV", "XVI", "XVII", "XVIII", "XIX", "XX", "XXI"];
+/*
+  能力の呼び名（技の画面）。
+  ⚠️⚠️ 育成と同じ名前（ちから・すばやさ…）に、何に効くかを添えること。
+    名前だけだと「すばやさ＝何？」になり、効いていない能力（うん）にも気づけなかった。
+*/
+const STAT_RPG_KEY = { power: "str", guard: "def", speed: "agi", vital: "vit",
+  skill: "dex", mind: "int", spirit: "spr", luck: "luk" };
+const STAT_EFFECT_I18N = {
+  ja: { power: "剣と剣の必殺の威力", guard: "受けるダメージ軽減（物理・魔法）",
+    vital: "最大HP・貨幣の倍率の伸び・貨幣の必殺（回復）",
+    speed: "回避率", skill: "会心率", mind: "棒と棒の必殺の威力",
+    spirit: "聖杯の回復量・聖杯の必殺（倍率）／自傷が少し重くなる",
+    luck: "敵の会心を受けにくい・逆位置が出にくい", maxHP: "最大HP" },
+  en: { power: "Swords & Swords finisher", guard: "Damage taken− (phys & magic)",
+    vital: "Max HP, Pentacles gain & finisher (heal)",
+    speed: "Evasion", skill: "Critical rate", mind: "Wands & Wands finisher",
+    spirit: "Cups healing & finisher (mult) / slightly more self-damage",
+    luck: "Resist foe crits, fewer reversals", maxHP: "Max HP" },
+};
+/* ⚠️ statLabel は別にある（占いの分野名）。名前を分けること */
+function skillStatLabel(k, lang) {
+  if (k === "maxHP") return (STAT_EFFECT_I18N[lang] || STAT_EFFECT_I18N.en).maxHP;
+  const nm = ((STAT_RPG_NAMES[lang] || STAT_RPG_NAMES.en) || {})[STAT_RPG_KEY[k]] || k;
+  const ef = (STAT_EFFECT_I18N[lang] || STAT_EFFECT_I18N.en)[k];
+  return ef ? (lang === "ja" ? `${nm}（${ef}）` : `${nm} (${ef})`) : nm;
+}
+/*
+  敵の行動の絵（札の場所に出す）。
+  ⚠️⚠️ 盤の上でぼんやり光らせるだけだと、自分の技なのか敵の手なのか分からない。
+  ★ 札の場所へ、赤黒い札として一枚出す。手ごとに違う絵を付ける。
+  ⚠️ 自分の札と同じ見た目にしないこと。今度は「自分の札が勝手に動いた」に見える。
+*/
+/*
+  【敵の属性】
+  ★ 体ごとに一つ。通常攻撃の絵だけが変わる（強さは変えない）。
+    同じ「通常攻撃」でも、炎の敵と氷の敵では見え方が違う ―― それだけで盤が賑やかになる。
+  ⚠️⚠️ 乱数で決めないこと。描き直すたびに属性が変わって落ち着かない。
+    土地の名前と体の番号から決める（同じ戦いでは常に同じ）。
+  ⚠️ 強さに触れない。属性で威力や耐性を変えると、★4〜12を全部測り直すことになる。
+*/
+/*
+  属性の色。⚠️ 敵の枠の縁に使う。ポケモンのタイプの色に寄せてある。
+  ⚠️ 暗い画面で見分けられる明るさにすること（あく・ゴーストは明度を上げてある）。
+*/
+const ELEM_COLOR = {
+  normal: "#C8C0A8", fire: "#FF7A30", water: "#4A9AF0", electric: "#F5D030",
+  grass: "#6CC850", ice: "#8ADCF0", fight: "#D0503A", poison: "#B058D8",
+  ground: "#D8B060", fly: "#A8B8F8", psychic: "#F868A8", bug: "#A8C030",
+  rock: "#B8A060", ghost: "#8870C8", dragon: "#7060F8", dark: "#9A7A6A",
+  steel: "#B8C0D0", fairy: "#F8A8D8",
+};
+const FOE_ELEMS = ["normal", "fire", "water", "electric", "grass", "ice", "fight", "poison",
+  "ground", "fly", "psychic", "bug", "rock", "ghost", "dragon", "dark", "steel", "fairy"];
+/*
+  【小MAPの出やすい属性】
+  ★ 小MAPごとに二つ。その土地の景色に合う候補から選ぶ（山ならいわ・じめん、社ならゴースト・エスパー）。
+    絵と属性が最初から噛み合う ―― 海辺でほのおばかり出る、ということが無い。
+  ★ 敵の七割はその二つから、残り三割はどの属性でも出る（全部そろうと単調になる）。
+  ⚠️ 乱数で決めないこと。同じ土地は毎回同じ二つ。
+*/
+const THEME_ELEMS = {
+  mountain: ["rock", "ground", "ice", "fly", "dragon"],
+  coast:    ["water", "fly", "ice", "electric"],
+  river:    ["water", "grass", "bug", "ice"],
+  shrine:   ["ghost", "psychic", "fairy", "dark"],
+  town:     ["normal", "fight", "grass", "bug"],
+  city:     ["steel", "electric", "normal", "poison"],
+  metro:    ["steel", "electric", "dark", "poison"],
+};
+function mapElemsOf(stageName) {
+  const pool = THEME_ELEMS[themeOf(stageName)] || THEME_ELEMS.town;
+  const h = Math.abs(hashName(`${stageName || "x"}#mapElem`));
+  const a = pool[h % pool.length];
+  const rest = pool.filter((e) => e !== a);
+  const b = rest[Math.floor(h / pool.length) % rest.length];
+  return [a, b];
+}
+function foeElemOf(i, seed) {
+  const h = Math.abs(hashName(`${seed || "x"}#elem${i}`));
+  /* ⚠️ 七割は小MAPの二つから。どの土地か分からない呼び出し（seed 無し）は全体から */
+  if (seed && (h % 10) < 7) {
+    const two = mapElemsOf(seed);
+    return two[Math.floor(h / 10) % 2];
+  }
+  return FOE_ELEMS[Math.floor(h / 10) % FOE_ELEMS.length];
+}
+/*
+  属性ごとの通常攻撃。
+  ⚠️⚠️ 拳の連打は「かくとう」だけ。ほかの属性に拳を出さないこと（一度そうして全部が拳になった）。
+  ⚠️ 0.9秒以内に収める（札が1.1秒で消える）。
+  ⚠️ 中心を軸に回すこと（transform-box）。SVGの原点で回ると画面外へ飛ぶ。
+*/
+function ElemHitArt({ elem }) {
+  const P = (d, ex) => {
+    /* ⚠️ key は広げて渡さない（React が警告を出す）。取り出して直に渡す */
+    const { key, ...rest } = ex || {};
+    return <path key={key} d={d} {...rest} />;
+  };
+  switch (elem) {
+    /* かくとう … 拳の連打。五発を左右から */
+    case "fight": return (
+      <g className="fa">
+        {[0, 1, 2, 3, 4].map((k) => (
+          <g key={k} className={`fa-jab j${k}${k === 4 ? " last" : ""}`}>
+            {P("M14 26 q0-8 8-8 h8 q8 0 8 8 v7 q0 8-8 8 h-8 q-8 0-8-8 Z",
+              { fill: k === 4 ? "#FFC8A0" : "#F0A090", stroke: "#8A3020", strokeWidth: "1.2" })}
+            {P("M18 25 h18 M18 31 h18 M18 37 h18", { stroke: "#8A3020", strokeWidth: "1.4" })}
+          </g>
+        ))}
+        {[0, 1, 2, 3, 4].map((k) => (
+          <g key={`i${k}`} className={`fa-burst j${k}`}>
+            {P("M24 24 l0-12 M24 24 l11-6 M24 24 l-11-6 M24 24 l9 9 M24 24 l-9 9",
+              { stroke: "#FFE8B0", strokeWidth: "2.4", strokeLinecap: "round", fill: "none" })}
+          </g>
+        ))}
+      </g>
+    );
+    /* ノーマル … 白い弾が三発、間を置いて走り抜ける */
+    case "normal": return (
+      <g className="fa">
+        {[0, 1, 2].map((k) => (
+          <circle key={k} className={`fa-shot n${k}`} cx="10" cy="24" r="5.5" fill="#FFF3D6" />
+        ))}
+        {[0, 1, 2].map((k) => (
+          <g key={`b${k}`} className={`fa-burst j${k}`}>
+            {P("M32 24 l9-7 M32 24 l11 0 M32 24 l9 7 M32 24 l3-11 M32 24 l3 11",
+              { stroke: "#FFF3D6", strokeWidth: "2.4", strokeLinecap: "round", fill: "none" })}
+          </g>
+        ))}
+      </g>
+    );
+    /* ほのお … 炎が呼吸し、火の粉が上がる（ここは良いとの評だったので触らない） */
+    case "fire": return (
+      <g className="fa">
+        {P("M24 46 C8 40 8 26 18 18 c2 6 5 7 6 3 C26 14 28 8 26 2 c10 6 16 16 16 26 0 10-8 18-18 18 Z",
+          { fill: "#FF7A2A", className: "fa-flame" })}
+        {P("M24 46 C16 42 14 34 20 28 c1 4 3 5 4 2 1 6 6 8 6 14 0 3-3 3-6 2 Z",
+          { fill: "#FFD24A", className: "fa-flame in" })}
+        {[0, 1, 2].map((k) => <circle key={k} className={`fa-ember e${k}`} cx={16 + k * 8} cy="30" r="2" fill="#FFC04A" />)}
+      </g>
+    );
+    /*
+      みず … 波が二度押し寄せ、しぶきが散る。
+      ⚠️ 球が落ちて終わりにしない。押し寄せる動きが無いと水に見えない。
+    */
+    case "water": return (
+      <g className="fa">
+        {[0, 1].map((k) => (
+          <path key={k} className={`fa-wave v${k}`}
+            d="M-6 30 q8-9 16 0 q8 9 16 0 q8-9 16 0 v18 h-48 Z" fill="#3E9AE0" opacity="0.85" />
+        ))}
+        {[0, 1, 2, 3, 4].map((k) => (
+          <circle key={`d${k}`} className={`fa-splash s${k % 4}`} cx={10 + k * 7} cy="26" r="2.6" fill="#BFE6FF" />
+        ))}
+      </g>
+    );
+    /* でんき … 稲妻が三度、間を置いて落ちる */
+    case "electric": return (
+      <g className="fa">
+        <rect className="fa-flash" x="-10" y="-10" width="68" height="68" fill="#FFF7C0" />
+        {[0, 1, 2].map((k) => (
+          <path key={k} className={`fa-strike k${k}`}
+            d={`M${26 + (k - 1) * 9} 0 L${12 + (k - 1) * 9} 24 h8 L${16 + (k - 1) * 9} 46 L${36 + (k - 1) * 9} 20 h-9 Z`}
+            fill="#FFE04A" stroke="#FFF8D0" strokeWidth="1" />
+        ))}
+        {/* ⚠️ 回転（位置決め）は外側の g、動きは内側。同じ要素に置くと動きが回転を消す */}
+        {[0, 1, 2].map((k) => (
+          <g key={`z${k}`} transform={`rotate(${k * 120} 24 24)`}>
+            <path className={`fa-zag z${k}`} d="M8 34 l6-6 l-2 8 l7-5"
+              stroke="#FFF0A0" strokeWidth="2" fill="none" strokeLinecap="round" />
+          </g>
+        ))}
+      </g>
+    );
+    /* くさ … 蔓が二度しなり、葉が渦を巻いて舞う */
+    case "grass": return (
+      <g className="fa">
+        {[0, 1].map((k) => (
+          <path key={k} className={`fa-whip w${k}`}
+            d={`M2 ${44 - k * 6} q14-12 22-26`} fill="none" stroke="#4FAF3A"
+            strokeWidth="3.4" strokeLinecap="round" />
+        ))}
+        {[0, 1, 2, 3, 4].map((k) => (
+          <path key={`l${k}`} className={`fa-leaf l${k % 3}`}
+            d={`M${18 + (k % 3) * 6} ${20 + (k % 2) * 8} q9-7 14 0 q-5 7-14 0 Z`} fill="#8FE05A" />
+        ))}
+      </g>
+    );
+    /* こおり … つららが伸びて落ち、雪が舞う */
+    case "ice": return (
+      <g className="fa">
+        {P("M6 8 h36", { stroke: "#9FD8EE", strokeWidth: "3", strokeLinecap: "round", fill: "none" })}
+        {[0, 1, 2].map((k) => (
+          <path key={k} className={`fa-icic i${k}`}
+            d={`M${13 + k * 11} 9 l3.2 0 l-1.6 ${16 + (k % 2) * 8} Z`} fill="#CFEFFF" />
+        ))}
+        {[0, 1, 2, 3].map((k) => (
+          <g key={`s${k}`} className={`fa-snow n${k}`}>
+            {[0, 60, 120].map((d) => (
+              <path key={d} d={`M${10 + k * 10} 26 v6`} stroke="#FFFFFF" strokeWidth="1.4"
+                strokeLinecap="round" transform={`rotate(${d} ${10 + k * 10} 29)`} />
+            ))}
+          </g>
+        ))}
+      </g>
+    );
+    /* かくとう … 拳の連打。五発を左右から */
+    case "fight": return (
+      <g className="fa">
+        {[0, 1, 2, 3, 4].map((k) => (
+          <g key={k} className={`fa-jab j${k}${k === 4 ? " last" : ""}`}>
+            {P("M14 26 q0-8 8-8 h8 q8 0 8 8 v7 q0 8-8 8 h-8 q-8 0-8-8 Z",
+              { fill: k === 4 ? "#FFC8A0" : "#F0A090", stroke: "#8A3020", strokeWidth: "1.2" })}
+            {P("M18 25 h18 M18 31 h18 M18 37 h18", { stroke: "#8A3020", strokeWidth: "1.4" })}
+          </g>
+        ))}
+        {[0, 1, 2, 3, 4].map((k) => (
+          <g key={`i${k}`} className={`fa-burst j${k}`}>
+            {P("M24 24 l0-12 M24 24 l11-6 M24 24 l-11-6 M24 24 l9 9 M24 24 l-9 9",
+              { stroke: "#FFE8B0", strokeWidth: "2.4", strokeLinecap: "round", fill: "none" })}
+          </g>
+        ))}
+      </g>
+    );
+    /* どく … 毒だまりが沸き、泡が弾けて飛沫が散る */
+    case "poison": return (
+      <g className="fa">
+        {P("M4 34 q10-8 20 0 q10 8 20 0 v14 h-40 Z", { fill: "#7A2AA8", className: "fa-blob" })}
+        {[0, 1, 2, 3].map((k) => (
+          <circle key={k} className={`fa-pop p${k}`} cx={11 + k * 9} cy="30" r="4.5" fill="#C87AF0" />
+        ))}
+        {[0, 1, 2].map((k) => (
+          <circle key={`s${k}`} className={`fa-splash s${k}`} cx="24" cy="26" r="2.4" fill="#E8C0FF" />
+        ))}
+      </g>
+    );
+    /*
+      じめん … 左右に揺さぶりながら、地面が三度 噴き上がる。
+      ★ 一度で終わらせない。断続的に来るのが地面の技。
+    */
+    case "ground": return (
+      <g className="fa">
+        {P("M-6 38 q12-6 24 0 q12 6 24 0 v14 h-48 Z", { fill: "#8A6A3A" })}
+        {[0, 1, 2].map((k) => (
+          <g key={k} className={`fa-erupt u${k}`}>
+            {P(`M${10 + k * 14} 40 l5-22 l5 22 Z`, { fill: "#C89A56" })}
+            {P(`M${12 + k * 14} 40 l3-14 l3 14 Z`, { fill: "#E8C48A" })}
+          </g>
+        ))}
+        {[0, 1, 2, 3].map((k) => (
+          <circle key={`r${k}`} className={`fa-rubble b${k}`} cx={12 + k * 8} cy="30" r="2.6" fill="#B08A4A" />
+        ))}
+      </g>
+    );
+    /* ひこう … 突風が三度、斜めに切り抜ける */
+    case "fly": return (
+      <g className="fa">
+        {[0, 1, 2].map((k) => (
+          <path key={k} className={`fa-dive d${k}`}
+            d={`M-6 ${10 + k * 12} q18-8 34 4 q-14-2-24 6`} fill="#DCEEFF" opacity="0.9" />
+        ))}
+        {[0, 1].map((k) => (
+          <path key={`f${k}`} className={`fa-leaf l${k}`} d="M24 26 q10-8 15-2 q-6 8-15 2 Z" fill="#FFFFFF" />
+        ))}
+      </g>
+    );
+    /* エスパー … 空間が歪み、輪が二度 押し寄せる */
+    case "psychic": return (
+      <g className="fa">
+        {[0, 1, 2, 3].map((k) => (
+          <ellipse key={k} className={`fa-warp r${k}`} cx="24" cy="24" rx="9" ry="6"
+            fill="none" stroke="#F58AD0" strokeWidth="2.4" />
+        ))}
+        {[0, 1, 2, 3].map((k) => (
+          <path key={`d${k}`} className={`fa-float f${k}`}
+            d={`M${10 + k * 10} ${12 + (k % 2) * 22} l4 5 l-4 5 l-4-5 Z`} fill="#FFC0EC" />
+        ))}
+      </g>
+    );
+    /* むし … 群れが横切り、糸が張る */
+    case "bug": return (
+      <g className="fa">
+        {P("M-4 10 q22 8 44 26", { fill: "none", stroke: "#C8E060", strokeWidth: "2.2", className: "fa-thread", strokeLinecap: "round" })}
+        {[0, 1, 2, 3, 4].map((k) => (
+          <g key={k} className={`fa-swarm s${k}`}>
+            <ellipse cx="24" cy={14 + (k % 3) * 9} rx="4.5" ry="3" fill="#A8D048" />
+            <ellipse className="fa-wing w0" cx="24" cy={14 + (k % 3) * 9} rx="8" ry="2" fill="#E0F0A0" opacity="0.7" />
+          </g>
+        ))}
+      </g>
+    );
+    /* いわ … 岩が三つ、間を置いて落ちて砕ける */
+    case "rock": return (
+      <g className="fa">
+        {[0, 1, 2].map((k) => (
+          <g key={k} className={`fa-drop3 r${k}`}>
+            {P(`M${8 + k * 13} 8 L${20 + k * 13} 11 L${23 + k * 13} 22 L${15 + k * 13} 29 L${6 + k * 13} 24 Z`,
+              { fill: "#8A7A6A", stroke: "#C8B49A", strokeWidth: "1.2" })}
+          </g>
+        ))}
+        {[0, 1, 2, 3].map((k) => (
+          <path key={`c${k}`} className={`fa-chip c${k}`} d="M24 34 l5 4 l-6 2 Z" fill="#A89684" />
+        ))}
+        {P("M-6 42 h60", { stroke: "#6A5A4A", strokeWidth: "3", strokeLinecap: "round", fill: "none" })}
+      </g>
+    );
+    /* ゴースト … 鬼火が寄り集まり、影が牙をむく */
+    case "ghost": return (
+      <g className="fa">
+        {P("M12 40 q0-20 12-20 q12 0 12 20 q-4-4-6 0 q-2 4-6 0 q-2-4-6 0 q-2 4-6 0 Z",
+          { fill: "#8A6AC8", className: "fa-ghost" })}
+        <circle className="fa-glow" cx="19" cy="26" r="2.6" fill="#1A0A2A" />
+        <circle className="fa-glow" cx="29" cy="26" r="2.6" fill="#1A0A2A" />
+        {[0, 1, 2, 3].map((k) => (
+          <circle key={k} className={`fa-wisp2 p${k}`} cx="24" cy="24" r="3.2" fill="#C8A8FF" />
+        ))}
+      </g>
+    );
+    /* ドラゴン … 螺旋の龍気が奥から迫る */
+    case "dragon": return (
+      <g className="fa">
+        {[0, 1, 2, 3, 4].map((k) => (
+          <circle key={k} className={`fa-helix h${k}`} cx="24" cy="24" r={4 + k * 3}
+            fill="none" stroke="#7A8AF0" strokeWidth="2.6" strokeDasharray="10 8" />
+        ))}
+        <circle className="fa-core" cx="24" cy="24" r="5" fill="#C8D4FF" />
+      </g>
+    );
+    /* あく … 闇が覆い、爪痕が三本 走る */
+    case "dark": return (
+      <g className="fa">
+        <rect x="-10" y="-10" width="68" height="68" fill="rgba(8,2,16,0.75)" className="fa-shade" />
+        {[0, 1, 2].map((k) => (
+          <path key={k} className={`fa-claw k${k}`} d={`M${4 + k * 9} 2 q7 20 3 44`}
+            fill="none" stroke="#C86AE8" strokeWidth="3.4" strokeLinecap="round" />
+        ))}
+      </g>
+    );
+    /* はがね … 斬撃が三度、向きを変えて走る */
+    case "steel": return (
+      <g className="fa">
+        {[["M2 8 L46 40", "#E8EEF8"], ["M46 8 L2 40", "#C8D4E8"], ["M2 24 L46 24", "#FFFFFF"]].map(([d, c], k) => (
+          <path key={k} className={`fa-slash3 k${k}`} d={d} stroke={c} strokeWidth="4" strokeLinecap="round" fill="none" />
+        ))}
+        {[0, 1, 2].map((k) => (
+          <circle key={`s${k}`} className={`fa-spark k${k}`} cx="24" cy="24" r="2.2" fill="#FFFFFF" />
+        ))}
+      </g>
+    );
+    /* フェアリー … 光が集まってから、星が弾ける */
+    default: return (
+      <g className="fa">
+        {[0, 1, 2, 3, 4, 5].map((k) => (
+          <circle key={k} className={`fa-gather g${k}`} cx="24" cy="24" r="2.2" fill="#FFD0F0"
+            style={{ "--gx": `${Math.cos(k * 1.047) * 20}px`, "--gy": `${Math.sin(k * 1.047) * 20}px` }} />
+        ))}
+        {[0, 1].map((k) => (
+          <circle key={`r${k}`} className={`fa-ring r${k + 1}`} cx="24" cy="24" r="7"
+            fill="none" stroke="#FFB0E0" strokeWidth="2.4" />
+        ))}
+        {[0, 1, 2, 3].map((k) => (
+          <path key={`s${k}`} className={`fa-float f${k}`}
+            d={`M${10 + k * 10} ${14 + (k % 2) * 16} l2.4 4.6 l5 0.8 l-3.6 3.6 l0.9 5 l-4.7-2.4 l-4.7 2.4 l0.9-5 l-3.6-3.6 l5-0.8 Z`}
+            fill="#FFE0F6" />
+        ))}
+      </g>
+    );
+  }
+}
+function FoeActArt({ move, elem }) {
+  const P = (d, ex) => {
+    /* ⚠️ key は広げて渡さない（React が警告を出す）。取り出して直に渡す */
+    const { key, ...rest } = ex || {};
+    return <path key={key} d={d} {...rest} />;
+  };
+  switch (move) {
+    /*
+      通常攻撃 … 拳が奥から手前へ突き出る。
+      ⚠️ 絵を置くだけにしないこと（ただ拳が出るだけでは安っぽい）。
+        踏み込み → 当たる → 衝撃が散る、の三拍で見せる。
+    */
+    /*
+      通常攻撃 … 拳の連打。
+      ⚠️⚠️ 一発だけ出して上を光らせるのは駄目（実際それで「しょぼい」と言われた）。
+      ★ 五発を0.12秒おきに、左右から交互に叩き込む。一発ごとに衝撃と速度線を出す。
+        最後の一発だけ大きく、止めを刺す形にする。
+      ⚠️ 属性を持つ敵は属性の絵に差し替える（ElemHitArt）。
+    */
+    case "hit": return elem ? <ElemHitArt elem={elem} /> : (
+      <g className="fa">
+        {[0, 1, 2, 3, 4].map((k) => (
+          <g key={k} className={`fa-jab j${k}${k === 4 ? " last" : ""}`}>
+            {P("M14 26 q0-8 8-8 h8 q8 0 8 8 v7 q0 8-8 8 h-8 q-8 0-8-8 Z",
+              { fill: k === 4 ? "#FFC8A0" : "#F0A090", stroke: "#8A3020", strokeWidth: "1.2" })}
+            {P("M18 25 h18 M18 31 h18 M18 37 h18", { stroke: "#8A3020", strokeWidth: "1.4" })}
+          </g>
+        ))}
+        {[0, 1, 2, 3, 4].map((k) => (
+          <g key={`i${k}`} className={`fa-burst j${k}`}>
+            {P("M24 24 l0-12 M24 24 l11-6 M24 24 l-11-6 M24 24 l9 9 M24 24 l-9 9",
+              { stroke: "#FFE8B0", strokeWidth: "2.4", strokeLinecap: "round", fill: "none" })}
+          </g>
+        ))}
+        {[0, 1, 2].map((k) => (
+          <path key={`s${k}`} className={`fa-streak s${k}`} d={`M2 ${14 + k * 10} h18`}
+            stroke="#FFD0B0" strokeWidth="2" strokeLinecap="round" fill="none" />
+        ))}
+      </g>
+    );
+    /* 連撃 … 通常攻撃より速く、八発。左右に振りながら */
+    case "combo": return (
+      <g className="fa">
+        {[0, 1, 2, 3, 4, 5, 6, 7].map((k) => (
+          <g key={k} className={`fa-combo c${k}`}>
+            {P("M16 24 q0-7 7-7 h7 q7 0 7 7 v7 q0 7-7 7 h-7 q-7 0-7-7 Z", { fill: "#F0A090" })}
+            {P("M19 24 h18 M19 30 h18", { stroke: "#8A3020", strokeWidth: "1.4" })}
+          </g>
+        ))}
+        {P("M4 40 h40", { className: "fa-combo-line", stroke: "#FFC0A0", strokeWidth: "2", strokeLinecap: "round" })}
+      </g>
+    );
+    /*
+      溜め … 力が渦を巻いて中心へ吸い込まれる。
+      ⚠️ 回すだけでなく縮めること。溜めているのだと伝わる。
+    */
+    case "wind": return (
+      <g className="fa">
+        <g className="fa-spin">
+          {P("M24 6 a18 18 0 1 1-17 23", { fill: "none", stroke: "#FFD86A", strokeWidth: "2.6", strokeLinecap: "round" })}
+          {P("M24 14 a10 10 0 1 0 10 10", { fill: "none", stroke: "#FFB84A", strokeWidth: "2.2", strokeLinecap: "round" })}
+        </g>
+        <circle className="fa-core" cx="24" cy="24" r="4" fill="#FFF0B0" />
+      </g>
+    );
+    /* 大技 … 空が光り、雷が落ちる */
+    case "heavy": return (
+      <g className="fa">
+        <rect className="fa-flash" x="0" y="0" width="48" height="48" fill="#FFF3C0" />
+        <g className="fa-bolt">
+          {P("M27 2 L11 25 h9 L15 46 L38 19 h-10 Z", { fill: "#FFE066", stroke: "#FFF6D0", strokeWidth: "1.2" })}
+        </g>
+        <g className="fa-bolt b2">
+          {P("M33 6 L23 22 h6 L25 40 L40 20 h-7 Z", { fill: "#FFC93C", opacity: "0.75" })}
+        </g>
+        <ellipse className="fa-ground" cx="24" cy="44" rx="16" ry="3" fill="#FFE066" />
+      </g>
+    );
+    /* 必中 … 矢が引かれ、貫く */
+    case "sure": return (
+      <g className="fa">
+        <g className="fa-arrow">
+          {P("M2 46 L42 6", { stroke: "#FF8A6A", strokeWidth: "3", strokeLinecap: "round" })}
+          {P("M42 6 l-12 2 M42 6 l-2 12", { stroke: "#FFD0B0", strokeWidth: "2.6", strokeLinecap: "round", fill: "none" })}
+        </g>
+        {[0, 1, 2].map((k) => (
+          <path key={k} className={`fa-trail t${k}`} d="M10 40 L30 20"
+            stroke="#FFB090" strokeWidth="1.6" strokeLinecap="round" fill="none" />
+        ))}
+      </g>
+    );
+    /*
+      轟音 … 波紋が広がる。
+      ⚠️⚠️ 音量の記号にしないこと（記号は「音がする」だけで、届く感じが無い）。
+      ★ 中心から輪が次々に広がって薄れる。愚者の波紋と同じ作り。
+    */
+    case "roar": return (
+      <g className="fa">
+        {[0, 1, 2, 3].map((k) => (
+          <circle key={k} className={`fa-ring r${k}`} cx="24" cy="24" r="6"
+            fill="none" stroke="#FFC0A0" strokeWidth="2.4" />
+        ))}
+        <circle className="fa-core" cx="24" cy="24" r="5" fill="#FFD8C0" />
+      </g>
+    );
+    /* 腐食 … 毒が滴り、泡が湧く */
+    case "rot": return (
+      <g className="fa">
+        {P("M24 4 C15 20 10 27 10 33 a14 14 0 0 0 28 0 c0-6-5-13-14-29 Z", { fill: "#7ACB5A", className: "fa-blob" })}
+        {[0, 1, 2].map((k) => (
+          <circle key={k} className={`fa-bub b${k}`} cx={16 + k * 8} cy="34" r="3" fill="#C8F0A0" />
+        ))}
+        {P("M14 44 q3 5 0 5 q-3 0 0-5 M34 44 q3 5 0 5 q-3 0 0-5", { fill: "#7ACB5A", className: "fa-drip" })}
+      </g>
+    );
+    /* 波動 … 渦が回りながら開く */
+    case "despair": return (
+      <g className="fa">
+        <g className="fa-spin slow">
+          {P("M24 24 m0-18 a18 18 0 1 1-13 30 a12 12 0 1 1 18-18 a6.5 6.5 0 1 1-9 9",
+            { fill: "none", stroke: "#C0A0F0", strokeWidth: "2.6", strokeLinecap: "round" })}
+        </g>
+        {[0, 1].map((k) => (
+          <circle key={k} className={`fa-ring r${k}`} cx="24" cy="24" r="6"
+            fill="none" stroke="#9A7AE0" strokeWidth="1.6" />
+        ))}
+      </g>
+    );
+    /* 瘴気 … 煙が下から立ちのぼり続ける */
+    case "miasma": return (
+      <g className="fa">
+        {[0, 1, 2].map((k) => (
+          <path key={k} className={`fa-smoke s${k}`}
+            d={`M${12 + k * 12} 46 q7-8 0-16 q-7-8 2-16`}
+            fill="none" stroke="#A8C86A" strokeWidth="2.4" strokeLinecap="round" />
+        ))}
+        {[0, 1].map((k) => (
+          <circle key={`p${k}`} className={`fa-bub b${k}`} cx={18 + k * 14} cy="20" r="2.4" fill="#C8E08A" />
+        ))}
+      </g>
+    );
+    /* 殺気 … 眼が開き、光が走る */
+    case "dread": return (
+      <g className="fa">
+        <g className="fa-eye">
+          {P("M2 24 q22-17 44 0 q-22 17-44 0 Z", { fill: "rgba(60,10,16,0.9)", stroke: "#FF8080", strokeWidth: "2" })}
+          <circle cx="24" cy="24" r="8.5" fill="#FF8080" />
+          <circle className="fa-pupil" cx="24" cy="24" r="4" fill="#200207" />
+        </g>
+        {P("M4 6 L44 42", { className: "fa-glare", stroke: "#FFD0D0", strokeWidth: "2", strokeLinecap: "round", fill: "none" })}
+      </g>
+    );
+    /* 会心UP … 刃を研ぎ、火花が散る */
+    case "sharpen": return (
+      <g className="fa">
+        {P("M6 42 L34 12 l6 6 L12 48 Z", { fill: "#D8DCE8", stroke: "#8A90A0", strokeWidth: "1.2", className: "fa-blade" })}
+        {[0, 1, 2, 3].map((k) => (
+          <circle key={k} className={`fa-spark k${k}`} cx="34" cy="14" r="1.8" fill="#FFE066" />
+        ))}
+        {P("M30 8 l4-6 M40 12 l6-3", { className: "fa-glare", stroke: "#FFF0B0", strokeWidth: "2", strokeLinecap: "round", fill: "none" })}
+      </g>
+    );
+    /* 回避UP … 影が三つに分かれて揺らぐ */
+    case "blur": return (
+      <g className="fa">
+        {[0, 1, 2].map((k) => (
+          <g key={k} className={`fa-clone c${k}`}>
+            <circle cx="24" cy="15" r="6.5" fill="#9090C0" />
+            {P("M15 44 q0-15 9-15 t9 15 Z", { fill: "#9090C0" })}
+          </g>
+        ))}
+      </g>
+    );
+    /* 会心耐性UP … 鎧の板が閉じる */
+    case "harden": return (
+      <g className="fa">
+        <g className="fa-close">
+          {P("M24 3 L41 10 v15 q0 13-17 21 Q7 33 7 25 V10 Z", { fill: "#8A94B8", stroke: "#D8DCE8", strokeWidth: "1.6" })}
+          {P("M24 14 v18 M15 23 h18", { stroke: "#2A3048", strokeWidth: "2.4" })}
+        </g>
+        <g className="fa-ring r0"><circle cx="24" cy="24" r="8" fill="none" stroke="#C8D0E8" strokeWidth="2" /></g>
+      </g>
+    );
+    /* 防御UP … 盾が張られ、輪が広がる */
+    case "guardUp": return (
+      <g className="fa">
+        <g className="fa-close">
+          {P("M24 3 L41 10 v15 q0 13-17 21 Q7 33 7 25 V10 Z", { fill: "#5A6EA8", stroke: "#C8D8F0", strokeWidth: "1.8" })}
+          {P("M24 15 v14 M17 22 h14", { stroke: "#FFF3D6", strokeWidth: "3", strokeLinecap: "round" })}
+        </g>
+        {[0, 1].map((k) => (
+          <circle key={k} className={`fa-ring r${k}`} cx="24" cy="24" r="8"
+            fill="none" stroke="#8FC0F0" strokeWidth="2" />
+        ))}
+      </g>
+    );
+    /* 攻撃UP … 刃が跳ね上がり、気が立ちのぼる */
+    case "atkUp": return (
+      <g className="fa">
+        <g className="fa-rise">
+          {P("M24 2 L33 22 h-6 v22 h-6 V22 h-6 Z", { fill: "#F09070", stroke: "#FFD0B0", strokeWidth: "1.2" })}
+        </g>
+        {[0, 1, 2].map((k) => (
+          <path key={k} className={`fa-up u${k}`} d={`M${13 + k * 11} 46 l0-10`}
+            stroke="#FF8A6A" strokeWidth="2.4" strokeLinecap="round" fill="none" />
+        ))}
+      </g>
+    );
+    /* 構え … 盾を掲げる */
+    default: return (
+      <g className="fa">
+        <g className="fa-close">
+          {P("M24 5 L39 11 v13 q0 12-15 20 Q9 32 9 24 V11 Z",
+            { fill: "none", stroke: "#B8C0D8", strokeWidth: "2.4" })}
+        </g>
+      </g>
+    );
+  }
+}
+function SkillGlyph({ nd, x, y }) {
+  const k = nd.kind;
+  /* 大アルカナ。⚠️ 数字は小さくする。二桁で丸からはみ出す */
+  if (k === "major") {
+    const r = ROMAN[nd.major] || "";
+    return (
+      <text className="sk-gly-t" x={x} y={y + 1.1}
+        style={{ fontSize: `${r.length > 3 ? 2.1 : r.length > 2 ? 2.5 : 3}px` }}>{r}</text>
+    );
+  }
+  const P = (d, extra) => (
+    <path className="sk-gly" d={d} {...(extra || {})} />
+  );
+  switch (k) {
+    /*
+      必殺 … 斜めの一閃。
+      ⚠️⚠️ ＋と×を重ねないこと。ただの「＋のばってん」に見えていた。
+      ★ 弧を描く斬撃線。走り抜けた跡が残る形にする。
+    */
+    case "flash": return (
+      <g>{P(`M${x - 2.4} ${y + 1.8} Q${x} ${y - 0.6} ${x + 2.4} ${y - 2.2}`,
+        { strokeWidth: 0.75 })}
+        {P(`M${x - 1.6} ${y + 2.4} Q${x + 0.4} ${y + 0.4} ${x + 2.2} ${y - 0.6}`,
+          { opacity: 0.45 })}</g>
+    );
+    /* 威力 … 上向きの山二つ */
+    case "power": return (
+      <g>{P(`M${x - 2} ${y + 0.4} L${x} ${y - 1.8} L${x + 2} ${y + 0.4}`)}
+        {P(`M${x - 2} ${y + 2.2} L${x} ${y} L${x + 2} ${y + 2.2}`, { opacity: 0.55 })}</g>
+    );
+    /* 秘剣 … 交差する二振り */
+    case "dance": return (
+      <g>{P(`M${x - 2.2} ${y + 2.2} L${x + 2.2} ${y - 2.2}`)}
+        {P(`M${x + 2.2} ${y + 2.2} L${x - 2.2} ${y - 2.2}`)}
+        {P(`M${x - 0.9} ${y + 0.9} L${x + 0.9} ${y + 0.9}`, { opacity: 0.6 })}</g>
+    );
+    /*
+      ブラスト … 四つの菱形が四方へ飛ぶ。
+      ⚠️⚠️ 八条の線にしないこと。必殺の印と見分けが付かない。
+      ★ 四系統（剣・棒・聖杯・貨幣）が同時に出る札なので、粒を四つ。
+    */
+    case "blast": return (
+      <g>{[[0, -1.9], [1.9, 0], [0, 1.9], [-1.9, 0]].map(([dx, dy], i) => P(
+        `M${x + dx} ${y + dy - 0.85} L${x + dx + 0.85} ${y + dy} `
+        + `L${x + dx} ${y + dy + 0.85} L${x + dx - 0.85} ${y + dy} Z`,
+        { key: i, fill: "currentColor", stroke: "none", opacity: 0.6 + i * 0.13 },
+      ))}
+        <circle className="sk-gly" cx={x} cy={y} r="0.6" fill="currentColor" stroke="none" /></g>
+    );
+    /* 体力 … 心の形 */
+    case "stat": {
+      if (nd.stat === "maxHP") {
+        return P(`M${x} ${y + 2.1} C${x - 3} ${y - 0.2} ${x - 1.9} ${y - 2.4} ${x} ${y - 1} `
+          + `C${x + 1.9} ${y - 2.4} ${x + 3} ${y - 0.2} ${x} ${y + 2.1} Z`, { fill: "currentColor" });
+      }
+      /* そのほかの能力 … 上向きの三角。伸びるものだと分かればよい */
+      return P(`M${x} ${y - 2.1} L${x + 1.9} ${y + 1.6} L${x - 1.9} ${y + 1.6} Z`,
+        { fill: "currentColor" });
+    }
+    /* カード枠 … 札が二枚 */
+    case "cards": return (
+      <g>{P(`M${x - 2.2} ${y - 1.8} h2.6 v3.8 h-2.6 Z`)}
+        {P(`M${x - 0.2} ${y - 2.2} h2.6 v3.8 h-2.6 Z`, { opacity: 0.7 })}</g>
+    );
+    /* 装備枠 … 四隅の括弧 */
+    case "slot": return (
+      <g>{P(`M${x - 2.2} ${y - 1.2} v-1 h1 M${x + 2.2} ${y - 1.2} v-1 h-1 `
+        + `M${x - 2.2} ${y + 1.2} v1 h1 M${x + 2.2} ${y + 1.2} v1 h-1`)}
+        {P(`M${x - 0.9} ${y - 0.9} h1.8 v1.8 h-1.8 Z`, { opacity: 0.6 })}</g>
+    );
+    /* 耐性 … 盾 */
+    case "ward": return P(
+      `M${x} ${y - 2.3} L${x + 2} ${y - 1.4} V${y + 0.3} C${x + 2} ${y + 1.6} ${x + 1} ${y + 2.2} `
+      + `${x} ${y + 2.4} C${x - 1} ${y + 2.2} ${x - 2} ${y + 1.6} ${x - 2} ${y + 0.3} `
+      + `V${y - 1.4} Z`);
+    /* 運 … 四つ葉 */
+    case "luck": return (
+      <g>{[[0, -1.2], [1.2, 0], [0, 1.2], [-1.2, 0]].map(([dx, dy], i) => (
+        <circle key={i} className="sk-gly" cx={x + dx} cy={y + dy} r="1" fill="currentColor" />
+      ))}</g>
+    );
+    default: return null;
+  }
+}
+/*
+  背景の十二宮。
+  ⚠️⚠️ 星座絵を描かないこと。伝統の約束事（振り返る羊・上半身だけの牛・
+    翼のある乙女）に忠実に描いても、「これは羊だ」とは伝わらない。
+  ★ 記号を一つ、大きく薄く置く。誰が見ても分かるのはこれ。
+    タブの記号と同じものなので、選んだ宮と空が一致する。
+  ⚠️ 塗りつぶさない。縁取りだけ ―― 塗ると星が沈む。
+*/
+function ZodiacArt({ sheet }) {
+  return (
+    <text className="sk-zart" x="50" y="50">{ZODIAC_MARK[sheet - 1]}</text>
+  );
+}
+function SkillPanel({ lang, onClose }) {
+  const a = advT(lang);
+  const [taken, setTaken] = useState(() => loadSkill());
+  /* ⚠️ 切り替えるのは★のシート。幹ではない。点が★ごとに分かれているので */
+  const [sheet, setSheet] = useState(1);
+  const pt = skillPointsOf(null, taken, sheet);
+  const b = skillBonus(taken);
+  const lab = EQUIP_LABEL_I18N[lang] || EQUIP_LABEL_I18N.en;
+  /*
+    ⚠️⚠️ 一覧を下に並べないこと。星座と同じ内容が二度出て、画面が二倍になる。
+    ★ 押した星の詳細だけを下からせり上げる。押していなければ引っ込む。
+  */
+  const [pick, setPick] = useState(null);
+  /*
+    ⚠️⚠️ 星図だけにしないこと。押さないと何があるか見えず、
+      取る作業がやりにくい（一覧を捨てたのは早計だった）。
+    ★ 星図は眺めるもの、一覧は作業するもの。切り替えにして両方残す。
+  */
+  const [view, setView] = useState("sky");
+  const [zoom, setZoom] = useState(1);
+  const [pan, setPan] = useState({ x: 0, y: 0 });
+  const drag = useRef(null);
+  const onDown = (e) => {
+    if (zoom <= 1) return;
+    const t = e.touches ? e.touches[0] : e;
+    drag.current = { x: t.clientX, y: t.clientY, px: pan.x, py: pan.y };
+  };
+  const onMove = (e) => {
+    if (!drag.current) return;
+    const t = e.touches ? e.touches[0] : e;
+    /* ⚠️ 動かす量は倍率で割る。広げるほど指の動きに対して図が速く動くのを防ぐ */
+    setPan({
+      x: drag.current.px + (t.clientX - drag.current.x) / (zoom * 3),
+      y: drag.current.py + (t.clientY - drag.current.y) / (zoom * 3),
+    });
+  };
+  const onUp = () => { drag.current = null; };
+  const setZ = (z) => { setZoom(z); if (z <= 1) setPan({ x: 0, y: 0 }); };
+  /* ⚠️ 開けた星を覚えておく。線が伸びて星が弾ける演出に使う */
+  const [lit, setLit] = useState(null);
+  const litT = useRef(null);
+  useEffect(() => () => clearTimeout(litT.current), []);
+  const take = (key) => {
+    if (!skillCanTake(key, taken, pt.left)) return;
+    const next = { ...taken, [key]: 1 };
+    setTaken(next); saveSkill(next);
+    setLit(key);
+    clearTimeout(litT.current);
+    litT.current = setTimeout(() => setLit(null), 900);
+  };
+  const nameOf = (nd) => {
+    if (!nd) return "";
+    if (nd.kind === "flash") return a.skFlash(a.suit[nd.trunk], nd.run);
+    if (nd.kind === "power") return a.skPower(a.suit[nd.trunk], nd.per);
+    if (nd.kind === "stat") return a.skStat(skillStatLabel(nd.stat, lang));
+    if (nd.kind === "cards") return a.skCards;
+    if (nd.kind === "slot") return a.skSlot;
+    if (nd.kind === "ward") return a.skWard(lab[nd.ward] || nd.ward, nd.per);
+    if (nd.kind === "luck") return `${a.skLuck[nd.luck] || nd.luck} +${nd.per}`;
+    if (nd.kind === "dance") return a.skDance(Number(String(nd.key).replace("dance", "")));
+    if (nd.kind === "blast") return a.skBlast(3 + Number(String(nd.key).replace("blast", "")));
+    if (nd.kind === "major") {
+      return a.skMajor(a.fxName[MAJOR_FX[nd.major] ? MAJOR_FX[nd.major].key : ""] || "");
+    }
+    return nd.key;
+  };
+  const list = SKILL_NODES.filter((nd) => nd.sheet === sheet)
+    .sort((x, y) => (SKILL_TRUNKS.findIndex((t) => t.key === x.trunk)
+      - SKILL_TRUNKS.findIndex((t) => t.key === y.trunk)) || (x.ord - y.ord));
+  const sel = list.find((x) => x.key === pick) || null;
+  const selTaken = sel ? !!taken[sel.key] : false;
+  const selReady = sel ? skillCanTake(sel.key, taken, 9999) : false;
+  const selCan = sel ? skillCanTake(sel.key, taken, pt.left) : false;
+  /* ⚠️ 足りない前提は名前で出す。「取れません」だけだと何をすればいいか分からない */
+  const missing = sel ? (sel.need || []).filter((k) => !taken[k])
+    .map((k) => {
+      const nd = SKILL_NODES.find((x) => x.key === k);
+      return nd ? `★${nd.sheet} ${nameOf(nd)}` : k;
+    }) : [];
+  const tcOf = (k) => (SKILL_TRUNKS.find((x) => x.key === k) || {}).color;
+  return (
+    <div className="sk-sheet">
+      {/*
+        上の帯。
+        ⚠️⚠️ 数字だけ出さないこと。「12 / 25」が何の数字か分からなかった。
+        ⚠️ いま★いくつのシートを見ているかを、記号ではなく数字で出すこと。
+      */}
+      <div className="sk-top">
+        <button type="button" className="sk-x" onClick={onClose}>✕</button>
+        <div className="sk-where">
+          <b>★{sheet}</b>
+          <span>{ZODIAC_MARK[sheet - 1]} {a.zodiac[sheet - 1]}</span>
+        </div>
+        <div className="sk-pt">
+          <em>{a.skLeftLabel}</em>
+          <b>{pt.left}</b>
+          <span>{a.skOfGot(pt.all)}</span>
+        </div>
+      </div>
+      {/* ⚠️ 星図と一覧を切り替える。役割が違うので、どちらも要る */}
+      <div className="sk-view">
+        <button type="button" className={`sk-vbtn${view === "sky" ? " on" : ""}`}
+          onClick={() => setView("sky")}>{a.skViewSky}</button>
+        <button type="button" className={`sk-vbtn${view === "list" ? " on" : ""}`}
+          onClick={() => setView("list")}>{a.skViewList}</button>
+        <span className="sk-now2">
+          {a.skNowFlash(["swords", "wands", "cups", "pentacles"]
+            .filter((k) => b.flashMax[k] > 0).length)}
+          {" ／ "}
+          {a.skNowMajor(Object.keys(b.major2).length)}
+        </span>
+      </div>
+      {/* 十二宮。⚠️ ★の数字より記号。小さく並べられて、シートの星座と一致する */}
+      <div className="sk-zod">
+        {[1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12].map((n) => {
+          const p = skillPointsOf(null, taken, n);
+          return (
+            <button key={n} type="button"
+              className={`sk-med${sheet === n ? " on" : ""}${p.left > 0 ? " has" : ""}`}
+              style={{ "--zc": ZODIAC_COLOR[n - 1] }}
+              onClick={() => { setSheet(n); setPick(null); }}>
+              {/* ⚠️ 記号だけだと★いくつか分からない。数字を添える */}
+              <span>{ZODIAC_MARK[n - 1]}</span>
+              <u>{n}</u>
+              {p.left > 0 && <b>{p.left}</b>}
+            </button>
+          );
+        })}
+      </div>
+      {/* ⚠️ 一覧のときは星図を出さない。両方出すと画面が二倍になる */}
+      {view === "list" ? (
+        <div className="sk-rows">
+          {list.map((nd) => {
+            const on = !!taken[nd.key];
+            const rdy = skillCanTake(nd.key, taken, 9999);
+            const can = skillCanTake(nd.key, taken, pt.left);
+            return (
+              <div key={nd.key}
+                className={`sk-row${on ? " got" : rdy ? " ready" : " lock"}`}
+                style={{ "--tc": tcOf(nd.trunk) }}>
+                <svg className="sk-row-ic" viewBox="0 0 12 12" aria-hidden="true">
+                  <circle className="sk-ring" cx="6" cy="6" r="5" />
+                  <SkillGlyph nd={nd} x={6} y={6} />
+                </svg>
+                <span className="sk-row-b">
+                  <b>{nameOf(nd)}</b>
+                  <i>{a.skTrunk[nd.trunk]}</i>
+                </span>
+                <span className="sk-row-c">{nd.cost}</span>
+                <button type="button" className={`sk-take sm${on ? " got" : ""}`}
+                  disabled={!can} onClick={() => take(nd.key)}>
+                  {on ? a.skDone : !rdy ? a.skLocked : !can ? a.skShort : a.skGet}
+                </button>
+              </div>
+            );
+          })}
+        </div>
+      ) : (
+      <div className="sk-stage">
+        <div className="sk-zoom">
+          {[1, 1.8, 3].map((z) => (
+            <button key={z} type="button"
+              className={`sk-zbtn${zoom === z ? " on" : ""}`}
+              onClick={() => setZ(z)}>×{z}</button>
+          ))}
+        </div>
+        {/*
+          ⚠️ 星以外を押したら札を閉じること。開きっぱなしだと星座が隠れたままになる。
+          ★ 空を押したときだけ閉じる。星を押したときは星側で止める（下の stopPropagation）。
+        */}
+        <svg className="sk-sky" viewBox="-6 -6 112 112"
+          onMouseDown={onDown} onMouseMove={onMove} onMouseUp={onUp} onMouseLeave={onUp}
+          onTouchStart={onDown} onTouchMove={onMove} onTouchEnd={onUp}
+          onClick={() => setPick(null)}
+          /* ⚠️ 星座の色をここで渡す。絵も微星もこの色に従う */
+          style={{ "--zc": ZODIAC_COLOR[sheet - 1], cursor: zoom > 1 ? "grab" : "default" }}>
+          {/*
+            ホロの帯。
+            ⚠️⚠️ 縞にしないこと。ホロは「虹色の縞」ではなく、
+              両端が透明な一本の光の帯が斜めに渡るもの（図鑑の札と同じ）。
+            ⚠️ objectBoundingBox にすること。使う側の大きさに自動で合う。
+            ⚠️ id は一つだけ。星ごとに作ると文書内で増えすぎる。
+          */}
+          <defs>
+            <linearGradient id="skHoloG" x1="0" y1="0.2" x2="1" y2="0.8">
+              <stop offset="0%" stopColor="#FF3CB4" stopOpacity="0" />
+              <stop offset="18%" stopColor="#FF3CB4" stopOpacity="0.95" />
+              <stop offset="36%" stopColor="#3CC8FF" stopOpacity="0.95" />
+              <stop offset="54%" stopColor="#78FF8C" stopOpacity="0.95" />
+              <stop offset="72%" stopColor="#FFDC3C" stopOpacity="0.95" />
+              <stop offset="88%" stopColor="#FF3CB4" stopOpacity="0.8" />
+              <stop offset="100%" stopColor="#FF3CB4" stopOpacity="0" />
+            </linearGradient>
+          </defs>
+          {/* 星雲。⚠️ 二枚だけ。重ねすぎると星が沈む */}
+          <ellipse className="sk-neb n1" cx="34" cy="38" rx="42" ry="30" />
+          <ellipse className="sk-neb n2" cx="66" cy="66" rx="38" ry="28" />
+          {/*
+            ⚠️⚠️ 星座の絵は微星より先に描くこと。あとに描くと星の上に線が乗る。
+            ⚠️ 薄く敷く。濃いと星座の線と混ざって、どちらも読めない。
+          */}
+          <ZodiacArt sheet={sheet} />
+          {/* 微星。⚠️ 星座の星と同じ明るさにしない。奥行きが消える */}
+          {skyDust(sheet).map(([x, y, r, d], i) => (
+            <circle key={`d${i}`} className={`sk-dust p${d}`} cx={x} cy={y} r={r} />
+          ))}
+          {/* ⚠️ 色はここで一度だけ渡す。星ごとに渡すと、幹の色に戻る隙ができる */}
+          <g style={{ "--tc": ZODIAC_COLOR[sheet - 1],
+            transform: `scale(${zoom}) translate(${pan.x}%, ${pan.y}%)`,
+            transformOrigin: "50px 50px",
+            transition: drag.current ? "none" : "transform 220ms ease" }}>
+            {list.map((nd) => {
+              const prev = list.filter((x) => x.armI === nd.armI - 1)[0];
+              if (!prev) return null;
+              const on = !!taken[nd.key];
+              return (
+                <g key={`l${nd.key}`}>
+                  <line x1={prev.x} y1={prev.y} x2={nd.x} y2={nd.y}
+                    className={`sk-line${on ? " on" : ""}`} />
+                  {/* ⚠️ 開けた線だけ光が流れる。全部流すと目が散る */}
+                  {on && (
+                    <line x1={prev.x} y1={prev.y} x2={nd.x} y2={nd.y} className="sk-flow" />
+                  )}
+                </g>
+              );
+            })}
+            {list.map((nd) => {
+              const on = !!taken[nd.key];
+              const rdy = skillCanTake(nd.key, taken, 9999);
+              return (
+                <g key={`s${nd.key}`}
+                  className={`sk-star${on ? " on" : rdy ? " ready" : " lock"}`
+                    + `${lit === nd.key ? " lit" : ""}${pick === nd.key ? " pick" : ""}`}
+                  style={{ cursor: "pointer" }}
+                  onClick={(e) => { e.stopPropagation(); setPick(nd.key); }}>
+                  {/*
+                    ⚠️⚠️ fill="transparent" にしないこと。塗りとして拾われず、
+                      押しても反応しないことがある。
+                    ★ 黒を不透明度0で置き、pointerEvents を明示する。
+                  */}
+                  <circle cx={nd.x} cy={nd.y} r="7.5" fill="#000" fillOpacity="0"
+                    pointerEvents="all" />
+                  {lit === nd.key && <circle className="sk-burst" cx={nd.x} cy={nd.y} r="3" />}
+                  {/* 後光 → 外環 → 芯。⚠️ 三層にしないと平たく見える */}
+                  <circle className="sk-halo" cx={nd.x} cy={nd.y} r="5.6" />
+                  <circle className="sk-ring" cx={nd.x} cy={nd.y} r="3.6" />
+                  {/*
+                    ⚠️⚠️ 中に印を入れること。丸だけでは何の枝か分からない。
+                      FF10のスフィア盤もライザ2のノードも、押す前に中身が分かる。
+                    ⚠️ 芯は印の裏に薄く敷くだけ。印と同じ濃さだと潰れる。
+                  */}
+                  <circle className="sk-core2" cx={nd.x} cy={nd.y} r={on ? 2.6 : 2.2} />
+                  {/*
+                    振った星には★。
+                    ⚠️⚠️ ただ光らせるだけにしないこと。図鑑のホロ札と同じ
+                      虹の帯を通す ―― タロットの当たり札と同じ格にする。
+                    ⚠️ 切り抜きの id は星ごと。同じ id を使い回すと、
+                      最初の一つの形で全部が抜かれる。
+                    ⚠️ 帯は横に流す。止めると、ただの虹色の星になる。
+                  */}
+                  {/*
+                    ⚠️⚠️ 印を★に置き換えないこと。振った星が何の枝だったか
+                      分からなくなる。印は常に残す。
+                    ★ 振った印は、輪の外（右上）に小さなホロの★を付ける。
+                      勲章のように脇に光らせれば、印もホロも両方読める。
+                    ⚠️ ★の中に印を書き込もうとしないこと。半径1.2では
+                      盾も四つ葉も札二枚も潰れ、XVIII は入らない。
+                  */}
+                  {/*
+                    ⚠️ 振ったら印は消し、ホロの★を中央に据える。
+                      何の枝かは押せば札に出る。盤面では「振った」が分かれば足りる。
+                  */}
+                  {on ? (
+                    <g className="sk-holo">
+                      <defs>
+                        <clipPath id={`skS_${nd.key}`}>
+                          <path d={starPath(nd.x, nd.y, 3.2)} />
+                        </clipPath>
+                      </defs>
+                      <path className="sk-holo-base" d={starPath(nd.x, nd.y, 3.2)} />
+                      <g clipPath={`url(#skS_${nd.key})`}>
+                        <rect className="sk-holo-band" x={nd.x - 9.6} y={nd.y - 4.8}
+                          width="19.2" height="9.6" fill="url(#skHoloG)" />
+                      </g>
+                    </g>
+                  ) : (
+                    <SkillGlyph nd={nd} x={nd.x} y={nd.y} />
+                  )}
+                  {/* ⚠️ 前提が足りない星には錠。色を落とすだけだと理由が伝わらない */}
+                  {!on && !rdy && (
+                    <g className="sk-lock">
+                      <path d={`M${nd.x - 1.1} ${nd.y - 0.2} v-0.8 a1.1 1.1 0 0 1 2.2 0 v0.8`} />
+                      <rect x={nd.x - 1.5} y={nd.y - 0.2} width="3" height="2.3" rx="0.5" />
+                    </g>
+                  )}
+                  {/*
+                    ⚠️⚠️ 盤面に数字を散らさないこと。星が30個あれば数字も30個浮いて、
+                      星座が読めなくなる。コストは詳細カードと一覧に出ている。
+                    ⚠️ 参考にした物の要素を全部足さないこと。
+                      ライザ2にSPが書いてあるからといって、この盤面に要るとは限らない。
+                  */}
+                  {zoom > 1.4 && (
+                    <text className="sk-name" x={nd.x} y={nd.y - 6.2}
+                      style={{ fontSize: `${4.2 / zoom}px` }}>{nameOf(nd)}</text>
+                  )}
+                </g>
+              );
+            })}
+          </g>
+        </svg>
+        {/*
+          押した星のそばに出す札。
+          ⚠️⚠️ 画面の下端に固定しないこと。下のナビ（占う・記録・育成・冒険）と
+            重なるうえ、どの星の話なのか目で追えない。
+          ★ 星の座標（0〜100）を割合に直して重ねる。拡大にも追従させる。
+          ⚠️ 右端・下端の星では左上へ回す。そのままだと画面の外へ出る。
+        */}
+        {sel && (() => {
+          const cx = 50 + (sel.x - 50) * zoom + pan.x * zoom;
+          const cy = 50 + (sel.y - 50) * zoom + pan.y * zoom;
+          const toRight = cx < 58;
+          const toDown = cy < 58;
+          return (
+            <div className="sk-tip"
+              /* ⚠️ 札の中を押しても閉じないこと。開放ボタンが押せなくなる */
+              onClick={(e) => e.stopPropagation()}
+              style={{
+                left: `${Math.max(2, Math.min(98, cx))}%`,
+                top: `${Math.max(2, Math.min(98, cy))}%`,
+                transform: `translate(${toRight ? "12px" : "calc(-100% - 12px)"}, `
+                  + `${toDown ? "8px" : "calc(-100% - 8px)"})`,
+              }}>
+              <span className="sk-card-tag" style={{ "--tc": tcOf(sel.trunk) }}>
+                {a.skTrunk[sel.trunk]}
+              </span>
+              <b className="sk-card-name">{nameOf(sel)}</b>
+              {!!missing.length && <i className="sk-card-need">{missing.join(" / ")}</i>}
+              <div className="sk-card-foot">
+                <span className="sk-card-cost">{a.skCost}<b>{sel.cost}</b></span>
+                <button type="button"
+                  className={`sk-take${selTaken ? " got" : ""}`}
+                  disabled={!selCan}
+                  onClick={() => take(sel.key)}>
+                  {selTaken ? a.skDone : !selReady ? a.skLocked
+                    : !selCan ? a.skShort : a.skGet}
+                </button>
+              </div>
+            </div>
+          );
+        })()}
+      </div>
+      )}
+    </div>
+  );
+}
+
+/*
+  【名産品の収集帳】
+  ★ 県ごとに並べる。まだ持っていない品は「？？？」で枠だけ見せる ――
+    何が残っているか分かることが、また行く理由になる。
+  ⚠️ 名産品の無い県は出さない。空の県が並ぶと、持っていないことのほうが目立つ。
+*/
+function MeiPanel({ lang, onClose }) {
+  const a = advT(lang);
+  const have = loadMeibutsu();
+  const prefs = Object.keys(MEIBUTSU);
+  const total = prefs.reduce((x, p) => x + MEIBUTSU[p].length, 0);
+  const got = prefs.reduce((x, p) => x + MEIBUTSU[p].filter((it) => have[it.id]).length, 0);
+  return (
+    <div className="eq-sheet">
+      <div className="eq-sheet-head">
+        <span>{a.meiTitle}</span>
+        <span className="eq-slot-n">{a.meiHave(got, total)}</span>
+        <button type="button" className="adv-back" onClick={onClose}>{a.close}</button>
+      </div>
+      {!got && <p className="eq-empty">{a.meiNone}</p>}
+      {prefs.map((p) => {
+        const list = MEIBUTSU[p];
+        const n = list.filter((it) => have[it.id]).length;
+        return (
+          <div key={p}>
+            <p className="eq-sub">{a.pref[p] || p}<span className="eq-slot-n">{a.meiHave(n, list.length)}</span></p>
+            <div className="mei-grid">
+              {list.map((it, k) => (
+                <div key={it.id} className="mei-cell">
+                  <MeiCard it={it} pref={p} lang={lang} count={have[it.id] || 0} />
+                  {/* ⚠️ 確率を隠さない。稀な品だと分かっていれば、出なくても腹が立たない */}
+                  <span className="mei-odd">{Math.round(meiOdds(p)[k] * 100)}%</span>
+                </div>
+              ))}
+            </div>
+          </div>
+        );
+      })}
+    </div>
+  );
+}
+/*
+  地図の一番下の帯。
+  ⚠️⚠️ 三層すべてに同じものを置くこと。層ごとに置き場所が変わると、
+    どこで開けるのか覚えられない。
+  ⚠️ 戦いの画面には置かない。始まってから替えさせない。
+*/
+function AdvBottomBar({ lang }) {
+  const a = advT(lang);
+  const [open, setOpen] = useState(null);
+  /*
+    ⚠️ 描くたびに localStorage を読まないこと。帯は地図の三層すべてに出るので、
+      地図を動かすたびに読み直すことになる。
+    ⚠️ 画面を閉じたときに数え直す（宝箱で残したぶんが減る）。
+  */
+  /* ⚠️ 未開封と開封後を足して出す。どちらかだけだと「0なのに中身がある」が起きる */
+  const countBox = () => {
+    const e = loadEquip();
+    return (e.box || []).length + (e.chests || []).length;
+  };
+  const [boxN, setBoxN] = useState(countBox);
+  /* ⚠️ 残りの点も帯に出す。開かないと気づかず、溜めたまま進むことになる */
+  const [skLeft, setSkLeft] = useState(() => skillPointsOf().left);
+  const close = () => {
+    setOpen(null); setBoxN(countBox()); setSkLeft(skillPointsOf().left);
+  };
+  return (
+    <>
+      <div className="adv-foot">
+        <button type="button" className="adv-foot-btn" onClick={() => setOpen("equip")}>
+          {a.equipTitle}
+        </button>
+        {/* ⚠️ 宝箱は装備の下。拾う → 選ぶ → 装備する、の順に並べる */}
+        <button type="button" className="adv-foot-btn" onClick={() => setOpen("box")}>
+          {a.boxTitle}
+          {/* ⚠️ 中身の数を出す。開かないと分からないと、溢れてから気づく */}
+          {!!boxN && <b className="adv-foot-n">{boxN}</b>}
+        </button>
+        {/* ⚠️ 使える点があるときだけ数を出す。無いときに出すと急かして見える */}
+        <button type="button" className="adv-foot-btn" onClick={() => setOpen("mei")}>
+          {a.meiTitle}
+        </button>
+        <button type="button" className="adv-foot-btn" onClick={() => setOpen("skill")}>
+          {a.skillTitle}
+          {skLeft > 0 && <b className="adv-foot-n">{skLeft}</b>}
+        </button>
+      </div>
+      {/* ⚠️ 閉じずに行き来できるように切り替えを渡す */}
+      {open === "equip" && <EquipPanel lang={lang} onClose={close} onSwitch={setOpen} />}
+      {open === "box" && <BoxPanel lang={lang} onClose={close} onSwitch={setOpen} />}
+      {open === "stash" && <GearListPanel lang={lang} which="stash" onClose={close} onSwitch={setOpen} />}
+      {open === "hand" && <GearListPanel lang={lang} which="hand" onClose={close} onSwitch={setOpen} />}
+      {open === "skill" && <SkillPanel lang={lang} onClose={close} />}
+      {open === "mei" && <MeiPanel lang={lang} onClose={close} />}
+    </>
+  );
+}
+
 function AdventurePanel({ lang, items, onItem }) {
   const t = T[lang] || T.ja;
   const a = advT(lang);
@@ -32228,6 +39975,8 @@ function AdventurePanel({ lang, items, onItem }) {
       雑魚が繰り返し湧いて移動が止まらなくなる（実際そうなっていた）。
   */
   const [usedNodes, setUsedNodes] = useState([]);
+  /* ⚠️ お店でもらった一枚。盤の上に札として出し、閉じるまで残す */
+  const [meiGot, setMeiGot] = useState(null);
   /*
     地図を進む速さ。
     ⚠️⚠️ 待ち時間を各所に直書きしないこと。散らばると、速さを変えたときに
@@ -32266,6 +40015,10 @@ function AdventurePanel({ lang, items, onItem }) {
   const goPhase = (p) => { phaseRef.current = p; setPhase(p); };
   const battleRef = useRef(null);
   const mapRef = useRef(null);
+  /*
+    ⚠️⚠️ 主戦も数えること。雑魚戦だけを見ていたので、主戦では寄せが一度も走らず、
+      直前の位置（盤の下や記録のあたり）に取り残されていた。
+  */
   const inFight = !!zako;
   const [trip, setTrip] = useState([]);   // 県をまたいだ記録
   const [startRegion, setStartRegion] = useState(null); // 初期選択で開いている地方
@@ -32377,15 +40130,37 @@ function AdventurePanel({ lang, items, onItem }) {
   const [dragging, setDragging] = useState(false);
   useEffect(() => () => timers.current.forEach(clearTimeout), []);
   /*
+    戦闘の画面へ寄せる。
+    ⚠️⚠️ 早期 return より後ろにフックを置かないこと。描画ごとにフックの数が変わり、
+      React が止まる（#310）。実際そうして落とした。
+    ⚠️ node を見て判定しない（宣言はもっと後ろ）。枠が現れたかどうかだけを見る。
+    ★ 依存を書かず毎回走らせ、「無い → 有る」に変わった一回だけ寄せる。
+      主戦も雑魚戦も同じ枠を使うので、これで両方に効く。
+  */
+  const scrolled = useRef(false);
+  useEffect(() => {
+    const el = battleRef.current;
+    if (!el) { scrolled.current = false; return undefined; }
+    if (scrolled.current) return undefined;
+    scrolled.current = true;
+    /*
+      ⚠️⚠️ 後片付けで取り消される予約にしないこと。
+        依存を書かない効果は毎回走るので、140ms のあいだに再描画が入ると
+        前の予約が取り消され、旗は立ったままで二度と寄らなくなる（実際そうなった）。
+      ★ 画面を閉じるときにまとめて片付ける timers へ預ける。
+      ⚠️ 少し遅らせる。描かれる前に動かすと、位置が定まらない。
+    */
+    timers.current.push(setTimeout(() => {
+      const el2 = battleRef.current;
+      if (el2) el2.scrollIntoView({ behavior: "smooth", block: "start" });
+    }, 140));
+    return undefined;
+  });
+  /*
     ⚠️ 少し遅らせる。描かれる前に動かすと、位置が定まらない。
     ⚠️ 依存に戦闘の有無だけを置く。毎描画で動かすと、読んでいる途中で飛ぶ。
   */
-  useEffect(() => {
-    const el = battleRef.current;
-    if (!el) return;
-    const id = setTimeout(() => el.scrollIntoView({ behavior: "smooth", block: "center" }), 140);
-    return () => clearTimeout(id);
-  }, [inFight]);
+
 
   /* ⚠️ 区部そのものは歩けない。区を選んで初めて小MAPになる */
   const walking = stage;
@@ -32401,8 +40176,14 @@ function AdventurePanel({ lang, items, onItem }) {
     const i = list.indexOf(walking);
     return i >= 0 ? i + 1 : 4;
   })();
+  /*
+    ⚠️ 名所の主役がある小MAPは合流型の盤（入口が外周、主が中央）。作れなければいつもの盤へ戻す。
+  */
+  const heroKind = heroOf(walking);
   const map = walking && pref
-    ? buildTownMap(pref, ward || area || areasOf(pref)[0], seed, mapNo) : null;
+    ? ((heroKind && buildConvergeMap(pref, ward || area || areasOf(pref)[0], seed, mapNo))
+      || buildTownMap(pref, ward || area || areasOf(pref)[0], seed, mapNo)) : null;
+  const heroOn = !!(heroKind && map && map.some((n) => n.kind === "boss" && n.q === 0 && n.r === 0));
   /*
     ⚠️ フックは早期 return より前に置く。順番が変わると React が壊れる。
     ⚠️⚠️ map を依存に入れないこと。buildTownMap は描画のたびに新しい配列を返すので、
@@ -32439,19 +40220,46 @@ function AdventurePanel({ lang, items, onItem }) {
         */}
         <div className="adv-choices">
           {!startRegion
-            ? REGIONS.map((r) => (
+            ? [...REGIONS.map((r) => (
                 <button key={r.key} type="button" className="adv-choice"
                   onClick={() => setStartRegion(r.key)}>
                   {a.regionLabel[r.key] || a.region[r.key]}
                   <span className="adv-choice-note">{a.prefCount((PREFS[r.key] || []).length)}</span>
                   <span className="adv-choice-go">›</span>
                 </button>
+              )),
+              /*
+                ⚠️ 区部スタートは地方の並びの最後に置く。
+                  地方ではないので、上に混ぜると「東京が二つある」ように見える。
+              */
+              <button key="__ward" type="button" className="adv-choice"
+                onClick={() => setStartRegion("__ward")}>
+                {a.startWards}
+                <span className="adv-choice-note">{a.wards(wardsListOf().length)}</span>
+                <span className="adv-choice-go">›</span>
+              </button>]
+            : startRegion === "__ward"
+            ? (
+              /*
+                区部から始める。
+                ⚠️⚠️ 選んだ一区だけが独立した区分として東京に並ぶ。
+                  残りの22区は区部に残り、47都道府県の制覇まで開かない。
+                ⚠️ ここで選ばなければ、東京の区分は「多摩・島しょ・？？？」の三つ。
+              */
+              wardsListOf().map((w) => (
+                <button key={w} type="button" className="adv-choice"
+                  onClick={() => { saveStartWard(w); setPref("tokyo"); saveAdvPref("tokyo"); }}>
+                  {w}
+                  <span className="adv-choice-note">{a.stages(TOKYO_WARDS[w].length)}</span>
+                  <span className="adv-choice-go">›</span>
+                </button>
               ))
+            )
             : (PREFS[startRegion] || []).map((p) => (
                 <button key={p} type="button" className="adv-choice"
                   onClick={() => { setPref(p); saveAdvPref(p); }}>
                   {a.pref[p] || p}
-                  <span className="adv-choice-note">{a.areaCount(areasOf(p).length)}</span>
+                  <span className="adv-choice-note">{a.areaCount(areasCountable(p).length)}</span>
                   <span className="adv-choice-go">›</span>
                 </button>
               ))}
@@ -32676,6 +40484,8 @@ function AdventurePanel({ lang, items, onItem }) {
               </button>
             ))}
           </div>
+          {/* ⚠️ 三層すべて同じ位置に。層ごとに変えると、どこで開けるか覚えられない */}
+          <AdvBottomBar lang={lang} />
         </div>
       );
     }
@@ -32690,8 +40500,11 @@ function AdventurePanel({ lang, items, onItem }) {
             </button>
           </div>
           <p className="adv-need">{a.pickWard}</p>
+          {/* ⚠️ 区部は★12固定。入る前に知らせること（やりこみだが、事故にはしない） */}
+          <p className="adv-need">{a.wardsHard}</p>
           <div className="adv-choices">
-            {Object.keys(TOKYO_WARDS).map((w) => (
+            {/* ⚠️ 区部スタートで選んだ一区は抜く。東京の区分として別に出ている */}
+            {wardsListOf().map((w) => (
               <button key={w} type="button" className="adv-choice" onClick={() => setWard(w)}>
                 {w}
                 <span className="adv-choice-note">{a.stages(TOKYO_WARDS[w].length)}</span>
@@ -32732,23 +40545,56 @@ function AdventurePanel({ lang, items, onItem }) {
               );
             })()}
             {/* 区分の点。⚠️ ここは県の全体図。ステージは押した先の局所図で選ぶ */}
-            {areasOf(pref).map((ar) => {
-              const q = (AREA_POS[pref] || {})[ar];
+            {areasShown(pref).map((ar) => {
+              /* ⚠️ 区部スタートで選んだ一区は AREA_POS に無い。__ward の席を使う */
+              const q = (AREA_POS[pref] || {})[ar]
+                || (pref === "tokyo" && TOKYO_WARDS[ar] ? (AREA_POS.tokyo || {}).__ward : null);
               if (!q) return null;
+              /*
+                ⚠️⚠️ 区部は47都道府県を制覇するまで伏せる。名前も件数も出さない。
+                  枠は三つ（四つ）のまま残すこと ―― 消すと東京だけ区分が減って見える。
+                ★ 押しても入れない。「？？？」のまま置いておく。
+              */
+              const locked = isWardStage(pref, ar) && !wardsOpen(cleared);
               const anchor = q.x < 24 ? "start" : q.x > 76 ? "end" : "middle";
+              /*
+                ⚠️⚠️ 下端の区分は、件数の文字が枠の外へ出る。
+                  名前は y-4.6、件数は y+7 に置いているので、
+                  y が 88 を超えると件数が 95 以上になって見切れる。
+                  島しょ（y: 94）は 101 で、完全に枠の外だった。
+                ★ 座標は動かさない（Akiが配置を決めた値）。文字の側を上へ折り返す。
+                ⚠️ 上端も同じ。y が 8 未満だと名前が枠を出るので下へ回す。
+              */
+              const low = q.y > 84;
+              const high = q.y < 9;
+              const nameY = low ? q.y - 8.2 : high ? q.y + 6.4 : q.y - 4.6;
+              const numY = low ? q.y - 3.6 : high ? q.y + 10.4 : q.y + 7;
               return (
-                <g key={ar} style={{ cursor: "pointer" }}
-                  onClick={() => { setArea(ar); setWard(null); }}>
-                  <circle cx={q.x} cy={q.y} r={q.off ? 2.6 : 3.2}
-                    fill={q.off ? "none" : "#E8C46A"} stroke="#FFE9A8"
-                    strokeWidth={q.off ? 0.7 : 0.6} strokeDasharray={q.off ? "1.4 1.4" : ""} />
+                <g key={ar} style={{ cursor: locked ? "default" : "pointer" }}
+                  onClick={() => { if (locked) return; setArea(ar); setWard(null); }}>
+                  {/*
+                    ⚠️⚠️ 押せる場所を広げること。丸は半径2.6〜3.2しかない。
+                      100×100 の図なので、実寸では10px前後 ―― 指では当たらない。
+                      島しょは中が空（off）なので、なおさら掴めなかった。
+                    ★ 透明な丸を重ねる。見た目は変えず、当たり判定だけ広げる。
+                  */}
+                  <circle cx={q.x} cy={q.y} r="7.5" fill="transparent" />
+                  {/*
+                    ⚠️ 離島（off）は中が空だった。県の形の外にあることを示す印だが、
+                      空のままだと「押せるもの」に見えない。薄く塗って輪郭を残す。
+                  */}
+                  <circle cx={q.x} cy={q.y} r={q.off ? 3.0 : 3.2}
+                    fill={locked ? "rgba(160,150,180,0.28)"
+                      : q.off ? "rgba(232,196,106,0.30)" : "#E8C46A"}
+                    stroke={locked ? "#9A93AE" : "#FFE9A8"}
+                    strokeWidth={q.off ? 0.8 : 0.6} strokeDasharray={q.off ? "1.4 1.4" : ""} />
                   {/*
                     区分の旗。
                     ★ その区分の名所を八つとも制覇したら立てる。
                       一つでも残っていれば立たない ―― 区分を終えた印。
                     ⚠️ 円の左上に小さく。名前と数を隠さない位置に。
                   */}
-                  {(landmarksOf(pref, ar) || []).length > 0
+                  {!locked && (landmarksOf(pref, ar) || []).length > 0
                     && (landmarksOf(pref, ar) || []).every((nm) => cleared.includes(nm)) && (
                     <g style={{ pointerEvents: "none" }}>
                       <path d={`M${q.x - 3.4} ${q.y + 1.2} L${q.x - 3.4} ${q.y - 3.6}`}
@@ -32757,17 +40603,23 @@ function AdventurePanel({ lang, items, onItem }) {
                         fill="#C8102E" />
                     </g>
                   )}
-                  <text x={q.x} y={q.y - 4.6} textAnchor={anchor}
-                    style={{ fontSize: "3.8px", fill: "var(--parchment)" }}>{ar}</text>
-                  <text x={q.x} y={q.y + 7} textAnchor={anchor}
-                    style={{ fontSize: "3px", fill: "var(--muted)" }}>
-                    {ar === "区部" ? a.wards(Object.keys(TOKYO_WARDS).length)
+                  <text x={q.x} y={nameY} textAnchor={anchor}
+                    style={{ fontSize: "3.8px",
+                      fill: locked ? "#9A93AE" : "var(--parchment)", pointerEvents: "none" }}>
+                    {locked ? "？？？" : ar}
+                  </text>
+                  <text x={q.x} y={numY} textAnchor={anchor}
+                    style={{ fontSize: "3px", fill: "var(--muted)", pointerEvents: "none" }}>
+                    {locked ? a.wardsLocked
+                      : isWardStage(pref, ar) ? a.wards(wardsListOf().length)
                       : a.stages(landmarksOf(pref, ar).length)}
                   </text>
                 </g>
               );
             })}
           </svg>
+          {/* ⚠️ 三層すべて同じ位置に。層ごとに変えると、どこで開けるか覚えられない */}
+          <AdvBottomBar lang={lang} />
         </div>
       );
     }
@@ -32950,6 +40802,8 @@ function AdventurePanel({ lang, items, onItem }) {
             {trip.slice(-4).map((x, i) => <li key={i}>{x}</li>)}
           </ul>
         )}
+        {/* ⚠️ 三層すべて同じ位置に。層ごとに変えると、どこで開けるか覚えられない */}
+        <AdvBottomBar lang={lang} />
       </div>
     );
   }
@@ -32993,6 +40847,8 @@ function AdventurePanel({ lang, items, onItem }) {
       : kind === "box" ? [176, 140, 66]
       : kind === "spot" ? [92, 148, 100]
       : kind === "gate" ? [104, 124, 164]
+      /* ⚠️ お店は暖かい朱。宝箱の金と並んでも見分けが付くこと */
+      : kind === "shop" ? [196, 104, 78]
       /*
         ⚠️⚠️ 何も描かれていないマスから敵を出さないこと。
           踏むまで分からないのは罠だけでよく、雑魚は見えていないと理不尽になる。
@@ -33013,6 +40869,8 @@ function AdventurePanel({ lang, items, onItem }) {
   };
   /* この回の土地柄。⚠️ ステージ名から決まる。地図を組み直しても変わらない */
   const theme = STAGE_THEMES[themeOf(walking)] || STAGE_THEMES.town;
+  /* ⚠️ この小MAPで出やすい属性（二つ）。見出しに色付きで出し、備えを考えさせる */
+  const mapElems = mapElemsOf(walking);
   /* ⚠️ 天気は種から。歩くたびに変わると、同じ土地を歩いている感じが消える */
   const weather = weatherOf(themeOf(walking), seed);
   const LAST_COL = MAP_RINGS;
@@ -33319,10 +41177,31 @@ function AdventurePanel({ lang, items, onItem }) {
           */
           const roll = hashName(String(nd.key) + ":" + seed) % 12;
           if (roll < 8) {
-            /* ⚠️ 渡すのはステージのカード。マスに固有名詞は無い */
-            onItem && onItem(walking);
-            setGain({ card: walking, kind: "box" });
-            setLog((l) => [...l, t.advBox(landmarkCardName(lang, walking)) + a.deadEnd]);
+            /*
+              ⚠️⚠️ ランドマークカードを渡さないこと。宝箱は冒険の装備へ繋げた。
+                カードを残すと「集めたのに使い道が無い」ものが増える。
+            */
+            /*
+              装備。
+              ⚠️⚠️ 倉庫（owned）へ直接入れないこと。宝箱に溜めて、
+                残すものだけを選ばせる（捨てる作業を作らない）。
+              ★ 引く回数は土地の★ぶん。目利き（eye）を積んでいれば増える。
+              ⚠️ 拾った土地を渡すこと。名前がそこから決まる。
+            */
+            /*
+              ⚠️⚠️ 中身を決めないこと。未開封の箱を渡す。
+                拾った瞬間に装備が決まると、箱を取っておく意味が消える。
+              ★ 箱の段が、開けるときの「引く回数」になる。
+            */
+            const eqb0 = equipBonus(equippedGear());
+            const st0 = isWardStage(pref, area) ? 12 : starOfStage(rank, walking);
+            /* ⚠️ ★13は★12の土地でだけ。8%。ここを上げると特別でなくなる */
+            const hi0 = (st0 >= 12 && Math.random() < CHEST_HIGH_RATE)
+              ? CHEST_HIGH_AT.boxSpot12 : 0;
+            const ch = pushChest(st0, { pref, area },
+              Math.round(eqb0.box ? eqb0.box / 100 : 0), hi0);
+            setLog((l) => [...l, (ch.hi ? a.advChestHi(ch.hi) : a.advChest(tierStars(ch.tier)))
+              + a.deadEnd]);
           } else if (roll === 8) {
             /* ⚠️ 倍率は1が基準。超過分を倍にする（1.0のときは何も起きない） */
             const before = carryMult;
@@ -33404,6 +41283,19 @@ function AdventurePanel({ lang, items, onItem }) {
           const add = Math.round(S.maxHP * 0.35);
           setHp((v) => Math.min(S.maxHP, v + add));
           setLog((l) => [...l, where + a.healed(add)]);
+        } else if (nd && nd.kind === "shop" && !usedNodes.includes(nd.key)) {
+          /*
+            お店。
+            ★ その県の名産品を一枚。被ってよい。
+            ⚠️ 一つの盤で一度だけ。何度も往復して稼げると、集める楽しみが一日で終わる。
+            ⚠️ 何をもらったか必ず文で残す。名前が残らないと土地が記憶に残らない。
+          */
+          setUsedNodes((v) => [...v, nd.key]);
+          const got = drawMeibutsu(pref);
+          if (got) {
+            setMeiGot(got);
+            setLog((l) => [...l, where + (got.fresh ? a.meiNew(got.name) : a.meiAgain(got.name, got.count))]);
+          }
         } else if (nd && nd.kind === "gate") {
           setLog((l) => [...l, where + t.advGate]);
         } else {
@@ -33593,11 +41485,55 @@ function AdventurePanel({ lang, items, onItem }) {
           return <circle key={`st${i}`} cx={x} cy={y} r={0.8 + (i % 3) * 0.5}
             fill="#DCD6FF" opacity={0.18 + (i % 4) * 0.08} />;
         })}
+        {/*
+          遠景。⚠️⚠️ 地面より奥に置くこと。盤の上端の向こうに景色が見えて、はじめて
+            「土地を歩いている」になる。台だけでは盤に見えた。
+        */}
+        <g transform={`translate(0 ${Math.max(0, MAP_H / 2 - YSTEP * (MAP_RINGS + 0.6) - 150)})`}>
+          <Panorama kind={themeOf(walking)} w={MAP_W} h={230} uid="map" />
+          {/*
+            渡り鳥。⚠️ 生き物がいると景色が「場所」になる。台と小物だけだと模型に見えた。
+            ⚠️ 群れを二つ、違う速さで。同じ速さだと一枚の絵が滑っているように見える。
+            ⚠️ 羽ばたきは翼の形だけを動かす（位置決めの transform と分ける）。
+          */}
+          {[0, 1].map((g) => (
+            <g key={`bird${g}`} className={`mv-flock f${g}`}>
+              {[0, 1, 2, 3, 4].map((k) => (
+                <g key={k} transform={`translate(${k * 11 - (k % 2) * 3} ${Math.abs(k - 2) * 6 + g * 40})`}>
+                  <path className="mv-wing" d="M-5 0 Q-2.4 -3 0 0 Q2.4 -3 5 0"
+                    fill="none" stroke="rgba(30,24,40,0.75)" strokeWidth="1.4" strokeLinecap="round" />
+                </g>
+              ))}
+            </g>
+          ))}
+        </g>
         {/* 地面。⚠️ マスの集まりの下に敷く。空の上に浮いていると旅に見えない */}
         <ellipse cx={MAP_W / 2} cy={MAP_H / 2} rx={XSTEP * (MAP_RINGS + 0.6)}
           ry={YSTEP * (MAP_RINGS + 0.6)} fill="url(#advLand)" />
         <ellipse cx={MAP_W / 2 - 90} cy={MAP_H / 2 + 60} rx={230} ry={150} fill="url(#advMist)" />
         <ellipse cx={MAP_W / 2 + 140} cy={MAP_H / 2 - 90} rx={200} ry={130} fill="url(#advMist)" />
+        {/*
+          空きマスの地形・川・電線。
+          ⚠️⚠️ 台より奥（先）に描くこと。台の上に景色が被ると道が読めなくなる。
+          ⚠️ 並びは奥から手前（terrainPlan で y の順に並べてある）。
+        */}
+        {(() => {
+          const tp = terrainPlan(map, seed, themeOf(walking), iso, mapElems, pref, area, heroOn);
+          return (
+            <g style={{ pointerEvents: "none" }}>
+              <TerrainRiver river={tp.river} />
+              <TerrainRail rail={tp.rail} />
+              {/* ⚠️ 高速道路は高架なので線路より手前に描く */}
+              <TerrainHighway hw={tp.highway} />
+              {tp.cells.map((c) => <TerrainCell key={`tc${c.q},${c.r}`} c={c} />)}
+              <TerrainCables pylons={tp.pylons} />
+              {/*
+                名所の主役。⚠️ 地形より手前、台より奥（主のマスが足元に重なる）。
+              */}
+              {heroOn && (() => { const C = iso({ q: 0, r: 0 }); return <HeroMonument kind={heroKind} x={C.x} y={C.y - 6} />; })()}
+            </g>
+          );
+        })()}
         {/*
           地面の景物。
           ⚠️⚠️ 台と道だけだと盤に見える。木・岩・草を置いて、土地の上を歩かせる。
@@ -33609,7 +41545,12 @@ function AdventurePanel({ lang, items, onItem }) {
           const items = [];
           let s2 = (seed || 1) * 7919 + 13;
           const rnd2 = () => (s2 = (s2 * 1103515245 + 12345) & 0x7fffffff) / 0x7fffffff;
-          for (let i = 0; i < 150; i++) {
+          /*
+            ⚠️⚠️ この層はもう撒かないこと。空きマスはすべて地形（TerrainCell）で埋めたので、
+              ここで家や田んぼを撒くと地形のマスと重なる（家と田んぼが重なっていた）。
+            ★ 数を0にして層ごと止めてある。戻すなら、地形のマスと当たらない所だけにすること。
+          */
+          for (let i = 0; i < 0; i++) {
             const ang = rnd2() * Math.PI * 2;
             const rad = Math.sqrt(rnd2()) * (MAP_RINGS + 0.5);
             const x = MAP_W / 2 + Math.cos(ang) * rad * XSTEP;
@@ -33626,9 +41567,16 @@ function AdventurePanel({ lang, items, onItem }) {
             for (const [k2, w2] of theme.mix) { if (pick < w2) { kind = k2; break; } pick -= w2; }
             items.push({ x, y, d: depth, kind, key: `sc${i}` });
           }
+          /*
+            ⚠️⚠️ 奥（y の小さい順）から手前へ並べること。順がばらばらだと、
+              手前の木が奥の家に隠れて重なりが崩れる。
+            ⚠️⚠️ 薄くしすぎないこと（以前は0.35〜0.75で、景色に溶けて見えなかった）。
+              奥だけ少し霞ませ、手前ははっきり描く。
+          */
+          items.sort((p1, p2) => p1.y - p2.y);
           return items.map((o) => (
             <g key={o.key} transform={`translate(${o.x} ${o.y}) scale(${o.d.toFixed(2)})`}
-              opacity={0.35 + o.d * 0.4}>
+              opacity={Math.min(1, 0.72 + o.d * 0.24)}>
               {o.kind === "tree" ? (
                 /* 木。⚠️ 三角を三段。一枚だと記号に見える */
                 <g>
@@ -33753,6 +41701,91 @@ function AdventurePanel({ lang, items, onItem }) {
                   <ellipse cx="-2" cy="-12" rx="1.2" ry="2.6" fill="#B49A63" />
                   <ellipse cx="1" cy="-14" rx="1.2" ry="2.8" fill="#C7AC74" />
                 </g>
+              ) : o.kind === "sakura" ? (
+                /* 桜。⚠️ 花びらが一枚ずつ散る。丸だけだと綿に見える */
+                <g>
+                  <ellipse cx="1" cy="2" rx="9" ry="2.6" fill="rgba(10,6,20,0.4)" />
+                  <path d="M-1.4 2 L-1 -9 L1 -9 L1.4 2 Z" fill="#5A3A2A" />
+                  <g className="mv-sway">
+                    <circle cx="-5" cy="-12" r="6" fill="#F4B4C8" />
+                    <circle cx="4" cy="-13" r="6.6" fill="#F8C4D4" />
+                    <circle cx="0" cy="-18" r="5.6" fill="#FAD2DE" />
+                    <circle cx="-2" cy="-14" r="3" fill="#FFE4EC" opacity="0.8" />
+                  </g>
+                  <circle className="mv-petal" cx="6" cy="-6" r="1.1" fill="#F8C4D4" />
+                </g>
+              ) : o.kind === "cedar" ? (
+                /* 杉。⚠️ 細く高く。松（三角三段）と見分けが付くように */
+                <g>
+                  <ellipse cx="0" cy="2" rx="6" ry="2" fill="rgba(10,6,20,0.4)" />
+                  <rect x="-1" y="-6" width="2" height="8" fill="#4A3020" />
+                  <path d="M0 -34 L5 -6 L-5 -6 Z" fill="#2E5A3C" />
+                  <path d="M0 -34 L5 -6 L0 -6 Z" fill="#3E7050" />
+                </g>
+              ) : o.kind === "lantern" ? (
+                /* 石灯籠。⚠️ 火は揺らす（速く点滅させない） */
+                <g>
+                  <ellipse cx="0" cy="2" rx="5" ry="1.8" fill="rgba(10,6,20,0.4)" />
+                  <path d="M-4 2 h8 l-1 -2 h-6 Z M-1.6 0 h3.2 v-6 h-3.2 Z" fill="#8A847A" />
+                  <path d="M-3.4 -6 h6.8 v-5 h-6.8 Z" fill="#9C968A" />
+                  <path d="M-5 -11 h10 l-5 -4 Z" fill="#78726A" />
+                  <circle className="mv-flame" cx="0" cy="-8.4" r="1.5" fill="#FFD27A" />
+                  <circle className="mv-flame" cx="0" cy="-8.4" r="4" fill="rgba(255,200,110,0.25)" />
+                </g>
+              ) : o.kind === "paddy" ? (
+                /* 田んぼ。⚠️ 畦で四つに割り、稲の列を斜めに。平らな緑だけだと芝生 */
+                <g>
+                  <path d="M-12 0 L0 -6 L12 0 L0 6 Z" fill="#6A9A5A" />
+                  <path d="M-12 0 L0 -6 L12 0 L0 6 Z" fill="none" stroke="#8A7A50" strokeWidth="1" />
+                  <path d="M-6 -3 L6 3 M-6 3 L6 -3" stroke="#8A7A50" strokeWidth="0.8" />
+                  <path d="M-8 -1 l2 1 M-3 -3 l2 1 M2 1 l2 1 M4 -2 l2 1 M-2 2 l2 1" stroke="#9AD07A" strokeWidth="0.9" />
+                </g>
+              ) : o.kind === "boat" ? (
+                /* 小舟。⚠️ 水の上で上下に揺れる */
+                <g className="mv-bob">
+                  <path d="M-10 0 Q0 5 10 0 L8 -2 H-8 Z" fill="#7A5A3A" />
+                  <path d="M-8 -2 H8" stroke="#A07A50" strokeWidth="1" />
+                  <path d="M0 -2 V-14" stroke="#5A4030" strokeWidth="1" />
+                  <path d="M0 -13 L7 -5 H0 Z" fill="#EDE6D6" />
+                </g>
+              ) : o.kind === "flower" ? (
+                /* 花畑。⚠️ 色を三つ混ぜる。一色だと模様に見える */
+                <g>
+                  {[[-5, 0, "#F4D060"], [0, -2, "#F48AA8"], [4, 1, "#FFFFFF"], [-2, 2, "#F48AA8"], [6, -2, "#F4D060"]].map(([x, y, c], k) => (
+                    <g key={k}>
+                      <path d={`M${x} ${y + 2} v-3`} stroke="#4F7F52" strokeWidth="0.8" />
+                      <circle cx={x} cy={y - 1.4} r="1.3" fill={c} />
+                    </g>
+                  ))}
+                </g>
+              ) : o.kind === "sign" ? (
+                /* 道標。⚠️ 旅の目印。矢の向きを左右に振る */
+                <g>
+                  <ellipse cx="0" cy="2" rx="4" ry="1.4" fill="rgba(10,6,20,0.4)" />
+                  <rect x="-0.8" y="-14" width="1.6" height="16" fill="#6A4A30" />
+                  <path d="M-1 -13 h9 l2 2 l-2 2 h-9 Z" fill="#C8A878" />
+                  <path d="M1 -7 h-9 l-2 2 l2 2 h9 Z" fill="#B89868" />
+                </g>
+              ) : o.kind === "hut" ? (
+                /* 山小屋・茶屋。⚠️ 煙突の煙で「人がいる」ことを見せる */
+                <g>
+                  <ellipse cx="0" cy="2" rx="10" ry="2.6" fill="rgba(10,6,20,0.4)" />
+                  <rect x="-7" y="-7" width="14" height="9" fill="#8A6A4A" />
+                  <rect x="-7" y="-7" width="7" height="9" fill="#9C7A56" />
+                  <path d="M-9 -7 L0 -14 L9 -7 Z" fill="#5A4A3A" />
+                  <rect x="-2" y="-3" width="4" height="5" fill="#3A2A20" />
+                  <rect x="3" y="-13" width="2" height="4" fill="#4A3A30" />
+                  <circle className="mv-smoke" cx="4" cy="-15" r="2" fill="rgba(230,230,240,0.5)" />
+                </g>
+              ) : o.kind === "light" ? (
+                /* 街灯。⚠️ 足元に光の輪。灯だけだと浮いて見える */
+                <g>
+                  <ellipse cx="0" cy="2" rx="7" ry="2.2" fill="rgba(255,220,150,0.25)" className="mv-flame" />
+                  <rect x="-0.7" y="-18" width="1.4" height="20" fill="#5A5A6A" />
+                  <path d="M0 -18 h4 v1.4 h-4 Z" fill="#5A5A6A" />
+                  <circle cx="4" cy="-15.6" r="1.8" fill="#FFE6A8" />
+                  <circle cx="4" cy="-15.6" r="5" fill="rgba(255,230,170,0.22)" />
+                </g>
               ) : (
                 /* 草。⚠️ 三本を別々の傾きで。揃えると刷毛に見える */
                 <g stroke="#4F7F52" strokeWidth="1.6" strokeLinecap="round" fill="none">
@@ -33836,10 +41869,12 @@ function AdventurePanel({ lang, items, onItem }) {
             return (
               <g key={n.key} transform={`translate(${P.x} ${P.y})`}>
                 {/* ⚠️ 光は台の下に敷く。上に載せると模様が消える */}
-                {(n.kind === "box" || n.kind === "spot" || n.kind === "boss" || n.kind === "gate") && (
+                {(n.kind === "box" || n.kind === "spot" || n.kind === "boss" || n.kind === "gate"
+                  || n.kind === "shop") && (
                   <ellipse cx="0" cy="0" rx={R * 1.7} ry={H * 1.7}
                     fill={n.kind === "box" ? "rgba(232,196,106,0.30)"
                       : n.kind === "spot" ? "rgba(126,216,130,0.26)"
+                      : n.kind === "shop" ? "rgba(240,140,110,0.30)"
                       : n.kind === "gate" ? "rgba(159,180,216,0.26)" : "rgba(255,122,122,0.30)"}
                     style={{ filter: "blur(6px)" }} />
                 )}
@@ -34064,6 +42099,12 @@ function AdventurePanel({ lang, items, onItem }) {
               style={{ animationDuration: `${5 + (i % 5)}s`, animationDelay: `${i * 0.42}s` }} />
           );
         })}
+        {/*
+          属性の空気。⚠️ 盤の最前面に置く（台や木の上を漂う）。判定は持たせない。
+        */}
+        {/* ⚠️ 北海道・東北は属性に関係なく雪を降らせる（雪国の空気） */}
+        <ElemAmbience elems={snowRegionOf(pref) && !mapElems.includes("ice") ? [...mapElems, "ice"] : mapElems}
+          w={MAP_W} h={MAP_H} />
         </g>
         {/* ⚠️ 艶は視点の外側に置く。盤と一緒に動かすと画面から出て見えなくなる */}
         <rect x="-90" y="0" width="90" height={VIEW_H} fill="url(#isoSheen)" className="mv-sheen"
@@ -34243,12 +42284,17 @@ function AdventurePanel({ lang, items, onItem }) {
         ⚠️ 主と同じ部品を使い、zako を渡して軽くする。別に作ると計算が二重になる。
         ⚠️ HPを引き継ぎ、終わったら戻す。ここが持ち越しの要。
       */}
+      {/*
+        ⚠️⚠️ 区部は★12固定。通算の初回クリア数を見ない。
+          全国制覇のあとに開く場所なので、47段の続きではなく、外側に置く。
+          やりこみなので消耗戦でよい ―― やらなくてもいい場所。
+      */}
       {zako && (
-        <div ref={battleRef}>
+        <div ref={battleRef} style={{ scrollMarginTop: 8 }}>
         <BattlePanel
           key={`zako-${rank}-${zako}`}
           lang={lang} zako startHP={hp} startMult={carryMult} seed={seed}
-          star={starOfStage(rank, walking)}
+          star={isWardStage(pref, area) ? 12 : starOfStage(rank, walking)}
           rank={rank}
           stageName={walking}
           theme={themeOf(walking)}
@@ -34268,6 +42314,8 @@ function AdventurePanel({ lang, items, onItem }) {
       )}
 
       {inBattle && (
+        /* ⚠️ 主戦も寄せの的に入れる。雑魚戦と同じく、上端（地名と★）を画面の上へ */
+        <div ref={battleRef} style={{ scrollMarginTop: 8 }}>
         <BattlePanel
           /*
             ⚠️ key に段を入れること。段を変えても組み直されないと、
@@ -34275,12 +42323,26 @@ function AdventurePanel({ lang, items, onItem }) {
           */
           key={`boss-${rank}`}
           lang={lang} startHP={hp} startMult={carryMult}
-          star={starOfStage(rank, walking)}
+          star={isWardStage(pref, area) ? 12 : starOfStage(rank, walking)}
           rank={rank}
           stageName={walking}
           theme={themeOf(walking)}
           onEnd={(win) => {
             setBossEnd(win ? "win" : "lose");
+            /*
+              主を倒したときの宝箱。
+              ⚠️⚠️ ★14は区分の主（EXTRA）、★15は区部の主だけ。
+                出どころを絞らないと、二本出しがただの管理の倍増になる。
+              ⚠️ 普通の主は箱を落とさない。落とすと社（鳥居マス）の意味が薄まる。
+            */
+            if (win) {
+              const hiB = isWardStage(pref, area) ? CHEST_HIGH_AT.wardBoss
+                : String(walking || "").endsWith(BOSS_SUFFIX) ? CHEST_HIGH_AT.extraBoss : 0;
+              if (hiB) {
+                const cb = pushChest(12, { pref, area }, 0, hiB);
+                setLog((l) => [...l, a.advChestHi(cb.hi)]);
+              }
+            }
             /* ⚠️ 結果は盤の下に出る。勝った瞬間にそこへ視点を移す */
             timers.current.push(setTimeout(() => {
               const el = document.querySelector(".adv-result");
@@ -34300,6 +42362,7 @@ function AdventurePanel({ lang, items, onItem }) {
             }
           }}
         />
+        </div>
       )}
 
       {/*
@@ -34332,6 +42395,23 @@ function AdventurePanel({ lang, items, onItem }) {
           <span className="adv-legend-key">{a.isoLegend}</span>
         </p>
       </details>
+      {/*
+        お店でもらった一枚。
+        ★ 札として大きく見せる。文だけだと、何をもらったか記憶に残らない。
+        ⚠️ 押すまで残す。すぐ消すと読む前に流れる。
+        ⚠️ 盤を塞がない位置に出す（画面の中央に重ねて、押せば閉じる）。
+      */}
+      {meiGot && (
+        <div className="mei-pop" onClick={() => setMeiGot(null)}>
+          <div className="mei-pop-in" onClick={(e) => e.stopPropagation()}>
+            {meiGot.fresh && <span className="mei-pop-tag">{a.meiFirst}</span>}
+            <MeiCard it={meiGot} pref={meiGot.pref} lang={lang} big count={meiGot.count} />
+            <button type="button" className="adv-back win" onClick={() => setMeiGot(null)}>
+              {a.close}
+            </button>
+          </div>
+        </div>
+      )}
       {/*
         起きたこと。
         ⚠️⚠️ 開いたままにしないこと。小MAPは見るものが多く、
@@ -35771,6 +43851,723 @@ const ITEM_POCKETS = [
   { suit: "major" }, { suit: "wands" }, { suit: "pentacles" },
   { suit: "cups" }, { suit: "swords" },
 ];
+/*
+  【装備の絵】
+  ⚠️⚠️ lucide のアイコンで済ませないこと。19種＋消耗品4種を線画の記号で並べると、
+    形が違うだけの同じものに見える。名前と一対一なのだから、絵も一対一で描く。
+  ★ 光は左上から。面の明るさはその向きから決める。
+    三段（当たる面・中間・影）を別の path で塗る。傾斜は使わない
+    （同じ id の傾斜を何十個も置くと、文書内で衝突して全部同じ色になる）。
+  ★ 種類ごとに違う動かし方をする。重いものは鈍く、軽いものは速く、石は動かさない。
+  ⚠️ 速い点滅を使わない。呼吸は2〜4秒。閃きだけ、間を置いて短く。
+  ⚠️ 位置決めは外側の <g>、動きは内側に分ける。
+    CSS の transform は SVG の transform 属性を上書きする。
+*/
+const EQ_M = { lit: "#EDF2FA", mid: "#A9B4C6", dark: "#5E6878" };   /* 鋼  */
+const EQ_G = { lit: "#FFEFC0", mid: "#E8C46A", dark: "#8A6A22" };   /* 金  */
+const EQ_W = { lit: "#D8B183", mid: "#9A6E3C", dark: "#5A3A1C" };   /* 木  */
+const EQ_C = { lit: "#E7B9B9", mid: "#B0706F", dark: "#6B3B3B" };   /* 布  */
+const EQ_S = { lit: "#D6D6D6", mid: "#949494", dark: "#5A5A5A" };   /* 石  */
+/*
+  段の色。
+  ⚠️ 12段あるので、明るさだけでは分けられない。色相で分ける。
+  ⚠️ 色だけに頼らないこと。★の数も必ず添える（暗所と色覚のため）。
+*/
+const EQ_TIER_COLOR = {
+  bronze: "#B0764A",   /* 銅 ★1  */ silver: "#A8C8E4",   /* 青白 ★2 */
+  /*
+    ⚠️ プラチナは白。金属としての白金の色ではないが、段の名前としてはこれで通す。
+      ★2に青白、★4に白を置いて、下の四段（銅・青白・金・白）を
+      暖・寒・暖・無彩の交互にしてある。並べたとき一段ごとに切り替わる。
+    ⚠️ ★12（白⇄黒）と白が重なる。あちらは黒へ振れるので静止していない。
+      ★4を動かさないこと。動かすと見分けが付かなくなる。
+  */
+  gold: "#E8C46A",     /* 金 ★3  */ platinum: "#FFFFFF", /* 白 ★4  */
+  diamond: "#4FD2F5",  /* 水色 ★5 */ astral: "#B79AF0",   /* 藤 ★6  */
+  /*
+    ⚠️⚠️ ここを暖色に戻さないこと。
+      ブロンズ（銅）とゴールド（金）は素材名で色が決まっていて動かせない。
+      そこへ橙と淡黄を足すと、12段のうち4段が黄茶系になり、
+      ★1と★7、★3と★9が並んだときに区別が付かなかった（実際そう見えた）。
+    ★ レジェンダリーは緑、ディヴァインは濃い紫。どちらも他で使っていない系統。
+    ⚠️ 緑はエターナル（翠）と、紫はアストラル（藤）と系統が重なる。
+      どちらも三段離してあり、明るさも大きく違う。詰めないこと。
+  */
+  legendary: "#2A5FE0",/* 青 ★7  */ ultimate: "#F06A9A", /* 桃 ★8  */
+  /*
+    ⚠️ 色は名前ではなく段に付く。★10=翠碧／★11=青赤／★12=白黒。
+      白と黒は12段のうちここだけが持つ「無い色」なので、最上位から動かさない。
+  */
+  /*
+    ⚠️ 翠は青緑（ティール）を少し緑に寄せた色。緑ではない。
+      #3FBF8A は緑寄りすぎて、★9の常磐（緑）と系統が重なっていた。
+      緑は★9、青緑は★10、と分けること。
+  */
+  /* ⚠️ ★10〜12はホロが色を持つ。ここは縁と光の色（ホロの上に乗る線）だけ */
+  divine: "#6A2FA8",   /* 菫 ★9  */ genesis: "#FFF3D6",  /* ★10 縁 */
+  cosmo: "#FFF3D6",    /* ★11 縁 */ eternal: "#FFF3D6",  /* ★12 縁 */
+};
+/*
+  上の七段（★6〜★12）が、二つ目の色を持つ。
+  ⚠️⚠️ 斜めに割らないこと。割ると「二色の板」になり、
+    余白・縁・光・粒がそれぞれ別の色を持ってしまって、段ではなく模様に見える。
+  ★ 枠ぜんたい（余白・縁・光・光輪・粒）が、周期で一色目と二色目に入れ替わる。
+    どの瞬間を切り取っても単色なので、段の色として読める。
+  ★ 下の五段は静止。ここが「動く／動かない」の境目でもある。
+  ⚠️ 対にする二色は離すこと。近い二色だと、切り替わっているのか
+    光っているだけなのか読めない（★10の翠⇄碧がその手前にある）。
+*/
+const EQ_TIER_SPLIT = {
+  astral:    "#F5E7B8",  /* ★6  藤 と クリーム */
+  legendary: "#E03A3A",  /* ★7  青 と 赤 */
+  ultimate:  "#7FD8F0",  /* ★8  桃 と 水色 */
+  divine:    "#2E8B57",  /* ★9  菫 と 常磐 */
+  /*
+    ⚠️⚠️ 翠を青緑へ寄せたぶん、碧を深く沈めてある。
+      翠（青緑）と碧（青）は元から隣り合う系統で、明るさまで近いと
+      入れ替わっているのか光っているだけなのか読めない。
+    ⚠️ ★11の青（#2A5FE0）より暗くしておくこと。明るいと段が入れ替わって見える。
+  */
+};
+/*
+  ★10〜12はホロ。
+  ⚠️⚠️ 二色を行き来させないこと。翠⇄碧・青⇄赤をやってみたが、
+    ホロと二色の入れ替わりが同時に起きて、何が段を示しているのか読めなかった。
+  ★ ホロ単体にする。図鑑のホロ札と同じ、斜めに流れる四色。
+      ★10 普通       ★11 少し派手       ★12 白・黒・ホロの三周期
+  ⚠️ 色は帯（余白）だけに置く。中央は暗いまま ―― 絵が消える。
+  ⚠️ 縁と光は淡い生成り（EQ_TIER_COLOR）で上から引く。ホロと同じ色にすると線が消える。
+*/
+const EQ_HOLO = { genesis: 1, cosmo: 2, eternal: 3 };
+/*
+  二色の見せ方。三通りある。
+  ⚠️⚠️ 三通りであることが段の読み方の一本になっている。減らさないこと。
+      ★1〜5   単色・静止
+      ★6〜9   二色・斜めに分けて静止
+      ★10〜12 二色・周期で入れ替わる
+    色や縁が読めなくても、「止まっている／割れている／移り変わる」で
+    おおよその位置が分かる。
+  ⚠️ 斜めに割るのは余白だけ。縁と光は一色目で通すこと。
+    縁まで割ると、余白・縁・光・粒が別々の色を持って模様に見える。
+  ⚠️ 割る向きは全段で同じ（左上／右下）。段ごとに向きを変えると、
+    割れていること自体が段の差に見える。
+*/
+const EQ_TIER_MODE = {
+  astral: "split", legendary: "split", ultimate: "split", divine: "split",
+  genesis: "holo", cosmo: "holo", eternal: "holo",
+};
+/*
+  入れ替わりの周期（秒）。⚠️ cycle の三段だけ。
+  ⚠️⚠️ 上の段ほど速い。落ち着かなさが段の高さになる。順を崩さないこと。
+  ⚠️ 2秒より速くしない。呼吸より速いと点滅に見え、警告のように読める。
+*/
+const EQ_TIER_CYCLE = { genesis: 2.5, cosmo: 2.2, eternal: 2.0 };
+/* 図鑑のホロ札と同じ四色。⚠️ ここを変えると梯子が二本に見える。揃えておくこと */
+const EQ_HOLO_COLORS = ["#FF3CB4", "#3CC8FF", "#78FF8C", "#FFDC3C"];
+/*
+  段ごとの枠の作り。
+  ★ 三つを入れ子にする。色は2段ごと、縁の本数は4段ごと、光は1段ごと。
+    どれか一つが読めなくても段が決まる。
+  ⚠️⚠️ 上の三段（藤・青・白）だけ1段ごとに色を変えること。
+    2段ごとのままだと最上位の二段が同じ色になり、虹が回っているかだけの差になる。
+  ⚠️ 光は偶数段。同じ色の二段が「くすんだほう」と「灯ったほう」で分かれる。
+  ⚠️ 四色の虹はジェネシスだけ。図鑑のホロ枠と同じ四色なので、
+    ここ以外で使うと梯子が二本に見える（v5で名前について決めたのと同じ話）。
+*/
+const EQ_TIER_FRAME = {
+  bronze:    { rings: 1, glow: false },
+  silver:    { rings: 1, glow: true },
+  gold:      { rings: 1, glow: false },
+  platinum:  { rings: 1, glow: true },
+  diamond:   { rings: 2, glow: false },
+  astral:    { rings: 2, glow: true },
+  legendary: { rings: 2, glow: false },
+  ultimate:  { rings: 2, glow: true, pulse: true },
+  divine:    { rings: 3, glow: true, pulse: true },
+  /* ⚠️ ホロの強さは EQ_HOLO で持つ。ここに書かないこと（二箇所になる） */
+  genesis:   { rings: 3, glow: true, pulse: true, halo: true },
+  cosmo:     { rings: 3, glow: true, pulse: true, halo: true },
+  eternal:   { rings: 3, glow: true, pulse: true, halo: true },
+};
+/*
+  台。
+  ⚠️⚠️ 余白に色を置き、中央は暗いままにすること。
+    面いっぱいを段の色で塗ると、白や淡黄の段で絵（明るい金属色）が消える。
+    色を持たせるのは縁の内側の帯だけ。だから「余白の色」。
+  ⚠️ 艶は斜めに一本。面で光らせると板に見える。
+  ⚠️ 光輪は台の外へ出す。内側に置くと縁の本数と混ざって数え間違える。
+  ⚠️ clipPath の id は全段で共通の一つだけ。段ごとに作ると文書内で増えすぎる。
+    同じ形なので、重複しても先頭が使われるだけで害はない。
+    ⚠️ clipPath の子に <g> を置かないこと（仕様上まるごと無視され、中身が消える）。
+*/
+function EqPlate({ tier }) {
+  const t = EQ_TIER_FRAME[tier] ? tier : "bronze";
+  const c = EQ_TIER_COLOR[t];
+  const c2 = EQ_TIER_SPLIT[t];
+  const f = EQ_TIER_FRAME[t];
+  const mode = c2 ? (EQ_TIER_MODE[t] || "cycle") : "solid";
+  const geo = [[2, 44, 11], [4.6, 38.8, 8.6], [7.2, 33.6, 6.4]];
+  /*
+    枠の中身。色は持たせず、すべて currentColor で描く。
+    ⚠️⚠️ ここに色を書かないこと。二色の段はこれを二度描いて色だけ変える。
+      要素ごとに色を書くと、余白だけが替わって縁と光が取り残される。
+  */
+  const body = (
+    <g>
+      {/* 外の光輪。⚠️ 台より先に描く。あとに描くと絵に被る */}
+      {f.halo && (
+        <g className="eqp-halo">
+          <rect x="0" y="0" width="48" height="48" rx="13" fill="none"
+            stroke="currentColor" strokeWidth="1" opacity="0.22" />
+          <rect x="-1.5" y="-1.5" width="51" height="51" rx="15" fill="none"
+            stroke="currentColor" strokeWidth="1" opacity="0.12" />
+        </g>
+      )}
+      {/* 余白。⚠️ 中央は暗いまま。面いっぱいを塗ると白や淡い段で絵が消える */}
+      <rect x="2" y="2" width="44" height="44" rx="11" fill="currentColor" />
+      <rect x="6.6" y="6.6" width="34.8" height="34.8" rx="8" fill="#16112C" />
+      {geo.slice(0, f.rings).map(([x, w, rx], i) => (
+        <rect key={i} x={x} y={x} width={w} height={w} rx={rx} fill="none" stroke="currentColor"
+          strokeWidth={i === 0 ? 1.6 : 1.1} opacity={i === 0 ? 0.9 : i === 1 ? 0.55 : 0.38} />
+      ))}
+      {f.glow && (
+        <rect className={`eqp-glow${f.pulse ? " pulse" : ""}`} x="2" y="2"
+          width="44" height="44" rx="11" fill="none" stroke="currentColor"
+          strokeWidth="3" opacity="0.28" />
+      )}
+      {f.motes && (
+        <g className="eqp-motes">
+          {[0, 72, 144, 216, 288].map((a) => (
+            <circle key={a} r="1.1" fill="currentColor" opacity="0.9"
+              cx={24 + 17 * Math.cos((a * Math.PI) / 180)}
+              cy={24 + 17 * Math.sin((a * Math.PI) / 180)} />
+          ))}
+        </g>
+      )}
+    </g>
+  );
+  /*
+    ⚠️⚠️ 入れ替わる段（★10〜12）だけ color を動かす。
+      CSS の変数は @property を登録しないと補間できない。color なら補間できる。
+    ⚠️ 斜めに分ける段では color を動かさない。面と縁が別々に動いて落ち着かない。
+  */
+  const holo = EQ_HOLO[t] || 0;
+  return (
+    <g>
+      {mode === "split" ? (
+        <g>
+          {/*
+            斜めに二つへ分ける。
+            ⚠️⚠️ 片方の色だけで縁と光を描かないこと。
+              二色目が「影が落ちている側」に見えて、色が対等にならない
+              （実際そう見えた）。枠ぜんたいを二度描き、色だけを変える。
+            ★ 切り口は中心を通る一本だけ（x + y = 48）。面積は厳密に半分ずつ。
+            ⚠️ 向きは全段で同じ（左上／右下）。段ごとに変えると、
+              分かれていること自体が段の差に見える。
+          */}
+          <defs>
+            <clipPath id="eqHalfA"><path d="M-6 -6 L54 -6 L-6 54 Z" /></clipPath>
+            <clipPath id="eqHalfB"><path d="M54 -6 L54 54 L-6 54 Z" /></clipPath>
+          </defs>
+          <g clipPath="url(#eqHalfA)" style={{ color: c }}>{body}</g>
+          <g clipPath="url(#eqHalfB)" style={{ color: c2 }}>{body}</g>
+        </g>
+      ) : mode === "holo" ? (
+        <g>
+          {/*
+            ⚠️ 虹は外側の <span>（.eq-icon-wrap.holo）が持つ。ここでは台と縁だけ。
+              SVG の中で虹を描かないこと ―― 縞にしかならない。
+            ⚠️ 台は暗いまま。虹はこの上に screen で乗る。
+          */}
+          <rect x="2" y="2" width="44" height="44" rx="11" fill="#16112C" />
+          <g style={{ color: c }}>
+            {[[2, 44, 11], [4.6, 38.8, 8.6], [7.2, 33.6, 6.4]].slice(0, f.rings).map(([x, w, rx], i) => (
+              <rect key={i} x={x} y={x} width={w} height={w} rx={rx} fill="none" stroke="currentColor"
+                strokeWidth={i === 0 ? 1.6 : 1.1} opacity={i === 0 ? 0.9 : i === 1 ? 0.55 : 0.38} />
+            ))}
+            {f.glow && (
+              <rect className={`eqp-glow${f.pulse ? " pulse" : ""}`} x="2" y="2"
+                width="44" height="44" rx="11" fill="none" stroke="currentColor"
+                strokeWidth="3" opacity="0.28" />
+            )}
+          </g>
+        </g>
+      ) : (
+        <g style={{ color: c }}>{body}</g>
+      )}
+      {/* ⚠️ 艶は一度だけ、いちばん上に。半分ずつ描くと切り口で途切れる */}
+      <path d="M5 16 L20 4 L28 4 L7 26 Z" fill="#FFFFFF" opacity="0.07" />
+    </g>
+  );
+}
+/*
+  一つ描く。
+  ⚠️⚠️ kind ごとに分岐を書ききること。既定の絵で埋めると、
+    描き忘れた種類が全部同じ顔になり、名前と絵の一対一が崩れる。
+*/
+function EquipArt({ kind }) {
+  switch (kind) {
+    /* 刀 ―― 剣の増幅。⚠️ 反りを付ける。まっすぐだと洋剣になる */
+    case "blade": return (
+      <g className="eqa blade">
+        <path d="M14 36 Q24 26 34 10 L36 12 Q28 28 17 38 Z" fill={EQ_M.lit} />
+        <path d="M14 36 Q24 26 34 10 L35 11 Q26 27 15.5 37 Z" fill={EQ_M.mid} />
+        <path d="M12 35 L18 39 L15 42 L9 38 Z" fill={EQ_W.mid} />
+        <path d="M12 35 L18 39 L17 40.5 L11 36.5 Z" fill={EQ_W.dark} />
+        <rect x="14.5" y="31.5" width="9" height="2.4" rx="1.2"
+          transform="rotate(-38 19 33)" fill={EQ_G.mid} />
+        <path className="eqa-glint" d="M22 28 L32 14" stroke="#FFFFFF"
+          strokeWidth="1.6" strokeLinecap="round" opacity="0" />
+      </g>
+    );
+    /* 杖 ―― 棒の増幅。先の玉が呼吸する */
+    case "staff": return (
+      <g className="eqa staff">
+        <path d="M22 42 L28 16 L31 16.6 L25 42.4 Z" fill={EQ_W.mid} />
+        <path d="M22 42 L28 16 L29.2 16.3 L23.3 42.1 Z" fill={EQ_W.lit} />
+        <circle cx="29" cy="12" r="6" fill={EQ_M.dark} opacity="0.55" />
+        <circle className="eqa-breathe" cx="29" cy="12" r="5" fill="#9AD8F0" opacity="0.9" />
+        <circle cx="27" cy="10" r="1.8" fill="#FFFFFF" opacity="0.8" />
+      </g>
+    );
+    /* 盃 ―― 聖杯の増幅。水面が揺れる */
+    case "chalice": return (
+      <g className="eqa chalice">
+        <path d="M14 14 H34 L30 28 H18 Z" fill={EQ_G.mid} />
+        <path d="M14 14 H34 L32.5 19 H15.5 Z" fill={EQ_G.lit} />
+        <path className="eqa-slosh" d="M16.5 19 H31.5 L30.6 22 H17.4 Z" fill="#7FC7E8" />
+        <rect x="22.5" y="28" width="3" height="8" fill={EQ_G.dark} />
+        <path d="M16 40 H32 L30 36 H18 Z" fill={EQ_G.mid} />
+      </g>
+    );
+    /* 小判 ―― 貨幣の増幅。⚠️ 円にしない。小判は楕円で穴がない */
+    case "koban": return (
+      <g className="eqa koban">
+        <ellipse cx="24" cy="25" rx="13" ry="9" fill={EQ_G.dark} />
+        <ellipse cx="24" cy="24" rx="13" ry="9" fill={EQ_G.mid} />
+        <ellipse cx="22" cy="22" rx="8" ry="4.6" fill={EQ_G.lit} opacity="0.6" />
+        <path d="M18 20 H30 M18 24 H30 M18 28 H30" stroke={EQ_G.dark}
+          strokeWidth="1" opacity="0.7" />
+        <path className="eqa-shine" d="M13 26 L22 16" stroke="#FFFFFF"
+          strokeWidth="3" strokeLinecap="round" opacity="0" />
+      </g>
+    );
+    /* 羅針盤 ―― 到達率。針だけが回る */
+    case "compass": return (
+      <g className="eqa compass">
+        <circle cx="24" cy="24" r="14" fill={EQ_G.dark} />
+        <circle cx="24" cy="24" r="12" fill="#1E2740" />
+        <circle cx="24" cy="24" r="12" fill="none" stroke={EQ_G.mid} strokeWidth="1.4" />
+        <path d="M24 12 V15 M24 33 V36 M12 24 H15 M33 24 H36"
+          stroke={EQ_G.lit} strokeWidth="1.4" strokeLinecap="round" />
+        <g className="eqa-needle" style={{ transformOrigin: "24px 24px" }}>
+          <path d="M24 14 L27 24 L24 34 L21 24 Z" fill="#E86A6A" />
+          <path d="M24 14 L27 24 L24 24 Z" fill="#F0A0A0" />
+        </g>
+        <circle cx="24" cy="24" r="2" fill={EQ_G.lit} />
+      </g>
+    );
+    /* 鏡 ―― 敵の情報。面を光がゆっくり渡る */
+    case "mirror": return (
+      <g className="eqa mirror">
+        <ellipse cx="24" cy="21" rx="12" ry="13" fill={EQ_G.dark} />
+        <ellipse cx="24" cy="21" rx="10" ry="11" fill="#2A3350" />
+        <ellipse className="eqa-sweep" cx="24" cy="21" rx="10" ry="11" fill="#BFE4FF" opacity="0.35" />
+        <ellipse cx="20" cy="16" rx="3.4" ry="4" fill="#FFFFFF" opacity="0.4" />
+        <rect x="22" y="33" width="4" height="8" rx="1.6" fill={EQ_G.mid} />
+        <path d="M18 41 H30" stroke={EQ_G.mid} strokeWidth="3" strokeLinecap="round" />
+      </g>
+    );
+    /* 牙 ―― 吸血。しずくが落ちる */
+    case "fang": return (
+      <g className="eqa fang">
+        <path d="M17 8 Q20 22 24 34 Q28 22 31 8 Q24 12 17 8 Z" fill={EQ_M.lit} />
+        <path d="M24 34 Q28 22 31 8 Q27.5 9.6 25.5 10.2 Z" fill={EQ_M.mid} />
+        <path d="M19 10 Q23 20 24 28" stroke="#FFFFFF" strokeWidth="1" opacity="0.5" />
+        <circle className="eqa-drip" cx="24" cy="36" r="2.6" fill="#C0364E" />
+      </g>
+    );
+    /* 御守 ―― 無効化。軽いので、ゆっくり揺れる */
+    case "charm": return (
+      <g className="eqa charm">
+        <path d="M24 6 V12" stroke={EQ_G.mid} strokeWidth="1.4" />
+        <g className="eqa-swing" style={{ transformOrigin: "24px 8px" }}>
+          <path d="M15 14 H33 V38 Q24 44 15 38 Z" fill={EQ_C.mid} />
+          <path d="M15 14 H24 V41.5 Q19 40.6 15 38 Z" fill={EQ_C.lit} opacity="0.55" />
+          <rect x="15" y="14" width="18" height="4" fill={EQ_G.mid} />
+          <path d="M24 22 V32 M20 27 H28" stroke={EQ_G.lit} strokeWidth="1.6" strokeLinecap="round" />
+        </g>
+      </g>
+    );
+    /* 羽織 ―― 減衰緩和。裾が波打つ */
+    case "cloak": return (
+      <g className="eqa cloak">
+        <path d="M24 8 L34 14 L36 40 H12 L14 14 Z" fill={EQ_C.dark} />
+        <path d="M24 8 L14 14 L12 40 H24 Z" fill={EQ_C.mid} />
+        <path className="eqa-hem" d="M12 40 Q18 36 24 40 Q30 44 36 40 L36 43 H12 Z" fill={EQ_C.lit} opacity="0.75" />
+        <path d="M24 8 V40" stroke="#1A1226" strokeWidth="1.2" opacity="0.6" />
+        <circle cx="24" cy="12" r="2.4" fill={EQ_G.mid} />
+      </g>
+    );
+    /* 提灯 ―― 稼ぎ。灯がゆらぐ */
+    case "lantern": return (
+      <g className="eqa lantern">
+        <path d="M24 5 V9" stroke={EQ_W.dark} strokeWidth="1.6" />
+        <rect x="15" y="9" width="18" height="3" rx="1.5" fill={EQ_W.dark} />
+        <path d="M16 12 Q12 24 16 36 H32 Q36 24 32 12 Z" fill="#E8D2A0" />
+        <path d="M16 12 Q12 24 16 36 H24 V12 Z" fill="#FFF0C8" />
+        <path d="M14 18 H34 M13 24 H35 M14 30 H34" stroke={EQ_W.mid} strokeWidth="0.9" opacity="0.8" />
+        <ellipse className="eqa-flame" cx="24" cy="24" rx="5" ry="7" fill="#FFB44A" opacity="0.55" />
+        <rect x="15" y="36" width="18" height="3" rx="1.5" fill={EQ_W.dark} />
+      </g>
+    );
+    /* 鬼面 ―― 背水。息づく。目が灯る */
+    case "oniMask": return (
+      <g className="eqa oniMask">
+        <g className="eqa-breathe2" style={{ transformOrigin: "24px 26px" }}>
+          <path d="M12 20 Q12 38 24 42 Q36 38 36 20 Q30 14 24 14 Q18 14 12 20 Z" fill="#B0363C" />
+          <path d="M12 20 Q12 38 24 42 L24 14 Q18 14 12 20 Z" fill="#D85A5A" opacity="0.7" />
+          <path d="M14 16 L10 8 L18 13 Z" fill={EQ_S.lit} />
+          <path d="M34 16 L38 8 L30 13 Z" fill={EQ_S.mid} />
+          <path className="eqa-eyes" d="M17 24 L22 26 M31 24 L26 26" stroke="#FFD84A"
+            strokeWidth="3" strokeLinecap="round" />
+          <path d="M18 33 Q24 37 30 33" stroke="#3A1218" strokeWidth="2" fill="none" strokeLinecap="round" />
+        </g>
+      </g>
+    );
+    /* 宝冠 ―― 万全。宝石が瞬く */
+    case "crown": return (
+      <g className="eqa crown">
+        <path d="M10 34 L12 14 L19 22 L24 10 L29 22 L36 14 L38 34 Z" fill={EQ_G.mid} />
+        <path d="M10 34 L12 14 L19 22 L24 10 L24 34 Z" fill={EQ_G.lit} opacity="0.55" />
+        <rect x="10" y="34" width="28" height="5" rx="2" fill={EQ_G.dark} />
+        <circle className="eqa-gem" cx="24" cy="27" r="3" fill="#E86A9A" />
+        <circle className="eqa-gem b" cx="15" cy="29" r="2.2" fill="#7FC7E8" />
+        <circle className="eqa-gem c" cx="33" cy="29" r="2.2" fill="#9AE8A0" />
+      </g>
+    );
+    /* 鎧 ―― 反射。面を光が渡る */
+    case "armor": return (
+      <g className="eqa armor">
+        <path d="M24 8 L38 13 Q38 34 24 42 Q10 34 10 13 Z" fill={EQ_M.mid} />
+        <path d="M24 8 L10 13 Q10 34 24 42 Z" fill={EQ_M.lit} opacity="0.45" />
+        <path d="M24 8 L38 13 Q38 34 24 42 Z" fill={EQ_M.dark} opacity="0.5" />
+        <path d="M16 20 H32 M16 27 H32" stroke="#1A1226" strokeWidth="1.2" opacity="0.5" />
+        <path className="eqa-sheen" d="M8 32 L26 6" stroke="#FFFFFF" strokeWidth="4"
+          strokeLinecap="round" opacity="0" />
+      </g>
+    );
+    /* 太鼓 ―― 群戦。打つ */
+    case "drum": return (
+      <g className="eqa drum">
+        <g className="eqa-beat" style={{ transformOrigin: "24px 24px" }}>
+          <rect x="12" y="14" width="24" height="20" rx="3" fill={EQ_W.mid} />
+          <ellipse cx="12" cy="24" rx="4" ry="10" fill={EQ_C.mid} />
+          <ellipse cx="36" cy="24" rx="4" ry="10" fill={EQ_C.lit} />
+          <path d="M12 16 H36 M12 32 H36" stroke={EQ_G.mid} strokeWidth="1.6" />
+          <circle cx="36" cy="24" r="3" fill={EQ_G.dark} opacity="0.5" />
+        </g>
+        <path d="M6 38 L16 30" stroke={EQ_W.dark} strokeWidth="2.6" strokeLinecap="round" />
+      </g>
+    );
+    /* 身代わり ―― ダメコン。⚠️ 消耗品。薄れて戻る */
+    case "effigy": return (
+      <g className="eqa effigy">
+        <g className="eqa-fade">
+          <path d="M24 8 L32 14 V24 Q32 38 24 42 Q16 38 16 24 V14 Z" fill="#E8E2CE" />
+          <path d="M24 8 L16 14 V24 Q16 38 24 42 Z" fill="#FFFBEE" />
+          <circle cx="24" cy="20" r="4" fill="#1A1226" opacity="0.7" />
+          <path d="M20 28 H28 M21 32 H27" stroke="#1A1226" strokeWidth="1.4"
+            strokeLinecap="round" opacity="0.6" />
+        </g>
+      </g>
+    );
+    /* 弁当 ―― 料理。湯気が上がる */
+    case "bento": return (
+      <g className="eqa bento">
+        <path className="eqa-steam" d="M18 14 Q20 10 18 6" stroke="#DFF0FF"
+          strokeWidth="1.6" fill="none" strokeLinecap="round" opacity="0.6" />
+        <path className="eqa-steam b" d="M26 14 Q28 9 26 5" stroke="#DFF0FF"
+          strokeWidth="1.6" fill="none" strokeLinecap="round" opacity="0.6" />
+        <rect x="9" y="17" width="30" height="20" rx="3" fill={EQ_W.mid} />
+        <rect x="9" y="17" width="30" height="5" rx="2.4" fill={EQ_W.lit} />
+        <rect x="12" y="24" width="11" height="10" rx="1.6" fill="#FFF6E2" />
+        <circle cx="17.5" cy="29" r="2.6" fill="#E05A5A" />
+        <rect x="25" y="24" width="11" height="10" rx="1.6" fill="#8CBF6A" />
+        <rect x="27" y="26" width="7" height="2.4" rx="1.2" fill="#E8A84A" />
+      </g>
+    );
+    /* 薬 ―― 解毒。泡が上がる */
+    case "medicine": return (
+      <g className="eqa medicine">
+        <rect x="20" y="6" width="8" height="5" rx="1.6" fill={EQ_M.mid} />
+        <path d="M18 11 H30 L33 22 V38 Q24 43 15 38 V22 Z" fill="#2A3350" opacity="0.8" />
+        <path d="M16 26 Q24 22 32 26 V37 Q24 42 16 37 Z" fill="#7FE8B0" />
+        <circle className="eqa-bub" cx="21" cy="34" r="1.8" fill="#DFFFF0" opacity="0.85" />
+        <circle className="eqa-bub b" cx="27" cy="36" r="1.4" fill="#DFFFF0" opacity="0.85" />
+        <path d="M18 11 H30 L31 15 H17 Z" fill={EQ_M.lit} opacity="0.4" />
+      </g>
+    );
+    /* 宝箱 ―― 未開封。⚠️ 閉じたまま息づかせる。開いた絵にすると中身が見えてしまう */
+    case "chest": return (
+      <g className="eqa chest">
+        <g className="eqa-lid" style={{ transformOrigin: "24px 26px" }}>
+          <path d="M8 26 Q24 12 40 26 L40 28 H8 Z" fill={EQ_W.mid} />
+          <path d="M8 26 Q24 12 40 26 L40 27 Q24 15 8 27 Z" fill={EQ_W.lit} />
+          <rect x="21" y="18" width="6" height="10" rx="1.4" fill={EQ_G.mid} />
+        </g>
+        <rect x="8" y="28" width="32" height="14" rx="2" fill={EQ_W.mid} />
+        <rect x="8" y="28" width="32" height="3" fill={EQ_W.dark} />
+        <rect x="8" y="28" width="12" height="14" fill={EQ_W.lit} opacity="0.35" />
+        <path d="M8 34 H40" stroke={EQ_G.mid} strokeWidth="1.6" />
+        {/* 錠。⚠️ 中央に。ここが「まだ開けていない」の印 */}
+        <rect x="20" y="30" width="8" height="8" rx="1.6" fill={EQ_G.dark} />
+        <rect x="21.4" y="31.4" width="5.2" height="5.2" rx="1" fill={EQ_G.lit} />
+        <circle className="eqa-chestglow" cx="24" cy="34" r="9" fill="none"
+          stroke="#FFF3D6" strokeWidth="1.4" opacity="0" />
+      </g>
+    );
+    /* 砥石 ―― 研ぎ。⚠️ 石は動かさない。火花だけ散らす */
+    case "whetstone": return (
+      <g className="eqa whetstone">
+        <path d="M8 26 H40 L36 38 H12 Z" fill={EQ_S.mid} />
+        <path d="M8 26 H40 L39 29 H9 Z" fill={EQ_S.lit} />
+        <path d="M12 38 H36 L35 40 H13 Z" fill={EQ_S.dark} />
+        <path d="M14 22 L34 12" stroke={EQ_M.mid} strokeWidth="3" strokeLinecap="round" />
+        <path d="M14 22 L34 12" stroke={EQ_M.lit} strokeWidth="1.2" strokeLinecap="round" />
+        <g className="eqa-spark">
+          <circle cx="20" cy="22" r="1.2" fill="#FFD84A" />
+          <circle cx="25" cy="18" r="0.9" fill="#FFB44A" />
+          <circle cx="16" cy="19" r="0.8" fill="#FFE8A0" />
+        </g>
+      </g>
+    );
+    /* 拍子木 ―― 必殺技の威力。二本を打ち合わせて拍を作る */
+    case "hyoshigi": return (
+      <g className="eqa hyoshigi">
+        <g className="eqa-clapL" style={{ transformOrigin: "16px 40px" }}>
+          <path d="M11 10 H21 L20 38 H12 Z" fill={EQ_W.mid} />
+          <path d="M11 10 H16 L15.5 38 H12 Z" fill={EQ_W.lit} />
+          <path d="M11 10 H21 L20.8 13 H11.1 Z" fill={EQ_W.dark} />
+        </g>
+        <g className="eqa-clapR" style={{ transformOrigin: "32px 40px" }}>
+          <path d="M27 10 H37 L36 38 H28 Z" fill={EQ_W.mid} />
+          <path d="M27 10 H32 L31.5 38 H28 Z" fill={EQ_W.lit} opacity="0.6" />
+          <path d="M27 10 H37 L36.8 13 H27.1 Z" fill={EQ_W.dark} />
+        </g>
+        {/* ⚠️ 打った瞬間だけ。鳴りっぱなしにすると「間を取る」に見えない */}
+        <path className="eqa-clack" d="M24 16 V32" stroke="#FFF3D6"
+          strokeWidth="2" strokeLinecap="round" opacity="0" />
+      </g>
+    );
+    /* すりがね ―― 周期軽減。撞木で拍を刻む */
+    case "surigane": return (
+      <g className="eqa surigane">
+        <path d="M24 5 V10" stroke={EQ_M.dark} strokeWidth="1.4" />
+        <circle cx="24" cy="25" r="14" fill={EQ_G.dark} />
+        <circle cx="24" cy="25" r="12.4" fill={EQ_G.mid} />
+        <circle cx="21" cy="21" r="6" fill={EQ_G.lit} opacity="0.55" />
+        <circle cx="24" cy="25" r="6" fill={EQ_G.dark} opacity="0.7" />
+        <circle className="eqa-gong" cx="24" cy="25" r="12.4" fill="none"
+          stroke="#FFF3D6" strokeWidth="1.6" opacity="0" />
+        {/* 撞木。⚠️ 鉦より前に出す。後ろに置くと何で鳴らすのか分からない */}
+        <g className="eqa-mallet" style={{ transformOrigin: "40px 40px" }}>
+          <path d="M40 40 L30 28" stroke={EQ_W.mid} strokeWidth="2.2" strokeLinecap="round" />
+          <circle cx="29" cy="27" r="2.6" fill={EQ_W.lit} />
+        </g>
+      </g>
+    );
+    /* ちゃんぽん ―― 二度働く。二枚を打ち合わせる */
+    case "chanpon": return (
+      <g className="eqa chanpon">
+        <g className="eqa-cymL" style={{ transformOrigin: "24px 24px" }}>
+          <ellipse cx="16" cy="24" rx="5" ry="12" fill={EQ_G.mid} />
+          <ellipse cx="16" cy="24" rx="2.6" ry="7" fill={EQ_G.lit} opacity="0.7" />
+          <circle cx="16" cy="24" r="2" fill={EQ_G.dark} />
+        </g>
+        <g className="eqa-cymR" style={{ transformOrigin: "24px 24px" }}>
+          <ellipse cx="32" cy="24" rx="5" ry="12" fill={EQ_G.mid} />
+          <ellipse cx="32" cy="24" rx="2.6" ry="7" fill={EQ_G.lit} opacity="0.45" />
+          <circle cx="32" cy="24" r="2" fill={EQ_G.dark} />
+        </g>
+        {/* ⚠️ 合わさった瞬間に光る。二度働く札なので、光も二度出す */}
+        <circle className="eqa-clash" cx="24" cy="24" r="6" fill="none"
+          stroke="#FFF3D6" strokeWidth="1.8" opacity="0" />
+      </g>
+    );
+    /* 鼓 ―― 自傷の軽減。自分の手で打つ */
+    case "tsuzumi": return (
+      <g className="eqa tsuzumi">
+        <g className="eqa-beatT" style={{ transformOrigin: "24px 24px" }}>
+          <path d="M13 10 H35 L28 24 L35 38 H13 L20 24 Z" fill={EQ_W.mid} />
+          <path d="M13 10 H24 L20 24 L24 38 H13 L20 24 Z" fill={EQ_W.lit} opacity="0.5" />
+          <ellipse cx="24" cy="10" rx="11" ry="3.4" fill={EQ_C.lit} />
+          <ellipse cx="24" cy="38" rx="11" ry="3.4" fill={EQ_C.mid} />
+          {/* 調べ緒。⚠️ 二本だけ。増やすと縞に見える */}
+          <path d="M17 12 L31 36 M31 12 L17 36" stroke={EQ_C.dark} strokeWidth="1.4" opacity="0.8" />
+        </g>
+        <circle className="eqa-pon" cx="24" cy="10" r="11" fill="none"
+          stroke="#FFF3D6" strokeWidth="1.6" opacity="0" />
+      </g>
+    );
+    /* 琴 ―― リジェネ。余韻が長く続く */
+    case "koto": return (
+      <g className="eqa koto">
+        <path d="M6 16 Q24 12 42 16 L42 32 Q24 36 6 32 Z" fill={EQ_W.mid} />
+        <path d="M6 16 Q24 12 42 16 L42 20 Q24 16 6 20 Z" fill={EQ_W.lit} />
+        <path d="M6 30 Q24 34 42 30 L42 32 Q24 36 6 32 Z" fill={EQ_W.dark} />
+        {/* 弦。⚠️ 順に波打たせる。一斉だと震えに見えて余韻が出ない */}
+        {[0, 1, 2, 3, 4].map((i) => (
+          <path key={i} className={`eqa-string s${i}`}
+            d={`M8 ${19 + i * 2.6} Q24 ${17.5 + i * 2.6} 40 ${19 + i * 2.6}`}
+            stroke={EQ_M.lit} strokeWidth="0.9" fill="none" opacity="0.9" />
+        ))}
+        <path d="M14 18 L12 31 M24 17 L24 32 M34 18 L36 31"
+          stroke={EQ_G.mid} strokeWidth="1.6" strokeLinecap="round" />
+      </g>
+    );
+    /* しの笛 ―― 構え貫通。高音が突き抜ける */
+    case "shinobue": return (
+      <g className="eqa shinobue">
+        <path d="M6 30 L40 14 L42 18 L8 34 Z" fill={EQ_W.mid} />
+        <path d="M6 30 L40 14 L41 16 L7 32 Z" fill={EQ_W.lit} />
+        <path d="M38 13 L43 15 L44 19 L39 17 Z" fill={EQ_G.mid} />
+        {/* 指穴。⚠️ 順に光らせる。同時だと運指に見えない */}
+        {[0, 1, 2, 3].map((i) => (
+          <circle key={i} className={`eqa-hole h${i}`} r="1.5" fill={EQ_W.dark}
+            cx={14 + i * 6} cy={27.2 - i * 2.85} />
+        ))}
+        {/* 突き抜ける音。⚠️ 笛の先から一直線に。散らすと貫通に見えない */}
+        <path className="eqa-pierce" d="M4 34 L-4 38" stroke="#FFF3D6"
+          strokeWidth="2" strokeLinecap="round" opacity="0" />
+      </g>
+    );
+    /* 胡弓 ―― 孤戦。独りで弾く */
+    case "kokyu": return (
+      <g className="eqa kokyu">
+        <ellipse cx="24" cy="32" rx="9" ry="8" fill={EQ_W.mid} />
+        <ellipse cx="21" cy="29" rx="4.6" ry="4" fill={EQ_W.lit} opacity="0.6" />
+        <rect x="22.4" y="8" width="3.2" height="20" fill={EQ_W.dark} />
+        <rect x="22.4" y="8" width="1.4" height="20" fill={EQ_W.mid} />
+        <path d="M20 6 H28 L27 10 H21 Z" fill={EQ_G.mid} />
+        <path d="M23 10 V30 M25 10 V30" stroke={EQ_M.lit} strokeWidth="0.7" opacity="0.85" />
+        {/* 弓。⚠️ 上下に挽く。左右だとギターに見える */}
+        <g className="eqa-bow" style={{ transformOrigin: "24px 26px" }}>
+          <path d="M8 22 Q24 26 40 30" stroke={EQ_W.lit} strokeWidth="1.6" fill="none" />
+          <path d="M8 24 Q24 28 40 32" stroke={EQ_M.mid} strokeWidth="0.8" fill="none" opacity="0.7" />
+        </g>
+      </g>
+    );
+    /*
+      三味線 ―― 是正。調子を合わせる。
+      ⚠️ 斜めに構えること。真っ直ぐ立てると棹と糸巻きが縦一列になって、
+        ただの棒に見える（実際そう見えた）。抱えている形にする。
+      ⚠️ 傾きは外側の <g> の transform 属性で。中の震えは CSS。
+        同じ要素に両方書くと、CSS 側が属性を打ち消す。
+    */
+    case "shamisen": return (
+      <g className="eqa shamisen" transform="rotate(-28 24 24)">
+        <rect x="14" y="26" width="20" height="16" rx="2" fill={EQ_C.lit} />
+        <rect x="14" y="26" width="20" height="4" rx="1.6" fill="#FFFBEE" />
+        <rect x="14" y="26" width="20" height="16" rx="2" fill="none" stroke={EQ_W.dark} strokeWidth="1.4" />
+        <rect x="22.2" y="4" width="3.6" height="24" fill={EQ_W.mid} />
+        <rect x="22.2" y="4" width="1.6" height="24" fill={EQ_W.lit} />
+        {/* 糸巻き。⚠️ 三つ。三味線なので本数を間違えない */}
+        <path d="M20 7 H28 M20 11 H28 M20 15 H28" stroke={EQ_W.dark} strokeWidth="1.6" strokeLinecap="round" />
+        {[0, 1, 2].map((i) => (
+          <path key={i} className={`eqa-sen n${i}`}
+            d={`M${22.8 + i * 1.2} 8 L${22.8 + i * 1.2} 40`}
+            stroke={EQ_M.lit} strokeWidth="0.7" opacity="0.9" />
+        ))}
+        <path d="M28 34 L33 30" stroke={EQ_G.mid} strokeWidth="2.4" strokeLinecap="round" />
+      </g>
+    );
+    /* 祓串 ―― 復活を遅らせる。振って場を鎮める */
+    case "harae": return (
+      <g className="eqa harae">
+        <g className="eqa-wave" style={{ transformOrigin: "24px 42px" }}>
+          <rect x="22.4" y="18" width="3.2" height="24" rx="1.2" fill={EQ_W.mid} />
+          <rect x="22.4" y="18" width="1.4" height="24" rx="0.7" fill={EQ_W.lit} />
+          {/* 紙垂。⚠️ 左右で段をずらす。揃えると旗に見える */}
+          <path d="M24 8 H33 V12 H28 V16 H33 V20 H24 Z" fill="#FFFBEE" />
+          <path d="M24 8 H15 V12 H20 V16 H15 V20 H24 Z" fill="#E8E2CE" />
+          <rect x="21" y="6" width="6" height="3" rx="1.2" fill={EQ_G.mid} />
+        </g>
+      </g>
+    );
+    /* 破魔矢 ―― 起き上がった相手を射る */
+    case "hamaya": return (
+      <g className="eqa hamaya">
+        <g transform="rotate(-38 24 24)">
+          <rect x="22.6" y="8" width="2.8" height="32" fill={EQ_W.mid} />
+          <rect x="22.6" y="8" width="1.2" height="32" fill={EQ_W.lit} />
+          <path d="M24 3 L29 13 H19 Z" fill={EQ_M.lit} />
+          <path d="M24 3 L29 13 H24 Z" fill={EQ_M.mid} />
+          {/* 羽根。⚠️ 二枚。三枚以上だと矢羽根が主役になる */}
+          <path d="M24 34 L18 40 L24 40 Z" fill="#FFFBEE" />
+          <path d="M24 34 L30 40 L24 40 Z" fill="#E8E2CE" />
+          <rect x="21" y="16" width="6" height="2.4" rx="1.2" fill="#C0364E" />
+        </g>
+        <path className="eqa-shot" d="M38 10 L46 2" stroke="#FFF3D6"
+          strokeWidth="2" strokeLinecap="round" opacity="0" />
+      </g>
+    );
+    /* カード ―― 大アルカナが出やすくなる。⚠️ 絵柄は描かない。22枚のどれでもない */
+    case "card": return (
+      <g className="eqa card">
+        <g className="eqa-tilt" style={{ transformOrigin: "24px 26px" }}>
+          <rect x="13" y="8" width="22" height="32" rx="3" fill="#2A2050" />
+          <rect x="13" y="8" width="22" height="32" rx="3" fill="none" stroke={EQ_G.mid} strokeWidth="1.4" />
+          <rect x="16" y="11" width="16" height="26" rx="2" fill="none" stroke={EQ_G.dark} strokeWidth="0.8" />
+          {/* 星。⚠️ 一つだけ。並べると図鑑の札に見える */}
+          <path d="M24 17 L26 23 L32 24 L26 25 L24 31 L22 25 L16 24 L22 23 Z" fill={EQ_G.lit} />
+          <path className="eqa-cardglow" d="M24 17 L26 23 L32 24 L26 25 L24 31 L22 25 L16 24 L22 23 Z"
+            fill="#FFFFFF" opacity="0" />
+        </g>
+      </g>
+    );
+    default: return null;
+  }
+}
+/*
+  装備の絵ひとつぶん。
+  ⚠️ 段の★を必ず添えること。色だけで段を示すと、暗所と色覚で読めない。
+*/
+function EquipIcon({ item, size }) {
+  const kind = equipKindOf(item);
+  const tier = (item && item.tier) || "bronze";
+  const holo = EQ_HOLO[tier] || 0;
+  /*
+    ⚠️⚠️ ホロは SVG の中で作らないこと。
+      図鑑の札は conic-gradient の輪と mix-blend-mode: screen の膜でできている。
+      どちらも SVG では同じようには書けず、縞を流して代用したら
+      「虹色の縞」になった ―― ホロは縞ではなく、一本の光の帯が虹に割れて渡るもの。
+    ★ <span> で包み、図鑑と同じ CSS を疑似要素で当てる。
+      値（115度・320%・1.5秒・conic の五色・blur 12px）は図鑑から持ってくること。
+    ⚠️ 中央はマスクで抜く。帯だけに残さないと、絵が虹に飲まれる。
+  */
+  const px = size || 48;
+  return (
+    <span className={`eq-icon-wrap${holo ? ` holo lv${holo}` : ""}`}
+      style={{ width: px, height: px }}>
+      <svg viewBox="-3 -3 54 54" className="eq-icon" width={px} height={px} aria-hidden="true">
+        <EqPlate tier={tier} />
+        <EquipArt kind={kind} />
+      </svg>
+      {/*
+        ★12の三周期。白 → 黒 → ホロ。
+        ⚠️⚠️ 虹の膜と同じ場所・同じマスクで重ね、見せる時間をずらすこと。
+          場所をずらすと三色の板になり、周期に見えない。
+        ⚠️ 白と黒は動かさない。動くのはホロだけ。三つとも動くと
+          何が切り替わったのか分からない。
+        ⚠️ 絵の側に filter を掛けて代用しないこと（反転すると絵まで裏返る）。
+      */}
+      {holo >= 3 && <i className="eq-h3 w" aria-hidden="true" />}
+      {holo >= 3 && <i className="eq-h3 k" aria-hidden="true" />}
+    </span>
+  );
+}
+
 function ItemPanel({ lang, items, onOpen }) {
   const base = T[lang] || T.ja;
   const t = new Proxy(base, {
@@ -35779,10 +44576,6 @@ function ItemPanel({ lang, items, onOpen }) {
   const a = advT(lang);
   const [msg, setMsg] = useState("");
   const boxes = items.box || 0;
-  const cards = items.cards || {};
-  /* ⚠️ 持っている数の多い順。同数なら名前順。並びが毎回変わると探せない */
-  const held = Object.keys(cards).filter((k) => cards[k] > 0)
-    .sort((x, y) => (cards[y] - cards[x]) || x.localeCompare(y, "ja"));
   return (
     <div style={{ width: "100%", maxWidth: "440px", margin: "0 auto" }}>
       <p className="item-note">{t.itemNote(ITEM_FREE_PER_DAY)}</p>
@@ -35807,7 +44600,8 @@ function ItemPanel({ lang, items, onOpen }) {
           disabled={!boxes}
           onClick={() => {
             const got = onOpen();
-            setMsg(got ? t.itemGot(landmarkCardName(lang, got)) : t.itemEmpty);
+            /* ⚠️ 中身はまだ決まっていない。段と、どこで開けるかだけを伝える */
+            setMsg(got ? a.itemChestGot(tierStars(got.tier)) : t.itemEmpty);
           }}>
           <svg viewBox="0 0 24 20" width="52" height="43" aria-hidden="true">
             <path d="M2 8 Q12 1 22 8 L22 10 L2 10 Z" fill="currentColor" opacity="0.95" />
@@ -35818,110 +44612,10 @@ function ItemPanel({ lang, items, onOpen }) {
         </button>
         {msg && <p className="item-msg">{msg}</p>}
       </div>
-      {/* 持っているカード */}
-      {held.length === 0 ? (
-        <p className="item-empty">{t.itemCardsNone}</p>
-      ) : (
-        <>
-          <p className="item-count">{t.itemHeld(held.length, held.reduce((s, k) => s + cards[k], 0))}</p>
-          {/*
-            直近に手に入れた一枚。
-            ★ 一番上に、単独で出す。開けた直後に「どこへ入ったか」を探させない。
-            ⚠️ ポケットの中にも重複して出す。ここだけにあると、
-              時間が経って別のものを引いたときに見失う。
-          */}
-          {items.last && cards[items.last] > 0 && (() => {
-            const c = cardOfLandmark(items.last);
-            const w = LANDMARK_WHERE[items.last];
-            return (
-              <div className="lmc-latest">
-                <span className="lmc-latest-tag">{t.itemLatest}</span>
-                <span className="lmc-name">{landmarkCardName(lang, items.last)}</span>
-                <span className="lmc-where">{w ? `${a.pref[w.pref] || w.pref}・${w.area}` : ""}</span>
-                <span className="lmc-card">
-                  {t.itemBecomes(c ? getCardName({ ...c, reversed: false }, lang) : "—")}
-                </span>
-              </div>
-            );
-          })()}
-          {/*
-            ポケット。
-            ★ 名所は78枚のどれかに化けるので、化ける先の札で仕分ける。
-              名所の名前で並べても、戦闘で何になるかは分からない。
-            ⚠️⚠️ 空のポケットは出さないこと。5つ並べて中身が1つだけだと、
-              持っていないことのほうが目立つ。
-            ⚠️ ポケットも札も閉じた状態で始める。開いた状態だと、
-              1937件を集めた人の画面が延々と続くことになる。
-          */}
-          {ITEM_POCKETS.map((p) => {
-            const inPocket = held.filter((n) => {
-              const c = cardOfLandmark(n);
-              return c && String(c.id).split("-")[0] === p.suit;
-            });
-            if (!inPocket.length) return null;
-            /* 札ごとにまとめる。⚠️ 同じ札に化ける名所は一つの札の中へ */
-            const byCard = {};
-            inPocket.forEach((n) => {
-              const c = cardOfLandmark(n);
-              (byCard[c.id] = byCard[c.id] || { card: c, names: [] }).names.push(n);
-            });
-            const cardIds = Object.keys(byCard).sort((x, y) => {
-              const nx = Number(String(x).split("-")[1]), ny = Number(String(y).split("-")[1]);
-              return nx - ny;
-            });
-            const total = inPocket.reduce((s, n) => s + cards[n], 0);
-            return (
-              <details key={p.suit} className="lmc-pocket">
-                <summary>
-                  {/*
-                    ⚠️ 印は DECK_MARKS から引くこと。ここで別の形や色を作ると、
-                      盤面の札に出ている印と食い違い、同じスートに二つの顔ができる。
-                  */}
-                  <span className="lmc-mark" style={{ color: DECK_MARKS[p.suit].color }}>
-                    {(() => { const I = DECK_MARKS[p.suit].Icon; return <I size={17} />; })()}
-                  </span>
-                  <span className="lmc-pocket-name">{t.pocketName[p.suit]}</span>
-                  <span className="lmc-pocket-n">{t.pocketCount(cardIds.length, total)}</span>
-                </summary>
-                {cardIds.map((cid) => {
-                  const g = byCard[cid];
-                  const n = g.names.reduce((s, x) => s + cards[x], 0);
-                  return (
-                    <details key={cid} className="lmc-cardgroup">
-                      <summary>
-                        {/*
-                          ⚠️ 角の表記（大アルカナはローマ数字、小アルカナは階位）を出すこと。
-                            名前だけだと、棒の3と剣の3が並んだときに見分けが付かない。
-                          ⚠️ 色はスートの色。札の印と同じ色で揃える。
-                        */}
-                        <span className="lmc-corner" style={{ color: DECK_MARKS[p.suit].color }}>
-                          {g.card.corner}
-                        </span>
-                        <span className="lmc-cardgroup-name">
-                          {getCardName({ ...g.card, reversed: false }, lang)}
-                        </span>
-                        <span className="item-n">{n}</span>
-                      </summary>
-                      {g.names.slice().sort((x, y) => (cards[y] - cards[x]) || x.localeCompare(y, "ja")).map((name) => {
-                        const w = LANDMARK_WHERE[name];
-                        return (
-                          <div key={name} className="lmc-cell">
-                            <span className="lmc-name">{landmarkCardName(lang, name)}</span>
-                            <span className="lmc-where">
-                              {w ? `${a.pref[w.pref] || w.pref}・${w.area}` : ""}
-                            </span>
-                            <span className="item-n">{cards[name]}</span>
-                          </div>
-                        );
-                      })}
-                    </details>
-                  );
-                })}
-              </details>
-            );
-          })}
-        </>
-      )}
+      {/*
+        ⚠️⚠️ ランドマークカードの一覧を戻さないこと。占いの箱は冒険の宝箱へ繋げたので、
+          カードはもう手に入らない。残すと「集めたのに使い道が無い」ものが並ぶ。
+      */}
     </div>
   );
 }
@@ -36296,6 +44990,9 @@ function withFallback(dict, ...rest) {
 }
 const T_RAW = {
   ko: {
+    /* ⚠️ 50種を前にして止まる人の入口。スリーカードへ直行する */
+    justRead: "일단 점쳐보기",
+    justReadNote: "고민되면 이것. 과거·현재·미래 세 장",
     ringDiaryTitle: "오미쿠지 연륜 일기",
     appTitle: "타로 점",
     tagline: "",
@@ -36816,6 +45513,9 @@ const T_RAW = {
     ],
   },
   vi: {
+    /* ⚠️ 50種を前にして止まる人の入口。スリーカードへ直行する */
+    justRead: "Cứ xem bài",
+    justReadNote: "Chưa biết bắt đầu? Quá khứ, hiện tại, tương lai.",
     ringDiaryTitle: "Nhật ký vòng năm Omikuji",
     appTitle: "Bói Bài Tarot",
     tagline: "",
@@ -37330,6 +46030,9 @@ const T_RAW = {
     ],
   },
   id: {
+    /* ⚠️ 50種を前にして止まる人の入口。スリーカードへ直行する */
+    justRead: "Langsung baca",
+    justReadNote: "Bingung mulai dari mana? Lalu, kini, nanti.",
     ringDiaryTitle: "Buku Harian Lingkar Tahun Omikuji",
     appTitle: "Ramalan Tarot",
     tagline: "",
@@ -37844,6 +46547,9 @@ const T_RAW = {
     ],
   },
   ms: {
+    /* ⚠️ 50種を前にして止まる人の入口。スリーカードへ直行する */
+    justRead: "Terus tilik",
+    justReadNote: "Tak pasti nak mula? Lalu, kini, nanti.",
     ringDiaryTitle: "Diari Lingkaran Tahun Omikuji",
     appTitle: "Tilikan Tarot",
     tagline: "",
@@ -38467,6 +47173,9 @@ const T_RAW = {
     ringSpiral: "らせん", ringCalendar: "暦",
     ringMonth: (m) => `${m}月`,
     ringNoText: "この日は何も書いていません",
+    /* ⚠️ 50種を前にして止まる人の入口。スリーカードへ直行する */
+    justRead: "とにかく占う",
+    justReadNote: "迷ったらこれ。過去・現在・未来の三枚",
     ringDiaryTitle: "おみくじ年輪日記",
     appTitle: "タロット占い",
     tagline: "",
@@ -38667,7 +47376,7 @@ const T_RAW = {
     itemTab: "アイテム",
     itemTabNote: "占うと箱がもらえる",
     itemNote: (n) => `占うたびに箱がもらえます。無料版は一日${n}回まで、AI鑑定は回数の枠の中で何度でも。`,
-    itemNotYet: "⚠ 戦闘はまだ準備中です。集めたランドマークカードは、戦いが始まったときに使えます。使い道が無いあいだも消えません。",
+    itemNotYet: "開けると冒険の「宝箱」に未開封の箱が入ります。中身の装備は、そこで開けたときに決まります。",
     itemCardsNone: "まだ一枚も持っていません。占って箱を開けるか、冒険の宝箱で拾えます。",
     itemHeld: (k, n) => `${k}種類・${n}枚`,
     itemBecomes: (c) => `戦闘では「${c}」`,
@@ -38676,8 +47385,8 @@ const T_RAW = {
       diamond: "ダイヤモンド", astral: "アストラル", legendary: "レジェンダリー", ultimate: "アルティメット",
       divine: "ディヴァイン", eternal: "エターナル", cosmo: "コスモ", genesis: "ジェネシス",
     },
-    itemOddsTitle: "切る瞬間に決まる段（12段）",
-    itemSides: "向きは自分で選べます。正位置は代償なし、逆位置は効果が大きい代わりに代償があります。",
+    itemOddsTitle: "箱の段の出やすさ（12段）",
+    itemSides: "箱の段は、いま冒険で着いている★が高いほど良くなります。",
     itemBoxes: (n) => `未開封 ${n}`,
     itemGot: (name) => `${name}を手に入れました。`,
     itemEmpty: "開けられる箱がありません。占うと増えます。",
@@ -39014,6 +47723,9 @@ const T_RAW = {
     diagEmpty: "まだ記録がありません。",
   },
   "zh-TW": {
+    /* ⚠️ 50種を前にして止まる人の入口。スリーカードへ直行する */
+    justRead: "先占一卦",
+    justReadNote: "猶豫時就選這個。過去・現在・未來三張",
     ringDiaryTitle: "御神籤年輪日記",
     appTitle: "塔羅占卜",
     tagline: "來自日本的全新塔羅體驗",
@@ -39531,6 +48243,9 @@ const T_RAW = {
     ],
   },
   "zh-CN": {
+    /* ⚠️ 50種を前にして止まる人の入口。スリーカードへ直行する */
+    justRead: "先占一卦",
+    justReadNote: "犹豫时就选这个。过去・现在・未来三张",
     ringDiaryTitle: "御神签年轮日记",
     appTitle: "塔罗占卜",
     tagline: "来自日本的全新塔罗体验",
@@ -40157,6 +48872,9 @@ const T_RAW = {
     ringSpiral: "Spiral", ringCalendar: "Calendar",
     ringMonth: (m) => ["Jan","Feb","Mar","Apr","May","Jun","Jul","Aug","Sep","Oct","Nov","Dec"][m - 1],
     ringNoText: "Nothing written for this day",
+    /* ⚠️ 50種を前にして止まる人の入口。スリーカードへ直行する */
+    justRead: "Just read my cards",
+    justReadNote: "Past, present, future — three cards.",
     ringDiaryTitle: "Omikuji Ring Diary",
     appTitle: "Tarot Reading",
     tagline: "A new tarot experience designed in Japan",
@@ -40663,7 +49381,7 @@ const T_RAW = {
     advAgain: "Walk again",
     itemTab: "Items", itemTabNote: "What you carry on the road",
     itemNote: (n) => `Every reading gives you a box. Free plan: up to ${n} a day.`,
-    itemNotYet: "\u26a0 Battles are not ready yet. The cards you collect will be used when they are.",
+    itemNotYet: "Opening one sends a sealed chest to Chest in Adventure. The gear inside is decided when you open it there.",
     itemCardsNone: "You have none yet. Open a box after a reading, or find a chest on the road.",
     itemHeld: (k, n) => `${k} kinds / ${n} cards`,
     itemBecomes: (c) => `In battle: \u201c${c}\u201d`,
@@ -40672,8 +49390,8 @@ const T_RAW = {
       diamond: "Diamond", astral: "Astral", legendary: "Legendary", ultimate: "Ultimate",
       divine: "Divine", eternal: "Eternal", cosmo: "Cosmo", genesis: "Genesis",
     },
-    itemOddsTitle: "Tiers, decided the moment you play it (12)",
-    itemSides: "You choose the orientation. Upright has no cost; reversed is stronger but comes at a price.",
+    itemOddsTitle: "Chest tier odds (12)",
+    itemSides: "The higher the star you have reached in Adventure, the better the chest.",
     itemBoxes: (n) => `Unopened ${n}`,
     itemGot: (name) => `You received ${name}.`,
     itemEmpty: "No boxes to open. Readings give you more.",
@@ -40699,6 +49417,9 @@ const T_RAW = {
     fxOn: "On", fxOff: "Off",
   },
   tl: {
+    /* ⚠️ 50種を前にして止まる人の入口。スリーカードへ直行する */
+    justRead: "Magpahula na",
+    justReadNote: "Hindi sigurado? Nakaraan, kasalukuyan, hinaharap.",
     ringDiaryTitle: "Omikuji Ring Diary",
     appTitle: "Tarot Reading",
     tagline: "A new tarot experience designed in Japan",
@@ -41213,6 +49934,9 @@ const T_RAW = {
     ],
   },
   th: {
+    /* ⚠️ 50種を前にして止まる人の入口。スリーカードへ直行する */
+    justRead: "ดูดวงเลย",
+    justReadNote: "ไม่รู้จะเริ่มตรงไหน? อดีต ปัจจุบัน อนาคต สามใบ",
     ringDiaryTitle: "บันทึกวงปีโอมิคุจิ",
     appTitle: "ไพ่ทาโรต์",
     tagline: "ประสบการณ์ไพ่ทาโรต์รูปแบบใหม่ ออกแบบจากญี่ปุ่น",
@@ -41727,6 +50451,9 @@ const T_RAW = {
     ],
   },
   sv: {
+    /* ⚠️ 50種を前にして止まる人の入口。スリーカードへ直行する */
+    justRead: "Läs mina kort",
+    justReadNote: "Vet du inte var du ska börja? Dåtid, nutid, framtid.",
     ringDiaryTitle: "Omikuji-årsringsdagbok",
     appTitle: "Tarotläsning",
     tagline: "En ny tarotupplevelse formgiven i Japan",
@@ -42253,6 +50980,9 @@ const T_RAW = {
       文言は画面ごとに少しずつ入れていく。
   */
   pt: {
+    /* ⚠️ 50種を前にして止まる人の入口。スリーカードへ直行する */
+    justRead: "Uma leitura rápida",
+    justReadNote: "Sem saber por onde começar? Passado, presente, futuro.",
     ringDiaryTitle: "Diário dos anéis Omikuji",
     /* 第1便：entrada, nome, escolha das cartas, títulos do resultado */
     appTitle: "Leitura de tarô",
@@ -42868,6 +51598,9 @@ const T_RAW = {
     hexConfirmAsk: (n) => `Estas ${n} cartas são definitivas?`,
   },
   ru: {
+    /* ⚠️ 50種を前にして止まる人の入口。スリーカードへ直行する */
+    justRead: "Просто расклад",
+    justReadNote: "Не знаете, с чего начать? Прошлое, настоящее, будущее.",
     ringDiaryTitle: "Дневник годовых колец Омикудзи",
     /* 第1便：вход, имя, выбор карт, заголовки результата */
     appTitle: "Гадание на таро",
@@ -43484,6 +52217,9 @@ const T_RAW = {
     hexConfirmAsk: (n) => `Эти ${n} карт окончательны?`,
   },
   pl: {
+    /* ⚠️ 50種を前にして止まる人の入口。スリーカードへ直行する */
+    justRead: "Po prostu wróż",
+    justReadNote: "Nie wiesz, od czego zacząć? Przeszłość, teraźniejszość, przyszłość.",
     ringDiaryTitle: "Dziennik słojów Omikuji",
     /* 第1便：wejście, imię, wybór kart, nagłówki wyniku */
     appTitle: "Wróżba z tarota",
@@ -44100,6 +52836,9 @@ const T_RAW = {
     hexConfirmAsk: (n) => `Czy te ${n} kart są ostateczne?`,
   },
   el: {
+    /* ⚠️ 50種を前にして止まる人の入口。スリーカードへ直行する */
+    justRead: "Απλώς ρίξε τα χαρτιά",
+    justReadNote: "Δεν ξέρεις από πού να αρχίσεις; Παρελθόν, παρόν, μέλλον.",
     ringDiaryTitle: "Ημερολόγιο δακτυλίων Omikuji",
     /* 第1便：είσοδος, όνομα, επιλογή καρτών, τίτλοι αποτελέσματος */
     appTitle: "Μαντεία με ταρώ",
@@ -44221,6 +52960,9 @@ const T_RAW = {
     greekWeak: (weak, strong) => `Μόνο το «${strong}» είναι τεντωμένο, ενώ το «${weak}» έχει μαζευτεί. Αντί να τεντώσεις κι άλλο τη δυνατή πλευρά, πρόσθεσε ένα πράγμα στην πλευρά που μάζεψε.`,
   },
   fr: {
+    /* ⚠️ 50種を前にして止まる人の入口。スリーカードへ直行する */
+    justRead: "Juste un tirage",
+    justReadNote: "Vous hésitez ? Passé, présent, futur.",
     ringDiaryTitle: "Journal des cernes Omikuji",
     appTitle: "Tirage de tarot",
     tagline: "Une nouvelle expérience du tarot, conçue au Japon",
@@ -44841,6 +53583,9 @@ const T_RAW = {
     ],
   },
   es: {
+    /* ⚠️ 50種を前にして止まる人の入口。スリーカードへ直行する */
+    justRead: "Tirada rápida",
+    justReadNote: "¿No sabes por dónde empezar? Pasado, presente, futuro.",
     ringDiaryTitle: "Diario de anillos Omikuji",
     appTitle: "Lectura de tarot",
     tagline: "Una nueva experiencia del tarot, diseñada en Japón",
@@ -45461,6 +54206,9 @@ const T_RAW = {
     ],
   },
   it: {
+    /* ⚠️ 50種を前にして止まる人の入口。スリーカードへ直行する */
+    justRead: "Una lettura veloce",
+    justReadNote: "Non sai da dove iniziare? Passato, presente, futuro.",
     ringDiaryTitle: "Diario degli anelli Omikuji",
     appTitle: "Lettura dei tarocchi",
     tagline: "Una nuova esperienza dei tarocchi, ideata in Giappone",
@@ -46198,15 +54946,24 @@ export default function TarotDraw() {
     ⚠️ 中身は運。狙えると集める意味が消える。
     ⚠️ いま立っている県の名所から出す。旅をしていない人は全国から。
   */
+  /*
+    占いの宝箱を開ける。
+    ⚠️⚠️ ランドマークカードを出さないこと。冒険の装備と繋がっていなかった。
+    ★ 冒険の「未開封の宝箱」を一つ渡す。中身は冒険の宝箱で開けたときに決まる
+      （段の数だけ引いて最良を採る梯子は、あちらで見せる）。
+    ★ 箱の段は、いま冒険で着いている★から引く。占いだけ遊んでいても
+      序盤の箱しか出ないので、冒険を進める理由になる。
+    ⚠️ 拾った土地は、旅を始めた県からにする。名前がそこから決まる。
+  */
   const openBox = () => {
     let got = null;
     setItems((o2) => {
       if (!(o2.box > 0)) return o2;
-      got = rollLandmark(loadAdvPref());
-      const cards = { ...(o2.cards || {}) };
-      cards[got] = (cards[got] || 0) + 1;
-      /* ⚠️ 直近に手に入れたものを覚える。持ち物の一番上に出すため */
-      const next = { ...o2, box: o2.box - 1, cards, last: got };
+      const done = (loadAdvDone() || []).length;
+      const step = Math.min(ADV_STEPS - 1, Math.floor(done / 37));
+      const st = Math.max(1, Math.min(12, starOfStage(step, "item")));
+      got = pushChest(st, randomWhere(loadAdvPref() || undefined), 0);
+      const next = { ...o2, box: o2.box - 1 };
       saveItems(next);
       return next;
     });
@@ -52416,7 +61173,73 @@ export default function TarotDraw() {
           46%      { transform: scale(1); }
         }
         /* 茎と葉。⚠️ ゆっくり。速いと風ではなく震えに見える */
-        .mv-sway { animation: mvSway 4.6s ease-in-out infinite; transform-origin: bottom center; }
+        .mv-sway { animation: mvSway 4.6s ease-in-out infinite; transform-origin: bottom center; transform-box: fill-box; }
+        /* 地形の動き。⚠️ 水・灯だけ動かす。山・鉄塔・棚田は動かさない */
+        .mv-flow { animation: mvFlow 2.4s linear infinite; }
+        @keyframes mvFlow { from { stroke-dashoffset: 26; } to { stroke-dashoffset: 0; } }
+        .mv-glint2 { animation: mvGlint2 3.2s ease-in-out infinite; }
+        @keyframes mvGlint2 { 0%, 100% { opacity: 0.15; } 50% { opacity: 0.85; } }
+        .mv-winlit { animation: mvWinlit 4s ease-in-out infinite; }
+        @keyframes mvWinlit { 0%, 100% { opacity: 0.55; } 50% { opacity: 1; } }
+        .mv-wave2 { animation: mvWave2 3.6s linear infinite; }
+        @keyframes mvWave2 { from { transform: translateX(-4px); } to { transform: translateX(6px); } }
+        .mv-beacon2 { animation: mvBeacon2 3s ease-in-out infinite; }
+        /* 時計の針。⚠️ ゆっくり一回り（1分）。回転の軸は外側の g で時計の中心に置いてある */
+        /* ⚠️ view-box にしないこと。盤全体の原点を軸に回ってしまう。針の根元（下端）を軸にする */
+        .mv-hand { transform-box: fill-box; transform-origin: 50% 100%; animation: mvHand 60s linear infinite; }
+        @keyframes mvHand { to { transform: rotate(360deg); } }
+        /* 弱々しい灯。⚠️ 暗くなりきらずに揺らぐ（速く点滅させない） */
+        .mv-dim { animation: mvDim 3.4s ease-in-out infinite; }
+        @keyframes mvDim { 0%, 100% { opacity: 0.35; } 40% { opacity: 0.9; } 55% { opacity: 0.5; } 70% { opacity: 0.85; } }
+        /* ミキサー車のドラム。⚠️ ゆっくり回る */
+        .mv-drum { transform-box: fill-box; transform-origin: center; animation: mvDrum 4s linear infinite; }
+        @keyframes mvDrum { 0%, 100% { transform: scaleX(1); } 50% { transform: scaleX(0.86); } }
+        /* スキー場のリフト。⚠️ 斜めの索道に沿ってゆっくり昇る */
+        .mv-lift { animation: mvLift 6s linear infinite; }
+        @keyframes mvLift { from { transform: translate(0, 0); } to { transform: translate(27px, -28px); } }
+        /* 風車・観覧車の回転。⚠️ ゆっくり。風車は12秒、観覧車は24秒で一回り */
+        /*
+          ⚠️⚠️ view-box にしないこと。盤全体の原点を軸に回ってしまう。
+          ★ fill-box の中心を軸にする。羽の外形が軸に対して対称になるよう、
+            見えない円（羽の長さの輪）を中に置いてある。
+        */
+        .mv-rotor { transform-box: fill-box; transform-origin: 50% 50%; animation: mvRotor 12s linear infinite; }
+        @keyframes mvRotor { to { transform: rotate(360deg); } }
+        /* 滝の水。⚠️ 下へ流れ続ける */
+        .mv-fall { animation: mvFall 0.9s linear infinite; }
+        @keyframes mvFall { from { stroke-dashoffset: 9; } to { stroke-dashoffset: 0; } }
+        /* 堰を越える水と、水門の扉。⚠️ どちらもゆっくり */
+        .mv-weir { animation: mvGlint2 1.8s ease-in-out infinite; }
+        .mv-gate { animation: mvGate 8s ease-in-out infinite; }
+        @keyframes mvGate { 0%, 100% { transform: translateY(0); } 50% { transform: translateY(-5px); } }
+        /* ネオン。⚠️ 呼吸くらいで明るさを変える。速い点滅は使わない */
+        .mv-neon { animation: mvNeon 2.8s ease-in-out infinite; }
+        @keyframes mvNeon { 0%, 100% { opacity: 0.45; } 50% { opacity: 1; } }
+        @keyframes mvBeacon2 { 0%, 70%, 100% { opacity: 0.2; } 82% { opacity: 1; } }
+        /* 渡り鳥。⚠️ 空を横切って消える。群れごとに速さを変える */
+        .mv-flock { animation: mvFlock 26s linear infinite; }
+        .mv-flock.f1 { animation-duration: 34s; animation-delay: -12s; }
+        @keyframes mvFlock {
+          0% { transform: translate(-80px, 60px); opacity: 0; }
+          6% { opacity: 1; } 90% { opacity: 1; }
+          100% { transform: translate(1500px, -10px); opacity: 0; }
+        }
+        .mv-wing { transform-box: fill-box; transform-origin: center; animation: mvWing 0.9s ease-in-out infinite; }
+        @keyframes mvWing { 0%, 100% { transform: scaleY(1); } 50% { transform: scaleY(-0.6); } }
+        /* 桜の花びら。⚠️ ゆっくり舞い落ちて消える。速いと雪に見える */
+        .mv-petal { animation: mvPetal 5s ease-in infinite; transform-box: fill-box; }
+        @keyframes mvPetal {
+          0% { opacity: 0; transform: translate(0, 0) rotate(0); }
+          20% { opacity: 1; }
+          100% { opacity: 0; transform: translate(10px, 14px) rotate(160deg); }
+        }
+        /* 小屋の煙。⚠️ 昇りながら広がって消える */
+        .mv-smoke { animation: mvSmoke 3.8s ease-out infinite; transform-box: fill-box; transform-origin: center; }
+        @keyframes mvSmoke {
+          0% { opacity: 0; transform: translateY(0) scale(0.6); }
+          30% { opacity: 0.8; }
+          100% { opacity: 0; transform: translateY(-14px) scale(2); }
+        }
         @keyframes mvSway {
           0%, 100% { transform: rotate(-1.6deg); }
           50%      { transform: rotate(1.6deg); }
@@ -52912,7 +61735,9 @@ export default function TarotDraw() {
           font-family: 'Shippori Mincho', serif; font-size: 19px; letter-spacing: 0.1em;
           color: var(--muted); margin: 0 0 2px;
         }
-        .adv-result.win .adv-result-title { color: #FFE9A8; text-shadow: 0 0 14px rgba(232,196,106,0.6); }
+        /* ⚠️ 戦場に重ねる覆いにも同じ色を通すこと。勝ちの見え方を二通りにしない */
+        .adv-result.win .adv-result-title,
+        .bt-over.win .adv-result-title { color: #FFE9A8; text-shadow: 0 0 14px rgba(232,196,106,0.6); }
         .adv-result-stage { font-size: 12.5px; color: var(--parchment); margin: 0 0 12px; }
         .adv-result-rows { display: flex; flex-direction: column; gap: 5px; margin-bottom: 14px; }
         .adv-result-row {
@@ -53002,13 +61827,132 @@ export default function TarotDraw() {
         .bt-foes.n2 { grid-template-columns: repeat(2, 1fr); }
         .bt-foes.n3 { grid-template-columns: repeat(3, 1fr); }
         .bt-foes.n4 { grid-template-columns: repeat(2, 1fr); }
+        /*
+          ⚠️ 縁の色＝属性。二重にして、外側を少し光らせる（暗い背景で縁が消えないように）。
+        */
         .bt-foe {
           position: relative; padding: 10px 10px 8px; border-radius: 11px;
           background: rgba(38,22,34,0.85);
-          box-shadow: inset 0 0 0 1px rgba(240,180,180,0.28);
+          box-shadow: inset 0 0 0 2px var(--elc2, rgba(240,180,180,0.28)),
+                      0 0 10px -2px var(--elc2, transparent);
         }
         /* ⚠️ 倒れた敵は消さずに沈める。消すと並びが動いて目が迷う */
         .bt-foe.down { opacity: 0.28; }
+        /*
+          遠景の動き。⚠️ 呼吸くらい（2〜4秒）。速い点滅は使わない。
+          ⚠️ 山や建物そのものは動かさない。霧・波・火・窓明かりだけ。
+        */
+        .pn * { transform-box: fill-box; transform-origin: center; }
+        .pn-mist { animation: pnMist 18s linear infinite; }
+        @keyframes pnMist { from { transform: translateX(-12%); } to { transform: translateX(12%); } }
+        .pn-sway { transform-origin: 50% 100%; animation: pnSway 3.6s ease-in-out infinite; }
+        .pn-sway.s1 { animation-delay: -1.2s; } .pn-sway.s2 { animation-delay: -2.4s; }
+        @keyframes pnSway { 0%, 100% { transform: rotate(-2.5deg); } 50% { transform: rotate(2.5deg); } }
+        .pn-wave { animation: pnWave 4s linear infinite; }
+        .pn-wave.w1 { animation-duration: 5s; } .pn-wave.w2 { animation-duration: 6s; } .pn-wave.w3 { animation-duration: 7s; }
+        @keyframes pnWave { from { transform: translateX(0); } to { transform: translateX(-40px); } }
+        .pn-glint { animation: pnGlint 3s ease-in-out infinite; }
+        .pn-glint.g1 { animation-delay: -0.6s; } .pn-glint.g2 { animation-delay: -1.2s; }
+        .pn-glint.g3 { animation-delay: -1.8s; } .pn-glint.g4 { animation-delay: -2.4s; }
+        @keyframes pnGlint { 0%, 100% { opacity: 0.2; } 50% { opacity: 0.9; } }
+        .pn-glow { animation: pnGlow 3.4s ease-in-out infinite; }
+        @keyframes pnGlow { 0%, 100% { opacity: 0.6; transform: scale(0.94); } 50% { opacity: 1; transform: scale(1.06); } }
+        .pn-beam { transform-origin: 0 50%; animation: pnBeam 4s ease-in-out infinite; }
+        @keyframes pnBeam { 0%, 100% { opacity: 0.2; transform: scaleX(0.7); } 50% { opacity: 0.8; transform: scaleX(1.1); } }
+        .pn-flame { animation: pnFlame 2.2s ease-in-out infinite; }
+        .pn-flame.f1 { animation-delay: -0.9s; }
+        @keyframes pnFlame { 0%, 100% { transform: scale(0.9, 1); } 50% { transform: scale(1.1, 1.18) translateY(-0.6px); } }
+        .pn-win { animation: pnWin 4s ease-in-out infinite; }
+        .pn-win.v1 { animation-delay: -1s; } .pn-win.v2 { animation-delay: -2s; } .pn-win.v3 { animation-delay: -3s; }
+        @keyframes pnWin { 0%, 100% { opacity: 0.55; } 50% { opacity: 1; } }
+        .pn-beacon { animation: pnBeacon 3s ease-in-out infinite; }
+        @keyframes pnBeacon { 0%, 70%, 100% { opacity: 0.2; } 80% { opacity: 1; } }
+        .pn-smoke { animation: pnSmoke 3.6s ease-out infinite; }
+        .pn-smoke.s1 { animation-delay: -1.2s; } .pn-smoke.s2 { animation-delay: -2.4s; }
+        @keyframes pnSmoke { 0% { opacity: 0; transform: translateY(0) scale(0.6); } 30% { opacity: 0.8; } 100% { opacity: 0; transform: translateY(-16px) scale(1.8); } }
+        .pn-lamp { animation: pnGlow 3s ease-in-out infinite; }
+        .pn-lamp.l1 { animation-delay: -1s; } .pn-lamp.l2 { animation-delay: -2s; }
+        .pn-train { animation: pnTrain 7s linear infinite; }
+        @keyframes pnTrain { 0% { transform: translateX(0); opacity: 0; } 10% { opacity: 1; } 60% { opacity: 1; } 70%, 100% { transform: translateX(640%); opacity: 0; } }
+        .pn-moon { animation: pnGlow 5s ease-in-out infinite; }
+        /*
+          属性の空気。⚠️ 属性ごとに違う動かし方。同じ動きだと形が違うだけの同じものに見える。
+        */
+        .amb { opacity: 0; animation-iteration-count: infinite; animation-timing-function: ease-in-out; }
+        .amb-ember, .amb-bubble { animation-name: ambRise; }
+        @keyframes ambRise { 0% { opacity: 0; transform: translateY(8px); } 30% { opacity: 0.9; } 100% { opacity: 0; transform: translateY(-40px); } }
+        .amb-snow { animation-name: ambFall; }
+        @keyframes ambFall { 0% { opacity: 0; transform: translate(0, -20px); } 30% { opacity: 0.9; } 100% { opacity: 0; transform: translate(8px, 30px); } }
+        .amb-leaf, .amb-feather { animation-name: ambDrift; }
+        @keyframes ambDrift { 0% { opacity: 0; transform: translate(-16px, -8px) rotate(0); } 30% { opacity: 0.9; } 100% { opacity: 0; transform: translate(34px, 20px) rotate(220deg); } }
+        .amb-firefly { animation-name: ambWander; filter: blur(0.4px) drop-shadow(0 0 3px #D8F07A); }
+        @keyframes ambWander { 0%, 100% { opacity: 0.1; transform: translate(0, 0); } 30% { opacity: 1; transform: translate(10px, -6px); } 65% { opacity: 0.6; transform: translate(-8px, 4px); } }
+        .amb-wisp { animation-name: ambWisp; filter: blur(0.6px) drop-shadow(0 0 4px #B8A0FF); }
+        @keyframes ambWisp { 0% { opacity: 0; transform: translateY(0) scale(0.6); } 40% { opacity: 0.85; } 100% { opacity: 0; transform: translateY(-22px) scale(1.3); } }
+        .amb-twinkle, .amb-spark { animation-name: ambTwinkle; }
+        @keyframes ambTwinkle { 0%, 60%, 100% { opacity: 0; transform: scale(0.4); } 75% { opacity: 1; transform: scale(1.1); } }
+        .amb-dust, .amb-mote { animation-name: ambDust; }
+        @keyframes ambDust { 0% { opacity: 0; transform: translate(0, 0); } 40% { opacity: 0.55; } 100% { opacity: 0; transform: translate(18px, -6px); } }
+        /* 小MAPの出やすい属性。⚠️ 敵の枠と同じ色の点を付ける */
+        .adv-elem-tag { display: inline-flex; gap: 4px; }
+        .adv-elem-tag > i {
+          font-style: normal; font-size: 10px; padding: 2px 7px 2px 6px; border-radius: 9px;
+          display: inline-flex; align-items: center; gap: 4px; color: #FFF3D6;
+          border: 1px solid var(--elc2); background: rgba(20,14,32,0.7);
+        }
+        .adv-elem-tag > i::before {
+          content: ""; width: 7px; height: 7px; border-radius: 50%; background: var(--elc2);
+          box-shadow: 0 0 6px var(--elc2);
+        }
+        /*
+          倒れる。
+          ⚠️⚠️ すぐ消さないこと。消えるより先に「打ち倒した」が出て、
+            勝った実感の前に結論が来ていた。
+          ★ 震える → 傾く → 白く飛んで消える。BT_DIE_MS と秒を合わせること。
+        */
+        .bt-fig.dying { animation: btDie 760ms cubic-bezier(0.4, 0, 0.7, 1) forwards; }
+        @keyframes btDie {
+          0% { transform: translateX(0) scale(1); filter: none; opacity: 1; }
+          8% { transform: translateX(-3px); }
+          16% { transform: translateX(3px); }
+          24% { transform: translateX(-2.4px); }
+          32% { transform: translateX(2.4px); }
+          40% { transform: translateX(-1.6px); }
+          48% { transform: translateX(1.6px) scale(1.04); filter: brightness(1.6); }
+          62% { transform: translateX(0) scale(1.1) rotate(-4deg); filter: brightness(2.6) saturate(0.4); opacity: 0.9; }
+          100% { transform: translateY(10px) scale(0.6) rotate(-14deg); filter: brightness(4) saturate(0); opacity: 0; }
+        }
+        /* ⚠️ 現れるほうも間を取る。ぱっと出ると置き換わったことに気づけない */
+        .bt-foe.born .bt-fig { animation: btBorn 620ms cubic-bezier(0.2, 0.9, 0.3, 1) both; }
+        @keyframes btBorn {
+          0% { transform: scale(0.3) rotate(10deg); filter: brightness(3.4) saturate(0); opacity: 0; }
+          45% { opacity: 1; }
+          70% { transform: scale(1.12) rotate(-2deg); filter: brightness(1.5); }
+          100% { transform: scale(1) rotate(0); filter: none; opacity: 1; }
+        }
+        /*
+          敵のHPの下の札。
+          ⚠️⚠️ その体に掛かっているものは、その体のそばに出すこと。
+            これまで画面のどこにも出ていなかったので、
+            「なぜ通らないのか」が分からないまま殴ることになっていた。
+          ⚠️ 小さく。敵の絵より大きくしない。
+        */
+        .bt-foe-tags { display: flex; flex-wrap: wrap; gap: 3px; justify-content: center; margin-top: 3px; }
+        .bt-foe-tag {
+          font-style: normal; font-size: 9px; line-height: 1; padding: 2.5px 4.5px;
+          border-radius: 5px; letter-spacing: 0.02em; white-space: nowrap;
+          background: rgba(60,40,40,0.72); color: #F0B4B4;
+          box-shadow: inset 0 0 0 1px rgba(240,180,180,0.28);
+        }
+        .bt-foe-tag.guardHi, .bt-foe-tag.guardEdge { background: rgba(80,40,40,0.8); color: #FFC8B0; }
+        .bt-foe-tag.wind { background: rgba(80,60,20,0.8); color: #F6DE96; }
+        .bt-foe-tag.revived { background: rgba(40,60,80,0.8); color: #9AD8F0; }
+        .bt-foe-tag.shield { background: rgba(50,50,80,0.8); color: #C8C0F0; }
+        /* ⚠️ 敵の強化は赤みで。こちらに不利な印だとひと目で分かる */
+        .bt-foe-tag.buff_crit, .bt-foe-tag.buff_evade, .bt-foe-tag.buff_critRes,
+        .bt-foe-tag.buff_def, .bt-foe-tag.buff_atk {
+          background: rgba(110,30,40,0.85); color: #FFC0B0;
+        }
         .bt-foe-mark { display: flex; justify-content: center; color: #F0B4B4; margin-bottom: 5px; }
         /*
           ゲージ。
@@ -53178,6 +62122,54 @@ export default function TarotDraw() {
             0 0 22px rgba(154,216,255,0.12),
             0 8px 22px rgba(0,0,0,0.45);
         }
+        /*
+          始めると終わるを戦場に重ねる。
+          ⚠️⚠️ 盤の外に出さないこと。スクロールしないと押せない位置にあると、
+            一戦ごとに画面を送ることになる。
+          ⚠️⚠️ 下端に置かないこと。親指は届くが、目は戦場の真ん中を見ている。
+            下に置くと、押すために視線を落とすことになる（実際そう見えた）。
+          ★ 真ん中に置く。裏はぼかすので、敵に被っても姿を潰さない。
+        */
+        /*
+          始める前は戦場をぼかす。
+          ⚠️⚠️ 地図が戦闘中にぼけるのと同じ扱いにすること。
+            くっきりしたままボタンを重ねると、敵と字が同じ層に見えて読みにくい。
+          ⚠️ ぼかすのは中身だけ。台（.bt-field）ごとぼかすと縁まで溶ける。
+          ⚠️ 少し沈める。ぼかしただけでは明るさが変わらず、奥へ行った感じが出ない。
+        */
+        .bt-scene, .bt-foes { transition: filter 260ms ease; }
+        .bt-field.ready .bt-scene,
+        .bt-field.ready .bt-foes { filter: blur(3.5px) saturate(0.85) brightness(0.72); }
+        .bt-cta {
+          position: absolute; inset: 0; z-index: 6;
+          display: flex; align-items: center; justify-content: center; padding: 0 12px;
+          pointer-events: none;
+        }
+        .bt-cta > * { pointer-events: auto; max-width: 320px; width: 100%; }
+        /*
+          決着の覆い。
+          ⚠️⚠️ 盤を伏せてから文字を出すこと。敵の絵の上に直接重ねると読めない。
+          ⚠️ 戦場の中に収める。下に置くと、勝った直後にまたスクロールが要る。
+        */
+        .bt-over {
+          position: absolute; inset: 0; z-index: 7;
+          display: flex; flex-direction: column; align-items: center; justify-content: center;
+          gap: 6px; padding: 12px; text-align: center;
+          background: radial-gradient(120% 80% at 50% 50%,
+            rgba(12,8,28,0.62) 0%, rgba(12,8,28,0.88) 100%);
+          backdrop-filter: blur(2px); -webkit-backdrop-filter: blur(2px);
+          animation: btOverIn 320ms ease both;
+        }
+        /* ⚠️ 勝ちだけ縁を灯す。負けたときに祝うと、負けが軽く見える */
+        .bt-over.win { box-shadow: inset 0 0 0 2px rgba(255,214,120,0.55), inset 0 0 44px rgba(255,214,120,0.22); }
+        @keyframes btOverIn { from { opacity: 0; } to { opacity: 1; } }
+        .bt-over .adv-back { max-width: 260px; width: 100%; }
+        /* ⚠️ 制覇の一手だけは目立たせる。地図へ戻るのと同じ顔にしない */
+        .bt-over .adv-back.win {
+          background: linear-gradient(180deg, rgba(232,196,106,0.92), rgba(176,130,40,0.92));
+          color: #1A1226; font-weight: 700;
+          box-shadow: 0 0 18px rgba(232,196,106,0.5);
+        }
         /* ⚠️ 戦場は縦を取ること。横長すぎると敵が小さく、盤面に見えない */
         .bt-scene { display: block; width: 100%; height: auto; min-height: 190px; object-fit: cover; }
         /* ⚠️ 敵は背景の地面の上に置く。下端を影の位置に合わせる */
@@ -53313,22 +62305,50 @@ export default function TarotDraw() {
           30% { opacity: 1; }
           100% { transform: scale(3.4); opacity: 0; }
         }
-        /* 回復。⚠️ 下から上へ。太く短い粒 */
+        /*
+          回復 … 緑・十字・下から上。
+          ⚠️ 強化（金・矢・足元の環）と色も形も分けること。同じ粒だと見分けが付かない。
+        */
         .fx-heal i {
-          bottom: 0; width: 5px; height: 5px; border-radius: 50%;
-          background: #9FE0A6; box-shadow: 0 0 8px rgba(159,224,166,0.9);
-          animation: fxHeal 560ms ease-out forwards;
+          bottom: 0; width: 9px; height: 9px; background: #7FE08A;
+          box-shadow: 0 0 10px rgba(127,224,138,0.95);
+          clip-path: polygon(38% 0, 62% 0, 62% 38%, 100% 38%, 100% 62%, 62% 62%, 62% 100%, 38% 100%, 38% 62%, 0 62%, 0 38%, 38% 38%);
+          animation: fxHeal 640ms ease-out forwards;
+        }
+        /* ⚠️ 輪は一度だけ。何重にも出すと強化の環と紛れる */
+        .fx-heal u {
+          position: absolute; left: 50%; bottom: 4px; width: 56px; height: 56px;
+          margin-left: -28px; border-radius: 50%; border: 2px solid rgba(127,224,138,0.9);
+          animation: fxHealRing 640ms ease-out forwards;
+        }
+        @keyframes fxHealRing {
+          0% { transform: scale(0.3); opacity: 0; }
+          30% { opacity: 0.9; }
+          100% { transform: scale(1.5); opacity: 0; }
         }
         @keyframes fxHeal {
           0% { transform: translateY(6px) scale(0.6); opacity: 0; }
           30% { opacity: 1; }
           100% { transform: translateY(-34px) scale(1.1); opacity: 0; }
         }
-        /* 強化。⚠️ 足元の環。上に出すと回復と紛れる */
+        /* 強化 … 金・矢・足元の環。⚠️ 回復（緑・十字）と混ぜない */
         .fx-buff i {
           left: 50%; bottom: 2px; width: 60px; height: 14px; margin-left: -30px;
-          border-radius: 50%; border: 2px solid #F6DE96;
-          animation: fxBuff 560ms ease-out forwards;
+          border-radius: 50%; border: 2px solid #FFD75A;
+          box-shadow: 0 0 10px rgba(255,215,90,0.5);
+          animation: fxBuff 620ms ease-out forwards;
+        }
+        /* ⚠️ 矢は上向き。回復の粒と形で分ける */
+        .fx-buff b {
+          position: absolute; bottom: 6px; width: 10px; height: 14px; background: #FFD75A;
+          clip-path: polygon(50% 0, 100% 55%, 68% 55%, 68% 100%, 32% 100%, 32% 55%, 0 55%);
+          box-shadow: 0 0 8px rgba(255,215,90,0.8);
+          animation: fxBuffUp 640ms ease-out forwards;
+        }
+        @keyframes fxBuffUp {
+          0% { transform: translateY(8px) scale(0.6); opacity: 0; }
+          35% { opacity: 1; }
+          100% { transform: translateY(-30px) scale(1.05); opacity: 0; }
         }
         @keyframes fxBuff {
           0% { transform: scale(0.4); opacity: 0; }
@@ -53688,6 +62708,27 @@ export default function TarotDraw() {
         }
         /* ⑩ 運命の輪 */
         .ar-wheel { animation: arWheel 620ms cubic-bezier(0.2,0.8,0.25,1) forwards; }
+        /*
+          運命の輪の風車。
+          ⚠️⚠️ 向きと速さを一つずつ変えること。全部同じだと、
+            大きな輪が一つ回っているようにしか見えない。
+          ⚠️ 中央の輪と重ねない。外周に散らす ―― 主役は真ん中の輪。
+        */
+        .ar-wheel .ar-pinwheel {
+          position: absolute; color: currentColor; opacity: 0;
+          transform-origin: 50% 50%;
+          animation: arPinIn 620ms ease-out both, arPinSpin 900ms linear infinite;
+        }
+        /* ⚠️ 逆回りを混ぜる。同じ向きだと、風向きが一つに見えて単調になる */
+        .ar-wheel .ar-pinwheel.rev { animation-name: arPinIn, arPinSpinRev; }
+        @keyframes arPinIn {
+          0% { opacity: 0; }
+          22% { opacity: 0.9; }
+          72% { opacity: 0.9; }
+          100% { opacity: 0; }
+        }
+        @keyframes arPinSpin { to { transform: rotate(360deg); } }
+        @keyframes arPinSpinRev { to { transform: rotate(-360deg); } }
         @keyframes arWheel {
           0% { transform: scale(0.3) rotate(-90deg); opacity: 0; }
           35% { transform: scale(1) rotate(0); opacity: 1; }
@@ -53804,6 +62845,27 @@ export default function TarotDraw() {
           100% { stroke-dashoffset: -120; opacity: 0; }
         }
         /* 受け側の飛沫。⚠️ 右下の盃の口に合わせる */
+        /*
+          節制の泡。
+          ⚠️⚠️ 大きさ・速さ・位置をばらすこと。揃えると「点が一列で上がった」
+            だけに見えて、水にならない。
+          ⚠️ 横に揺らす。まっすぐ上がると気泡ではなく弾に見える。
+          ⚠️ 620ms（FX_MS）以内に終わること。
+        */
+        .ar-temper .ar-bubble {
+          position: absolute; bottom: -4%;
+          width: 9px; height: 9px; border-radius: 50%;
+          border: 1.4px solid currentColor; background: rgba(255,255,255,0.14);
+          opacity: 0; transform: scale(var(--s, 1));
+          animation: arBubble 560ms ease-out both;
+        }
+        @keyframes arBubble {
+          0% { opacity: 0; transform: translate(0, 0) scale(calc(var(--s, 1) * 0.4)); }
+          18% { opacity: 0.95; }
+          50% { transform: translate(var(--sw, 8px), -52%) scale(var(--s, 1)); }
+          78% { opacity: 0.8; }
+          100% { opacity: 0; transform: translate(calc(var(--sw, 8px) * -0.6), -112%) scale(calc(var(--s, 1) * 1.15)); }
+        }
         .ar-temper .ar-splash {
           left: 78%; top: 62%; width: 5px; height: 5px;
           border-radius: 50%; background: currentColor;
@@ -54047,6 +63109,30 @@ export default function TarotDraw() {
           100% { transform: scale(1.9); opacity: 0; }
         }
         /* 花弁。⚠️ 八方へ開く。丸のままだと光の粒に見える */
+        /*
+          恵の葉。
+          ⚠️⚠️ 中心を軸に回すこと。舞い散らすと「風が吹いた」になり、
+            恵み（実り）ではなく別の札に見える。
+          ⚠️ 葉そのものも自転させる。公転だけだと板が回って見える。
+          ⚠️ 距離（--d）を三段に分ける。同じ半径だと輪が一本増えるだけ。
+        */
+        .fx-flash-cups .fl-leaf {
+          position: absolute; left: 50%; top: 50%;
+          width: 14px; height: 9px;
+          border-radius: 0 100% 0 100%;
+          background: linear-gradient(120deg, #9FE0A6, #4FA860);
+          box-shadow: 0 0 6px rgba(159,224,166,0.55);
+          opacity: 0; transform-origin: 50% 50%;
+          animation: flLeaf 620ms cubic-bezier(0.2,0.75,0.3,1) both;
+        }
+        @keyframes flLeaf {
+          0% { opacity: 0;
+            transform: rotate(var(--a)) translateX(0) rotate(0deg) scale(0.4); }
+          25% { opacity: 1; }
+          80% { opacity: 1; }
+          100% { opacity: 0;
+            transform: rotate(calc(var(--a) + 300deg)) translateX(var(--d, 40px)) rotate(540deg) scale(1); }
+        }
         .fx-flash-cups .fl-petal {
           left: 50%; top: 46%; width: 14px; height: 26px; margin: -13px 0 0 -7px;
           border-radius: 50% 50% 50% 50% / 62% 62% 38% 38%;
@@ -54155,6 +63241,32 @@ export default function TarotDraw() {
             下を太く上を細くすると、竜巻にも塔にも見える。
           ⚠️ 風の筋は斜めに。水平だと線が引かれただけに見える。
         */
+        /*
+          塔の雷。左右に二本ずつ。
+          ⚠️⚠️ 中央に置かないこと。渦と重なって、どちらも見えなくなる。
+          ⚠️ 左右で時間をずらす。同時に光ると一枚の板に見える。
+          ⚠️ 光るのは一瞬。落ちて、白く残って、消える。
+        */
+        .ar-twister .ar-bolt {
+          position: absolute; top: -4%; height: 108%; width: 15%;
+          fill: #FFF3D6; opacity: 0; pointer-events: none;
+          filter: drop-shadow(0 0 7px rgba(200,150,255,0.95))
+                  drop-shadow(0 0 18px rgba(176,123,232,0.7));
+          animation: arBolt 300ms steps(1, end) both;
+        }
+        .ar-twister .ar-bolt.s0 { left: 2%;  animation-delay: 20ms; }
+        .ar-twister .ar-bolt.s1 { right: 2%; animation-delay: 110ms; transform: scaleX(-1); }
+        .ar-twister .ar-bolt.s2 { left: 17%; animation-delay: 210ms; transform: scaleX(-1) scaleY(0.82); }
+        .ar-twister .ar-bolt.s3 { right: 17%; animation-delay: 300ms; transform: scaleY(0.82); }
+        /* ⚠️ steps で明滅させる。滑らかに消すと蛍光灯に見えて、雷にならない */
+        @keyframes arBolt {
+          0% { opacity: 0; }
+          10% { opacity: 1; }
+          26% { opacity: 0.25; }
+          38% { opacity: 1; }
+          62% { opacity: 0.7; }
+          100% { opacity: 0; }
+        }
         .ar-twister .ar-twring {
           left: 50%; width: var(--w, 100px); height: 18px;
           margin-left: calc(var(--w, 100px) / -2);
@@ -54484,6 +63596,719 @@ export default function TarotDraw() {
           ⚠️ 札の右下に置く。札の枠を犠牲にする仕組みなので、札のそばが筋。
           ⚠️ 札に重ねないこと。最後の一枚が隠れる。右下の外側に添える。
         */
+        /*
+          敵の手の札。
+          ⚠️ 札の場所に重ねる。自分の札と色を変える（赤黒）。
+          ⚠️ 判定を持たせない。押せてしまうと自分の札と取り違える。
+        */
+        /*
+          敵の手の枠。⚠️ 札の横。札の上に重ねない。
+          ⚠️ 大きさを変えない。中身が変わっても枠が動くと、札の並びが揺れる。
+        */
+        /* ⚠️ 少し縦長。札より背を高くして、目が自然にここへ行くようにする */
+        .bt-side { flex: 0 0 auto; display: flex; flex-direction: column; gap: 6px; align-items: center; }
+        .bt-slotx {
+          width: 86px; height: 104px; border-radius: 12px;
+          display: flex; align-items: center; justify-content: center;
+          border: 1px solid rgba(255,243,214,0.14); background: rgba(24,14,26,0.6);
+          transition: border-color 160ms ease, box-shadow 160ms ease;
+        }
+        /* 盾と消耗品。⚠️ ハートの下にまとめる。札の列を圧迫しない */
+        .bt-side-btns {
+          display: flex; flex-wrap: wrap; gap: 5px; justify-content: center; width: 86px;
+        }
+        /* ⚠️ 名前の行。高さを固定して、出ていないときも場所を空けておく */
+        .bt-slotx-name {
+          display: block; width: 86px; min-height: 14px; text-align: center;
+          font-size: 10.5px; line-height: 1.25; color: #FFD0C0; opacity: 0;
+        }
+        .bt-slotx-name.on { opacity: 1; animation: btSlotName 260ms ease-out; }
+        @keyframes btSlotName {
+          0% { opacity: 0; transform: translateY(-3px); }
+          100% { opacity: 1; transform: translateY(0); }
+        }
+        /* 敵の通常攻撃 … 朱 */
+        .bt-slotx.act.atk {
+          border-color: rgba(240,120,110,0.9);
+          background: linear-gradient(180deg, rgba(70,18,26,0.96), rgba(28,8,14,0.98));
+          box-shadow: 0 0 16px rgba(220,60,60,0.45);
+        }
+        /* 敵の特殊行動 … 紫。攻撃と混ぜない */
+        .bt-slotx.act.sp {
+          border-color: rgba(178,120,240,0.9);
+          background: linear-gradient(180deg, rgba(44,20,74,0.96), rgba(16,8,28,0.98));
+          box-shadow: 0 0 16px rgba(150,80,230,0.45);
+        }
+        /*
+          衝撃で枠が揺れる。
+          ⚠️ 連打（通常攻撃）は五発ぶん、ほかの攻撃は一発ぶん。
+          ⚠️ 大きく振りすぎない。札の列の横にあるので、動きが大きいと盤ごと揺れて見える。
+        */
+        .bt-slotx.shake-j { animation: btShakeJ 760ms linear; }
+        .bt-slotx.shake-jb { animation: btShakeJb 760ms linear; }
+        .bt-slotx.shake-o { animation: btShakeO 460ms cubic-bezier(0.2,0.9,0.3,1); }
+        .bt-slotx.shake-ob { animation: btShakeOb 460ms cubic-bezier(0.2,0.9,0.3,1); }
+        @keyframes btShakeJ {
+          0%, 100% { transform: translate(0, 0); }
+          6% { transform: translate(-5px, 2px); } 12% { transform: translate(3px, -1px); }
+          22% { transform: translate(-5px, 2px); } 28% { transform: translate(3px, -1px); }
+          38% { transform: translate(-5px, 2px); } 44% { transform: translate(3px, -1px); }
+          54% { transform: translate(-5px, 2px); } 60% { transform: translate(3px, -1px); }
+          72% { transform: translate(-8px, 3px) scale(1.04); } 80% { transform: translate(5px, -2px); }
+          90% { transform: translate(-2px, 1px); }
+        }
+        @keyframes btShakeJb {
+          0%, 100% { transform: translate(0, 0); }
+          6% { transform: translate(-5px, 2px); } 12% { transform: translate(3px, -1px); }
+          22% { transform: translate(-5px, 2px); } 28% { transform: translate(3px, -1px); }
+          38% { transform: translate(-5px, 2px); } 44% { transform: translate(3px, -1px); }
+          54% { transform: translate(-5px, 2px); } 60% { transform: translate(3px, -1px); }
+          72% { transform: translate(-8px, 3px) scale(1.04); } 80% { transform: translate(5px, -2px); }
+          90% { transform: translate(-2px, 1px); }
+        }
+        @keyframes btShakeO {
+          0%, 100% { transform: translate(0, 0); }
+          15% { transform: translate(-9px, 3px) scale(1.05); }
+          32% { transform: translate(7px, -2px); }
+          52% { transform: translate(-5px, 2px); }
+          72% { transform: translate(3px, -1px); }
+        }
+        @keyframes btShakeOb {
+          0%, 100% { transform: translate(0, 0); }
+          15% { transform: translate(-9px, 3px) scale(1.05); }
+          32% { transform: translate(7px, -2px); }
+          52% { transform: translate(-5px, 2px); }
+          72% { transform: translate(3px, -1px); }
+        }
+        .bt-slotx.act.atk + .bt-slotx-name { color: #FFD0C0; }
+        .bt-slotx.act.sp + .bt-slotx-name { color: #D8B8FF; }
+
+        /* ⚠️ 待っているときの心。静かに脈打つだけにする */
+        .bt-heart {
+          width: 64px; height: 64px; fill: rgba(240,120,120,0.35);
+          animation: btHeartIdle 2.6s ease-in-out infinite;
+        }
+        @keyframes btHeartIdle {
+          0%, 100% { transform: scale(1); opacity: 0.6; }
+          50% { transform: scale(1.12); opacity: 0.95; }
+        }
+        .bt-foeact-art { width: 76px; height: 76px; animation: btFoeAct 520ms ease-out; overflow: visible; }
+        /*
+          敵の行動の動き。
+          ⚠️⚠️ 絵を置くだけにしないこと。「拳が出る」「目が出る」だけでは安っぽい。
+            動作そのもの（踏み込む・走る・広がる・回る）を見せる。
+          ⚠️ 中心を軸にすること。transform-box を指定しないと、SVG の原点で回って飛ぶ。
+          ⚠️ 1.1秒で消えるので、動きは0.9秒以内に収める。途中で切れると雑に見える。
+        */
+        .fa * { transform-box: fill-box; transform-origin: center; }
+        /*
+          拳の連打。
+          ⚠️⚠️ 一発で終わらせないこと。五発を0.12秒おき、左右交互に。
+          ⚠️ 最後の一発だけ大きく、長く残す。同じ大きさを並べると機械的に見える。
+        */
+        .fa-jab { animation: faJab 300ms cubic-bezier(0.25,0.9,0.3,1) both; opacity: 0; }
+        .fa-jab.j0 { animation-delay: 0ms; }
+        .fa-jab.j1 { animation-delay: 120ms; }
+        .fa-jab.j2 { animation-delay: 240ms; }
+        .fa-jab.j3 { animation-delay: 360ms; }
+        .fa-jab.j4 { animation-delay: 480ms; animation-duration: 420ms; }
+        .fa-jab.j1, .fa-jab.j3 { --dx: 16px; }
+        @keyframes faJab {
+          0% { opacity: 0; transform: translate(calc(-1 * var(--dx, -16px)), 10px) scale(0.5); }
+          45% { opacity: 1; transform: translate(0, 0) scale(1.08); }
+          100% { opacity: 0; transform: translate(0, -2px) scale(0.96); }
+        }
+        .fa-jab.last { transform-origin: center; }
+        .fa-jab.last path { stroke-width: 1.6; }
+        .fa-burst { animation: faBurst 280ms ease-out both; opacity: 0; }
+        .fa-burst.j0 { animation-delay: 90ms; }
+        .fa-burst.j1 { animation-delay: 210ms; }
+        .fa-burst.j2 { animation-delay: 330ms; }
+        .fa-burst.j3 { animation-delay: 450ms; }
+        .fa-burst.j4 { animation-delay: 600ms; animation-duration: 420ms; }
+        @keyframes faBurst {
+          0% { opacity: 0; transform: scale(0.3) rotate(0); }
+          35% { opacity: 1; transform: scale(1) rotate(12deg); }
+          100% { opacity: 0; transform: scale(1.8) rotate(24deg); }
+        }
+        /* 速度線。⚠️ 拳より薄く。同じ濃さだと拳が埋もれる */
+        .fa-streak { opacity: 0; animation: faStreak 260ms linear infinite; }
+        .fa-streak.s0 { animation-delay: 0ms; }
+        .fa-streak.s1 { animation-delay: 90ms; }
+        .fa-streak.s2 { animation-delay: 180ms; }
+        @keyframes faStreak {
+          0% { opacity: 0; transform: translateX(-6px); }
+          40% { opacity: 0.7; }
+          100% { opacity: 0; transform: translateX(16px); }
+        }
+        .fa-punch { animation: faPunch 620ms cubic-bezier(0.2,0.9,0.3,1) both; transform-origin: 60% 60%; }
+        @keyframes faPunch {
+          0% { transform: translate(-14px, 12px) scale(0.55); opacity: 0.2; }
+          45% { transform: translate(3px, -2px) scale(1.16); opacity: 1; }
+          60% { transform: translate(0, 0) scale(1); }
+          100% { transform: translate(0, 0) scale(1); }
+        }
+        .fa-impact { animation: faImpact 520ms ease-out 300ms both; }
+        @keyframes faImpact {
+          0% { opacity: 0; transform: scale(0.3); }
+          30% { opacity: 1; }
+          100% { opacity: 0; transform: scale(1.7); }
+        }
+        /*
+          属性ごとの動き。
+          ⚠️ 属性はポケモンの18タイプに合わせてある。拳の連打は「かくとう」だけ。
+        */
+        .fa-shot { animation: faShot 500ms cubic-bezier(0.3,0,0.4,1) both; opacity: 0; }
+        .fa-shot.n0 { animation-delay: 0ms; }
+        .fa-shot.n1 { animation-delay: 110ms; }
+        .fa-shot.n2 { animation-delay: 220ms; }
+        @keyframes faShot {
+          0% { opacity: 0; transform: translateX(-10px) scale(0.5); }
+          25% { opacity: 1; transform: translateX(0) scale(1); }
+          100% { opacity: 0; transform: translateX(17px) scale(0.7); }
+        }
+        .fa-flame { transform-origin: 50% 90%; animation: faFlame 620ms ease-in-out infinite alternate; }
+        .fa-flame.in { animation-duration: 420ms; }
+        @keyframes faFlame {
+          0% { transform: scale(0.88, 0.92) translateY(2px); }
+          100% { transform: scale(1.1, 1.08) translateY(-2px); }
+        }
+        .fa-ember { animation: faBub 900ms ease-in infinite; }
+        .fa-ember.e0 { animation-delay: 0ms; }
+        .fa-ember.e1 { animation-delay: 280ms; }
+        .fa-ember.e2 { animation-delay: 560ms; }
+        .fa-drop { animation: faDrop 700ms cubic-bezier(0.2,0.9,0.3,1) both; }
+        .fa-drop.in { animation-delay: 80ms; }
+        @keyframes faDrop {
+          0% { transform: translateY(-18px) scale(0.5); opacity: 0.3; }
+          45% { transform: translateY(0) scale(1.14, 0.86); opacity: 1; }
+          70% { transform: scale(0.94, 1.06); }
+          100% { transform: scale(1); }
+        }
+        .fa-splash { animation: faSplash 620ms ease-out 260ms both; opacity: 0; }
+        .fa-splash.s0 { --sx: -13px; --sy: -9px; }
+        .fa-splash.s1 { --sx: 13px; --sy: -9px; }
+        .fa-splash.s2 { --sx: -10px; --sy: 9px; }
+        .fa-splash.s3 { --sx: 10px; --sy: 9px; }
+        @keyframes faSplash {
+          0% { opacity: 1; transform: translate(0, 0) scale(1); }
+          100% { opacity: 0; transform: translate(var(--sx), var(--sy)) scale(0.4); }
+        }
+        .fa-zag { animation: faZag 480ms ease-out infinite; opacity: 0; }
+        .fa-zag.z0 { animation-delay: 60ms; }
+        .fa-zag.z1 { animation-delay: 200ms; }
+        .fa-zag.z2 { animation-delay: 340ms; }
+        @keyframes faZag { 0% { opacity: 0; } 30% { opacity: 1; } 100% { opacity: 0; } }
+        /* つらら … 上から伸びて、最後に落ちる */
+        .fa-icic { transform-origin: top center; animation: faIcic 820ms ease-in both; }
+        .fa-icic.i0 { animation-delay: 0ms; }
+        .fa-icic.i1 { animation-delay: 120ms; }
+        .fa-icic.i2 { animation-delay: 240ms; }
+        @keyframes faIcic {
+          0% { transform: scaleY(0.1); opacity: 0.4; }
+          45% { transform: scaleY(1); opacity: 1; }
+          70% { transform: scaleY(1) translateY(0); }
+          100% { transform: scaleY(1) translateY(16px); opacity: 0; }
+        }
+        /* 雪 … ゆっくり舞い落ちる */
+        .fa-snow { animation: faSnow 1400ms linear infinite; opacity: 0; }
+        .fa-snow.n0 { animation-delay: 0ms; }
+        .fa-snow.n1 { animation-delay: 350ms; }
+        .fa-snow.n2 { animation-delay: 700ms; }
+        .fa-snow.n3 { animation-delay: 1050ms; }
+        @keyframes faSnow {
+          0% { opacity: 0; transform: translate(0, -8px) rotate(0); }
+          25% { opacity: 1; }
+          100% { opacity: 0; transform: translate(4px, 16px) rotate(90deg); }
+        }
+        .fa-leaf { animation: faLeaf 900ms ease-in-out infinite; transform-origin: 20% 50%; }
+        .fa-leaf.l0 { animation-delay: 0ms; }
+        .fa-leaf.l1 { animation-delay: 220ms; opacity: 0.8; }
+        .fa-leaf.l2 { animation-delay: 440ms; opacity: 0.6; }
+        @keyframes faLeaf {
+          0% { transform: rotate(-30deg) translate(-6px, 6px); opacity: 0; }
+          35% { opacity: 1; }
+          100% { transform: rotate(40deg) translate(10px, -10px); opacity: 0; }
+        }
+        .fa-vine { stroke-dasharray: 60; animation: faVine 700ms ease-out both; }
+        @keyframes faVine { 0% { stroke-dashoffset: 60; } 100% { stroke-dashoffset: 0; } }
+        .fa-crack { stroke-dasharray: 70; animation: faVine 520ms ease-out 160ms both; }
+        .fa-dust { animation: faBub 900ms ease-out infinite; }
+        .fa-dust.d0 { animation-delay: 0ms; }
+        .fa-dust.d1 { animation-delay: 240ms; }
+        .fa-dust.d2 { animation-delay: 480ms; }
+        .fa-gust { stroke-dasharray: 40; animation: faGust 700ms ease-out infinite; }
+        .fa-gust.g0 { animation-delay: 0ms; }
+        .fa-gust.g1 { animation-delay: 160ms; }
+        .fa-gust.g2 { animation-delay: 320ms; }
+        @keyframes faGust {
+          0% { stroke-dashoffset: 40; opacity: 0; }
+          30% { opacity: 1; }
+          100% { stroke-dashoffset: -40; opacity: 0; }
+        }
+        .fa-float { animation: faFloat 1100ms ease-in-out infinite; }
+        .fa-float.f0 { animation-delay: 0ms; }
+        .fa-float.f1 { animation-delay: 260ms; }
+        .fa-float.f2 { animation-delay: 520ms; }
+        .fa-float.f3 { animation-delay: 780ms; }
+        @keyframes faFloat {
+          0%, 100% { transform: translateY(0) rotate(0); opacity: 0.5; }
+          50% { transform: translateY(-7px) rotate(180deg); opacity: 1; }
+        }
+        .fa-thread { stroke-dasharray: 70; animation: faVine 620ms linear both; }
+        .fa-wing { animation: faWing 320ms ease-in-out infinite; transform-origin: center; }
+        .fa-wing.w0 { animation-delay: 0ms; }
+        .fa-wing.w1 { animation-delay: 80ms; }
+        .fa-wing.w2 { animation-delay: 160ms; }
+        @keyframes faWing {
+          0%, 100% { transform: scaleY(1) rotate(-6deg); }
+          50% { transform: scaleY(0.3) rotate(6deg); }
+        }
+        .fa-fall { animation: faFall 620ms cubic-bezier(0.4,0,0.6,1) both; }
+        @keyframes faFall {
+          0% { transform: translateY(-26px) rotate(-30deg); opacity: 0.4; }
+          60% { transform: translateY(2px) rotate(4deg); opacity: 1; }
+          75% { transform: translateY(-2px) rotate(-2deg); }
+          100% { transform: translateY(0) rotate(0); }
+        }
+        .fa-chip { animation: faChip 620ms ease-out 420ms both; opacity: 0; }
+        .fa-chip.c0 { --sx: -12px; --sy: -6px; }
+        .fa-chip.c1 { --sx: 12px; --sy: -6px; }
+        .fa-chip.c2 { --sx: -8px; --sy: 9px; }
+        .fa-chip.c3 { --sx: 9px; --sy: 9px; }
+        @keyframes faChip {
+          0% { opacity: 1; transform: translate(0, 0) rotate(0); }
+          100% { opacity: 0; transform: translate(var(--sx), var(--sy)) rotate(140deg); }
+        }
+        .fa-ghost { animation: faGhost 1200ms ease-in-out infinite; }
+        @keyframes faGhost {
+          0%, 100% { transform: translateY(0) scaleX(1); opacity: 0.85; }
+          50% { transform: translateY(-4px) scaleX(1.06); opacity: 1; }
+        }
+        .fa-wisp { animation: faWisp 1400ms ease-in-out infinite; }
+        .fa-wisp.p1 { animation-delay: 500ms; }
+        @keyframes faWisp {
+          0%, 100% { transform: translate(0, 0); opacity: 0.3; }
+          50% { transform: translate(4px, 8px); opacity: 1; }
+        }
+        .fa-scale { animation: faScale 1100ms linear infinite; }
+        .fa-scale.s0 { animation-delay: 0ms; }
+        .fa-scale.s1 { animation-delay: 360ms; }
+        .fa-scale.s2 { animation-delay: 720ms; }
+        @keyframes faScale {
+          0% { opacity: 0; transform: translateY(0) scale(0.6); }
+          30% { opacity: 1; }
+          100% { opacity: 0; transform: translateY(18px) scale(1.1); }
+        }
+        .fa-shade { animation: faShade 700ms ease-out both; opacity: 0; }
+        @keyframes faShade { 0% { opacity: 0; } 30% { opacity: 1; } 100% { opacity: 0.5; } }
+        .fa-claw { stroke-dasharray: 50; animation: faClaw 420ms ease-out both; }
+        .fa-claw.k0 { animation-delay: 60ms; }
+        .fa-claw.k1 { animation-delay: 180ms; }
+        .fa-claw.k2 { animation-delay: 300ms; }
+        @keyframes faClaw {
+          0% { stroke-dashoffset: 50; opacity: 0; }
+          25% { opacity: 1; }
+          100% { stroke-dashoffset: 0; opacity: 0.95; }
+        }
+        .fa-slash { stroke-dasharray: 60; animation: faSlash 420ms ease-out both; }
+        .fa-slash.s2 { animation-delay: 180ms; }
+        @keyframes faSlash {
+          0% { stroke-dashoffset: 60; opacity: 0; }
+          20% { opacity: 1; }
+          100% { stroke-dashoffset: 0; opacity: 1; }
+        }
+        /*
+          断続的に来る動き（ポケモンGOの技の三拍：溜め → 何度も来る → 余韻）。
+          ⚠️⚠️ 一回出て終わりにしないこと。地面なら三度噴き上がる、雷なら三度落ちる。
+          ⚠️ 間隔は0.2秒前後。短すぎると一つに見え、長すぎると間延びする。
+        */
+        .fa-wave { animation: faWave 700ms cubic-bezier(0.3,0,0.4,1) both; }
+        .fa-wave.v1 { animation-delay: 260ms; opacity: 0.6; }
+        @keyframes faWave {
+          0% { transform: translate(-30px, 8px); opacity: 0; }
+          30% { opacity: 0.9; }
+          100% { transform: translate(24px, -4px); opacity: 0; }
+        }
+        .fa-strike { animation: faStrike 360ms ease-out both; opacity: 0; }
+        .fa-strike.k0 { animation-delay: 0ms; }
+        .fa-strike.k1 { animation-delay: 220ms; }
+        .fa-strike.k2 { animation-delay: 440ms; }
+        @keyframes faStrike {
+          0% { opacity: 0; transform: translateY(-18px) scaleY(0.4); }
+          20% { opacity: 1; transform: translateY(0) scaleY(1); }
+          45% { opacity: 0.35; } 60% { opacity: 1; }
+          100% { opacity: 0; }
+        }
+        .fa-flash { animation: faFlash3 760ms linear both; opacity: 0; }
+        @keyframes faFlash3 {
+          0%, 100% { opacity: 0; } 4% { opacity: 0.7; } 12% { opacity: 0; }
+          33% { opacity: 0.6; } 40% { opacity: 0; } 62% { opacity: 0.55; } 70% { opacity: 0; }
+        }
+        .fa-whip { stroke-dasharray: 44; animation: faWhip 520ms cubic-bezier(0.2,0.9,0.3,1) both; }
+        .fa-whip.w1 { animation-delay: 240ms; }
+        @keyframes faWhip {
+          0% { stroke-dashoffset: 44; transform: rotate(-18deg); opacity: 0.4; }
+          55% { stroke-dashoffset: 0; transform: rotate(8deg); opacity: 1; }
+          100% { stroke-dashoffset: 0; transform: rotate(0); opacity: 0.2; }
+        }
+        .fa-pop { animation: faPop 460ms ease-out both; opacity: 0; }
+        .fa-pop.p0 { animation-delay: 0ms; }
+        .fa-pop.p1 { animation-delay: 150ms; }
+        .fa-pop.p2 { animation-delay: 300ms; }
+        .fa-pop.p3 { animation-delay: 450ms; }
+        @keyframes faPop {
+          0% { opacity: 0; transform: scale(0.3) translateY(6px); }
+          55% { opacity: 1; transform: scale(1.25) translateY(-4px); }
+          100% { opacity: 0; transform: scale(1.8) translateY(-8px); }
+        }
+        /* 地面 … 三度噴き上がる */
+        .fa-erupt { transform-origin: 50% 100%; animation: faErupt 420ms cubic-bezier(0.2,0.9,0.3,1) both; opacity: 0; }
+        .fa-erupt.u0 { animation-delay: 0ms; }
+        .fa-erupt.u1 { animation-delay: 220ms; }
+        .fa-erupt.u2 { animation-delay: 440ms; }
+        @keyframes faErupt {
+          0% { opacity: 0; transform: scaleY(0.1); }
+          40% { opacity: 1; transform: scaleY(1.2); }
+          70% { transform: scaleY(0.9); }
+          100% { opacity: 0.2; transform: scaleY(0.4); }
+        }
+        .fa-rubble { animation: faRubble 520ms ease-out infinite; opacity: 0; }
+        .fa-rubble.b0 { animation-delay: 80ms; --rx: -10px; }
+        .fa-rubble.b1 { animation-delay: 300ms; --rx: 8px; }
+        .fa-rubble.b2 { animation-delay: 190ms; --rx: -6px; }
+        .fa-rubble.b3 { animation-delay: 410ms; --rx: 11px; }
+        @keyframes faRubble {
+          0% { opacity: 1; transform: translate(0, 6px); }
+          50% { transform: translate(calc(var(--rx) * 0.6), -14px); }
+          100% { opacity: 0; transform: translate(var(--rx), 4px); }
+        }
+        /* ひこう … 三度切り抜ける */
+        .fa-dive { animation: faDive 440ms cubic-bezier(0.3,0,0.3,1) both; opacity: 0; }
+        .fa-dive.d0 { animation-delay: 0ms; }
+        .fa-dive.d1 { animation-delay: 200ms; }
+        .fa-dive.d2 { animation-delay: 400ms; }
+        @keyframes faDive {
+          0% { opacity: 0; transform: translate(-22px, -8px); }
+          35% { opacity: 1; }
+          100% { opacity: 0; transform: translate(26px, 10px); }
+        }
+        /* エスパー … 歪みが押し寄せる */
+        .fa-warp { animation: faWarp 820ms ease-in-out infinite; opacity: 0; }
+        .fa-warp.r0 { animation-delay: 0ms; }
+        .fa-warp.r1 { animation-delay: 200ms; }
+        .fa-warp.r2 { animation-delay: 400ms; }
+        .fa-warp.r3 { animation-delay: 600ms; }
+        @keyframes faWarp {
+          0% { opacity: 0; transform: scale(2.2) rotate(0); }
+          40% { opacity: 1; }
+          100% { opacity: 0; transform: scale(0.3) rotate(120deg); }
+        }
+        /* むし … 群れが横切る */
+        .fa-swarm { animation: faSwarm 620ms linear both; opacity: 0; }
+        .fa-swarm.s0 { animation-delay: 0ms; }
+        .fa-swarm.s1 { animation-delay: 90ms; }
+        .fa-swarm.s2 { animation-delay: 180ms; }
+        .fa-swarm.s3 { animation-delay: 270ms; }
+        .fa-swarm.s4 { animation-delay: 360ms; }
+        @keyframes faSwarm {
+          0% { opacity: 0; transform: translate(-26px, 4px); }
+          20% { opacity: 1; }
+          50% { transform: translate(0, -5px); }
+          100% { opacity: 0; transform: translate(26px, 4px); }
+        }
+        /* いわ … 三つ落ちる */
+        .fa-drop3 { animation: faDrop3 420ms cubic-bezier(0.5,0,0.8,0.6) both; opacity: 0; }
+        .fa-drop3.r0 { animation-delay: 0ms; }
+        .fa-drop3.r1 { animation-delay: 210ms; }
+        .fa-drop3.r2 { animation-delay: 420ms; }
+        @keyframes faDrop3 {
+          0% { opacity: 0; transform: translateY(-20px) rotate(-25deg); }
+          25% { opacity: 1; }
+          80% { transform: translateY(12px) rotate(6deg); }
+          100% { opacity: 0.85; transform: translateY(10px) rotate(0); }
+        }
+        .fa-chip { animation-delay: 200ms; }
+        /* ゴースト … 鬼火が寄り集まる */
+        .fa-wisp2 { animation: faWisp2 900ms ease-in infinite; opacity: 0; }
+        .fa-wisp2.p0 { --wx: -20px; --wy: -16px; animation-delay: 0ms; }
+        .fa-wisp2.p1 { --wx: 20px; --wy: -16px; animation-delay: 220ms; }
+        .fa-wisp2.p2 { --wx: -20px; --wy: 16px; animation-delay: 440ms; }
+        .fa-wisp2.p3 { --wx: 20px; --wy: 16px; animation-delay: 660ms; }
+        @keyframes faWisp2 {
+          0% { opacity: 0; transform: translate(var(--wx), var(--wy)) scale(1.2); }
+          40% { opacity: 1; }
+          100% { opacity: 0; transform: translate(0, 0) scale(0.3); }
+        }
+        .fa-glow { animation: faGlow 700ms ease-in-out infinite; }
+        @keyframes faGlow { 0%, 100% { fill: #1A0A2A; } 50% { fill: #FF5A8A; } }
+        /* ドラゴン … 螺旋が奥から迫る */
+        .fa-helix { animation: faHelix 900ms linear infinite; opacity: 0; }
+        .fa-helix.h0 { animation-delay: 0ms; }
+        .fa-helix.h1 { animation-delay: 180ms; }
+        .fa-helix.h2 { animation-delay: 360ms; }
+        .fa-helix.h3 { animation-delay: 540ms; }
+        .fa-helix.h4 { animation-delay: 720ms; }
+        @keyframes faHelix {
+          0% { opacity: 0; transform: scale(0.3) rotate(0); }
+          30% { opacity: 1; }
+          100% { opacity: 0; transform: scale(1.7) rotate(200deg); }
+        }
+        /* はがね … 三度斬る */
+        .fa-slash3 { stroke-dasharray: 60; animation: faSlash3 300ms ease-out both; opacity: 0; }
+        .fa-slash3.k0 { animation-delay: 0ms; }
+        .fa-slash3.k1 { animation-delay: 200ms; }
+        .fa-slash3.k2 { animation-delay: 400ms; }
+        @keyframes faSlash3 {
+          0% { stroke-dashoffset: 60; opacity: 0; }
+          25% { opacity: 1; }
+          100% { stroke-dashoffset: -8; opacity: 0.9; }
+        }
+        /* フェアリー … 光が集まって弾ける */
+        .fa-gather { animation: faGather 520ms ease-in both; opacity: 0; }
+        @keyframes faGather {
+          0% { opacity: 0; transform: translate(var(--gx), var(--gy)) scale(1.4); }
+          40% { opacity: 1; }
+          100% { opacity: 0; transform: translate(0, 0) scale(0.2); }
+        }
+        .fa-ring.r1, .fa-ring.r2 { animation-delay: 420ms; }
+        /*
+          地震。⚠️ 地面・岩の通常攻撃では、枠ごと左右に揺さぶる。
+          ⚠️ 三度の噴き上げに合わせて三回強くなる。
+        */
+        .bt-slotx.shake-q { animation: btQuake 760ms linear; }
+        .bt-slotx.shake-qb { animation: btQuakeB 760ms linear; }
+        @keyframes btQuake {
+          0%, 100% { transform: translateX(0); }
+          5% { transform: translateX(-6px); } 10% { transform: translateX(6px); } 15% { transform: translateX(-3px); }
+          30% { transform: translateX(-7px) translateY(1px); } 35% { transform: translateX(7px); } 40% { transform: translateX(-3px); }
+          58% { transform: translateX(-8px) translateY(2px); } 63% { transform: translateX(8px); } 68% { transform: translateX(-4px); }
+          80% { transform: translateX(3px); } 90% { transform: translateX(-1px); }
+        }
+        @keyframes btQuakeB {
+          0%, 100% { transform: translateX(0); }
+          5% { transform: translateX(-6px); } 10% { transform: translateX(6px); } 15% { transform: translateX(-3px); }
+          30% { transform: translateX(-7px) translateY(1px); } 35% { transform: translateX(7px); } 40% { transform: translateX(-3px); }
+          58% { transform: translateX(-8px) translateY(2px); } 63% { transform: translateX(8px); } 68% { transform: translateX(-4px); }
+          80% { transform: translateX(3px); } 90% { transform: translateX(-1px); }
+        }
+        /*
+          属性の色で枠の内側が脈打つ。
+          ⚠️ 薄く。濃いと絵が沈む。色で「何が来たか」を一瞬で伝えるためのもの。
+        */
+        .bt-slotx.act.atk { position: relative; }
+        .bt-slotx.act.atk::after {
+          content: ""; position: absolute; inset: 0; border-radius: inherit; pointer-events: none;
+          background: radial-gradient(circle at 50% 55%, var(--elc, rgba(255,120,110,0.35)), transparent 70%);
+          animation: btElPulse 760ms ease-out both;
+        }
+        @keyframes btElPulse {
+          0% { opacity: 0; } 20% { opacity: 1; } 40% { opacity: 0.4; } 60% { opacity: 0.9; } 100% { opacity: 0; }
+        }
+        .bt-slotx.el-normal { --elc: rgba(255,243,214,0.35); }
+        .bt-slotx.el-fire { --elc: rgba(255,120,40,0.45); }
+        .bt-slotx.el-water { --elc: rgba(60,150,230,0.45); }
+        .bt-slotx.el-electric { --elc: rgba(255,224,74,0.5); }
+        .bt-slotx.el-grass { --elc: rgba(110,200,80,0.42); }
+        .bt-slotx.el-ice { --elc: rgba(170,230,255,0.45); }
+        .bt-slotx.el-fight { --elc: rgba(230,110,80,0.45); }
+        .bt-slotx.el-poison { --elc: rgba(170,80,220,0.45); }
+        .bt-slotx.el-ground { --elc: rgba(200,150,80,0.45); }
+        .bt-slotx.el-fly { --elc: rgba(190,220,255,0.4); }
+        .bt-slotx.el-psychic { --elc: rgba(245,120,200,0.45); }
+        .bt-slotx.el-bug { --elc: rgba(170,210,70,0.42); }
+        .bt-slotx.el-rock { --elc: rgba(170,150,120,0.45); }
+        .bt-slotx.el-ghost { --elc: rgba(140,100,210,0.45); }
+        .bt-slotx.el-dragon { --elc: rgba(110,130,240,0.45); }
+        .bt-slotx.el-dark { --elc: rgba(120,60,160,0.5); }
+        .bt-slotx.el-steel { --elc: rgba(210,220,235,0.4); }
+        .bt-slotx.el-fairy { --elc: rgba(255,170,220,0.45); }
+        /* 連撃 … 通常攻撃より速い八発。上下に振る */
+        .fa-combo { animation: faCombo 300ms ease-out both; opacity: 0; }
+        .fa-combo.c0 { animation-delay: 0ms; }
+        .fa-combo.c1 { animation-delay: 90ms; }
+        .fa-combo.c2 { animation-delay: 180ms; }
+        .fa-combo.c3 { animation-delay: 270ms; }
+        .fa-combo.c4 { animation-delay: 360ms; }
+        .fa-combo.c5 { animation-delay: 450ms; }
+        .fa-combo.c6 { animation-delay: 540ms; }
+        .fa-combo.c7 { animation-delay: 630ms; }
+        .fa-combo.c1, .fa-combo.c3, .fa-combo.c5, .fa-combo.c7 { --cy: -10px; }
+        @keyframes faCombo {
+          0% { opacity: 0; transform: translate(-18px, calc(-1 * var(--cy, 10px))) scale(0.62); }
+          45% { opacity: 1; transform: translate(2px, 0) scale(1.06); }
+          100% { opacity: 0; transform: translate(16px, var(--cy, 10px)) scale(0.85); }
+        }
+        .fa-combo-line { animation: faLine 700ms ease-out both; }
+        @keyframes faLine {
+          0% { opacity: 0; stroke-dasharray: 0 60; }
+          40% { opacity: 0.9; stroke-dasharray: 40 60; }
+          100% { opacity: 0; stroke-dasharray: 60 0; }
+        }
+        /* 回る・縮む（溜め・渦） */
+        .fa-spin { animation: faSpin 900ms cubic-bezier(0.3,0,0.5,1) both; }
+        .fa-spin.slow { animation: faSpinSlow 1100ms linear infinite; }
+        @keyframes faSpin {
+          0% { transform: rotate(0) scale(1.35); opacity: 0.3; }
+          100% { transform: rotate(540deg) scale(0.8); opacity: 1; }
+        }
+        @keyframes faSpinSlow { to { transform: rotate(360deg); } }
+        .fa-core { animation: faCore 900ms ease-in-out infinite; }
+        @keyframes faCore {
+          0%, 100% { transform: scale(0.8); opacity: 0.7; }
+          50% { transform: scale(1.3); opacity: 1; }
+        }
+        /* 雷（大技） */
+        .fa-flash { animation: faFlash 560ms ease-out both; opacity: 0; }
+        @keyframes faFlash {
+          0% { opacity: 0; } 8% { opacity: 0.85; } 18% { opacity: 0.1; }
+          26% { opacity: 0.6; } 40% { opacity: 0; } 100% { opacity: 0; }
+        }
+        .fa-bolt { animation: faBolt 620ms ease-out both; }
+        .fa-bolt.b2 { animation-delay: 140ms; }
+        @keyframes faBolt {
+          0% { opacity: 0; transform: translateY(-22px) scaleY(0.5); }
+          18% { opacity: 1; transform: translateY(0) scaleY(1); }
+          34% { opacity: 0.4; } 48% { opacity: 1; }
+          100% { opacity: 0.85; }
+        }
+        .fa-ground { animation: faGround 620ms ease-out 160ms both; }
+        @keyframes faGround {
+          0% { opacity: 0; transform: scaleX(0.2); }
+          30% { opacity: 0.9; transform: scaleX(1.2); }
+          100% { opacity: 0; transform: scaleX(1.6); }
+        }
+        /* 矢（必中） */
+        .fa-arrow { animation: faArrow 620ms cubic-bezier(0.2,0.9,0.2,1) both; }
+        @keyframes faArrow {
+          0% { transform: translate(-16px, 16px); opacity: 0; }
+          25% { opacity: 1; }
+          70% { transform: translate(8px, -8px); }
+          100% { transform: translate(6px, -6px); opacity: 1; }
+        }
+        .fa-trail { animation: faTrail 520ms ease-out both; opacity: 0; }
+        .fa-trail.t0 { animation-delay: 60ms; }
+        .fa-trail.t1 { animation-delay: 140ms; }
+        .fa-trail.t2 { animation-delay: 220ms; }
+        @keyframes faTrail {
+          0% { opacity: 0.8; transform: translate(-6px, 6px); }
+          100% { opacity: 0; transform: translate(10px, -10px); }
+        }
+        /* 波紋（轟音・波動・盾） */
+        .fa-ring { animation: faRing 900ms ease-out infinite; opacity: 0; }
+        .fa-ring.r0 { animation-delay: 0ms; }
+        .fa-ring.r1 { animation-delay: 180ms; }
+        .fa-ring.r2 { animation-delay: 360ms; }
+        .fa-ring.r3 { animation-delay: 540ms; }
+        @keyframes faRing {
+          0% { opacity: 0.9; transform: scale(0.4); stroke-width: 3; }
+          100% { opacity: 0; transform: scale(2.2); stroke-width: 0.8; }
+        }
+        /* 毒 */
+        .fa-blob { animation: faBlob 1100ms ease-in-out infinite; }
+        @keyframes faBlob {
+          0%, 100% { transform: scale(1) translateY(0); }
+          50% { transform: scale(1.06, 0.95) translateY(2px); }
+        }
+        .fa-bub { animation: faBub 1000ms ease-in infinite; }
+        .fa-bub.b0 { animation-delay: 0ms; }
+        .fa-bub.b1 { animation-delay: 300ms; }
+        .fa-bub.b2 { animation-delay: 600ms; }
+        @keyframes faBub {
+          0% { opacity: 0; transform: translateY(6px) scale(0.5); }
+          40% { opacity: 0.9; }
+          100% { opacity: 0; transform: translateY(-14px) scale(1.2); }
+        }
+        .fa-drip { animation: faDrip 900ms ease-in infinite; }
+        @keyframes faDrip {
+          0% { opacity: 0; transform: translateY(-6px); }
+          50% { opacity: 1; }
+          100% { opacity: 0; transform: translateY(6px); }
+        }
+        /* 煙（瘴気） */
+        .fa-smoke { stroke-dasharray: 46; animation: faSmoke 1400ms linear infinite; }
+        .fa-smoke.s0 { animation-delay: 0ms; }
+        .fa-smoke.s1 { animation-delay: 380ms; }
+        .fa-smoke.s2 { animation-delay: 760ms; }
+        @keyframes faSmoke {
+          0% { stroke-dashoffset: 46; opacity: 0; }
+          25% { opacity: 0.95; }
+          100% { stroke-dashoffset: -46; opacity: 0; }
+        }
+        /* 眼（殺気） */
+        .fa-eye { animation: faEye 700ms cubic-bezier(0.2,0.9,0.3,1) both; }
+        @keyframes faEye {
+          0% { transform: scaleY(0.06); opacity: 0.4; }
+          45% { transform: scaleY(1.12); opacity: 1; }
+          100% { transform: scaleY(1); }
+        }
+        .fa-pupil { animation: faPupil 900ms ease-in-out infinite 400ms; }
+        @keyframes faPupil {
+          0%, 100% { transform: translateX(0) scale(1); }
+          40% { transform: translateX(-4px) scale(0.8); }
+          70% { transform: translateX(3px) scale(1.1); }
+        }
+        .fa-glare { animation: faGlare 700ms ease-out 260ms both; opacity: 0; stroke-dasharray: 60; }
+        @keyframes faGlare {
+          0% { opacity: 0; stroke-dashoffset: 60; }
+          30% { opacity: 1; }
+          100% { opacity: 0; stroke-dashoffset: -60; }
+        }
+        /* 研ぐ */
+        .fa-blade { animation: faBlade 800ms ease-in-out both; }
+        @keyframes faBlade {
+          0% { transform: translate(-6px, 6px) rotate(-6deg); }
+          40% { transform: translate(4px, -4px) rotate(2deg); }
+          70% { transform: translate(-3px, 3px) rotate(-3deg); }
+          100% { transform: translate(0, 0) rotate(0); }
+        }
+        .fa-spark { animation: faSpark 620ms ease-out infinite; opacity: 0; }
+        .fa-spark.k0 { animation-delay: 120ms; }
+        .fa-spark.k1 { animation-delay: 260ms; }
+        .fa-spark.k2 { animation-delay: 400ms; }
+        .fa-spark.k3 { animation-delay: 540ms; }
+        @keyframes faSpark {
+          0% { opacity: 1; transform: translate(0, 0) scale(1); }
+          100% { opacity: 0; transform: translate(10px, -12px) scale(0.3); }
+        }
+        /* 影分身 */
+        .fa-clone { animation: faClone 1200ms ease-in-out infinite; }
+        .fa-clone.c0 { animation-delay: 0ms; opacity: 0.4; }
+        .fa-clone.c1 { animation-delay: 180ms; opacity: 0.7; }
+        .fa-clone.c2 { animation-delay: 360ms; opacity: 1; }
+        @keyframes faClone {
+          0%, 100% { transform: translateX(0) scaleX(1); }
+          30% { transform: translateX(-9px) scaleX(0.92); }
+          65% { transform: translateX(9px) scaleX(0.92); }
+        }
+        /* 盾・鎧（閉じる） */
+        .fa-close { animation: faClose 620ms cubic-bezier(0.2,0.9,0.3,1) both; }
+        @keyframes faClose {
+          0% { transform: scale(0.4) rotate(-14deg); opacity: 0.2; }
+          55% { transform: scale(1.12) rotate(4deg); opacity: 1; }
+          100% { transform: scale(1) rotate(0); }
+        }
+        /* 攻撃UP（立ちのぼる） */
+        .fa-rise { animation: faRise 700ms cubic-bezier(0.2,0.9,0.3,1) both; }
+        @keyframes faRise {
+          0% { transform: translateY(14px) scale(0.7); opacity: 0.2; }
+          55% { transform: translateY(-3px) scale(1.12); opacity: 1; }
+          100% { transform: translateY(0) scale(1); }
+        }
+        .fa-up { animation: faUp 800ms ease-out infinite; opacity: 0; }
+        .fa-up.u0 { animation-delay: 0ms; }
+        .fa-up.u1 { animation-delay: 240ms; }
+        .fa-up.u2 { animation-delay: 480ms; }
+        @keyframes faUp {
+          0% { opacity: 0; transform: translateY(6px); }
+          35% { opacity: 1; }
+          100% { opacity: 0; transform: translateY(-16px); }
+        }
+        @keyframes btFoeAct {
+          0% { opacity: 0; transform: scale(0.6) rotate(-8deg); }
+          40% { opacity: 1; transform: scale(1.14) rotate(3deg); }
+          100% { opacity: 1; transform: scale(1) rotate(0); }
+        }
         .bt-hand-wrap {
           position: relative; display: flex; align-items: flex-end;
           justify-content: center; gap: 8px;
@@ -54496,6 +64321,1134 @@ export default function TarotDraw() {
         .bt-pause.on {
           color: #2A1020; background: linear-gradient(180deg, #F6DE96, #C9A24B);
         }
+        /*
+          消耗する装備のボタン。
+          ⚠️ 盾と同じ大きさにすること。並びの高さが揃っていないと、押し間違える。
+          ⚠️ 使うと消える物なので、盾（切り替え）と違って押した瞬間に無くなる。
+            消える動きを付けて、消えたことを分かるようにする。
+        */
+        /*
+          装備の絵。
+          ⚠️⚠️ 種類ごとに違う動かし方をすること。同じ動きだと、
+            形が違うだけの同じものに見える（実際そう見えた）。
+          ⚠️ 重いもの（楔・分銅・砥石）は鈍く、軽いもの（御守・鈴）は速く。
+            石は動かさない。
+          ⚠️ 速い点滅を使わない。呼吸は2〜4秒。閃きだけ間を置いて短く。
+          ⚠️ 位置決めは外側の <g> の transform 属性、動きは内側のクラス。
+            CSS の transform は SVG の transform 属性を上書きする。
+        */
+        /*
+          地図の一番下の帯と、装備の画面。
+          ⚠️⚠️ 三層すべて同じ見た目・同じ位置にすること。
+            層ごとに置き場所が変わると、どこで開けるのか覚えられない。
+          ⚠️ 戦いの画面には出さない。始まってから替えさせない。
+        */
+        .adv-foot {
+          margin: 14px 10px 6px; display: flex; gap: 8px; justify-content: center;
+        }
+        .adv-foot-btn {
+          flex: 1 1 auto; max-width: 240px; padding: 11px 14px; border-radius: 12px;
+          border: 1px solid rgba(255,243,214,0.24); background: rgba(28,22,58,0.62);
+          color: #FFF3D6; font-size: 14px; letter-spacing: 0.04em; cursor: pointer;
+        }
+        .adv-foot-btn:active { transform: translateY(1px); }
+        /* ⚠️ 中身の数は帯の上に。開かないと分からないと、溢れてから気づく */
+        .adv-foot-btn > .adv-foot-n {
+          display: inline-block; margin-left: 6px; min-width: 18px; padding: 1px 5px;
+          border-radius: 9px; font-size: 11px; background: #E8C46A; color: #1A1226;
+        }
+        /*
+          宝箱を開ける演出。
+          ⚠️⚠️ 引いた結果を一度に出さないこと。一回ずつ積み上がる棒が、
+            この仕組みのいちばん面白いところ（更新するたびに段が上がる梯子）。
+          ⚠️ 更新した回だけ光らせる。全部光らせると、どこで上がったか分からない。
+        */
+        .cb-open {
+          margin: 0 0 12px; padding: 12px 10px; border-radius: 12px;
+          background: rgba(20,14,40,0.8);
+          box-shadow: inset 0 0 0 1px rgba(255,243,214,0.18);
+          text-align: center;
+        }
+        .cb-count { margin: 0 0 8px; font-size: 11px; opacity: 0.7; }
+        /* ⚠️ 下端を揃える。棒の高さが段そのものなので、上端で揃えると読めない */
+        .cb-seq {
+          display: flex; align-items: flex-end; justify-content: center;
+          gap: 3px; min-height: 96px;
+        }
+        .cb-pip {
+          width: 9px; border-radius: 3px 3px 1px 1px; opacity: 0.5;
+          animation: cbPip 200ms ease-out both;
+        }
+        /* ⚠️ 更新した棒だけ立てる。光と一緒に少し伸ばす */
+        .cb-pip.up {
+          opacity: 1;
+          box-shadow: 0 0 10px currentColor, 0 0 18px rgba(255,255,255,0.55);
+          animation: cbPipUp 300ms cubic-bezier(0.2,0.9,0.3,1) both;
+        }
+        @keyframes cbPip {
+          0% { transform: scaleY(0.2); opacity: 0; }
+          100% { transform: scaleY(1); opacity: 0.5; }
+        }
+        @keyframes cbPipUp {
+          0% { transform: scaleY(0.2) translateY(6px); opacity: 0; }
+          60% { transform: scaleY(1.18) translateY(-3px); opacity: 1; }
+          100% { transform: scaleY(1) translateY(0); opacity: 1; }
+        }
+        .cb-got {
+          margin-top: 10px; display: flex; flex-direction: column;
+          align-items: center; gap: 5px;
+          animation: cbGot 420ms cubic-bezier(0.2,0.9,0.3,1) both;
+        }
+        .cb-items { display: flex; gap: 14px; justify-content: center; flex-wrap: wrap; }
+        .cb-item { display: flex; flex-direction: column; align-items: center; gap: 3px; }
+        .cb-item > b { font-size: 14px; }
+        .cb-item > em { font-style: normal; font-size: 11px; color: #E8C46A; letter-spacing: -1px; }
+        /* ⚠️ 下限が効いたことを書く。書かないと「運が良かった」と区別が付かない */
+        .cb-floor { margin: 0 0 4px; font-size: 11px; color: #9AD8F0; }
+        /* ⚠️ 二本出しは事件。文字も強くする */
+        .cb-twin {
+          margin: 0 0 6px; font-size: 14px; font-weight: 700; color: #FFD21E;
+          text-shadow: 0 0 10px rgba(255,210,30,0.6);
+        }
+        .cb-got > .adv-back { max-width: 200px; margin-top: 4px; }
+        @keyframes cbGot {
+          0% { opacity: 0; transform: scale(0.7); }
+          65% { transform: scale(1.06); }
+          100% { opacity: 1; transform: scale(1); }
+        }
+        /* 未開封の箱。⚠️ 段ごとにまとめる。30個を一列に並べても選べない */
+        .cb-grid {
+          display: grid; grid-template-columns: repeat(auto-fill, minmax(74px, 1fr));
+          gap: 8px; margin-bottom: 14px;
+        }
+        .cb-chest {
+          display: flex; flex-direction: column; align-items: center; gap: 2px;
+          padding: 8px 4px; border-radius: 12px; cursor: pointer; color: #FFF3D6;
+          border: 1px solid rgba(255,243,214,0.14); background: rgba(28,22,58,0.42);
+        }
+        .cb-chest:active { transform: translateY(1px); }
+        .cb-chest:disabled { opacity: 0.35; cursor: default; }
+        .cb-chest > b { font-size: 9px; color: #E8C46A; letter-spacing: -1px; }
+        .cb-chest > em { font-style: normal; font-size: 11px; opacity: 0.8; }
+        /*
+          技の画面。
+          ⚠️⚠️ 取れないものも並べること。「まだ使えない」が見えて初めて、
+            開けたときに成長が実感される。取れるものだけ出すと、
+            最初から全部持っていたのと変わらない。
+          ⚠️ 三つの状態を色で分ける ―― 取った／取れる／前提が足りない。
+        */
+        .sk-tabs { display: flex; gap: 5px; flex-wrap: wrap; margin-bottom: 10px; }
+        /* ⚠️ 12枚並ぶ。一列に収めず折り返す。横スクロールにすると端が押しにくい */
+        .sk-tab.sheet { flex: 0 0 auto; min-width: 52px; position: relative; }
+        .sk-tab.sheet > b {
+          display: inline-block; margin-left: 4px; min-width: 15px; padding: 0 4px;
+          border-radius: 8px; font-size: 10px; background: #E8C46A; color: #1A1226;
+        }
+        .sk-tab.sheet.on { border-color: #E8C46A; color: #E8C46A; }
+        .sk-tab {
+          flex: 1 1 auto; padding: 7px 8px; border-radius: 10px; font-size: 12px;
+          border: 1px solid rgba(255,243,214,0.16); background: rgba(28,22,58,0.42);
+          color: #FFF3D6; cursor: pointer;
+        }
+        .sk-tab.on {
+          border-color: var(--tc, #E8C46A); color: var(--tc, #E8C46A);
+          box-shadow: inset 0 0 0 1px var(--tc, #E8C46A), 0 0 12px rgba(255,255,255,0.12);
+        }
+        /*
+          技の画面。
+          ⚠️⚠️ 星座の下に同じ内容の一覧を並べないこと。画面が二倍になり、
+            どちらを見ればいいのか分からなくなる。
+          ★ 押した星の詳細だけを下からせり上げる。押していなければ引っ込む。
+          ⚠️ 星は三層（後光・外環・芯）。単色の丸だと平たく見える。
+        */
+        /*
+          ⚠️⚠️ 下端を画面の底まで伸ばさないこと。下のナビ（占う・記録・育成・冒険）が
+            高さ56px＋ホームバーぶん貼り付いていて、一覧の下端が潰れていた。
+          ★ ナビの上で止める。ナビは見えたままなので、別の画面へも移れる。
+        */
+        .sk-sheet {
+          position: fixed; top: 0; left: 0; right: 0;
+          bottom: calc(56px + env(safe-area-inset-bottom, 0px));
+          z-index: 60; display: flex; flex-direction: column;
+          overflow: hidden;
+          background:
+            radial-gradient(120% 80% at 20% 0%, rgba(58,34,96,0.55) 0%, rgba(0,0,0,0) 60%),
+            radial-gradient(110% 70% at 85% 100%, rgba(24,58,96,0.5) 0%, rgba(0,0,0,0) 60%),
+            #070410;
+        }
+        /* ⚠️ 残りの点をいちばん大きく出す。ここを見に来ている */
+        .sk-top {
+          display: flex; align-items: center; gap: 12px; padding: 12px 14px 8px;
+          border-bottom: 1px solid rgba(255,243,214,0.1);
+        }
+        .sk-x {
+          width: 32px; height: 32px; border-radius: 50%; cursor: pointer; flex: 0 0 auto;
+          border: 1px solid rgba(255,243,214,0.22); background: rgba(28,22,58,0.6);
+          color: #FFF3D6; font-size: 14px;
+        }
+        /* ⚠️ いま★いくつのシートを見ているかを、記号ではなく数字で出す */
+        .sk-where { display: flex; flex-direction: column; gap: 1px; }
+        .sk-where > b {
+          font-size: 19px; line-height: 1; color: #FFF3D6;
+          font-family: 'Shippori Mincho', serif;
+        }
+        .sk-where > span { font-size: 10px; opacity: 0.6; color: #FFF3D6; }
+        /* ⚠️ 数字だけ出さない。何の数字か言葉で添える */
+        .sk-pt { margin-left: auto; display: flex; align-items: baseline; gap: 5px; }
+        .sk-pt > em {
+          font-style: normal; font-size: 10px; opacity: 0.65; color: #FFF3D6;
+        }
+        .sk-pt > b {
+          font-size: 30px; line-height: 1; color: #FFE9A8;
+          text-shadow: 0 0 14px rgba(232,196,106,0.6);
+          font-family: 'Shippori Mincho', serif;
+        }
+        .sk-pt > span { font-size: 10px; opacity: 0.5; color: #FFF3D6; }
+        /* ⚠️ 星図と一覧の切り替え。役割が違うので、どちらも要る */
+        .sk-view { display: flex; align-items: center; gap: 6px; padding: 6px 14px 0; }
+        .sk-vbtn {
+          padding: 5px 14px; border-radius: 9px; font-size: 12px; cursor: pointer;
+          border: 1px solid rgba(255,243,214,0.18); background: rgba(28,22,58,0.5);
+          color: #FFF3D6;
+        }
+        .sk-vbtn.on { border-color: #E8C46A; color: #E8C46A; background: rgba(232,196,106,0.12); }
+        .sk-now2 { margin-left: auto; font-size: 10px; opacity: 0.6; color: #FFF3D6; }
+        /* 一覧。⚠️ 星図と同じ印を出す。二つの画面で見た目が違うと別物に見える */
+        .sk-rows {
+          flex: 1 1 auto; min-height: 0; overflow-y: auto; padding: 8px 12px 14px;
+          display: flex; flex-direction: column; gap: 5px;
+        }
+        .sk-row {
+          display: flex; align-items: center; gap: 9px; padding: 7px 10px;
+          border-radius: 11px; border: 1px solid rgba(255,243,214,0.1);
+          background: rgba(24,16,48,0.5); color: rgba(255,243,214,0.32);
+        }
+        .sk-row.ready { color: var(--tc, #E8C46A); border-color: rgba(232,196,106,0.4); }
+        .sk-row.got { color: #FFFFFF; border-color: var(--tc, #E8C46A); background: rgba(40,32,70,0.6); }
+        .sk-row.lock { opacity: 0.55; }
+        .sk-row-ic { width: 26px; height: 26px; flex: 0 0 auto; overflow: visible; }
+        .sk-row-b { display: flex; flex-direction: column; gap: 1px; min-width: 0; flex: 1 1 auto; }
+        .sk-row-b > b { font-size: 13px; color: #FFF3D6; }
+        .sk-row-b > i { font-style: normal; font-size: 10px; opacity: 0.55; color: #FFF3D6; }
+        .sk-row-c { font-size: 15px; color: #FFE9A8; min-width: 20px; text-align: center; }
+        .sk-take.sm { min-width: 96px; padding: 8px 10px; font-size: 12px; }
+        /*
+          十二宮。
+          ⚠️ ★の数字ではなく記号。小さく並べられて、シートの星座と一致する。
+          ⚠️ 折り返す。横スクロールにすると端が押しにくい。
+        */
+        .sk-zod {
+          display: flex; flex-wrap: wrap; gap: 5px; justify-content: center;
+          padding: 8px 10px;
+        }
+        .sk-med {
+          position: relative; width: 38px; height: 38px; border-radius: 50%;
+          display: inline-flex; align-items: center; justify-content: center;
+          cursor: pointer; color: #FFF3D6; font-size: 17px;
+          border: 1px solid rgba(255,243,214,0.16);
+          background: radial-gradient(circle at 34% 28%, rgba(88,68,140,0.8), rgba(20,14,40,0.9));
+          transition: transform 160ms ease, box-shadow 160ms ease;
+        }
+        /* ⚠️ 選んだ宮は、その星座の色で光らせる。中身の色と揃える */
+        .sk-med.on {
+          border-color: var(--zc, #E8C46A); color: var(--zc, #FFE9A8);
+          transform: translateY(-2px);
+          box-shadow: 0 0 0 1px var(--zc, #E8C46A), 0 0 16px var(--zc, #E8C46A);
+        }
+        /* ⚠️ 振れる点があるシートに数を付ける。12枚を毎回開いて回らせない */
+        /* ⚠️ 記号だけだと★いくつか分からない。数字を小さく添える */
+        .sk-med > u {
+          position: absolute; bottom: 2px; right: 5px; font-size: 9px;
+          text-decoration: none; opacity: 0.65;
+        }
+        .sk-med > b {
+          position: absolute; top: -4px; right: -4px; min-width: 16px; height: 16px;
+          border-radius: 8px; font-size: 10px; line-height: 16px; padding: 0 4px;
+          background: #E8C46A; color: #1A1226;
+          box-shadow: 0 0 8px rgba(232,196,106,0.7);
+        }
+        /*
+          ⚠️⚠️ 中のSVGは aspect-ratio 1/1 で幅いっぱいに広がる。
+            縦がはみ出して、下の詳細カードが画面の外へ押し出されていた。
+          ★ はみ出しを止めて、SVGの高さを枠に収める。
+        */
+        .sk-stage {
+          position: relative; flex: 1 1 auto; min-height: 0; overflow: hidden;
+          display: flex; align-items: center; justify-content: center;
+        }
+        .sk-zoom {
+          position: absolute; top: 6px; right: 10px; z-index: 2;
+          display: flex; gap: 5px;
+        }
+        .sk-zbtn {
+          padding: 3px 8px; border-radius: 8px; font-size: 10px; cursor: pointer;
+          border: 1px solid rgba(255,243,214,0.18); background: rgba(10,6,20,0.7);
+          color: #FFF3D6;
+        }
+        .sk-zbtn.on { border-color: #E8C46A; color: #E8C46A; }
+        .sk-sky {
+          display: block; width: 100%; max-width: 440px; margin: 0 auto;
+          /* ⚠️ 高さの上限を枠に合わせる。これが無いと縦にはみ出す */
+          max-height: 100%; aspect-ratio: 1 / 1; overflow: hidden; touch-action: none;
+        }
+        /* 星雲。⚠️ 二枚だけ。重ねすぎると星が沈む */
+        .sk-neb { mix-blend-mode: screen; }
+        /* ⚠️ クラス名を a / b にしないこと。汎用すぎて他の規則と衝突する */
+        .sk-neb.n1 { fill: rgba(120,80,200,0.10); animation: skNeb 14s ease-in-out infinite; }
+        .sk-neb.n2 { fill: rgba(60,140,200,0.09); animation: skNeb 18s ease-in-out infinite reverse; }
+        @keyframes skNeb {
+          0%, 100% { opacity: 0.7; transform: translate(0, 0); }
+          50% { opacity: 1; transform: translate(2px, -2px); }
+        }
+        /*
+          十二宮の絵。
+          ⚠️⚠️ 薄く敷くこと。濃いと星座の線と混ざり、どちらも読めない。
+          ⚠️ 塗らない。線画だけ。塗ると星が沈む。
+          ⚠️ 当たり判定を持たせない。星より手前に判定があると押せなくなる。
+        */
+        /*
+          ⚠️ 縁取りだけ。塗ると星が沈む。
+          ⚠️ 当たり判定を持たせない。星より手前にあると押せなくなる。
+          ⚠️ 大きくしすぎない。星座の線と重なる範囲に収める。
+        */
+        .sk-zart {
+          font-size: 64px; text-anchor: middle; dominant-baseline: central;
+          fill: none; stroke: var(--zc, #FFF3D6); stroke-width: 0.9;
+          opacity: 0.16; pointer-events: none;
+          animation: skZart 9s ease-in-out infinite;
+        }
+        @keyframes skZart {
+          0%, 100% { opacity: 0.12; }
+          50% { opacity: 0.22; }
+        }
+        /* 微星。⚠️ 星座の星と同じ明るさにしない。奥行きが消える */
+        .sk-dust { fill: #FFF3D6; opacity: 0.16; animation: skDust 4s ease-in-out infinite; }
+        .sk-dust.p1 { animation-delay: 0.5s; } .sk-dust.p2 { animation-delay: 1s; }
+        .sk-dust.p3 { animation-delay: 1.5s; } .sk-dust.p4 { animation-delay: 2s; }
+        .sk-dust.p5 { animation-delay: 2.5s; } .sk-dust.p6 { animation-delay: 3s; }
+        @keyframes skDust { 0%, 100% { opacity: 0.10; } 50% { opacity: 0.30; } }
+        /* 線。⚠️ 未取得は沈める。取ると幹の色で灯り、光が流れる */
+        .sk-line { stroke: rgba(255,243,214,0.13); stroke-width: 0.8; }
+        .sk-line.on {
+          stroke: var(--tc, #E8C46A); stroke-width: 1.5; opacity: 0.8;
+          filter: drop-shadow(0 0 3px var(--tc, #E8C46A));
+          stroke-dasharray: 40; animation: skDraw 420ms ease-out both;
+        }
+        @keyframes skDraw {
+          0% { stroke-dashoffset: 40; opacity: 0; }
+          100% { stroke-dashoffset: 0; opacity: 0.8; }
+        }
+        /* ⚠️ 光は開けた線だけ流す。全部流すと目が散る */
+        .sk-flow {
+          stroke: #FFFFFF; stroke-width: 1.8; stroke-linecap: round; opacity: 0.85;
+          stroke-dasharray: 3 37; animation: skFlow 2.6s linear infinite;
+        }
+        @keyframes skFlow { from { stroke-dashoffset: 40; } to { stroke-dashoffset: 0; } }
+        /* 星。⚠️ 三層（後光・外環・芯）。単色の丸だと平たく見える */
+        /*
+          星の三状態。
+          ⚠️⚠️ 動きで示さないこと。回る点線も「ここから」の吹き出しも余計だった。
+            FF10もライザ2も、状態は塗りの量だけで示している。
+          ★ できない … 灰色（輪も中身も沈む）
+            できる   … 枠だけ色付き、中身は空
+            振った   … 枠も中身も色付き、中身が光る
+        */
+        .sk-halo { fill: var(--tc, #E8C46A); opacity: 0; }
+        .sk-ring { fill: none; stroke: rgba(255,243,214,0.18); stroke-width: 0.7; }
+        .sk-core2 { fill: transparent; }
+        /* できる … 枠だけ色付き */
+        .sk-star.ready .sk-ring { stroke: var(--tc, #E8C46A); stroke-width: 1.1; }
+        /* 振った … 枠も中身も色付き、中身は★のホロ */
+        .sk-star.on .sk-ring { stroke: var(--tc, #E8C46A); stroke-width: 1.3; }
+        /* ⚠️ 振った星は★が主役。芯は敷かない（★の下で濁る） */
+        .sk-star.on .sk-core2 { fill: transparent; }
+        .sk-star.on .sk-halo { opacity: 0.16; filter: blur(2px); }
+        /*
+          ★のホロ。
+          ⚠️⚠️ 縞にしないこと。両端が透明な一本の帯が渡るのがホロ
+            （図鑑の札と同じ）。縞にすると「虹色の縞」になって別物になる。
+          ⚠️ 白の芯を下に敷く。虹だけだと紫紺の空に沈む。
+          ⚠️ 帯は 1.5 秒で渡す。図鑑の holoSweep と揃えてある。
+        */
+        .sk-holo-base {
+          fill: #FFF3D6;
+          filter: drop-shadow(0 0 3px rgba(255,255,255,0.95))
+                  drop-shadow(0 0 6px var(--tc, #E8C46A));
+        }
+        .sk-holo-band {
+          mix-blend-mode: screen; filter: saturate(1.4);
+          animation: skHoloSweep 1.5s linear infinite;
+        }
+        @keyframes skHoloSweep {
+          0% { transform: translateX(-9.6px); }
+          100% { transform: translateX(9.6px); }
+        }
+        /* できない … 灰色 */
+        .sk-star.lock .sk-ring { stroke: rgba(255,243,214,0.13); }
+        /* ⚠️ 選んだ星だけ輪を白く太く。詳細が誰のものか分からなくなる */
+        .sk-star.pick .sk-ring { stroke-width: 1.9; stroke: #FFFFFF; }
+        .sk-burst {
+          fill: none; stroke: #FFFFFF; stroke-width: 1.4;
+          animation: skBurst 520ms cubic-bezier(0.2,0.8,0.3,1) 380ms both;
+        }
+        @keyframes skBurst {
+          0% { r: 2; opacity: 0; stroke-width: 2.2; }
+          25% { opacity: 1; }
+          100% { r: 14; opacity: 0; stroke-width: 0.4; }
+        }
+        .sk-star.lit .sk-core2 {
+          transform-box: fill-box; transform-origin: center;
+          animation: skPop 520ms cubic-bezier(0.2,0.9,0.3,1) 380ms both;
+        }
+        @keyframes skPop {
+          0% { transform: scale(1); } 40% { transform: scale(2.4); } 100% { transform: scale(1); }
+        }
+        .sk-name {
+          fill: #FFF3D6; text-anchor: middle; pointer-events: none;
+          paint-order: stroke; stroke: rgba(7,4,16,0.92); stroke-width: 1.8px;
+          stroke-linejoin: round;
+        }
+        /*
+          詳細のカード。
+          ⚠️⚠️ 押していないときは引っ込めること。常に出していると
+            星座が半分隠れて、どこを押したか分からなくなる。
+        */
+        /*
+          ⚠️⚠️ 流れの中に置かないこと。星図の高さ次第で画面の外へ出る。
+          ★ 下端に貼り付けて、押したときだけせり上がる。
+        */
+        /*
+          押した星のそばに出す札。
+          ⚠️⚠️ 画面の下端に固定しないこと。下のナビと重なるうえ、
+            どの星の話なのか目で追えない。
+          ⚠️ 幅を広げすぎない。星座を隠すと、次にどこを押すか見えなくなる。
+        */
+        .sk-tip {
+          position: absolute; z-index: 5; width: 212px; padding: 10px 12px 12px;
+          border-radius: 13px; pointer-events: auto;
+          border: 1px solid rgba(232,196,106,0.45);
+          background: linear-gradient(180deg, rgba(28,20,56,0.97), rgba(10,6,20,0.99));
+          box-shadow: 0 8px 26px rgba(0,0,0,0.65), 0 0 0 1px rgba(255,243,214,0.06);
+          animation: skTip 180ms ease-out both;
+        }
+        @keyframes skTip {
+          0% { opacity: 0; transform-origin: center; }
+          100% { opacity: 1; }
+        }
+        .sk-card-tag {
+          display: inline-block; padding: 2px 9px; border-radius: 8px; font-size: 10px;
+          color: var(--tc, #E8C46A); border: 1px solid var(--tc, #E8C46A);
+          letter-spacing: 0.08em;
+        }
+        .sk-card-name {
+          display: block; margin: 7px 0 3px; font-size: 15px; color: #FFF3D6;
+          font-family: 'Shippori Mincho', serif;
+        }
+        .sk-card-need { display: block; font-size: 11px; color: #F0B4B4; font-style: normal; }
+        .sk-card-foot { display: flex; align-items: center; gap: 12px; margin-top: 10px; }
+        .sk-card-cost { font-size: 11px; opacity: 0.7; color: #FFF3D6; }
+        .sk-card-cost > b {
+          margin-left: 6px; font-size: 20px; color: #FFE9A8;
+          text-shadow: 0 0 10px rgba(232,196,106,0.5);
+        }
+        /* ⚠️ 取得ボタンは大きく。ここが目的地 */
+        .sk-take {
+          margin-left: auto; min-width: 104px; padding: 9px 12px; border-radius: 11px;
+          font-size: 13px; font-weight: 700; cursor: pointer; color: #1A1226;
+          border: none;
+          background: linear-gradient(180deg, #FFE9A8, #E8C46A);
+          box-shadow: 0 0 18px rgba(232,196,106,0.45);
+        }
+        .sk-take:active { transform: translateY(1px); }
+        .sk-take:disabled {
+          background: rgba(60,50,90,0.7); color: rgba(255,243,214,0.45);
+          box-shadow: none; cursor: default;
+        }
+        .sk-take.got { background: rgba(60,50,90,0.7); color: rgba(255,243,214,0.6); }
+        /*
+          装備スロット。
+          ⚠️⚠️ 数字だけで出さないこと。「3 / 5」では何が入っていて
+            何が空いているのか分からなかった。
+          ★ 枠を並べる。入っているものは絵、空きは破線。
+          ⚠️ 押すと外れる。外し方が無いと、枠が埋まったあとに詰まる。
+        */
+        .eq-slots {
+          display: grid; grid-template-columns: repeat(auto-fill, minmax(62px, 1fr));
+          gap: 6px; margin-bottom: 10px;
+        }
+        .eq-slot {
+          display: flex; flex-direction: column; align-items: center; gap: 2px;
+          padding: 6px 2px; border-radius: 11px; min-height: 72px;
+          justify-content: center;
+        }
+        .eq-slot.full {
+          cursor: pointer; color: #FFF3D6;
+          border: 1px solid rgba(232,196,106,0.6); background: rgba(232,196,106,0.1);
+          box-shadow: inset 0 0 0 1px rgba(232,196,106,0.25);
+        }
+        .eq-slot.full:active { transform: translateY(1px); }
+        .eq-slot.full > b { font-size: 9px; opacity: 0.8; }
+        /* ⚠️ 空きは破線。実線だと埋まっているように見える */
+        .eq-slot.empty {
+          border: 1px dashed rgba(255,243,214,0.22); background: rgba(20,14,40,0.4);
+        }
+        .eq-slot.empty > i { font-style: normal; font-size: 10px; opacity: 0.35; color: #FFF3D6; }
+        /* ⚠️ 装着中は文字でも出す。縁の色だけだと見落とす */
+        .eq-on-mark {
+          margin-left: auto; flex: 0 0 auto; align-self: flex-start;
+          font-size: 9px; padding: 2px 6px; border-radius: 7px;
+          background: #E8C46A; color: #1A1226;
+        }
+        /*
+          名産品のカード。
+          ⚠️ 県名を必ず出す。どこの名物か分からないと宣伝にならない。
+          ⚠️ 持っていない品は枠だけ見せる。何が残っているか分かることが、また行く理由になる。
+        */
+        .mei-grid {
+          display: grid; grid-template-columns: repeat(auto-fill, minmax(100px, 1fr));
+          gap: 7px; margin-bottom: 12px;
+        }
+        .mei-card {
+          position: relative; display: flex; flex-direction: column; align-items: center;
+          gap: 2px; padding: 8px 6px 9px; border-radius: 12px; text-align: center;
+          border: 1px solid rgba(240,140,110,0.45);
+          background: linear-gradient(180deg, rgba(58,34,40,0.7), rgba(24,14,30,0.9));
+          color: #FFF3D6;
+        }
+        .mei-cell { display: flex; flex-direction: column; gap: 3px; }
+        .mei-odd { text-align: center; font-size: 10px; opacity: 0.55; color: #FFF3D6; }
+        .mei-card.none { border-style: dashed; border-color: rgba(255,243,214,0.18); background: rgba(20,14,40,0.4); }
+        .mei-art { width: 56px; height: 56px; }
+        .mei-name { font-size: 12.5px; line-height: 1.3; font-family: 'Shippori Mincho', serif; }
+        .mei-pref { font-size: 9.5px; opacity: 0.6; }
+        .mei-line { font-style: normal; font-size: 10px; line-height: 1.45; opacity: 0.82; margin-top: 3px; }
+        .mei-n {
+          position: absolute; top: 5px; right: 6px; text-decoration: none;
+          font-size: 10px; padding: 1px 5px; border-radius: 7px;
+          background: rgba(240,140,110,0.9); color: #1A1226;
+        }
+        /* 盤の上に出す大きな札。⚠️ 大きさはこの二つだけ。途中を作らない */
+        .mei-card.big { width: 220px; padding: 14px 14px 16px; }
+        .mei-card.big .mei-art { width: 112px; height: 112px; }
+        .mei-card.big .mei-name { font-size: 18px; }
+        .mei-card.big .mei-pref { font-size: 11px; }
+        .mei-card.big .mei-line { font-size: 12px; }
+        .mei-pop {
+          position: fixed; top: 0; left: 0; right: 0;
+          bottom: calc(56px + env(safe-area-inset-bottom, 0px));
+          z-index: 65; display: flex; align-items: center; justify-content: center;
+          background: rgba(7,4,16,0.55);
+        }
+        .mei-pop-in {
+          display: flex; flex-direction: column; align-items: center; gap: 10px;
+          animation: meiPop 320ms cubic-bezier(0.2,0.9,0.3,1) both;
+        }
+        .mei-pop-in > .adv-back { max-width: 200px; }
+        .mei-pop-tag {
+          font-size: 12px; padding: 3px 12px; border-radius: 10px;
+          background: #F08C6E; color: #1A1226; font-weight: 700;
+        }
+        @keyframes meiPop {
+          0% { opacity: 0; transform: scale(0.8) translateY(8px); }
+          100% { opacity: 1; transform: scale(1) translateY(0); }
+        }
+        /* 装備 ／ 宝箱 の切り替え。⚠️ 閉じずに行き来できること */
+        .gt-tabs { display: flex; gap: 5px; }
+        .gt-tab {
+          padding: 6px 14px; border-radius: 10px; font-size: 13px; cursor: pointer;
+          border: 1px solid rgba(255,243,214,0.18); background: rgba(28,22,58,0.5); color: #FFF3D6;
+        }
+        .gt-tab.on { border-color: #E8C46A; color: #FFE9A8; background: rgba(232,196,106,0.14); }
+        /*
+          装備スロット 1〜12。
+          ⚠️⚠️ 開いていない枠も鍵付きで並べる。あと何枠伸びるかが見えること。
+          ⚠️ 6列固定。12枠が二段にきれいに収まる。
+        */
+        .eq-slots12 { display: grid; grid-template-columns: repeat(6, 1fr); gap: 5px; margin-bottom: 10px; }
+        .eq-s12 {
+          position: relative; aspect-ratio: 1 / 1; border-radius: 10px; cursor: pointer;
+          display: flex; align-items: center; justify-content: center; padding: 0;
+          border: 1px dashed rgba(255,243,214,0.26); background: rgba(20,14,40,0.45); color: #FFF3D6;
+        }
+        .eq-s12.full { border: 1px solid rgba(232,196,106,0.6); background: rgba(232,196,106,0.10); }
+        .eq-s12.lock { border-style: solid; border-color: rgba(255,243,214,0.08); background: rgba(10,6,20,0.6); cursor: default; }
+        /* ⚠️ 選んだ枠ははっきり光らせる。次に押す物がここへ入る */
+        .eq-s12.sel { box-shadow: 0 0 0 2px #FFE9A8, 0 0 14px rgba(255,233,168,0.5); }
+        .eq-s12-no {
+          position: absolute; top: 2px; left: 4px; font-size: 9px; text-decoration: none; opacity: 0.6;
+        }
+        .eq-s12-lock { font-style: normal; font-size: 13px; opacity: 0.45; }
+        .eq-s12-empty { font-style: normal; font-size: 9px; opacity: 0.35; }
+        /*
+          ポケットの切り替え。
+          ⚠️⚠️ 縦に全部並べないこと。装備が増えると下の系統まで延々と送ることになる。
+          ⚠️ 横に流れるときは横スクロール。折り返すと段が増えて同じ問題になる。
+        */
+        .eq-pk-tabs {
+          display: flex; gap: 5px; overflow-x: auto; padding-bottom: 4px; margin-bottom: 8px;
+          -webkit-overflow-scrolling: touch;
+        }
+        .eq-pk {
+          flex: 0 0 auto; padding: 6px 12px; border-radius: 10px; font-size: 12px; cursor: pointer;
+          border: 1px solid rgba(255,243,214,0.16); background: rgba(28,22,58,0.45); color: #FFF3D6;
+        }
+        .eq-pk.on { border-color: #E8C46A; color: #FFE9A8; background: rgba(232,196,106,0.14); }
+        .eq-pk > b { margin-left: 5px; font-size: 10px; opacity: 0.7; font-weight: 400; }
+        /* 持ち物。⚠️ 格子で並べる。一行ずつだと数が増えたときに長くなりすぎる */
+        .eq-grid {
+          display: grid; grid-template-columns: repeat(auto-fill, minmax(104px, 1fr)); gap: 6px;
+        }
+        .eq-cell {
+          position: relative; display: flex; flex-direction: column; align-items: center; gap: 2px;
+          padding: 8px 5px 9px; border-radius: 11px; text-align: center; color: #FFF3D6;
+          border: 1px solid rgba(255,243,214,0.12); background: rgba(28,22,58,0.45);
+          cursor: grab; user-select: none; -webkit-user-select: none; -webkit-touch-callout: none;
+          touch-action: pan-y;
+        }
+        .eq-cell.on { border-color: rgba(232,196,106,0.7); background: rgba(232,196,106,0.10); }
+        .eq-cell.held { opacity: 0.35; }
+        .eq-cell > b { font-size: 11.5px; line-height: 1.3; }
+        .eq-cell > em { font-style: normal; font-size: 9px; color: #E8C46A; letter-spacing: -1px; }
+        .eq-cell > i { font-style: normal; font-size: 9.5px; opacity: 0.75; line-height: 1.35; }
+        .eq-cell > .eq-cell-sub { opacity: 0.55; }
+        /* ⚠️ 何番の枠に入っているか。「装備中」だけだと場所が分からない */
+        .eq-cell-at {
+          position: absolute; top: 4px; right: 5px; min-width: 16px; height: 16px; line-height: 16px;
+          border-radius: 8px; font-size: 10px; background: #E8C46A; color: #1A1226;
+        }
+        /* 掴んでいる絵。⚠️ 判定を持たせない（落とす先の枠を拾えなくなる） */
+        .eq-ghost {
+          position: fixed; z-index: 90; pointer-events: none; transform: translate(-50%, -60%);
+          filter: drop-shadow(0 6px 14px rgba(0,0,0,0.6));
+        }
+        /*
+          メインとサブの二行。
+          ⚠️ 見出し（メインオプション：／サブオプション：）を必ず付ける。
+          ⚠️ メインは明るく、サブは少し落とす。同じ濃さだと区別が付かない。
+        */
+        .eq-opts { display: flex; flex-direction: column; gap: 2px; margin-top: 2px; text-align: left; width: 100%; }
+        .eq-opt { font-style: normal; font-size: 9.5px; line-height: 1.4; }
+        .eq-opt.main { color: #FFE9A8; }
+        .eq-opt.sub { opacity: 0.7; }
+        /* ゴミ箱。⚠️ 名前の横に小さく。大きいと誤って押す */
+        .eq-name-row { display: flex; align-items: center; gap: 6px; }
+        .eq-trash {
+          flex: 0 0 auto; width: 24px; height: 24px; border-radius: 7px; padding: 0; cursor: pointer;
+          border: 1px solid rgba(240,150,150,0.35); background: rgba(60,20,30,0.5); font-size: 12px;
+          line-height: 22px; color: #F0B4B4;
+        }
+        /* 🎓 端的表示の切り替え。⚠️ ゴミ箱と同じ大きさ。押すと全部の装備が切り替わる */
+        .eq-cap {
+          flex: 0 0 auto; width: 24px; height: 24px; border-radius: 7px; padding: 0; cursor: pointer;
+          border: 1px solid rgba(143,216,240,0.35); background: rgba(20,40,60,0.5); font-size: 12px;
+          line-height: 22px;
+        }
+        .eq-cap.on { border-color: #8FD8F0; background: rgba(143,216,240,0.22); box-shadow: 0 0 8px rgba(143,216,240,0.35); }
+        .eq-name-row.c { justify-content: center; flex-wrap: wrap; }
+        .eq-keep.sm { margin: 6px 0 0; padding: 5px 8px; font-size: 11px; }
+        /* 捨てる確認。⚠️ 外側を押したら「やめる」扱い（捨てない側に倒す） */
+        .eq-confirm {
+          position: fixed; inset: 0; z-index: 95; display: flex; align-items: center; justify-content: center;
+          background: rgba(7,4,16,0.6);
+        }
+        .eq-confirm-in {
+          width: min(300px, 86vw); padding: 16px 16px 14px; border-radius: 14px; text-align: center;
+          border: 1px solid rgba(240,150,150,0.4); background: rgba(24,14,34,0.98); color: #FFF3D6;
+        }
+        .eq-confirm-in > p { margin: 0 0 6px; font-size: 14px; }
+        .eq-confirm-in > b { display: block; font-size: 13px; opacity: 0.8; margin-bottom: 12px; }
+        .eq-confirm-btns { display: flex; gap: 8px; justify-content: center; }
+        .eq-confirm-btns > .adv-back { flex: 1 1 0; }
+        .adv-back.danger { border-color: rgba(240,120,120,0.7); color: #FFB0B0; }
+        .eq-sub {
+          margin: 12px 0 6px; font-size: 12px; opacity: 0.8;
+          display: flex; align-items: center; gap: 8px;
+        }
+        /* ⚠️ 宝箱の行は押せない。押すのは「残す」だけ */
+        .eq-row.box { cursor: default; }
+        /* ⚠️ 先に消えるものは分かるように。順番だけでは気づけない */
+        .eq-row.box.soon {
+          border-color: rgba(240,150,150,0.55);
+          box-shadow: inset 0 0 0 1px rgba(240,150,150,0.25);
+        }
+        .eq-keep {
+          margin-left: auto; flex: 0 0 auto; padding: 8px 12px; border-radius: 10px;
+          border: 1px solid rgba(232,196,106,0.6); background: rgba(232,196,106,0.16);
+          color: #FFF3D6; font-size: 12px; cursor: pointer;
+        }
+        .eq-keep:active { transform: translateY(1px); }
+        /* ⚠️ 画面いっぱいに覆う。地図の上に小窓を出すと、どちらを触るのか迷う */
+        /* ⚠️ 技の画面と同じ理由で、ナビの上で止める */
+        .eq-sheet {
+          position: fixed; top: 0; left: 0; right: 0;
+          bottom: calc(56px + env(safe-area-inset-bottom, 0px));
+          z-index: 60; overflow-y: auto;
+          background: rgba(10,6,20,0.96); padding: 14px 12px 28px;
+          -webkit-overflow-scrolling: touch;
+        }
+        .eq-sheet-head {
+          display: flex; align-items: center; gap: 10px; margin-bottom: 10px;
+          color: #FFF3D6; font-size: 15px;
+        }
+        .eq-slot-n { margin-left: auto; font-size: 12px; opacity: 0.75; }
+        /* ⚠️ 何が効いているかを必ず出す。数字が見えないと「付けた気がするだけ」になる */
+        .eq-sum {
+          margin: 0 0 10px; font-size: 11px; line-height: 1.7; color: #E8C46A;
+          background: rgba(28,22,58,0.5); border-radius: 10px; padding: 8px 10px;
+        }
+        .eq-empty { font-size: 12px; opacity: 0.6; text-align: center; padding: 28px 0; }
+        .eq-list { display: flex; flex-direction: column; gap: 6px; }
+        .eq-row {
+          display: flex; align-items: center; gap: 10px; width: 100%;
+          padding: 7px 9px; border-radius: 12px; text-align: left; cursor: pointer;
+          border: 1px solid rgba(255,243,214,0.12); background: rgba(28,22,58,0.42);
+          color: #FFF3D6;
+        }
+        /* ⚠️ 装着中がひと目で分かること。付け外しの操作なので、状態が命 */
+        .eq-row.on {
+          border-color: rgba(232,196,106,0.7);
+          box-shadow: inset 0 0 0 1px rgba(232,196,106,0.35), 0 0 14px rgba(232,196,106,0.18);
+        }
+        .eq-row-body { display: flex; flex-direction: column; gap: 2px; min-width: 0; }
+        .eq-row-body b { font-size: 13px; }
+        .eq-row-body em { font-size: 10px; font-style: normal; color: #E8C46A; letter-spacing: -1px; }
+        .eq-row-body i { font-size: 10px; font-style: normal; opacity: 0.72; }
+        .eq-icon { display: block; overflow: visible; }
+        /*
+          上の三段。枠ぜんたいが周期で二色を行き来する。
+          ⚠️⚠️ 止めて置かないこと。斜めに割った板にすると、
+            余白・縁・光・粒がそれぞれ別の色を持ち、段ではなく模様に見える。
+          ⚠️ 切り替わりの前後に「留まる時間」を置く。ずっと動いていると
+            中間色ばかりになり、二色のどちらも読めない。
+          ⚠️ 秒数は要素側で渡す（段ごとに違う）。ここでは既定だけ置く。
+        */
+        .eqp-cyc { animation: eqpCyc 4.2s ease-in-out infinite; }
+        @keyframes eqpCyc {
+          0%, 38% { color: var(--eqc1); }
+          50%, 88% { color: var(--eqc2); }
+          100% { color: var(--eqc1); }
+        }
+        /* 段の枠。⚠️ 光は1段ごと、脈動は★8から。呼吸より速くしない */
+        .eqp-glow { animation: eqpGlow 3.4s ease-in-out infinite; }
+        @keyframes eqpGlow { 0%, 100% { opacity: 0.16; } 50% { opacity: 0.42; } }
+        .eqp-glow.pulse { animation: eqpPulse 1.9s ease-in-out infinite; }
+        @keyframes eqpPulse {
+          0%, 100% { opacity: 0.18; stroke-width: 2.2; }
+          50% { opacity: 0.62; stroke-width: 4.4; }
+        }
+        .eqp-halo { animation: eqpHalo 4.2s ease-in-out infinite; transform-origin: 24px 24px; }
+        @keyframes eqpHalo {
+          0%, 100% { opacity: 0.5; transform: scale(1); }
+          50% { opacity: 1; transform: scale(1.06); }
+        }
+        .eqp-motes { animation: eqpSpin 7s linear infinite; transform-origin: 24px 24px; }
+        /*
+          ホロ。図鑑の .holo-card をそのまま持ってきたもの。
+          ⚠️⚠️ 値を作り直さないこと。115度・320%・1.5秒・conic の五色・blur 12px は
+            すべて図鑑の札で決めた値。ここで別の数字にすると、
+            同じ「ホロ」の名で二つの見え方ができる。
+          ★ 三層。① 虹の膜（斜めに渡る帯）② 外周の輪 ③ 白を芯にした脈動。
+            ①だけだと平たい。②が「決定的な差」、③が眩しさを作る。
+          ⚠️ 中央は必ず抜くこと。抜かないと絵が虹に飲まれる。
+            content-box を exclude で抜く（padding が帯の幅になる）。
+          ⚠️ -webkit- を併記する。Safari はこれが無いとマスクが効かず全面が虹になる。
+        */
+        .eq-icon-wrap { position: relative; display: inline-block; line-height: 0; }
+        .eq-icon-wrap > svg { position: relative; z-index: 1; }
+        /*
+          ① 虹の膜。⚠️ 両端を透明にすること。
+            端まで色を詰めると縞になり、光の帯に見えない。
+        */
+        .eq-icon-wrap.holo::after {
+          content: ""; position: absolute; z-index: 2; pointer-events: none;
+          inset: 9.3%; border-radius: 23%;
+          background: linear-gradient(115deg,
+            transparent 6%, rgba(255,60,180,0.90) 22%, rgba(60,200,255,0.90) 37%,
+            rgba(120,255,140,0.90) 52%, rgba(255,220,60,0.90) 67%,
+            rgba(255,60,180,0.78) 82%, transparent 96%);
+          background-size: 320% 320%;
+          mix-blend-mode: screen; filter: saturate(1.4);
+          /* ⚠️ 帯だけに残す。padding が帯の幅（台の 10.5%）になる */
+          padding: 10.5%; box-sizing: border-box;
+          -webkit-mask: linear-gradient(#000 0 0) content-box, linear-gradient(#000 0 0);
+          -webkit-mask-composite: xor;
+          mask: linear-gradient(#000 0 0) content-box exclude, linear-gradient(#000 0 0);
+          animation: holoSweep 1.5s linear infinite;
+        }
+        /* ② 外周の輪。⚠️ これが常時版との決定的な差。落とさないこと */
+        .eq-icon-wrap.holo::before {
+          content: ""; position: absolute; z-index: 0; pointer-events: none;
+          inset: 9.3%; border-radius: 23%;
+          background: conic-gradient(from 0deg,
+            #ff3ca6, #ffd23c, #6cff8d, #3cd2ff, #a86cff, #ff3ca6);
+          filter: blur(6px) saturate(2.1) brightness(1.2);
+          animation: holoRing 2.2s linear infinite;
+        }
+        /*
+          段の差。⚠️ 図鑑（★11）を基準にして、下は弱く、上は重ねる。
+            速さと濃さだけ動かす。色と角度は触らない。
+        */
+        .eq-icon-wrap.holo.lv1::after { animation-duration: 1.9s; opacity: 0.68; }
+        .eq-icon-wrap.holo.lv1::before { opacity: 0.38; }
+        .eq-icon-wrap.holo.lv2::after { opacity: 1; }
+        .eq-icon-wrap.holo.lv2::before { opacity: 0.72; }
+        /* ③ 白を芯にした脈動。⚠️ 内側は必ず白。有彩色の後光は眩しくない */
+        .eq-icon-wrap.holo.lv2 > svg,
+        .eq-icon-wrap.holo.lv3 > svg { border-radius: 23%; animation: eqHoloGlow 1.6s ease-in-out infinite; }
+        @keyframes eqHoloGlow {
+          0%, 100% { box-shadow: 0 0 10px rgba(255,255,255,0.70), 0 0 22px rgba(255,60,180,0.62); }
+          50%      { box-shadow: 0 0 16px rgba(255,255,255,1), 0 0 38px rgba(60,200,255,0.88), 0 0 60px rgba(255,60,180,0.55); }
+        }
+        /*
+          ★12の三周期。白 → 黒 → ホロ。
+          ⚠️⚠️ 虹の膜と同じ場所に重ね、見せる時間をずらすこと。
+            並べて置くと三色の板になり、周期に見えない。
+          ⚠️ 白と黒は動かさない。動くのはホロだけ。三つとも動くと
+            何が切り替わったのか分からない。
+        */
+        .eq-icon-wrap.holo.lv3::after { animation-duration: 1.4s; }
+        .eq-icon-wrap.holo.lv3::before { opacity: 0.85; }
+        /* ⚠️ 帯の形は ::after と一字一句そろえること。ずれると縁が二重に見える */
+        .eq-h3 {
+          position: absolute; z-index: 3; pointer-events: none;
+          inset: 9.3%; border-radius: 23%;
+          padding: 10.5%; box-sizing: border-box;
+          -webkit-mask: linear-gradient(#000 0 0) content-box, linear-gradient(#000 0 0);
+          -webkit-mask-composite: xor;
+          mask: linear-gradient(#000 0 0) content-box exclude, linear-gradient(#000 0 0);
+          animation: eqH3 4.2s linear infinite;
+        }
+        .eq-h3.w { background: #FFFFFF; animation-delay: 0s; }
+        .eq-h3.k { background: #000000; animation-delay: -1.4s; }
+        /* ⚠️ ホロが見える時間（残り1/3）は両方を透明にする */
+        @keyframes eqH3 {
+          0% { opacity: 0; }
+          4%, 29% { opacity: 1; }
+          33%, 100% { opacity: 0; }
+        }
+        /* ⚠️ 白と黒が乗っているあいだは虹を伏せる。重なると灰色になる */
+        .eq-icon-wrap.holo.lv3::after { animation: holoSweep 1.4s linear infinite, eqH3Holo 4.2s linear infinite; }
+        @keyframes eqH3Holo {
+          0%, 62% { opacity: 0; }
+          70%, 96% { opacity: 1; }
+          100% { opacity: 0; }
+        }
+        /* 段の枠。⚠️ 光は1段ごと、脈動は★8から。呼吸より速くしない */
+        .eqp-glow { animation: eqpGlow 3.4s ease-in-out infinite; }
+        @keyframes eqpGlow { 0%, 100% { opacity: 0.16; } 50% { opacity: 0.42; } }
+        .eqp-glow.pulse { animation: eqpPulse 1.9s ease-in-out infinite; }
+        @keyframes eqpPulse {
+          0%, 100% { opacity: 0.18; stroke-width: 2.2; }
+          50% { opacity: 0.62; stroke-width: 4.4; }
+        }
+        .eqp-halo { animation: eqpHalo 4.2s ease-in-out infinite; transform-origin: 24px 24px; }
+        @keyframes eqpHalo {
+          0%, 100% { opacity: 0.5; transform: scale(1); }
+          50% { opacity: 1; transform: scale(1.06); }
+        }
+        .eqp-motes { animation: eqpSpin 7s linear infinite; transform-origin: 24px 24px; }
+        /*
+          ホロ。図鑑のホロ札と同じ、斜めに流れる四色。
+          ⚠️⚠️ 帯（縁の内側）だけに流すこと。中央まで流すと絵が虹に飲まれる。
+          ⚠️ 速さと濃さで段を分ける。太さは帯の幅で決まっているので動かせない。
+          ⚠️ 1.2秒より速くしない。図鑑の1.5秒を基準に、少し速いところで止める。
+        */
+        .eqp-holo { mix-blend-mode: screen; }
+        .eqp-holo.lv1 { opacity: 0.72; filter: saturate(1.1); }
+        .eqp-holo.lv2 { opacity: 0.92; filter: saturate(1.4); }
+        .eqp-holo.lv3 { opacity: 1; filter: saturate(1.5); }
+        .eqp-holoflow { animation: eqpHoloFlow 2.4s linear infinite; }
+        .lv2 .eqp-holoflow { animation-duration: 1.7s; }
+        .lv3 .eqp-holoflow { animation-duration: 1.4s; }
+        @keyframes eqpHoloFlow {
+          0% { transform: translateX(0); }
+          100% { transform: translateX(26px); }
+        }
+        /*
+          ★12の三周期。白 → 黒 → ホロ。
+          ⚠️⚠️ 三つを同じ帯に重ねて、見せる時間をずらすこと。
+            並べて置くと三色の板になり、周期に見えない。
+          ⚠️ 切り替わりの前後に留まる時間を置く。ずっと混ざっていると
+            白も黒もホロも読めない灰色になる。
+        */
+        .eqp-h3 { animation: eqpH3 4.2s linear infinite; }
+        .eqp-h3.w { animation-delay: 0s; }
+        .eqp-h3.k { animation-delay: -1.4s; }
+        .eqp-h3.h { animation-delay: -2.8s; }
+        @keyframes eqpH3 {
+          0% { opacity: 0; }
+          6%, 27% { opacity: 1; }
+          33%, 100% { opacity: 0; }
+        }
+        /* 段の枠。⚠️ 光は1段ごと、脈動は★8から。呼吸より速くしない */
+        .eqp-glow { animation: eqpGlow 3.4s ease-in-out infinite; }
+        @keyframes eqpGlow { 0%, 100% { opacity: 0.16; } 50% { opacity: 0.42; } }
+        .eqp-glow.pulse { animation: eqpPulse 1.9s ease-in-out infinite; }
+        @keyframes eqpPulse {
+          0%, 100% { opacity: 0.18; stroke-width: 2.2; }
+          50% { opacity: 0.62; stroke-width: 4.4; }
+        }
+        .eqp-halo { animation: eqpHalo 4.2s ease-in-out infinite; transform-origin: 24px 24px; }
+        @keyframes eqpHalo {
+          0%, 100% { opacity: 0.5; transform: scale(1); }
+          50% { opacity: 1; transform: scale(1.06); }
+        }
+        .eqp-motes { animation: eqpSpin 7s linear infinite; transform-origin: 24px 24px; }
+        /*
+          虹のホロ。⚠️ 強さを三段に分ける。太さ・濃さ・速さを一緒に動かすこと。
+            一つだけ変えても「もっと派手」に見えない。
+        */
+        @keyframes eqpSpin { to { transform: rotate(360deg); } }
+        /* 刀 ―― 4.6秒に一度、刃に光が走る */
+        .eqa-glint { animation: eqGlint 4.6s ease-in-out infinite; }
+        @keyframes eqGlint {
+          0%, 86% { opacity: 0; stroke-dasharray: 0 40; }
+          90% { opacity: 0.95; stroke-dasharray: 18 40; }
+          100% { opacity: 0; stroke-dasharray: 0 40; }
+        }
+        /* 杖 ―― 玉が呼吸する */
+        .eqa-breathe { animation: eqBreathe 3.2s ease-in-out infinite; transform-origin: 29px 12px; }
+        @keyframes eqBreathe {
+          0%, 100% { transform: scale(1); opacity: 0.85; }
+          50% { transform: scale(1.14); opacity: 1; }
+        }
+        /* 盃 ―― 水面が揺れる。⚠️ 上下ではなく傾ける。上下だと増減に見える */
+        .eqa-slosh { animation: eqSlosh 3.8s ease-in-out infinite; transform-origin: 24px 20px; }
+        @keyframes eqSlosh {
+          0%, 100% { transform: rotate(-2.5deg); }
+          50% { transform: rotate(2.5deg); }
+        }
+        /* 小判 ―― 6秒に一度だけ光る。頻繁だと安っぽい */
+        .eqa-shine { animation: eqShine 6s ease-in-out infinite; }
+        @keyframes eqShine {
+          0%, 90% { opacity: 0; }
+          94% { opacity: 0.9; }
+          100% { opacity: 0; }
+        }
+        /* 羅針盤 ―― 針が一方向に回り続ける。⚠️ 往復させない。揺れになる */
+        .eqa-needle { animation: eqSpinSlow 9s linear infinite; }
+        @keyframes eqSpinSlow { to { transform: rotate(360deg); } }
+        /* 鏡 ―― 面を光がゆっくり渡る */
+        .eqa-sweep { animation: eqSweep 5s ease-in-out infinite; transform-origin: 24px 21px; }
+        @keyframes eqSweep {
+          0%, 100% { opacity: 0.08; transform: translateX(-5px); }
+          50% { opacity: 0.42; transform: translateX(5px); }
+        }
+        /* 牙 ―― しずくが落ちる */
+        .eqa-drip { animation: eqDrip 3.4s ease-in infinite; }
+        @keyframes eqDrip {
+          0%, 55% { opacity: 0; transform: translateY(-3px) scale(0.6); }
+          65% { opacity: 1; transform: translateY(0) scale(1); }
+          95% { opacity: 0; transform: translateY(8px) scale(0.7); }
+          100% { opacity: 0; }
+        }
+        /* 御守 ―― 軽い。速めに揺れる */
+        .eqa-swing { animation: eqSwing 2.6s ease-in-out infinite; }
+        @keyframes eqSwing {
+          0%, 100% { transform: rotate(-4deg); }
+          50% { transform: rotate(4deg); }
+        }
+        /* 羽織 ―― 裾が波打つ */
+        .eqa-hem { animation: eqHem 3.6s ease-in-out infinite; transform-origin: 24px 40px; }
+        @keyframes eqHem {
+          0%, 100% { transform: skewX(-3deg) translateY(0); }
+          50% { transform: skewX(3deg) translateY(-1px); }
+        }
+        /* 提灯 ―― 灯がゆらぐ。⚠️ 等間隔にしない。炎に見えない */
+        .eqa-flame { animation: eqFlame 2.9s ease-in-out infinite; transform-origin: 24px 26px; }
+        @keyframes eqFlame {
+          0%, 100% { opacity: 0.42; transform: scaleY(1); }
+          28% { opacity: 0.68; transform: scaleY(1.1); }
+          52% { opacity: 0.38; transform: scaleY(0.94); }
+          74% { opacity: 0.62; transform: scaleY(1.06); }
+        }
+        /* 鬼面 ―― 息づく。目は別の周期で灯る */
+        .eqa-breathe2 { animation: eqBreathe2 3.6s ease-in-out infinite; }
+        @keyframes eqBreathe2 {
+          0%, 100% { transform: scale(1); }
+          50% { transform: scale(1.04); }
+        }
+        .eqa-eyes { animation: eqEyes 2.4s ease-in-out infinite; }
+        @keyframes eqEyes {
+          0%, 100% { stroke: #FFD84A; opacity: 0.8; }
+          50% { stroke: #FFF0A0; opacity: 1; }
+        }
+        /* 宝冠 ―― 宝石が順に瞬く */
+        .eqa-gem { animation: eqGem 3.8s ease-in-out infinite; }
+        .eqa-gem.b { animation-delay: 1.2s; }
+        .eqa-gem.c { animation-delay: 2.4s; }
+        @keyframes eqGem {
+          0%, 80%, 100% { opacity: 0.85; }
+          88% { opacity: 1; filter: brightness(1.8); }
+        }
+        /* 鎧 ―― 5.4秒に一度、面を光が渡る */
+        .eqa-sheen { animation: eqShine 5.4s ease-in-out infinite; }
+        /* 太鼓 ―― 打つ。⚠️ 二度打ちにする。一度だと呼吸に見える */
+        .eqa-beat { animation: eqBeat 2.6s ease-out infinite; }
+        @keyframes eqBeat {
+          0%, 100% { transform: scale(1); }
+          6% { transform: scale(1.09); }
+          14% { transform: scale(1); }
+          22% { transform: scale(1.05); }
+          30% { transform: scale(1); }
+        }
+        /*
+          祭囃子の八つ。
+          ⚠️⚠️ 楽器ごとに鳴らし方を変えること。全部を「震える」にすると、
+            名前が違うだけの同じものに戻る。
+          ⚠️ 打ち物（拍子木・すりがね・ちゃんぽん・鼓・太鼓）は打った瞬間だけ光る。
+            鳴りっぱなしにすると拍が消える。
+        */
+        /* 拍子木 ―― 二本が打ち合う。⚠️ 間を取る札なので、打つ前に溜める */
+        .eqa-clapL { animation: eqClapL 3.0s cubic-bezier(0.7,0,0.3,1) infinite; }
+        .eqa-clapR { animation: eqClapR 3.0s cubic-bezier(0.7,0,0.3,1) infinite; }
+        @keyframes eqClapL { 0%,74% { transform: rotate(-9deg); } 82%,88% { transform: rotate(0deg); } 100% { transform: rotate(-9deg); } }
+        @keyframes eqClapR { 0%,74% { transform: rotate(9deg); } 82%,88% { transform: rotate(0deg); } 100% { transform: rotate(9deg); } }
+        .eqa-clack { animation: eqClack 3.0s ease-out infinite; }
+        @keyframes eqClack { 0%,80% { opacity: 0; } 84% { opacity: 1; } 92%,100% { opacity: 0; } }
+        /* すりがね ―― 撞木が当たって鉦が震える */
+        .eqa-mallet { animation: eqMallet 1.8s ease-in-out infinite; }
+        @keyframes eqMallet { 0%,100% { transform: rotate(14deg); } 46%,54% { transform: rotate(0deg); } }
+        .eqa-gong { animation: eqGong 1.8s ease-out infinite; transform-origin: 24px 25px; }
+        @keyframes eqGong {
+          0%,46% { opacity: 0; transform: scale(1); }
+          52% { opacity: 0.9; transform: scale(1); }
+          100% { opacity: 0; transform: scale(1.35); }
+        }
+        /* ちゃんぽん ―― 二枚が開いて合わさる。⚠️ 二度働く札なので、光も二度 */
+        .eqa-cymL { animation: eqCymL 2.2s ease-in-out infinite; }
+        .eqa-cymR { animation: eqCymR 2.2s ease-in-out infinite; }
+        @keyframes eqCymL { 0%,100% { transform: translateX(-4px); } 44%,52% { transform: translateX(3px); } }
+        @keyframes eqCymR { 0%,100% { transform: translateX(4px); } 44%,52% { transform: translateX(-3px); } }
+        .eqa-clash { animation: eqClash 2.2s ease-out infinite; transform-origin: 24px 24px; }
+        @keyframes eqClash {
+          0%,42% { opacity: 0; transform: scale(0.6); }
+          48% { opacity: 1; transform: scale(1); }
+          62% { opacity: 0; transform: scale(1.7); }
+          66% { opacity: 0.8; transform: scale(0.8); }
+          80%,100% { opacity: 0; transform: scale(1.7); }
+        }
+        /* 鼓 ―― 打たれて胴がたわむ。⚠️ 縦につぶす。横だと弾んで見える */
+        .eqa-beatT { animation: eqTsu 2.4s ease-out infinite; }
+        @keyframes eqTsu {
+          0%,100% { transform: scaleY(1); }
+          8% { transform: scaleY(0.94); }
+          18% { transform: scaleY(1); }
+        }
+        .eqa-pon { animation: eqPon 2.4s ease-out infinite; transform-origin: 24px 10px; }
+        @keyframes eqPon {
+          0% { opacity: 0.9; transform: scale(1); }
+          30%,100% { opacity: 0; transform: scale(1.5); }
+        }
+        /* 琴 ―― 弦が順に波打つ。⚠️ 一斉に動かすと震えになり、余韻が出ない */
+        .eqa-string { animation: eqKoto 3.2s ease-in-out infinite; }
+        .eqa-string.s1 { animation-delay: 0.14s; }
+        .eqa-string.s2 { animation-delay: 0.28s; }
+        .eqa-string.s3 { animation-delay: 0.42s; }
+        .eqa-string.s4 { animation-delay: 0.56s; }
+        @keyframes eqKoto {
+          0%,100% { transform: translateY(0); opacity: 0.9; }
+          20% { transform: translateY(-1px); opacity: 1; }
+          40% { transform: translateY(0.6px); opacity: 0.95; }
+        }
+        /* しの笛 ―― 指が順に動き、音が一直線に抜ける */
+        .eqa-hole { animation: eqHole 2.6s ease-in-out infinite; }
+        .eqa-hole.h1 { animation-delay: 0.16s; }
+        .eqa-hole.h2 { animation-delay: 0.32s; }
+        .eqa-hole.h3 { animation-delay: 0.48s; }
+        @keyframes eqHole { 0%,70%,100% { opacity: 1; } 78% { opacity: 0.25; } }
+        .eqa-pierce { animation: eqPierce 2.6s ease-out infinite; }
+        @keyframes eqPierce {
+          0%,62% { opacity: 0; transform: translate(6px, -3px); }
+          70% { opacity: 1; transform: translate(0, 0); }
+          100% { opacity: 0; transform: translate(-8px, 4px); }
+        }
+        /* 胡弓 ―― 弓を挽く。⚠️ ゆっくり。速いと弾いているように見える */
+        .eqa-bow { animation: eqBow 3.4s ease-in-out infinite; }
+        @keyframes eqBow {
+          0%,100% { transform: translate(-4px, 3px); }
+          50% { transform: translate(4px, -3px); }
+        }
+        /* 祓串 ―― 振って場を鎮める。⚠️ ゆっくり。速いと払いではなく叩きに見える */
+        .eqa-wave { animation: eqWave 3.6s ease-in-out infinite; }
+        @keyframes eqWave {
+          0%, 100% { transform: rotate(-7deg); }
+          50% { transform: rotate(7deg); }
+        }
+        /* 破魔矢 ―― 3.2秒に一度だけ矢先が光る。⚠️ 飛ばさない。矢は構えているもの */
+        .eqa-shot { animation: eqShot 3.2s ease-out infinite; }
+        @keyframes eqShot {
+          0%, 84% { opacity: 0; transform: translate(-4px, 4px); }
+          89% { opacity: 1; transform: translate(0, 0); }
+          100% { opacity: 0; transform: translate(6px, -6px); }
+        }
+        /* カード ―― ゆっくり傾いて、星が時々灯る */
+        .eqa-tilt { animation: eqTilt 4.4s ease-in-out infinite; }
+        @keyframes eqTilt {
+          0%, 100% { transform: rotate(-5deg); }
+          50% { transform: rotate(5deg); }
+        }
+        .eqa-cardglow { animation: eqCardGlow 4.4s ease-in-out infinite; }
+        @keyframes eqCardGlow { 0%, 72%, 100% { opacity: 0; } 82% { opacity: 0.85; } }
+        /* 三味線 ―― 三本が別の速さで震える。⚠️ 揃えると一本に見える */
+        .eqa-sen { animation: eqSen 1.4s ease-in-out infinite; transform-origin: center; }
+        .eqa-sen.n1 { animation-duration: 1.1s; }
+        .eqa-sen.n2 { animation-duration: 1.7s; }
+        @keyframes eqSen { 0%,100% { transform: translateX(0); } 50% { transform: translateX(0.6px); } }
+        /* 身代わり ―― 薄れて戻る。消耗品であることを絵で言う */
+        .eqa-fade { animation: eqFade 3.4s ease-in-out infinite; }
+        @keyframes eqFade {
+          0%, 100% { opacity: 1; }
+          50% { opacity: 0.45; }
+        }
+        /* 弁当 ―― 湯気。⚠️ 二本を別の周期で上げる。揃うと煙突になる */
+        .eqa-steam { animation: eqSteam 3.2s ease-in-out infinite; transform-origin: 18px 14px; }
+        .eqa-steam.b { animation-duration: 4.1s; animation-delay: 0.7s; transform-origin: 26px 14px; }
+        @keyframes eqSteam {
+          0% { opacity: 0; transform: translateY(3px) scaleY(0.6); }
+          40% { opacity: 0.7; }
+          100% { opacity: 0; transform: translateY(-5px) scaleY(1.2); }
+        }
+        /* 薬 ―― 泡が上がる */
+        .eqa-bub { animation: eqBub 2.8s ease-in infinite; }
+        .eqa-bub.b { animation-delay: 1.3s; animation-duration: 3.4s; }
+        @keyframes eqBub {
+          0% { opacity: 0; transform: translateY(2px) scale(0.5); }
+          30% { opacity: 0.9; }
+          100% { opacity: 0; transform: translateY(-11px) scale(1); }
+        }
+        /* 宝箱 ―― 蓋が息づく。⚠️ 開けない。開くと中身が見えてしまう */
+        .eqa-lid { animation: eqLid 3.0s ease-in-out infinite; }
+        @keyframes eqLid {
+          0%, 100% { transform: translateY(0) rotate(0deg); }
+          50% { transform: translateY(-0.8px) rotate(-1.2deg); }
+        }
+        .eqa-chestglow { animation: eqChestGlow 3.0s ease-in-out infinite; transform-origin: 24px 34px; }
+        @keyframes eqChestGlow {
+          0%, 66% { opacity: 0; transform: scale(0.8); }
+          78% { opacity: 0.8; transform: scale(1); }
+          100% { opacity: 0; transform: scale(1.3); }
+        }
+        /* 砥石 ―― 石は動かさない。火花だけ散る */
+        .eqa-spark { animation: eqSpark 3.6s ease-out infinite; transform-origin: 20px 21px; }
+        @keyframes eqSpark {
+          0%, 70% { opacity: 0; transform: scale(0.4); }
+          76% { opacity: 1; transform: scale(1); }
+          100% { opacity: 0; transform: scale(1.7) translate(-3px, -3px); }
+        }
+        .bt-use {
+          width: 34px; height: 34px; border-radius: 10px; font-size: 17px; line-height: 1;
+          border: 1px solid rgba(255,243,214,0.28);
+          background: rgba(28,22,58,0.62); color: #FFF3D6;
+          display: inline-flex; align-items: center; justify-content: center;
+          cursor: pointer; transition: transform 140ms ease, box-shadow 140ms ease;
+        }
+        .bt-use:active { transform: translateY(1px) scale(0.94); }
+        /* ⚠️ 一戦に一つ。使えないことを見せる。押しても反応しないだけだと壊れて見える */
+        .bt-use.spent { opacity: 0.32; filter: grayscale(1); cursor: default; }
+        .bt-use.meal { box-shadow: inset 0 0 0 1px rgba(150,230,170,0.35), 0 0 12px rgba(150,230,170,0.22); }
+        .bt-use.cure { box-shadow: inset 0 0 0 1px rgba(170,200,255,0.35), 0 0 12px rgba(170,200,255,0.22); }
+        .bt-use.whet { box-shadow: inset 0 0 0 1px rgba(255,190,140,0.35), 0 0 12px rgba(255,190,140,0.22); }
         .bt-shield.on {
           color: #2A1020; background: linear-gradient(180deg, #9AD8FF, #4C8BC9);
           box-shadow: inset 0 0 0 1px rgba(154,216,255,0.7), 0 0 12px rgba(154,216,255,0.4);
@@ -54519,6 +65472,87 @@ export default function TarotDraw() {
           box-shadow: inset 0 0 0 1px rgba(255,138,138,0.6), 0 0 12px rgba(255,90,90,0.25);
         }
         /* 自分の帯。⚠️ 画面下に浮かせる。戦場と地続きにすると、どちらのHPか迷う */
+        /*
+          HPの色。⚠️ 四段。境目は 60% / 30% / 15%。
+          ⚠️ 赤（15%以下）だけ鼓動させる。常に動いていると、本当に危ないときに気づかない。
+        */
+        .bt-me.hp-ok .bt-bar-fill.me { background: linear-gradient(90deg, #4FBF6A, #8FE08A); }
+        .bt-me.hp-warn .bt-bar-fill.me { background: linear-gradient(90deg, #D8B83A, #F2DC6A); }
+        .bt-me.hp-low .bt-bar-fill.me { background: linear-gradient(90deg, #E07A30, #F5A860); }
+        .bt-me.hp-crit .bt-bar-fill.me {
+          background: linear-gradient(90deg, #C8283A, #F05A6A);
+          animation: btHeart 0.9s ease-in-out infinite;
+        }
+        .bt-me.hp-crit .bt-hp { color: #FF8A8A; }
+        /* ⚠️ 粘りの札。HPのすぐ横に置く。離すと何の数字か分からない */
+        .bt-grit {
+          font-size: 10px; padding: 1px 7px; border-radius: 8px;
+          background: rgba(240,120,120,0.9); color: #2A0A10; font-weight: 700;
+        }
+        @keyframes btHeart {
+          0%, 100% { filter: brightness(1); }
+          15% { filter: brightness(1.7); }
+          30% { filter: brightness(1); }
+          45% { filter: brightness(1.45); }
+        }
+        /*
+          削られた跡。⚠️ 本体の帯は即座に減り、こちらは遅れて追いかける。
+          その差（白く残る部分）が「どれだけ持っていかれたか」になる。
+        */
+        .bt-bar.tall { position: relative; }
+        .bt-bar-lag {
+          position: absolute; left: 0; top: 0; bottom: 0; border-radius: inherit;
+          background: rgba(255,240,220,0.85);
+          transition: width 520ms ease-in 380ms;
+        }
+        .bt-bar-fill.me { position: relative; transition: width 120ms ease-out; }
+        /* 衝撃。⚠️ 一撃の重さで三段階。重いほど大きく長く */
+        .bt-bar.jolt-1 { animation: btJolt1 260ms ease-out; }
+        .bt-bar.jolt-2 { animation: btJolt2 420ms ease-out; }
+        .bt-bar.jolt-3 { animation: btJolt3 560ms ease-out; }
+        /* ⚠️ 同じ動きの別名。名前が替わると最初から出し直される */
+        .bt-bar.jolt-1b { animation: btJolt1b 260ms ease-out; }
+        .bt-bar.jolt-2b { animation: btJolt2b 420ms ease-out; }
+        .bt-bar.jolt-3b { animation: btJolt3b 560ms ease-out; }
+        @keyframes btJolt1 {
+          0%, 100% { transform: translateX(0); }
+          30% { transform: translateX(-2px); } 60% { transform: translateX(2px); }
+        }
+        @keyframes btJolt1b {
+          0%, 100% { transform: translateX(0); }
+          30% { transform: translateX(-2px); } 60% { transform: translateX(2px); }
+        }
+        @keyframes btJolt2 {
+          0%, 100% { transform: translate(0, 0); }
+          15% { transform: translate(-6px, 1px); } 30% { transform: translate(6px, -1px); }
+          45% { transform: translate(-4px, 0); } 60% { transform: translate(4px, 0); }
+          80% { transform: translate(-2px, 0); }
+        }
+        @keyframes btJolt2b {
+          0%, 100% { transform: translate(0, 0); }
+          15% { transform: translate(-6px, 1px); } 30% { transform: translate(6px, -1px); }
+          45% { transform: translate(-4px, 0); } 60% { transform: translate(4px, 0); }
+          80% { transform: translate(-2px, 0); }
+        }
+        @keyframes btJolt3 {
+          0%, 100% { transform: translate(0, 0) scale(1); }
+          10% { transform: translate(-10px, 2px) scale(1.03); } 22% { transform: translate(10px, -2px) scale(1.03); }
+          34% { transform: translate(-8px, 1px); } 46% { transform: translate(8px, -1px); }
+          60% { transform: translate(-5px, 0); } 75% { transform: translate(3px, 0); }
+        }
+        @keyframes btJolt3b {
+          0%, 100% { transform: translate(0, 0) scale(1); }
+          10% { transform: translate(-10px, 2px) scale(1.03); } 22% { transform: translate(10px, -2px) scale(1.03); }
+          34% { transform: translate(-8px, 1px); } 46% { transform: translate(8px, -1px); }
+          60% { transform: translate(-5px, 0); } 75% { transform: translate(3px, 0); }
+        }
+        /* 重い一撃の閃き。⚠️ 縁だけ赤く。中央を塞ぐと盤が見えない */
+        .bt-hurt {
+          position: fixed; inset: 0; z-index: 58; pointer-events: none;
+          box-shadow: inset 0 0 90px 30px rgba(220,30,50,0.55);
+          animation: btHurt 520ms ease-out forwards;
+        }
+        @keyframes btHurt { 0% { opacity: 0; } 18% { opacity: 1; } 100% { opacity: 0; } }
         .bt-me {
           position: relative; padding: 11px 13px; border-radius: 14px;
           background: rgba(18,26,44,0.62);
@@ -54537,17 +65571,108 @@ export default function TarotDraw() {
           font-family: 'Cinzel', serif; font-size: 12px; color: #9FE0A6;
           text-shadow: 0 0 8px rgba(159,224,166,0.5);
         }
-        /* 飛ぶ数字。⚠️ 上へ抜けて消える。留まると次の数字と重なる */
-        /* ⚠️ 上へ抜ける。帯の中に留めると、HPと倍率の行に重なる */
+        /*
+          飛ぶ数字。
+          ⚠️ 上へ抜けて消える。留まると次の数字と重なる。
+          ⚠️⚠️ 頭より上に出さないこと。敵の外に数字が出ると、
+            どの相手に入ったのか分からない（体が三つ四つ並ぶので）。
+          ★ 姿の中ほどから出して、上へ抜ける。高さは姿の大きさから決める
+            （--fig は行に渡してある）。
+        */
         .bt-pop {
-          position: absolute; left: 50%; top: -6px; transform: translateX(-50%);
-          font-family: 'Shippori Mincho', serif; font-size: 15px; font-weight: 700;
+          position: absolute; left: 50%; top: calc(var(--fig, 48px) * 0.40);
+          transform: translateX(-50%);
+          font-family: 'Shippori Mincho', serif; font-size: 17px; font-weight: 800;
           pointer-events: none; animation: btPop 900ms ease-out forwards;
+          /*
+            ⚠️⚠️ 縁を付けること。戦場は紫紺で、その上に敵の姿と光が重なる。
+              色だけの文字は姿に溶けて読めない（実際そう見えた）。
+            ⚠️ 黒の細い縁を四方に置いてから、外へ広いぼかしを足す。
+              ぼかしだけだと輪郭が甘いまま、縁だけだと沈んだままになる。
+          */
+          text-shadow:
+            0 1px 0 rgba(0,0,0,0.95), 0 -1px 0 rgba(0,0,0,0.95),
+            1px 0 0 rgba(0,0,0,0.95), -1px 0 0 rgba(0,0,0,0.95),
+            0 2px 5px rgba(0,0,0,0.9);
         }
-        .bt-pop.dmg { color: #FF8A8A; }
-        .bt-pop.heal { color: #9FE0A6; }
-        .bt-pop.self { color: #E8B02A; font-size: 12px; }
-        .bt-pop.buff { color: #F6DE96; font-size: 12px; }
+        /*
+          ⚠️ 自分側は姿を持たないので、--fig の既定（48px）だと帯に重なる。
+            自分の帯の上へ出すこと。
+        */
+        .bt-me .bt-pop { top: -6px; }
+        /*
+          ⚠️ 色は濃いほうへ寄せる。淡い色は縁を付けても弱い。
+            四色とも、戦場（紫紺）に対して明度が十分離れていること。
+        */
+        .bt-pop.dmg { color: #FF4D4D; }
+        .bt-pop.heal { color: #5BE86F; }
+        .bt-pop.self { color: #FFB01E; font-size: 14px; }
+        /* ⚠️ 強化＝金、回避や耐性＝水色。同じ色にすると「何が起きたか」が混ざる */
+        .bt-pop.buff { color: #FFDE6A; font-size: 14px; }
+        .bt-pop.info { color: #8FD8F0; font-size: 14px; }
+        /* ⚠️ 会心は黄色。朱（通常）と虹（必殺）のあいだに置く */
+        .bt-pop.crit { color: #FFD21E; }
+        .bt-foe .bt-pop.crit { font-size: 22px; }
+        /*
+          ⚠️ 悪魔が効いているあいだは真っ黒でよい。
+            階位が半分・全部逆位置・必殺技が出せない札なので、
+            数字まで沈んでいるほうが場に合う。
+        */
+        .bt-field.devil .bt-pop.dmg,
+        .bt-field.devil .bt-pop.crit { color: #2A1E38; text-shadow: 0 0 3px rgba(255,255,255,0.5); }
+        .bt-field.devil .bt-pop.holo { filter: grayscale(1) brightness(0.35) drop-shadow(0 0 6px rgba(255,255,255,0.6)); }
+        /* ⚠️ 与えた傷は受けた傷より大きく。こちらの手応えのほうを強く出す */
+        .bt-foe .bt-pop.dmg { font-size: 19px; }
+        /*
+          必殺技の数字。
+          ⚠️⚠️ 札一枚ぶんの数字（朱・緑・金）と同じ見た目にしないこと。
+            32種のうち一つが出たのに、通常の一撃と区別が付かなかった。
+          ★ 虹のホロ。⚠️ 淡くしすぎると背景（紫紺）に沈み、
+            濃くしすぎると図鑑のホロ札と同じ強さになって梯子が二本に見える。
+            中ほどの彩度で、ゆっくり流す。
+          ⚠️ 背景を文字で抜く（background-clip: text）ので、text-shadow は効かない。
+            縁は drop-shadow で立てること。これが無いと戦場に溶ける。
+          ⚠️ -webkit- を必ず併記する。Safari はこれが無いと文字が透明のまま消える。
+        */
+        /*
+          ⚠️⚠️ 虹の数字に text-shadow を残さないこと。
+            背景を文字で抜く（background-clip: text）と、影は背景より手前に描かれる。
+            .bt-pop に足した黒い縁が虹を覆って、文字が真っ黒になっていた。
+          ★ 縁は drop-shadow だけで立てる。あちらは要素の絵に対して掛かるので覆わない。
+        */
+        .bt-pop.holo { text-shadow: none; }
+        .bt-pop.holo {
+          /*
+            ⚠️⚠️ 運命の輪の文字より派手にすること。あちらは盤の演出、
+              こちらは32種のうち一つが出た瞬間の数字。負けていると軽く見える。
+            ⚠️ 少しだけ大きく、少しだけ長く残す。倍にすると盤が読めない。
+          */
+          font-size: 21px;
+          background: linear-gradient(100deg,
+            #F58FB4 0%, #F5C98F 18%, #EFEF8F 36%, #8FE8A8 54%,
+            #8FD8F0 72%, #B79AF0 88%, #F58FB4 100%);
+          background-size: 260% 100%;
+          -webkit-background-clip: text; background-clip: text;
+          -webkit-text-fill-color: transparent; color: transparent;
+          /* ⚠️ 白の芯を強くする。虹だけだと背景の紫紺に沈む */
+          filter: drop-shadow(0 0 9px rgba(255,255,255,0.95))
+                  drop-shadow(0 0 20px rgba(255,120,220,0.55))
+                  drop-shadow(0 2px 4px rgba(0,0,0,0.95));
+          /* ⚠️ 流れを速く。虹が動いていることが分かる速さにする */
+          animation: btPopHolo 1500ms ease-out forwards, btHolo 1.1s linear infinite;
+        }
+        /* ⚠️ 通常の数字より長く留める。上がりきってから消える */
+        @keyframes btPopHolo {
+          0% { transform: translate(-50%, 8px) scale(0.7); opacity: 0; }
+          16% { transform: translate(-50%, -6px) scale(1.28); opacity: 1; }
+          26% { transform: translate(-50%, -8px) scale(1.1); opacity: 1; }
+          72% { transform: translate(-50%, -20px) scale(1.06); opacity: 1; }
+          100% { transform: translate(-50%, -34px) scale(1); opacity: 0; }
+        }
+        @keyframes btHolo {
+          0% { background-position: 0% 50%; }
+          100% { background-position: 260% 50%; }
+        }
         @keyframes btPop {
           0% { transform: translate(-50%, 6px) scale(0.8); opacity: 0; }
           25% { transform: translate(-50%, -4px) scale(1.15); opacity: 1; }
@@ -54747,6 +65872,18 @@ export default function TarotDraw() {
           ⚠️ 流派の札より目立たせること。日課にしてほしいのはこちら。
           ⚠️ ただし派手にしすぎない。毎日見るものなので、強い光は疲れる。
         */
+        /*
+          とにかく占う。
+          ⚠️⚠️ 年輪日記より上に、目立つ形で置くこと。
+            50種の配置を前に「どれを選べばいいか分からない」で止まる人の入口。
+          ⚠️ 年輪日記と同じ見た目にしない。並ぶと、どちらも押されなくなる。
+        */
+        .fortune-entry.just {
+          background: linear-gradient(135deg, rgba(232,196,106,0.22), rgba(120,80,200,0.18));
+          border-color: rgba(232,196,106,0.6);
+          box-shadow: inset 0 0 0 1px rgba(232,196,106,0.3), 0 0 18px rgba(232,196,106,0.2);
+        }
+        .fortune-entry.just .fortune-entry-main { color: #FFE9A8; font-size: 16px; }
         .fortune-entry {
           position: relative; display: flex; flex-direction: column; gap: 3px;
           width: 100%; min-height: 60px; margin: 0 0 12px;
