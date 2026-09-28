@@ -1,4 +1,4 @@
-import { useState, useEffect, useLayoutEffect, useRef, useMemo } from "react";
+import { useState, useEffect, useLayoutEffect, useRef, useMemo, memo } from "react";
 import { Sparkles, Droplet, Swords, Coins, RotateCcw, Shuffle, Copy, Check, Star, Share2, Volume2, VolumeX, Pause, Play, Square } from "lucide-react";
 /* ============================================================
    カード裏面（全スプレッド共通）
@@ -5620,6 +5620,27 @@ const spTurnsOf = (star) => 6 + (star | 0);
 const spRunOf = (star) => Math.max(3, Math.min(10, 2 + Math.ceil(((star | 0) * 8) / 12)));
 /* ⚠️ 1スートの満タン。一ターンに来るそのスートの札は、およそ枚数の1/4 */
 const spMaxOf = (star, cards) => Math.max(3, Math.round(((cards || 3) / 4) * spTurnsOf(star) / spChargeNow()));
+/*
+  【溜まりの段】2026-09-29 Aki：「円形に溜まり、3枚必殺から★の上限（最大10枚）まで撃てる。MAXまで溜めれば10枚、
+    3枚・4枚ならすぐ撃てる。数字は出さず、印が変わっていく」。
+  ★ 溜まり（0〜1）が spThreshOf(n, 上限) を越えると n 枚の必殺が撃てる。上限の枚数は満タン（1）。
+  ★ 段の位置は威力の比の 0.8 乗（SP_THRESH_GAMMA）。溜まり1あたりの威力は枚数が多いほど上がる
+    （★12 で 3枚→10枚が約1.55倍）。小さく連打するより、溜めて撃つほうが少し得。
+    等分にすると、3枚の連打と10枚が同じ得になり、溜める意味がなくなる。
+  ★ 撃つと溜まりは全部なくなる。区切りの分だけ使う形にすると、3枚の連打が一番得になる。
+  ⚠️ 威力は「その★で満タン」を今までと同じにしてある（上限の枚数＝従来の必殺）。途中で撃つと比の分だけ弱い。
+*/
+const SP_THRESH_GAMMA = 0.8;
+function spThreshOf(n, cap) {
+  if (n >= cap) return 1;
+  return Math.pow(FLASH_MUL[Math.min(8, n - 2) - 1] / FLASH_MUL[Math.min(8, cap - 2) - 1], SP_THRESH_GAMMA);
+}
+/** 溜まり r（0〜1）で撃てる枚数。まだ3枚に届かなければ 0 */
+function spTierOf(r, cap) {
+  let best = 0;
+  for (let n = 3; n <= cap; n++) if (r >= spThreshOf(n, cap) - 1e-9) best = n;
+  return best;
+}
 /* ⚠️ 制覇報酬の「溜まり」。advProgress は後ろで定義されるので、呼ぶ時点で引く */
 function spChargeNow() { try { return advProgress().spCharge || 1; } catch (e) { return 1; } }
 /*
@@ -9709,7 +9730,7 @@ const ADV_I18N = {
     stanceAuto: "オート", stanceManual: "手動", stanceReserved: "次ターンから",
     ctrlTip: (n) => `${n}を止める（次のターンから${CTRL_TURNS}ターン。大アルカナの指定は別）`,
     spReady: "満", spArmed: "構え",
-    spTip: (n) => `${n}の必殺：${n}の札を出すごとに溜まる。満タンで押すと、次の札の瞬間に放つ（★が高いほど遅く、強い）`,
+    spTip: (n) => `${n}の必殺：${n}の札を出すごとに円が溜まる。刻みを一つ越えるごとに必殺の段が上がり（3枚〜★の上限）、押すと次の札の瞬間に放つ。溜まりは全部使う。満タンまで溜めるほど、溜まりあたりの威力が高い`,
     cureAll: "浄化", potion: "ポーション", potionTip: `ポーション：最大HPの${Math.round(POTION_HEAL * 100)}%回復（1ターンに1個）`,
     layoutTip: "画面の型を切り替える（スマホ／PC）",
     cheatMagi: "魔術師のみ",
@@ -10004,7 +10025,7 @@ const ADV_I18N = {
     stanceAuto: "Auto", stanceManual: "Manual", stanceReserved: "Next turn",
     ctrlTip: (n) => `Block ${n} (from next turn, ${CTRL_TURNS} turns; Major Arcana overrides)`,
     spReady: "MAX", spArmed: "SET",
-    spTip: (n) => `${n} finisher: charges with each ${n} card. When full, tap to unleash it on the next card (higher ★: slower, stronger)`,
+    spTip: (n) => `${n} finisher: the ring charges with each ${n} card. Each notch passed raises the finisher (3 cards up to your ★ cap). Tap to unleash it on the next card; it uses the whole charge, and a fuller ring is stronger per charge`,
     cureAll: "CURE", potion: "Potion", potionTip: `Potion: heal ${Math.round(POTION_HEAL * 100)}% of max HP (1 per turn)`,
     layoutTip: "Switch layout (phone / PC)",
     cheatMagi: "Magician only",
@@ -34694,6 +34715,72 @@ function FxBossSp({ spKey, stage, fam, label, elem }) {
   手動の必殺の印。viewBox 0 0 32 20（長丸の中）。
   ⚠️ 札の印（剣・棒・杯・貨）とは別の絵にすること。同じだと札の枠と紛れる。
 */
+/*
+  【必殺の円いゲージ】2026-09-29 Aki。
+  ★ 円が時計回りに満ちる。区切り（刻み）は「n枚が撃てる」所。越えた刻みは金に灯る。
+  ★ 印の格（stage）：1＝素の印 ／ 2＝光をまとう ／ 3＝左右に翼 ／ 4＝ホロの環ときらめき。
+  ⚠️⚠️ 重くしないこと（スマホが熱くなった）。この部品の中は動かさない。
+    動くのは満タン・構えの光（.bt-sp-glow の不透明度だけ）で、合成だけで済む動き。
+  ⚠️ 星は四方に光る形だけ（六芒星・五芒星にしない）。
+*/
+const SP_RING_COL = {
+  swords: ["#F4F8FF", "#9FB8E8"], wands: ["#FFD08A", "#FF7A3A"], cups: ["#C8FFD8", "#4AC87A"], pentacles: ["#BFE4FF", "#3A8AE8"],
+};
+function SpRing({ k, r, cap, stage }) {
+  const R0 = 16, CIRC = 2 * Math.PI * R0;
+  const col = SP_RING_COL[k] || SP_RING_COL.swords;
+  const ticks = [];
+  for (let n = 3; n < cap; n++) ticks.push({ n, t: spThreshOf(n, cap) });
+  const at = (t, rr) => {
+    const ang = t * Math.PI * 2 - Math.PI / 2;
+    return [20 + Math.cos(ang) * rr, 20 + Math.sin(ang) * rr];
+  };
+  const star4 = (x, y, s) => `M${x} ${y - s} L${x + s * 0.28} ${y - s * 0.28} L${x + s} ${y} L${x + s * 0.28} ${y + s * 0.28} L${x} ${y + s} L${x - s * 0.28} ${y + s * 0.28} L${x - s} ${y} L${x - s * 0.28} ${y - s * 0.28} Z`;
+  return (
+    <svg className="bt-sp-ring" viewBox="0 0 40 40" aria-hidden="true">
+      <defs>
+        <linearGradient id={`spRg-${k}`} x1="0" y1="0" x2="1" y2="1">
+          <stop offset="0" stopColor={col[0]} /><stop offset="1" stopColor={col[1]} />
+        </linearGradient>
+        <linearGradient id={`spRh-${k}`} x1="0" y1="0" x2="1" y2="1">
+          <stop offset="0" stopColor="#FFF6C8" /><stop offset="0.3" stopColor={col[0]} /><stop offset="0.55" stopColor="#E8C8F0" />
+          <stop offset="0.8" stopColor={col[1]} /><stop offset="1" stopColor="#FFE58A" />
+        </linearGradient>
+        <radialGradient id={`spRc-${k}`}>
+          <stop offset="0" stopColor="rgba(60,44,104,0.95)" /><stop offset="1" stopColor="rgba(14,9,30,0.98)" />
+        </radialGradient>
+      </defs>
+      {/* 盤：暗い円板と溝 */}
+      <circle cx="20" cy="20" r="19" fill={`url(#spRc-${k})`} stroke="rgba(255,243,214,0.22)" strokeWidth="0.8" />
+      <circle cx="20" cy="20" r={R0} fill="none" stroke="rgba(0,0,0,0.55)" strokeWidth="3.6" />
+      {/* 溜まり。⚠️ 12時から時計回り */}
+      {r > 0 && (
+        <circle cx="20" cy="20" r={R0} fill="none" stroke={`url(#${stage >= 4 ? "spRh" : "spRg"}-${k})`} strokeWidth="3.2"
+          strokeLinecap={r >= 1 ? "butt" : "round"} strokeDasharray={`${(Math.min(1, r) * CIRC).toFixed(2)} ${CIRC.toFixed(2)}`}
+          transform="rotate(-90 20 20)" />
+      )}
+      {/* 刻み（撃てる枚数の区切り）。越えたら金 */}
+      {ticks.map(({ n, t }) => {
+        const [x1, y1] = at(t, R0 - 2.6), [x2, y2] = at(t, R0 + 2.6);
+        return <line key={n} x1={x1} y1={y1} x2={x2} y2={y2} strokeWidth="1.1"
+          stroke={r >= t ? "#FFE08A" : "rgba(255,243,214,0.35)"} />;
+      })}
+      {/* 格3〜：左右の小さな翼 */}
+      {stage >= 3 && (
+        <g fill="#FFE08A" opacity="0.92">
+          <path d="M8.2 21.5 Q5.6 17 8.6 13.4 Q8.4 16.6 10.6 18.2 Q9 19.4 8.2 21.5 Z" />
+          <path d="M31.8 21.5 Q34.4 17 31.4 13.4 Q31.6 16.6 29.4 18.2 Q31 19.4 31.8 21.5 Z" />
+        </g>
+      )}
+      {/* 格4：きらめき（四方に光る星）。⚠️ 動かさない */}
+      {stage >= 4 && (
+        <g fill="#FFFFFF">
+          <path d={star4(9.5, 9.5, 2.2)} /><path d={star4(31, 30.5, 1.8)} /><path d={star4(31.5, 9, 1.4)} />
+        </g>
+      )}
+    </svg>
+  );
+}
 function SpGlyph({ k, fam }) {
   if (k === "swords") return (
     <svg className="sp-g" viewBox="0 0 32 20" aria-hidden="true">
@@ -39458,15 +39545,60 @@ function terrainPlan(map, seed, themeKey, iso, elems, pref, area, plaza) {
     }
     out.push({ ...c, kind, v: rnd() });
   });
+  /*
+    【景物を道の近くに絞る】2026-09-29 Aki：「小MAPが重くスマホが熱くなる。不要なバイオームを少なく」。
+    ★ 道から1マス以内は必ず、2マスは半分だけ景物を建てる。3マス以上離れたマスは地面だけ（bare）。
+      窓に映るのは道のまわりなので、見える景色はほぼ変わらずに、描く量が大きく減る。
+    ⚠️ 種類の抽選（rnd）は今までどおり全マスで回すこと。ここで rnd を使うと、
+      川・線路の形や残るマスの景物まで変わってしまう。間引きはマスの座標のハッシュで決める。
+    ⚠️ マスそのものは消さない（TerrainGround が kind で水面・雪原などの地面を敷くため）。
+  */
+  out.forEach((c) => {
+    let d = 99;
+    map.forEach((n) => { const dd = hexDist(c.q - n.q, c.r - n.r); if (dd < d) d = dd; });
+    const h = (((c.q * 73856093) ^ (c.r * 19349663) ^ ((seed | 0) * 2246822519)) >>> 0) % 100;
+    if (c.kind !== "station" && (d >= 3 || (d === 2 && h >= 50))) c.bare = true;
+  });
   out.sort((a, b) => a.y - b.y);
-  const pylons = out.filter((c) => c.kind === "pylon").sort((a, b) => a.x - b.x);
+  const pylons = out.filter((c) => c.kind === "pylon" && !c.bare).sort((a, b) => a.x - b.x);
   /* ⚠️ どくの小MAPでは川が濁る（汚れた川） */
   if (river && (elems || []).includes("poison")) river.dirty = true;
   return { cells: out, river, pylons, rail, highway };
 }
 
+/*
+  【小MAPの地形の層】2026-09-29：memo で包む。
+  ⚠️⚠️ 視点を動かすたび（指でなぞる・自動で進む）に親が描き直され、数千の景物と地形の計算（terrainPlan）を
+    毎回やり直していた。盤・種・土地柄が同じなら描き直さない。
+  ★ 動かせる範囲（box）の外のマスは地面ごと描かない（見えないので）。
+*/
+const TerrainLayer = memo(function TerrainLayer({ map, seed, themeKey, elems, pref, area, heroOn, heroKind, box }) {
+  const tp = terrainPlan(map, seed, themeKey, hexAt, elems, pref, area, heroOn);
+  const inBox = (c) => !box || (c.x > box.x0 - XSTEP && c.x < box.x1 + XSTEP && c.y > box.y0 - YSTEP && c.y < box.y1 + YSTEP * 1.6);
+  const cells = tp.cells.filter(inBox);
+  return (
+    <g style={{ pointerEvents: "none" }}>
+      {/* ⚠️ 大地を先に敷く（川・景物・台はその上） */}
+      <TerrainGround cells={cells} themeKey={themeKey} seed={seed} box={box} />
+      <g clipPath="url(#tgClip)">
+        <TerrainRiver river={tp.river} />
+        <TerrainRail rail={tp.rail} />
+        {/* ⚠️ 高速道路は高架なので線路より手前に描く */}
+        <TerrainHighway hw={tp.highway} />
+      </g>
+      {cells.map((c) => <TerrainCell key={`tc${c.q},${c.r}`} c={c} />)}
+      <TerrainCables pylons={tp.pylons} />
+      {/* 名所の主役。⚠️ 地形より手前、台より奥（主のマスが足元に重なる） */}
+      {heroOn && (() => { const C = hexAt({ q: 0, r: 0 }); return <HeroMonument kind={heroKind} x={C.x} y={C.y - 6} />; })()}
+    </g>
+  );
+}, (a, b) => a.map === b.map && a.seed === b.seed && a.themeKey === b.themeKey && a.pref === b.pref && a.area === b.area
+  && a.heroOn === b.heroOn && a.heroKind === b.heroKind && String(a.elems) === String(b.elems) && a.box === b.box);
+
 /* 一マスぶんの地形。⚠️ マスの大きさ（横62×縦52）に収める。はみ出すと隣と潰し合う */
 function TerrainCell({ c }) {
+  /* ⚠️ 道から遠いマスは地面だけ（terrainPlan の bare） */
+  if (c.bare) return null;
   const { x, y, kind, v } = c;
   const P = (d, ex) => {
     /* ⚠️ key は広げて渡さない（React が警告を出す）。取り出して直に渡す */
@@ -40958,7 +41090,7 @@ const GROUND_PAL = {
 };
 const GROUND_OF_THEME = { mountain: "dark", coast: "grass", river: "grass", shrine: "moss", town: "grass", city: "pave",
   metro: "pave", snow: "snow", onsen: "earth", ruins: "earth", farm: "farm", forest: "dark" };
-function TerrainGround({ cells, themeKey, seed }) {
+function TerrainGround({ cells, themeKey, seed, box }) {
   const byQR = {};
   (cells || []).forEach((c) => { byQR[`${c.q},${c.r}`] = c.kind; });
   const base = GROUND_OF_THEME[themeKey] || "grass";
@@ -40969,6 +41101,8 @@ function TerrainGround({ cells, themeKey, seed }) {
     for (let r = -MAP_RINGS; r <= MAP_RINGS; r++) {
       if (hexDist(q, r) > MAP_RINGS) continue;
       const P = hexAt({ q, r });
+      /* ⚠️ 動かせる範囲の外は敷かない（見えない）。2026-09-29 */
+      if (box && (P.x < box.x0 - XSTEP || P.x > box.x1 + XSTEP || P.y < box.y0 - YSTEP || P.y > box.y1 + YSTEP * 1.6)) continue;
       const k = byQR[`${q},${r}`];
       const type = GROUND_WATER.has(k) ? "water" : GROUND_REEF.has(k) ? "reef" : GROUND_DEEP.has(k) ? "deep" : GROUND_SNOW.has(k) ? "snow" : GROUND_SAND.has(k) ? "sand"
         : GROUND_PAVE.has(k) ? "pave" : base;
@@ -41396,8 +41530,11 @@ function BattleScene({ theme, foes, star, elems }) {
       {/* ⚠️ 地平線を地面（y=120）の少し上に合わせる。高いままだと建物の胴が伸びて見える */}
       <Panorama kind={theme} w={320} h={112} uid="bt" hz={116} />
       <rect x="0" y="120" width="320" height="30" fill="url(#btGround)" />
-      {/* 属性の空気。⚠️ 敵の後ろに置く。前に置くと敵が見えにくい */}
-      <ElemAmbience elems={elems} w={320} h={120} />
+      {/*
+        ⚠️⚠️ 2026-09-29 Aki：「戦闘中の背景は一枚絵でアニメーションなし」（スマホが重く熱くなる）。
+          属性の空気（漂う粒）は外した。景色の動き（窓の灯・煙・波など）も .bt-scene で全部止めている。
+          戻さないこと。動くのは敵と技の演出だけ。
+      */}
       {/*
         敵の立ち位置。
         ⚠️ 影を必ず置く。影が無いと、地面から浮いて紙に見える。
@@ -69432,7 +69569,8 @@ function BattlePanel({ lang, star, stageName, onEnd, theme, rank, zako, startHP,
   const spMax = spMaxOf(setup.star, setup.cards);
   const pressSp = (k) => setSt((v) => {
     if (v.phase === "win" || v.phase === "lose" || v.phase === "ready" || v.phase === "dying") return v;
-    if (((v.sp || {})[k] || 0) < spMax || v.spFire) return v;
+    /* ⚠️ 3枚の段に届いていれば構えられる（満タンを待たなくてよい） */
+    if (spTierOf(((v.sp || {})[k] || 0) / spMax, spRunOf(setup.star)) < 3 || v.spFire) return v;
     return { ...v, spFire: k };
   });
   /* ポーション。⚠️ 1ターンに1個。手番は使わない */
@@ -70303,9 +70441,13 @@ function BattlePanel({ lang, star, stageName, onEnd, theme, rank, zako, startHP,
     */
     if (next.spFire && !((s.turnNext && s.turnNext.halve) || (s.fx && s.fx.dread > 0))) {
       const su = next.spFire;
-      const run = spRunOf(setup.star);
+      /* ⚠️ 撃つ瞬間の溜まりで枚数が決まる（構えてから溜まった分も乗る） */
+      const cap = spRunOf(setup.star);
+      const run = Math.max(3, spTierOf(((next.sp || {})[su] || 0) / spMaxOf(setup.star, setup.cards), cap));
       const tier = Math.min(8, run - 2);
       const mul = FLASH_MUL[tier - 1];
+      /* 満タン（上限の枚数）に対する威力の比。回復はこの比で縮める */
+      const capK = mul / FLASH_MUL[Math.min(8, cap - 2) - 1];
       const wfam = su === "wands" ? next.stance : null;
       const nm = (wfam && a.wandFlashName && a.wandFlashName[wfam] && a.wandFlashName[wfam][tier - 1])
         || (a.flashName && a.flashName[su] && a.flashName[su][tier - 1]) || "";
@@ -70341,7 +70483,8 @@ function BattlePanel({ lang, star, stageName, onEnd, theme, rank, zako, startHP,
         next.mult = Math.min(BATTLE.multCap, next.mult + 0.10 * mul * statK(S5.spirit));
         if (next.mult > before5) pop("me", `×${next.mult.toFixed(2)}`, "holo");
       } else {
-        const h = Math.round(S5.maxHP * (run / 10) * statK(S5.vital));
+        /* ⚠️ 満タンなら従来どおり（上限の枚数/10）。途中で撃つと威力の比の分だけ少ない */
+        const h = Math.round(S5.maxHP * (cap / 10) * capK * statK(S5.vital));
         next.hp = Math.min(S5.maxHP, next.hp + h);
         /* ⚠️ 2026-09-27（Aki）：青の回復必殺は状態異常も消す（手動でも同じ） */
         if (cureDebuffs(next)) timers.current.push(setTimeout(() => pop("me", a.cureAll || "CURE", "holo"), 520));
@@ -71767,20 +71910,22 @@ function BattlePanel({ lang, star, stageName, onEnd, theme, rank, zako, startHP,
               );
             }
             const r = Math.min(1, ((st.sp || {})[k] || 0) / spMax);
+            const cap = spRunOf(setup.star);
+            const run = spTierOf(r, cap);
             const full = r >= 1;
             const armed = st.spFire === k;
+            /* ★ 印の格：3〜4枚／5〜6枚／7〜8枚／9〜10枚。⚠️ 数字は出さない（Aki） */
+            const stage = run >= 9 ? 4 : run >= 7 ? 3 : run >= 5 ? 2 : run >= 3 ? 1 : 0;
             return (
-              <button key={k} type="button" className={`bt-sp sp-${k}${full ? " full" : ""}${armed ? " armed" : ""}`}
-                style={{ "--r": `${Math.round(r * 100)}%` }} disabled={!full || !!st.spFire}
+              <button key={k} type="button"
+                className={`bt-sp sp-${k} stage-${stage}${full ? " full" : ""}${armed ? " armed" : ""}`}
+                disabled={run < 3 || !!st.spFire}
                 title={a.spTip(suitLabel(k, lang))} onClick={() => pressSp(k)}>
-                <span className="bt-sp-pill">
-                  <i className="bt-sp-fill" />
+                <span className="bt-sp-orb">
+                  <SpRing k={k} r={r} cap={cap} stage={stage} />
                   <SpGlyph k={k} fam={st.stance || "fire"} />
-                  {/* ⚠️ きらめきは満タンのときだけ動く（CSS）。位置と間をずらして同時に光らせない */}
-                  {[[18, 20, 0], [78, 30, 470], [60, 72, 930]].map(([x, y, d], q) => (
-                    <i key={q} className="bt-sp-spark" style={{ left: `${x}%`, top: `${y}%`, animationDelay: `${d}ms` }} />
-                  ))}
-                  <b className="bt-sp-pct">{armed ? a.spArmed : full ? a.spReady : `${Math.floor(r * 100)}%`}</b>
+                  <i className="bt-sp-glow" />
+                  {armed && <b className="bt-sp-set">{a.spArmed}</b>}
                 </span>
               </button>
             );
@@ -76649,9 +76794,33 @@ function AdventurePanel({ lang, items, onItem }) {
   */
   const heroKind = heroOf(walking);
   /* ⚠️ 組んだ盤を整える（制覇前は袋小路なし・主の手前は三択・ポーションのマス）。reshapeMap */
-  const map = walking && pref
-    ? reshapeMap((heroKind && buildConvergeMap(pref, ward || area || areasOf(pref)[0], seed, mapNo))
-      || buildTownMap(pref, ward || area || areasOf(pref)[0], seed, mapNo), cleared.includes(walking), seed) : null;
+  /*
+    ⚠️⚠️ 2026-09-29：盤は useMemo で一度だけ組む。指でなぞるたびに視点（view）が変わって描き直しになり、
+      そのたびに盤を組み直していた（スマホが熱くなる一因）。
+  */
+  const mapArea = ward || area || areasOf(pref || "")[0];
+  const clearedHere = cleared.includes(walking);
+  const map = useMemo(() => (walking && pref
+    ? reshapeMap((heroKind && buildConvergeMap(pref, mapArea, seed, mapNo))
+      || buildTownMap(pref, mapArea, seed, mapNo), clearedHere, seed) : null),
+  [walking, pref, mapArea, seed, mapNo, clearedHere, heroKind]); // eslint-disable-line react-hooks/exhaustive-deps
+  /*
+    【動かせる範囲】2026-09-29 Aki：「スクロールできる範囲を狭く」。
+    ★ 道のあるマスの広がり＋少しの余白までしか視点を動かせない。その外は描かない（TerrainLayer の clip）。
+    ⚠️ 上は建物の高さぶん（66）広く取る。狭いと道の上端の景物の頭が切れる。
+  */
+  const mapBox = useMemo(() => {
+    if (!map) return null;
+    let x0 = 1e9, x1 = -1e9, y0 = 1e9, y1 = -1e9;
+    map.forEach((n) => { const P = hexAt(n); x0 = Math.min(x0, P.x); x1 = Math.max(x1, P.x); y0 = Math.min(y0, P.y); y1 = Math.max(y1, P.y); });
+    return { x0: Math.max(0, x0 - XSTEP * 1.2), x1: Math.min(MAP_W, x1 + XSTEP * 1.2),
+      y0: Math.max(0, y0 - YSTEP * 1.2 - 40), y1: Math.min(MAP_H, y1 + YSTEP * 1.2) };
+  }, [map]);
+  const clampView = (x, y) => {
+    const b = mapBox || { x0: 0, x1: MAP_W, y0: 0, y1: MAP_H };
+    const fit = (v, lo, hi, span) => (hi - lo <= span ? (lo + hi - span) / 2 : Math.min(Math.max(lo, v), hi - span));
+    return { x: fit(x, b.x0, b.x1, VIEW_W), y: fit(y, b.y0, b.y1, VIEW_H) };
+  };
   const heroOn = !!(heroKind && map && map.some((n) => n.kind === "boss" && n.q === 0 && n.r === 0));
   /*
     ⚠️ フックは早期 return より前に置く。順番が変わると React が壊れる。
@@ -76665,10 +76834,7 @@ function AdventurePanel({ lang, items, onItem }) {
     map.forEach((n) => { by[n.key] = n; });
     const c = (at && by[at]) ? at : map[0].key;
     const P = hexAt(by[c]);
-    setView({
-      x: Math.min(Math.max(0, P.x - VIEW_W / 2), MAP_W - VIEW_W),
-      y: Math.min(Math.max(0, P.y - VIEW_H / 2), MAP_H - VIEW_H),
-    });
+    setView(clampView(P.x - VIEW_W / 2, P.y - VIEW_H / 2));
   }, [at, walking, seed]);
   /* ---- 旅の型（ビルド）と最初の属性。⚠️ 開放の仕組みが動いていて、まだ選んでいないときだけ ---- */
   if (MAJOR_UNLOCK_ON && !(growSt && growSt.build)) {
@@ -78094,10 +78260,7 @@ function AdventurePanel({ lang, items, onItem }) {
           const k = VIEW_W / box.width;
           const dx = (e.clientX - d.x) * k, dy = (e.clientY - d.y) * k;
           d.moved = Math.max(d.moved, Math.hypot(e.clientX - d.x, e.clientY - d.y));
-          setView({
-            x: Math.min(Math.max(0, d.vx - dx), MAP_W - VIEW_W),
-            y: Math.min(Math.max(0, d.vy - dy), MAP_H - VIEW_H),
-          });
+          setView(clampView(d.vx - dx, d.vy - dy));
         }}
         onPointerCancel={() => { dragRef.current = null; setDragging(false); }}
         /* ⚠️ 叩いても全体は出さない。先が全部見えると、探して進む意味が消える */
@@ -78216,27 +78379,8 @@ function AdventurePanel({ lang, items, onItem }) {
           ⚠️⚠️ 台より奥（先）に描くこと。台の上に景色が被ると道が読めなくなる。
           ⚠️ 並びは奥から手前（terrainPlan で y の順に並べてある）。
         */}
-        {(() => {
-          const tp = terrainPlan(map, seed, themeOf(walking), iso, mapElems, pref, area, heroOn);
-          return (
-            <g style={{ pointerEvents: "none" }}>
-              {/* ⚠️ 大地を先に敷く（川・景物・台はその上） */}
-              <TerrainGround cells={tp.cells} themeKey={themeOf(walking)} seed={seed} />
-              <g clipPath="url(#tgClip)">
-                <TerrainRiver river={tp.river} />
-                <TerrainRail rail={tp.rail} />
-                {/* ⚠️ 高速道路は高架なので線路より手前に描く */}
-                <TerrainHighway hw={tp.highway} />
-              </g>
-              {tp.cells.map((c) => <TerrainCell key={`tc${c.q},${c.r}`} c={c} />)}
-              <TerrainCables pylons={tp.pylons} />
-              {/*
-                名所の主役。⚠️ 地形より手前、台より奥（主のマスが足元に重なる）。
-              */}
-              {heroOn && (() => { const C = iso({ q: 0, r: 0 }); return <HeroMonument kind={heroKind} x={C.x} y={C.y - 6} />; })()}
-            </g>
-          );
-        })()}
+        <TerrainLayer map={map} seed={seed} themeKey={themeOf(walking)} elems={mapElems}
+          pref={pref} area={area} heroOn={heroOn} heroKind={heroKind} box={mapBox} />
         {/*
           地面の景物。
           ⚠️⚠️ 台と道だけだと盤に見える。木・岩・草を置いて、土地の上を歩かせる。
@@ -98700,6 +98844,25 @@ export default function TarotDraw() {
         */
         /* ⚠️ 天気を重ねるので、親を relative にすること */
         .adv-iso-wrap { position: relative; }
+        /*
+          【軽くする】2026-09-29 Aki：「小MAPと戦闘で処理落ち。スマホが重く熱い」。
+          ★ 戦闘の背景は一枚絵（どの端末でも動かさない）。
+          ★ スマホ（指で触る端末）だけ、次を止める：
+              ・小MAPの景色の動き（景物・遠景・渡り鳥・属性の粒・艶）。道の上の印（mv-bob など）は残す。
+              ・敵の絵の中の細かい動き（尾・翼・まばたき等）。器ごとの上下の揺れ（btIdle）は残す。
+              ・格の金属枠の艶。
+          ⚠️ 盤は一枚の svg なので、どこか一か所でも動くと毎フレーム描き直しになる。止めるなら景色ごと止める。
+        */
+        .bt-scene, .bt-scene * { animation: none !important; }
+        @media (hover: none) and (pointer: coarse) {
+          .adv-iso-wrap svg [class*="mv-"]:not(.mv-bob):not(.mv-throb):not(.mv-pulse):not(.mv-trail),
+          .adv-iso-wrap svg [class*="pn-"],
+          .adv-iso-wrap svg .amb-layer, .adv-iso-wrap svg .amb-layer * { animation: none !important; }
+          .adv-iso-wrap svg .amb-layer { opacity: 0.6; }
+          .bt-fig .zk-svg * { animation: none !important; }
+          .bt-fig { filter: drop-shadow(0 0 8px currentColor); will-change: transform; }
+          .bt-foe::after { animation: none; }
+        }
         .adv-iso {
           display: block; width: 100%; height: auto; margin: 0 auto 10px;
           max-width: 460px; aspect-ratio: 19 / 16;
@@ -103495,6 +103658,33 @@ export default function TarotDraw() {
         @keyframes btSpBeat { 0%, 100% { filter: brightness(1); } 50% { filter: brightness(1.25); } }
         @keyframes btSpBob { 0%, 100% { transform: translate(-50%, -50%) scale(1); } 50% { transform: translate(-50%, -58%) scale(1.08); } }
         @keyframes btSpSpark { 0%, 100% { opacity: 0; transform: scale(0.6) rotate(0deg); } 40% { opacity: 1; transform: scale(2.4) rotate(45deg); } 70% { opacity: 0; } }
+        /*
+          円いゲージ（2026-09-29）。⚠️ 旧い長丸（.bt-sp-pill）は「未開放」の伏せ札だけが使う。
+          ⚠️⚠️ 重い動き（背景位置・明るさの脈）を使わない。光るのは .bt-sp-glow の不透明度だけ。
+        */
+        .bt-sp { justify-content: center; }
+        /* ⚠️ 光の色は円の色（印の色）に合わせる。聖杯＝緑の花、貨幣＝青い地球 */
+        .bt-sp.sp-cups { --glow: #7AE08E; } .bt-sp.sp-pentacles { --glow: #6AB4FF; }
+        .bt-sp-orb { position: relative; display: block; width: 100%; max-width: 58px; aspect-ratio: 1 / 1; margin: auto;
+          border-radius: 50%; box-shadow: 0 3px 0 rgba(0,0,0,0.55); transition: transform 90ms ease; }
+        .bt-sp-ring { position: absolute; inset: 0; width: 100%; height: 100%; overflow: visible; }
+        .bt-sp .bt-sp-orb .sp-g { position: absolute; left: 50%; top: 50%; width: 60%; height: auto; transform: translate(-50%, -50%);
+          filter: drop-shadow(0 1px 1.5px rgba(0,0,0,0.85)); opacity: 0.5; animation: none; }
+        .bt-sp.stage-1 .bt-sp-orb .sp-g { opacity: 1; }
+        .bt-sp.stage-2 .bt-sp-orb .sp-g { opacity: 1; filter: drop-shadow(0 0 3px var(--glow)) drop-shadow(0 1px 1.5px rgba(0,0,0,0.85)); }
+        .bt-sp.stage-3 .bt-sp-orb .sp-g, .bt-sp.stage-4 .bt-sp-orb .sp-g { opacity: 1; width: 66%;
+          filter: drop-shadow(0 0 4px var(--glow)) drop-shadow(0 0 1px #FFF) drop-shadow(0 1px 1.5px rgba(0,0,0,0.85)); }
+        .bt-sp-glow { position: absolute; inset: -2px; border-radius: 50%; pointer-events: none; opacity: 0;
+          box-shadow: 0 0 10px 2px var(--glow), inset 0 0 6px var(--glow); }
+        .bt-sp.stage-1:not(:disabled) .bt-sp-glow, .bt-sp.stage-2:not(:disabled) .bt-sp-glow { opacity: 0.35; }
+        .bt-sp.stage-3:not(:disabled) .bt-sp-glow, .bt-sp.stage-4:not(:disabled) .bt-sp-glow { opacity: 0.55; }
+        .bt-sp.full .bt-sp-glow { will-change: opacity; animation: spOrbPulse 2.4s ease-in-out infinite; }
+        .bt-sp.armed .bt-sp-orb { transform: translateY(2px) scale(0.96); box-shadow: 0 1px 0 rgba(0,0,0,0.55); }
+        .bt-sp.armed .bt-sp-glow { will-change: opacity; animation: spOrbPulse 1.4s ease-in-out infinite; }
+        @keyframes spOrbPulse { 0%, 100% { opacity: 0.45; } 50% { opacity: 1; } }
+        .bt-sp:not(:disabled):active .bt-sp-orb { transform: translateY(2px) scale(0.96); }
+        .bt-sp-set { position: absolute; left: 50%; bottom: -2px; transform: translateX(-50%); padding: 0 4px; border-radius: 6px;
+          font-size: 9px; line-height: 12px; font-weight: 700; color: #1A1030; background: var(--glow); white-space: nowrap; }
         /* 押した手応え。⚠️ 影の段のぶん沈む */
         .bt-sp:not(:disabled):active .bt-sp-pill { transform: translateY(3px);
           box-shadow: inset 0 0 0 1.5px #FFFFFF, inset 0 -1px 0 rgba(0,0,0,0.3), 0 1px 0 rgba(0,0,0,0.55), 0 0 20px var(--glow); }
