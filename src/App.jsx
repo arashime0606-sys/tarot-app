@@ -9747,7 +9747,7 @@ const ADV_I18N = {
     /* ⚠️ 勝った手をここで完結させる。画面を移してから押させない */
     toConquer: "制覇する",
     walkingOn: "道は一本です。そのまま進みます。",
-    walkedOn: "道が一本だったので、そのまま進んだ。",
+    walkedOn: "道が一本だったので、そのまま進んだ。", forkAuto: "分かれ道。足の向くほうへ進んだ。",
     weatherName: { clear: "晴れ", cloud: "曇り", rain: "雨", snow: "雪", fog: "霧" },
     bossSuffix: "の主",
     thanksTravel: (p) => `${p}を選んでくれてありがとう。機会があったら、ぜひ実際にも訪ねてみてください。`,
@@ -10039,7 +10039,7 @@ const ADV_I18N = {
     toResult: "See the result",
     toConquer: "Claim it",
     walkingOn: "There is only one way on. Walking on...",
-    walkedOn: "The road was single. Walked on.",
+    walkedOn: "The road was single. Walked on.", forkAuto: "A fork. You followed where your feet led.",
     weatherName: { clear: "Clear", cloud: "Cloudy", rain: "Rain", snow: "Snow", fog: "Fog" },
     bossSuffix: "の主",
     thanksTravel: (p) => `Thank you for choosing ${p}. If you ever get the chance, go and see it for real.`,
@@ -19316,7 +19316,7 @@ function starPoints(r) {
   }
   return p.join(" ");
 }
-function TitleSky({ kind, dim = false }) {
+function TitleSky({ kind, dim = false, paused = false }) {
   /* ⚠️ 雷にも雲を出す。雲の無い雷は、どこから落ちているのか分からない */
   const clouded = kind === "rain" || kind === "snow" || kind === "heavysnow"
     || kind === "blizzard" || kind === "thunder";
@@ -19666,7 +19666,7 @@ function TitleSky({ kind, dim = false }) {
       ⚠️ 色相回転の層に入れない。稲妻が緑や桃色になる。
     */}
     {kind === "thunder" && (
-      <svg className={`sky-bolt${dim ? " dim" : ""}`} aria-hidden="true">
+      <svg className={`sky-bolt${dim ? " dim" : ""}${paused ? " paused" : ""}`} aria-hidden="true">
         {SKY_BOLTS.map((bo, i) => (
           <svg key={`bo${i}`} x={`${bo.x}%`} y="0" overflow="visible">
             <g className="sky-bolt-run" style={{ animationDelay: `${bo.d}s`, animationDuration: `${bo.dur}s` }}>
@@ -19692,7 +19692,7 @@ function TitleSky({ kind, dim = false }) {
         ))}
       </svg>
     )}
-    <svg className={`title-sky${dim ? " dim" : ""}`} aria-hidden="true">
+    <svg className={`title-sky${dim ? " dim" : ""}${paused ? " paused" : ""}`} aria-hidden="true">
       {/*
         天体。右上に据える。降るものと違って動かさない。
         ⚠️ 動かすと「大きな粒」に見えて、空の主が二つになる。
@@ -43690,7 +43690,12 @@ const ZK_PROTO = {
 const ZK_POSES = 6; // 0〜2＝左向きの[横,斜め,正面]、3〜5＝その左右反転
 function zkNextPose(rnd = Math.random) { return Math.floor(rnd() * ZK_POSES); }
 /* 姿を描く。⚠️ 反転は外側の g（transform 属性）、切り替わりの弾みは内側の g（key で付け直して CSS を再生） */
-function ZkPose({ kinds, pose = 1, band = 2 }) {
+/*
+  ⚠️ 2026-09-29：memo で包む（ZkPose）。戦闘は札が一枚出るたびに画面全体を描き直すので、
+    敵の絵（一体に数百の部品）まで毎回作り直していた。姿（kinds・pose・band）が同じなら描き直さない。
+  ⚠️ kinds は ZK_ART / ZKB_ART の定数の配列をそのまま渡すこと（毎回新しい配列を作ると memo が効かない）。
+*/
+function ZkPoseRaw({ kinds, pose = 1, band = 2 }) {
   const C = kinds[pose % 3];
   const flip = pose >= 3;
   /* ⚠️ 帯で大きさを変える（b1 8割・b2 9割・b3 枠いっぱい）。足元（y=96）を基準に縮め、宙に浮かせない */
@@ -43703,6 +43708,7 @@ function ZkPose({ kinds, pose = 1, band = 2 }) {
     </g>
   );
 }
+const ZkPose = memo(ZkPoseRaw);
 /*
   【どの敵の絵を出すか】タイプ（18）× 帯（★1〜4／5〜8／9〜12）→ その帯の2体から、土地と並び順で決まった1体。
   ★ ZK_ART[type] は6体（b1,b1,b2,b2,b3,b3）の [横,斜め,正面]。まだ描いていない枠は null。
@@ -70731,13 +70737,18 @@ const BATTLE_FOE_MS = 720;
   ★ 3・4・6 は制覇報酬（3回）。こちらは演出も倍率どおりに速い。
   ⚠️ 倍率の間はおよそ1.3〜1.5倍ずつ。どの段も一つ上げると「速くなった」と分かる幅にしてある。
 */
-const SPEED_STEPS = [1, 1.5, 2, 3, 4, 6];
-const SPEED_BASE_OPEN = 3;
-const SPEED_ANIM = { 1: 1, 1.5: 1.2, 2: 1.4, 3: 3, 4: 4, 6: 6 };
-/* 速さの表示。⚠️ 最初の三段は三角の数、報酬の段は倍率を金で出す（▷が六つ並ぶと幅が壊れる） */
+/*
+  2026-09-29 改（Aki）：「６倍速なしで４段階に戻す（スマホが熱くなる原因かも）。報酬の３段階は報酬のまま」。
+  ★ 四段：×1（最初から）／×1.5・×2・×3（制覇報酬の三回で一つずつ開く）。
+  ⚠️ ×4・×6 は外した。速い段ほど演出の書き換えが詰まり、スマホが熱くなる。
+*/
+const SPEED_STEPS = [1, 1.5, 2, 3];
+const SPEED_BASE_OPEN = 1;
+const SPEED_ANIM = { 1: 1, 1.5: 1.4, 2: 1.8, 3: 2.6 };
+/* 速さの表示。⚠️ 三角の数（最大四つ） */
 function speedLabel(v) {
   const i = SPEED_STEPS.indexOf(v);
-  return i < SPEED_BASE_OPEN ? "▷".repeat(Math.max(1, i + 1)) : `▶×${v}`;
+  return "▷".repeat(Math.max(1, i + 1));
 }
 const LS_BT_SPEED = "tarot_bt_speed";
 /* 画面の型。⚠️ スマホ（sp）は地名〜HPの帯を画面の高さに収める。PC（pc）は戦場の高さを固定 */
@@ -70882,6 +70893,13 @@ function BattlePanel({ lang, star, stageName, onEnd, theme, rank, zako, startHP,
   speedRef.current = speed;
   /* いま説明を開いている継続。⚠️ 一つだけ。並べて出すと画面が埋まる */
   const [fxOpen, setFxOpen] = useState(null);
+  /* ⚠️ 開いていた効果が切れたら、開いた印も戻す（同じ効果が次に付いたとき勝手に開かないように） */
+  useEffect(() => {
+    if (!fxOpen || !st) return;
+    const on = (st.fx && st.fx[fxOpen] > 0) || (fxOpen === "emperor" && st.foeStun > 0)
+      || nextFxList(st.turnNext).some((x) => x.key === fxOpen);
+    if (!on) setFxOpen(null);
+  }, [st, fxOpen]);
   /*
     盾の段。
     ⚠️ 戦闘のあいだ持ち越す。ターンごとに選び直させると、
@@ -73080,7 +73098,11 @@ function BattlePanel({ lang, star, stageName, onEnd, theme, rank, zako, startHP,
           <div className="bt-fx marks rows">
             <div className="bt-fx-row buf">{all.filter((x) => !BAD[x.key]).map(chip)}</div>
             <div className="bt-fx-row deb">{all.filter((x) => BAD[x.key]).map(chip)}</div>
-            {fxOpen && (
+            {/*
+              ⚠️⚠️ 2026-09-29 Aki（致命的）：開いた説明の効果が切れても説明が残り、消せなくなっていた。
+                いま並んでいる印の中にある効果の説明だけを出す（切れたら一緒に消える）。
+            */}
+            {fxOpen && all.some((x) => x.key === fxOpen) && (
               <p className="bt-fx-help"><b>{(a.fxName && a.fxName[fxOpen]) || fxOpen}</b>{a.fxHelp && a.fxHelp[fxOpen] ? `　${a.fxHelp[fxOpen]}` : ""}</p>
             )}
           </div>
@@ -79215,6 +79237,25 @@ function AdventurePanel({ lang, items, onItem }) {
       何が起きたのか分からないまま盤だけが進む。
     ★ 直前に着いた節が「まだ効果を見せていない」なら一拍置く。
   */
+  /*
+    【札で決めるのは主の手前だけ】2026-09-29 Aki：「タロットカードで方向を決めるのはボス前だけ」。
+    ★ 主の手前（行き先に主がある節）だけ札を配って選ばせる。それ以外の分かれ道は、札を見せずに自動で決めて進む。
+    ⚠️⚠️ 決め方は今までと同じ（山から必要枚数を引き、advanceOn の確率で選ぶ）。
+      引かずに一様に選ぶと、主への到達率（GO_TABLE の実測）が変わってしまう。
+  */
+  const toBossHere = nexts.some((n) => n.kind === "boss");
+  if (!over && !busy && !atBoss && phase === "idle" && !pool && nexts.length >= 2 && !toBossHere) {
+    const mark = `fork:${walking}:${seed}:${at}`;
+    if (kickRef.current !== mark) {
+      kickRef.current = mark;
+      timers.current.push(setTimeout(() => {
+        if (goingRef.current || phaseRef.current !== "idle") return;
+        const deck = buildPool([...MAJOR_LIST, ...MINOR_LIST]);
+        setLog((l) => [...l, a.forkAuto]);
+        commit(deck.slice(0, need));
+      }, ms(820)));
+    }
+  }
   if (!over && !busy && !atBoss && phase === "idle" && !pool && nexts.length === 1) {
     const mark = `one:${walking}:${seed}:${at}`;
     if (kickRef.current !== mark) {
@@ -79225,7 +79266,7 @@ function AdventurePanel({ lang, items, onItem }) {
       }, ms(820)));
     }
   }
-  if (autoRef.current && !over && !busy && !atBoss && phase === "idle" && !pool && nexts.length >= 2) {
+  if (autoRef.current && !over && !busy && !atBoss && phase === "idle" && !pool && nexts.length >= 2 && toBossHere) {
     const mark = `${walking}:${seed}:${at}`;
     if (kickRef.current !== mark) {
       kickRef.current = mark;
@@ -94578,7 +94619,9 @@ export default function TarotDraw() {
       */}
       {!skyOff && (
         <TitleSky kind={skyKind}
-          dim={!(phase === "idle" && (mode === "select" || drawMode === "select"))} />
+          dim={!(phase === "idle" && (mode === "select" || drawMode === "select"))}
+          /* ⚠️ 2026-09-29 Aki：冒険（小MAP・戦闘）の間は空の動きを止める（スマホが熱くなる）。粒の数・色相は変えない。戻れば続きから動く */
+          paused={navTab === "adventure"} />
       )}
       <style>{`
         @import url('https://fonts.googleapis.com/css2?family=Shippori+Mincho:wght@400;500;600;700;800&family=Noto+Sans+JP:wght@300;400;500;700&family=Cinzel:wght@500;600&display=swap');
@@ -94683,6 +94726,12 @@ export default function TarotDraw() {
         }
         /* 盤面の裏に敷くとき。札より前に出ないよう、はっきり落とす */
         .title-sky.dim { opacity: 0.22; }
+        /*
+          冒険の間は止める（2026-09-29 Aki）。⚠️ 消さずに一時停止する（色相もその位置で止まるので、色が跳ねない）。
+          ⚠️ 粒の数・色相の回転・濃さは変えないこと（Aki の決めた値）。止めるのは「冒険の画面にいる間」だけ。
+        */
+        .title-sky.paused, .title-sky.paused *, .sky-bolt.paused * { animation-play-state: paused !important; }
+        .title-sky.paused { will-change: auto; }
         /*
           ⚠️ 文字の上に空を降らせないこと。
           .title-sky は絶対配置なので、position を持たない静的な要素より
@@ -97555,6 +97604,15 @@ export default function TarotDraw() {
           background: rgba(20,14,40,0.82); border: 1px solid rgba(201,162,75,0.5); color: #F0DCA8;
           box-shadow: 0 4px 14px rgba(0,0,0,0.5); -webkit-backdrop-filter: blur(6px); backdrop-filter: blur(6px); }
         .sound-fab.off { color: #8A82A8; border-color: rgba(150,140,190,0.4); }
+        /*
+          2026-09-29 Aki：スマホ（指で触る端末）では、すりガラス（backdrop-filter）をやめて不透明寄りの地にする。
+          ⚠️ 後ろの空が動くたびに、ぼかしを毎フレーム掛け直していた（スマホが熱くなる）。
+        */
+        @media (hover: none) and (pointer: coarse) {
+          .sound-fab, .tarot-root nav, .tarot-root .bottom-nav, .adv-weather-tag, .adv-wrap *, .bt-wrap * {
+            -webkit-backdrop-filter: none !important; backdrop-filter: none !important; }
+          .sound-fab { background: rgba(20,14,40,0.94); }
+        }
         .has-bottom-nav .sound-fab { bottom: calc(78px + env(safe-area-inset-bottom, 0px)); }
         /* 旅の終わりの三枚 */
         .jn-box { margin: 14px auto 6px; padding: 14px 10px 16px; border-radius: 14px; max-width: 460px;
@@ -100243,6 +100301,13 @@ export default function TarotDraw() {
           ⚠️ 盤は一枚の svg なので、どこか一か所でも動くと毎フレーム描き直しになる。止めるなら景色ごと止める。
         */
         .bt-scene, .bt-scene * { animation: none !important; }
+        /*
+          2026-09-29 Aki：「小MAPの動くアニメーション全部なくして（竹などの景色、マスの宝箱や敵も）」。
+          ★ どの端末でも、盤の中の動きは全部止める。駒の移動（transition）と視点の滑り（transition）は残る。
+          ⚠️ 天気の粒（雨・雪）も止めると宙に浮いた点になるので、層ごと隠す（天気の名前の札は残す）。
+        */
+        .adv-iso-wrap *, .adv-iso-wrap *::before, .adv-iso-wrap *::after { animation: none !important; }
+        .adv-iso-wrap .adv-weather { display: none !important; }
         @media (hover: none) and (pointer: coarse) {
           .adv-iso-wrap svg [class*="mv-"]:not(.mv-bob):not(.mv-throb):not(.mv-pulse):not(.mv-trail),
           .adv-iso-wrap svg [class*="pn-"],
