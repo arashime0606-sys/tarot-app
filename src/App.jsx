@@ -9729,7 +9729,7 @@ const ADV_I18N = {
     /* 構え */
     stanceAuto: "オート", stanceManual: "手動", stanceReserved: "次ターンから",
     ctrlTip: (n) => `${n}を止める（次のターンから${CTRL_TURNS}ターン。大アルカナの指定は別）`,
-    spReady: "満", spArmed: "構え",
+    spReady: "満", spArmed: "構え", spGo: "発動", spCharging: "溜め中", potGo: "回復", logBox: "ログ",
     spTip: (n) => `${n}の必殺：${n}の札を出すごとに円が溜まる。刻みを一つ越えるごとに必殺の段が上がり（3枚〜★の上限）、押すと次の札の瞬間に放つ。溜まりは全部使う。満タンまで溜めるほど、溜まりあたりの威力が高い`,
     cureAll: "浄化", potion: "ポーション", potionTip: `ポーション：最大HPの${Math.round(POTION_HEAL * 100)}%回復（1ターンに1個）`,
     layoutTip: "画面の型を切り替える（スマホ／PC）",
@@ -10024,7 +10024,7 @@ const ADV_I18N = {
       reflectP: "P.Reflect", reflectM: "M.Reflect" },
     stanceAuto: "Auto", stanceManual: "Manual", stanceReserved: "Next turn",
     ctrlTip: (n) => `Block ${n} (from next turn, ${CTRL_TURNS} turns; Major Arcana overrides)`,
-    spReady: "MAX", spArmed: "SET",
+    spReady: "MAX", spArmed: "SET", spGo: "TAP", spCharging: "charging", potGo: "HEAL", logBox: "Log",
     spTip: (n) => `${n} finisher: the ring charges with each ${n} card. Each notch passed raises the finisher (3 cards up to your ★ cap). Tap to unleash it on the next card; it uses the whole charge, and a fuller ring is stronger per charge`,
     cureAll: "CURE", potion: "Potion", potionTip: `Potion: heal ${Math.round(POTION_HEAL * 100)}% of max HP (1 per turn)`,
     layoutTip: "Switch layout (phone / PC)",
@@ -34715,6 +34715,1363 @@ function FxBossSp({ spKey, stage, fam, label, elem }) {
   手動の必殺の印。viewBox 0 0 32 20（長丸の中）。
   ⚠️ 札の印（剣・棒・杯・貨）とは別の絵にすること。同じだと札の枠と紛れる。
 */
+/* ==== SP_GLYPHS BEGIN ==== */
+// 必殺ゲージの印 group A：剣 swords・聖杯 cups・貨幣 pentacles（段1→8）
+const SpgA_O = "#2A3458";
+
+// 四方に光る星（4つの尖り）の path
+const SpgA_st = (x, y, R, r = R * 0.26) =>
+  `M${x} ${y - R}L${x + r} ${y - r}L${x + R} ${y}L${x + r} ${y + r}L${x} ${y + R}L${x - r} ${y + r}L${x - R} ${y}L${x - r} ${y - r}Z`;
+function SpgA_Star({ x, y, R, f = "#FFFFFF", sw = 0.5 }) {
+  return <path d={SpgA_st(x, y, R)} fill={f} stroke={SpgA_O} strokeWidth={sw} strokeLinejoin="round" />;
+}
+// 光の刃（p1 が根元、p2 が切っ先）。中ほどが膨らむ細い紡錘
+const SpgA_blade = (x1, y1, x2, y2, w) => {
+  const dx = x2 - x1, dy = y2 - y1, L = Math.hypot(dx, dy), nx = -dy / L, ny = dx / L;
+  const mx = x1 + dx * 0.55, my = y1 + dy * 0.55, h = w * 0.7, b = w * 0.16;
+  const f = (v) => v.toFixed(2);
+  return `M${f(x1 + nx * b)} ${f(y1 + ny * b)}Q${f(mx + nx * h * 1.6)} ${f(my + ny * h * 1.6)} ${f(x2)} ${f(y2)}Q${f(mx - nx * h * 1.6)} ${f(my - ny * h * 1.6)} ${f(x1 - nx * b)} ${f(y1 - ny * b)}Z`;
+};
+// 稲妻（8×14 の枠）
+const SpgA_bolt = "M2.5 0 L8 0 L5 5.2 L8.5 5.2 L1 14 L3.2 7.6 L0 7.6 Z";
+// 雲のもくもく
+const SpgA_cloud = (x, y, s) =>
+  `M${x - 5 * s} ${y + 2 * s}C${x - 7.5 * s} ${y + 2 * s} ${x - 7.5 * s} ${y - 1.5 * s} ${x - 4.5 * s} ${y - 1.2 * s}C${x - 4 * s} ${y - 4 * s} ${x} ${y - 4.5 * s} ${x + 1} ${y - 2 * s}C${x + 3 * s} ${y - 3.5 * s} ${x + 6 * s} ${y - 2 * s} ${x + 5 * s} ${y}C${x + 7.5 * s} ${y} ${x + 7.5 * s} ${y + 2 * s} ${x + 5 * s} ${y + 2 * s}Z`;
+
+/* ───────── 剣 swords：一閃 ───────── */
+function SpgA_swords_1() { // 霧雨一閃：細い刃と、細い雨の筋
+  return (<svg viewBox="0 0 32 32" aria-hidden="true">
+    {[[6, 5], [11, 3], [4, 12], [20, 18], [25, 16], [18, 24], [27, 23]].map(([x, y], i) =>
+      <path key={i} d={`M${x} ${y}l-1.2 5.5`} stroke="#CFE0F2" strokeWidth="1.1" strokeLinecap="round" opacity="0.9" />)}
+    <path d={SpgA_blade(5, 27, 26, 6, 3.4)} fill="#F4F8FF" stroke={SpgA_O} strokeWidth="0.7" />
+    <SpgA_Star x={26} y={6} R={3.6} />
+  </svg>);
+}
+function SpgA_swords_2() { // 疾風一閃：刃に沿って吹き抜ける風
+  return (<svg viewBox="0 0 32 32" aria-hidden="true">
+    <path d="M2 20 C9 18 13 14 17 9" stroke={SpgA_O} strokeWidth="2.6" fill="none" strokeLinecap="round" opacity="0.6" />
+    <path d="M2 20 C9 18 13 14 17 9" stroke="#BFF5E0" strokeWidth="1.5" fill="none" strokeLinecap="round" />
+    <path d="M13 29 C19 26 23 22 27 17" stroke={SpgA_O} strokeWidth="2.6" fill="none" strokeLinecap="round" opacity="0.6" />
+    <path d="M13 29 C19 26 23 22 27 17" stroke="#BFF5E0" strokeWidth="1.5" fill="none" strokeLinecap="round" />
+    <path d="M4 25 C8 24 10 22 12 20" stroke="#FFFFFF" strokeWidth="1" fill="none" strokeLinecap="round" />
+    <path d={SpgA_blade(5, 27, 27, 5, 3.8)} fill="#F4F8FF" stroke={SpgA_O} strokeWidth="0.7" />
+    <SpgA_Star x={27} y={5} R={3.8} />
+  </svg>);
+}
+function SpgA_swords_3() { // 紫電一閃：刃に紫の稲妻が絡む
+  return (<svg viewBox="0 0 32 32" aria-hidden="true">
+    <path d={SpgA_bolt} transform="translate(2 1) rotate(-20 4 7) scale(1.15)" fill="#C08AFF" stroke={SpgA_O} strokeWidth="0.6" strokeLinejoin="round" />
+    <path d={SpgA_bolt} transform="translate(19 14) rotate(-20 4 7) scale(1.05)" fill="#E0C8FF" stroke={SpgA_O} strokeWidth="0.6" strokeLinejoin="round" />
+    <path d={SpgA_blade(6, 28, 27, 6, 4.2)} fill="#F4F8FF" stroke={SpgA_O} strokeWidth="0.7" />
+    <path d="M8 26 L25 8" stroke="#C08AFF" strokeWidth="0.6" />
+    <SpgA_Star x={27} y={6} R={4} f="#F2E6FF" />
+    <SpgA_Star x={6} y={10} R={1.8} f="#E0C8FF" sw={0.4} />
+  </svg>);
+}
+function SpgA_swords_4() { // 烈空一閃：空を裂く三日月の斬撃
+  return (<svg viewBox="0 0 32 32" aria-hidden="true">
+    <defs><linearGradient id="spgAswords4a" x1="0" y1="1" x2="1" y2="0">
+      <stop offset="0" stopColor="#FFD27A" stopOpacity="0.2" /><stop offset="0.6" stopColor="#FFE6A8" /><stop offset="1" stopColor="#FFFFFF" />
+    </linearGradient></defs>
+    <path d="M3 22 C6 10 16 4 28 4 C18 7 10 13 7 25 Z" fill="url(#spgAswords4a)" stroke={SpgA_O} strokeWidth="0.6" />
+    <path d={SpgA_blade(6, 28, 28, 6, 4.6)} fill="#F4F8FF" stroke={SpgA_O} strokeWidth="0.7" />
+    <path d="M9 25 L26 8" stroke="#9FB8E8" strokeWidth="0.7" />
+    <SpgA_Star x={28} y={6} R={4.2} />
+    <SpgA_Star x={21} y={25} R={2} f="#FFE6A8" sw={0.4} />
+  </svg>);
+}
+function SpgA_swords_5() { // 行雲一閃：流れる雲ごと断つ
+  return (<svg viewBox="0 0 32 32" aria-hidden="true">
+    <path d={SpgA_cloud(9, 12, 1.05)} fill="#E8F0FF" stroke={SpgA_O} strokeWidth="0.6" />
+    <path d={SpgA_cloud(22, 21, 1.1)} fill="#C8D6F0" stroke={SpgA_O} strokeWidth="0.6" />
+    <path d="M2 17 H8 M24 13 H30 M3 27 H9" stroke="#E8F0FF" strokeWidth="1" strokeLinecap="round" />
+    <path d={SpgA_blade(4, 29, 28, 5, 5)} fill="#F4F8FF" stroke={SpgA_O} strokeWidth="0.7" />
+    <path d="M8 26 L26 7" stroke="#9FB8E8" strokeWidth="0.8" />
+    <SpgA_Star x={28} y={5} R={4.4} />
+    <SpgA_Star x={25} y={11} R={1.6} sw={0.4} />
+  </svg>);
+}
+function SpgA_swords_6() { // 風雷一閃：片側に風の渦、片側に雷
+  return (<svg viewBox="0 0 32 32" aria-hidden="true">
+    <path d="M4 16 C2 10 8 5 13 7 C17 9 14 13 11 12" stroke={SpgA_O} strokeWidth="2.8" fill="none" strokeLinecap="round" opacity="0.6" />
+    <path d="M4 16 C2 10 8 5 13 7 C17 9 14 13 11 12" stroke="#9FE0FF" strokeWidth="1.6" fill="none" strokeLinecap="round" />
+    <path d="M22 14 L28 16 L24 20 L29 22 L20 30 L22 23 L18 22 Z" fill="#FFF0A0" stroke={SpgA_O} strokeWidth="0.6" strokeLinejoin="round" />
+    <path d={SpgA_blade(4, 29, 28, 4, 5.4)} fill="#F4F8FF" stroke={SpgA_O} strokeWidth="0.7" />
+    <path d="M8 26 L26 7" stroke="#9FE0FF" strokeWidth="0.9" />
+    <SpgA_Star x={28} y={4} R={4.4} />
+    <SpgA_Star x={7} y={24} R={1.8} f="#9FE0FF" sw={0.4} />
+  </svg>);
+}
+function SpgA_swords_7() { // 霹靂一閃：金縁の大きな刃から雷が枝分かれ
+  return (<svg viewBox="0 0 32 32" aria-hidden="true">
+    <defs><linearGradient id="spgAswords7a" x1="0" y1="1" x2="1" y2="0">
+      <stop offset="0" stopColor="#B8C8F0" /><stop offset="0.6" stopColor="#FFFFFF" /><stop offset="1" stopColor="#F4F8FF" />
+    </linearGradient></defs>
+    <path d={SpgA_bolt} transform="translate(0 0) rotate(-15 4 7) scale(1.25)" fill="#FFE68A" stroke={SpgA_O} strokeWidth="0.55" strokeLinejoin="round" />
+    <path d={SpgA_bolt} transform="translate(19 14) rotate(-15 4 7) scale(1.15)" fill="#E0C8FF" stroke={SpgA_O} strokeWidth="0.55" strokeLinejoin="round" />
+    <path d={SpgA_bolt} transform="translate(2 20) rotate(-30 4 7) scale(0.6)" fill="#FFF4C8" stroke={SpgA_O} strokeWidth="0.6" strokeLinejoin="round" />
+    <path d={SpgA_blade(3, 30, 28, 5, 6.2)} fill="url(#spgAswords7a)" stroke="#E8C060" strokeWidth="0.9" />
+    <path d={SpgA_blade(3, 30, 28, 5, 6.2)} fill="none" stroke={SpgA_O} strokeWidth="0.4" />
+    <path d="M7 26 L26 7" stroke="#9FB8E8" strokeWidth="0.8" />
+    <SpgA_Star x={27} y={5} R={5.2} f="#FFF4C8" />
+    <SpgA_Star x={5} y={19} R={1.9} f="#FFE68A" sw={0.4} />
+    <SpgA_Star x={23} y={27} R={1.9} f="#E0C8FF" sw={0.4} />
+  </svg>);
+}
+function SpgA_swords_8() { // 虚空一閃：星のある闇の裂け目を、金の大刃が断つ
+  return (<svg viewBox="0 0 32 32" aria-hidden="true">
+    <defs>
+      <radialGradient id="spgAswords8a"><stop offset="0" stopColor="#3A2470" /><stop offset="1" stopColor="#120828" /></radialGradient>
+      <linearGradient id="spgAswords8b" x1="0" y1="1" x2="1" y2="0">
+        <stop offset="0" stopColor="#E8C060" /><stop offset="0.35" stopColor="#FFFFFF" /><stop offset="1" stopColor="#FFF4C8" />
+      </linearGradient>
+    </defs>
+    <ellipse cx="16" cy="17" rx="15" ry="7.5" transform="rotate(-45 16 17)" fill="url(#spgAswords8a)" stroke="#9A7AFF" strokeWidth="1.1" />
+    {[[9, 13, 0.7], [12, 9, 0.5], [20, 24, 0.7], [23, 20, 0.5], [11, 20, 0.5], [21, 13, 0.5], [15, 26, 0.4]].map(([x, y, r], i) =>
+      <circle key={i} cx={x} cy={y} r={r} fill="#FFFFFF" />)}
+    <path d={SpgA_blade(3, 31, 29, 3, 7)} fill="url(#spgAswords8b)" stroke="#E8C060" strokeWidth="1" />
+    <path d={SpgA_blade(3, 31, 29, 3, 7)} fill="none" stroke={SpgA_O} strokeWidth="0.4" />
+    <path d="M7 27 L27 5" stroke="#9A7AFF" strokeWidth="0.8" />
+    <SpgA_Star x={28} y={4} R={5.6} f="#FFE68A" />
+    <SpgA_Star x={5} y={8} R={2.4} f="#E0C8FF" sw={0.4} />
+    <SpgA_Star x={26} y={26} R={2.4} f="#FFFFFF" sw={0.4} />
+  </svg>);
+}
+
+/* ───────── 聖杯 cups：緑の恵み ───────── */
+function SpgA_Flower({ x, y, r, c = "#FFB6D0", k = "#FFE070", n = 5 }) {
+  return (<g>
+    {Array.from({ length: n }, (_, i) => (
+      <ellipse key={i} cx={x} cy={y - r} rx={r * 0.62} ry={r * 0.95} fill={c} stroke={SpgA_O} strokeWidth="0.4" transform={`rotate(${i * 360 / n} ${x} ${y})`} />
+    ))}
+    <circle cx={x} cy={y} r={r * 0.5} fill={k} stroke={SpgA_O} strokeWidth="0.4" />
+  </g>);
+}
+const SpgA_leaf = (x, y, dx, dy) => { // 付け根(x,y)→先(x+dx,y+dy)の葉
+  const mx = x + dx / 2, my = y + dy / 2, nx = -dy * 0.35, ny = dx * 0.35;
+  return `M${x} ${y}Q${mx + nx} ${my + ny} ${x + dx} ${y + dy}Q${mx - nx} ${my - ny} ${x} ${y}Z`;
+};
+function SpgA_cups_1() { // 自然の恵：丘に一輪の花と若葉
+  return (<svg viewBox="0 0 32 32" aria-hidden="true">
+    <path d="M2 30 C8 22 24 22 30 30 Z" fill="#5AB84A" stroke={SpgA_O} strokeWidth="0.6" />
+    <path d="M16 25 L16 15" stroke="#3E8E3A" strokeWidth="1.6" />
+    <path d={SpgA_leaf(16, 22, -7, -3)} fill="#8AE070" stroke={SpgA_O} strokeWidth="0.5" />
+    <path d={SpgA_leaf(16, 20, 7, -4)} fill="#A8F090" stroke={SpgA_O} strokeWidth="0.5" />
+    <SpgA_Flower x={16} y={10} r={3.6} />
+  </svg>);
+}
+function SpgA_cups_2() { // 天候の恵：花の上にお日さまと雨粒
+  return (<svg viewBox="0 0 32 32" aria-hidden="true">
+    {[0, 45, 90, 135, 180, 225, 270, 315].map((d) =>
+      <path key={d} d="M24 2.2 L24 4.2" stroke="#FFD27A" strokeWidth="1.2" strokeLinecap="round" transform={`rotate(${d} 24 7)`} />)}
+    <circle cx="24" cy="7" r="3" fill="#FFE070" stroke={SpgA_O} strokeWidth="0.5" />
+    {[[5, 5], [9, 9], [4, 12]].map(([x, y], i) =>
+      <path key={i} d={`M${x} ${y - 2.2}C${x + 1.6} ${y} ${x + 1.3} ${y + 1.6} ${x} ${y + 1.6}C${x - 1.3} ${y + 1.6} ${x - 1.6} ${y} ${x} ${y - 2.2}Z`} fill="#9FE0FF" stroke={SpgA_O} strokeWidth="0.4" />)}
+    <path d="M2 30 C8 22 24 22 30 30 Z" fill="#5AB84A" stroke={SpgA_O} strokeWidth="0.6" />
+    <path d="M16 25 L16 16" stroke="#3E8E3A" strokeWidth="1.6" />
+    <path d={SpgA_leaf(16, 22, -7, -3)} fill="#8AE070" stroke={SpgA_O} strokeWidth="0.5" />
+    <path d={SpgA_leaf(16, 20, 7, -4)} fill="#A8F090" stroke={SpgA_O} strokeWidth="0.5" />
+    <SpgA_Flower x={16} y={12} r={3.4} />
+  </svg>);
+}
+function SpgA_cups_3() { // 大地の恵：土の層と根、三つ葉の若木
+  return (<svg viewBox="0 0 32 32" aria-hidden="true">
+    <path d="M1 31 L1 24 C8 18 24 18 31 24 L31 31 Z" fill="#8A6038" stroke={SpgA_O} strokeWidth="0.6" />
+    <path d="M1 25 C8 19 24 19 31 25 L31 27 C24 22 8 22 1 27 Z" fill="#5AB84A" />
+    <path d="M16 23 C14 26 11 27 9 30 M16 23 C18 26 21 27 23 30 M16 23 L16 30" stroke="#E8C890" strokeWidth="0.9" fill="none" strokeLinecap="round" />
+    <path d="M16 22 L16 11" stroke="#3E8E3A" strokeWidth="2" />
+    <path d={SpgA_leaf(16, 19, -9, -3)} fill="#8AE070" stroke={SpgA_O} strokeWidth="0.5" />
+    <path d={SpgA_leaf(16, 16, 9, -4)} fill="#A8F090" stroke={SpgA_O} strokeWidth="0.5" />
+    <path d={SpgA_leaf(16, 13, -7, -6)} fill="#7AE08E" stroke={SpgA_O} strokeWidth="0.5" />
+    <SpgA_Flower x={17} y={7} r={3.5} />
+  </svg>);
+}
+function SpgA_cups_4() { // 四季の恵：春・夏・秋・冬の四つの房をつけた木
+  return (<svg viewBox="0 0 32 32" aria-hidden="true">
+    <path d="M2 31 C8 25 24 25 30 31 Z" fill="#5AB84A" stroke={SpgA_O} strokeWidth="0.6" />
+    <path d="M15 27 L15.2 18 M15.2 21 L11 17 M15.2 20 L20 16" stroke="#8A6038" strokeWidth="2" strokeLinecap="round" />
+    <circle cx="10" cy="14" r="5" fill="#FFB6D0" stroke={SpgA_O} strokeWidth="0.5" />
+    <circle cx="21" cy="14" r="5" fill="#FFA050" stroke={SpgA_O} strokeWidth="0.5" />
+    <circle cx="12" cy="7.5" r="4.8" fill="#7AE08E" stroke={SpgA_O} strokeWidth="0.5" />
+    <circle cx="19.5" cy="7.5" r="4.8" fill="#F4F8FF" stroke={SpgA_O} strokeWidth="0.5" />
+    <circle cx="9" cy="13" r="1" fill="#FFFFFF" /><circle cx="11.5" cy="15.5" r="0.9" fill="#FFFFFF" />
+    <path d={SpgA_leaf(20, 15, 2.5, -2.5)} fill="#E86030" />
+    <path d={SpgA_leaf(11, 8, 2, -2)} fill="#3E8E3A" />
+    <circle cx="18.5" cy="6" r="0.9" fill="#9FB8E8" /><circle cx="21" cy="8.5" r="0.9" fill="#9FB8E8" /><circle cx="19" cy="9.8" r="0.7" fill="#9FB8E8" />
+    <circle cx="15.5" cy="11" r="1.8" fill="#FFE070" stroke={SpgA_O} strokeWidth="0.4" />
+  </svg>);
+}
+function SpgA_cups_5() { // 豊穣の恵：実った金の麦の穂と果実
+  const ear = (rot) => (
+    <g transform={`rotate(${rot} 16 28)`}>
+      <path d="M16 28 L16 11" stroke="#C8A040" strokeWidth="1.2" />
+      {[0, 1, 2, 3].map((i) => <g key={i}>
+        <ellipse cx="14.4" cy={7 + i * 2.6} rx="1.5" ry="2.2" transform={`rotate(-25 14.4 ${7 + i * 2.6})`} fill="#FFD27A" stroke={SpgA_O} strokeWidth="0.4" />
+        <ellipse cx="17.6" cy={7 + i * 2.6} rx="1.5" ry="2.2" transform={`rotate(25 17.6 ${7 + i * 2.6})`} fill="#FFE070" stroke={SpgA_O} strokeWidth="0.4" />
+      </g>)}
+      <ellipse cx="16" cy="5" rx="1.4" ry="2.2" fill="#FFE8A0" stroke={SpgA_O} strokeWidth="0.4" />
+    </g>);
+  return (<svg viewBox="0 0 32 32" aria-hidden="true">
+    {ear(-28)}{ear(28)}{ear(0)}
+    <path d={SpgA_leaf(16, 28, -10, -4)} fill="#7AE08E" stroke={SpgA_O} strokeWidth="0.5" />
+    <path d={SpgA_leaf(16, 28, 10, -4)} fill="#5AB84A" stroke={SpgA_O} strokeWidth="0.5" />
+    <circle cx="12" cy="27" r="2.6" fill="#FF7A8A" stroke={SpgA_O} strokeWidth="0.5" />
+    <circle cx="20" cy="27" r="2.6" fill="#FFB050" stroke={SpgA_O} strokeWidth="0.5" />
+    <circle cx="16" cy="28.5" r="2.3" fill="#B070E0" stroke={SpgA_O} strokeWidth="0.5" />
+    <circle cx="11.3" cy="26.2" r="0.7" fill="#FFFFFF" opacity="0.8" /><circle cx="19.3" cy="26.2" r="0.7" fill="#FFFFFF" opacity="0.8" />
+  </svg>);
+}
+function SpgA_cups_6() { // 生命の恵：花と実をつけた大樹、根が大地に張る
+  return (<svg viewBox="0 0 32 32" aria-hidden="true">
+    <defs><radialGradient id="spgAcups6a" cx="0.4" cy="0.35" r="0.7">
+      <stop offset="0" stopColor="#B8F5A8" /><stop offset="0.6" stopColor="#7AE08E" /><stop offset="1" stopColor="#3E9E4A" />
+    </radialGradient></defs>
+    <path d="M14 30 C13 26 14 22 14.5 18 L17.5 18 C18 22 19 26 18 30 Z" fill="#8A6038" stroke={SpgA_O} strokeWidth="0.5" />
+    <path d="M14 29 C11 29 8 30 5 31 M18 29 C21 29 24 30 27 31" stroke="#8A6038" strokeWidth="1.3" fill="none" strokeLinecap="round" />
+    <path d="M4 19 C1 16 2 11 6 10 C6 5 11 2 16 3 C21 2 26 5 26 10 C30 11 31 16 28 19 C25 22 7 22 4 19 Z" fill="url(#spgAcups6a)" stroke={SpgA_O} strokeWidth="0.6" />
+    <SpgA_Flower x={9} y={12} r={1.9} />
+    <SpgA_Flower x={22} y={9} r={1.9} />
+    <SpgA_Flower x={16} y={16} r={1.9} />
+    {[[14, 8], [24, 16], [8, 17], [19, 13]].map(([x, y], i) => <circle key={i} cx={x} cy={y} r="1.4" fill="#FFD27A" stroke={SpgA_O} strokeWidth="0.4" />)}
+    <SpgA_Star x={27} y={4} R={2.6} f="#FFE68A" sw={0.4} />
+  </svg>);
+}
+function SpgA_cups_7() { // 海山の恵：花咲く山と寄せる海、金の陽
+  return (<svg viewBox="0 0 32 32" aria-hidden="true">
+    <defs><linearGradient id="spgAcups7a" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0" stopColor="#B8F5A8" /><stop offset="1" stopColor="#3E9E4A" />
+    </linearGradient></defs>
+    <SpgA_Star x={26} y={5} R={4} f="#FFE070" />
+    <path d="M1 24 L10 9 L14 15 L19 6 L31 24 Z" fill="url(#spgAcups7a)" stroke={SpgA_O} strokeWidth="0.6" strokeLinejoin="round" />
+    <path d="M19 6 L16.5 10.5 L19 9.5 L21.5 10.5 Z" fill="#FFFFFF" />
+    <SpgA_Flower x={10} y={16} r={1.8} />
+    <SpgA_Flower x={21} y={15} r={1.8} c="#FFD27A" k="#FF9AB8" />
+    <path d="M0 24 C4 21 7 24 10 24 C13 24 14 21 18 21 C22 21 23 24 26 24 C28 24 30 22 32 22 L32 32 L0 32 Z" fill="#4AC8B8" stroke={SpgA_O} strokeWidth="0.6" />
+    <path d="M2 28 C5 26 7 28 10 28 M14 27 C17 25 19 27 22 27 M24 29 C27 27 29 29 31 28" stroke="#E8FFF8" strokeWidth="1" fill="none" strokeLinecap="round" />
+    <SpgA_Star x={5} y={8} R={2} f="#FFE68A" sw={0.4} />
+  </svg>);
+}
+function SpgA_cups_8() { // 地球の恵：若葉の大陸をもつ緑の星に、大輪の花と金の葉
+  return (<svg viewBox="0 0 32 32" aria-hidden="true">
+    <defs><radialGradient id="spgAcups8a" cx="0.38" cy="0.35" r="0.75">
+      <stop offset="0" stopColor="#8AF0C8" /><stop offset="0.6" stopColor="#3AB88A" /><stop offset="1" stopColor="#1E6A5A" />
+    </radialGradient></defs>
+    <path d={SpgA_leaf(9, 30, -7, -10)} fill="#FFD27A" stroke={SpgA_O} strokeWidth="0.5" />
+    <path d={SpgA_leaf(23, 30, 7, -10)} fill="#FFD27A" stroke={SpgA_O} strokeWidth="0.5" />
+    <path d={SpgA_leaf(7, 26, -6, -3)} fill="#FFE8A0" stroke={SpgA_O} strokeWidth="0.5" />
+    <path d={SpgA_leaf(25, 26, 6, -3)} fill="#FFE8A0" stroke={SpgA_O} strokeWidth="0.5" />
+    <circle cx="16" cy="19" r="10" fill="url(#spgAcups8a)" stroke={SpgA_O} strokeWidth="0.7" />
+    <path d="M9 16 C11 13 15 14 14 17 C13 20 10 19 9 22 C7 20 7 18 9 16 Z M17 21 C20 19 24 20 23 24 C21 27 17 26 17 23 Z" fill="#B8F5A8" stroke="#3E8E3A" strokeWidth="0.4" />
+    <path d="M9 14 C10 12 12 11 14 10.5" stroke="#FFFFFF" strokeWidth="0.9" fill="none" opacity="0.7" strokeLinecap="round" />
+    <path d={SpgA_leaf(16, 10, -6, -2)} fill="#7AE08E" stroke={SpgA_O} strokeWidth="0.5" />
+    <path d={SpgA_leaf(16, 10, 6, -2)} fill="#A8F090" stroke={SpgA_O} strokeWidth="0.5" />
+    <SpgA_Flower x={16} y={6} r={3.2} n={6} />
+    <SpgA_Star x={4} y={6} R={2.8} f="#FFE68A" sw={0.4} />
+    <SpgA_Star x={28} y={5} R={2.4} f="#FFFFFF" sw={0.4} />
+  </svg>);
+}
+
+/* ───────── 貨幣 pentacles：青い癒し ───────── */
+const SpgA_drop = (x, y, s) =>
+  `M${x} ${y - 4 * s}C${x + 3 * s} ${y - 0.5 * s} ${x + 2.8 * s} ${y + 2.8 * s} ${x} ${y + 2.8 * s}C${x - 2.8 * s} ${y + 2.8 * s} ${x - 3 * s} ${y - 0.5 * s} ${x} ${y - 4 * s}Z`;
+function SpgA_pentacles_1() { // ブルーサークル：青い環と、中の雫
+  return (<svg viewBox="0 0 32 32" aria-hidden="true">
+    <circle cx="16" cy="16" r="11" fill="none" stroke={SpgA_O} strokeWidth="4.4" opacity="0.7" />
+    <circle cx="16" cy="16" r="11" fill="none" stroke="#6AB4FF" strokeWidth="3.2" />
+    <circle cx="16" cy="16" r="11" fill="none" stroke="#CDEBFF" strokeWidth="0.8" strokeDasharray="6 4" />
+    <path d={SpgA_drop(16, 17, 1.4)} fill="#9AD8FF" stroke={SpgA_O} strokeWidth="0.6" />
+    <path d="M14.2 17 C14.2 15.5 15 14.2 15.8 13.5" stroke="#FFFFFF" strokeWidth="0.8" fill="none" strokeLinecap="round" />
+  </svg>);
+}
+function SpgA_pentacles_2() { // ブルースフィア：光る青い球
+  return (<svg viewBox="0 0 32 32" aria-hidden="true">
+    <defs><radialGradient id="spgApentacles2a" cx="0.36" cy="0.32" r="0.75">
+      <stop offset="0" stopColor="#E0F4FF" /><stop offset="0.35" stopColor="#6AB4FF" /><stop offset="1" stopColor="#1E5FC8" />
+    </radialGradient></defs>
+    <circle cx="16" cy="17" r="11" fill="url(#spgApentacles2a)" stroke={SpgA_O} strokeWidth="0.7" />
+    <ellipse cx="12" cy="12" rx="3.2" ry="2" transform="rotate(-35 12 12)" fill="#FFFFFF" opacity="0.85" />
+    <path d="M8 22 C11 26 19 27 23 24" stroke="#CDEBFF" strokeWidth="0.9" fill="none" strokeLinecap="round" opacity="0.8" />
+    <SpgA_Star x={26} y={6} R={3} />
+  </svg>);
+}
+function SpgA_pentacles_3() { // ブルードーム：大地を覆う青い半球
+  return (<svg viewBox="0 0 32 32" aria-hidden="true">
+    <defs><linearGradient id="spgApentacles3a" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0" stopColor="#BDE4FF" stopOpacity="0.95" /><stop offset="1" stopColor="#3A8AE8" stopOpacity="0.9" />
+    </linearGradient></defs>
+    <path d="M3 25 C3 13 9 6 16 6 C23 6 29 13 29 25 Z" fill="url(#spgApentacles3a)" stroke={SpgA_O} strokeWidth="0.7" />
+    <path d="M9 25 C9 16 12 10 16 6 C20 10 23 16 23 25" stroke="#E8F6FF" strokeWidth="0.7" fill="none" opacity="0.7" />
+    <path d="M5 17 C10 15 22 15 27 17" stroke="#E8F6FF" strokeWidth="0.7" fill="none" opacity="0.7" />
+    <path d="M7 16 C7 12 10 9 13 8" stroke="#FFFFFF" strokeWidth="1.3" fill="none" strokeLinecap="round" />
+    <rect x="1" y="24.5" width="30" height="4" rx="2" fill="#1E5FC8" stroke={SpgA_O} strokeWidth="0.6" />
+    <path d="M4 26.5 H28" stroke="#9AD8FF" strokeWidth="0.8" />
+    <SpgA_Star x={25} y={5} R={3} />
+  </svg>);
+}
+function SpgA_pentacles_4() { // ブルーサンクチュアリ：守りの盾に、癒しの雫
+  return (<svg viewBox="0 0 32 32" aria-hidden="true">
+    <defs><linearGradient id="spgApentacles4a" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0" stopColor="#9AD8FF" /><stop offset="0.55" stopColor="#3A8AE8" /><stop offset="1" stopColor="#1E4AA8" />
+    </linearGradient></defs>
+    <path d="M16 2 C20 4.5 24 5 28 5 C28 17 24 25 16 30 C8 25 4 17 4 5 C8 5 12 4.5 16 2 Z" fill="url(#spgApentacles4a)" stroke={SpgA_O} strokeWidth="0.7" />
+    <path d="M16 4.6 C19.5 6.5 22.5 7 25.5 7.2 C25.2 17 22 23 16 27.2 C10 23 6.8 17 6.5 7.2 C9.5 7 12.5 6.5 16 4.6 Z" fill="none" stroke="#CDEBFF" strokeWidth="0.9" />
+    <path d={SpgA_drop(16, 17, 1.5)} fill="#F4FBFF" stroke={SpgA_O} strokeWidth="0.6" />
+    <path d="M14 17 C14 15.5 14.8 14 15.6 13.3" stroke="#6AB4FF" strokeWidth="0.8" fill="none" strokeLinecap="round" />
+    <SpgA_Star x={25} y={24} R={2.6} sw={0.4} />
+    <SpgA_Star x={7} y={23} R={1.6} f="#CDEBFF" sw={0.4} />
+  </svg>);
+}
+function SpgA_pentacles_5() { // ブルーラグーン：白い砂の環に囲まれた澄んだ入り江
+  return (<svg viewBox="0 0 32 32" aria-hidden="true">
+    <defs><radialGradient id="spgApentacles5a" cx="0.5" cy="0.45" r="0.6">
+      <stop offset="0" stopColor="#C8FAFF" /><stop offset="0.7" stopColor="#5AD8E8" /><stop offset="1" stopColor="#2AA8D8" />
+    </radialGradient></defs>
+    <ellipse cx="16" cy="18" rx="15" ry="11" fill="#1E5FC8" stroke={SpgA_O} strokeWidth="0.7" />
+    <path d="M1.5 18 C4 21 8 22 11 21 M21 27 C24 26 27 25 30 22" stroke="#6AB4FF" strokeWidth="0.9" fill="none" strokeLinecap="round" />
+    <ellipse cx="16" cy="17.5" rx="11" ry="7.5" fill="#F4ECD0" stroke={SpgA_O} strokeWidth="0.5" />
+    <ellipse cx="16" cy="17.5" rx="9" ry="5.8" fill="url(#spgApentacles5a)" />
+    <path d="M11 17 C13 16 14 18 16 17 C18 16 19 18 21 17" stroke="#FFFFFF" strokeWidth="0.8" fill="none" strokeLinecap="round" />
+    <path d="M22 11 C23 7 24 5 24.5 4" stroke="#8A6038" strokeWidth="1" fill="none" strokeLinecap="round" />
+    <path d={SpgA_leaf(24.5, 4, -5, 1.5)} fill="#5AC87A" stroke={SpgA_O} strokeWidth="0.4" />
+    <path d={SpgA_leaf(24.5, 4, 5, 2)} fill="#7AE08E" stroke={SpgA_O} strokeWidth="0.4" />
+    <path d={SpgA_leaf(24.5, 4, -1, -4)} fill="#5AC87A" stroke={SpgA_O} strokeWidth="0.4" />
+    <SpgA_Star x={6} y={6} R={2.6} sw={0.4} />
+  </svg>);
+}
+function SpgA_pentacles_6() { // ブルーオーシャン：巻き上がる大波
+  return (<svg viewBox="0 0 32 32" aria-hidden="true">
+    <defs><linearGradient id="spgApentacles6a" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0" stopColor="#9AD8FF" /><stop offset="0.5" stopColor="#3A8AE8" /><stop offset="1" stopColor="#1E4AA8" />
+    </linearGradient></defs>
+    <path d="M1 29 C3 18 9 7 19 5 C26 4 30 9 29 14 C28 18 23 19 21 16 C19 13 22 10 25 12 C24 9 19 9 16 13 C12 18 14 25 18 29 Z"
+      fill="url(#spgApentacles6a)" stroke={SpgA_O} strokeWidth="0.7" strokeLinejoin="round" />
+    <path d="M6 23 C8 15 12 10 18 7.5 C23 6 27 8 28 11" stroke="#F4FBFF" strokeWidth="1.6" fill="none" strokeLinecap="round" />
+    <path d="M9 26 C10 20 12 16 15 13" stroke="#CDEBFF" strokeWidth="0.9" fill="none" strokeLinecap="round" />
+    <circle cx="28.5" cy="17.5" r="1" fill="#FFFFFF" stroke={SpgA_O} strokeWidth="0.3" />
+    <circle cx="26" cy="19.5" r="0.7" fill="#FFFFFF" />
+    <path d="M14 29 C18 25 22 27 25 25 C27 24 29 25 31 24 L31 31 L14 31 Z" fill="#6AB4FF" stroke={SpgA_O} strokeWidth="0.6" />
+    <path d="M18 28.5 C21 27 24 28 27 27" stroke="#FFFFFF" strokeWidth="0.8" fill="none" strokeLinecap="round" />
+    <SpgA_Star x={7} y={6} R={3} />
+  </svg>);
+}
+function SpgA_pentacles_7() { // ブルーガイア：海流の渦巻く水の星、金の縁と光
+  return (<svg viewBox="0 0 32 32" aria-hidden="true">
+    <defs><radialGradient id="spgApentacles7a" cx="0.38" cy="0.35" r="0.75">
+      <stop offset="0" stopColor="#BDE4FF" /><stop offset="0.45" stopColor="#3A8AE8" /><stop offset="1" stopColor="#123C98" />
+    </radialGradient></defs>
+    <circle cx="16" cy="17" r="11.5" fill="url(#spgApentacles7a)" stroke={SpgA_O} strokeWidth="0.7" />
+    <path d="M6 13 C9 11 12 14 15 12 C18 10 21 13 25 11 M5.5 18 C9 16 12 19 16 17 C20 15 23 18 27 16" stroke="#E8F6FF" strokeWidth="1.4" fill="none" strokeLinecap="round" />
+    <path d={SpgA_drop(16, 23, 0.9)} fill="#F4FBFF" stroke={SpgA_O} strokeWidth="0.5" />
+    <path d={SpgA_leaf(16, 6, -5, -2.5)} fill="#7AE08E" stroke={SpgA_O} strokeWidth="0.5" />
+    <path d={SpgA_leaf(16, 6, 4.5, -3.5)} fill="#A8F090" stroke={SpgA_O} strokeWidth="0.5" />
+    <path d="M6 21 C8 23 10 23 12 22 M21 26 C23 25 25 24 26 22" stroke="#9AD8FF" strokeWidth="0.9" fill="none" strokeLinecap="round" />
+    <path d="M24 9.5 C27 12 28.5 16 27.5 20.5" stroke="#FFD27A" strokeWidth="1.3" fill="none" strokeLinecap="round" />
+    <SpgA_Star x={26} y={5} R={3.6} f="#FFE68A" />
+    <SpgA_Star x={5} y={8} R={2.2} sw={0.4} />
+    <SpgA_Star x={6} y={28} R={1.8} f="#FFE68A" sw={0.4} />
+  </svg>);
+}
+function SpgA_pentacles_8() { // ブルーアース：大気に包まれた壮大な青い地球、金の光
+  return (<svg viewBox="0 0 32 32" aria-hidden="true">
+    <defs>
+      <radialGradient id="spgApentacles8a" cx="0.36" cy="0.34" r="0.75">
+        <stop offset="0" stopColor="#8AC8FF" /><stop offset="0.5" stopColor="#2A78E0" /><stop offset="1" stopColor="#0E2A78" />
+      </radialGradient>
+      <radialGradient id="spgApentacles8b"><stop offset="0.78" stopColor="#6AB4FF" stopOpacity="0.9" /><stop offset="1" stopColor="#6AB4FF" stopOpacity="0" /></radialGradient>
+    </defs>
+    <circle cx="16" cy="16.5" r="15" fill="url(#spgApentacles8b)" />
+    <circle cx="16" cy="16.5" r="12" fill="url(#spgApentacles8a)" stroke={SpgA_O} strokeWidth="0.7" />
+    <path d="M8 9 C12 7 15 10 13.5 13 C12 16 8 14 7 18 C5 15 5 11 8 9 Z M17 17 C21 15 26 17 25 22 C23 26 18 25 18 21 Z M18 7 C21 6.5 24 8 23 10.5 C20.5 11 18.5 9.5 18 7 Z"
+      fill="#5AC87A" stroke="#2A6A3A" strokeWidth="0.4" />
+    <path d="M9 22 C12 21 14 23 17 22 M14 9 C16 8.5 17 9.5 18.5 9" stroke="#FFFFFF" strokeWidth="1" fill="none" strokeLinecap="round" opacity="0.85" />
+    <path d="M22.5 6.5 C27 9 29 14 28 20 C27 24 24.5 26.5 22 28" stroke="#FFD27A" strokeWidth="1.5" fill="none" strokeLinecap="round" />
+    <path d="M7 10 C8 8 10 6 12.5 5.5" stroke="#FFFFFF" strokeWidth="1" fill="none" strokeLinecap="round" opacity="0.8" />
+    <SpgA_Star x={27} y={4.5} R={4.4} f="#FFE68A" />
+    <SpgA_Star x={4} y={26} R={2.8} f="#FFFFFF" sw={0.4} />
+    <SpgA_Star x={4.5} y={5} R={2} f="#FFE68A" sw={0.4} />
+  </svg>);
+}
+
+const SPG_A = {
+  swords: [SpgA_swords_1, SpgA_swords_2, SpgA_swords_3, SpgA_swords_4, SpgA_swords_5, SpgA_swords_6, SpgA_swords_7, SpgA_swords_8],
+  cups: [SpgA_cups_1, SpgA_cups_2, SpgA_cups_3, SpgA_cups_4, SpgA_cups_5, SpgA_cups_6, SpgA_cups_7, SpgA_cups_8],
+  pentacles: [SpgA_pentacles_1, SpgA_pentacles_2, SpgA_pentacles_3, SpgA_pentacles_4, SpgA_pentacles_5, SpgA_pentacles_6, SpgA_pentacles_7, SpgA_pentacles_8],
+};
+/*
+  棒（魔法）の必殺ゲージの印。構えの属性 fire / water / wind × 段1〜8。
+  ★ 段1は今の構えの印に近い素朴な形、段8は同じモチーフの最も壮大な形。
+  ★ 段が上がるほど：線が太く・数が増え・きらめきが増え・段7〜8で金が入る。
+  ⚠️ 静止画のみ（animate / filter / className 禁止）。グラデーションの id は spgB<行><段><記号> で固有。
+*/
+const SpgB_O = "#2A3458"; // 輪郭の暗色
+const SpgB_GOLD = "#FFD86A";
+
+/* 四方に光る星（4つの尖り） */
+function SpgB_star(cx, cy, r, fill, k) {
+  const q = r * (k || 0.26);
+  return (
+    <path
+      d={`M${cx} ${cy - r} L${cx + q} ${cy - q} L${cx + r} ${cy} L${cx + q} ${cy + q} L${cx} ${cy + r} L${cx - q} ${cy + q} L${cx - r} ${cy} L${cx - q} ${cy - q} Z`}
+      fill={fill || "#FFFFFF"} stroke={SpgB_O} strokeWidth="0.45" strokeLinejoin="round"
+    />
+  );
+}
+/* 炎の舌。底 (cx, by)、幅 w、高さ h、先端のずれ lean */
+function SpgB_flameD(cx, by, w, h, lean) {
+  const t = cx + (lean || 0), y = by - h;
+  return `M${t} ${y} C${t + w * 0.12} ${by - h * 0.72} ${cx + w * 0.5} ${by - h * 0.55} ${cx + w * 0.5} ${by - h * 0.28} C${cx + w * 0.5} ${by - h * 0.07} ${cx + w * 0.27} ${by} ${cx} ${by} C${cx - w * 0.27} ${by} ${cx - w * 0.5} ${by - h * 0.07} ${cx - w * 0.5} ${by - h * 0.28} C${cx - w * 0.5} ${by - h * 0.5} ${t - w * 0.16} ${by - h * 0.64} ${t} ${y} Z`;
+}
+/* 尖りの多い爆発（n 個の尖り、外径 R、内径 r、ゆらぎ j） */
+function SpgB_burstD(cx, cy, n, R, r, j, rot) {
+  const pts = [];
+  for (let i = 0; i < n * 2; i++) {
+    const a = ((rot || 0) + (i * 180) / n) * Math.PI / 180;
+    const jit = j ? (((i * 7) % 5) - 2) * j : 0;
+    const rr = i % 2 === 0 ? R + jit : r;
+    pts.push(`${(cx + Math.sin(a) * rr).toFixed(2)} ${(cy - Math.cos(a) * rr).toFixed(2)}`);
+  }
+  return `M${pts.join(" L")} Z`;
+}
+const SpgB_svg = (kids) => <svg viewBox="0 0 32 32" aria-hidden="true">{kids}</svg>;
+
+/* ───────── fire 火（橙赤 #FF8A4A） ───────── */
+// 爆裂：小さな爆ぜ。八つの尖りと白い芯
+function SpgB_fire_1() {
+  return SpgB_svg(<>
+    <path d={SpgB_burstD(16, 16, 8, 13.5, 6.4, 0, 0)} fill="#FF8A4A" stroke={SpgB_O} strokeWidth="0.6" strokeLinejoin="round" />
+    <path d={SpgB_burstD(16, 16, 8, 8, 3.8, 0, 22.5)} fill="#FFD27A" />
+    <circle cx="16" cy="16" r="2.8" fill="#FFF6DC" />
+  </>);
+}
+// 灰塵：燃え上がる炎と、舞い上がる灰と火の粉
+function SpgB_fire_2() {
+  return SpgB_svg(<>
+    <path d={SpgB_flameD(15, 30, 16, 24, 1)} fill="#FF8A4A" stroke={SpgB_O} strokeWidth="0.6" />
+    <path d={SpgB_flameD(15, 29, 8.5, 13, 0.5)} fill="#FFD27A" />
+    {[[26, 8, 2.4, "#9A8E9E"], [5, 8, 2.1, "#B8AEBC"], [27.5, 17, 1.8, "#8A7E90"], [9.5, 2.8, 1.6, "#A89CB0"], [22, 2.8, 1.5, "#C0B6C6"]].map(([x, y, r, c], i) => (
+      <rect key={i} x={x - r} y={y - r * 0.6} width={r * 2} height={r * 1.2} rx="0.4" fill={c} stroke={SpgB_O} strokeWidth="0.4" transform={`rotate(${i * 37 - 30} ${x} ${y})`} />
+    ))}
+    <circle cx="4" cy="15" r="1.3" fill="#FFB060" /><circle cx="24" cy="12.5" r="1.1" fill="#FFD27A" /><circle cx="16" cy="2.5" r="1" fill="#FFB060" />
+  </>);
+}
+// 紅蓮：紅の炎の花びらが開く蓮
+function SpgB_fire_3() {
+  return SpgB_svg(<>
+    <defs>
+      <linearGradient id="spgBfire3a" x1="0" y1="1" x2="0" y2="0"><stop offset="0" stopColor="#FF5A3A" /><stop offset="1" stopColor="#C8243A" /></linearGradient>
+    </defs>
+    {[-62, -32, 32, 62].map((a) => (
+      <path key={a} d={SpgB_flameD(16, 27, 8, 17, 0)} fill="url(#spgBfire3a)" stroke={SpgB_O} strokeWidth="0.55" transform={`rotate(${a} 16 26)`} />
+    ))}
+    <path d={SpgB_flameD(16, 27, 10, 22, 0)} fill="#FF6A3A" stroke={SpgB_O} strokeWidth="0.6" />
+    <path d={SpgB_flameD(16, 26.5, 5.5, 13, 0)} fill="#FFC060" />
+    <path d="M9 27.5 Q16 30.5 23 27.5" stroke="#C8243A" strokeWidth="1.6" fill="none" strokeLinecap="round" />
+  </>);
+}
+// 烈火：三つの舌が激しく立つ炎
+function SpgB_fire_4() {
+  return SpgB_svg(<>
+    <path d={SpgB_flameD(9.5, 29, 10, 18, -3)} fill="#FF7A3A" stroke={SpgB_O} strokeWidth="0.6" />
+    <path d={SpgB_flameD(22.5, 29, 10, 18, 3)} fill="#FF7A3A" stroke={SpgB_O} strokeWidth="0.6" />
+    <path d={SpgB_flameD(16, 29.5, 14, 28, 0)} fill="#FF8A4A" stroke={SpgB_O} strokeWidth="0.7" />
+    <path d={SpgB_flameD(16, 29, 8.5, 17, 0)} fill="#FFD27A" />
+    <path d={SpgB_flameD(16, 28.5, 4, 8, 0)} fill="#FFF6DC" />
+  </>);
+}
+// 業火：地を這う炎の壁と、飛ぶ火の粉
+function SpgB_fire_5() {
+  return SpgB_svg(<>
+    <defs>
+      <linearGradient id="spgBfire5a" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stopColor="#FF9A4A" /><stop offset="1" stopColor="#D8303A" /></linearGradient>
+    </defs>
+    {[[4.5, 14, -2], [27.5, 14, 2], [10, 20, -1], [22, 20, 1]].map(([x, h, l], i) => (
+      <path key={i} d={SpgB_flameD(x, 29, 9, h, l)} fill="url(#spgBfire5a)" stroke={SpgB_O} strokeWidth="0.55" />
+    ))}
+    <path d={SpgB_flameD(16, 29, 12, 26, 0)} fill="url(#spgBfire5a)" stroke={SpgB_O} strokeWidth="0.65" />
+    {[[10, 28, 5, 9], [22, 28, 5, 9], [16, 28.5, 6, 14]].map(([x, b, w, h], i) => (
+      <path key={i} d={SpgB_flameD(x, b, w, h, 0)} fill="#FFD27A" />
+    ))}
+    <rect x="2" y="27" width="28" height="3" rx="1.5" fill="#C8243A" stroke={SpgB_O} strokeWidth="0.5" />
+    <circle cx="4" cy="6" r="1.1" fill="#FFB060" /><circle cx="28" cy="5" r="1.2" fill="#FFD27A" /><circle cx="25" cy="10" r="0.8" fill="#FFB060" />
+  </>);
+}
+// 滅失：すべてを消し去る爆心。黒い芯を裂く赤い爆炎と飛び散る破片
+function SpgB_fire_6() {
+  return SpgB_svg(<>
+    <path d={SpgB_burstD(16, 16, 12, 14.5, 7, 0.7, 0)} fill="#E8402A" stroke={SpgB_O} strokeWidth="0.65" strokeLinejoin="round" />
+    <path d={SpgB_burstD(16, 16, 12, 10.5, 6, 0.5, 15)} fill="#FF9A4A" />
+    <path d={SpgB_burstD(16, 16, 8, 7, 4.2, 0, 0)} fill="#FFE08A" />
+    <circle cx="16" cy="16" r="3.6" fill="#1A0E1E" stroke="#FFF6DC" strokeWidth="1" />
+    {[[3, 4, 20], [29, 5, -30], [3.5, 28, 60], [28.5, 28, 10]].map(([x, y, a], i) => (
+      <path key={i} d={`M${x - 1.6} ${y} L${x} ${y - 1.2} L${x + 1.8} ${y + 0.4} L${x} ${y + 1.3} Z`} fill="#FFB060" stroke={SpgB_O} strokeWidth="0.4" transform={`rotate(${a} ${x} ${y})`} />
+    ))}
+  </>);
+}
+// 神炎：金に輝く大きな炎。白金の芯ときらめき
+function SpgB_fire_7() {
+  return SpgB_svg(<>
+    <defs>
+      <linearGradient id="spgBfire7a" x1="0" y1="1" x2="0" y2="0"><stop offset="0" stopColor="#FF6A2A" /><stop offset="0.6" stopColor="#FF9A3A" /><stop offset="1" stopColor={SpgB_GOLD} /></linearGradient>
+      <linearGradient id="spgBfire7b" x1="0" y1="1" x2="0" y2="0"><stop offset="0" stopColor="#FFFFFF" /><stop offset="1" stopColor="#FFE9A0" /></linearGradient>
+    </defs>
+    <path d={SpgB_flameD(7.5, 30, 10, 19, -3.5)} fill="url(#spgBfire7a)" stroke={SpgB_O} strokeWidth="0.6" />
+    <path d={SpgB_flameD(24.5, 30, 10, 19, 3.5)} fill="url(#spgBfire7a)" stroke={SpgB_O} strokeWidth="0.6" />
+    <path d={SpgB_flameD(16, 30.5, 17, 30, 0)} fill="url(#spgBfire7a)" stroke={SpgB_O} strokeWidth="0.75" />
+    <path d={SpgB_flameD(16, 29.5, 11, 21, 0)} fill={SpgB_GOLD} />
+    <path d={SpgB_flameD(16, 29, 6, 12, 0)} fill="url(#spgBfire7b)" />
+    {SpgB_star(26.5, 6, 3.4, "#FFFFFF")}
+    {SpgB_star(5, 9, 2.4, "#FFF0B0")}
+  </>);
+}
+// 滅界：世界を焼く火球。炎の冠が四方に噴き、金のきらめき
+function SpgB_fire_8() {
+  const tongues = Array.from({ length: 12 }, (_, i) => i * 30);
+  return SpgB_svg(<>
+    <defs>
+      <radialGradient id="spgBfire8a" cx="0.42" cy="0.4" r="0.65"><stop offset="0" stopColor="#FFFFFF" /><stop offset="0.3" stopColor="#FFE9A0" /><stop offset="0.65" stopColor="#FF9A3A" /><stop offset="1" stopColor="#D8303A" /></radialGradient>
+      <linearGradient id="spgBfire8b" x1="0" y1="1" x2="0" y2="0"><stop offset="0" stopColor="#E8402A" /><stop offset="1" stopColor={SpgB_GOLD} /></linearGradient>
+    </defs>
+    {tongues.map((a, i) => (
+      <path key={a} d={SpgB_flameD(16, 16, i % 2 ? 6.5 : 8.5, i % 2 ? 14 : 16.5, 0)} fill="url(#spgBfire8b)" stroke={SpgB_O} strokeWidth="0.5" transform={`rotate(${a + 8} 16 16)`} />
+    ))}
+    <circle cx="16" cy="16" r="10" fill="url(#spgBfire8a)" stroke={SpgB_O} strokeWidth="0.7" />
+    <path d="M9 15 L12 16.5 L11 19 L14 20.5 M19 9.5 L18.5 12 L21 13.5 L20.5 16 M16 23.5 L17 21.5 L19.5 22" stroke="#C8243A" strokeWidth="0.9" fill="none" strokeLinecap="round" strokeLinejoin="round" />
+    {SpgB_star(27.5, 4.5, 3.4, "#FFFFFF")}
+    {SpgB_star(4, 27, 2.8, SpgB_GOLD)}
+    {SpgB_star(4.5, 5, 2, "#FFF0B0")}
+  </>);
+}
+
+/* ───────── water 水（青 #6AB4FF） ───────── */
+// 水泡：ふくらむ泡の粒
+function SpgB_water_1() {
+  const bub = (x, y, r) => (
+    <g key={`${x}${y}`}>
+      <circle cx={x} cy={y} r={r} fill="#6AB4FF" fillOpacity="0.55" stroke="#BFE6FF" strokeWidth={r > 5 ? 1.4 : 1} />
+      <circle cx={x} cy={y} r={r + 0.7} fill="none" stroke={SpgB_O} strokeWidth="0.5" />
+      <path d={`M${x - r * 0.62} ${y - r * 0.1} A${r * 0.65} ${r * 0.65} 0 0 1 ${x - r * 0.05} ${y - r * 0.66}`} stroke="#FFFFFF" strokeWidth={r > 5 ? 1.4 : 0.9} fill="none" strokeLinecap="round" />
+    </g>
+  );
+  return SpgB_svg(<>{bub(14, 18, 8.5)}{bub(25, 8, 4.2)}{bub(26.5, 23, 2.6)}{bub(6, 5.5, 2.2)}</>);
+}
+// 氷雨：斜めに降りそそぐ氷の針
+function SpgB_water_2() {
+  const nd = (x, y, L, w) => `M${x} ${y} L${x + w} ${y + L * 0.5} L${x} ${y + L} L${x - w} ${y + L * 0.5} Z`;
+  return SpgB_svg(<g transform="rotate(22 16 16)">
+    {[[7, 1, 14], [13, 8, 17], [19, 2, 15], [25, 9, 13], [10, 18, 11], [22, 20, 10]].map(([x, y, L], i) => (
+      <path key={i} d={nd(x, y, L, 1.7)} fill={i % 2 ? "#BFE6FF" : "#6AB4FF"} stroke={SpgB_O} strokeWidth="0.5" strokeLinejoin="round" />
+    ))}
+    <path d="M13 8 L13 25" stroke="#FFFFFF" strokeWidth="0.6" /><path d="M19 2 L19 17" stroke="#FFFFFF" strokeWidth="0.6" />
+  </g>);
+}
+// 激流：うねって押し寄せる三筋の流れ
+function SpgB_water_3() {
+  const band = (y, c) => `M1 ${y + 4} C7 ${y - 2} 12 ${y + 6} 18 ${y} C21 ${y - 3} 26 ${y - 3} 29 ${y + 1} C27 ${y - 1} 24 ${y} 24 ${y + 2} C27 ${y + 3} 29 ${y + 5} 31 ${y + 4} C25 ${y + 10} 20 ${y + 6} 16 ${y + 8} C11 ${y + 10} 6 ${y + 6} 1 ${y + 9} Z`;
+  return SpgB_svg(<>
+    <path d={band(18, 0)} fill="#2A6AD0" stroke={SpgB_O} strokeWidth="0.6" strokeLinejoin="round" />
+    <path d={band(11, 0)} fill="#6AB4FF" stroke={SpgB_O} strokeWidth="0.6" strokeLinejoin="round" />
+    <path d={band(4, 0)} fill="#BFE6FF" stroke={SpgB_O} strokeWidth="0.6" strokeLinejoin="round" />
+    <circle cx="29.5" cy="3" r="1.2" fill="#FFFFFF" /><circle cx="30" cy="10.5" r="1" fill="#FFFFFF" />
+  </>);
+}
+// 渦潮：海に巻きこむ渦
+function SpgB_water_4() {
+  return SpgB_svg(<>
+    <circle cx="16" cy="16" r="14" fill="#2A6AD0" stroke={SpgB_O} strokeWidth="0.6" />
+    <path d="M16 16 C16 13.5 19.5 13.5 19.5 16.5 C19.5 20.5 13 21 12 16 C11 10.5 19 8.5 22.5 12.5 C26.5 17 23.5 25 16 25.5 C8 26 4.5 18 7 11.5 C9 6.5 14 4 19 4.5"
+      stroke="#BFE6FF" strokeWidth="2.6" fill="none" strokeLinecap="round" />
+    <path d="M16 16 C16 13.5 19.5 13.5 19.5 16.5 C19.5 20.5 13 21 12 16 C11 10.5 19 8.5 22.5 12.5 C26.5 17 23.5 25 16 25.5 C8 26 4.5 18 7 11.5 C9 6.5 14 4 19 4.5"
+      stroke="#6AB4FF" strokeWidth="1" fill="none" strokeLinecap="round" />
+    <circle cx="16.2" cy="16.3" r="1.3" fill="#FFFFFF" />
+  </>);
+}
+// 氷牙：左右から噛みあう、反りかえった二本の大きな氷の牙と霜のかけら
+function SpgB_water_5() {
+  return SpgB_svg(<>
+    <defs>
+      <linearGradient id="spgBwater5a" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stopColor="#FFFFFF" /><stop offset="0.55" stopColor="#BFE6FF" /><stop offset="1" stopColor="#3A8AE8" /></linearGradient>
+      <linearGradient id="spgBwater5b" x1="1" y1="0" x2="0" y2="1"><stop offset="0" stopColor="#FFFFFF" /><stop offset="0.55" stopColor="#BFE6FF" /><stop offset="1" stopColor="#3A8AE8" /></linearGradient>
+    </defs>
+    <path d="M1.5 3 L14 2 C13.5 11 14.5 19 17.5 28.5 C9 22 4 13 1.5 3 Z" fill="url(#spgBwater5a)" stroke={SpgB_O} strokeWidth="0.65" strokeLinejoin="round" />
+    <path d="M30.5 29 L18 30 C18.5 21 17.5 13 14.5 3.5 C23 10 28 19 30.5 29 Z" fill="url(#spgBwater5b)" stroke={SpgB_O} strokeWidth="0.65" strokeLinejoin="round" />
+    <path d="M5 4 C6 12 9 18 13.5 24" stroke="#FFFFFF" strokeWidth="0.9" fill="none" strokeLinecap="round" />
+    <path d="M27 28 C26 20 23 14 18.5 8" stroke="#2A6AD0" strokeWidth="0.9" fill="none" strokeLinecap="round" />
+    {[[25, 5, 2.2, 30], [7, 27, 2.2, -20], [29, 11, 1.4, 60]].map(([x, y, r, a], i) => (
+      <path key={i} d={`M${x} ${y - r * 1.4} L${x + r * 0.7} ${y} L${x} ${y + r * 1.4} L${x - r * 0.7} ${y} Z`} fill="#BFE6FF" stroke={SpgB_O} strokeWidth="0.45" transform={`rotate(${a} ${x} ${y})`} />
+    ))}
+  </>);
+}
+// 瀑布：崖から落ちる幾筋もの滝と、しぶきの冠
+function SpgB_water_6() {
+  return SpgB_svg(<>
+    <defs>
+      <linearGradient id="spgBwater6a" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stopColor="#BFE6FF" /><stop offset="1" stopColor="#3A8AE8" /></linearGradient>
+    </defs>
+    <path d="M1 2 H31 V7 C27 6 24 8 21 7 C18 6 14 8 11 7 C7 6 4 8 1 7 Z" fill="#5A5A7A" stroke={SpgB_O} strokeWidth="0.6" />
+    <path d="M5 6.5 C4.5 14 4 20 3.5 25 L28.5 25 C28 20 27.5 14 27 6.5 Z" fill="url(#spgBwater6a)" stroke={SpgB_O} strokeWidth="0.6" />
+    {[9, 14, 18, 23].map((x) => <path key={x} d={`M${x} 7 L${x - 0.3} 23`} stroke="#FFFFFF" strokeWidth={x % 2 ? 1.2 : 0.8} strokeLinecap="round" opacity="0.85" />)}
+    <path d="M1 29 C3 23 6 22 8 25 C9 20 13 20 14 24 C15 19 18 19 19 24 C20 20 24 20 25 25 C27 22 30 23 31 29 Z" fill="#FFFFFF" stroke={SpgB_O} strokeWidth="0.6" strokeLinejoin="round" />
+    <circle cx="4" cy="20" r="1.1" fill="#BFE6FF" /><circle cx="28.5" cy="19" r="1.1" fill="#BFE6FF" />
+  </>);
+}
+// 海嘯：天を衝いて巻き込む大波。しぶきに金のきらめき
+function SpgB_water_7() {
+  return SpgB_svg(<>
+    <defs>
+      <linearGradient id="spgBwater7a" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stopColor="#6AB4FF" /><stop offset="1" stopColor="#1E4FB0" /></linearGradient>
+    </defs>
+    <path d="M1 31 L1 20 C3 10 11 2 21 2.5 C27 3 31 7 30 12 C29 16 24 16 23 12.5 C22 9.5 25 8 26.5 10 C25 6.5 18 6 14.5 11 C11 16 12 24 18 31 Z" fill="url(#spgBwater7a)" stroke={SpgB_O} strokeWidth="0.7" strokeLinejoin="round" />
+    <path d="M4 19 C6 10 13 4.5 21 4.5 C25 4.5 28.5 6.5 28.5 10" stroke="#FFFFFF" strokeWidth="1.8" fill="none" strokeLinecap="round" />
+    <path d="M6 24 C7 18 9 14 12 11.5" stroke="#BFE6FF" strokeWidth="1.1" fill="none" strokeLinecap="round" />
+    <path d="M16 31 C19 26 24 25 31 27 L31 31 Z" fill="#3A8AE8" stroke={SpgB_O} strokeWidth="0.5" />
+    {[[23, 14.5], [26, 15.5], [20.5, 13]].map(([x, y], i) => <circle key={i} cx={x} cy={y} r="1.2" fill="#FFFFFF" stroke={SpgB_O} strokeWidth="0.35" />)}
+    {SpgB_star(9, 5, 3, SpgB_GOLD)}
+    {SpgB_star(29.5, 20.5, 2.2, "#FFFFFF")}
+  </>);
+}
+// 滄溟：果てない大海から噴き上がる三本の水柱。金の飛沫
+function SpgB_water_8() {
+  const col = (x, w, top) => `M${x - w} 25 C${x - w * 0.7} 18 ${x - w * 0.3} ${top + 6} ${x - w * 0.5} ${top + 2} C${x - w * 0.9} ${top} ${x - w * 0.2} ${top - 2} ${x} ${top - 2} C${x + w * 0.2} ${top - 2} ${x + w * 0.9} ${top} ${x + w * 0.5} ${top + 2} C${x + w * 0.3} ${top + 6} ${x + w * 0.7} 18 ${x + w} 25 Z`;
+  return SpgB_svg(<>
+    <defs>
+      <linearGradient id="spgBwater8a" x1="0" y1="1" x2="0" y2="0"><stop offset="0" stopColor="#2A6AD0" /><stop offset="0.7" stopColor="#6AB4FF" /><stop offset="1" stopColor="#FFFFFF" /></linearGradient>
+      <linearGradient id="spgBwater8b" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stopColor="#3A8AE8" /><stop offset="1" stopColor="#12307A" /></linearGradient>
+    </defs>
+    <path d={col(6.5, 3.6, 11)} fill="url(#spgBwater8a)" stroke={SpgB_O} strokeWidth="0.55" />
+    <path d={col(25.5, 3.6, 11)} fill="url(#spgBwater8a)" stroke={SpgB_O} strokeWidth="0.55" />
+    <path d={col(16, 5, 4)} fill="url(#spgBwater8a)" stroke={SpgB_O} strokeWidth="0.7" />
+    <path d="M1 31 V24 C4 21 7 25 10 23 C13 21 15 25 18 23 C21 21 24 25 27 23 C29 22 30 22.5 31 24 V31 Z" fill="url(#spgBwater8b)" stroke={SpgB_O} strokeWidth="0.6" />
+    <path d="M3 27 C6 25.5 8 28 11 26.5 M17 27.5 C20 26 22 28.5 25 27" stroke="#BFE6FF" strokeWidth="0.9" fill="none" strokeLinecap="round" />
+    <path d="M13.5 4 C14.5 2.5 17.5 2.5 18.5 4" stroke={SpgB_GOLD} strokeWidth="1.2" fill="none" strokeLinecap="round" />
+    {SpgB_star(10.5, 5, 3, SpgB_GOLD)}
+    {SpgB_star(22, 4, 2.4, "#FFFFFF")}
+    {SpgB_star(29, 5.5, 2, SpgB_GOLD)}
+    <circle cx="3" cy="8" r="1" fill="#FFFFFF" />
+  </>);
+}
+
+/* ───────── wind 風（緑 #7AE08E） ───────── */
+const SpgB_line = (d, w, c) => (
+  <g>
+    <path d={d} stroke={SpgB_O} strokeWidth={w + 1.2} fill="none" strokeLinecap="round" strokeLinejoin="round" />
+    <path d={d} stroke={c} strokeWidth={w} fill="none" strokeLinecap="round" strokeLinejoin="round" />
+  </g>
+);
+const SpgB_leaf = (x, y, a, s, c) => (
+  <path d={`M${x - 2.4 * s} ${y} C${x - 1 * s} ${y - 1.8 * s} ${x + 1 * s} ${y - 1.8 * s} ${x + 2.4 * s} ${y} C${x + 1 * s} ${y + 1.8 * s} ${x - 1 * s} ${y + 1.8 * s} ${x - 2.4 * s} ${y} Z`}
+    fill={c || "#A8F0A0"} stroke={SpgB_O} strokeWidth="0.45" transform={`rotate(${a} ${x} ${y})`} />
+);
+// 旋風：くるりと巻く小さなつむじ風（構えの印に近い形）
+function SpgB_wind_1() {
+  return SpgB_svg(<>
+    {SpgB_line("M4 12 H19 A4.5 4.5 0 1 0 14.5 7.5", 2.6, "#7AE08E")}
+    {SpgB_line("M4 18.5 H23 A4.5 4.5 0 1 1 18.5 23", 2.6, "#7AE08E")}
+    {SpgB_line("M6 25 H13", 2.2, "#7AE08E")}
+  </>);
+}
+// 烈風：鋭く吹き抜ける太い風の筋と、ちぎれ飛ぶ若葉
+function SpgB_wind_2() {
+  return SpgB_svg(<>
+    {SpgB_line("M2 8 H20 C25 8 27 4 24 2.5", 2.6, "#7AE08E")}
+    {SpgB_line("M5 15.5 H28", 3, "#D4FFD8")}
+    {SpgB_line("M2 23 H18 C24 23 26 28 22 29.5", 2.6, "#7AE08E")}
+    {SpgB_line("M22 11 H29", 1.6, "#7AE08E")}
+    {SpgB_line("M3 19 H9", 1.6, "#7AE08E")}
+    {SpgB_leaf(27.5, 21, -30, 1.1)}
+    {SpgB_leaf(7.5, 3.5, 20, 0.9, "#7AE08E")}
+  </>);
+}
+// 裂空：空を裂く三日月の風の刃と、裂け目
+function SpgB_wind_3() {
+  return SpgB_svg(<>
+    <path d="M3 29 L29 3" stroke="#0E0820" strokeWidth="2.2" strokeLinecap="round" />
+    <path d="M3 29 L29 3" stroke="#D4FFD8" strokeWidth="0.6" strokeLinecap="round" />
+    <path d="M4 23 C8 10 17 4 28 3 C20 7 13 13 9 25 Z" fill="#7AE08E" stroke={SpgB_O} strokeWidth="0.6" strokeLinejoin="round" />
+    <path d="M6 22 C10 12 17 7 25 4.5" stroke="#D4FFD8" strokeWidth="1" fill="none" strokeLinecap="round" />
+    {SpgB_line("M14 27 L24 17", 1.4, "#7AE08E")}
+    {SpgB_line("M20 29 L28 21", 1.4, "#7AE08E")}
+  </>);
+}
+// 竜巻：天から地へ細まる漏斗の渦
+function SpgB_wind_4() {
+  const rings = [[16, 4.5, 12.5, 3], [16.5, 10, 10, 2.6], [17.5, 15, 7.5, 2.2], [18, 19.5, 5.2, 1.8], [17.5, 23.5, 3.4, 1.4], [16.5, 27, 2, 1]];
+  return SpgB_svg(<>
+    <path d="M3.5 4.5 C6 14 12 22 16 29 C18 22 25 14 28.5 4.5 Z" fill="#3AA85A" fillOpacity="0.55" />
+    {rings.map(([x, y, rx, ry], i) => (
+      <g key={i}>
+        <ellipse cx={x} cy={y} rx={rx} ry={ry} fill="none" stroke={SpgB_O} strokeWidth="3.2" />
+        <ellipse cx={x} cy={y} rx={rx} ry={ry} fill="none" stroke={i % 2 ? "#D4FFD8" : "#7AE08E"} strokeWidth="2" />
+      </g>
+    ))}
+  </>);
+}
+// 嵐刃：斜めに走る三枚の三日月の刃
+function SpgB_wind_5() {
+  const blade = (dx, dy) => `M${3 + dx} ${24 + dy} C${6 + dx} ${13 + dy} ${14 + dx} ${6 + dy} ${24 + dx} ${4 + dy} C${17 + dx} ${8 + dy} ${10 + dx} ${14 + dy} ${7 + dx} ${25 + dy} Z`;
+  return SpgB_svg(<>
+    <defs>
+      <linearGradient id="spgBwind5a" x1="0" y1="1" x2="1" y2="0"><stop offset="0" stopColor="#3AA85A" /><stop offset="1" stopColor="#D4FFD8" /></linearGradient>
+    </defs>
+    {[[-1, -1], [4.5, 2.5], [10, 6]].map(([dx, dy], i) => (
+      <path key={i} d={blade(dx, dy)} fill="url(#spgBwind5a)" stroke={SpgB_O} strokeWidth="0.65" strokeLinejoin="round" />
+    ))}
+    {SpgB_star(28, 4, 2.4, "#FFFFFF")}
+    {SpgB_leaf(5, 29, -20, 0.8)}
+  </>);
+}
+// 暴嵐：荒れ狂う黒雲と、叩きつける横なぐりの風
+function SpgB_wind_6() {
+  return SpgB_svg(<>
+    <path d="M4 14 C1 14 1 9 5 9 C5 4 11 3 13 6 C15 1.5 23 2 23.5 7 C28 6 31 10 28 13.5 C27 14.5 26 14.5 25 14.5 Z" fill="#3E5A58" stroke={SpgB_O} strokeWidth="0.6" strokeLinejoin="round" />
+    <path d="M7 9.5 C8 7 11 7 12 8.5 M16 6.5 C18 5 21 6 21.5 8" stroke="#8AB8A8" strokeWidth="1" fill="none" strokeLinecap="round" />
+    {SpgB_line("M2 19 H22 C26 19 27 15.5 24.5 15", 2.4, "#7AE08E")}
+    {SpgB_line("M6 24 H29", 2.6, "#D4FFD8")}
+    {SpgB_line("M2 29 H16 C20 29 21 26 19 25.5", 2.2, "#7AE08E")}
+    {SpgB_leaf(27, 28, 25, 1)}
+    {SpgB_leaf(28.5, 19, -40, 0.8, "#7AE08E")}
+    {SpgB_leaf(24, 30.5, 60, 0.7, "#D4FFD8")}
+  </>);
+}
+// 天嵐：天の雲から地を穿つ巨大な竜巻。金の芯ときらめき
+function SpgB_wind_7() {
+  const rings = [[16, 5.5, 14, 3.4], [16.5, 11, 11, 2.9], [17.5, 16, 8, 2.4], [18, 20.5, 5.6, 2], [17.5, 24.5, 3.6, 1.5], [16.5, 28, 2.2, 1.1]];
+  return SpgB_svg(<>
+    <defs>
+      <linearGradient id="spgBwind7a" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stopColor="#D4FFD8" /><stop offset="1" stopColor="#3AA85A" /></linearGradient>
+    </defs>
+    <path d="M2 5.5 C5 15 12 23 16 30 C18 23 26 15 30 5.5 Z" fill="url(#spgBwind7a)" fillOpacity="0.5" />
+    {rings.map(([x, y, rx, ry], i) => (
+      <g key={i}>
+        <ellipse cx={x} cy={y} rx={rx} ry={ry} fill="none" stroke={SpgB_O} strokeWidth="3.6" />
+        <ellipse cx={x} cy={y} rx={rx} ry={ry} fill="none" stroke={i === 1 || i === 3 ? SpgB_GOLD : i % 2 ? "#D4FFD8" : "#7AE08E"} strokeWidth="2.3" />
+      </g>
+    ))}
+    {SpgB_star(3.5, 17, 2.8, SpgB_GOLD)}
+    {SpgB_star(28.5, 18, 2.2, "#FFFFFF")}
+    {SpgB_leaf(26, 26, 30, 0.9)}
+    {SpgB_leaf(6, 25, -30, 0.8, "#7AE08E")}
+  </>);
+}
+// 神風：幾重もの風が一つに束なり、金の穂先で突き抜ける大いなる一陣
+function SpgB_wind_8() {
+  return SpgB_svg(<>
+    <defs>
+      <linearGradient id="spgBwind8a" x1="0" y1="0" x2="1" y2="0"><stop offset="0" stopColor="#3AA85A" /><stop offset="0.7" stopColor="#7AE08E" /><stop offset="1" stopColor={SpgB_GOLD} /></linearGradient>
+      <linearGradient id="spgBwind8b" x1="0" y1="0" x2="1" y2="0"><stop offset="0" stopColor="#7AE08E" /><stop offset="1" stopColor="#FFFFFF" /></linearGradient>
+    </defs>
+    <path d="M1 4 C9 5 15 10 20 14 L31 16 L20 18 C15 22 9 27 1 28 C8 24 12 20 13 16 C12 12 8 8 1 4 Z" fill="url(#spgBwind8a)" stroke={SpgB_O} strokeWidth="0.7" strokeLinejoin="round" />
+    <path d="M4 10 C10 11 14 14 16 16 C14 18 10 21 4 22 C8 20 10 18 10.5 16 C10 14 8 12 4 10 Z" fill="url(#spgBwind8b)" stroke={SpgB_O} strokeWidth="0.5" strokeLinejoin="round" />
+    <path d="M20 15.2 L30 16 L20 16.8 Z" fill="#FFFFFF" />
+    {SpgB_line("M5 1.5 C12 2 17 5 21 9", 1.2, SpgB_GOLD)}
+    {SpgB_line("M5 30.5 C12 30 17 27 21 23", 1.2, SpgB_GOLD)}
+    {SpgB_star(27, 6, 3.4, "#FFFFFF")}
+    {SpgB_star(27.5, 26, 2.6, SpgB_GOLD)}
+    {SpgB_leaf(2.5, 16, 0, 0.8, "#D4FFD8")}
+  </>);
+}
+
+const SPG_B = {
+  fire: [SpgB_fire_1, SpgB_fire_2, SpgB_fire_3, SpgB_fire_4, SpgB_fire_5, SpgB_fire_6, SpgB_fire_7, SpgB_fire_8],
+  water: [SpgB_water_1, SpgB_water_2, SpgB_water_3, SpgB_water_4, SpgB_water_5, SpgB_water_6, SpgB_water_7, SpgB_water_8],
+  wind: [SpgB_wind_1, SpgB_wind_2, SpgB_wind_3, SpgB_wind_4, SpgB_wind_5, SpgB_wind_6, SpgB_wind_7, SpgB_wind_8],
+};
+/* 必殺ゲージの印・group C：棒（魔法）の earth / light / dark、各8段。静止画のみ。 */
+const SpgC_O = "#2A3458";
+const SpgC_r = (v) => Math.round(v * 100) / 100;
+/* 点の列 → 閉じた多角形 */
+const SpgC_p = (pts) => "M" + pts.map((q) => SpgC_r(q[0]) + " " + SpgC_r(q[1])).join(" L") + " Z";
+/* 極座標（0度＝真上、時計回り） */
+const SpgC_at = (cx, cy, r, deg) => {
+  const a = (deg * Math.PI) / 180;
+  return [cx + r * Math.sin(a), cy - r * Math.cos(a)];
+};
+/* 四方に光る星（4つの尖りだけ） */
+const SpgC_s4 = (cx, cy, R, r) =>
+  `M${cx} ${cy - R} Q${cx + r} ${cy - r} ${cx + R} ${cy} Q${cx + r} ${cy + r} ${cx} ${cy + R} Q${cx - r} ${cy + r} ${cx - R} ${cy} Q${cx - r} ${cy - r} ${cx} ${cy - R} Z`;
+const SpgC_Star = ({ x, y, R, c = "#FFFFFF", w = 0.5 }) => (
+  <path d={SpgC_s4(x, y, R, R * 0.2)} fill={c} stroke={SpgC_O} strokeWidth={w} strokeLinejoin="round" />
+);
+/* 放射状の尖り（光・炎・コロナ用）。n本、長さ交互 */
+const SpgC_spikes = (cx, cy, r0, rA, rB, n, halfW, rot = 0) => {
+  const out = [];
+  for (let i = 0; i < n; i++) {
+    const a = rot + (360 / n) * i;
+    const R = i % 2 ? rB : rA;
+    out.push(SpgC_p([SpgC_at(cx, cy, r0, a - halfW), SpgC_at(cx, cy, R, a), SpgC_at(cx, cy, r0, a + halfW)]));
+  }
+  return out.join(" ");
+};
+
+/* ───────── earth：茶の岩と大地。段が上がるほど大きく割れ、7から金の光 ───────── */
+const SpgC_Rock = ({ id }) => (
+  <linearGradient id={id} x1="0" y1="0" x2="0.3" y2="1">
+    <stop offset="0" stopColor="#F0CFA4" />
+    <stop offset="0.55" stopColor="#C89A6A" />
+    <stop offset="1" stopColor="#8A6038" />
+  </linearGradient>
+);
+
+function SpgC_earth_1() {
+  /* 岩礫：飛び散る三つの礫 */
+  return (
+    <svg viewBox="0 0 32 32" aria-hidden="true">
+      <defs><SpgC_Rock id="spgCearth1a" /></defs>
+      <path d="M4 16 L9 14 M23 21 L28 19 M6 25 L10 23" stroke="#E8C49A" strokeWidth="1.1" strokeLinecap="round" opacity="0.7" />
+      <path d={SpgC_p([[8, 25], [11, 17], [18, 14], [24, 18], [22, 26], [13, 28]])} fill="url(#spgCearth1a)" stroke={SpgC_O} strokeWidth="0.7" strokeLinejoin="round" />
+      <path d={SpgC_p([[11, 17], [18, 14], [16, 20], [12, 21]])} fill="#F6DDBA" />
+      <path d={SpgC_p([[5, 10], [8, 6], [13, 7], [12, 12], [7, 13]])} fill="url(#spgCearth1a)" stroke={SpgC_O} strokeWidth="0.6" strokeLinejoin="round" />
+      <path d={SpgC_p([[20, 6], [24, 3], [28, 6], [26, 10], [21, 10]])} fill="url(#spgCearth1a)" stroke={SpgC_O} strokeWidth="0.6" strokeLinejoin="round" />
+    </svg>
+  );
+}
+
+function SpgC_earth_2() {
+  /* 石槍：地面から突き上がる三本の石の槍 */
+  const spike = (x, top, hw, base) => (
+    <g key={x}>
+      <path d={SpgC_p([[x - hw, base], [x, top], [x + hw, base]])} fill="#8A6038" stroke={SpgC_O} strokeWidth="0.6" strokeLinejoin="round" />
+      <path d={SpgC_p([[x - hw, base], [x, top], [x + hw * 0.1, base]])} fill="url(#spgCearth2a)" />
+    </g>
+  );
+  return (
+    <svg viewBox="0 0 32 32" aria-hidden="true">
+      <defs><SpgC_Rock id="spgCearth2a" /></defs>
+      {spike(8, 12, 4, 27)}
+      {spike(24, 13, 4, 27)}
+      {spike(16, 2, 5, 27)}
+      <path d="M2 26 Q16 23 30 26 L29 30 L3 30 Z" fill="#9A6E44" stroke={SpgC_O} strokeWidth="0.6" strokeLinejoin="round" />
+      <path d={SpgC_p([[4, 20], [5.5, 18], [6.5, 20.5]])} fill="#E8C49A" />
+      <path d={SpgC_p([[26.5, 9], [28, 7], [29, 9.5]])} fill="#E8C49A" />
+    </svg>
+  );
+}
+
+function SpgC_earth_3() {
+  /* 地裂：大地の塊に、光る割れ目 */
+  return (
+    <svg viewBox="0 0 32 32" aria-hidden="true">
+      <defs>
+        <SpgC_Rock id="spgCearth3a" />
+        <linearGradient id="spgCearth3b" x1="0" y1="0" x2="0" y2="1">
+          <stop offset="0" stopColor="#FFF0B0" />
+          <stop offset="1" stopColor="#FF8A3A" />
+        </linearGradient>
+      </defs>
+      <path d={SpgC_p([[2, 14], [15, 12], [13, 17], [16, 21], [14, 29], [4, 28], [2, 21]])} fill="url(#spgCearth3a)" stroke={SpgC_O} strokeWidth="0.7" strokeLinejoin="round" />
+      <path d={SpgC_p([[18, 12], [30, 14], [30, 21], [28, 28], [18, 29], [20, 21], [17, 17]])} fill="url(#spgCearth3a)" stroke={SpgC_O} strokeWidth="0.7" strokeLinejoin="round" />
+      <path d="M2 18 L14.5 18 M17.8 18 L30 18" stroke="#7A5634" strokeWidth="0.8" />
+      <path d={SpgC_p([[15, 12], [18, 12], [17, 17], [20, 21], [18, 29], [14, 29], [16, 21], [13, 17]])} fill="url(#spgCearth3b)" stroke={SpgC_O} strokeWidth="0.5" strokeLinejoin="round" />
+      <path d={SpgC_p([[14, 10], [16.5, 3], [19, 10]])} fill="#FFE8A0" opacity="0.8" />
+      <path d={SpgC_p([[9, 9], [11, 6], [12, 9.5]])} fill="#E8C49A" stroke={SpgC_O} strokeWidth="0.4" />
+      <path d={SpgC_p([[22, 8], [24.5, 5.5], [25, 9]])} fill="#E8C49A" stroke={SpgC_O} strokeWidth="0.4" />
+    </svg>
+  );
+}
+
+function SpgC_earth_4() {
+  /* 岩崩：崖から転げ落ちる大岩 */
+  const boulder = (cx, cy, r, key) => {
+    const pts = [0, 55, 115, 170, 230, 290].map((a, i) => SpgC_at(cx, cy, r * (i % 2 ? 0.88 : 1), a + 10));
+    return (
+      <g key={key}>
+        <path d={SpgC_p(pts)} fill="url(#spgCearth4a)" stroke={SpgC_O} strokeWidth="0.6" strokeLinejoin="round" />
+        <path d={SpgC_p([pts[5], pts[0], [cx, cy]])} fill="#F6DDBA" opacity="0.85" />
+      </g>
+    );
+  };
+  return (
+    <svg viewBox="0 0 32 32" aria-hidden="true">
+      <defs><SpgC_Rock id="spgCearth4a" /></defs>
+      <path d={SpgC_p([[2, 30], [2, 7], [6, 2], [11, 5], [12, 13], [15, 18], [19, 30]])} fill="#8A6038" stroke={SpgC_O} strokeWidth="0.7" strokeLinejoin="round" />
+      <path d={SpgC_p([[2, 30], [2, 7], [6, 2], [8, 12], [10, 30]])} fill="#B08050" />
+      <path d="M13 6 Q19 4 20 9 M20 13 Q27 12 27 17 M18 21 Q24 19 25 24" stroke="#E8C49A" strokeWidth="1" fill="none" strokeLinecap="round" opacity="0.75" />
+      {boulder(19.5, 11, 4, 1)}
+      {boulder(25.5, 18.5, 3.6, 2)}
+      {boulder(22, 26, 4.2, 3)}
+    </svg>
+  );
+}
+
+function SpgC_earth_5() {
+  /* 激震：大地がずれ、衝撃の波が走り、岩が跳ねる */
+  return (
+    <svg viewBox="0 0 32 32" aria-hidden="true">
+      <defs><SpgC_Rock id="spgCearth5a" /></defs>
+      <path d="M1 12 L3.5 9.5 L6 12 L8.5 9.5 L11 12" stroke="#FFD89A" strokeWidth="1.5" fill="none" strokeLinejoin="round" strokeLinecap="round" />
+      <path d="M21 13 L23.5 10.5 L26 13 L28.5 10.5 L31 13" stroke="#FFD89A" strokeWidth="1.5" fill="none" strokeLinejoin="round" strokeLinecap="round" />
+      <path d={SpgC_p([[1, 19], [15, 16], [14, 22], [15.5, 30], [1, 30]])} fill="url(#spgCearth5a)" stroke={SpgC_O} strokeWidth="0.7" strokeLinejoin="round" />
+      <path d={SpgC_p([[17, 20], [31, 22], [31, 30], [16.5, 30], [18, 25]])} fill="url(#spgCearth5a)" stroke={SpgC_O} strokeWidth="0.7" strokeLinejoin="round" />
+      <path d={SpgC_p([[1, 19], [15, 16], [14.5, 19], [1, 21.5]])} fill="#F6DDBA" />
+      <path d={SpgC_p([[17, 20], [31, 22], [31, 24], [17.4, 22.5]])} fill="#F6DDBA" />
+      <path d={SpgC_p([[13, 12], [15, 5], [18, 7], [17.5, 13]])} fill="url(#spgCearth5a)" stroke={SpgC_O} strokeWidth="0.6" strokeLinejoin="round" />
+      <path d={SpgC_p([[7, 13], [8, 8.5], [11, 10], [10, 14]])} fill="url(#spgCearth5a)" stroke={SpgC_O} strokeWidth="0.5" strokeLinejoin="round" />
+      <path d={SpgC_p([[21, 15], [23, 12], [25.5, 14.5], [23.5, 17]])} fill="url(#spgCearth5a)" stroke={SpgC_O} strokeWidth="0.5" strokeLinejoin="round" />
+      <path d="M14 3 L13 1.5 M19 4 L20.5 2.5" stroke="#FFD89A" strokeWidth="1" strokeLinecap="round" />
+    </svg>
+  );
+}
+
+function SpgC_earth_6() {
+  /* 山崩：割れて崩れ落ちる大きな山 */
+  return (
+    <svg viewBox="0 0 32 32" aria-hidden="true">
+      <defs>
+        <SpgC_Rock id="spgCearth6a" />
+        <linearGradient id="spgCearth6b" x1="0" y1="0" x2="1" y2="1">
+          <stop offset="0" stopColor="#FFF0B0" />
+          <stop offset="1" stopColor="#FF9A4A" />
+        </linearGradient>
+      </defs>
+      <path d={SpgC_p([[1, 29], [11, 7], [15, 13], [19, 6], [31, 29]])} fill="url(#spgCearth6a)" stroke={SpgC_O} strokeWidth="0.7" strokeLinejoin="round" />
+      <path d={SpgC_p([[11, 7], [15, 13], [13, 17], [8, 16]])} fill="#F6DDBA" />
+      <path d={SpgC_p([[19, 6], [23, 13], [21, 15]])} fill="#F6DDBA" />
+      <path d={SpgC_p([[4, 21], [10, 19], [14, 22], [19, 18], [24, 21], [28, 20], [28.6, 22], [24, 23.5], [19, 21], [14, 24.5], [10, 21.5], [4.8, 23]])} fill="url(#spgCearth6b)" stroke={SpgC_O} strokeWidth="0.5" strokeLinejoin="round" />
+      <path d={SpgC_p([[16, 11], [17.5, 17], [15.5, 20], [15, 15]])} fill="url(#spgCearth6b)" stroke={SpgC_O} strokeWidth="0.4" />
+      <path d={SpgC_p([[7, 3], [10, 1.5], [10.5, 5], [8, 5.5]])} fill="url(#spgCearth6a)" stroke={SpgC_O} strokeWidth="0.5" />
+      <path d={SpgC_p([[22, 1.5], [26, 2], [25, 5.5], [22, 5]])} fill="url(#spgCearth6a)" stroke={SpgC_O} strokeWidth="0.5" />
+      <path d={SpgC_p([[27, 8], [29.5, 8.5], [29, 11], [26.5, 10.5]])} fill="url(#spgCearth6a)" stroke={SpgC_O} strokeWidth="0.5" />
+      <path d={SpgC_p([[2.5, 11], [5, 10], [5, 13], [3, 13.5]])} fill="url(#spgCearth6a)" stroke={SpgC_O} strokeWidth="0.5" />
+      <path d="M1 30 C0 27 3 26 4 27.5 C5 25.5 8.5 26.5 8 29 C9.5 29 9.5 31 8 31 L2 31 C1 31 0.8 30.5 1 30 Z M31 30 C32 27 29 26 28 27.5 C27 25.5 23.5 26.5 24 29 C22.5 29 22.5 31 24 31 L30 31 C31 31 31.2 30.5 31 30 Z" fill="#E8C49A" opacity="0.9" />
+    </svg>
+  );
+}
+
+function SpgC_earth_7() {
+  /* 天地：割れて持ち上がる大地と、右上に浮かぶ岩の島。金の光が斜めに結ぶ（左右非対称） */
+  return (
+    <svg viewBox="0 0 32 32" aria-hidden="true">
+      <defs>
+        <SpgC_Rock id="spgCearth7a" />
+        <linearGradient id="spgCearth7b" x1="0" y1="1" x2="1" y2="0">
+          <stop offset="0" stopColor="#FF9A3A" />
+          <stop offset="0.5" stopColor="#FFF6D0" />
+          <stop offset="1" stopColor="#FFD86A" />
+        </linearGradient>
+      </defs>
+      <path d={SpgC_p([[10.5, 22.5], [19.5, 9.5], [21.2, 11.2], [12.5, 24]])} fill="url(#spgCearth7b)" stroke={SpgC_O} strokeWidth="0.5" strokeLinejoin="round" />
+      <path d="M5 21 L14 9.5 M17 25 L25 14" stroke="#FFE890" strokeWidth="1.1" strokeLinecap="round" />
+      <path d={SpgC_p([[1, 23], [9, 20.5], [11.5, 24], [10, 30], [1, 30]])} fill="url(#spgCearth7a)" stroke={SpgC_O} strokeWidth="0.7" strokeLinejoin="round" />
+      <path d={SpgC_p([[12.5, 24.5], [17, 16.5], [24, 19], [27, 23], [31, 25], [31, 30], [11, 30]])} fill="url(#spgCearth7a)" stroke={SpgC_O} strokeWidth="0.7" strokeLinejoin="round" />
+      <path d={SpgC_p([[12.5, 24.5], [17, 16.5], [24, 19], [18, 21]])} fill="#F6DDBA" />
+      <path d="M11.5 24 L12.5 24.5 M11 27 L12 26.5" stroke="#FFD86A" strokeWidth="1.2" strokeLinecap="round" />
+      <path d={SpgC_p([[10, 6], [30.5, 2], [31, 5], [28, 8], [24.5, 9.5], [21.5, 13], [18.5, 10.5], [14, 9.5]])} fill="url(#spgCearth7a)" stroke={SpgC_O} strokeWidth="0.7" strokeLinejoin="round" />
+      <path d={SpgC_p([[10, 6], [30.5, 2], [30.7, 3.6], [10.8, 7.6]])} fill="#FFD86A" />
+      <path d={SpgC_p([[4, 3], [6.5, 2], [7, 4.5], [4.8, 5.2]])} fill="url(#spgCearth7a)" stroke={SpgC_O} strokeWidth="0.5" strokeLinejoin="round" />
+      <path d={SpgC_p([[25.5, 12.5], [28, 12], [27.6, 14.6]])} fill="url(#spgCearth7a)" stroke={SpgC_O} strokeWidth="0.5" strokeLinejoin="round" />
+      <SpgC_Star x={4.5} y={13} R={3} c="#FFE890" />
+      <SpgC_Star x={15.5} y={16} R={2.6} />
+    </svg>
+  );
+}
+function SpgC_earth_8() {
+  /* 星核：岩の星が割れ、金に燃える核が現れる */
+  const orbit = [[3.5, 7], [28.5, 6], [29, 24], [4, 26]];
+  return (
+    <svg viewBox="0 0 32 32" aria-hidden="true">
+      <defs>
+        <radialGradient id="spgCearth8a" cx="0.38" cy="0.32" r="0.75">
+          <stop offset="0" stopColor="#F6DDBA" />
+          <stop offset="0.5" stopColor="#C89A6A" />
+          <stop offset="1" stopColor="#6A4428" />
+        </radialGradient>
+        <radialGradient id="spgCearth8b" cx="0.5" cy="0.5" r="0.5">
+          <stop offset="0" stopColor="#FFFFFF" />
+          <stop offset="0.45" stopColor="#FFE890" />
+          <stop offset="1" stopColor="#FF9A3A" />
+        </radialGradient>
+      </defs>
+      <circle cx="16" cy="16" r="11.5" fill="url(#spgCearth8a)" stroke={SpgC_O} strokeWidth="0.7" />
+      <path d="M16 16 L13 11 L14 7.5 L11.5 5 M16 16 L21 14 L23.5 16 L27 14.5 M16 16 L15 21 L18.5 24 L17.5 27.2" stroke="#FF9A3A" strokeWidth="2.6" strokeLinecap="round" strokeLinejoin="round" fill="none" />
+      <path d="M16 16 L13 11 L14 7.5 L11.5 5 M16 16 L21 14 L23.5 16 L27 14.5 M16 16 L15 21 L18.5 24 L17.5 27.2" stroke="#FFF0A0" strokeWidth="1" strokeLinecap="round" strokeLinejoin="round" fill="none" />
+      <path d={SpgC_p([SpgC_at(16, 16, 6.5, 0), SpgC_at(16, 16, 4.5, 60), SpgC_at(16, 16, 6.5, 115), SpgC_at(16, 16, 5, 175), SpgC_at(16, 16, 6.5, 240), SpgC_at(16, 16, 4.6, 300)])} fill="url(#spgCearth8b)" stroke={SpgC_O} strokeWidth="0.5" strokeLinejoin="round" />
+      {orbit.map(([x, y], i) => (
+        <path key={i} d={SpgC_p([[x - 2, y], [x - 0.6, y - 2], [x + 2, y - 0.8], [x + 1.4, y + 1.8], [x - 1, y + 1.8]])} fill="#C89A6A" stroke={SpgC_O} strokeWidth="0.5" strokeLinejoin="round" />
+      ))}
+      <SpgC_Star x={16} y={16} R={4} />
+      <SpgC_Star x={27} y={29} R={2.6} c="#FFE890" />
+      <SpgC_Star x={5} y={2.8} R={2.4} c="#FFE890" />
+    </svg>
+  );
+}
+
+/* ───────── light：金の光。輪（光輪に見える形）・十字は使わない ───────── */
+function SpgC_light_1() {
+  /* 閃光：小さな光の玉と短い光条（今の印に近い） */
+  return (
+    <svg viewBox="0 0 32 32" aria-hidden="true">
+      {[0, 45, 90, 135, 180, 225, 270, 315].map((a) => (
+        <path key={a} d="M16 4.5 V9" stroke="#FFE08A" strokeWidth="2.4" strokeLinecap="round" transform={`rotate(${a} 16 16)`} />
+      ))}
+      <circle cx="16" cy="16" r="5.4" fill="#FFE08A" stroke={SpgC_O} strokeWidth="0.6" />
+      <circle cx="16" cy="16" r="2.8" fill="#FFFBE8" />
+    </svg>
+  );
+}
+
+function SpgC_light_2() {
+  /* 光輪：回る光の刃の円盤（ギザギザの鋸刃、中まで塗った円盤） */
+  const n = 10, cx = 16, cy = 16;
+  const pts = [];
+  for (let i = 0; i < n; i++) {
+    const a = (360 / n) * i;
+    pts.push(SpgC_at(cx, cy, 9, a));
+    pts.push(SpgC_at(cx, cy, 14.6, a + 6));
+    pts.push(SpgC_at(cx, cy, 11.6, a + 22));
+  }
+  return (
+    <svg viewBox="0 0 32 32" aria-hidden="true">
+      <defs>
+        <radialGradient id="spgClight2a" cx="0.5" cy="0.5" r="0.5">
+          <stop offset="0" stopColor="#FFFFFF" />
+          <stop offset="0.55" stopColor="#FFF0B8" />
+          <stop offset="1" stopColor="#FFD060" />
+        </radialGradient>
+      </defs>
+      <path d={SpgC_p(pts)} fill="url(#spgClight2a)" stroke={SpgC_O} strokeWidth="0.6" strokeLinejoin="round" />
+      <path d="M16 8.6 A7.4 7.4 0 0 1 23.4 16 M16 23.4 A7.4 7.4 0 0 1 8.6 16" stroke="#E0A830" strokeWidth="1.4" fill="none" strokeLinecap="round" />
+      <path d="M16 11.4 A4.6 4.6 0 0 1 20.6 16 M16 20.6 A4.6 4.6 0 0 1 11.4 16" stroke="#E0A830" strokeWidth="1.2" fill="none" strokeLinecap="round" />
+      <circle cx="16" cy="16" r="2" fill="#FFFFFF" stroke="#E0A830" strokeWidth="0.5" />
+    </svg>
+  );
+}
+
+function SpgC_light_3() {
+  /* 聖光：天から地へ落ちる一本の光の柱 */
+  return (
+    <svg viewBox="0 0 32 32" aria-hidden="true">
+      <defs>
+        <linearGradient id="spgClight3a" x1="0" y1="0" x2="1" y2="0">
+          <stop offset="0" stopColor="#FFD060" />
+          <stop offset="0.5" stopColor="#FFFFFF" />
+          <stop offset="1" stopColor="#FFD060" />
+        </linearGradient>
+      </defs>
+      <ellipse cx="16" cy="27" rx="12" ry="3.4" fill="#FFE08A" stroke={SpgC_O} strokeWidth="0.5" />
+      <path d={SpgC_p([[12, 1], [20, 1], [22, 27], [10, 27]])} fill="url(#spgClight3a)" stroke={SpgC_O} strokeWidth="0.6" strokeLinejoin="round" />
+      <path d="M16 2 V26" stroke="#FFFFFF" strokeWidth="1.6" strokeLinecap="round" />
+      <ellipse cx="16" cy="27" rx="7" ry="2" fill="#FFFBE8" />
+      <SpgC_Star x={5.5} y={13} R={2.8} c="#FFE890" />
+      <SpgC_Star x={26.5} y={17} R={2.4} c="#FFE890" />
+    </svg>
+  );
+}
+
+function SpgC_light_4() {
+  /* 天光：雲の切れ間から扇状に差す光 */
+  const beams = [142, 161, 180, 199, 218].map((a) => SpgC_p([SpgC_at(16, 6, 2, a - 5), SpgC_at(16, 6, 25, a - 7), SpgC_at(16, 6, 25, a + 7), SpgC_at(16, 6, 2, a + 5)]));
+  return (
+    <svg viewBox="0 0 32 32" aria-hidden="true">
+      <defs>
+        <linearGradient id="spgClight4a" x1="0" y1="0" x2="0" y2="1">
+          <stop offset="0" stopColor="#FFFFFF" />
+          <stop offset="1" stopColor="#FFD060" />
+        </linearGradient>
+      </defs>
+      {beams.map((d, i) => (
+        <path key={i} d={d} fill="url(#spgClight4a)" stroke={SpgC_O} strokeWidth="0.5" strokeLinejoin="round" />
+      ))}
+      <path d="M3 9 C1 9 1 5 4 5.2 C4.5 2 9 2 10 4 C11.5 1 16 1 17 3.5 C19 1.2 24 1.8 24 4.5 C27 3.6 30 6 28.5 8.5 C29 10 26 10.5 25 9.5 L4.5 9.5 C4 9.8 3.4 9.6 3 9 Z" fill="#FFF6D8" stroke={SpgC_O} strokeWidth="0.6" strokeLinejoin="round" />
+      <path d="M4 8 H27" stroke="#FFD060" strokeWidth="1" strokeLinecap="round" />
+    </svg>
+  );
+}
+
+function SpgC_light_5() {
+  /* 極光：空に揺れる光の帯（オーロラ）三本 */
+  const band = (y, a, id) => `M1 ${y} C8 ${y - a} 12 ${y + a} 17 ${y} S26 ${y - a} 31 ${y - 1} L31 ${y + 5} C26 ${y + 5 - a} 22 ${y + 6 + a} 17 ${y + 5.5} S8 ${y + 5.5 - a} 1 ${y + 5} Z`;
+  return (
+    <svg viewBox="0 0 32 32" aria-hidden="true">
+      <defs>
+        <linearGradient id="spgClight5a" x1="0" y1="0" x2="0" y2="1">
+          <stop offset="0" stopColor="#FFFFFF" />
+          <stop offset="1" stopColor="#FFD060" />
+        </linearGradient>
+        <linearGradient id="spgClight5b" x1="0" y1="0" x2="0" y2="1">
+          <stop offset="0" stopColor="#F4FFE0" />
+          <stop offset="1" stopColor="#B8E8A0" />
+        </linearGradient>
+        <linearGradient id="spgClight5c" x1="0" y1="0" x2="0" y2="1">
+          <stop offset="0" stopColor="#FFF4D8" />
+          <stop offset="1" stopColor="#FFB070" />
+        </linearGradient>
+      </defs>
+      <path d={band(5, 4)} fill="url(#spgClight5b)" stroke={SpgC_O} strokeWidth="0.5" />
+      <path d={band(13, 5)} fill="url(#spgClight5a)" stroke={SpgC_O} strokeWidth="0.6" />
+      <path d={band(21, 4)} fill="url(#spgClight5c)" stroke={SpgC_O} strokeWidth="0.5" />
+      <path d="M6 16 V19 M11 18 V21 M22 14 V17.5 M27 15 V18" stroke="#FFFFFF" strokeWidth="0.8" strokeLinecap="round" opacity="0.9" />
+      <SpgC_Star x={27} y={27.5} R={2.6} />
+      <SpgC_Star x={5} y={28} R={1.8} c="#FFE890" />
+    </svg>
+  );
+}
+
+function SpgC_light_6() {
+  /* 煌星：大きな四方の星と、まわりにきらめく小さな星 */
+  return (
+    <svg viewBox="0 0 32 32" aria-hidden="true">
+      <defs>
+        <radialGradient id="spgClight6a" cx="0.5" cy="0.5" r="0.5">
+          <stop offset="0" stopColor="#FFFFFF" />
+          <stop offset="0.4" stopColor="#FFF4C0" />
+          <stop offset="1" stopColor="#FFC94A" />
+        </radialGradient>
+      </defs>
+      <path d={SpgC_s4(15, 16, 13.5, 2.6)} fill="url(#spgClight6a)" stroke={SpgC_O} strokeWidth="0.6" strokeLinejoin="round" />
+      <circle cx="15" cy="16" r="2.4" fill="#FFFFFF" />
+      <SpgC_Star x={25.5} y={6} R={3.6} c="#FFE890" />
+      <SpgC_Star x={27} y={24} R={2.6} />
+      <SpgC_Star x={5} y={6} R={2.2} />
+      <SpgC_Star x={6} y={26} R={2.8} c="#FFE890" />
+    </svg>
+  );
+}
+
+function SpgC_light_7() {
+  /* 神光：鋭い光条が四方八方へ弾ける大きな閃光（金） */
+  return (
+    <svg viewBox="0 0 32 32" aria-hidden="true">
+      <defs>
+        <radialGradient id="spgClight7a" cx="0.5" cy="0.5" r="0.5">
+          <stop offset="0" stopColor="#FFFFFF" />
+          <stop offset="0.35" stopColor="#FFF0A0" />
+          <stop offset="1" stopColor="#FFB830" />
+        </radialGradient>
+      </defs>
+      <path d={SpgC_spikes(16, 16, 8.5, 15.9, 12.5, 12, 12, 15)} fill="#FFD060" stroke={SpgC_O} strokeWidth="0.5" strokeLinejoin="round" />
+      <path d={SpgC_spikes(16, 16, 7.5, 13.8, 10.5, 12, 6, 15)} fill="#FFF4C8" />
+      <circle cx="16" cy="16" r="7.4" fill="url(#spgClight7a)" stroke={SpgC_O} strokeWidth="0.5" />
+      <SpgC_Star x={16} y={16} R={5} />
+    </svg>
+  );
+}
+
+function SpgC_light_8() {
+  /* 天照：天を照らす大きな陽。炎のようなコロナと、金のきらめき */
+  const flames = [];
+  const n = 14;
+  for (let i = 0; i < n; i++) {
+    const a = (360 / n) * i;
+    const R = i % 2 ? 12.5 : 15;
+    const p0 = SpgC_at(16, 16, 8, a - 11), p1 = SpgC_at(16, 16, 8, a + 11);
+    const tip = SpgC_at(16, 16, R, a + 9);
+    const c0 = SpgC_at(16, 16, R * 0.85, a - 8), c1 = SpgC_at(16, 16, R * 0.8, a + 16);
+    flames.push(`M${SpgC_r(p0[0])} ${SpgC_r(p0[1])} Q${SpgC_r(c0[0])} ${SpgC_r(c0[1])} ${SpgC_r(tip[0])} ${SpgC_r(tip[1])} Q${SpgC_r(c1[0])} ${SpgC_r(c1[1])} ${SpgC_r(p1[0])} ${SpgC_r(p1[1])} Z`);
+  }
+  return (
+    <svg viewBox="0 0 32 32" aria-hidden="true">
+      <defs>
+        <linearGradient id="spgClight8a" x1="0" y1="0" x2="0" y2="1">
+          <stop offset="0" stopColor="#FFE890" />
+          <stop offset="1" stopColor="#FF9A3A" />
+        </linearGradient>
+        <radialGradient id="spgClight8b" cx="0.42" cy="0.4" r="0.6">
+          <stop offset="0" stopColor="#FFFFFF" />
+          <stop offset="0.45" stopColor="#FFF4C0" />
+          <stop offset="1" stopColor="#FFC030" />
+        </radialGradient>
+      </defs>
+      <path d={flames.join(" ")} fill="url(#spgClight8a)" stroke={SpgC_O} strokeWidth="0.5" strokeLinejoin="round" />
+      <circle cx="16" cy="16" r="9" fill="url(#spgClight8b)" stroke={SpgC_O} strokeWidth="0.6" />
+      <circle cx="16" cy="16" r="4.4" fill="#FFFFFF" opacity="0.85" />
+      <SpgC_Star x={3.4} y={3.6} R={3} c="#FFE890" />
+      <SpgC_Star x={28.6} y={28.4} R={3} c="#FFE890" />
+      <SpgC_Star x={28.8} y={3.4} R={2.2} />
+      <SpgC_Star x={3.2} y={28.6} R={2.2} />
+    </svg>
+  );
+}
+
+/* ───────── dark：紫の闇。三日月→闇の玉→渦→裂け目…→黒い陽（金の縁）→終焉 ───────── */
+const SpgC_crescent = "M15.5 3.2 a8.6 8.6 0 1 0 5.6 13.6 a7 7 0 1 1 -5.6 -13.6 Z";
+
+function SpgC_dark_1() {
+  /* 暗影：三日月と、たなびく影 */
+  return (
+    <svg viewBox="0 0 32 32" aria-hidden="true">
+      <path d="M22 22 C26 24 29 21 28 18 C31 21 30 27 24 27 C20 27 18 25 16 25 Z" fill="#8A6AC8" stroke={SpgC_O} strokeWidth="0.5" strokeLinejoin="round" />
+      <g transform="translate(-0.4 0.6) scale(1.3)">
+        <path d={SpgC_crescent} fill="#B48AE8" stroke={SpgC_O} strokeWidth="0.5" strokeLinejoin="round" />
+      </g>
+    </svg>
+  );
+}
+
+function SpgC_dark_2() {
+  /* 冥闇：闇の玉と、立ちのぼる黒い靄 */
+  return (
+    <svg viewBox="0 0 32 32" aria-hidden="true">
+      <defs>
+        <radialGradient id="spgCdark2a" cx="0.62" cy="0.35" r="0.7">
+          <stop offset="0" stopColor="#D8C0FF" />
+          <stop offset="0.35" stopColor="#8A5AD0" />
+          <stop offset="1" stopColor="#1A0E30" />
+        </radialGradient>
+      </defs>
+      <path d="M9 12 C5 9 8 5 5 2 C10 3 12 7 11 11 Z M22 11 C24 7 21 4 24 1 C28 4 26 9 23 12 Z M15 9 C13 6 16 4 15 1 C19 3 19 7 18 9 Z" fill="#7A4AC0" stroke={SpgC_O} strokeWidth="0.5" strokeLinejoin="round" />
+      <circle cx="16" cy="19" r="10" fill="url(#spgCdark2a)" stroke={SpgC_O} strokeWidth="0.7" />
+      <path d="M20 12 C24 13 26 17 25 21" stroke="#E8D8FF" strokeWidth="1.2" fill="none" strokeLinecap="round" />
+    </svg>
+  );
+}
+
+function SpgC_dark_3() {
+  /* 深淵：闇の底へ吸いこむ渦 */
+  const arm = (a0) => {
+    const outer = [], inner = [];
+    for (let k = 0; k <= 14; k++) {
+      const t = k / 14, a = a0 + t * 260, r = 3 + t * 11, w = 0.3 + t * 3;
+      outer.push(SpgC_at(16, 16, r + w / 2, a));
+      inner.push(SpgC_at(16, 16, r - w / 2, a));
+    }
+    return SpgC_p(outer.concat(inner.reverse()));
+  };
+  return (
+    <svg viewBox="0 0 32 32" aria-hidden="true">
+      <defs>
+        <radialGradient id="spgCdark3a" cx="0.5" cy="0.5" r="0.5">
+          <stop offset="0" stopColor="#4A2A7A" />
+          <stop offset="1" stopColor="#D0B0FF" />
+        </radialGradient>
+      </defs>
+      {[0, 120, 240].map((a) => (
+        <path key={a} d={arm(a)} fill="url(#spgCdark3a)" stroke={SpgC_O} strokeWidth="0.5" strokeLinejoin="round" />
+      ))}
+      <circle cx="16" cy="16" r="3.8" fill="#0E0620" stroke="#B48AE8" strokeWidth="0.8" />
+    </svg>
+  );
+}
+
+function SpgC_dark_4() {
+  /* 虚無：空間の裂け目。向こうは何もない黒 */
+  return (
+    <svg viewBox="0 0 32 32" aria-hidden="true">
+      <path d={SpgC_p([[17, 1], [21, 8], [19.5, 12], [23.5, 17], [20, 22], [21, 27], [15, 31], [12, 24], [13.5, 19], [9, 14], [13, 9], [12, 5]])} fill="#B48AE8" stroke={SpgC_O} strokeWidth="0.6" strokeLinejoin="round" />
+      <path d={SpgC_p([[16.8, 3.5], [19, 8.5], [17.5, 12.5], [20.5, 17], [17.8, 21.5], [18.5, 26.5], [15.3, 28.5], [14.2, 24], [15.6, 19], [11.8, 14], [15, 9.5], [14.2, 5.5]])} fill="#0A0418" />
+      <path d={SpgC_p([[4, 6], [8, 4.5], [7, 9]])} fill="#8A5AD0" stroke={SpgC_O} strokeWidth="0.5" />
+      <path d={SpgC_p([[25, 5], [29, 7], [26, 10]])} fill="#8A5AD0" stroke={SpgC_O} strokeWidth="0.5" />
+      <path d={SpgC_p([[3, 22], [7, 20], [7.5, 25]])} fill="#8A5AD0" stroke={SpgC_O} strokeWidth="0.5" />
+      <path d={SpgC_p([[25, 23], [30, 24], [27, 28]])} fill="#8A5AD0" stroke={SpgC_O} strokeWidth="0.5" />
+      <circle cx="5" cy="15" r="1" fill="#D8C0FF" />
+      <circle cx="27.5" cy="15" r="1" fill="#D8C0FF" />
+    </svg>
+  );
+}
+
+function SpgC_dark_5() {
+  /* 冥府：闇の底から立ちのぼる紫の鬼火 */
+  const wisp = (x, y, s, key) => (
+    <g key={key} transform={`translate(${x} ${y}) scale(${s})`}>
+      <path d="M0 6 C-5 6 -6 1 -4 -2 C-2.5 -4.5 -2 -7 0.5 -11 C0.5 -7 3 -6 4 -3 C6 1 4.5 6 0 6 Z" fill="url(#spgCdark5a)" stroke={SpgC_O} strokeWidth={0.55 / s} strokeLinejoin="round" />
+      <ellipse cx="0" cy="2" rx="2" ry="2.6" fill="#F4ECFF" />
+    </g>
+  );
+  return (
+    <svg viewBox="0 0 32 32" aria-hidden="true">
+      <defs>
+        <linearGradient id="spgCdark5a" x1="0" y1="0" x2="0" y2="1">
+          <stop offset="0" stopColor="#8A5AD0" />
+          <stop offset="1" stopColor="#E0CCFF" />
+        </linearGradient>
+      </defs>
+      <path d="M1 26 C6 22 10 25 16 23 C22 25 26 22 31 26 L31 31 L1 31 Z" fill="#3A2266" stroke={SpgC_O} strokeWidth="0.6" strokeLinejoin="round" />
+      <path d="M3 27 C8 25 12 27 16 26 C21 27 25 25 29 27" stroke="#8A5AD0" strokeWidth="0.9" fill="none" strokeLinecap="round" />
+      {wisp(7, 17, 0.85, 1)}
+      {wisp(25, 16, 0.9, 2)}
+      {wisp(16, 13, 1.25, 3)}
+    </svg>
+  );
+}
+
+function SpgC_dark_6() {
+  /* 奈落：底の見えない穴へ、岩が吸いこまれて落ちる */
+  const rim = [];
+  for (let i = 0; i < 20; i++) {
+    const a = (Math.PI * 2 * i) / 20, k = i % 2 ? 1.12 : 1;
+    rim.push([16 + Math.cos(a) * 14 * k, 21 + Math.sin(a) * 7.5 * k]);
+  }
+  return (
+    <svg viewBox="0 0 32 32" aria-hidden="true">
+      <path d={SpgC_p(rim)} fill="#B48AE8" stroke={SpgC_O} strokeWidth="0.6" strokeLinejoin="round" />
+      <ellipse cx="16" cy="21.6" rx="12" ry="6" fill="#6A3AA8" />
+      <ellipse cx="16" cy="22.4" rx="8.6" ry="4.3" fill="#3A1A6A" />
+      <ellipse cx="16" cy="23.2" rx="5" ry="2.5" fill="#0A0418" />
+      <path d="M8 2 V8 M16 1 V9 M24 2 V8" stroke="#D8C0FF" strokeWidth="0.9" strokeLinecap="round" opacity="0.8" />
+      <path d={SpgC_p([[6, 9], [9, 8], [10, 11.5], [7, 12.5]])} fill="#8A5AD0" stroke={SpgC_O} strokeWidth="0.5" strokeLinejoin="round" />
+      <path d={SpgC_p([[14, 10], [18.5, 9.5], [18, 14], [14.5, 14.5]])} fill="#8A5AD0" stroke={SpgC_O} strokeWidth="0.5" strokeLinejoin="round" />
+      <path d={SpgC_p([[22.5, 9], [25.5, 8.5], [26, 11.5], [23, 12]])} fill="#8A5AD0" stroke={SpgC_O} strokeWidth="0.5" strokeLinejoin="round" />
+    </svg>
+  );
+}
+
+function SpgC_dark_7() {
+  /* 黒陽：金の縁をもつ黒い陽と、紫のとげの炎 */
+  return (
+    <svg viewBox="0 0 32 32" aria-hidden="true">
+      <defs>
+        <radialGradient id="spgCdark7a" cx="0.5" cy="0.5" r="0.5">
+          <stop offset="0.45" stopColor="#E0CCFF" />
+          <stop offset="1" stopColor="#8A5AD0" />
+        </radialGradient>
+        <radialGradient id="spgCdark7b" cx="0.4" cy="0.35" r="0.7">
+          <stop offset="0" stopColor="#3A2266" />
+          <stop offset="1" stopColor="#06020E" />
+        </radialGradient>
+      </defs>
+      <path d={SpgC_spikes(16, 16, 8, 15.5, 12.5, 16, 10.5, 0)} fill="url(#spgCdark7a)" stroke={SpgC_O} strokeWidth="0.5" strokeLinejoin="round" />
+      <circle cx="16" cy="16" r="9" fill="url(#spgCdark7b)" stroke="#FFD86A" strokeWidth="1.3" />
+      <path d="M11 11.5 C12.5 9.5 14.5 8.8 16.5 8.8" stroke="#B48AE8" strokeWidth="1" fill="none" strokeLinecap="round" />
+      <SpgC_Star x={27.5} y={4.5} R={2.6} c="#FFD86A" />
+      <SpgC_Star x={4.5} y={27.5} R={2.2} c="#FFD86A" />
+    </svg>
+  );
+}
+
+function SpgC_dark_8() {
+  /* 終焉：黒い陽が金の亀裂から砕け、破片と三日月の刃が舞う */
+  const shards = [[0, 12.6], [50, 13.6], [100, 12.4], [150, 13.8], [205, 12.8], [255, 13.6], [305, 12.6]];
+  return (
+    <svg viewBox="0 0 32 32" aria-hidden="true">
+      <defs>
+        <radialGradient id="spgCdark8a" cx="0.4" cy="0.35" r="0.7">
+          <stop offset="0" stopColor="#4A2A7A" />
+          <stop offset="1" stopColor="#06020E" />
+        </radialGradient>
+        <linearGradient id="spgCdark8b" x1="0" y1="0" x2="1" y2="1">
+          <stop offset="0" stopColor="#F0E0FF" />
+          <stop offset="1" stopColor="#9A6AE0" />
+        </linearGradient>
+      </defs>
+      {shards.map(([a, r], i) => {
+        const c = SpgC_at(16, 16, r, a);
+        return (
+          <path key={i} d={SpgC_p([SpgC_at(c[0], c[1], 2.8, a), SpgC_at(c[0], c[1], 1.6, a + 120), SpgC_at(c[0], c[1], 1.6, a + 240)])} fill={i % 2 ? "#FFD86A" : "#B48AE8"} stroke={SpgC_O} strokeWidth="0.5" strokeLinejoin="round" />
+        );
+      })}
+      <circle cx="16" cy="16" r="9.6" fill="url(#spgCdark8a)" stroke="#FFD86A" strokeWidth="1.2" />
+      <path d="M16 16 L14 11 L15.5 8.5 L13 6.6 M16 16 L20.5 17 L22 20.5 L25 21 M16 16 L11.5 19 L10.5 23 M20.5 17 L24 13.5" stroke="#FFB04A" strokeWidth="2" fill="none" strokeLinecap="round" strokeLinejoin="round" />
+      <path d="M16 16 L14 11 L15.5 8.5 L13 6.6 M16 16 L20.5 17 L22 20.5 L25 21 M16 16 L11.5 19 L10.5 23" stroke="#FFF4C0" strokeWidth="0.8" strokeLinecap="round" strokeLinejoin="round" fill="none" />
+      <path d="M2.5 21 C5 30 20 33 29 24 C21 29 8 28 2.5 21 Z" fill="url(#spgCdark8b)" stroke={SpgC_O} strokeWidth="0.6" strokeLinejoin="round" />
+      <SpgC_Star x={16} y={16} R={3.4} c="#FFF4C0" />
+      <SpgC_Star x={28.5} y={3.5} R={2.8} c="#FFD86A" />
+    </svg>
+  );
+}
+
+const SPG_C = {
+  earth: [SpgC_earth_1, SpgC_earth_2, SpgC_earth_3, SpgC_earth_4, SpgC_earth_5, SpgC_earth_6, SpgC_earth_7, SpgC_earth_8],
+  light: [SpgC_light_1, SpgC_light_2, SpgC_light_3, SpgC_light_4, SpgC_light_5, SpgC_light_6, SpgC_light_7, SpgC_light_8],
+  dark: [SpgC_dark_1, SpgC_dark_2, SpgC_dark_3, SpgC_dark_4, SpgC_dark_5, SpgC_dark_6, SpgC_dark_7, SpgC_dark_8],
+};
+/*
+  【必殺ゲージの印】2026-09-29 Aki：「ゲージが溜まるごとに必殺技の絵が変わる（剣8・魔法8×6・聖杯8・貨幣8）」。
+  ★ 段（tier 1〜8＝3枚〜10枚）ごとにその技の印。棒はいまの構えの属性の魔法。
+  ⚠️ 静止画（動かさない・filter なし）。スマホが熱くなるので、この印の中に動きを入れないこと。
+*/
+const SP_GLYPHS = {
+  swords: SPG_A.swords, cups: SPG_A.cups, pentacles: SPG_A.pentacles,
+  wands: { fire: SPG_B.fire, water: SPG_B.water, wind: SPG_B.wind, earth: SPG_C.earth, light: SPG_C.light, dark: SPG_C.dark },
+};
+/* ==== SP_GLYPHS END ==== */
 /*
   【必殺の円いゲージ】2026-09-29 Aki。
   ★ 円が時計回りに満ちる。区切り（刻み）は「n枚が撃てる」所。越えた刻みは金に灯る。
@@ -34781,7 +36138,13 @@ function SpRing({ k, r, cap, stage }) {
     </svg>
   );
 }
-function SpGlyph({ k, fam }) {
+function SpGlyph({ k, fam, tier }) {
+  /* ★ 段の印があればそれを出す（段ごとに絵が変わる）。無ければ従来の印 */
+  if (tier) {
+    const set = k === "wands" ? (SP_GLYPHS.wands[fam] || SP_GLYPHS.wands.fire) : SP_GLYPHS[k];
+    const G = set && set[Math.max(1, Math.min(8, tier)) - 1];
+    if (G) return <span className="sp-g sp-gt"><G /></span>;
+  }
   if (k === "swords") return (
     <svg className="sp-g" viewBox="0 0 32 20" aria-hidden="true">
       {/* 一閃。斜めの細い光の刃と、切っ先のきらめき */}
@@ -71923,109 +73286,143 @@ function BattlePanel({ lang, star, stageName, onEnd, theme, rank, zako, startHP,
                 title={a.spTip(suitLabel(k, lang))} onClick={() => pressSp(k)}>
                 <span className="bt-sp-orb">
                   <SpRing k={k} r={r} cap={cap} stage={stage} />
-                  <SpGlyph k={k} fam={st.stance || "fire"} />
+                  <SpGlyph k={k} fam={st.stance || "fire"} tier={Math.max(3, run) - 2} />
                   <i className="bt-sp-glow" />
-                  {armed && <b className="bt-sp-set">{a.spArmed}</b>}
+                </span>
+                {/*
+                  ★ 2026-09-29 Aki：ゲージの下に「発動」（タップの印つき）。ここを押しても撃てる（ボタンの中に置いてある）。
+                  ⚠️ 技の名前は出さない（Aki：「名前は書かずに発動だけ」）。枚数の数字も出さない。
+                */}
+                <span className="bt-sp-cap">
+                  <i className="go">{armed ? a.spArmed : run >= 3 ? (
+                    <>
+                      <svg viewBox="0 0 12 12" aria-hidden="true"><circle cx="6" cy="6" r="1.6" fill="currentColor" />
+                        <path d="M2.6 6 A3.4 3.4 0 0 1 9.4 6 M1 6 A5 5 0 0 1 11 6" fill="none" stroke="currentColor" strokeWidth="0.9" strokeLinecap="round" /></svg>
+                      {a.spGo}
+                    </>
+                  ) : a.spCharging}</i>
                 </span>
               </button>
             );
           })}
-          <button type="button" className={`bt-potion${(st.potions || 0) <= 0 || st.potTurn === st.turn ? " cd" : ""}`}
-            title={a.potionTip.replace(/\d+%/, `${Math.round((advProgress().potHeal || POTION_HEAL) * 100)}%`)} onClick={drinkPotion}>
-            <svg viewBox="0 0 24 24" width="18" height="18" aria-hidden="true">
-              <path d="M9 2 h6 v2 h-1 v4 l5 8 a3 3 0 0 1 -2.6 4.5 h-8.8 A3 3 0 0 1 5 16 l5 -8 V4 H9 Z" fill="rgba(255,255,255,0.12)" stroke="currentColor" strokeWidth="1.4" />
-              <path d="M7.2 14 h9.6 l1.6 2.6 a2 2 0 0 1 -1.8 3 H7.4 a2 2 0 0 1 -1.8 -3 Z" fill="#FF5A7A" />
-            </svg>
-            <b className="bt-ctrl-n">{st.potions || 0}</b>
-          </button>
+          {/*
+            ポーション。2026-09-29 Aki：「〇型に統一」。必殺の丸と同じ器・同じ下の札（押せるとき「回復」）。
+          */}
+          {(() => {
+            const potCd = (st.potions || 0) <= 0 || st.potTurn === st.turn;
+            return (
+              <button type="button" className={`bt-sp bt-pot${potCd ? " cd" : ""}`} disabled={potCd}
+                title={a.potionTip.replace(/\d+%/, `${Math.round((advProgress().potHeal || POTION_HEAL) * 100)}%`)} onClick={drinkPotion}>
+                <span className="bt-sp-orb bt-pot-orb">
+                  <svg viewBox="0 0 24 24" aria-hidden="true">
+                    <path d="M9 2 h6 v2 h-1 v4 l5 8 a3 3 0 0 1 -2.6 4.5 h-8.8 A3 3 0 0 1 5 16 l5 -8 V4 H9 Z" fill="rgba(255,255,255,0.12)" stroke="#FFE0E8" strokeWidth="1.4" />
+                    <path d="M7.2 14 h9.6 l1.6 2.6 a2 2 0 0 1 -1.8 3 H7.4 a2 2 0 0 1 -1.8 -3 Z" fill="#FF5A7A" />
+                  </svg>
+                  <b className="bt-ctrl-n">{st.potions || 0}</b>
+                </span>
+                <span className="bt-sp-cap"><i className="go">{a.potGo}</i></span>
+              </button>
+            );
+          })()}
         </div>
       </div>
 
       {/*
-        大アルカナの一覧。
-        ⚠️⚠️ 畳んでおくこと。22行を常に出すと、戦場も札も押し出される。
-        ⚠️ 戦いの最中に見るものなので、戦闘の画面の中に置く。
-          別の画面へ移すと、確かめるために戦いを離れることになる。
+        【ログ】2026-09-29 Aki：「敵の行動13種・大アルカナの効果・戦闘ログ・何ターン目／残りの敵などは全部ログとして下に分離」。
+        ★ 一つの畳みにまとめ、戦闘の画面の一番下に置く。見出しにだけ、何ターン目・残りの敵（と動けない）を出す。
+        ⚠️ 戦うたびに畳んだ状態へ戻す（key に戦闘の識別）。
       */}
-      {/*
-        敵の妨害の一覧。
-        ⚠️⚠️ 味方の効果と混ぜないこと。どちらが自分に良いものか分からなくなる。
-        ★ 別の畳みにして、朱で統一する。
-      */}
-      {/*
-        ⚠️⚠️ open を付けないこと。付けると戦闘に入るたび開いた状態で始まり、
-          戦場と札が下へ押し出される。
-        ⚠️ key に戦闘の識別を入れて、戦うたびに畳んだ状態へ戻す。
-          details は一度開くと、同じ要素のまま残って開きっぱなしになる。
-      */}
-      <details className="bt-guide bad" key={`dbg-${star}-${zako || "boss"}`}>
-        <summary>{a.debuffList}</summary>
-        <ul className="bt-guide-list">
-          {["roar", "rot", "despair", "miasma", "dread", "guard", "guardHi", "guardEdge",
-            "wind", "heavy", "combo", "hit", "heal"].map((k) => (
-            <li key={k}>
-              <b>{(a.foeActName && a.foeActName[k]) || k}</b>
-              <span>{(a.foeActHelp && a.foeActHelp[k]) || ""}</span>
-            </li>
-          ))}
-        </ul>
-      </details>
-
-      <details className="bt-guide major" key={`mjr-${star}-${zako || "boss"}`}>
-        <summary>{a.majorList}</summary>
-        <ul className="bt-guide-list">
-          {Array.from({ length: 22 }, (_, n) => {
-            const fx0 = MAJOR_FX[n];
-            const key = fx0 && fx0.key;
-            return (
-              <li key={n}>
-                <b>{(a.fxName && a.fxName[key]) || n}</b>
-                <span>{(a.majorHelp && a.majorHelp[n]) || ""}</span>
-              </li>
-            );
-          })}
-        </ul>
-      </details>
-
-      {/*
-        戦いの履歴。
-        ⚠️⚠️ 新しいものを上に並べること。下に積むと、開くたびに
-          いちばん見たい直近の一手が隠れる。
-        ⚠️ 色で分ける。自分への傷＝朱、敵への傷＝金、回復＝緑、効果＝紫。
-          数字だけ並べても、どちらが受けたのか読めない。
-        ⚠️ 戦うたびに畳んだ状態へ戻す（key に戦闘の識別を入れる）。
-      */}
-      <details className="bt-guide log" key={`log-${star}-${zako || "boss"}`}>
-        <summary>{a.histList}</summary>
-        <ul className="bt-hist">
-          {hist.length === 0 && <li className="bt-hist-none">{a.histNone}</li>}
-          {[...hist].reverse().map((h) => (
-            <li key={h.id} className={`bt-hist-row ${h.kind}`}>
-              <span className="bt-hist-turn">{h.turn}</span>
-              <span className="bt-hist-text">{h.text}</span>
-            </li>
-          ))}
-        </ul>
-      </details>
-
-
-      <p className="adv-legend">
-        <span className="adv-legend-key">{a.btTurn(st.turn)}</span>
-        {/* ⚠️ 動けないことを出す。札が全部灰色なだけでは理由が分からない */}
-        {st.stunNext > 0 && <span className="adv-legend-key">{a.btStun}</span>}
+      <details className="oo-logbox" key={`lb-${star}-${zako || "boss"}`}>
+        <summary>
+          <span className="oo-log-h">{a.logBox}</span>
+          <span className="oo-log-live">{a.btTurn(st.turn)}・{a.btFoesLeft(alive)}{st.stunNext > 0 ? `・${a.btStun}` : ""}</span>
+        </summary>
+        <p className="adv-legend">
+          <span className="adv-legend-key">{a.btTurn(st.turn)}</span>
+          {/* ⚠️ 動けないことを出す。札が全部灰色なだけでは理由が分からない */}
+          {st.stunNext > 0 && <span className="adv-legend-key">{a.btStun}</span>}
+          {/*
+            ⚠️ 何巡目かを出すこと。世界（3回行動）は同じ手札を繰り返すので、
+              画面では一巡目と三巡目の区別が付かず、効いていないように見える。
+          */}
+          {(() => {
+            const acts = (st.turnNext && st.turnNext.acts) || 1;
+            if (acts <= 1 || !st.hand.length) return null;
+            const lap = Math.min(acts, Math.floor(st.shown / st.hand.length) + 1);
+            return <span className="adv-legend-key">{a.btLap(lap, acts)}</span>;
+          })()}
+          <span className="adv-legend-key">{a.btFoesLeft(alive)}</span>
+          {st.note && <span className="adv-legend-key">{st.note}</span>}
+        </p>
         {/*
-          ⚠️ 何巡目かを出すこと。世界（3回行動）は同じ手札を繰り返すので、
-            画面では一巡目と三巡目の区別が付かず、効いていないように見える。
+          大アルカナの一覧。
+          ⚠️⚠️ 畳んでおくこと。22行を常に出すと、戦場も札も押し出される。
+          ⚠️ 戦いの最中に見るものなので、戦闘の画面の中に置く。
+            別の画面へ移すと、確かめるために戦いを離れることになる。
         */}
-        {(() => {
-          const acts = (st.turnNext && st.turnNext.acts) || 1;
-          if (acts <= 1 || !st.hand.length) return null;
-          const lap = Math.min(acts, Math.floor(st.shown / st.hand.length) + 1);
-          return <span className="adv-legend-key">{a.btLap(lap, acts)}</span>;
-        })()}
-        <span className="adv-legend-key">{a.btFoesLeft(alive)}</span>
-        {st.note && <span className="adv-legend-key">{st.note}</span>}
-      </p>
+        {/*
+          敵の妨害の一覧。
+          ⚠️⚠️ 味方の効果と混ぜないこと。どちらが自分に良いものか分からなくなる。
+          ★ 別の畳みにして、朱で統一する。
+        */}
+        {/*
+          ⚠️⚠️ open を付けないこと。付けると戦闘に入るたび開いた状態で始まり、
+            戦場と札が下へ押し出される。
+          ⚠️ key に戦闘の識別を入れて、戦うたびに畳んだ状態へ戻す。
+            details は一度開くと、同じ要素のまま残って開きっぱなしになる。
+        */}
+        <details className="bt-guide bad" key={`dbg-${star}-${zako || "boss"}`}>
+          <summary>{a.debuffList}</summary>
+          <ul className="bt-guide-list">
+            {["roar", "rot", "despair", "miasma", "dread", "guard", "guardHi", "guardEdge",
+              "wind", "heavy", "combo", "hit", "heal"].map((k) => (
+              <li key={k}>
+                <b>{(a.foeActName && a.foeActName[k]) || k}</b>
+                <span>{(a.foeActHelp && a.foeActHelp[k]) || ""}</span>
+              </li>
+            ))}
+          </ul>
+        </details>
+
+        <details className="bt-guide major" key={`mjr-${star}-${zako || "boss"}`}>
+          <summary>{a.majorList}</summary>
+          <ul className="bt-guide-list">
+            {Array.from({ length: 22 }, (_, n) => {
+              const fx0 = MAJOR_FX[n];
+              const key = fx0 && fx0.key;
+              return (
+                <li key={n}>
+                  <b>{(a.fxName && a.fxName[key]) || n}</b>
+                  <span>{(a.majorHelp && a.majorHelp[n]) || ""}</span>
+                </li>
+              );
+            })}
+          </ul>
+        </details>
+
+        {/*
+          戦いの履歴。
+          ⚠️⚠️ 新しいものを上に並べること。下に積むと、開くたびに
+            いちばん見たい直近の一手が隠れる。
+          ⚠️ 色で分ける。自分への傷＝朱、敵への傷＝金、回復＝緑、効果＝紫。
+            数字だけ並べても、どちらが受けたのか読めない。
+          ⚠️ 戦うたびに畳んだ状態へ戻す（key に戦闘の識別を入れる）。
+        */}
+        <details className="bt-guide log" key={`log-${star}-${zako || "boss"}`}>
+          <summary>{a.histList}</summary>
+          <ul className="bt-hist">
+            {hist.length === 0 && <li className="bt-hist-none">{a.histNone}</li>}
+            {[...hist].reverse().map((h) => (
+              <li key={h.id} className={`bt-hist-row ${h.kind}`}>
+                <span className="bt-hist-turn">{h.turn}</span>
+                <span className="bt-hist-text">{h.text}</span>
+              </li>
+            ))}
+          </ul>
+        </details>
+
+
+      </details>
 
     </div>
   );
@@ -79267,36 +80664,6 @@ function AdventurePanel({ lang, items, onItem }) {
       )}
 
       {/*
-        いまどこにいるか。
-        ⚠️⚠️ 盤と札のあいだに挟まないこと。挟むと、盤から札への視線が
-          文で切られて、めくる場面が地続きに見えなくなる。実際そうなっていた。
-        ⚠️ これは常に出す。畳めるのは読み方のほうだけ。
-      */}
-      <p className="adv-where">
-        {a.here}<b>{node.name || "—"}</b>
-        {!over && nexts.length > 0 && (
-          <span className="adv-next">{a.next}{nexts.map((n) => n.name).filter(Boolean).join(" ／ ")}</span>
-        )}
-      </p>
-      {/*
-        地図の読み方。
-        ⚠️⚠️ 常に開いておかないこと。何十周もする画面なので、
-          二周目からは読まない文が場所を取り続ける。実際そうなっていた。
-        ⚠️ 進み具合（何環めか）と天気は、閉じていても分かるように見出しへ出す。
-      */}
-      <details className="adv-guide">
-        <summary>
-          {/* ⚠️ 天気はここに出さない。盤の上に出しているので二重になる */}
-          <span className="adv-guide-sum">
-            {a.progress(hexDist(node.q || 0, node.r || 0), LAST_COL)}
-          </span>
-        </summary>
-        <p className="adv-legend">
-          <span className="adv-legend-key">{a.viewDrag}</span>
-          <span className="adv-legend-key">{a.isoLegend}</span>
-        </p>
-      </details>
-      {/*
         お店でもらった一枚。
         ★ 札として大きく見せる。文だけだと、何をもらったか記憶に残らない。
         ⚠️ 押すまで残す。すぐ消すと読む前に流れる。
@@ -79312,23 +80679,6 @@ function AdventurePanel({ lang, items, onItem }) {
             </button>
           </div>
         </div>
-      )}
-      {/*
-        起きたこと。
-        ⚠️⚠️ 開いたままにしないこと。小MAPは見るものが多く、
-          流れる文が視線を奪って、盤と札から気が散る。
-        ★ 畳んでおき、見出しに最新の一行だけ出す。
-      */}
-      {log.length > 0 && (
-        <details className="adv-log-box">
-          <summary>
-            <span className="adv-log-sum">{a.logTitle(log.length)}</span>
-            <span className="adv-log-last">{log[log.length - 1]}</span>
-          </summary>
-          <ul className="adv-log">
-            {log.slice(-12).map((x, i) => <li key={i}>{x}</li>)}
-          </ul>
-        </details>
       )}
       {/*
         結果。
@@ -79422,6 +80772,45 @@ function AdventurePanel({ lang, items, onItem }) {
           </div>
         </div>
       )}
+      {/*
+        【ログ】2026-09-29 Aki：「いま居るのは・行ける先・中心から何環め・移動履歴・何かが立ちふさがった、も全部ログとして下に分離」。
+        ★ 一つの畳みにまとめて画面の一番下に置く。見出しには、いま居る所と最新の一行だけ出す（畳んだままでも分かる）。
+      */}
+      <details className="oo-logbox">
+        <summary>
+          <span className="oo-log-h">{a.logBox}</span>
+          <span className="oo-log-live">{node.name || "—"}{log.length > 0 ? `・${log[log.length - 1]}` : ""}</span>
+        </summary>
+        <p className="adv-where">
+          {a.here}<b>{node.name || "—"}</b>
+          {!over && nexts.length > 0 && (
+            <span className="adv-next">{a.next}{nexts.map((n) => n.name).filter(Boolean).join(" ／ ")}</span>
+          )}
+        </p>
+        <details className="adv-guide">
+          <summary>
+            {/* ⚠️ 天気はここに出さない。盤の上に出しているので二重になる */}
+            <span className="adv-guide-sum">
+              {a.progress(hexDist(node.q || 0, node.r || 0), LAST_COL)}
+            </span>
+          </summary>
+          <p className="adv-legend">
+            <span className="adv-legend-key">{a.viewDrag}</span>
+            <span className="adv-legend-key">{a.isoLegend}</span>
+          </p>
+        </details>
+        {log.length > 0 && (
+          <details className="adv-log-box">
+            <summary>
+              <span className="adv-log-sum">{a.logTitle(log.length)}</span>
+              <span className="adv-log-last">{log[log.length - 1]}</span>
+            </summary>
+            <ul className="adv-log">
+              {log.slice(-12).map((x, i) => <li key={i}>{x}</li>)}
+            </ul>
+          </details>
+        )}
+      </details>
     </div>
   );
 }
@@ -103585,6 +104974,10 @@ export default function TarotDraw() {
           padding: 1px 4px; border-radius: 10px; }
         .bt-fx-row.buf { background: rgba(120,200,255,0.06); box-shadow: inset 2px 0 0 rgba(140,220,160,0.6); }
         .bt-fx-row.deb { background: rgba(255,90,90,0.06); box-shadow: inset 2px 0 0 rgba(255,110,110,0.6); }
+        /* ⚠️ 2026-09-29 Aki：欄の地に薄く「＋」（バフ）と「−」（デバフ）。空でもどちらの欄か分かるように。右端に置き、印の並びと重ねない */
+        .bt-fx-row.buf, .bt-fx-row.deb { background-repeat: no-repeat; background-position: right 6px center; background-size: 16px 16px; }
+        .bt-fx-row.buf { background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 20 20'%3E%3Cpath d='M8.4 3h3.2v5.4H17v3.2h-5.4V17H8.4v-5.4H3V8.4h5.4z' fill='%238CDCA0' fill-opacity='0.22'/%3E%3C/svg%3E"); background-color: rgba(120,200,255,0.06); }
+        .bt-fx-row.deb { background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 20 20'%3E%3Cpath d='M3 8.4h14v3.2H3z' fill='%23FF6E6E' fill-opacity='0.24'/%3E%3C/svg%3E"); background-color: rgba(255,90,90,0.06); }
         .bt-me .bt-fx.marks.rows .bt-fx-help { left: 0; right: auto; bottom: calc(100% + 6px); }
         .bt-fx-help b { color: #FFF3D6; }
         /* PCの型。⚠️ 画面が高いので戦場を固定（伸ばすと札の枠が画面の外へ押し出される） */
@@ -103670,6 +105063,8 @@ export default function TarotDraw() {
         .bt-sp-ring { position: absolute; inset: 0; width: 100%; height: 100%; overflow: visible; }
         .bt-sp .bt-sp-orb .sp-g { position: absolute; left: 50%; top: 50%; width: 60%; height: auto; transform: translate(-50%, -50%);
           filter: drop-shadow(0 1px 1.5px rgba(0,0,0,0.85)); opacity: 0.5; animation: none; }
+        .bt-sp .bt-sp-orb .sp-gt { display: block; width: 64%; }
+        .bt-sp .bt-sp-orb .sp-gt svg { display: block; width: 100%; height: auto; }
         .bt-sp.stage-1 .bt-sp-orb .sp-g { opacity: 1; }
         .bt-sp.stage-2 .bt-sp-orb .sp-g { opacity: 1; filter: drop-shadow(0 0 3px var(--glow)) drop-shadow(0 1px 1.5px rgba(0,0,0,0.85)); }
         .bt-sp.stage-3 .bt-sp-orb .sp-g, .bt-sp.stage-4 .bt-sp-orb .sp-g { opacity: 1; width: 66%;
@@ -103683,6 +105078,37 @@ export default function TarotDraw() {
         .bt-sp.armed .bt-sp-glow { will-change: opacity; animation: spOrbPulse 1.4s ease-in-out infinite; }
         @keyframes spOrbPulse { 0%, 100% { opacity: 0.45; } 50% { opacity: 1; } }
         .bt-sp:not(:disabled):active .bt-sp-orb { transform: translateY(2px) scale(0.96); }
+        .bt-sp-cap { display: flex; flex-direction: column; align-items: center; gap: 1px; margin-top: 3px; min-width: 0; pointer-events: none; }
+        .bt-sp-cap i { font-style: normal; display: block; max-width: 100%; text-align: center; }
+        .bt-sp-cap .nm { font-size: 8.5px; line-height: 10px; color: rgba(255,243,214,0.55); letter-spacing: -0.02em;
+          display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; word-break: keep-all; overflow-wrap: anywhere; }
+        .bt-sp-cap .go { font-size: 9px; line-height: 13px; font-weight: 700; padding: 0 5px; border-radius: 7px; white-space: nowrap;
+          color: rgba(255,243,214,0.35); display: inline-flex; align-items: center; gap: 2px; }
+        .bt-sp-cap .go svg { width: 10px; height: 10px; }
+        .bt-sp:not(:disabled) .bt-sp-cap .nm { color: #FFF3D6; }
+        .bt-sp:not(:disabled) .bt-sp-cap .go { color: #1A1030; background: var(--glow); box-shadow: 0 0 6px var(--glow); }
+        .bt-sp.armed .bt-sp-cap .go { color: #1A1030; background: #FFE08A; }
+        .bt-sp.armed .bt-sp-cap .nm { color: #FFF3D6; }
+        .bt-pot { --glow: #FF7A9A; }
+        .bt-pot-orb { background: radial-gradient(rgba(70,30,60,0.95), rgba(20,10,26,0.98)); box-shadow: inset 0 0 0 1.5px rgba(255,120,150,0.55), 0 3px 0 rgba(0,0,0,0.55); }
+        .bt-pot-orb svg { position: absolute; left: 50%; top: 50%; width: 52%; height: 52%; transform: translate(-50%, -50%); }
+        .bt-pot-orb .bt-ctrl-n { right: -2px; top: -2px; background: #8A2A4A; }
+        .bt-pot.cd .bt-pot-orb { opacity: 0.45; }
+        /*
+          ログの箱（戦闘・小MAP）。2026-09-29 Aki：「全部ログとして下に分離」。
+          ⚠️ 本体と区切るため上に線と間を空け、地を一段暗く。見出しの右に今の一行（畳んでいても読める）。
+        */
+        .oo-logbox { margin: 14px 0 4px; padding: 0 10px; border-radius: 12px; background: rgba(10,6,22,0.55);
+          border: 1px solid rgba(255,243,214,0.12); box-shadow: 0 -8px 0 -7px rgba(255,243,214,0.18); }
+        .oo-logbox > summary { display: flex; align-items: center; gap: 8px; padding: 8px 0; cursor: pointer; list-style: none;
+          font-size: 12px; color: #FFF3D6; }
+        .oo-logbox > summary::-webkit-details-marker { display: none; }
+        .oo-logbox > summary::after { content: "▾"; margin-left: auto; opacity: 0.6; }
+        .oo-logbox[open] > summary::after { content: "▴"; }
+        .oo-log-h { flex: none; font-weight: 700; letter-spacing: 0.12em; color: #C9A24B; }
+        .oo-log-live { min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; color: rgba(255,243,214,0.7); font-size: 11px; }
+        .oo-logbox[open] { padding-bottom: 8px; }
+        .oo-logbox .adv-legend { display: flex; flex-direction: row; flex-wrap: wrap; gap: 4px 12px; border-radius: 10px; }
         .bt-sp-set { position: absolute; left: 50%; bottom: -2px; transform: translateX(-50%); padding: 0 4px; border-radius: 6px;
           font-size: 9px; line-height: 12px; font-weight: 700; color: #1A1030; background: var(--glow); white-space: nowrap; }
         /* 押した手応え。⚠️ 影の段のぶん沈む */
