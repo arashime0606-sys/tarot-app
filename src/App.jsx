@@ -89610,6 +89610,8 @@ function AdventurePanel({ lang, items, onItem }) {
   const deal = (self) => {
     /* ⚠️ 終わっていたら配らない。戦闘中も配らない（遅れて発火するタイマー対策）。チケットの演出中も配らない */
     if (over || busy || atBoss || tkRoll) return;
+    /* ⚠️ 札は主の手前の分かれ道だけ（2026-10-05）。一本道・入口では配らない */
+    if (!(nexts.length >= 2 && toBossHere)) return;
     /* ⚠️ 移動が決まっている最中は配らない。二重に動く */
     if (goingRef.current) return;
     /* ⚠️ 78枚から。冒険でも山を絞らない。絞ると出る札に意図が入る */
@@ -90668,14 +90670,11 @@ function AdventurePanel({ lang, items, onItem }) {
             ⚠️ 終わりの節（主・行き止まり）では次を引かないこと。
               結果の画面を跨いで走り続けると、何が起きたか読めない。
           */
-          const fin = !nd || nd.kind === "boss" || !(nd.next || []).length;
-          if (autoRef.current && !fin) {
-            timers.current.push(setTimeout(() => {
-              /* ⚠️ 最新の deal を呼ぶ。古い描画のものだと引く枚数がずれる */
-              /* ⚠️ 主の前でチケットを聞いているあいだは送らない（数え終えたら上の起動が引き受ける） */
-              if (autoRef.current && dealRef.current && !tkHoldRef.current) dealRef.current(true);
-            }, ms(520)));
-          }
+          /*
+            ⚠️⚠️ 2026-10-05 Aki「オートだとカード出てくる」：ここで毎回 deal を呼んでいたので、
+              オートでは一本道の一歩ごとに札が6枚出ていた（札は使われず、すぐ歩いていた）。
+            ★ 次の一手は場所ごとの送り（一本道・入口・井戸・主の手前）に任せる。札を配るのは主の手前の送りだけ。
+          */
         }, ms(900)));
       }, ms(700)));
     }, ms(800)));
