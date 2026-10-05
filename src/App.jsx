@@ -5619,7 +5619,8 @@ const SP_COLOR = { swords: "#DDE6F6", wands: "#FF8A4A", cups: "#7AE08E", pentacl
 const spTurnsOf = (star) => 6 + (star | 0);
 const spRunOf = (star) => Math.max(3, Math.min(10, 2 + Math.ceil(((star | 0) * 8) / 12)));
 /* ⚠️ 1スートの満タン。一ターンに来るそのスートの札は、およそ枚数の1/4 */
-const spMaxOf = (star, cards) => Math.max(3, Math.round(((cards || 3) / 4) * spTurnsOf(star) / spChargeNow()));
+/* ⚠️ k … その探索のあいだのゲージの溜まり方（小MAPの特別なマス、1＝そのまま）。大きいほど早く溜まる */
+const spMaxOf = (star, cards, k) => Math.max(3, Math.round(((cards || 3) / 4) * spTurnsOf(star) / (spChargeNow() * (k || 1))));
 /*
   【溜まりの段】2026-09-29 Aki：「円形に溜まり、3枚必殺から★の上限（最大10枚）まで撃てる。MAXまで溜めれば10枚、
     3枚・4枚ならすぐ撃てる。数字は出さず、印が変わっていく」。
@@ -5668,6 +5669,20 @@ const FLASH_NAMES = {
     "豊穣の恵", "生命の恵", "海山の恵", "地球の恵"],
   pentacles: ["ブルーサークル", "ブルースフィア", "ブルードーム", "ブルーサンクチュアリ",
     "ブルーラグーン", "ブルーオーシャン", "ブルーガイア", "ブルーアース"],
+};
+/*
+  物理の必殺の名前（2026-10-03）。斬撃は FLASH_NAMES.swords（一閃）のまま。
+  ⚠️ 演出（PfThrustFlash など）の段ごとの情景と名前を揃えてある。片方だけ変えないこと。
+*/
+const PHYS_FLASH_NAMES = {
+  thrust: ["一角突", "流星突", "迅雷突", "穿岩突", "破城突", "竜牙突", "貫天突", "天穿突"],
+  blunt: ["石砕", "岩砕", "鉄砕", "地砕", "山砕", "城砕", "天砕", "星砕"],
+  shoot: ["一矢", "疾風矢", "雷鳴矢", "驟雨矢", "嵐矢", "流星矢", "千本矢", "天穹矢"],
+};
+const PHYS_FLASH_NAMES_EN = {
+  thrust: ["Horn Thrust", "Meteor Thrust", "Thunder Thrust", "Rockpierce Thrust", "Siegebreaker Thrust", "Dragonfang Thrust", "Heavenpierce Thrust", "Skypierce Thrust"],
+  blunt: ["Stonebreaker", "Rockbreaker", "Ironbreaker", "Earthbreaker", "Mountainbreaker", "Castlebreaker", "Skyshatter", "Starbreaker"],
+  shoot: ["Lone Arrow", "Gale Arrows", "Thunder Arrows", "Arrow Shower", "Storm Arrows", "Meteor Arrows", "Thousand Arrows", "Skyvault Volley"],
 };
 const FLASH_NAMES_EN = {
   swords: ["Drizzle Edge", "Gale Edge", "Violet Edge", "Skyrend Edge",
@@ -6205,7 +6220,9 @@ function emptyFx() {
   return { hiero: 0, lovers: 0, hermit: 0, wheel: 0, justice: 0, hanged: 0,
     death: 0, temperance: 0, star: 0, moon: 0, sun: 0, despair: 0, dread: 0,
     /* ⚠️ 瘴気も敵が掛けてくるもの。こちらの継続と同じ器に置き、同じ速さで減らす */
-    miasma: 0 };
+    miasma: 0,
+    /* 逆転の奥義の守り（2026-10-04）。aegis … 敵の攻撃を受けない ／ eternal … 状態異常を受けない */
+    aegis: 0, eternal: 0 };
 }
 /** 継続を1つ減らす。⚠️ 呼ぶのは敵の手番のあと一箇所だけ */
 function tickFx(fx) {
@@ -6357,7 +6374,7 @@ function majorEffect(state, card, ctx) {
           「新しいものが生まれる」という札の意味に合わない。
         ★ 星・月・太陽のうち、まだ効いていないものから一つ。2ターン。
         ⚠️ 三つとも効いていたら何もしない
-          （エレメンタルブラストが出る場面なので、そちらに任せる）。
+          （コスモフォースが出る場面なので、そちらに任せる）。
       */
       const cand = ["star", "moon", "sun"].filter((k) => !(state.fx[k] > 0));
       if (cand.length) {
@@ -7200,7 +7217,9 @@ function battleApply(state, card) {
       const wkRev = (state.weak && t.f.revived && state.weak.revived) || 1;
       const d = Math.round(S.power * CARD_COEF.swords * state.mult * r * cm
         * (1 - defRate(state.foeDefP || 0)) * (seeThrough ? 1 : (1 - res.phys)) * gd * vsBoss
-        * vsRevivedMul(state.eq, t.f) * wk * wkRev * foeDef * stanceDealMul(state, t.i));
+        * vsRevivedMul(state.eq, t.f) * wk * wkRev * foeDef * stanceDealMul(state, t.i)
+        /* ★ 2026-10-03：物理の構えの相性と、その物理の倍率（地の利・天の利・特別なマス） */
+        * physDealMul(state, t.i) * attrMulOf(state, state.phys));
       /* ⚠️ 敵の回避。外れたら0（必殺技と大アルカナはここを通らない） */
       if (Math.random() < foeEvadeOf(state.star || 1) + ((fb0.evade && fb0.evade.t > 0) ? fb0.evade.amt : 0)) { out.hits.push({ i: t.i, d: 0, miss: true }); }
       else if (reflects(state, t.i, "swords")) { out.hits.push({ i: t.i, d: 0, reflect: true }); out.reflect += d; }
@@ -7248,7 +7267,9 @@ function battleApply(state, card) {
       const wkWRev = (state.weak && x.f.revived && state.weak.revived) || 1;
       const d = Math.round(S.mind * CARD_COEF.wands * spread * state.mult * r * cm
         * (1 - defRate(state.foeDefM || 0)) * (seeThroughW ? 1 : (1 - res.mag)) * gd * rv
-        * wkW * wkWRev * stanceDealMul(state, x.i));
+        * wkW * wkWRev * stanceDealMul(state, x.i)
+        /* ★ 2026-10-03：いまの魔法の構えの属性の倍率（地の利・天の利・特別なマス） */
+        * attrMulOf(state, state.stance));
       if (Math.random() < foeEvadeOf(state.star || 1) + ((fb0.evade && fb0.evade.t > 0) ? fb0.evade.amt : 0)) { out.hits.push({ i: x.i, d: 0, miss: true }); }
       else if (reflects(state, x.i, "wands")) { out.hits.push({ i: x.i, d: 0, reflect: true }); out.reflect += d; }
       else { x.f.hp -= d; out.hits.push({ i: x.i, d }); }
@@ -7294,7 +7315,9 @@ function battleApply(state, card) {
       ★ 精神に戻す。割合に変えるなら、敵HPと攻撃力を12段ぶん測り直すこと。
     */
     const raw = Math.round(S.spirit * CARD_COEF.cups * rankMultOf(shifted, "normal")
-      * (rev ? BATTLE.revHeal : 1) * (just ? 2.0 : 1) * might * temper);
+      * (rev ? BATTLE.revHeal : 1) * (just ? 2.0 : 1) * might * temper
+      /* ★ 2026-10-03：受ける回復の倍率（小MAPの薬草園など） */
+      * (state.healK || 1));
     /* ⚠️ 瘴気のぶん回復を削る。深淵（1.0）なら一切戻らない */
     const mia = (state.fx && state.fx.miasma > 0) ? (1 - (state.miasmaCut || 0)) : 1;
     const room = Math.max(0, S.maxHP - state.hp);
@@ -7648,7 +7671,17 @@ function hpBandOf(hp, maxHP) {
     回数まで変えると、タイプごとに強さが割れて★4〜12を測り直すことになる。
   ⚠️ その★でまだ使えない妨害（★3以下の瘴気など）は選ばない。
 */
-const DEBUFF_KEYS = ["roar", "rot", "despair", "miasma", "dread"];
+/*
+  ⚠️ 2026-10-03 Aki「ゲージに関するデバフもシステム上追加して」→ 六つ目の「虚脱」（sap）。
+    殴らずに、必殺ゲージ4本の溜まりをそれぞれ削る（今ある量の SAP_CUT 割）。★4から。
+    轟音（積んだ倍率を削る）と対になる手：轟音は貨幣の積み、虚脱は必殺の積みを崩す。
+*/
+const DEBUFF_KEYS = ["roar", "rot", "despair", "miasma", "dread", "sap"];
+/* 虚脱の削り幅（★ごと）。⚠️ 釣り合いは最後にまとめて測る（2026-10-03 Aki：毎回は合わせない） */
+const SAP_CUT_BY_STAR = { 8: 0.40, 9: 0.40, 10: 0.45, 11: 0.45, 12: 0.50 };
+function sapCutOf(star) { return SAP_CUT_BY_STAR[star | 0] || 0.30; }
+/* 虚脱を得意にするタイプ（重み3）。⚠️ 他の妨害の得意・不得意（DEBUFF_STYLE）は触らない */
+const SAP_FAV = { ghost: 3, electric: 3, psychic: 3 };
 /*
   状態異常を消す（貨幣＝青の回復必殺）。2026-09-27 Aki。
   ★ 消すもの：絶望・瘴気・殺気（続いている分）、次の手番の腐食の予約、いま手札で腐っている札。
@@ -7746,11 +7779,12 @@ function healStyleOf(elem) {
   return h === 0 ? { p: 0, amt: 0, max: 0 } : h === 2 ? { p: 0.7, amt: 1.4, max: 1 } : { p: 0.5, amt: 1, max: 0 };
 }
 const DEBUFF_BY_ELEM = Object.fromEntries(Object.entries(DEBUFF_STYLE).map(([k, v]) =>
-  [k, DEBUFF_KEYS.map((d) => (v.fav.includes(d) ? 4 : v.weak === d ? 0 : 1))]));
+  [k, DEBUFF_KEYS.map((d) => (d === "sap" ? (SAP_FAV[k] || 1) : v.fav.includes(d) ? 4 : v.weak === d ? 0 : 1))]));
 function debuffPick(elem, star) {
-  const w = (DEBUFF_BY_ELEM[elem] || [1, 1, 1, 1, 1]).slice();
-  /* ⚠️ まだ使えない妨害は外す。瘴気は★4から（miasmaOf が null を返す） */
+  const w = (DEBUFF_BY_ELEM[elem] || DEBUFF_KEYS.map(() => 1)).slice();
+  /* ⚠️ まだ使えない妨害は外す。瘴気は★4から（miasmaOf が null を返す）。虚脱も★4から */
   if (!miasmaOf(star)) w[3] = 0;
+  if ((star | 0) <= 3) w[5] = 0;
   const tot = w.reduce((x, y) => x + y, 0);
   if (tot <= 0) return "roar";
   let t = Math.random() * tot;
@@ -8163,6 +8197,8 @@ const FOE_MOVES = {
     ⚠️ 累積させない（上書き）。四体が同時に掛けると永久に封じられる。
   */
   dread: { mul: 0, hits: 0, dread: 2 },
+  /* 虚脱。⚠️ 殴らない。必殺ゲージ4本を、今ある量の sapCutOf(★) 割ずつ削る（一度きり。継続しない） */
+  sap: { mul: 0, hits: 0, sap: true },
   miasma1: { mul: 0, hits: 0, miasma: 0.25, turns: 3 },
   /*
     ⚠️⚠️ ★8〜12の瘴気は長く効かせること。★12では回復が1ターンに最大HPの7%あり、
@@ -8270,6 +8306,48 @@ function weatherOf(themeKey, seed) {
   }
   return "clear";
 }
+/*
+  【地の利・天の利】2026-10-03 Aki：「地の利と天の利がある。マスを引いてさらに倍率が変わる」。
+  ★ 地の利 … 土地柄（themeOf）ごとに、魔法6属性・物理4属性のどれかの倍率が上下する。さらに名所ごとに一つ、
+    名前から決まる上下を足す（同じ土地柄でも盤ごとに違う）。⚠️ 乱数で決めない。同じ名所は毎回同じ。
+  ★ 天の利 … その回の天気（weatherOf）ごとに上下する。天気は探索のたびに変わる。
+  ★ どちらも画面に出す（敵の相性は伏せる。こちらは見せる）。戦闘には、特別なマスの変化と足し合わせて渡す。
+  ⚠️ 値は割合（0.2＝+20%）。合計の上限は ATTR_TOTAL_LO〜HI。
+*/
+const ATTR_KEYS = ["earth", "fire", "water", "wind", "light", "dark", "slash", "thrust", "blunt", "shoot"];
+const LAND_ATTR = {
+  mountain: { earth: 0.2, blunt: 0.1, wind: -0.1 },
+  coast:    { water: 0.2, thrust: 0.1, earth: -0.1 },
+  river:    { water: 0.2, slash: 0.1, fire: -0.1 },
+  shrine:   { light: 0.2, slash: 0.1, dark: -0.1 },
+  town:     { fire: 0.2, thrust: 0.1, water: -0.1 },
+  city:     { light: 0.2, shoot: 0.1, wind: -0.1 },
+  metro:    { dark: 0.2, shoot: 0.1, light: -0.1 },
+  snow:     { water: 0.2, blunt: 0.1, earth: -0.1 },
+  onsen:    { fire: 0.2, thrust: 0.1, wind: -0.1 },
+  ruins:    { dark: 0.2, blunt: 0.1, light: -0.1 },
+  farm:     { earth: 0.2, slash: 0.1, fire: -0.1 },
+  forest:   { wind: 0.2, shoot: 0.1, fire: -0.1 },
+};
+const SKY_ATTR = {
+  clear: { fire: 0.1, light: 0.1, shoot: 0.1 },
+  cloud: { wind: 0.1, dark: 0.1, light: -0.1 },
+  rain:  { water: 0.2, fire: -0.2, shoot: -0.1 },
+  snow:  { water: 0.1, blunt: 0.1, fire: -0.1 },
+  fog:   { dark: 0.2, thrust: 0.1, shoot: -0.2, light: -0.1 },
+};
+/* ⚠️ 2026-10-04：上は止めない（マスの上振れを止めない）。下だけ ×0.5 で止める */
+const ATTR_TOTAL_LO = 0.5, ATTR_TOTAL_HI = Infinity;
+function landAttrOf(stageName) {
+  const base = { ...(LAND_ATTR[themeOf(stageName)] || LAND_ATTR.town) };
+  /* ⚠️ 名所ごとの一つ。土地柄で既に動いているものは選ばない */
+  const free = ATTR_KEYS.filter((k) => base[k] == null);
+  const h = Math.abs(hashName(`land:${stageName}`));
+  const k = free[h % free.length];
+  if (k) base[k] = (h >> 5) % 2 ? 0.1 : -0.1;
+  return base;
+}
+function skyAttrOf(weather) { return { ...(SKY_ATTR[weather] || {}) }; }
 function themeOf(name) {
   const s = String(name || "");
   for (const [key, words] of THEME_WORDS) {
@@ -8298,6 +8376,10 @@ const MAP_W = XSTEP * MAP_RINGS * 2 + 150;
 */
 const VIEW_W = 190, VIEW_H = 160;
 const MAP_H = YSTEP * MAP_RINGS * 2 + 150;
+/* 盤の視点 → 盤の要素の transform。⚠️ % は盤の要素自身の幅・高さに対して効く（盤＝MAP_W×MAP_H） */
+function advBoardXf(v) {
+  return `translate3d(${(-v.x / MAP_W) * 100}%, ${(-v.y / MAP_H) * 100}%, 0)`;
+}
 function hexAt(n) {
   return {
     x: MAP_W / 2 + XSTEP * (n.q || 0),
@@ -9342,6 +9424,34 @@ function reshapeMap(nodes, done, seed) {
   /* ⚠️ 候補が無い小さな盤では、主の手前と入口以外のただの道から */
   const roads2 = roads.length ? roads : ns.filter((n) => n.kind === "road" && !n.term && n.key !== startKey && !front.has(n.key));
   if (roads2.length) roads2[Math.floor(rnd() * roads2.length)].kind = "potion";
+  /*
+    【井戸】2026-09-30 Aki：「井戸というマスで、井戸と井戸をワープできるように」。
+    ★ ただの道から二つ。入口に近い側（前半）を「入る井戸」、主に近い側（後半）を「出る井戸」にする。
+      入る井戸に着くと、出る井戸へ抜ける（近道）。出る井戸に先に着いても何も起きない（出口なだけ）。
+    ⚠️ 主の手前・入口とその隣・袋小路には置かない。二つの井戸は3マス以上離す（隣だと近道にならない）。
+    ⚠️ 入口からの歩数（BFS）で前後を決める。座標の遠近で決めると、回り道の側に出口が出ることがある。
+  */
+  {
+    const depth = { [startKey]: 0 }; const qd = [startKey];
+    while (qd.length) {
+      const k = qd.shift(); const n = ns.find((m) => m.key === k);
+      (n ? n.next : []).forEach((k2) => { if (depth[k2] == null) { depth[k2] = depth[k] + 1; qd.push(k2); } });
+    }
+    const maxD = Math.max(1, ...Object.values(depth));
+    const pool = ns.filter((n) => n.kind === "road" && !n.term && n.key !== startKey && !nearStart.has(n.key)
+      && !front.has(n.key) && depth[n.key] != null && n.next.length);
+    const early = pool.filter((n) => depth[n.key] <= maxD * 0.45);
+    const late = pool.filter((n) => depth[n.key] >= maxD * 0.6);
+    if (early.length && late.length) {
+      const A = early[Math.floor(rnd() * early.length)];
+      const Bs = late.filter((n) => hexDist(n.q - A.q, n.r - A.r) >= 3 && depth[n.key] - depth[A.key] >= 2);
+      if (Bs.length) {
+        const B = Bs[Math.floor(rnd() * Bs.length)];
+        A.kind = "well"; A.warp = B.key; A.wellIn = true;
+        B.kind = "well"; B.wellOut = true;
+      }
+    }
+  }
   /* 入口から主へ行けるか確かめる。⚠️ 行けなければ元の盤 */
   const seen = new Set([startKey]); const qu = [startKey];
   while (qu.length) { const k = qu.shift(); const n = ns.find((m) => m.key === k); (n ? n.next : []).forEach((k2) => { if (!seen.has(k2)) { seen.add(k2); qu.push(k2); } }); }
@@ -9350,6 +9460,510 @@ function reshapeMap(nodes, done, seed) {
   prune();
   if (nodes.converge) ns.converge = true;
   return ns;
+}
+/*
+  【一本道の盤】2026-09-30 Aki：「ストレス緩和と自動操作のため、全部一本道＋井戸（ワープ式）にする。
+    一本道は複数あって、運が良ければ一発で主の道へ行けるが、外れの道もある（先には井戸）。
+    移動先はルーレットで決める。主の手前だけ三択。敵マスもルーレット（当たれば戦闘を回避）」。
+  ★ 入口（中心）から k 本の一本道が放射状に伸びる。どれか一本だけが主の道（先に主の手前の三択）。
+    外れの道の先は井戸。井戸に着くと、まだ行っていない道からルーレットで選び直して、その道の入口へ抜ける。
+  ★ ルーレットを回せる回数（spins）に上限がある。使い切って外れの井戸に着いたら、そこで旅は終わり。
+    主の道に着ける確率 ≒ spins / k。47段×8MAPの到達率（reach）に近い (k, spins) を選ぶ（k は3〜6）。
+  ⚠️ 道は隣り合う二方向を交互に進む（例：右と右上）。六本の道がそれぞれ別の60°の扇に入るので、重ならない。
+  ⚠️ 入口を配列の先頭に置く（呼び出し側が map[0] を入口とみなす）。
+*/
+function laneSpinsFor(reach, rnd) {
+  let best = null;
+  for (let k = 3; k <= 6; k++) for (let sp = 1; sp <= k; sp++) {
+    const err = Math.abs(sp / k - reach) + rnd() * 0.001;
+    if (!best || err < best.err) best = { k, sp, err };
+  }
+  return best;
+}
+/*
+  ルーレットの盤。2026-09-30。
+  ★ 重みの分だけ扇を広げ、上の針の位置に選んだ扇が来るよう、4回転＋αで止める。
+  ⚠️ 回すのは CSS の transition（一つの要素の回転だけ）。重くしない。
+  ⚠️ 扇の色は外れ・当たりで決めない（結果が回る前に読めてしまう）。並びの順に色を振る。
+*/
+const ROUL_COLORS = ["#6A4AB0", "#3A7AC8", "#C8784A", "#4AA070", "#B0486A", "#8A8A3A"];
+function LaneRoulette({ roul, title }) {
+  const { opts, pick } = roul;
+  /* ★ 特別なマスは、そのマスの絵を上に大きく出し、扇ごとの中身を下に並べる（扇の文字は短いので） */
+  const Icon = roul.icon && ADV_GLYPH[roul.icon];
+  /* ⚠️ 重み0は0のまま（|| 1 にすると、0の目が1の重みで出てしまう） */
+  const wOf = (o) => (o.w == null ? 1 : o.w);
+  const tot = opts.reduce((x, o) => x + wOf(o), 0);
+  let acc = 0;
+  const segs = opts.map((o, i) => {
+    const a0 = acc / tot * 360; acc += wOf(o); const a1 = acc / tot * 360;
+    return { ...o, a0, a1, col: ROUL_COLORS[i % ROUL_COLORS.length] };
+  });
+  const mid = (segs[pick].a0 + segs[pick].a1) / 2;
+  const [rot, setRot] = useState(0);
+  useEffect(() => { const id = setTimeout(() => setRot((roul.fast ? 360 : 360 * 4) + (360 - mid)), 30); return () => clearTimeout(id); }, [mid]);
+  const R = 44;
+  const pt = (deg, r) => { const t = (deg - 90) * Math.PI / 180; return [50 + Math.cos(t) * r, 50 + Math.sin(t) * r]; };
+  return (
+    <div className="adv-roul" aria-live="polite">
+      <div className="adv-roul-in">
+        {Icon && (
+          <svg viewBox="-10 -11 20 18" className="adv-roul-icon" aria-hidden="true"><Icon /></svg>
+        )}
+        <b className="adv-roul-t">{title}</b>
+        {/*
+          ★ 2026-10-05「スマホを軽く」：盤（回る svg）と針（止まった svg）を分けて重ねる。
+          ⚠️ svg の中の <g> を回すと、回っている 1.5 秒のあいだ毎フレーム描き直しになる。svg ごと回せば GPU が回すだけ。
+        */}
+        <span className="adv-roul-svg" aria-hidden="true">
+        <svg viewBox="0 -6 100 108" className="adv-roul-wheel" style={{ transform: `rotate(${rot}deg)`, transitionDuration: roul.fast ? "0.22s" : undefined }}>
+          <g>
+            <g>
+              {segs.map((g, i) => {
+                const [x0, y0] = pt(g.a0, R), [x1, y1] = pt(g.a1, R);
+                const large = g.a1 - g.a0 > 180 ? 1 : 0;
+                const [tx, ty] = pt((g.a0 + g.a1) / 2, R * 0.62);
+                return (
+                  <g key={i}>
+                    {segs.length === 1 ? <circle cx="50" cy="50" r={R} fill={g.col} />
+                      : <path d={`M50 50 L${x0} ${y0} A${R} ${R} 0 ${large} 1 ${x1} ${y1} Z`} fill={g.col} stroke="#1A1030" strokeWidth="0.8" />}
+                    <text x={tx} y={ty + 2} textAnchor="middle" fontSize={segs.length > 4 ? 5.4 : 6.4} fontWeight="700" fill="#FFF3D6"
+                      transform={`rotate(${(g.a0 + g.a1) / 2} ${tx} ${ty})`}>{g.label}</text>
+                  </g>
+                );
+              })}
+              <circle cx="50" cy="50" r={R} fill="none" stroke="#E8C46A" strokeWidth="1.6" />
+              <circle cx="50" cy="50" r="5" fill="#1A1030" stroke="#E8C46A" strokeWidth="1.2" />
+            </g>
+          </g>
+        </svg>
+        <svg viewBox="0 -6 100 108" className="adv-roul-pin">
+          {/* 針（上） */}
+          <path d="M50 10 L45 -2 L55 -2 Z" fill="#FFE08A" stroke="#1A1030" strokeWidth="0.8" />
+        </svg>
+        </span>
+        {segs.some((g) => g.desc) && (
+          <ul className="adv-roul-legend">
+            {segs.map((g, i) => (
+              <li key={i}><i style={{ background: g.col }} />{g.desc || g.label}</li>
+            ))}
+          </ul>
+        )}
+      </div>
+    </div>
+  );
+}
+/*
+  黄金の道（2026-10-03）。外れの井戸のルーレットで、まれに出る。
+  ★ 金の台が一列に並び、一つずつ宝箱が現れる。拾った箱はルーレットの回数を使わない（井戸に戻って回し直す）。
+  ⚠️ 点滅させない。現れる動きは一度きり（不透明度と位置）。
+*/
+function GoldRoad({ run, title }) {
+  const items = (run && run.items) || [];
+  const [shown, setShown] = useState(0);
+  useEffect(() => {
+    if (shown >= items.length) return undefined;
+    const id = setTimeout(() => setShown((v) => v + 1), run.gap || 420);
+    return () => clearTimeout(id);
+  }, [shown, items.length, run.gap]);
+  return (
+    <div className="adv-gold" aria-live="polite">
+      <div className="adv-gold-in">
+        <b className="adv-roul-t">{title}</b>
+        <div className="adv-gold-row">
+          {items.map((it, i) => (
+            <div key={i} className={`adv-gold-tile${i < shown ? " on" : ""}`}>
+              <svg viewBox="-12 -12 24 24" aria-hidden="true">
+                <path d="M11 0 L5.5 9.5 L-5.5 9.5 L-11 0 L-5.5 -9.5 L5.5 -9.5 Z" fill="#B88A2A" stroke="#FFE7A0" strokeWidth="0.9" />
+                <path d="M8.6 0 L4.3 7.4 L-4.3 7.4 L-8.6 0 L-4.3 -7.4 L4.3 -7.4 Z" fill="none" stroke="#FFF3C8" strokeWidth="0.5" opacity="0.6" />
+                <g transform="translate(0 1) scale(1.05)">
+                  <path d="M-5.6 -3.4 Q0 -9 5.6 -3.4 L5.6 -1.6 L-5.6 -1.6 Z" fill="#E0A83A" stroke="#5A3A08" strokeWidth="0.45" />
+                  <rect x="-5.6" y="-1.6" width="11.2" height="5.9" rx="0.7" fill="#C88A22" stroke="#5A3A08" strokeWidth="0.45" />
+                  <rect x="-5.9" y="-2.1" width="11.8" height="1.1" rx="0.4" fill="#FFF0B0" />
+                  <rect x="-1.5" y="-2.6" width="3" height="3.4" rx="0.6" fill="#FFF7D0" stroke="#5A3A08" strokeWidth="0.3" />
+                </g>
+              </svg>
+              <span>{it.label}</span>
+            </div>
+          ))}
+        </div>
+      </div>
+    </div>
+  );
+}
+/* 敵マスで戦闘を回避できる確率（ルーレット）。⚠️ 仮の値 */
+const ZAKO_DODGE = 0.35;
+/*
+  敵マスのルーレットの「金の敵」と「精鋭」（2026-10-03）。⚠️ 「戦う」の側から割く。
+  ★ 金の敵 … HPが低く弱い。倒せば★+2の宝箱。★2から。
+  ★ 精鋭 … 区分の主の絵（銀の枠）。HP×1.5・攻撃×1.2。倒せば★+2の宝箱。負ければ（HP0）探索は終わる。★3から。
+  ⚠️ 強さは ZAKO_KIND_K。精鋭の全滅率は実測してある（注は ZAKO_KIND_K）。
+*/
+const ZAKO_GILD = 0.03, ZAKO_ELITE = 0.08;
+const ZAKO_KIND_K = { gild: { hp: 0.5, atk: 0.6 }, elite: { hp: 1.5, atk: 1.2 }, mimic: { hp: 1.1, atk: 1.0 },
+  /* 熊（2026-10-05）。⚠️ ミミックと同じく一体にまとめる。ツキノワグマは精鋭くらい、ヒグマはその上 */
+  bear: { hp: 1.3, atk: 1.1 }, higuma: { hp: 1.7, atk: 1.35 } };
+/* 黄金の道（外れの井戸のルーレット、★2から）。⚠️ 出る率は井戸の一回あたり。拾う箱の数 */
+const ADV_GOLD_RATE = 0.06, ADV_GOLD_N = 5;
+/* イベント（パルプンテ）の中身と重み。⚠️⚠️ 仮（Aki：詳細はあとで決める） */
+const EVENT_FX = [
+  /* ⚠️ 2026-10-05 Aki「全必殺封印が出すぎ」：必殺の封印（nosp）はここから外し、封じの鎖（一つの盤に一つ・0〜4本のルーレット）へ移した */
+  { key: "hp", w: 1 }, { key: "pot", w: 1 }, { key: "elem", w: 1 },
+  { key: "heal", w: 1 }, { key: "potUp", w: 1 },
+];
+const LANE_NAMES = ["一の道", "二の道", "三の道", "四の道", "五の道", "六の道"];
+/*
+  愚者の道（2026-10-04 Aki「黄金の道だけでなく愚者の道も。ランダムに同じマスしか出ない道（かなり低確率）」）。
+  ★ 盤ごとに ADV_FOOL_RATE の確率で、道を一本選び、入口と出口（井戸・主の前）以外の全部のマスを同じ特別なマスにする。
+    どのマスになるかは、その道に置けるマスから等しい確率で（重みも上限も無視）。雑魚・泉・宝箱も消えて、その一種類だけになる。
+  ★ ルーレットでは「愚者の道」と名前が出る。入ったら知らせる。
+  ⚠️ 主の道にもなりうる（そのときは抜け穴など主の道に置けないマスは選ばない）。
+*/
+/* 実測（盤6万枚×★）：愚者の道がある盤 約3%、実際に歩くのは ★1 1.5%（約66探索に1回）／★6 1.4%／★12 1.3%（約76探索に1回） */
+const ADV_FOOL_RATE = 0.03;
+const FOOL_LANE_NAME = "愚者の道";
+/*
+  【特別なマス】2026-10-03 Aki：「マスの種類を増やしまくる（主と戦うまでの状態に大きな振れ幅＝運の兵站）」。
+  ★ 盤は一本道なので、マスは避けられない。効果の強いものは必ずルーレットにし、外れの目を入れる。
+  ★ 効かせるのは「その探索のあいだ戻らないもの」だけ：最大HP・ゲージの溜まり方・ポーションの数と回復量・
+    妨害ごとの耐性・手札・主のHP・ボス確定・拾った宝箱・道のルーレットの回数。
+    ⚠️⚠️ HP・必殺ゲージ・聖杯の倍率をご褒美にも代償にもしないこと。雑魚戦と貨幣の必殺ですぐ戻る（Aki）。
+  ★ 置き場所は「何も無い道」だけ。雑魚・イベント・泉・罠・宝箱の数は今までどおり（道中の全滅率を動かさない）。
+    ADV_SPECIAL_RATE … 何も無い道が特別なマスになる割合。
+  ★ 重み w は出やすさ。from は出始める★（序盤は単純に）。cap は一つの盤に置ける数。
+    miss … 外れの道にだけ置く（抜け穴：主の道へ抜ける。主の道に置いても意味が無い）。
+  ⚠️ 到達率に直接効くもの（四つ葉・迷い道・抜け穴・挑戦状・闇商人）は cap 1。到達率の実測は LANE_REACH_COMP の注を参照。
+*/
+/* ⚠️ 2026-10-04 Aki「空のマスをなくすんじゃなかったの？」→ 1（何も無い道は作らない） */
+const ADV_SPECIAL_RATE = 1;
+/* 道のルーレットの回数（スタートの一回を含む）。⚠️ 尽きたら外れの井戸からボスの道へ抜ける。踏むマスの数はこれと LANE_EXTRA_BY_STAR で決まる */
+const LANE_SPINS = 2;
+/*
+  道一本あたり、★で足す特別なマスの数（2026-10-04 Aki「★に応じて踏む升の平均数をどんどん増やす」）。
+  ★ 足したマスはすべて特別なマス。★ごとに特別なマスが約1ずつ増える坂（2026-10-04 Aki と決めた目標：★1 3.5 → ★12 14.5）。
+  実測（2026-10-04 改2：Aki「道中の通るマスが少なすぎて全然バフが偏らない」「一本の道に敵は一つまで」。各★4000回、空のマス 0）：
+    ★          1    2    3    4    5    6    7    8    9   10   11   12
+    踏むマス 20.8 22.7 25.1 27.1 28.9 30.8 32.5 33.9 35.8 37.6 38.9 40.4
+    特別     11.9 13.6 15.7 17.6 19.4 21.3 22.9 24.5 26.3 28.0 29.3 30.8
+    雑魚      1.8  1.8  1.9  1.9  1.9  1.9  1.9  1.9  1.9  1.9  1.9  1.9
+    最多属性  2.0  2.0  2.1  2.0  2.1  2.2  2.3  2.4  2.5  2.5  2.7  2.7（いちばん多く踏んだ属性の回数。一回あたりの期待値 +9%）
+    ★12の最多属性の分布：1回 11% ／ 2回 35% ／ 3回 35% ／ 4回 14% ／ 5回以上 5%（2026-10-05 気配の廃止後。全部開いた状態・各4000回）
+*/
+/* ⚠️ 端数は確率で（2.4 → 4割の道で3、6割の道で2）。★ごとに特別なマスが約1ずつ増える坂にする */
+const LANE_EXTRA_BY_STAR = { 1: 3.0, 2: 3.8, 3: 4.6, 4: 5.4, 5: 6.2, 6: 7.0, 7: 7.7, 8: 8.5, 9: 9.3, 10: 10.1, 11: 10.9, 12: 11.6 };
+/*
+  マスの出方（2026-10-05 Aki「意図的な偏りは面白くない。偶発的な偏りが欲しい」）。
+  ★ 盤ごとの「気配」は廃止。ふつうのマスはすべて同じ重み（ADV_SP_W）・数の上限なし ―― 偏りは踏んだ数の偶然だけで生まれる。
+  ★ 例外は二つだけ。重み ADV_SP_W_RARE・一つの盤に cap まで：
+    デメリットしかないマス（霧・石像・迷い道・封じの鎖）／効果が強すぎるマス（抜け穴・虹の丘・鎧職人・四つ葉・竜の巣・挑戦状・料亭・柿の木・床屋）。
+*/
+const ADV_SP_W = 4, ADV_SP_W_RARE = 2;
+/*
+  封じの鎖のルーレット。封じる本数 0〜4 の重み（%）。⚠️ 開いている必殺が少ないときは、その本数までの目にし、
+  「全部」の目はいつも最後の重み（8）にする（2本しか開いていない盤で全部封印が出やすくならないように）。
+*/
+/*
+  実測（各4000回・全部開いた状態）：鎖を踏む探索 ★3 23% ／ ★12 31%。全部封印は ★3 1.8% ／ ★12 2.5%。
+  （前はパルプンテの「必殺の封印」で、★1から探索の約2〜2.5割が全封印だった）
+*/
+const ADV_CHAIN_W = [30, 30, 20, 12, 8];
+const ADV_SPECIALS = [
+  { key: "cannon",    w: ADV_SP_W, from: 1 },
+  { key: "lake",      w: ADV_SP_W,  from: 1, anySp: true },
+  { key: "healer",    w: ADV_SP_W,  from: 1 },
+  { key: "fruit",     w: ADV_SP_W,  from: 1 },
+  { key: "tunnel",    w: ADV_SP_W_RARE,  from: 1, cap: 1, miss: true },
+  { key: "fog",       w: ADV_SP_W_RARE,  from: 2, cap: 2, anySp: true },
+  { key: "thief",     w: ADV_SP_W,  from: 2 },
+  { key: "anvil",     w: ADV_SP_W,  from: 2 },
+  { key: "clover",    w: ADV_SP_W_RARE,  from: 2, cap: 1 },
+  { key: "lost",      w: ADV_SP_W_RARE,  from: 2, cap: 1 },
+  { key: "armorer",   w: ADV_SP_W_RARE,  from: 4, cap: 1 },
+  { key: "statue",    w: ADV_SP_W_RARE,  from: 3, cap: 1 },
+  { key: "merchant",  w: ADV_SP_W,  from: 3 },
+  { key: "hoard",     w: ADV_SP_W_RARE,  from: 4, cap: 1 },
+  { key: "challenge", w: ADV_SP_W_RARE,  from: 4, cap: 1 },
+  /*
+    第2弾（2026-10-03 Aki：「進むマスとルーレットで小MAPのビルドが決まる」）。
+    attr … その属性の倍率が上下する（魔法6・物理4）。suit … その必殺ゲージの溜まりが上下する。heal … 受ける回復の倍率。
+    ⚠️ まだ開いていない属性・物理・必殺のマスは置かない（buildLaneMap の open）。
+  */
+  { key: "volcano",    w: ADV_SP_W, from: 1, attr: "fire" },
+  { key: "waterfall",  w: ADV_SP_W, from: 1, attr: "water" },
+  { key: "windmill",   w: ADV_SP_W, from: 1, attr: "wind" },
+  { key: "quarry",     w: ADV_SP_W, from: 1, attr: "earth" },
+  { key: "lighthouse", w: ADV_SP_W, from: 1, attr: "light" },
+  { key: "shadow",     w: ADV_SP_W, from: 1, attr: "dark" },
+  { key: "sword",      w: ADV_SP_W, from: 1, attr: "slash" },
+  { key: "spear",      w: ADV_SP_W, from: 1, attr: "thrust" },
+  { key: "axe",        w: ADV_SP_W, from: 1, attr: "blunt" },
+  { key: "bow",        w: ADV_SP_W, from: 1, attr: "shoot" },
+  { key: "arena",      w: ADV_SP_W, from: 1, suit: "swords" },
+  { key: "tower",      w: ADV_SP_W, from: 1, suit: "wands" },
+  { key: "tavern",     w: ADV_SP_W, from: 1, suit: "cups" },
+  { key: "market",     w: ADV_SP_W, from: 1, suit: "pentacles" },
+  { key: "garden",     w: ADV_SP_W, from: 1, heal: true },
+  /*
+    第3弾（2026-10-03 Aki：②「属性も全部微量UP」③「デバフ耐性も個別に」）。
+    allAttr … 魔法6・物理4の倍率がそろって少し上がる。res … その妨害の耐性だけが上がる。
+    ⚠️ 妨害は★4から来る（波動は★7から）。来ない★では置かない。
+    ⚠️ 鎧職人は「全部の耐性が少し」に変えた（一つずつは下の六つのマス）。
+  */
+  { key: "rainbow",  w: ADV_SP_W_RARE, from: 1, cap: 1, allAttr: true },
+  { key: "silence",  w: ADV_SP_W, from: 4, res: "resRoar" },
+  { key: "saltpan",  w: ADV_SP_W, from: 4, res: "resRot" },
+  { key: "stargaze", w: ADV_SP_W, from: 7, res: "resDread" },
+  { key: "bamboo",   w: ADV_SP_W, from: 4, res: "resMiasma" },
+  { key: "dojo",     w: ADV_SP_W, from: 4, res: "resKill" },
+  { key: "onsen",    w: ADV_SP_W, from: 4, res: "resSap" },
+  /*
+    封じの鎖（2026-10-04 Aki「必殺1個ランダム封印マス（低確率）」）。⚠️ 出にくい（重み2・一つの盤に一つ・★3から）。
+    ★ 2026-10-05 Aki「0個封印〜4個封印までルーレットにして、MAP全体で1個まで」：
+      封じる本数をルーレットで決める（ADV_CHAIN_W）。封じた必殺は主を倒すまで出ない（並びの必殺も手動の必殺も）。
+    ⚠️ 愚者の道には選ばない（一つの盤に一つを守る）。
+  */
+  { key: "chain",    w: ADV_SP_W_RARE, from: 3, cap: 1, anySp: true },
+  /*
+    第4弾（2026-10-05 Aki）。
+    ★ 料理のマス：屋台（ふつう）・喫茶（ふつうの半分の重み）・料亭（レア）。その区分の料理を一品もらう（ADV_FOOD_TIER_W の段の重み）。
+      ⚠️ まだ料理の無い区分では、全国の同じ★の料理から。
+    ★ 柿の木（レア）：最大HP（ルーレット）＋魔法六属性すべて +5%。
+    ★ 床屋（レア）：悪いマスで付いた効果を一つ切り落とす（ルーレットで、いま付いている悪い効果の中から）。
+  */
+  /* ★ 2026-10-05 Aki「屋台が出る頻度が多すぎてうざい」→ 普通マスの半分（喫茶と同じ重み）。踏む数 0.5〜0.8 → 実測は下の報告 */
+  { key: "stall",    w: ADV_SP_W / 2, from: 1, food: true },
+  { key: "kissa",    w: ADV_SP_W / 2, from: 1, food: true },
+  /* ★ 2026-10-05 Aki：★1 からも出す（★1 だけ回る人も地域の料理をそろえられるように） */
+  { key: "ryotei",   w: ADV_SP_W_RARE, from: 1, cap: 1, food: true },
+  { key: "kaki",     w: ADV_SP_W_RARE, from: 1, cap: 1 },
+  { key: "barber",   w: ADV_SP_W_RARE, from: 2, cap: 1 },
+  /*
+    熊（2026-10-05 Aki）。デメリットのマス（レアの重み・一つの盤に一つ・★3から）。熊のいない土地には置かない（advBearOK）。
+    ★ ルーレット：静かに去る 30 ／ 食べ物を奪われる 25 ／ 襲われる 25（HP −25%）／ 立ちはだかる 20（熊と戦う。勝てば★+2の宝箱）。
+    ★ 北海道はヒグマ：襲われると HP −40%、戦いは強く、勝てば★+3の宝箱。
+  */
+  { key: "bear",     w: ADV_SP_W_RARE, from: 3, cap: 1, bear: true },
+];
+/*
+  熊のいない土地（2026-10-05 Aki「千葉と九州にはなし。四国は徳島と高知だけ」）。
+  ★ 千葉・九州七県・沖縄・香川・愛媛・東京の区部には熊のマスを置かない。
+*/
+const ADV_BEAR_NONE = ["chiba", "fukuoka", "saga", "nagasaki", "kumamoto", "oita", "miyazaki", "kagoshima", "okinawa", "kagawa", "ehime"];
+function advBearOK(pref, area) {
+  if (ADV_BEAR_NONE.includes(pref)) return false;
+  if (pref === "tokyo" && (area === WARDS_AREA || (typeof TOKYO_WARDS !== "undefined" && TOKYO_WARDS[area]))) return false;
+  return true;
+}
+const ADV_BEAR_W = { calm: 30, food: 25, hurt: 25, fight: 20 };
+/* 料理のマスで出る料理の★の重み（%）。⚠️ 屋台はボスの落とし物（GOURMET_DROP）と同じ */
+const ADV_FOOD_TIER_W = { stall: { 1: 60, 2: 30, 3: 10 }, kissa: { 2: 75, 3: 25 }, ryotei: { 3: 100 } };
+/* 柿の木の魔法の上がり幅（%） */
+const ADV_KAKI_MAGIC = 5;
+/*
+  数値の目のマスの目（[値, 重み]）。値は%（耐性は点）。0 は外れ。⚠️ runSpecial と「ボス直行の平均加算」で同じものを使う。
+  hasSu … 湖・霧は効く必殺を一本選べたときだけ目がある。
+*/
+function advNumOf(k, hasSu) {
+  const row = ADV_SPECIALS.find((x) => x.key === k) || {};
+  return row.allAttr ? [[8, 1], [6, 1], [5, 2], [4, 2], [3, 2], [2, 1], [0, 1]]
+    : row.res ? [[20, 1], [16, 1], [12, 2], [8, 2], [4, 2], [0, 1]]
+    : k === "armorer" ? [[8, 1], [6, 1], [5, 2], [4, 2], [3, 2], [0, 1]]
+    : row.suit ? [[40, 1], [30, 1], [20, 2], [10, 2], [-10, 1], [-20, 1]]
+    : (row.attr || row.heal) ? [[25, 1], [20, 1], [15, 2], [10, 2], [5, 2], [-5, 1], [-10, 1]]
+    : k === "fruit" ? [[10, 1], [8, 1], [6, 2], [4, 2], [2, 1], [-3, 1], [-5, 1]]
+    /* 柿の木（最大HP。⚠️ 魔法 +5% は目と別に必ず付く） */
+    : k === "kaki" ? [[15, 1], [12, 1], [10, 2], [8, 2], [5, 1]]
+    : (k === "lake" && hasSu) ? [[25, 1], [20, 1], [15, 2], [10, 2], [5, 2], [0, 1]]
+    : (k === "fog" && hasSu) ? [[-25, 1], [-20, 1], [-15, 2], [-10, 2], [0, 2]]
+    /* 砲台（ボスHPの削り）。⚠️ ルーレットは hit4 2・hit8 1・miss 2 のまま。ここは平均のためだけ */
+    : k === "cannon" ? [[4, 2], [8, 1], [0, 2]]
+    : null;
+}
+function advNumEV(k) {
+  const T = advNumOf(k, true);
+  if (!T) return 0;
+  const tw = T.reduce((x, [, w]) => x + w, 0);
+  return T.reduce((x, [p, w]) => x + p * w, 0) / tw;
+}
+/* 妨害の耐性の六つ（小MAPの耐性のマス・鎧職人・戦闘の判定で同じ並び） */
+const RUN_RES_KEYS = ["resRoar", "resRot", "resDread", "resMiasma", "resKill", "resSap"];
+const ADV_SPECIAL_KEYS = ADV_SPECIALS.map((x) => x.key);
+const isAdvSpecial = (kind) => ADV_SPECIAL_KEYS.indexOf(kind) >= 0;
+function laneLabelOf(map, key) {
+  const i = ((map && map.lanes) || []).findIndex((l) => l.head === key);
+  if (map && map.foolLane === i && i >= 0) return FOOL_LANE_NAME;
+  return LANE_NAMES[Math.max(0, i)] || LANE_NAMES[0];
+}
+function buildLaneMap(pref, area, seed, mapNo, reach, star, open) {
+  let sd = ((seed || 1) * 2654435761) >>> 0;
+  const rnd = () => ((sd = (sd * 1103515245 + 12345) >>> 0) / 4294967296);
+  /*
+    ⚠️ 2026-10-04：井戸で探索が終わらなくなった（尽きたらボスの道へ）ので、ルーレットの回数は到達率ではなく「何本の道を歩くか」を決める。
+    ★ 回数は LANE_SPINS（スタートの一回を含む）。道の本数 k は今までどおり到達率から。
+  */
+  const { k } = laneSpinsFor(reach == null ? 0.5 : reach, rnd);
+  const sp = Math.min(k, LANE_SPINS);
+  const t = Math.max(0, Math.min(1, ((mapNo || 4) - 1) / 7));
+  const at = {};
+  const nodes = [];
+  const add = (q, r, kind, extra) => {
+    const n = { key: `h${q}_${r}`, q, r, kind, name: "", next: [], ...(extra || {}) };
+    nodes.push(n); at[`${q},${r}`] = n; return n;
+  };
+  const S = add(0, 0, "start");
+  const dirs = [0, 1, 2, 3, 4, 5].sort(() => rnd() - 0.5).slice(0, k);
+  const bossLane = Math.floor(rnd() * k);
+  const lanes = [];
+  dirs.forEach((d, li) => {
+    const isBoss = li === bossLane;
+    /*
+      ⚠️ 2026-10-03：道を一マス長くし、そのぶん「必ず特別なマス」の枠を一つ取る（reserved）。
+        雑魚・イベント・泉・罠・宝箱の数は今までどおり（道中の全滅率を動かさない）。
+    */
+    const L = isBoss ? 6 + (rnd() < 0.5 ? 1 : 0) : 5 + (rnd() < 0.5 ? 1 : 0);
+    /*
+      ★が上がるほど道を長くし、伸びたぶんは全部「特別なマス」の枠にする（LANE_EXTRA_BY_STAR）。
+      2026-10-04 Aki「★に応じて踏む升の平均数をどんどん増やして、偏った属性や戦略を選んでもらって戦闘してほしい」。
+      ★ 道は自分の扇形（方角 d と d+1 のあいだ）の中で、横へ折れながら外へ進む（蛇行）。外へ L 歩、横へ extra 歩。
+        扇形の座標 (a, b) … 位置 = a×方角d + b×方角d+1、中心からの距離 = a + b。
+        横へ … (a−1, b+1) か (a+1, b−1)（同じ環の隣）。外へ … (a+1, b) か (a, b+1)。
+      ⚠️ 一つの環の中では横へ一方向にしか進まない ―― 同じマスを二度通らない。扇形どうしは重ならない。
+      ⚠️ 終わりの環は今までどおり L（主・宝箱の三択は外側の空きマスに置ける）。
+      ⚠️ 雑魚・イベント・泉・罠・宝箱の数は今までどおり（伸びたマスは reserved で、中身の抽選から外す）。
+    */
+    const ex0 = LANE_EXTRA_BY_STAR[Math.max(1, Math.min(12, star || 1))] || 0;
+    const extra = Math.floor(ex0) + (rnd() < ex0 - Math.floor(ex0) ? 1 : 0);
+    let left = extra;
+    const [d0q, d0r] = HEX_DIRS[d], [d1q, d1r] = HEX_DIRS[(d + 1) % 6];
+    let pa = 1, pb = 0, prev = S;
+    const tiles = [];
+    const put = (isExtra) => {
+      const n = add(pa * d0q + pb * d1q, pa * d0r + pb * d1r, "road", { lane: li });
+      if (isExtra) n.reserved = true;
+      prev.next.push(n.key); prev = n; tiles.push(n);
+    };
+    for (let ring = 1; ring <= L; ring++) {
+      if (ring > 1) { if (pa > 1 && rnd() < 0.5) pa++; else if (pb > 0 && rnd() < 0.5) pb++; else if (rnd() < 0.5) pa++; else pb++; }
+      put(false);
+      /* 横へ。⚠️ 余裕のある向きへまとめて進む */
+      /*
+        ⚠️ 扇形からはみ出さない（a ≥ 1, b ≥ 0）。余裕の大きい向きへ、余裕のぶんだけ。
+        ★ 残りの環に均して配る（最後の環で残りを全部）。⚠️ 取りこぼすと★の坂が崩れる
+      */
+      const roomB = pa - 1, roomA = pb;
+      const toB = roomB > roomA || (roomB === roomA && rnd() < 0.5);
+      const ringsLeft = L - ring + 1;
+      const want = ring === 1 ? 0 : ring === L ? left : Math.floor(left / ringsLeft + rnd());
+      const k2 = Math.min(want, toB ? roomB : roomA);
+      left -= k2;
+      for (let x = 0; x < k2; x++) { if (toB) { pa--; pb++; } else { pa++; pb--; } put(true); }
+    }
+    lanes.push({ head: tiles[0].key, boss: isBoss, tiles, d });
+  });
+  /* 道の中身。⚠️ 入口の一マス目と、道の最後のマスには置かない */
+  let potionLeft = 1, shopLeft = rnd() < 0.5 ? 1 : 0;
+  lanes.forEach((ln) => {
+    const body = ln.tiles.slice(1, ln.tiles.length - (ln.boss ? 1 : 0));
+    /* 特別なマスの枠を一つ取る。⚠️ 道の最後（井戸・三択）は除く */
+    const inner = ln.tiles.slice(1, ln.tiles.length - 1);
+    if (inner.length) inner[Math.floor(rnd() * inner.length)].reserved = true;
+    /* ⚠️ 2026-10-04 Aki「一本の道に敵のマスは一つまで」。二つ目からは特別なマスになる */
+    let zakoIn = 0;
+    body.forEach((n) => {
+      if (n.reserved) return;
+      const x = rnd();
+      if (x < 0.22 + 0.2 * t) { if (!zakoIn) { n.kind = "zako"; zakoIn = 1; } }
+      else if (x < 0.36 + 0.2 * t) n.kind = "event";
+      /* ⚠️ 2026-10-04 Aki「従前からの回復マスと罠マスは削除」。宝箱の幅は前のまま。空いたぶんは特別なマスになる */
+      else if (x < 0.44 + 0.17 * t) n.kind = "box";
+    });
+    if (potionLeft && body.length) {
+      const cand = body.filter((n) => n.kind === "road" && !n.reserved);
+      if (cand.length) { cand[Math.floor(rnd() * cand.length)].kind = "potion"; potionLeft--; }
+    }
+    if (shopLeft && !ln.boss && body.length) {
+      const cand = body.filter((n) => n.kind === "road" && !n.reserved);
+      if (cand.length) { cand[Math.floor(rnd() * cand.length)].kind = "shop"; shopLeft--; }
+    }
+  });
+  /*
+    特別なマス（2026-10-03）。⚠️ ポーション・お店を置いたあとの「何も無い道」にだけ置く。
+    ⚠️ 入口の一マス目と、道の最後（井戸・主の前の三択）には置かない。
+  */
+  {
+    const st = Math.max(1, Math.min(12, star || 1));
+    const used = {};
+    lanes.forEach((ln) => {
+      ln.tiles.slice(1, ln.tiles.length - 1).forEach((n) => {
+        if (n.kind !== "road" || (!n.reserved && rnd() >= ADV_SPECIAL_RATE)) return;
+        /* ★ 2026-10-05 Aki：料理のマス（屋台・喫茶・料亭）は 1 MAP に、どれか 1 個まで */
+        const pool = ADV_SPECIALS.filter((x) => x.from <= st && (!x.cap || (used[x.key] || 0) < x.cap) && !(x.food && used.__food) && !(x.miss && ln.boss) && !(x.bear && !advBearOK(pref, area))
+          /* ⚠️ 開いていない属性・物理・必殺のマスは置かない（倍率が上がっても使えない） */
+          && !(open && x.attr && (open.elems || []).concat(open.phys || []).indexOf(x.attr) < 0)
+          && !(open && x.suit && (open.sp || []).indexOf(x.suit) < 0)
+          /* ⚠️ 湖・霧は必殺ゲージのどれかに効く。一本も開いていなければ置かない */
+          && !(open && x.anySp && !(open.sp || []).length));
+        const wOf = (x) => x.w;
+        /* ⚠️ 使えるマスが尽きたら、上限を無視して開いているマスから選ぶ（空のマスを残さない） */
+        if (!pool.length) pool.push(...ADV_SPECIALS.filter((x) => x.from <= st && x.key !== "chain" && !x.bear && !x.food && !(x.miss && ln.boss)
+          && !(open && x.attr && (open.elems || []).concat(open.phys || []).indexOf(x.attr) < 0)
+          && !(open && x.suit && (open.sp || []).indexOf(x.suit) < 0)
+          && !(open && x.anySp && !(open.sp || []).length)));
+        const tot = pool.reduce((v, x) => v + wOf(x), 0);
+        if (tot <= 0) return;
+        let p = rnd() * tot;
+        const pick = pool.find((x) => (p -= wOf(x)) < 0) || pool[pool.length - 1];
+        n.kind = pick.key;
+        used[pick.key] = (used[pick.key] || 0) + 1;
+        if (pick.food) used.__food = 1;
+      });
+    });
+    /* 愚者の道。⚠️ 中身を全部決めたあとで、一本だけ丸ごと塗り替える */
+    if (rnd() < ADV_FOOL_RATE) {
+      const fi = Math.floor(rnd() * lanes.length), fl = lanes[fi];
+      /* ⚠️ 封じの鎖は選ばない（一つの盤に一つまで。2026-10-05） */
+      /* ⚠️ 料理のマスも選ばない（1 MAP にどれか 1 個まで） */
+      const kinds = ADV_SPECIALS.filter((x) => x.from <= st && x.key !== "chain" && !x.bear && !x.food && !(x.miss && fl.boss)
+        && !(open && x.attr && (open.elems || []).concat(open.phys || []).indexOf(x.attr) < 0)
+        && !(open && x.suit && (open.sp || []).indexOf(x.suit) < 0)
+        && !(open && x.anySp && !(open.sp || []).length));
+      if (kinds.length) {
+        const fk = kinds[Math.floor(rnd() * kinds.length)].key;
+        fl.tiles.slice(1, fl.tiles.length - 1).forEach((n) => { n.kind = fk; n.reserved = true; });
+        nodes.foolLane = fi; nodes.foolKind = fk;
+      }
+    }
+  }
+  /* 外れの道の先は井戸。⚠️ 行き先は着いたときにルーレットで決める（ここでは決めない） */
+  lanes.forEach((ln) => {
+    if (ln.boss) return;
+    const last = ln.tiles[ln.tiles.length - 1];
+    last.kind = "well"; last.wellMiss = true; last.next = [];
+  });
+  /*
+    道の入口も井戸（2026-10-03 Aki：「井戸の先が空白マスなのは気持ち悪いから、井戸の先は井戸にして」）。
+    ★ 外れの井戸のルーレットは、別の道の入口へ抜ける ―― 抜けた先も井戸（井戸の口）にする。
+    ⚠️ 何も起きない（出口なだけ）。中身は今までどおり入口の一マス目には置かない。
+  */
+  lanes.forEach((ln) => { const h = ln.tiles[0]; if (h && h.kind === "road") { h.kind = "well"; h.wellMouth = true; } });
+  /* 主の道。⚠️ 最後のマスが主の手前。外へ向かう空きマスに、主・レア宝箱・宝箱を置く（三択） */
+  const bl = lanes[bossLane];
+  const P = bl.tiles[bl.tiles.length - 1];
+  P.kind = "road"; P.front = true;
+  const outs = HEX_DIRS.map(([dq, dr]) => [P.q + dq, P.r + dr])
+    .filter(([q, r]) => !at[`${q},${r}`] && hexDist(q, r) >= hexDist(P.q, P.r) && hexDist(q, r) <= MAP_RINGS)
+    .sort((a, b) => hexDist(b[0], b[1]) - hexDist(a[0], a[1]));
+  const [bq, br] = outs[0] || [P.q + HEX_DIRS[bl.d][0], P.r + HEX_DIRS[bl.d][1]];
+  const B = add(bq, br, "boss");
+  P.next.push(B.key);
+  outs.slice(1, 3).forEach(([q, r], j) => {
+    const c = add(q, r, j === 0 ? "rarebox" : "box", { term: true, front: true });
+    P.next.push(c.key);
+  });
+  nodes.lanes = lanes.map((ln) => ({ head: ln.head, boss: ln.boss }));
+  nodes.spins = sp;
+  nodes.lane = true;
+  return nodes;
 }
 function mapOf(areaKey) { return AREA_MAPS[areaKey] || AREA_MAPS.field; }
 /*
@@ -9406,6 +10020,19 @@ function goForReach(reach) {
     }
   }
   return 0.53;
+}
+/*
+  【特別なマスのぶんの到達率の差し引き】2026-10-03。
+  ★ 抜け穴・挑戦状・闇商人（ボス確定）・四つ葉は主への到達を上げる。そのぶん主の前の三択で主を引く率（go）を下げ、
+    盤全体の到達率を表（diffOf）に揃える。
+  ★ 実測（★ごと3万盤、道とルーレットだけを回す器。戦闘の死は含めない）。
+    2026-10-03 第2弾（道を一マス延ばして特別なマスの枠を一つ取った）のあと：補正なしだと +0.1〜+2.4pt（★4から挑戦状・竜の巣が出るので段差がある）、
+    この表を掛けると各★の差は −0.6〜+0.4pt に収まった（scratchpad/lane/reach2.cjs）。
+  ⚠️ ADV_SPECIALS の重み・ADV_SPECIAL_RATE・ルーレットの目・道の長さを変えたら測り直すこと。
+*/
+const LANE_REACH_COMP = { 1: 0.960, 2: 0.958, 3: 0.945, 4: 0.915, 5: 0.915, 6: 0.910, 7: 0.910, 8: 0.905, 9: 0.900, 10: 0.890, 11: 0.885, 12: 0.878 };
+function laneReachComp(star) {
+  return LANE_REACH_COMP[Math.max(1, Math.min(12, star | 0))] || 1;
 }
 
 /*
@@ -9514,11 +10141,11 @@ const ADV_I18N = {
     skPower: (su, n) => `${su}の威力 +${n}%`,
     skStat: (nm) => `${nm}の伸び`,
     skMajor: (nm) => `${nm}を完成させる`,
-    skBlast: (n) => `エレメンタルブラストの段 ${n}`,
+    skBlast: (n) => `コスモフォースの段 ${n}`,
     skDance: (n) => `秘剣・剣の舞の段 ${n}`,
     skNeed: "前の段が要る",
     skNowFlash: (n) => `必殺が使える系統 ${n}/4`,
-    skNowBlast: (n) => `ブラスト ${n}枚`,
+    skNowBlast: (n) => `コスモフォース ${n}枚`,
     skNowMajor: (n) => `完成した大アルカナ ${n}/22`,
     /* ⚠️ ★ごとに分かれていることを最初に伝える。通算だと思われると点が余る */
     skSheetNote: "★ごとに別のシート。その★のMAPで得た点だけが振れます",
@@ -9572,19 +10199,107 @@ const ADV_I18N = {
     progress: (n, all) => `中心から ${n} / ${all} 環め`,
     deadEnd: "行き止まりでした。ここで旅は終わりです。",
     rareChest: "レア宝箱！ ", potionGot: "ポーションを拾った（＋1）",
+    wellIn: "井戸に飛び込んだ……", wellOut: "別の井戸から這い出した。道の先へ抜けた！", wellQuiet: "古い井戸がある。覗いても底は暗いだけだ。",
     shrineMult: (a1, b1) => `社が力を映した。倍率が ×${a1} から ×${b1} へ。`,
     shrineCut: (a1, b1) => `社が力を削いだ。倍率が ×${a1} から ×${b1} へ。`,
     shrineHeal: (h) => `湧き水で ${h} 回復した。`,
     shrineHurt: "社の障りを受けた。体力が半分になった。",
     cannotGo: "道が続いていなかった。",
     viewDrag: "地図は指でなぞると動かせます。一度に見えるのは三マスぶんです。",
-    isoLegend: "緑＝名所、金＝宝箱、青＝関所、★＝主。灰の台は何もない道です",
+    isoLegend: "緑＝名所、金＝宝箱、青＝関所、★＝主。水の光る井戸は、もう一つの井戸へ抜ける近道。灰の台は何もない道。絵の描かれた台（商人・砲台・湖など）は、踏むとルーレットが回り、その探索のあいだだけ効く変化が起きます（左上の札）",
     pickWard: "どの区を歩きますか。", wards: (n) => `${n}区`,
     stages: (n) => `${n}ステージ`,
     pickStage: (p) => `${p}のどこを歩きますか。ひとつの名所がひとつのステージです。`,
     ringNote: "①から順に。前を踏破すると次が開きます。8つ踏破すると真ん中に区分の主が現れます。",
     areaBoss: "この区分の主",
     metZako: "何かが立ちふさがった。",
+    laneRoll: (n) => `ルーレット……「${n}」へ進む。`, wellOutTo: (n) => `井戸の底を抜けて、「${n}」の入口の井戸から這い出した。`,
+    wellMouth: "古井戸のほとり。ここから道が始まる。",
+    wellMissIn: "道の果てに古い井戸がある。", wellDry: "井戸は枯れていた。道に迷い、旅はここまで。",
+    wellDryIn: "道の果てに枯れた井戸がある。底に抜け道が見える……", wellToBoss: "枯れ井戸の抜け道は、ボスの道へ続いていた。",
+    zakoDodge: "うまくすり抜けた！（戦闘を回避）",
+    roulTitle: { lane: "どの道へ？", well: "井戸の底へ……", zako: "すり抜けられるか？", event: "何が起きる？", box: "宝箱を開ける……" },
+    rFight: "戦う", rDodge: "回避", spinsLeft: (n) => `ルーレット 残り${n}`,
+    evName: { hp: "毒の霧", pot: "瓶が割れる", elem: "属性の封印", nosp: "必殺の封印", heal: "癒しの風", potUp: "落とし物" },
+    evLog: { hp: (n) => `毒の霧を吸った（HP −${n}）。`, pot: "ポーションの瓶が割れた（−1）。", elem: (n) => `属性が封じられた。主を倒すまで、構えは「${n}」だけ。`,
+      nosp: "必殺が封じられた。主を倒すまで、手動の必殺は撃てない。", heal: (n) => `癒しの風が吹いた（HP ＋${n}）。`, potUp: "ポーションを拾った（＋1）。" },
+    curseTag: { elem: (n) => `封印：${n}のみ`, nosp: "封印：必殺", spSeal: (n) => `封印：${n}の必殺` },
+    /* ---- 特別なマス（2026-10-03）。⚠️ opt は扇に載る短い文字、desc は扇の下の一覧と記録の一行 ---- */
+    sp: {
+      chainOpt: (n, all) => (all ? "全部" : n ? `${n}つ` : "なし"), chainDesc: (n, all) => (all ? "鎖が絡みついた。必殺が全部封じられた" : n ? `鎖が絡みついた。必殺が${n}つ封じられた` : "鎖をすり抜けた"),
+      name: { merchant: "闇商人", challenge: "挑戦状", tunnel: "抜け穴", clover: "四つ葉", lost: "迷い道", cannon: "砲台",
+        anvil: "鍛冶屋", hoard: "竜の巣", thief: "盗賊", statue: "呪いの石像", fog: "重い霧", fruit: "巨人の果実",
+        lake: "静かな湖", armorer: "鎧職人", healer: "名医",
+        volcano: "火山", waterfall: "滝", windmill: "風車", quarry: "石切り場", lighthouse: "灯台", shadow: "影の森",
+        sword: "刃の岩", spear: "槍の陣", axe: "木こり小屋", bow: "射的場",
+        arena: "闘技場", tower: "魔導塔", tavern: "酒場", market: "市場", garden: "薬草園",
+        rainbow: "虹の丘", silence: "静寂の谷", saltpan: "塩田", stargaze: "星見台", bamboo: "竹林", dojo: "稽古場", onsen: "温泉", chain: "封じの鎖",
+        stall: "屋台", kissa: "喫茶", ryotei: "料亭", kaki: "柿の木", barber: "床屋", bear: "熊" },
+      bearOpt: { calm: "去った", food: "奪われた", hurt: "襲われた", fight: "立ちはだかる" },
+      bearDesc: { calm: "熊は静かに去っていった", food: "食べ物を奪われる", hurt: (n) => `襲われた（HP −${n}%）`, fight: "熊が立ちはだかる（勝てば宝箱）" },
+      bearFood: (s2) => `「${s2}」を奪われた`, bearPot: "ポーションを1本奪われた", bearNoFood: "奪われる物は何もなかった",
+      kakiPlus: (n) => `・魔法すべて +${n}%`, barberCut: (s2) => `「${s2}」を切り落とした`, barberNone: "切り落とす悪い効果がなかった",
+      barberSpins: (n) => `ルーレット ${n}回`,
+      opt: { c1: "薬+2", c2: "★+2箱", sure: "ボス確定", none: "なし", boss: "ボスへ！", seal: "封印", pass: "抜ける", cave: "落盤", plus: "+1回", minus: "−1回",
+        hit4: "−4%", hit8: "−8%", miss: "外れ", up1: "★+1", up2: "★+2", broke: "壊れる", dbl: "倍", lose: "全部失う",
+        steal: "盗まれる", escape: "逃げ切る", drop: "拾う", maxhp: "最大HP", charge: "溜まり", cards: "手札",
+        p10: "+10%", p5: "+5%", m5: "−5%", c20: "+20%", c10: "+10%", heal5: "回復量", pot1: "薬+1",
+        resRoar: "轟音耐性", resRot: "腐食耐性", resDread: "波動耐性", resMiasma: "瘴気耐性", resKill: "殺気耐性", resSap: "虚脱耐性" },
+      desc: {
+        merchant: { c1: "宝箱1個を渡して、ポーション+2", c2: "宝箱2個を渡して、★+2の宝箱", sure: "最大HP−10%を払って、ボス確定", none: "取引は成立しなかった" },
+        challenge: { sure: "ボス確定。ただしボスのHP+15%", none: "何も起きなかった", already: "もうボスは確定している" },
+        tunnel: { boss: "大当たり！ ボスの目の前へ抜けた（通らないマスの平均はすべて受け取れる）",
+          pass: "ボスの道の入口へ抜けた（ルーレットの回数は使わない。通らないマスの平均は受け取れる）", none: "行き止まりだった", cave: "落盤！ 最大HP−10%" },
+        clover: { plus: "道のルーレット+1回", none: "ただの三つ葉だった" },
+        lost: { minus: "道に迷った。道のルーレット−1回", none: "迷わずに済んだ" },
+        cannon: { hit4: "命中！ ボスのHP−4%", hit8: "会心！ ボスのHP−8%", miss: "外れた", cap: "砲台はもう撃ち尽くした（ボスのHP−12%が上限）" },
+        anvil: { up1: "宝箱を鍛えた。★+1", up2: "宝箱を鍛えた。★+2", broke: "鍛えすぎて宝箱が壊れた", empty: "鍛える宝箱を持っていない" },
+        hoard: { dbl: "竜の宝と取り替えた。宝箱が倍に", lose: "竜が目覚めた。宝箱を全部失った", none: "竜は眠っている", empty: "巣は空っぽだった" },
+        thief: { steal: "宝箱を1個盗まれた", escape: "盗賊から逃げ切った", drop: "盗賊が落とした宝箱を拾った" },
+        statue: { maxhp: "呪い：最大HP−10%", charge: "呪い：ゲージの溜まり−25%", cards: "呪い：手札−1", none: "石像は黙っている" },
+        fog: { charge: "霧に呑まれた。ゲージの溜まり−20%", none: "霧を抜けた" },
+        chain: { seal: "鎖が絡みついた。必殺が一つ封じられた", none: "鎖をすり抜けた", n0: "鎖をすり抜けた",
+          n1: "鎖が絡みついた。必殺が1つ封じられた", n2: "鎖が絡みついた。必殺が2つ封じられた",
+          n3: "鎖が絡みついた。必殺が3つ封じられた", n4: "鎖が絡みついた。必殺が4つ封じられた" },
+        fruit: { p10: "最大HP+10%", p5: "最大HP+5%", m5: "腐っていた。最大HP−5%" },
+        lake: { c20: "心が澄んだ。ゲージの溜まり+20%", c10: "ゲージの溜まり+10%", none: "何も起きなかった" },
+        armorer: { resRoar: "轟音（倍率削り）の耐性+15%", resRot: "腐食（札が腐る）の耐性+15%", resDread: "波動（大アルカナ封じ）の耐性+15%",
+          resMiasma: "瘴気（回復封じ）の耐性+15%", resKill: "殺気（必殺封じ）の耐性+15%" },
+        healer: { heal5: "ポーション1本の回復量が最大HPの+5%", pot1: "ポーション+1", none: "留守だった" },
+      },
+      boxN: (n) => (n >= 0 ? `（宝箱+${n}）` : `（宝箱−${-n}）`),
+      /* 第2弾：倍率のマスの文言（目の数字から作る） */
+      attrOf: (k) => ({ earth: "地の魔法", fire: "火の魔法", water: "水の魔法", wind: "風の魔法", light: "光の魔法", dark: "闇の魔法",
+        slash: "斬撃", thrust: "突撃", blunt: "打撃", shoot: "射撃" })[k] || k,
+      chargeOf: (su) => `${su}の必殺の溜まり`, healLabel: "受ける回復", curse: "呪い：",
+      directBonus: (n) => `近道のご褒美：通らなかった特別なマス${n}か所ぶんの平均を受け取った（ルーレット無しで確定）。`,
+      allAttrLabel: "魔法と物理の倍率すべて", allResLabel: "妨害の耐性すべて", nothing: "何も起きなかった", maxHpLabel: "最大HP",
+      resWhat: { resRoar: "轟音（倍率削り）", resRot: "腐食（札が腐る）", resDread: "波動（大アルカナ封じ）",
+        resMiasma: "瘴気（回復封じ）", resKill: "殺気（必殺封じ）", resSap: "虚脱（必殺ゲージ削り）" },
+      pct: (lab, p) => `${lab} ${p > 0 ? "+" : "−"}${Math.abs(p)}%`,
+    },
+    physName: { slash: "斬撃", thrust: "突撃", blunt: "打撃", shoot: "射撃" },
+    physTip: (n) => `物理の構え：${n}（押すと次のターンから。もう一度押すとオート）`,
+    attrShort: { earth: "地", fire: "火", water: "水", wind: "風", light: "光", dark: "闇", slash: "斬", thrust: "突", blunt: "打", shoot: "射" },
+    landTag: "地の利", skyTag: () => "天の利" /* ⚠️ 2026-10-05 Aki「天気を書くのはやめて（文字が多くて気が散る）」 */, attrAll: "全属性", resAll: "全耐性",
+    prep: { title: "決戦の前に", magic: "魔法", phys: "物理", charge: "溜まり", heal: "回復", maxHp: "最大HP", bossHp: "ボスHP",
+      res: "耐性", resShort: { roar: "轟", rot: "腐", despair: "波", miasma: "瘴", dread: "殺", sap: "虚" }, resCap: "100%で完全耐性",
+      hint: "倍率を見て、下の構え（魔法・物理）を選んでから「戦いを始める」" },
+    /* その探索のあいだ効いている変化の札 */
+    runTag: {
+      maxHp: (p) => `最大HP ${p > 0 ? "+" : "−"}${Math.abs(p)}%`, charge: (p) => `溜まり ${p > 0 ? "+" : "−"}${Math.abs(p)}%`,
+      potHeal: (p) => `薬の回復 +${p}%`, cards: (n) => `手札 ${n > 0 ? "+" : "−"}${Math.abs(n)}`,
+      res: (nm, n) => `${nm} +${n}%`, bossCut: (p) => `ボスHP −${p}%`, bossUp: (p) => `ボスHP +${p}%`, bossSure: "ボス確定",
+      attr: (nm, p) => `${nm} ${p > 0 ? "+" : "−"}${Math.abs(p)}%`, chargeS: (nm, p) => `${nm}の溜まり ${p > 0 ? "+" : "−"}${Math.abs(p)}%`,
+      heal: (p) => `回復 ${p > 0 ? "+" : "−"}${Math.abs(p)}%`,
+      grpMagic: "魔法", grpPhys: "物理", grpCharge: "増幅", grpRes: "耐性", all: "全",
+    },
+    zkOpt: { gild: "金の敵", elite: "精鋭" },
+    zkMeet: { gild: "金色に輝く敵が現れた！", elite: "精鋭が立ちはだかる！", mimic: "宝箱が牙をむいた――ミミックだ！", bear: "熊が立ちはだかった！", higuma: "ヒグマが立ちはだかった！" },
+    zkWin: { gild: "金の敵を倒した！ ", elite: "精鋭を倒した！ ", mimic: "ミミックを倒した！ ", bear: "熊を追い払った！ ", higuma: "ヒグマを追い払った！ " },
+    boxOpt: { chest: "宝箱", multUp: "倍率×2", heal: "回復", hurt: "HP半分", multDown: "倍率½", mimic: "ミミック" },
+    foolIn: (n) => `愚者の道！ この道は「${n}」しか出ない。`, foolSub: (n) => `この道は「${n}」ばかり`,
+    goldName: "黄金の道", goldIn: "井戸の底が金色に光った――黄金の道！（ルーレットの回数は使わない）",
     dbgStep: (n, all) => `${n}/${all}段 `,
     foeWind: "力を溜めている", foeHeavy: "渾身の一撃", foeCombo: "連撃",
     foeRoar: "戦慄の轟音",
@@ -9593,7 +10308,11 @@ const ADV_I18N = {
     foeMiasma: { miasma1: "魔界の瘴気", miasma2: "地獄の瘴気", miasma3: "深淵の瘴気" },
     foeDread: "すさまじい殺気",
     foeDreadFail: "殺気は届かなかった",
-    flashName: FLASH_NAMES, wandFlashName: WAND_FLASH_NAMES,
+    foeSap: "虚脱 ―― 必殺ゲージが抜けていく", foeSapFail: "抜き取るゲージが無かった",
+    sapPop: (p) => `ゲージ−${p}%`,
+    flashName: FLASH_NAMES, wandFlashName: WAND_FLASH_NAMES, physFlashName: PHYS_FLASH_NAMES, fourName: "秘奥義・四武の衝陣", eternalName: "エターナルエレメンツ",
+    danceNames: { slash: "秘剣・剣の舞", thrust: "秘槍・槍の華", shoot: "秘弓・矢の雨", blunt: "秘斧・斧の宴" },
+    aegisBlock: "無効", eternalBlock: "状態異常を受けない",
     foeMiasmaFail: "瘴気は届かなかった",
     foeGuardHi: "剛防御", foeGuardEdge: "凶刃防御",
     /* ⚠️ 二行にまたがる定義の途中に差し込まないこと。別の表が壊れる */
@@ -9607,6 +10326,8 @@ const ADV_I18N = {
       shield: "守護", curse: "呪詛", command: "号令", drain: "吸収" },
     fxHelp: {
       despair: "大アルカナが山から外れています。効果札が来ません。",
+      aegis: "四武の衝陣：敵の攻撃を受けません。",
+      eternal: "エターナルエレメンツ：状態異常を受けません。",
       miasma: "聖杯の回復が鈍っています。深淵なら一切戻りません。",
       dread: "必殺技が出せません。同じスートを揃えても何も起きません。",
       hiero: "逆位置が出ません。大アルカナが必ず1枚来ます。",
@@ -9631,7 +10352,7 @@ const ADV_I18N = {
       emperor: "敵が行動不能です。効いている継続は2ターン延びました。",
     },
     majorList: "大アルカナ22枚の効果",
-    debuffList: "敵の行動13種",
+    debuffList: "敵の行動14種",
     histList: "戦闘ログ",
     suitName: { swords: "剣", wands: "棒", cups: "聖杯", pentacles: "貨幣" },
     foeSizeName: { xl: "特大", lg: "大", md: "中", sm: "小", xs: "極小" },
@@ -9639,7 +10360,7 @@ const ADV_I18N = {
     foeMoveName: {
       hit: "通常攻撃", combo: "連撃", wind: "溜め", heavy: "大技",
       roar: "戦慄の轟音", rot: "腐食攻撃", despair: "絶望の波動",
-      miasma: "瘴気", dread: "殺気",
+      miasma: "瘴気", dread: "殺気", sap: "虚脱",
       sharpen: "会心UP", blur: "回避UP", harden: "会心耐性UP",
       guardUp: "防御UP", atkUp: "攻撃UP",
       guard: "防御", guardHi: "剛防御", guardEdge: "凶刃防御",
@@ -9647,11 +10368,11 @@ const ADV_I18N = {
       /* ⚠️ 必中は名前で分かるようにする。避けられなかった理由が伝わらない */
       sure: "必中の一撃",
     },
-    blastName: "エレメンタルブラスト",
+    blastName: "コスモフォース",
     danceName: "秘剣・剣の舞",
     foeActName: {
       roar: "戦慄の轟音", rot: "腐食攻撃", despair: "絶望の波動",
-      miasma: "瘴気（魔界・地獄・深淵）", dread: "すさまじい殺気",
+      miasma: "瘴気（魔界・地獄・深淵）", dread: "すさまじい殺気", sap: "虚脱",
       guard: "防御", guardHi: "剛防御", guardEdge: "凶刃防御",
       wind: "溜め", heavy: "大技", combo: "連撃", hit: "通常攻撃", heal: "自己回復",
     },
@@ -9661,6 +10382,7 @@ const ADV_I18N = {
       despair: "2ターン、大アルカナが山から外れます。★7以上。",
       miasma: "回復が鈍ります。魔界=1/4減、地獄=半分減、深淵=一切回復できない。",
       dread: "2ターン、必殺技（一閃・魔法・恵・青）が出せなくなります。★4以上。",
+      sap: "必殺ゲージ4本を、今ある量の3割ずつ削ります（★8〜は4〜5割）。殴ってきません。★4以上。",
       guard: "こちらの攻撃の通りが55%になります。",
       guardHi: "通りが28%まで落ちます。",
       guardEdge: "通りは75%ですが、斬ると自傷が3.5倍になります。",
@@ -9709,7 +10431,7 @@ const ADV_I18N = {
     btStart: "戦いを始める",
     fxName: {
       /* ⚠️ 敵が掛けてくるものも、こちらの継続と同じ場所に出す。効いているものは一覧で */
-      despair: "絶望の波動", miasma: "瘴気", dread: "殺気",
+      despair: "絶望の波動", miasma: "瘴気", dread: "殺気", aegis: "四武の衝陣", eternal: "エターナルエレメンツ",
       hiero: "法王", lovers: "恋人", hermit: "隠者", wheel: "運命の輪",
       justice: "正義", hanged: "吊るされた男", death: "死神", temperance: "節制",
       star: "星", moon: "月", sun: "太陽",
@@ -9729,7 +10451,7 @@ const ADV_I18N = {
     /* 構え */
     stanceAuto: "オート", stanceManual: "手動", stanceReserved: "次ターンから",
     ctrlTip: (n) => `${n}を止める（次のターンから${CTRL_TURNS}ターン。大アルカナの指定は別）`,
-    spReady: "満", spArmed: "構え", spGo: "発動", spCharging: "溜め中", potGo: "回復", logBox: "ログ",
+    spReady: "満", spArmed: "構え", spGo: "発動", spCharging: "溜め中", potGo: "回復", logBox: "ログ", spSealed: "封印",
     spTip: (n) => `${n}の必殺：${n}の札を出すごとに円が溜まる。刻みを一つ越えるごとに必殺の段が上がり（3枚〜★の上限）、押すと次の札の瞬間に放つ。溜まりは全部使う。満タンまで溜めるほど、溜まりあたりの威力が高い`,
     cureAll: "浄化", potion: "ポーション", potionTip: `ポーション：最大HPの${Math.round(POTION_HEAL * 100)}%回復（1ターンに1個）`,
     layoutTip: "画面の型を切り替える（スマホ／PC）",
@@ -9753,6 +10475,10 @@ const ADV_I18N = {
     thanksTravel: (p) => `${p}を選んでくれてありがとう。機会があったら、ぜひ実際にも訪ねてみてください。`,
     resultWin: "踏破しました", resultLose: "旅はここまでです",
     resultSteps: "歩数 ", resultGot: "手に入れたもの ", resultNone: "なし",
+    jnFirst: "旅の終わりの三枚を選ぶと、制覇できます。",
+    runRes: { title: "旅の記録", foes: "勝った戦い", foesN: (n) => `${n}回`, chests: "拾った宝箱", chestsN: (n) => `${n}個`,
+      special: "立ち寄った特別なマス", specialN: (n) => `${n}か所`, spins: "回したルーレット", spinsN: (a2, b2) => `${a2} / ${b2}回`,
+      hp: "残りHP", pot: "残りのポーション", potN: (n) => `${n}本`, mods: "この旅の変化", chestList: "手に入れた宝箱" },
     resultDone: "この区分 ", resultCount: (a2, b2) => `${a2} / ${b2} 踏破`,
     cleared: "踏破済み",
     autoOn: "自動で進んでいます（押すと止まります）",
@@ -9821,11 +10547,11 @@ const ADV_I18N = {
     skPower: (su, n) => `${su} power +${n}%`,
     skStat: (nm) => `${nm} growth`,
     skMajor: (nm) => `Complete ${nm}`,
-    skBlast: (n) => `Elemental Blast — tier ${n}`,
+    skBlast: (n) => `Cosmo Force — tier ${n}`,
     skDance: (n) => `Sword Dance — tier ${n}`,
     skNeed: "Needs the previous step",
     skNowFlash: (n) => `Finishers unlocked ${n}/4`,
-    skNowBlast: (n) => `Blast ${n} cards`,
+    skNowBlast: (n) => `Cosmo Force ${n} cards`,
     skNowMajor: (n) => `Major arcana completed ${n}/22`,
     skSheetNote: "One sheet per star. Points only spend on the star that earned them.",
     skCost: "Cost", skGet: "Unlock", skDone: "Unlocked",
@@ -9873,19 +10599,104 @@ const ADV_I18N = {
     progress: (n, all) => `ring ${n} of ${all}`,
     deadEnd: "A dead end. The journey ends here.",
     rareChest: "Rare chest! ", potionGot: "Picked up a potion (+1)",
+    wellIn: "You dove into the well…", wellOut: "You climbed out of another well, far ahead!", wellQuiet: "An old well. Only darkness below.",
     shrineMult: (a1, b1) => `The shrine doubled your gain: x${a1} to x${b1}.`,
     shrineCut: (a1, b1) => `The shrine took half your gain: x${a1} to x${b1}.`,
     shrineHeal: (h) => `A spring restored ${h} HP.`,
     shrineHurt: "Something at the shrine took half your strength.",
     cannotGo: "The road did not hold.",
     viewDrag: "Drag the map to look around. About three tiles fit on screen.",
-    isoLegend: "green: a place, gold: a chest, blue: a gate, star: the master. Grey tiles are empty road",
+    isoLegend: "green: a place, gold: a chest, blue: a gate, star: the master. A glowing well is a shortcut to the other well. Grey tiles are empty road. Tiles with a picture (merchant, cannon, lake…) spin a roulette when you step on them; the effect lasts for this run (tags at top left)",
     pickWard: "Which ward will you walk?", wards: (n) => `${n} wards`,
     stages: (n) => `${n} stages`,
     pickStage: (p) => `Where in ${p} will you walk? Each place is one stage.`,
     ringNote: "Clear them in order from ①. Clear all 8 and the area lord appears in the center.",
     areaBoss: "The Keeper of this district",
     metZako: "Something blocks the way.",
+    laneRoll: (n) => `Roulette… heading down "${n}".`, wellOutTo: (n) => `Through the well, you climbed out of the well at the start of "${n}".`,
+    wellMouth: "An old well. The road starts here.",
+    wellMissIn: "An old well at the end of the road.", wellDry: "The well was dry. You lost your way; the journey ends here.",
+    wellDryIn: "A dry well at the end of the road. There is a passage at the bottom…", wellToBoss: "The dry well's passage led to the boss road.",
+    zakoDodge: "You slipped past! (battle avoided)",
+    roulTitle: { lane: "Which road?", well: "Into the well…", zako: "Slip past?", event: "What happens?", box: "Opening the chest…" },
+    rFight: "Fight", rDodge: "Dodge", spinsLeft: (n) => `Spins left: ${n}`,
+    evName: { hp: "Toxic mist", pot: "Broken flask", elem: "Element seal", nosp: "Finisher seal", heal: "Healing wind", potUp: "Lucky find" },
+    evLog: { hp: (n) => `You breathed toxic mist (HP −${n}).`, pot: "A potion flask broke (−1).", elem: (n) => `Your elements are sealed: only ${n} until the master falls.`,
+      nosp: "Your finishers are sealed until the master falls.", heal: (n) => `A healing wind (HP +${n}).`, potUp: "You found a potion (+1)." },
+    curseTag: { elem: (n) => `Seal: ${n} only`, nosp: "Seal: finisher", spSeal: (n) => `Seal: ${n} finisher` },
+    sp: {
+      chainOpt: (n, all) => (all ? "All" : n ? `${n}` : "None"), chainDesc: (n, all) => (all ? "Chains wrapped around you: every finisher sealed" : n ? `Chains wrapped around you: ${n} finisher${n > 1 ? "s" : ""} sealed` : "You slipped past the chains"),
+      name: { merchant: "Shady Merchant", challenge: "Challenge Letter", tunnel: "Hidden Passage", clover: "Four-leaf Clover", lost: "Lost Path",
+        cannon: "Cannon", anvil: "Anvil", hoard: "Dragon's Hoard", thief: "Thief", statue: "Cursed Statue", fog: "Heavy Fog",
+        fruit: "Giant's Fruit", lake: "Still Lake", armorer: "Armorer", healer: "Healer",
+        volcano: "Volcano", waterfall: "Waterfall", windmill: "Windmill", quarry: "Quarry", lighthouse: "Lighthouse", shadow: "Shadow Grove",
+        sword: "Blade Rock", spear: "Spear Camp", axe: "Lumber Camp", bow: "Archery Range",
+        arena: "Arena", tower: "Mage Tower", tavern: "Tavern", market: "Market", garden: "Herb Garden",
+        rainbow: "Rainbow Hill", silence: "Silent Vale", saltpan: "Salt Pans", stargaze: "Stargazer's Hill", bamboo: "Bamboo Grove", dojo: "Training Yard", onsen: "Hot Spring", chain: "Binding Chains",
+        stall: "Food Stall", kissa: "Café", ryotei: "Ryotei", kaki: "Persimmon Tree", barber: "Barber", bear: "Bear" },
+      bearOpt: { calm: "Leaves", food: "Robbed", hurt: "Mauled", fight: "Fight" },
+      bearDesc: { calm: "The bear wandered quietly away", food: "It steals your food", hurt: (n) => `Mauled (HP −${n}%)`, fight: "The bear blocks the way (a chest if you win)" },
+      bearFood: (s2) => `"${s2}" was stolen`, bearPot: "A potion was stolen", bearNoFood: "There was nothing to steal",
+      kakiPlus: (n) => ` · all magic +${n}%`, barberCut: (s2) => `Snipped away "${s2}"`, barberNone: "Nothing bad to snip away",
+      barberSpins: (n) => `Roulette ${n}`,
+      opt: { c1: "Pot+2", c2: "★+2 box", sure: "Boss!", none: "None", boss: "To the boss!", seal: "Seal", pass: "Through", cave: "Cave-in", plus: "+1 spin", minus: "−1 spin",
+        hit4: "−4%", hit8: "−8%", miss: "Miss", up1: "★+1", up2: "★+2", broke: "Broken", dbl: "Double", lose: "Lose all",
+        steal: "Stolen", escape: "Escape", drop: "Loot", maxhp: "Max HP", charge: "Charge", cards: "Hand",
+        p10: "+10%", p5: "+5%", m5: "−5%", c20: "+20%", c10: "+10%", heal5: "Heal+", pot1: "Pot+1",
+        resRoar: "Roar res", resRot: "Rot res", resDread: "Dread res", resMiasma: "Miasma res", resKill: "Killing-intent res", resSap: "Sap res" },
+      desc: {
+        merchant: { c1: "Trade 1 chest for 2 potions", c2: "Trade 2 chests for a ★+2 chest", sure: "Pay 10% max HP: the boss is certain", none: "No deal" },
+        challenge: { sure: "The boss is certain, but the boss has +15% HP", none: "Nothing happened", already: "The boss is already certain" },
+        tunnel: { boss: "Jackpot! Straight to the boss (you get the average of every tile you skip)",
+          pass: "Out at the start of the boss road (no spin used; you still get the average of the tiles you skip)", none: "A dead end", cave: "Cave-in! Max HP −10%" },
+        clover: { plus: "Road roulette +1 spin", none: "Just a three-leaf clover" },
+        lost: { minus: "You lost your way: road roulette −1 spin", none: "You kept your way" },
+        cannon: { hit4: "Hit! Boss HP −4%", hit8: "Critical! Boss HP −8%", miss: "Missed", cap: "The cannons are spent (boss HP −12% is the limit)" },
+        anvil: { up1: "Your chest was forged: ★+1", up2: "Your chest was forged: ★+2", broke: "Forged too hard: the chest broke", empty: "You have no chest to forge" },
+        hoard: { dbl: "Swapped for the dragon's gold: chests doubled", lose: "The dragon woke: you lost every chest", none: "The dragon sleeps", empty: "The hoard was empty" },
+        thief: { steal: "A chest was stolen", escape: "You escaped the thief", drop: "You picked up the thief's dropped chest" },
+        statue: { maxhp: "Curse: max HP −10%", charge: "Curse: gauge charge −25%", cards: "Curse: hand −1", none: "The statue is silent" },
+        fog: { charge: "Swallowed by fog: gauge charge −20%", none: "You came through the fog" },
+        chain: { seal: "Chains wrapped around you: one finisher is sealed", none: "You slipped past the chains", n0: "You slipped past the chains",
+          n1: "Chains wrapped around you: 1 finisher sealed", n2: "Chains wrapped around you: 2 finishers sealed",
+          n3: "Chains wrapped around you: 3 finishers sealed", n4: "Chains wrapped around you: 4 finishers sealed" },
+        fruit: { p10: "Max HP +10%", p5: "Max HP +5%", m5: "It was rotten: max HP −5%" },
+        lake: { c20: "A clear mind: gauge charge +20%", c10: "Gauge charge +10%", none: "Nothing happened" },
+        armorer: { resRoar: "Roar resistance +15%", resRot: "Rot resistance +15%", resDread: "Dread resistance +15%",
+          resMiasma: "Miasma resistance +15%", resKill: "Killing-intent resistance +15%" },
+        healer: { heal5: "Each potion heals +5% of max HP more", pot1: "Potion +1", none: "Nobody was home" },
+      },
+      boxN: (n) => (n >= 0 ? ` (chests +${n})` : ` (chests −${-n})`),
+      attrOf: (k) => ({ earth: "Earth magic", fire: "Fire magic", water: "Water magic", wind: "Wind magic", light: "Light magic", dark: "Dark magic",
+        slash: "Slash", thrust: "Thrust", blunt: "Blunt", shoot: "Shot" })[k] || k,
+      chargeOf: (su) => `${su} finisher charge`, healLabel: "Healing received", curse: "Curse: ",
+      directBonus: (n) => `Shortcut reward: you received the average of the ${n} special tiles you skipped (guaranteed, no spin).`,
+      allAttrLabel: "All magic and physical multipliers", allResLabel: "All debuff resistances", nothing: "Nothing happened", maxHpLabel: "Max HP",
+      resWhat: { resRoar: "Roar (multiplier cut)", resRot: "Rot (cards fail)", resDread: "Despair (Major Arcana sealed)",
+        resMiasma: "Miasma (healing sealed)", resKill: "Killing intent (finishers sealed)", resSap: "Sap (finisher gauges drained)" },
+      pct: (lab, p) => `${lab} ${p > 0 ? "+" : "−"}${Math.abs(p)}%`,
+    },
+    physName: { slash: "Slash", thrust: "Thrust", blunt: "Blunt", shoot: "Shot" },
+    physTip: (n) => `Physical stance: ${n} (from next turn; tap again for auto)`,
+    attrShort: { earth: "Earth", fire: "Fire", water: "Water", wind: "Wind", light: "Light", dark: "Dark", slash: "Slash", thrust: "Thrust", blunt: "Blunt", shoot: "Shot" },
+    landTag: "Terrain", skyTag: () => "Sky", attrAll: "All attrs", resAll: "All res",
+    prep: { title: "Before the battle", magic: "Magic", phys: "Physical", charge: "Charge", heal: "Healing", maxHp: "Max HP", bossHp: "Boss HP",
+      res: "Resist", resShort: { roar: "Roar ", rot: "Rot ", despair: "Desp ", miasma: "Mias ", dread: "Dread ", sap: "Sap " }, resCap: "100% = immune",
+      hint: "Check the multipliers, pick your magic and physical stances below, then start" },
+    runTag: {
+      maxHp: (p) => `Max HP ${p > 0 ? "+" : "−"}${Math.abs(p)}%`, charge: (p) => `Charge ${p > 0 ? "+" : "−"}${Math.abs(p)}%`,
+      potHeal: (p) => `Potion +${p}%`, cards: (n) => `Hand ${n > 0 ? "+" : "−"}${Math.abs(n)}`,
+      res: (nm, n) => `${nm} +${n}%`, bossCut: (p) => `Boss HP −${p}%`, bossUp: (p) => `Boss HP +${p}%`, bossSure: "Boss certain",
+      attr: (nm, p) => `${nm} ${p > 0 ? "+" : "−"}${Math.abs(p)}%`, chargeS: (nm, p) => `${nm} charge ${p > 0 ? "+" : "−"}${Math.abs(p)}%`,
+      heal: (p) => `Healing ${p > 0 ? "+" : "−"}${Math.abs(p)}%`,
+      grpMagic: "Magic", grpPhys: "Physical", grpCharge: "Boost", grpRes: "Res", all: "All",
+    },
+    zkOpt: { gild: "Gilded", elite: "Elite" },
+    zkMeet: { gild: "A gleaming golden foe appears!", elite: "An elite blocks the way!", mimic: "The chest bares its teeth: a mimic!", bear: "A bear blocks the way!", higuma: "A brown bear blocks the way!" },
+    zkWin: { gild: "The golden foe falls! ", elite: "The elite falls! ", mimic: "The mimic falls! ", bear: "You drove off the bear! ", higuma: "You drove off the brown bear! " },
+    boxOpt: { chest: "Chest", multUp: "Mult ×2", heal: "Heal", hurt: "HP half", multDown: "Mult ½", mimic: "Mimic" },
+    foolIn: (n) => `The Fool's Road! Nothing but "${n}" on this road.`, foolSub: (n) => `Nothing but "${n}"`,
+    goldName: "Golden Road", goldIn: "The well shines gold: the Golden Road! (no spin used)",
     dbgStep: (n, all) => `step ${n}/${all} `,
     foeWind: "Gathering force", foeHeavy: "A crushing blow", foeCombo: "A flurry",
     foeRoar: "A terrible roar",
@@ -9894,7 +10705,11 @@ const ADV_I18N = {
     foeMiasma: { miasma1: "Demonic miasma", miasma2: "Infernal miasma", miasma3: "Abyssal miasma" },
     foeDread: "A dreadful killing intent",
     foeDreadFail: "The killing intent did not reach",
-    flashName: FLASH_NAMES_EN, wandFlashName: WAND_FLASH_NAMES_EN,
+    foeSap: "Sap: your finisher gauges drain away", foeSapFail: "There was no gauge to drain",
+    sapPop: (p) => `Gauges −${p}%`,
+    flashName: FLASH_NAMES_EN, wandFlashName: WAND_FLASH_NAMES_EN, physFlashName: PHYS_FLASH_NAMES_EN, fourName: "Secret Art: Fourfold Bulwark", eternalName: "Eternal Elements",
+    danceNames: { slash: "Secret Blade: Sword Dance", thrust: "Secret Spear: Spear Blossom", shoot: "Secret Bow: Arrow Rain", blunt: "Secret Axe: Axe Feast" },
+    aegisBlock: "NULL", eternalBlock: "Immune",
     foeMiasmaFail: "The miasma did not take",
     foeGuardHi: "Braced hard", foeGuardEdge: "Bladed stance",
     bossPctName: {
@@ -9907,6 +10722,8 @@ const ADV_I18N = {
       shield: "Guarded", curse: "Curse", command: "Command", drain: "Drain" },
     fxHelp: {
       despair: "Major Arcana are removed from the deck.",
+      aegis: "Fourfold Bulwark: enemy attacks deal no damage.",
+      eternal: "Eternal Elements: immune to status effects.",
       miasma: "Healing is dulled. Under the abyssal kind, none at all.",
       dread: "Your finishers are sealed. Runs of a suit do nothing.",
       hiero: "No reversed cards. One Major Arcana is guaranteed each turn.",
@@ -9931,7 +10748,7 @@ const ADV_I18N = {
       emperor: "The enemy loses its turn.",
     },
     majorList: "The 22 Major Arcana",
-    debuffList: "13 enemy actions",
+    debuffList: "14 enemy actions",
     histList: "Battle log",
     suitName: { swords: "Sw", wands: "Wa", cups: "Cu", pentacles: "Pe" },
     foeSizeName: { xl: "XL", lg: "L", md: "M", sm: "S", xs: "XS" },
@@ -9939,16 +10756,16 @@ const ADV_I18N = {
     foeMoveName: {
       hit: "Strike", combo: "Combo", wind: "Wind-up", heavy: "Heavy",
       roar: "Roar", rot: "Corrosion", despair: "Despair",
-      miasma: "Miasma", dread: "Dread",
+      miasma: "Miasma", dread: "Dread", sap: "Sap",
       guard: "Guard", guardHi: "Hard guard", guardEdge: "Bladed stance",
       reflectP: "Phys Reflect", reflectM: "Magic Reflect",
     },
-    blastName: "ELEMENTAL BLAST",
+    blastName: "COSMO FORCE",
     /* ⚠️ ブラストと同じ格で見せる。片方だけ日本語だと格が下がって見える */
     danceName: "秘剣・剣の舞",
     foeActName: {
       roar: "Dread Roar", rot: "Corroding Strike", despair: "Wave of Despair",
-      miasma: "Miasma", dread: "Killing Intent",
+      miasma: "Miasma", dread: "Killing Intent", sap: "Sap",
       sharpen: "Crit UP", blur: "Evade UP", harden: "Crit-res UP",
       guardUp: "Defense UP", atkUp: "Attack UP",
       guard: "Guard", guardHi: "Hard Guard", guardEdge: "Bladed Stance",
@@ -9960,6 +10777,7 @@ const ADV_I18N = {
       despair: "2 turns without Major Arcana. Star 7 and above.",
       miasma: "Healing is dulled: a quarter, a half, or none at all.",
       dread: "2 turns without finishers. Star 4 and above.",
+      sap: "Drains 30% of each finisher gauge (40-50% from star 8). Deals no damage. Star 4 and above.",
       guard: "Your attacks land at 55%.",
       guardHi: "Your attacks land at 28%.",
       guardEdge: "Lands at 75%, but your recoil is 3.5x.",
@@ -10007,7 +10825,7 @@ const ADV_I18N = {
     zakoWin: "Driven off.", zakoLose: "You fell.",
     btStart: "Begin the fight",
     fxName: {
-      despair: "Despair", miasma: "Miasma", dread: "Dread",
+      despair: "Despair", miasma: "Miasma", dread: "Dread", aegis: "Fourfold Bulwark", eternal: "Eternal Elements",
       hiero: "Hierophant", lovers: "Lovers", hermit: "Hermit", wheel: "Wheel",
       justice: "Justice", hanged: "Hanged Man", death: "Death", temperance: "Temperance",
       star: "Star", moon: "Moon", sun: "Sun",
@@ -10024,7 +10842,7 @@ const ADV_I18N = {
       reflectP: "P.Reflect", reflectM: "M.Reflect" },
     stanceAuto: "Auto", stanceManual: "Manual", stanceReserved: "Next turn",
     ctrlTip: (n) => `Block ${n} (from next turn, ${CTRL_TURNS} turns; Major Arcana overrides)`,
-    spReady: "MAX", spArmed: "SET", spGo: "TAP", spCharging: "charging", potGo: "HEAL", logBox: "Log",
+    spReady: "MAX", spArmed: "SET", spGo: "TAP", spCharging: "charging", potGo: "HEAL", logBox: "Log", spSealed: "SEALED",
     spTip: (n) => `${n} finisher: the ring charges with each ${n} card. Each notch passed raises the finisher (3 cards up to your ★ cap). Tap to unleash it on the next card; it uses the whole charge, and a fuller ring is stronger per charge`,
     cureAll: "CURE", potion: "Potion", potionTip: `Potion: heal ${Math.round(POTION_HEAL * 100)}% of max HP (1 per turn)`,
     layoutTip: "Switch layout (phone / PC)",
@@ -10045,6 +10863,10 @@ const ADV_I18N = {
     thanksTravel: (p) => `Thank you for choosing ${p}. If you ever get the chance, go and see it for real.`,
     resultWin: "Cleared", resultLose: "The journey ends here",
     resultSteps: "Steps ", resultGot: "You got ", resultNone: "nothing",
+    jnFirst: "Choose the three cards of your journey's end to claim the conquest.",
+    runRes: { title: "Journey record", foes: "Battles won", foesN: (n) => `${n}`, chests: "Chests found", chestsN: (n) => `${n}`,
+      special: "Special tiles visited", specialN: (n) => `${n}`, spins: "Roulettes spun", spinsN: (a2, b2) => `${a2} / ${b2}`,
+      hp: "HP left", pot: "Potions left", potN: (n) => `${n}`, mods: "Changes this journey", chestList: "Chests gained" },
     resultDone: "This area ", resultCount: (a2, b2) => `${a2} / ${b2} cleared`,
     cleared: "cleared",
     autoOn: "Auto is running (tap to stop)", autoOff: "Auto",
@@ -10810,6 +11632,7 @@ const EQUIP_SUBS = [
   { key: "resDread",  unit: 0.9, pct: true },  /* 耐性・波動  大アルカナ封じ */
   { key: "resMiasma", unit: 0.9, pct: true },  /* 耐性・瘴気  回復の減衰 */
   { key: "resKill",   unit: 0.9, pct: true },  /* 耐性・殺気  必殺技の封じ */
+  { key: "resSap",    unit: 0.9, pct: true },  /* 耐性・虚脱  必殺ゲージ削り（2026-10-04） */
   /*
     ★ 宝箱。二段ある。
       box … 宝箱そのものが出る確率（マスの抽選）。段12で最大 0.8×12 = 9.6%。
@@ -10929,7 +11752,7 @@ const EQUIP_LABEL_I18N = {
     atk: "攻撃", def: "防御", sword: "剣", wand: "棒", cup: "聖杯", coin: "貨幣",
     crit: "会心率", critMul: "会心ダメージ", first: "1〜3ターン目の与ダメ", body: "体力", burst: "必殺技の威力",
     box: "宝箱マスの出やすさ", eye: "宝箱の引く回数", resRoar: "轟音耐性", resRot: "腐食耐性",
-    resDread: "波動耐性", resMiasma: "瘴気耐性", resKill: "殺気耐性",
+    resDread: "波動耐性", resMiasma: "瘴気耐性", resKill: "殺気耐性", resSap: "虚脱耐性",
   },
   en: {
     power: "Power", guard: "Guard", vital: "Vitality", skill: "Dexterity",
@@ -10942,7 +11765,7 @@ const EQUIP_LABEL_I18N = {
     atk: "Attack", def: "Defense", sword: "Swords", wand: "Wands", cup: "Cups", coin: "Pentacles",
     crit: "Crit", critMul: "Crit power", first: "First strike", body: "Max HP", burst: "Burst",
     box: "Chests", eye: "Chest depth", resRoar: "Roar res", resRot: "Rot res",
-    resDread: "Dread res", resMiasma: "Miasma res", resKill: "Killing-intent res",
+    resDread: "Dread res", resMiasma: "Miasma res", resKill: "Killing-intent res", resSap: "Sap res",
   },
 };
 const EQUIP_KIND_I18N = {
@@ -11824,15 +12647,24 @@ const ELEM_ALL6 = ["earth", "fire", "water", "wind", "light", "dark"];
   ★ heal＝ポーションの回復量 20%→30→40→50→60%。charge＝手動必殺の溜まり +10%ずつ（10回で2倍）。
   ⚠️ 魔法属性は連続させない。
 */
+/*
+  ⚠️ 2026-10-03（Aki）：物理の武器（構え）。最初の一つは旅の始めに選ぶ（BuildPick）。残りの三つは順番を伏せて混ぜ、
+    9・20・29県目に散らして開く（2026-10-04 Aki の並べ替え）。三つ目が開くと秘奥義「四武の舞」も使える。
+*/
 const CONQUEST_LADDER = [
+  /*
+    ⚠️ 2026-10-04 Aki：9段の倍速→36段、40段の武器→9段、20段のポーション→21段、20段に武器。
+      武器は 9・20・29段。40段は秘奥義「四武の舞」（武器が四つそろっていて、40段まで制覇したら使える）。
+      ⚠️ 36段にあった溜まりは無くなった（溜まりは6つ・最大+60%）。
+  */
   { n: 1, k: "sp" }, { n: 2, k: "slot" }, { n: 3, k: "sp" }, { n: 4, k: "speed" }, { n: 5, k: "cards" }, { n: 6, k: "slot" },
-  { n: 7, k: "elem" }, { n: 8, k: "pot" }, { n: 9, k: "speed" }, { n: 10, k: "slot" }, { n: 11, k: "elem" }, { n: 12, k: "cards" },
+  { n: 7, k: "elem" }, { n: 8, k: "pot" }, { n: 9, k: "phys" }, { n: 10, k: "slot" }, { n: 11, k: "elem" }, { n: 12, k: "cards" },
   { n: 13, k: "sp" }, { n: 14, k: "slot" }, { n: 15, k: "sp" }, { n: 16, k: "heal" }, { n: 17, k: "speed" }, { n: 18, k: "slot" },
-  { n: 19, k: "elem" }, { n: 20, k: "pot" }, { n: 21, k: "charge" }, { n: 22, k: "cards" }, { n: 23, k: "slot" }, { n: 24, k: "heal" },
-  { n: 25, k: "elem" }, { n: 26, k: "charge" }, { n: 27, k: "slot" }, { n: 28, k: "pot" }, { n: 29, k: "charge" }, { n: 30, k: "cards" },
-  { n: 31, k: "slot" }, { n: 32, k: "heal" }, { n: 33, k: "elem" }, { n: 34, k: "cards" }, { n: 35, k: "slot" }, { n: 36, k: "charge" },
-  { n: 37, k: "heal" }, { n: 38, k: "cards" }, { n: 39, k: "slot" }, { n: 40, k: "charge" }, { n: 41, k: "charge" }, { n: 42, k: "charge" },
-  { n: 43, k: "cards" }, { n: 44, k: "slot" }, { n: 45, k: "charge" }, { n: 46, k: "charge" }, { n: 47, k: "charge" },
+  { n: 19, k: "elem" }, { n: 20, k: "phys" }, { n: 21, k: "pot" }, { n: 22, k: "cards" }, { n: 23, k: "slot" }, { n: 24, k: "heal" },
+  { n: 25, k: "elem" }, { n: 26, k: "charge" }, { n: 27, k: "slot" }, { n: 28, k: "pot" }, { n: 29, k: "phys" }, { n: 30, k: "cards" },
+  { n: 31, k: "slot" }, { n: 32, k: "heal" }, { n: 33, k: "elem" }, { n: 34, k: "cards" }, { n: 35, k: "slot" }, { n: 36, k: "speed" },
+  { n: 37, k: "heal" }, { n: 38, k: "cards" }, { n: 39, k: "slot" }, { n: 40, k: "four" }, { n: 41, k: "charge" }, { n: 42, k: "charge" },
+  { n: 43, k: "cards" }, { n: 44, k: "slot" }, { n: 45, k: "eternal" }, { n: 46, k: "charge" }, { n: 47, k: "charge" },
 ];
 const POT_HEAL_START = 0.20, POT_HEAL_STEP = 0.10, SP_CHARGE_STEP = 0.10;
 /* ⚠️ 手持と倉庫の枠は仮の値（Aki 未決。後から数字だけ変えられる） */
@@ -11853,7 +12685,7 @@ function advProgress(cleared) {
 }
 function advProgressCalc(cleared) {
   const st = loadMajorState();
-  const full = { on: false, elems: FAMILY_KEYS.slice(), speedMax: SPEED_STEPS[SPEED_STEPS.length - 1], potStart: POTION_START, potHeal: POTION_HEAL, spCharge: 1, handCap: 999, stashCap: 999, spOpen: SP_SUITS.slice(), conquered: 0, cards: 7, slots: EQUIP_SLOT_MAX };
+  const full = { on: false, elems: FAMILY_KEYS.slice(), physOpen: PHYS_KEYS.slice(), fourOpen: true, eternalOpen: true, speedMax: SPEED_STEPS[SPEED_STEPS.length - 1], potStart: POTION_START, potHeal: POTION_HEAL, spCharge: 1, handCap: 999, stashCap: 999, spOpen: SP_SUITS.slice(), conquered: 0, cards: 7, slots: EQUIP_SLOT_MAX };
   if (!MAJOR_UNLOCK_ON || !st || !st.build) return full;
   const done = cleared || loadAdvDone() || [];
   const n = prefDoneCount(done);
@@ -11862,6 +12694,12 @@ function advProgressCalc(cleared) {
   return {
     on: true, conquered: n,
     elems: order.slice(0, 1 + cnt("elem")),
+    /* 物理の構え。⚠️ 斬撃は最初から（今の剣＝一閃は斬撃）。残りは制覇で */
+    physOpen: physOrderOf(st).slice(0, 1 + cnt("phys")),
+    /* 秘奥義「四武の舞」。⚠️ 40段の報酬。武器が四つそろっていても、ここまで来ないと使えない */
+    fourOpen: cnt("four") > 0,
+    /* エターナルエレメンツ。⚠️ 45段の報酬 */
+    eternalOpen: cnt("eternal") > 0,
     speedMax: SPEED_STEPS[Math.min(SPEED_STEPS.length - 1, SPEED_BASE_OPEN - 1 + cnt("speed"))],
     potStart: cnt("pot"),
     potHeal: POT_HEAL_START + POT_HEAL_STEP * cnt("heal"),
@@ -11883,11 +12721,19 @@ function skillCapOf(kind) {
   return SKILL_NODES.filter((nd) => nd.kind === kind && t[nd.key]).length;
 }
 /* ビルドと最初の属性を決めて、冒険を始める。1県目の入場は県を選んだときに起きる */
-function startBuild(buildKey, elem) {
+function startBuild(buildKey, elem, weapon) {
   const b = BUILD_UI.find((x) => x.key === buildKey) || BUILD_UI[0];
   /* ⚠️ 2026-09-27（Aki）：最初の属性は六つから選べる。残りの五つは順番を伏せて混ぜる */
   const rest = shuffle(ELEM_ALL6.filter((e) => e !== elem));
-  saveMajorState({ build: b.order, owned: [], awakened: [], entered: [], gotIn: {}, elems: [elem, ...rest] });
+  /* ⚠️ 2026-10-03（Aki）：最初の武器（物理の構え）も選ぶ。残りの三つは順番を伏せて混ぜる */
+  const w = PHYS_KEYS.indexOf(weapon) >= 0 ? weapon : "slash";
+  const restW = shuffle(PHYS_KEYS.filter((x) => x !== w));
+  saveMajorState({ build: b.order, owned: [], awakened: [], entered: [], gotIn: {}, elems: [elem, ...rest], phys: [w, ...restW] });
+}
+/* その人の武器の開く順。⚠️ 選ぶ前に始めた記録（phys が無い）は 斬→突→打→射 */
+function physOrderOf(st) {
+  const o = st && Array.isArray(st.phys) ? st.phys.filter((x) => PHYS_KEYS.indexOf(x) >= 0) : [];
+  return o.length === PHYS_KEYS.length ? o : PHYS_KEYS.slice();
 }
 /*
   【アルカナの試練】2026-09-27（Aki）
@@ -12003,7 +12849,7 @@ function equipBonus(list) {
     foeInfo: false, cardMuls: [], twice: {},
     atk: 0, def: 0, sword: 0, wand: 0, cup: 0, coin: 0, crit: 0, critMul: 0,
     first: 0, body: 0, burst: 0, box: 0, eye: 0,
-    resRoar: 0, resRot: 0, resDread: 0, resMiasma: 0, resKill: 0,
+    resRoar: 0, resRot: 0, resDread: 0, resMiasma: 0, resKill: 0, resSap: 0,
   };
   (list || []).forEach((e) => {
     if (!e) return;
@@ -12020,7 +12866,7 @@ function equipBonus(list) {
     ⚠️ 上限は「一本で取れる最大値のおよそ3倍」。揃える意味は残し、壊れる手前で止める。
   */
   /* ⚠️ 妨害ごとに別々に頭を打たせる。合算して一つの上限にしないこと */
-  ["resRoar", "resRot", "resDread", "resMiasma", "resKill"]
+  ["resRoar", "resRot", "resDread", "resMiasma", "resKill", "resSap"]
     .forEach((k) => { b[k] = Math.min(30, b[k]); });
   b.body = Math.min(20, b.body);
   b.def = Math.min(30, b.def);
@@ -12188,6 +13034,144 @@ function pushChest(star, where, seek, force) {
   return c;
 }
 /*
+  【その探索で拾った宝箱を扱う】2026-10-03（特別なマス：闇商人・鍛冶屋・竜の巣・盗賊）。
+  ★ 探索の中で拾った箱の id を覚えておき、まだ箱のまま（未開封）で残っているものだけを対象にする。
+  ⚠️ 開けてしまった箱・溢れて消えた箱は対象にしない（無いものは盗めない）。
+*/
+function runChestsAlive(ids) {
+  const set = ids || [];
+  return (loadEquip().chests || []).filter((c) => set.indexOf(c.id) >= 0);
+}
+function dropChests(ids) {
+  const eq = loadEquip();
+  saveEquip({ ...eq, chests: (eq.chests || []).filter((c) => (ids || []).indexOf(c.id) < 0) });
+}
+/* 箱の段を n 上げる。⚠️ ★12を越えたら★13〜15の箱（hi）にする。15で止める */
+function bumpChest(id, n) {
+  const eq = loadEquip();
+  const list = (eq.chests || []).slice();
+  const i = list.findIndex((c) => c.id === id);
+  if (i < 0) return null;
+  const c = list[i];
+  const cur = c.hi || c.star || lmcTierOf(c.tier).star;
+  const to = Math.min(15, cur + n);
+  const nc = to > 12 ? { ...c, tier: "genesis", star: to, hi: to }
+    : { ...c, tier: (LMC_TIERS.find((x) => x.star === to) || LMC_TIERS[0]).key, star: to, hi: 0 };
+  list[i] = nc;
+  saveEquip({ ...eq, chests: list });
+  return nc;
+}
+/* 箱を複製する（竜の巣）。⚠️ 溢れたら pushChest と同じく段の低いほうから落とす。返すのは新しい id */
+function cloneChests(ids) {
+  const eq = loadEquip();
+  const src = (eq.chests || []).filter((c) => (ids || []).indexOf(c.id) >= 0);
+  const add = src.map((c, k) => ({ ...c, id: `cb${Date.now().toString(36)}${k}${Math.floor(Math.random() * 1e6).toString(36)}` }));
+  const next = [...(eq.chests || []), ...add];
+  if (next.length > EQUIP_CHEST_MAX) {
+    next.sort((a2, b2) => (a2.star - b2.star) || (a2.id < b2.id ? -1 : 1));
+    next.splice(0, next.length - EQUIP_CHEST_MAX);
+  }
+  saveEquip({ ...eq, chests: next });
+  return add.map((c) => c.id).filter((id) => next.some((c) => c.id === id));
+}
+/*
+  一回の探索のあいだだけ効く変化（2026-10-03）。小MAPの特別なマスが書き込み、雑魚戦と主戦に渡す。
+    maxHp … 最大HPの増減（割合）  charge … ゲージの溜まり方（割合）  potHeal … ポーション1本の回復量（最大HPに対する割合の上乗せ）
+    cards … 手札の増減  res … 妨害ごとの耐性（点）  bossCut / bossUp … 主のHPの増減（割合）  bossSure … 主の前の三択でボスが確定
+    spins … 道のルーレットの回数の増減  chests … この探索で拾った宝箱の id  gold … 黄金の道を一度通った
+  ⚠️ 上限は ADV_RUN_CAP。HP・必殺ゲージ・聖杯の倍率はここに入れない（戦えば戻るので、効かせる意味がない）。
+*/
+/*
+  【ボスチケット】2026-10-04 Aki「偏るから、望み通りの時に絶対ボスに行きたい欲求が出る。
+    ボス前の三択でチケットを使うかどうかの選択肢を出す（オートでは出さない）」。
+  ★ 激レアの持ち物。五種：ブロンズ・シルバー・ゴールド・プラチナ・ホロ（虹色）。端末に残る（探索をまたぐ）。
+  ★ 使うと TICKET_RATE の確率で「ボス確定」。外れたらチケットは失う（三択はいつもどおり）。
+  ⚠️⚠️ 一回の探索で、同じ種類は一枚まで（2026-10-04 Aki「ブロンズ連打最強じゃん」→「一枚だけだとブロンズの価値がない」）。
+    ★ 外れたら、まだ使っていない別の種類で続けて挑める（最大五回）。ブロンズは「先に一回試す」券になる。
+    ⚠️ 同じ種類を重ねられると、安い券を積むだけで確定に近づき、上の券の意味が消える。
+  ★ ホロは100%。
+  ★ 落ちる場所 … 主に勝つ・主の前でレア宝箱を選ぶ・金ぴか／精鋭／ミミックに勝つ。確率は TICKET_DROP ×（★の倍率 ticketDropMul）。
+    2026-10-04 Aki「ブロンズの入手確率も高すぎて、ブロンズだけ99とかになる」→ 激レアに絞った。
+    → 「そうじゃない、比率がおかしい。5：4：3：2：1にして」。落ちる確率は App_1328 に戻し、種類の比を★に関係なく 5：4：3：2：1 に。
+    実測（盤の歩きを各6万回・主の勝率は App_1320 の実測を当てた近似）：100探索で ★1 5.4枚 ／ ★4 6.7枚 ／ ★8 7.0枚 ／ ★12 6.0枚。
+    ⚠️ 高い★ほど主に勝ちにくいので、★の倍率で落ちやすくして、どの★でもおよそ同じ枚数にしてある。
+  ★ 何が落ちるかの比は ブロンズ5：シルバー4：ゴールド3：プラチナ2：ホロ1（★に関係なし。実測は下）。
+  ⚠️ オート（自動で進む）のときは使う画面を出さない（放置の邪魔をしない）。
+*/
+const TICKET_KINDS = ["bronze", "silver", "gold", "platinum", "holo"];
+const TICKET_RATE = { bronze: 0.30, silver: 0.50, gold: 0.70, platinum: 0.90, holo: 1.0 };
+const TICKET_DROP = { boss: 0.10, rarebox: 0.12, special: 0.04 };
+function ticketDropMul(star) { return 1 + (Math.max(1, Math.min(12, star | 0)) - 1) * 0.18; }
+/*
+  持てる数（2026-10-04 Aki「チケットが使われず溜まって99になるのは嫌。ゲームアイテムのしょぼさにつながる」）。
+  ★ 一種類3枚まで。満杯の種類は落ちる抽選から外す（残りの種類で 5：4：3：2：1 の比のまま引く）。全部満杯なら落ちない。
+  ⚠️ 格上げはしない（2026-10-04 Aki）。
+*/
+const TICKET_MAX = 3;
+const LS_TICKETS = "oo_tickets";
+function loadTickets() {
+  const r = {};
+  let o = {};
+  try { o = JSON.parse(localStorage.getItem(LS_TICKETS) || "{}") || {}; } catch (e) { o = {}; }
+  TICKET_KINDS.forEach((k) => { r[k] = Math.max(0, Math.min(TICKET_MAX, o[k] | 0)); });
+  return r;
+}
+function saveTickets(t) { try { localStorage.setItem(LS_TICKETS, JSON.stringify(t)); } catch (e) { /* 保存できなくても続ける */ } }
+/*
+  種類の比（2026-10-04 Aki「5：4：3：2：1にして」）。⚠️ ★に関係なし。
+  実測（40万回）：ブロンズ33.3% シルバー26.7% ゴールド20.0% プラチナ13.3% ホロ6.7%
+*/
+function ticketWeights() {
+  return { bronze: 5, silver: 4, gold: 3, platinum: 2, holo: 1 };
+}
+function rollTicket(star, have) {
+  const w = ticketWeights(star);
+  const ks = TICKET_KINDS.filter((k) => !have || (have[k] || 0) < TICKET_MAX);
+  if (!ks.length) return null;
+  const tot = ks.reduce((x, k) => x + w[k], 0);
+  let p = Math.random() * tot;
+  for (let i = 0; i < ks.length; i++) { p -= w[ks[i]]; if (p < 0) return ks[i]; }
+  return ks[ks.length - 1];
+}
+const TICKET_I18N = {
+  ja: { name: { bronze: "ブロンズチケット", silver: "シルバーチケット", gold: "ゴールドチケット", platinum: "プラチナチケット", holo: "ホロチケット" },
+    title: "ボスチケットを使いますか？", lead: (p) => `このままだと、ボスへ進めるのはおよそ ${p}%。チケットが当たれば、三択は必ずボスになります。`,
+    note: "同じ種類は一回の探索で一枚まで。外れたら別の種類で続けて挑めます（外れた券は消えます）。使わないなら、そのまま「札を出す」へ。", autoWait: "使わなければ、オートが続きます", rate: "成功", okBig: "ボスへの道が開いた！", ngBig: "チケットは砕けた……",
+    ok: (n) => `${n}を使った。ボスへの道が開いた！`, ng: (n) => `${n}を使った……外れ。`, got: "激レア！ チケットを手に入れた", gotLog: (n) => `激レア！ ${n}を手に入れた。` },
+  en: { name: { bronze: "Bronze Ticket", silver: "Silver Ticket", gold: "Gold Ticket", platinum: "Platinum Ticket", holo: "Holo Ticket" },
+    title: "Use a boss ticket?", lead: (p) => `Right now your chance to reach the boss is about ${p}%. If a ticket hits, the three-way choice always leads to the boss.`,
+    note: "One of each kind per journey. If one misses, you may try another kind (missed tickets are lost). To skip, just deal the cards.", autoWait: "Auto resumes if no ticket is used", rate: "hit", okBig: "The road to the boss opens!", ngBig: "The ticket shattered…",
+    ok: (n) => `Used a ${n}. The road to the boss opens!`, ng: (n) => `Used a ${n}… it missed.`, got: "Ultra rare! You got a ticket", gotLog: (n) => `Ultra rare! You got a ${n}.` },
+};
+const ticketT = (lang) => TICKET_I18N[lang] || TICKET_I18N.en;
+/* チケットの絵。⚠️ 切り欠きのある横長の券。ホロだけ虹色がゆっくり流れる（呼吸くらいの速さ） */
+function TicketCard({ kind, lang, big, count, rate }) {
+  const t = ticketT(lang);
+  return (
+    <span className={`tk tk-${kind}${big ? " big" : ""}`}>
+      <span className="tk-sheen" aria-hidden="true" />
+      <span className="tk-stub" aria-hidden="true" />
+      <svg className="tk-star" viewBox="0 0 24 24" aria-hidden="true">
+        <path d="M12 2 L14.2 9.8 L22 12 L14.2 14.2 L12 22 L9.8 14.2 L2 12 L9.8 9.8 Z" fill="currentColor" />
+      </svg>
+      <b className="tk-name">{t.name[kind]}</b>
+      {rate != null && <i className="tk-rate">{t.rate} {Math.round(rate * 100)}%</i>}
+      {count != null && <em className="tk-n">{count}/{TICKET_MAX}</em>}
+    </span>
+  );
+}
+function advRun0() {
+  /* ⚠️ attr … 魔法6・物理4の倍率（割合）。charge … 必殺ゲージ4本それぞれの溜まり（割合）。heal … 受ける回復の倍率（割合） */
+  return { maxHp: 0, charge: {}, attr: {}, heal: 0, potHeal: 0, cards: 0, res: {}, bossCut: 0, bossUp: 0, bossSure: false, spins: 0, chests: [], gold: false };
+}
+/*
+  ⚠️⚠️ 2026-10-04 Aki「マスでキャップを作ると上振れが止まって楽しくない。装備を控えめにすればいい」。
+    マスで上がるもの（属性・溜まり・回復・最大HP・薬・耐性）は、上には止めない（Infinity）。下だけ止める。
+    釣り合いは、マス以外（装備など）を控えめにして取る（耐性は EQUIP_WARD_CAP）。
+*/
+const ADV_RUN_CAP = { maxHpLo: -0.4, maxHpHi: Infinity, chargeLo: -0.4, chargeHi: Infinity, attrLo: -0.4, attrHi: Infinity,
+  healLo: -0.3, healHi: Infinity, potHeal: Infinity, bossCut: Infinity, res: Infinity };
+/*
   箱を開ける。
   ★ 段の数だけ引いて、いちばん良いものを採る。引いた順を返すので、
     画面側で一回ずつ見せられる（更新のたびに段が上がる梯子）。
@@ -12343,7 +13327,7 @@ function spendUse(id) {
 */
 const EQUIP_RESIST_KEY = {
   roar: "resRoar", rot: "resRot", dread: "resDread",
-  miasma: "resMiasma", kill: "resKill",
+  miasma: "resMiasma", kill: "resKill", sap: "resSap",
 };
 /*
   【妨害を防ぐ判定（まとめ）】
@@ -12355,7 +13339,23 @@ const EQUIP_RESIST_KEY = {
 */
 const STAT_RESIST_EACH = 0.012;
 const DEBUFF_WARD_KEY = { roar: "resRoar", rot: "resRot", despair: "resDread",
-  miasma: "resMiasma", dread: "resKill" };
+  miasma: "resMiasma", dread: "resKill", sap: "resSap" };
+/* スキルツリーの守り。⚠️ 虚脱（resSap）には専用の枝が無いので、殺気の守り（必殺を守る枝）が効く */
+const SKILL_WARD_OF = { resSap: "resKill" };
+/*
+  妨害を防ぐ確率（2026-10-04 Aki「耐性のキャップを外して。装備・サブステ・料理・マスが偏りまくって、
+    ぎりぎり当該デバフの完全耐性が実現できるスケールにして」）。
+  ★ 全体の上限は100%（完全耐性）。育てて持ち込む分は控えめに止め、残りは小MAPのマスの上振れで埋める：
+      装備（その耐性の主・サブ＋打ち消し）… EQUIP_WARD_CAP 25%
+      スキルツリーの守り                 … 12%（2%×6段。虚脱は殺気の守りが効く）
+      能力の耐性                          … 約5%（八つの能力を育て切って）
+      料理（これから作る）                … COOK_WARD_CAP 15%
+      ここまで（持ち込める最大）          … 約57%
+      小MAPのマス（その探索）             … 上限なし（2026-10-04 Aki「マスでキャップを作ると上振れが止まって楽しくない」）
+  ⚠️ 完全耐性は、持ち込みを揃えたうえで、その耐性のマスを4〜5枚踏んだ探索だけ。（2026-10-05 気配を廃止。偶然同じ耐性のマスが重なった探索だけ）
+*/
+const DEBUFF_BLOCK_CAP = 1.0;
+const EQUIP_WARD_CAP = 25, COOK_WARD_CAP = 15;
 function statResistOf(S) {
   if (!S) return 0;
   return ["power", "guard", "speed", "vital", "skill", "mind", "spirit", "luck"]
@@ -12364,9 +13364,12 @@ function statResistOf(S) {
 function debuffBlockRate(move, eqb, sk, S) {
   const k = DEBUFF_WARD_KEY[move];
   if (!k) return 0;
-  const eqP = (((eqb && eqb[k]) || 0) + ((eqb && eqb.nullify) || 0)) / 100;
-  const skP = ((sk && sk.ward && sk.ward[k]) || 0) / 100;
-  return Math.min(0.60, eqP + skP + statResistOf(S));
+  /* ⚠️ 装備（その耐性＋打ち消し）・マス・料理は、それぞれの上限で止めてから足す */
+  const eqP = Math.min(EQUIP_WARD_CAP, ((eqb && eqb[k]) || 0) + ((eqb && eqb.nullify) || 0)) / 100;
+  const runP = Math.min(ADV_RUN_CAP.res, ((eqb && eqb.runRes && eqb.runRes[k]) || 0)) / 100;
+  const cookP = Math.min(COOK_WARD_CAP, ((eqb && eqb.cookRes && eqb.cookRes[k]) || 0)) / 100;
+  const skP = ((sk && sk.ward && sk.ward[SKILL_WARD_OF[k] || k]) || 0) / 100;
+  return Math.min(DEBUFF_BLOCK_CAP, eqP + runP + cookP + skP + statResistOf(S));
 }
 function equipBlocks(bonus, moveKind) {
   if (!bonus) return false;
@@ -18711,45 +19714,223 @@ const JOURNEY_I18N = {
   },
 };
 const journeyT = (lang) => JOURNEY_I18N[lang] || JOURNEY_I18N.en;
-function JourneyReading({ lang, win, onReward }) {
+/*
+  【制覇の演出】2026-10-05 Aki「制覇ボタンを押したら獲得宝箱一覧が表示されて、一般的なソシャゲみたいに開封して出てきて、簡易なクリアアニメ」。
+  ★ ① クリア（約1.6秒）：暗転→金の帯が左右に開く→「制覇」が弾んで出る→紙吹雪がゆっくり落ちる。
+    ② 宝箱の一覧：その冒険で拾った箱を★の高い順に並べる（箱は小さく揺れて待つ）。
+    ③ 開ける：端から一箱ずつパカッと開き、中身が飛び出す。いちばん良い物はホロで光る。押すと飛ばせる。
+  ⚠️ 開けた物は宝箱（box）へ入る（いつもの開封と同じ openChest）。宝箱がいっぱいなら入る数だけ開け、残りは箱のまま。
+  ⚠️ オートのときは一覧が出たら自動で開ける。閉じるのは押してから（8つの画面へ戻る）。
+  ⚠️ 速い点滅は使わない。光は一回きり。
+*/
+const CONQ_I18N = {
+  ja: { big: "制覇", sub: "STAGE CLEAR", boxes: "手に入れた宝箱", none: "今回は宝箱がありませんでした", open: "開ける", next: "次へ",
+    opened: (n, left) => `${n}個開けました${left ? `（宝箱がいっぱいのため${left}箱は未開封）` : ""}`, skip: "タップで飛ばす" },
+  en: { big: "Conquered", sub: "STAGE CLEAR", boxes: "Chests gained", none: "No chests this time", open: "Open", next: "Next",
+    opened: (n, left) => `Opened ${n}${left ? ` (${left} left: box is full)` : ""}`, skip: "Tap to skip" },
+};
+/*
+  【オートのつなぎ】2026-10-05 Aki「オート系は基本、接続系（チケット・場面切り替えのあとのつなぎ）は、
+    何秒か構ったら自動で移行するように」。
+  ★ 置いた場所で sec 秒数えて onGo を一度呼ぶ。数字と、減っていく輪で残りを見せる（手で押せば先に進める）。
+  ⚠️ 消えたら（押した・オートを切った・場面が変わった）数えるのをやめる。二度は呼ばない。
+  ⚠️ 秒は倍速に合わせない（読む時間なので）。
+*/
+function AutoCount({ sec, onGo }) {
+  const [left, setLeft] = useState(Math.ceil(sec));
+  const fn = useRef(onGo); fn.current = onGo;
+  useEffect(() => {
+    const t0 = Date.now();
+    const iv = setInterval(() => {
+      const r = sec - (Date.now() - t0) / 1000;
+      if (r <= 0) { clearInterval(iv); fn.current && fn.current(); return; }
+      setLeft(Math.ceil(r));
+    }, 200);
+    return () => clearInterval(iv);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+  return (
+    <span className="auto-cd" style={{ "--sec": `${sec}s` }} aria-label={`auto ${left}`}>
+      <svg viewBox="0 0 20 20" aria-hidden="true"><circle cx="10" cy="10" r="8.5" className="auto-cd-bg" /><circle cx="10" cy="10" r="8.5" className="auto-cd-fg" /></svg>
+      <b>{left}</b>
+    </span>
+  );
+}
+function ConquerShow({ lang, ids, auto, stage, onDone }) {
+  const t = CONQ_I18N[lang] || CONQ_I18N.en;
+  const [ph, setPh] = useState("clear");   /* clear → list → opening */
+  const [res, setRes] = useState(null);    /* { list, at, bestKey, stepMs, msg } */
+  const timers = useRef([]);
+  useEffect(() => () => timers.current.forEach(clearTimeout), []);
+  /* ⚠️ 一覧は押した時点で箱のまま残っているものだけ。★の高い順 */
+  const [chests] = useState(() => {
+    const all = loadEquip().chests || [];
+    return (ids || []).map((id) => all.find((c) => c.id === id)).filter(Boolean)
+      .sort((x, y) => (y.hi || lmcTierOf(y.tier).star) - (x.hi || lmcTierOf(x.tier).star));
+  });
+  useEffect(() => { timers.current.push(setTimeout(() => setPh("list"), 1700)); }, []);
+  const doOpen = () => {
+    if (res || !chests.length) return;
+    const seek = Math.round(equipBonus(equippedGear()).eye || 0);
+    const room = Math.max(0, EQUIP_BOX_MAX - (loadEquip().box || []).length);
+    const list = [];
+    chests.slice(0, room).forEach((c) => {
+      const r = openChest(c.id, seek);
+      if (r) list.push({ tier: c.tier, hi: c.hi, items: r.items || [r.item] });
+    });
+    const left = chests.length - list.length;
+    let best = -1, bestKey = null;
+    list.forEach((c, i) => c.items.forEach((it, k) => {
+      const v = lmcTierOf(it.tier || "bronze").star;
+      if (v > best) { best = v; bestKey = `${i}-${k}`; }
+    }));
+    const stepMs = Math.max(120, Math.min(420, Math.round(2600 / Math.max(1, list.length))));
+    setPh("opening");
+    setRes({ list, at: 0, bestKey, stepMs, msg: t.opened(list.reduce((n, c) => n + c.items.length, 0), left) });
+    list.forEach((_, i) => timers.current.push(setTimeout(() => setRes((v) => (v ? { ...v, at: Math.max(v.at, i + 1) } : v)), 380 + stepMs * i)));
+    if (list.length) SFX.chime("maj");
+  };
+  /* オートは一覧が出たら自動で開ける */
+  useEffect(() => {
+    if (ph !== "list" || !auto || !chests.length) return undefined;
+    const id = setTimeout(doOpen, 900);
+    return () => clearTimeout(id);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [ph, auto]);
+  const done = res && res.at >= res.list.length;
+  return (
+    <div className="cq-wrap" onClick={() => { if (res && !done) setRes((v) => ({ ...v, at: v.list.length })); }}>
+      <div className="cq-confetti" aria-hidden="true">
+        {Array.from({ length: 26 }, (_, i) => (
+          <i key={i} style={{ "--x": `${(i * 37) % 100}%`, "--d": `${(i * 113) % 1400}ms`, "--h": (i * 47) % 360, "--r": `${(i * 71) % 360}deg`, "--s": `${2.6 + ((i * 7) % 10) / 6}s` }} />
+        ))}
+      </div>
+      <div className={`cq-in ph-${ph}`}>
+        <div className="cq-head">
+          <span className="cq-band" aria-hidden="true" />
+          <p className="cq-sub">{t.sub}</p>
+          <p className="cq-big"><span>{t.big}</span></p>
+          {stage && <p className="cq-stage">{stage}</p>}
+        </div>
+        {ph !== "clear" && (
+          <div className="cq-body">
+            <p className="cq-boxes">{t.boxes}　<b>{chests.length}</b></p>
+            {!chests.length && <p className="cq-none">{t.none}</p>}
+            {!!chests.length && !res && (
+              <div className="cb-bulk-grid cq-grid">
+                {chests.map((c, i) => (
+                  <span key={c.id} className="cb-bulk-cell cq-cell" style={{ "--d": `${(i % 7) * 40}ms`, "--i": i }}>
+                    <span className="cb-bulk-box"><EquipIcon item={{ tier: c.tier || "bronze", key: "chest" }} size={40} /></span>
+                    <em className="cq-star">★{c.hi || lmcTierOf(c.tier).star}</em>
+                  </span>
+                ))}
+              </div>
+            )}
+            {res && (
+              <div className="cb-bulk-grid cq-grid">
+                {res.list.map((c, i) => {
+                  const opened = i < res.at;
+                  return (
+                    <span key={i} className={`cb-bulk-cell${opened ? " open" : ""}`} style={{ "--d": `${(i % 7) * 40}ms` }}>
+                      {!opened && <span className="cb-bulk-box"><EquipIcon item={{ tier: c.tier || "bronze", key: "chest" }} size={40} /></span>}
+                      {opened && (
+                        <>
+                          <i className="cb-bulk-burst" style={{ "--tc": EQ_TIER_COLOR[c.items[0].tier] || "#F6DE96" }} />
+                          {c.items.map((it, k) => (
+                            <span key={k} className={`cb-bulk-item${res.bestKey === `${i}-${k}` ? " best" : ""}`}>
+                              <EquipIcon item={it} size={c.items.length > 1 ? 30 : 40} />
+                            </span>
+                          ))}
+                        </>
+                      )}
+                    </span>
+                  );
+                })}
+              </div>
+            )}
+            {res && !done && <p className="cb-bulk-skip">{t.skip}</p>}
+            {done && <p className="cb-bulk-msg">{res.msg}</p>}
+            <div className="cq-acts">
+              {!!chests.length && !res && (
+                <button type="button" className="draw-btn adv-go" onClick={(e) => { e.stopPropagation(); doOpen(); }}>
+                  <span className="adv-go-shine" /><Sparkles size={18} />{t.open}
+                </button>
+              )}
+              {(!chests.length || done) && (
+                <button type="button" className="draw-btn adv-go" onClick={(e) => { e.stopPropagation(); onDone(); }}>
+                  <span className="adv-go-shine" />{t.next}
+                  {auto && <AutoCount sec={3} onGo={onDone} />}
+                </button>
+              )}
+            </div>
+          </div>
+        )}
+      </div>
+    </div>
+  );
+}
+function JourneyReading({ lang, win, onReward, onDone, auto }) {
   const t = journeyT(lang);
+  /*
+    2026-10-05 Aki「デッキを並べるのはいらず、直にカードを回転させて開封する、いつものやつだけに」。
+    ★ 混ぜた山の上から三枚を伏せて置き、一枚ずつ表に返す（選ぶ手順は無い）。
+  */
   const [pool] = useState(() => buildPool(MAJOR_LIST));
   const [picks, setPicks] = useState([]);
   const [shown, setShown] = useState(0);
+  const dealt = useRef(false);
   const [result, setResult] = useState(null);
   const timers = useRef([]);
   useEffect(() => () => timers.current.forEach(clearTimeout), []);
-  const pick = (card) => {
-    if (picks.length >= 3 || picks.find((c) => c.id === card.id)) return;
-    const next = [...picks, card];
-    setPicks(next);
-    if (next.length === 3) {
-      [1, 2, 3].forEach((k) => timers.current.push(setTimeout(() => setShown(k), 400 + k * 900)));
-      timers.current.push(setTimeout(() => {
-        const g = journeyGrade(next);
-        const r = { grade: g, chest: null };
-        if (win && JOURNEY_SEEK[g] >= 0 && onReward) r.chest = onReward(JOURNEY_SEEK[g]);
-        setResult(r);
-        if (g === "goku" || g === "shu" || g === "yu") SFX.chime("maj");
-      }, 400 + 3 * 900 + 1300));
-    }
-  };
   const name = (c) => getCardName(c, lang);
+  /* ⚠️ 開いたらすぐ、上から一枚ずつ枠へ配る（オートでも手動でも同じ。放置を止めない） */
+  useEffect(() => {
+    if (dealt.current) return undefined;
+    dealt.current = true;
+    const top = pool.slice(0, 3);
+    const ids = top.map((c, k) => setTimeout(() => setPicks((v) => {
+      const next = [...v, c];
+      if (next.length === 3) {
+        [1, 2, 3].forEach((j) => timers.current.push(setTimeout(() => setShown(j), 400 + j * 900)));
+        timers.current.push(setTimeout(() => {
+          const g = journeyGrade(next);
+          const r = { grade: g, chest: null };
+          if (win && JOURNEY_SEEK[g] >= 0 && onReward) r.chest = onReward(JOURNEY_SEEK[g]);
+          setResult(r);
+          if (onDone) onDone();
+          if (g === "goku" || g === "shu" || g === "yu") SFX.chime("maj");
+        }, 400 + 3 * 900 + 1300));
+      }
+      return next;
+    }), 250 + k * 260));
+    timers.current.push(...ids);
+    return undefined;
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
   return (
     <div className="jn-box">
       <p className="jn-title sheen-text">{t.title}</p>
-      {picks.length < 3 && (
-        <>
-          <p className="jn-lead">{t.lead}　<b>{t.left(3 - picks.length)}</b></p>
-          <PileChooser pool={pool} exclude={new Set(picks.map((c) => c.id))} onPick={pick} lang={lang} />
-        </>
-      )}
-      {picks.length === 3 && (
+      {/*
+        三つの枠（2026-10-03 Aki「三枚の選択にアニメーションが一切ないのがおかしい」）。
+        ★ 枠は最初から見せる（空の枠はゆっくり光って待つ）。山から取った札は、上から枠へ飛んで収まる。
+        ★ 三枚そろったら、一枚ずつ表に返す（これまでどおり）。
+        ⚠️ 同じ要素のまま返す。そろった瞬間に作り直すと、収まる動きがもう一度走る。
+      */}
+      {(
         <div className="jn-cards">
-          {picks.map((c, i) => (
+          {[0, 1, 2].map((i) => {
+            const c = picks[i];
+            if (!c) return (
+              <div key={`e${i}`} className="jn-slot">
+                <span className="position-label">{t.pos[i]}</span>
+                <div className={`jn-empty${i === picks.length ? " next" : ""}`} aria-hidden="true" />
+              </div>
+            );
+            return (
             <div key={c.id} className="jn-slot">
               <span className="position-label">{t.pos[i]}</span>
-              <div className={`tc-flip-outer jn-flip${i < shown ? " open" : ""}`}>
+              <div className={`tc-flip-outer jn-flip jn-deal${i < shown ? " open" : ""}`}>
+                <span className="jn-landfx" aria-hidden="true" />
                 <div className="tc-flip">
                   <div className="tc-face tc-front"><TarotCardBack /></div>
                   <div className="tc-face tc-back">
@@ -18770,7 +19951,8 @@ function JourneyReading({ lang, win, onReward }) {
               </div>
               {i < shown && <span className="jn-kw">{majorKeyword(Number(String(c.id).split("-")[1]), c.reversed, lang)}</span>}
             </div>
-          ))}
+            );
+          })}
         </div>
       )}
       {shown === 3 && <p className="jn-story">{t.story(name(picks[0]), name(picks[1]), name(picks[2]))}</p>}
@@ -18860,6 +20042,9 @@ const GROW_I18N = {
     firstCard: (c) => `最初の札：${c}`, firstSp: (s) => `最初の必殺：${s}`,
     elemTitle: "最初の魔法属性を選ぶ", elemLead: "残りの属性は、都道府県を制覇していくと一つずつ手に入ります。何が来るかはお楽しみ。序盤は相性で有利を取りにくい旅になります。",
     go: "この型で旅に出る", back: "戻る",
+    weaponTitle: "最初の武器を選ぶ",
+    weaponLead: "剣の札と剣の必殺は、武器の種類で当て方が変わります。残りの武器は、都道府県を制覇していくと手に入ります（何が来るかはお楽しみ）。",
+    weaponNote: { slash: "剣：敵ぜんぶを斬る", thrust: "槍：主を一点で貫く", blunt: "斧：ぜんぶを砕き、守りを崩す", shoot: "弓：矢の雨がばらばらに降る" },
     gotCard: (c) => `大アルカナ「${c}」を手に入れた`, gotSpHint: (s) => `この県を制覇すると「${s}」の必殺ゲージが手に入ります`,
     conqTitle: (n) => `${n}県目の制覇`, tapClose: "タップで閉じる",
     trialTitle: "アルカナの試練", trialHead: (c) => `試練：${c}`, trialQuit: "やめる", duelAreaWin: (ar) => `${ar}を制覇した`, duelPrefWin: (p) => `${p}を制覇した！`, duelAgain: "再び勝利した", duelLose: "敗れた……もう一度挑める", prefBoss: "県の主", prefBossNote: (n, m) => `区分の制覇 ${n}/${m}　そろうと県の主が現れる`, gotoVisited: "行ったことのある県（いつでも戻れる）", gotoNew: "新しく入れる県（一つだけ）", gotoPending: (p) => `${p}を制覇するまで、新しい県には入れません`, gotoHere: "この県を制覇すると、隣の県に入れるようになります", trialGo: "試練に挑む",
@@ -18871,7 +20056,10 @@ const GROW_I18N = {
     trialLost: "認められませんでした。何も失っていません。何度でも挑めます。",
     reward: { speed: (v) => `倍速 ×${v} が使えるようになった（戦闘・小MAP／演出も速い）`, cards: (n) => `戦闘のカード枠が ${n}枚 に増えた（★の上限まで）`, slot: (n) => `装備スロットが ${n} に増えた`,
       pot: (n) => `冒険の始めのポーションが ${n}個 になった`, none: () => "宝箱を一つ手に入れた", elem: (e) => `新しい魔法属性「${e}」を手に入れた`, sp: (s) => `手動の必殺「${s}」が使えるようになった`,
-      heal: (n) => `ポーションの回復量が 最大HPの${n}% になった`, charge: (n) => `手動の必殺の溜まりが +${n}% になった` },
+      heal: (n) => `ポーションの回復量が 最大HPの${n}% になった`, charge: (n) => `手動の必殺の溜まりが +${n}% になった`,
+      phys: (p) => `新しい武器「${p}」が使えるようになった（物理の構え）`,
+      four: () => "秘奥義「四武の衝陣」が使えるようになった（武器が四つそろい、HPが赤のときに剣のゲージ満タンで。一戦闘に一回）",
+      eternal: () => "「エターナルエレメンツ」が使えるようになった（六属性がそろい、HPが赤のときに棒のゲージ満タンで。一戦闘に一回）" },
   },
   en: {
     buildTitle: "Choose your path", buildLead: "This changes the order in which you gain the Major Arcana. Whichever you choose, you will eventually have all 22 Major Arcana and all four finisher gauges.",
@@ -18880,6 +20068,9 @@ const GROW_I18N = {
     firstCard: (c) => `First card: ${c}`, firstSp: (s) => `First finisher: ${s}`,
     elemTitle: "Choose your first magic element", elemLead: "The other elements are gained one by one as you conquer prefectures — what comes next is a surprise. Early on, favorable matchups will be hard to come by.",
     go: "Set out on this path", back: "Back",
+    weaponTitle: "Choose your first weapon",
+    weaponLead: "Your sword cards and sword finisher change with your weapon. The other weapons come as you conquer prefectures — what comes next is a surprise.",
+    weaponNote: { slash: "Sword: cuts every enemy", thrust: "Spear: pierces the master", blunt: "Axe: smashes all, breaks their guard", shoot: "Bow: a scattered rain of arrows" },
     gotCard: (c) => `You gained the Major Arcana "${c}"`, gotSpHint: (s) => `Conquer this prefecture to gain the "${s}" finisher gauge`,
     conqTitle: (n) => `Prefecture #${n} conquered`, tapClose: "Tap to close",
     trialTitle: "Trial of the Arcana", trialHead: (c) => `Trial: ${c}`, trialQuit: "Quit", duelAreaWin: (ar) => `${ar} conquered`, duelPrefWin: (p) => `${p} conquered!`, duelAgain: "Victory again", duelLose: "Defeated… you can try again", prefBoss: "Lord of the land", prefBossNote: (n, m) => `Areas conquered ${n}/${m}: the lord appears when complete`, gotoVisited: "Visited (return any time)", gotoNew: "New prefecture (one at a time)", gotoPending: (p) => `Conquer ${p} before entering a new prefecture`, gotoHere: "Conquer this prefecture to open its neighbors", trialGo: "Take the trial",
@@ -18891,7 +20082,10 @@ const GROW_I18N = {
     trialLost: "You were not acknowledged. Nothing was lost — you may try again anytime.",
     reward: { speed: (v) => `Speed ×${v} unlocked (battle & map, faster effects)`, cards: (n) => `Battle hand size increased to ${n} (up to the ★ limit)`, slot: (n) => `Equipment slots increased to ${n}`,
       pot: (n) => `You now start each adventure with ${n} potion(s)`, none: () => "You received a treasure chest", elem: (e) => `New magic element "${e}" gained`, sp: (s) => `Manual finisher "${s}" unlocked`,
-      heal: (n) => `Potions now heal ${n}% of max HP`, charge: (n) => `Manual finisher charge +${n}%` },
+      heal: (n) => `Potions now heal ${n}% of max HP`, charge: (n) => `Manual finisher charge +${n}%`,
+      phys: (p) => `New weapon "${p}" unlocked (physical stance)`,
+      four: () => "Secret art \"Fourfold Bulwark\" unlocked (all four weapons; with HP in the red, a full sword gauge; once per battle)",
+      eternal: () => "\"Eternal Elements\" unlocked (all six elements; with HP in the red, a full wand gauge; once per battle)" },
   },
 };
 const growT = (lang) => GROW_I18N[lang] || GROW_I18N.en;
@@ -18899,6 +20093,7 @@ function BuildPick({ lang, onDone }) {
   const t = growT(lang), a = advT(lang);
   const [b, setB] = useState(null);
   const [e, setE] = useState(null);
+  const [w, setW] = useState(null);
   if (!b) {
     return (
       <div className="adv-wrap grow-pick">
@@ -18933,9 +20128,22 @@ function BuildPick({ lang, onDone }) {
           </button>
         ))}
       </div>
+      {/* ★ 2026-10-03（Aki）：最初の武器（物理の構え）。開始の県は、この次の画面で選ぶ */}
+      <p className="grow-title sheen-text">{t.weaponTitle}</p>
+      <p className="grow-lead">{t.weaponLead}</p>
+      <div className="grow-elems grow-weapons">
+        {PHYS_KEYS.map((k) => (
+          <button key={k} type="button" className={`grow-elem${w === k ? " on" : ""}`} style={{ "--sc": PHYS_COLOR[k] }}
+            onClick={() => { SFX.tick(); setW(k); }}>
+            <PhysGlyph k={k} size={30} />
+            <b>{(a.physName && a.physName[k]) || k}</b>
+            <span className="grow-weapon-note">{t.weaponNote[k]}</span>
+          </button>
+        ))}
+      </div>
       <div className="grow-acts">
         <button type="button" className="adv-back" onClick={() => setB(null)}>{t.back}</button>
-        <button type="button" className="draw-btn adv-go" disabled={!e} onClick={() => { startBuild(b, e); SFX.chime("maj"); onDone(); }}>
+        <button type="button" className="draw-btn adv-go" disabled={!e || !w} onClick={() => { startBuild(b, e, w); SFX.chime("maj"); onDone(); }}>
           <span className="adv-go-shine" /><Sparkles size={16} />{t.go}
         </button>
       </div>
@@ -18981,7 +20189,8 @@ function ConquestPop({ lang, items, onClose }) {
           <div key={i} className="grow-conq" style={{ animationDelay: `${i * 0.25}s` }}>
             {it.title && <p className="grow-pop-title">{t.conqTitle(it.title)}</p>}
             <p className="grow-conq-line">
-              {it.k === "elem" ? t.reward.elem(a.familyName[it.v]) : it.k === "sp" ? t.reward.sp(suitLabel(it.v, lang)) : t.reward[it.k](it.v)}
+              {it.k === "elem" ? t.reward.elem(a.familyName[it.v]) : it.k === "sp" ? t.reward.sp(suitLabel(it.v, lang))
+                : it.k === "phys" ? t.reward.phys((a.physName && a.physName[it.v]) || it.v) : t.reward[it.k](it.v)}
             </p>
           </div>
         ))}
@@ -19002,9 +20211,13 @@ function conquestRewards(prevN, nowN, prevSp, nowPg) {
         : x.k === "pot" ? cnt("pot")
         : x.k === "heal" ? Math.round((POT_HEAL_START + POT_HEAL_STEP * cnt("heal")) * 100)
         : x.k === "charge" ? Math.round(SP_CHARGE_STEP * cnt("charge") * 100)
+        : x.k === "phys" ? (physOrderOf(loadMajorState())[cnt("phys")] || "shoot")
+        : (x.k === "four" || x.k === "eternal") ? null
         : x.k === "sp" ? (spOrderOf((loadMajorState() || {}).build)[cnt("sp") - 1] || "swords")
         : ((((loadMajorState() || {}).elems) || nowPg.elems)[cnt("elem")] || "light");
       out.push({ title: i === 0 ? n : null, k: x.k, v });
+      /* ★ 武器が四つそろったら、秘奥義も開く */
+      /* ⚠️ 2026-10-04：秘奥義は40段の報酬（武器の三つ目では開かない） */
     });
   }
   return out;
@@ -34307,7 +35520,7 @@ function SeekerPanel({ lang, onBack }) {
   ⚠️ 一枚ぶんの間（620ms）で必ず消えること。残ると次の札の演出と重なる。
   ⚠️ 画面全体を覆う演出は大アルカナだけにする。毎手ごとに全画面が光ると疲れる。
 */
-/* ⚠️ エレメンタルブラストだけ四段続くので長い。他は620msで消える */
+/* ⚠️ コスモフォースだけ四段続くので長い。他は620msで消える */
 const FX_MS = 620, FX_MS_BLAST = 1900, FX_MS_BOSS = 1500;
 /* ⚠️⚠️ デバッグ用のチート（戦闘の「魔術師しか出ない」スイッチなど）。公開前に false にすること */
 const DEBUG_CHEATS = true;
@@ -34495,6 +35708,8 @@ function FxBuff() {
   ⚠️ 黒（危険）は背景に沈むので、縁を明るくして抜くこと。
 */
 const MAJOR_FX_COLOR = {
+  /* 逆転の奥義の守り（2026-10-04） */
+  aegis: "#F0D27A", eternal: "rainbow",
   /* 攻め */
   strength: "#FF5A5A", chariot: "#FF5A5A",
   /* 守り（聖杯と同じ青） */
@@ -34609,7 +35824,7 @@ function FxBlock() {
 }
 
 /*
-  エレメンタルブラスト。
+  コスモフォース。
   ★ 四つの必殺技が続けて出るので、絵も四段に分ける。
     虹の環 → 全体の薙ぎ → 一点の集束 → 癒やしの波。
   ⚠️ 文字は虹。四色を流して、他のどの札とも違うことを示す。
@@ -36141,7 +37356,11 @@ function SpRing({ k, r, cap, stage }) {
 function SpGlyph({ k, fam, tier }) {
   /* ★ 段の印があればそれを出す（段ごとに絵が変わる）。無ければ従来の印 */
   if (tier) {
-    const set = k === "wands" ? (SP_GLYPHS.wands[fam] || SP_GLYPHS.wands.fire) : SP_GLYPHS[k];
+    /* ★ 2026-10-03：剣は物理の構えで印が変わる（斬撃は一閃のまま）。四武の舞が撃てるときは秘奥義の印 */
+    const set = (k === "wands" && fam !== "__eternal") ? (SP_GLYPHS.wands[fam] || SP_GLYPHS.wands.fire)
+      : (k === "swords" && fam === "__four") ? [PFG_DANCE[0], PFG_DANCE[0], PFG_DANCE[0], PFG_DANCE[0], PFG_DANCE[0], PFG_DANCE[0], PFG_DANCE[0], PFG_DANCE[0]]
+      : (k === "wands" && fam === "__eternal") ? Array(8).fill(PFG_ETERNAL[0])
+      : (k === "swords" && PFG_PHYS[fam]) ? PFG_PHYS[fam] : SP_GLYPHS[k];
     const G = set && set[Math.max(1, Math.min(8, tier)) - 1];
     if (G) return <span className="sp-g sp-gt"><G /></span>;
   }
@@ -36228,6 +37447,9 @@ const FX_MARK_ART = {
   /* 敵の妨害 */
   despair: <g fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round"><path d="M3 9 C6 6 9 12 12 9 C15 6 18 12 21 9" /><path d="M3 15 C6 12 9 18 12 15 C15 12 18 18 21 15" /></g>,
   miasma: <g fill="currentColor"><circle cx="8" cy="14" r="4.2" /><circle cx="14.5" cy="11" r="5" /><circle cx="17" cy="16" r="3.4" /><path d="M5 20 H19" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" /></g>,
+  /* 逆転の奥義の守り（2026-10-04）。盾 ／ 六つの光の粒の輪（⚠️ 線で結ばない） */
+  aegis: <path d="M12 2.5 L20 5.5 V11.5 C20 16.5 16.4 20 12 21.5 C7.6 20 4 16.5 4 11.5 V5.5 Z" fill="currentColor" />,
+  eternal: <g fill="currentColor">{[0, 60, 120, 180, 240, 300].map((d) => <circle key={d} cx="12" cy="4.6" r="2.3" transform={`rotate(${d} 12 12)`} />)}<circle cx="12" cy="12" r="3" /></g>,
   dread: <g><path d="M2 12 C6 5.5 18 5.5 22 12 C18 18.5 6 18.5 2 12 Z" fill="currentColor" /><circle cx="12" cy="12" r="3.2" fill="#1A0A10" /><path d="M12 8.8 V15.2" stroke="#FF3030" strokeWidth="1.4" /></g>,
 };
 /* 台の色。⚠️ 虹の札は白い台に虹の縁、危険（黒）の札は暗い台に赤い縁 */
@@ -37794,6 +39016,3056 @@ function FxSpellLv({ fam, lv }) {
   ⚠️ 約0.78秒で終わる（等倍で FX_MS / (1/1.3)）。
   ⚠️ 十字・六芒星を使わない。二閃は平行に置く（交差させるとバツ＝十字に見える）。
 */
+/* ==== PHYS_FLASH BEGIN ====
+  物理の必殺技（2026-10-03 Aki）：突撃（PfThrustFlash）・打撃（PfBluntFlash）・射撃（PfShootFlash）の8段の演出と、
+  ゲージの印（PFG_THRUST / PFG_BLUNT / PFG_SHOOT）。斬撃は今までの一閃（SwordFlash・SPG_A.swords）。
+  秘奥義「四武の舞」（PfDanceFlash・PFG_DANCE）。⚠️ 演出の長さ：必殺は0.9秒以内、秘奥義は1.9秒以内。
+*/
+/* ---- thrust ---- */
+/*
+  突撃（槍）の必殺技「〜突」8段と、ゲージの印8つ。
+  ★ 一体を貫く単体への重い一撃。どの段も「切っ先が一点（中央の敵）に届いて弾ける」構図。
+  ★ 位置決め（transform 属性）は外側の <g>、CSS アニメーションは内側の <g>。transform-origin は % で書く。
+  ⚠️ 十字を作らない：火花は前向きの扇だけ（反対向きの対を作らない）、裂け目は奇数本、渦の線は斜めに交わる。
+  ⚠️ 普通の必殺：0.9秒以内に全部消える（最後は不透明度0）。
+*/
+const PfThrustTX = 100, PfThrustTY = 86; // 狙う一体（中央の敵の胸）
+const PfThrustAMB = "#F0B860";
+const PfThrustO = "#2A3458";
+const PfThrustGOLD = "#FFD86A";
+const PfThrustDots = (m) => Array.from({ length: m }, (_, i) => i);
+const PfThrustRnd = (i, s = 0) => { const x = Math.sin(i * 127.1 + s * 311.7) * 43758.5453; return x - Math.floor(x); };
+const PfThrustF = (v) => Math.round(v * 100) / 100;
+// 四方に光る星
+const PfThrustStarD = (x, y, R, r = R * 0.24) =>
+  `M${x} ${y - R}L${x + r} ${y - r}L${x + R} ${y}L${x + r} ${y + r}L${x} ${y + R}L${x - r} ${y + r}L${x - R} ${y}L${x - r} ${y - r}Z`;
+// 尖りの多いぎざぎざ（n 個の尖り、外径 R、内径 r、ゆらぎ j、縦の潰れ sy）
+const PfThrustJagD = (cx, cy, n, R, r, j = 0, rot = 0, sy = 1) => {
+  const pts = [];
+  for (let i = 0; i < n * 2; i++) {
+    const a = ((rot + (i * 180) / n) * Math.PI) / 180;
+    const rr = i % 2 === 0 ? R + (PfThrustRnd(i, 3) - 0.5) * 2 * j : r + (PfThrustRnd(i, 4) - 0.5) * j;
+    pts.push(`${PfThrustF(cx + Math.sin(a) * rr)} ${PfThrustF(cy - Math.cos(a) * rr * sy)}`);
+  }
+  return `M${pts.join(" L")} Z`;
+};
+// 稲妻のジグザグ（x0→x1、y は ±amp）
+const PfThrustZig = (x0, x1, step, amp, s) => {
+  const pts = [[x0, 0]];
+  let i = 1;
+  for (let x = x0 + step; x < x1 - step * 0.5; x += step, i++) {
+    pts.push([x + (PfThrustRnd(i, s) - 0.5) * step * 0.4, (i % 2 ? 1 : -1) * amp * (0.45 + PfThrustRnd(i, s + 1) * 0.55)]);
+  }
+  pts.push([x1, 0]);
+  return "M" + pts.map(([x, y]) => `${PfThrustF(x)} ${PfThrustF(y)}`).join(" L");
+};
+// 円錐の螺旋（切っ先 x=0 から後ろへ len。振幅は a0→a1。傾き A·k を一定にして、線どうしが直交しないようにする）
+const PfThrustHelix = (len, a0, a1, Ak, sign, ph0 = 0) => {
+  const pts = [];
+  let ph = ph0;
+  for (let x = 0; x >= -len; x -= 2) {
+    const A = a0 + (a1 - a0) * Math.min(1, -x / (len * 0.6));
+    pts.push([x, sign * A * Math.sin(ph)]);
+    ph += (Ak / A) * 2;
+  }
+  pts.reverse();
+  return "M" + pts.map(([x, y]) => `${PfThrustF(x)} ${PfThrustF(y)}`).join(" L");
+};
+// 雲のもくもく
+const PfThrustCloudD = (x, y, s) =>
+  `M${x - 5 * s} ${y + 2 * s}C${x - 7.5 * s} ${y + 2 * s} ${x - 7.5 * s} ${y - 1.5 * s} ${x - 4.5 * s} ${y - 1.2 * s}C${x - 4 * s} ${y - 4 * s} ${x} ${y - 4.5 * s} ${x + 1 * s} ${y - 2 * s}C${x + 3 * s} ${y - 3.5 * s} ${x + 6 * s} ${y - 2 * s} ${x + 5 * s} ${y}C${x + 7.5 * s} ${y} ${x + 7.5 * s} ${y + 2 * s} ${x + 5 * s} ${y + 2 * s}Z`;
+
+/* ───────── 演出の部品 ───────── */
+// 突きの軸：(x,y) を切っ先にして、角度 a で後ろ（-x）へ伸びる座標系
+function PfThrustAt({ x = PfThrustTX, y = PfThrustTY, a = 0, children }) {
+  return <g transform={`translate(${x} ${y}) rotate(${a})`}>{children}</g>;
+}
+// 光の槍の筋（根元から切っ先へ伸びる）
+function PfThrustBeam({ k, len, w, gw, col, delay = 40, cls = "", ext = 0 }) {
+  return (
+    <g className={`pft-beam ${cls}`} style={{ animationDelay: `${delay}ms` }}>
+      <path d={`M${-len} 0 L${-24 + ext} ${-gw} L${4 + ext} 0 L${-24 + ext} ${gw} Z`} fill={col} opacity="0.32" />
+      <path d={`M${-len} 0 L${-18 + ext} ${-w} L${2 + ext} 0 L${-18 + ext} ${w} Z`} fill={`url(#pftCore${k})`} />
+    </g>
+  );
+}
+// 切っ先（筋の先端と同じ速さで走る）
+function PfThrustHead({ len, delay = 40, cls = "", children }) {
+  return <g className={`pft-head ${cls}`} style={{ "--d": `${-len}px`, animationDelay: `${delay}ms` }}>{children}</g>;
+}
+const PfThrustTipD = (s = 1, x = 0) =>
+  `M${x + 5 * s} 0 L${x - 6 * s} ${-3.1 * s} Q${x - 11 * s} ${-2.8 * s} ${x - 15 * s} ${-0.8 * s} L${x - 15 * s} ${0.8 * s} Q${x - 11 * s} ${2.8 * s} ${x - 6 * s} ${3.1 * s} Z`;
+// 切っ先を囲む衝撃の輪（突きに直交する楕円。突きの座標系の中で使う）
+function PfThrustShock({ r, col, w = 1, delay, x = 2 }) {
+  return <ellipse className="pft-ring" cx={x} cy="0" rx={PfThrustF(r * 0.42)} ry={r} fill="none" stroke={col} strokeWidth={w} style={{ animationDelay: `${delay}ms` }} />;
+}
+// 切っ先で弾ける星
+function PfThrustPop({ x = PfThrustTX, y = PfThrustTY, R, fill = "#FFF6E2", delay, rot = 0 }) {
+  return (
+    <g transform={`translate(${x} ${y}) rotate(${rot})`}>
+      <path className="pft-pop" d={PfThrustStarD(0, 0, R)} fill={fill} style={{ animationDelay: `${delay}ms` }} />
+    </g>
+  );
+}
+// 前向きの扇に飛ぶ火花（突きの座標系の中で使う。包む <g> なしで向きを座標に持たせる）
+function PfThrustSparks({ n, spread = 60, len = 6, dist = 16, col, delay, w = 0.9, s = 0, dir = 0 }) {
+  return PfThrustDots(n).map((i) => {
+    const a = ((dir - spread + (2 * spread * (i + 0.5)) / n + (PfThrustRnd(i, s) - 0.5) * (spread / n)) * Math.PI) / 180;
+    const L = len * (0.6 + PfThrustRnd(i, s + 1) * 0.8), d = dist * (0.6 + PfThrustRnd(i, s + 2) * 0.7);
+    const c = Math.cos(a), si = Math.sin(a);
+    return (
+      <line key={`sp${s}-${i}`} className="pft-spark" x1={PfThrustF(2 * c)} y1={PfThrustF(2 * si)} x2={PfThrustF((2 + L) * c)} y2={PfThrustF((2 + L) * si)}
+        stroke={col} strokeWidth={w} strokeLinecap="round"
+        style={{ "--dx": `${PfThrustF(d * c)}px`, "--dy": `${PfThrustF(d * si)}px`, animationDelay: `${delay + Math.round(PfThrustRnd(i, s + 3) * 40)}ms` }} />
+    );
+  });
+}
+// 飛び散る破片（画面座標。角度 0=右、90=下）
+function PfThrustFrags({ x = PfThrustTX, y = PfThrustTY, n, a0, a1, d0, d1, cols, size = 1, delay, s = 0, grav = 6, stroke = "#2A2028", dur }) {
+  return PfThrustDots(n).map((i) => {
+    const a = ((a0 + (a1 - a0) * ((i + PfThrustRnd(i, s)) / n)) * Math.PI) / 180;
+    const d = d0 + (d1 - d0) * PfThrustRnd(i, s + 5);
+    const z = size * (0.7 + PfThrustRnd(i, s + 7) * 0.7);
+    const ox = x + Math.cos(a) * 3, oy = y + Math.sin(a) * 3;
+    const q = (px, py) => `${PfThrustF(ox + px * z)} ${PfThrustF(oy + py * z)}`;
+    return (
+      <path key={`fr${s}-${i}`} className="pft-frag" d={`M${q(0, -2)} L${q(2.2, -0.4)} L${q(1.2, 2)} L${q(-1.8, 1.4)} Z`}
+        fill={cols[i % cols.length]} stroke={stroke} strokeWidth="0.4"
+        style={{ "--dx": `${PfThrustF(Math.cos(a) * d)}px`, "--dy": `${PfThrustF(Math.sin(a) * d + grav)}px`, "--r": `${(i % 2 ? 1 : -1) * (160 + i * 23)}deg`, animationDelay: `${delay + (i % 4) * 10}ms`, ...(dur ? { animationDuration: `${dur}ms` } : null) }} />
+    );
+  });
+}
+// 点 (ox,oy) から角度 a へ伸びるぎざぎざの裂け目（座標に回転を焼き込む）
+const PfThrustRayD = (ox, oy, a, pts) => {
+  const r = (a * Math.PI) / 180, c = Math.cos(r), si = Math.sin(r);
+  return "M" + pts.map(([u, v]) => `${PfThrustF(ox + u * c - v * si)} ${PfThrustF(oy + u * si + v * c)}`).join(" L");
+};
+// 傾いた楕円を path で（包む <g> なしで回す）
+const PfThrustEllD = (cx, cy, rx, ry, rot) => {
+  const r = (rot * Math.PI) / 180, ex = rx * Math.cos(r), ey = rx * Math.sin(r);
+  return `M${PfThrustF(cx + ex)} ${PfThrustF(cy + ey)} A${rx} ${ry} ${rot} 1 1 ${PfThrustF(cx - ex)} ${PfThrustF(cy - ey)} A${rx} ${ry} ${rot} 1 1 ${PfThrustF(cx + ex)} ${PfThrustF(cy + ey)} Z`;
+};
+
+/* ───────── 段1 一角突：まっすぐな一本の光の線、切っ先に小さな火花 ───────── */
+function PfThrustK3({ k }) {
+  const len = 135;
+  return <>
+    <PfThrustAt a={22}>
+      <PfThrustBeam k={k} len={len} w={1.2} gw={3.4} col={PfThrustAMB} />
+      <PfThrustHead len={len}><path d={PfThrustTipD(1)} fill="#FFF6E2" stroke={PfThrustAMB} strokeWidth="0.4" /></PfThrustHead>
+      <PfThrustSparks n={5} spread={50} len={5} dist={13} col="#FFE6B0" delay={225} w={0.8} />
+      <PfThrustShock r={8} col={PfThrustAMB} w={0.9} delay={230} />
+    </PfThrustAt>
+    <PfThrustPop R={6} delay={220} />
+  </>;
+}
+
+/* ───────── 段2 流星突：槍が流星になり、尾を引いて一体へ ───────── */
+function PfThrustK4({ k }) {
+  const len = 150;
+  return <>
+    <PfThrustAt a={40}>
+      <PfThrustBeam k={k} len={len} w={1} gw={3} col="#FF9A4A" />
+      {PfThrustDots(14).map((i) => {
+        const x = -140 + i * 9.5 + PfThrustRnd(i, 9) * 4, p = Math.max(0, (x + len) / len);
+        return (
+          <circle key={`em${i}`} className="pft-ember" cx={PfThrustF(x)} cy={PfThrustF((PfThrustRnd(i, 2) - 0.5) * 9)} r={PfThrustF(0.7 + PfThrustRnd(i, 3) * 1)} fill={i % 3 ? "#FFB060" : "#FFE6A0"}
+            style={{ "--dx": `${PfThrustF((PfThrustRnd(i, 4) - 0.5) * 8)}px`, "--dy": `${PfThrustF(4 + PfThrustRnd(i, 5) * 8)}px`, animationDelay: `${Math.round(40 + 189 * Math.pow(p, 1.6))}ms` }} />
+        );
+      })}
+      <PfThrustHead len={len}>
+        <path d="M5 0 C-2 -8 -24 -9 -105 0 C-24 9 -2 8 5 0 Z" fill={`url(#pftTail${k})`} />
+        <path d="M4 0 C-2 -3.6 -16 -4 -62 0 C-16 4 -2 3.6 4 0 Z" fill="#FFE6A0" opacity="0.75" />
+        <circle cx="-2" cy="0" r="11" fill={`url(#pftOrb${k})`} />
+        <path d={PfThrustTipD(0.9, 3)} fill="#FFFFFF" stroke="#FF9A4A" strokeWidth="0.4" />
+      </PfThrustHead>
+      <PfThrustSparks n={9} spread={68} len={8} dist={22} col="#FFB060" delay={228} w={1.1} s={2} />
+      <PfThrustShock r={17} col="#FF9A4A" w={1.3} delay={235} />
+    </PfThrustAt>
+    <circle className="pft-boom" cx={PfThrustTX} cy={PfThrustTY} r="18" fill={`url(#pftOrb${k})`} style={{ animationDelay: "222ms" }} />
+    <PfThrustPop R={10} delay={225} />
+    <PfThrustFrags n={7} a0={-40} a1={140} d0={16} d1={30} cols={["#FFB060", "#FF7A3A", "#FFE6A0"]} size={0.9} delay={232} s={5} stroke="#8A3A1A" />
+  </>;
+}
+
+/* ───────── 段3 迅雷突：突きの線に沿って稲妻が走る ───────── */
+function PfThrustK5({ k }) {
+  const len = 140;
+  const z1 = PfThrustZig(-len, 0, 14, 7, 1), z2 = PfThrustZig(-len + 20, 0, 11, 5, 7);
+  return <>
+    <PfThrustAt a={18}>
+      <PfThrustBeam k={k} len={len} w={1.6} gw={4.4} col={PfThrustGOLD} />
+      <path className="pft-bolt" pathLength="100" d={z1} fill="none" stroke={PfThrustAMB} strokeOpacity="0.55" strokeWidth="3.4" strokeLinejoin="round" />
+      <path className="pft-bolt pft-glow" pathLength="100" d={z1} fill="none" stroke="#FFF8D0" strokeWidth="1.3" strokeLinejoin="round" />
+      <path className="pft-bolt" pathLength="100" d={z2} fill="none" stroke="#FFE68A" strokeWidth="0.8" strokeLinejoin="round" style={{ animationDelay: "60ms" }} />
+      {[-48, -20, 14, 42].map((a, i) => (
+        <g key={`fk${i}`} transform={`rotate(${a})`}>
+          <path className="pft-fork" pathLength="100" d={`M2 0 L8 ${i % 2 ? 3 : -3} L12 ${i % 2 ? -1 : 1} L19 ${i % 2 ? 4 : -4} L23 ${i % 2 ? 1 : -1}`} fill="none" stroke="#FFF2A0" strokeWidth="1.1" strokeLinejoin="round"
+            style={{ animationDelay: `${228 + i * 18}ms` }} />
+        </g>
+      ))}
+      <PfThrustHead len={len}><path d={PfThrustTipD(1.15)} fill="#FFFBE6" stroke={PfThrustGOLD} strokeWidth="0.5" /></PfThrustHead>
+      <PfThrustSparks n={7} spread={62} len={6} dist={18} col="#FFF2A0" delay={232} s={4} />
+      <PfThrustShock r={14} col="#FFE68A" w={1.2} delay={240} />
+    </PfThrustAt>
+    <path className="pft-burst" d={PfThrustJagD(PfThrustTX, PfThrustTY, 9, 13, 4.5, 2.2)} fill="#FFF6C0" stroke={PfThrustAMB} strokeWidth="0.6" strokeLinejoin="round" style={{ animationDelay: "226ms" }} />
+  </>;
+}
+
+/* ───────── 段4 穿岩突：岩を穿つ。穴が開き、破片が飛ぶ ───────── */
+function PfThrustK6({ k }) {
+  const len = 135, A = 22;
+  const rock = [[-21, 4], [-17, -9], [-8, -17], [6, -17], [17, -9], [22, 3], [16, 14], [2, 18], [-13, 15]];
+  const top = [[-17, -9], [-8, -17], [6, -17], [17, -9], [4, -5], [-9, -4]];
+  const side = [[17, -9], [22, 3], [16, 14], [6, 8], [4, -5]];
+  const P = (a) => "M" + a.map(([x, y]) => `${x} ${y}`).join(" L") + " Z";
+  return <>
+    <g transform={`translate(${PfThrustTX + 2} ${PfThrustTY - 1})`}>
+      <g className="pft-rock">
+        <path d={P(rock)} fill="#8A7866" stroke="#2A2028" strokeWidth="0.9" strokeLinejoin="round" />
+        <path d={P(top)} fill="#B8A48A" />
+        <path d={P(side)} fill="#5E4E42" />
+        <path d="M-12 8 L-6 10 M8 -10 L12 -6" stroke="#5E4E42" strokeWidth="0.8" strokeLinecap="round" />
+      </g>
+    </g>
+    <PfThrustAt a={A}>
+      <PfThrustBeam k={k} len={len} w={2} gw={5} col={PfThrustAMB} />
+    </PfThrustAt>
+    <g transform={`translate(${PfThrustTX} ${PfThrustTY})`}>
+      <g className="pft-hole" style={{ animationDelay: "228ms" }}>
+        <ellipse cx="0" cy="0" rx="5.6" ry="4.8" fill="#140A06" stroke="#FFC870" strokeWidth="1.3" />
+        <ellipse cx="0.6" cy="0" rx="2.2" ry="1.8" fill="#FFE6A0" />
+      </g>
+      {[-150, -78, -6, 66, 138].map((a, i) => (
+        <path key={`ck${i}`} className="pft-crack" pathLength="100" d={PfThrustRayD(0, 0, a, [[5, 0], [9, i % 2 ? 1.6 : -1.6], [12, i % 2 ? -0.8 : 0.8], [15 + (i % 3) * 2, i % 2 ? 1.2 : -1.2]])}
+          fill="none" stroke="#FFC870" strokeWidth="0.85" strokeLinejoin="round" style={{ animationDelay: `${236 + i * 10}ms` }} />
+      ))}
+    </g>
+    <PfThrustAt a={A}>
+      <path className="pft-exit" d="M0 -3.2 L36 0 L0 3.2 Z" fill="#FFE6A0" style={{ animationDelay: "232ms" }} />
+      <PfThrustHead len={len}><path d={PfThrustTipD(1.25)} fill="#FFF6E2" stroke={PfThrustAMB} strokeWidth="0.5" /></PfThrustHead>
+      <PfThrustSparks n={6} spread={55} len={6} dist={18} col="#FFD27A" delay={230} s={6} />
+    </PfThrustAt>
+    {[[0, 0, -6, -10], [4, 2, 10, -6], [-3, 4, -2, 8]].map(([x, y, dx, dy], i) => (
+      <circle key={`du${i}`} className="pft-dust" cx={PfThrustTX + x} cy={PfThrustTY + y} r="6" fill="#A89478"
+        style={{ "--dx": `${dx}px`, "--dy": `${dy}px`, animationDelay: `${232 + i * 15}ms` }} />
+    ))}
+    <PfThrustFrags n={12} a0={-80} a1={110} d0={18} d1={38} cols={["#B8A48A", "#8A7866", "#5E4E42"]} size={1.3} delay={232} s={3} />
+    <PfThrustPop R={7} delay={226} fill="#FFF0C8" rot={45} />
+  </>;
+}
+
+/* ───────── 段5 破城突：城門が砕ける。円錐形の重い衝撃波 ───────── */
+function PfThrustK7({ k }) {
+  const len = 140, A = 20;
+  // 門：下端中央を原点に（幅 50、高さ 56）
+  const doorL = "M-18 0 L-18 -30 A18 16 0 0 1 0 -46 L0 0 Z", doorR = "M18 0 L18 -30 A18 16 0 0 0 0 -46 L0 0 Z";
+  const Door = ({ d, side }) => (
+    <g className="pft-door" style={{ transformOrigin: side < 0 ? "0% 100%" : "100% 100%", "--dx": `${side * 18}px`, "--dy": "8px", "--r": `${side * 34}deg` }}>
+      <path d={d} fill="#8A5A34" stroke="#3A2214" strokeWidth="0.8" />
+      <rect x={side < 0 ? -13 : 10.6} y="-40" width="2.4" height="40" fill="#74482A" />
+      <rect x={side < 0 ? -7 : 4.6} y="-44" width="2.4" height="44" fill="#74482A" />
+      {[[15, -9], [3, -9], [9, -24]].map(([x, y]) => <circle key={`${x}${y}`} cx={side * x} cy={y} r="0.9" fill="#E0B870" />)}
+    </g>
+  );
+  return <>
+    <g transform={`translate(${PfThrustTX} ${PfThrustTY + 26})`}>
+      <g className="pft-gate">
+        <path d="M-26 0 L-26 -34 A26 24 0 0 1 26 -34 L26 0 Z" fill="#5A5266" stroke="#241E30" strokeWidth="1" />
+        <path d="M-18 0 L-18 -30 A18 16 0 0 1 18 -30 L18 0 Z" fill="#160E1C" />
+        {[[-22, -20], [21, -14], [-12, -50]].map(([x, y], i) => (
+          <rect key={`st${i}`} x={x - 2.5} y={y - 1.6} width="5" height="3.2" rx="1" fill="#6E6680" />
+        ))}
+        <path className="pft-crack" pathLength="100" d="M-2 -57 L2 -50 L-1.5 -46 L1 -40" fill="none" stroke="#FFD8A0" strokeWidth="1" strokeLinejoin="round" style={{ animationDelay: "232ms" }} />
+      </g>
+      <Door d={doorL} side={-1} />
+      <Door d={doorR} side={1} />
+    </g>
+    <PfThrustAt a={A}>
+      <PfThrustBeam k={k} len={len} w={3.2} gw={8} col={PfThrustAMB} />
+      {/* 円錐の衝撃波：切っ先を頂点に、前へ開く円錐（口は楕円） */}
+      <g className="pft-cone" style={{ animationDelay: "226ms" }}>
+        <path d="M0 0 L46 -19 A7 19 0 0 1 46 19 Z" fill={`url(#pftCone${k})`} />
+        <path d="M46 -19 L0 0 L46 19" fill="none" stroke="#FFE0A8" strokeWidth="1.1" strokeLinejoin="round" />
+        <ellipse cx="46" cy="0" rx="7" ry="19" fill="none" stroke="#FFF2D0" strokeWidth="1.3" />
+        <ellipse cx="26" cy="0" rx="4" ry="10.7" fill="none" stroke="#FFE0A8" strokeWidth="0.9" opacity="0.8" />
+      </g>
+      {[0, 1].map((i) => (
+        <path key={`bw${i}`} className="pft-bow" d="M0 -14 Q14 0 0 14" fill="none" stroke="#FFE0A8" strokeWidth={2.2 - i * 0.7} strokeLinecap="round"
+          style={{ "--dx": `${40 + i * 14}px`, animationDelay: `${250 + i * 40}ms` }} />
+      ))}
+      <PfThrustHead len={len}>
+        <path d={PfThrustTipD(1.8)} fill="#FFF6E2" stroke={PfThrustAMB} strokeWidth="0.6" />
+      </PfThrustHead>
+      <PfThrustSparks n={8} spread={60} len={7} dist={22} col="#FFD27A" delay={230} s={8} w={1.1} />
+    </PfThrustAt>
+    <PfThrustFrags n={8} a0={-70} a1={80} d0={26} d1={50} cols={["#A06A3C", "#8A5A34", "#C08048"]} size={1.5} delay={230} s={11} stroke="#3A2214" />
+    <PfThrustFrags n={5} a0={-150} a1={150} d0={16} d1={30} cols={["#6E6680", "#5A5266"]} size={1.3} delay={236} s={13} stroke="#241E30" />
+    <PfThrustPop R={9} delay={226} rot={45} />
+  </>;
+}
+
+/* ───────── 段6 竜牙突：螺旋に巻く気流をまとった、ドリルのような突き ───────── */
+function PfThrustK8({ k }) {
+  const len = 145;
+  const h1 = PfThrustHelix(len, 3, 13, 1.9, 1), h2 = PfThrustHelix(len, 3, 13, 1.9, -1);
+  const w1 = PfThrustHelix(len, 6, 22, 2.4, 1, 1.2), w2 = PfThrustHelix(len, 6, 22, 2.4, -1, 1.2);
+  return <>
+    <PfThrustAt a={20}>
+      <g className="pft-beam" style={{ animationDelay: "40ms" }}>
+        <path d={`M${-len} 0 L-24 -9 L4 0 L-24 9 Z`} fill="#FF9A4A" opacity="0.22" />
+        <path d={`M${-len} 0 L-18 -2.6 L2 0 L-18 2.6 Z`} fill={`url(#pftCore${k})`} />
+        <path d={`M${-len} -24 L-20 -8 L6 0 L-20 8 L${-len} 24 Z`} fill="#FFE6B0" opacity="0.07" />
+        <path d={w1} fill="none" stroke="#FFE6B0" strokeWidth="0.9" strokeLinecap="round" opacity="0.45" />
+        <path d={w2} fill="none" stroke="#FF9A4A" strokeWidth="0.8" strokeLinecap="round" opacity="0.4" />
+        <path d={h1} fill="none" stroke="#FFE6B0" strokeWidth="4.5" strokeLinecap="round" opacity="0.18" />
+        <path className="pft-coil" d={h2} fill="none" stroke="#FF8A4A" strokeWidth="1.4" strokeLinecap="round" />
+        <path className="pft-coil" d={h1} fill="none" stroke="#FFF4D8" strokeWidth="1.7" strokeLinecap="round" />
+      </g>
+      <PfThrustHead len={len}>
+        <path d="M8 0.5 C-4 -3 -18 -8 -40 -7 L-40 6.5 C-18 6.5 -4 3.5 8 0.5 Z" fill={`url(#pftDrill${k})`} stroke="#E8A050" strokeWidth="0.6" />
+        {[0, 1, 2, 3].map((i) => {
+          const x = -34 + i * 8.5;
+          return <path key={`gr${i}`} d={`M${x} ${-6.2 + i * 1.3} Q${x + 4} 0 ${x + 6.5} ${5.8 - i * 1.2}`} fill="none" stroke="#D8904A" strokeWidth="0.8" opacity="0.8" />;
+        })}
+      </PfThrustHead>
+      <PfThrustSparks n={9} spread={66} len={7} dist={24} col="#FFB070" delay={232} s={10} w={1.1} />
+      <PfThrustShock r={17} col="#FFE6B0" w={1.4} delay={232} />
+      <PfThrustShock r={25} col="#FF8A4A" w={1} delay={268} x={6} />
+    </PfThrustAt>
+    <g transform={`translate(${PfThrustTX} ${PfThrustTY})`}>
+      <g className="pft-whirl" style={{ animationDelay: "226ms" }}>
+        {/* 渦を巻く風：同心の弧（中心から放射させない＝風車・巴に見せない） */}
+        {[[9, 10], [9, 190], [16, 70], [16, 250], [23, 130], [23, 310]].map(([r, a0], i) => {
+          const a = (a0 * Math.PI) / 180, b = ((a0 + 105) * Math.PI) / 180;
+          return <path key={`wh${i}`} d={`M${PfThrustF(r * Math.cos(a))} ${PfThrustF(r * Math.sin(a))} A${r} ${r} 0 0 1 ${PfThrustF(r * Math.cos(b))} ${PfThrustF(r * Math.sin(b))}`}
+            fill="none" stroke={i % 2 ? "#FF9A4A" : "#FFF0C8"} strokeWidth={2.6 - (i >> 1) * 0.5} strokeLinecap="round" />;
+        })}
+      </g>
+    </g>
+    <PfThrustPop R={10} delay={228} rot={45} />
+  </>;
+}
+
+/* ───────── 段7 貫天突：突き上げた光が雲を貫き、天まで一本の柱 ───────── */
+function PfThrustK9({ k }) {
+  const cl = [[-4, 29, 24, 10], [26, 25, 22, 11], [56, 31, 23, 10], [88, 27, 20, 10]];
+  const Cloud = ({ side }) => (
+    <g className="pft-cloud" style={{ "--cx": `${side * 34}px` }}>
+      {cl.map(([x, y, rx, ry], i) => {
+        const cx = side < 0 ? x : 200 - x;
+        return [
+          <ellipse key={`cs${i}`} cx={cx} cy={y + 4} rx={rx * 0.92} ry={ry * 0.7} fill="#9A8EBA" />,
+          <ellipse key={`ct${i}`} cx={cx} cy={y} rx={rx} ry={ry} fill="#E8E2F4" opacity="0.92" />,
+        ];
+      })}
+    </g>
+  );
+  return <>
+    <rect className="pft-sky" x="0" y="-2" width="200" height="26" fill={`url(#pftSky${k})`} style={{ animationDelay: "235ms" }} />
+    <Cloud side={-1} />
+    <Cloud side={1} />
+    <ellipse className="pft-boom" cx="100" cy="29" rx="28" ry="14" fill={`url(#pftGlow${k})`} style={{ animationDelay: "190ms" }} />
+    <ellipse className="pft-boom" cx="100" cy="110" rx="34" ry="6" fill={`url(#pftGlow${k})`} style={{ animationDelay: "90ms" }} />
+    {/* ⚠️ 柱は雲の帯に直交させない（十字に見える）。着弾点を軸に少し傾ける */}
+    <g transform="rotate(14 100 110)">
+    <g className="pft-col">
+      <rect x="86" y="-12" width="28" height="146" fill={`url(#pftColG${k})`} />
+      <rect x="95.5" y="-12" width="9" height="146" fill={`url(#pftColC${k})`} />
+      <rect x="99.2" y="-12" width="1.6" height="146" fill="#FFFFFF" />
+    </g>
+    <g className="pft-rise" style={{ "--d": "150px" }}>
+      <path d="M100 -18 Q93.6 -2 98.6 8 L101.4 8 Q106.4 -2 100 -18 Z" fill="#FFFFFF" stroke={PfThrustGOLD} strokeWidth="0.6" />
+    </g>
+    <PfThrustAt a={-90}>
+      <PfThrustSparks n={8} spread={70} len={7} dist={20} col="#FFE6A0" delay={125} s={12} w={1.1} />
+    </PfThrustAt>
+    <PfThrustPop R={9} delay={120} fill="#FFFFFF" rot={45} />
+    {PfThrustDots(8).map((i) => (
+      <path key={`mo${i}`} className="pft-mote" d={PfThrustStarD(PfThrustF(100 + (i % 2 ? 1 : -1) * (9 + PfThrustRnd(i, 6) * 12)), 20 + i * 10, PfThrustF(1.6 + PfThrustRnd(i, 7) * 1.2))}
+        fill={i % 3 ? "#FFE6A0" : "#FFFFFF"} style={{ animationDelay: `${185 + (7 - i) * 18}ms` }} />
+    ))}
+    </g>
+  </>;
+}
+
+/* ───────── 段8 天穿突：空そのものに穴が開き、光のトンネルが敵を貫く ───────── */
+function PfThrustK10({ k }) {
+  const HX = 44, HY = 24;
+  const A = (Math.atan2(PfThrustTY - HY, PfThrustTX - HX) * 180) / Math.PI;
+  const L = Math.hypot(PfThrustTX - HX, PfThrustTY - HY);
+  const ext = 40;
+  return <>
+    <path className="pft-starf" fill="#FFFFFF" d={PfThrustDots(22).map((i) => {
+      const x = (i * 47 + 13) % 200, y = (i * 29 + 5) % 78, r = i % 4 ? 0.5 : 0.9;
+      return `M${x - r} ${y} a${r} ${r} 0 1 0 ${2 * r} 0 a${r} ${r} 0 1 0 ${-2 * r} 0`;
+    }).join("")} />
+    <g transform={`translate(${HX} ${HY})`}>
+      {[-150, -80, -10, 120].map((a, i) => (
+        <path key={`sc${i}`} className="pft-crack" pathLength="100" d={PfThrustRayD(0, 0, a, [[8, 0], [16, i % 2 ? 2.5 : -2.5], [24, i % 2 ? -1 : 1], [32 + (i % 3) * 4, i % 2 ? 2 : -2]])}
+          fill="none" stroke="#FFD27A" strokeWidth="1.1" strokeLinejoin="round" style={{ animationDelay: `${30 + i * 14}ms` }} />
+      ))}
+      <ellipse className="pft-open" cx="0" cy="0" rx="26" ry="21" fill={`url(#pftHoleG${k})`} style={{ animationDelay: "70ms" }} />
+      <g className="pft-open" style={{ animationDelay: "90ms" }}>
+        <path d={PfThrustJagD(0, 0, 11, 15, 11, 4.5, 10, 0.82)} fill={`url(#pftHole${k})`} stroke="#FFE6A0" strokeWidth="1" strokeLinejoin="round" />
+        <ellipse cx="1" cy="0.5" rx="6" ry="5" fill="#FFFFFF" opacity="0.9" />
+      </g>
+    </g>
+    <PfThrustFrags x={HX} y={HY} n={6} a0={-180} a1={180} d0={16} d1={28} cols={["#1E1640", "#2A2050"]} size={2} delay={130} s={21} grav={10} stroke={PfThrustAMB} />
+    <PfThrustAt a={A}>
+      <g className="pft-beam pft-f" style={{ animationDelay: "230ms" }}>
+        <path d={`M${-L} -15 L-6 -6 L${ext} -2.5 L${ext} 2.5 L-6 6 L${-L} 15 Z`} fill={`url(#pftTun${k})`} />
+      </g>
+      {PfThrustDots(6).map((i) => {
+        const ry = 15 - i * 1.7;
+        return (
+          <path key={`tr${i}`} className="pft-tring" d={PfThrustEllD(PfThrustF(-L + 10 + i * 12.5), 0, PfThrustF(ry * 0.45), PfThrustF(ry), 18)}
+            fill="none" stroke="#FFE6A0" strokeWidth={PfThrustF(1.4 - i * 0.1)} style={{ animationDelay: `${215 + i * 18}ms` }} />
+        );
+      })}
+      <PfThrustBeam k={k} len={L} w={3} gw={7.5} col={PfThrustGOLD} cls="pft-f" delay={230} ext={ext} />
+      <PfThrustHead len={L + ext} cls="pft-f" delay={230}><path d={PfThrustTipD(1.7, ext)} fill="#FFFFFF" stroke={PfThrustGOLD} strokeWidth="0.6" /></PfThrustHead>
+      <PfThrustSparks n={8} spread={72} len={9} dist={28} col="#FFE6A0" delay={300} s={14} w={1.3} />
+    </PfThrustAt>
+    <path className="pft-burst" d={PfThrustJagD(PfThrustTX, PfThrustTY, 12, 20, 8, 2.5)} fill="#FFF6D8" stroke={PfThrustAMB} strokeWidth="0.7" strokeLinejoin="round" style={{ animationDelay: "300ms" }} />
+    <ellipse className="pft-ring" cx={PfThrustTX} cy={PfThrustTY + 18} rx="30" ry="7" fill="none" stroke={PfThrustGOLD} strokeWidth="1.4" style={{ animationDelay: "302ms" }} />
+    <ellipse className="pft-ring" cx={PfThrustTX} cy={PfThrustTY + 18} rx="30" ry="7" fill="none" stroke="#FFFFFF" strokeWidth="0.8" style={{ animationDelay: "340ms", animationDuration: "470ms" }} />
+    <PfThrustFrags n={8} a0={-60} a1={200} d0={22} d1={44} cols={[PfThrustGOLD, "#FFFFFF", PfThrustAMB]} size={1.5} delay={298} s={17} stroke="#8A5A20" dur={490} />
+  </>;
+}
+
+const PfThrustBodies = { 3: PfThrustK3, 4: PfThrustK4, 5: PfThrustK5, 6: PfThrustK6, 7: PfThrustK7, 8: PfThrustK8, 9: PfThrustK9, 10: PfThrustK10 };
+const PfThrustCoreCol = { 3: PfThrustAMB, 4: "#FF9A4A", 5: PfThrustGOLD, 6: PfThrustAMB, 7: "#F0A040", 8: "#FF9A4A", 9: PfThrustAMB, 10: PfThrustGOLD };
+// [不透明度, 遅れ ms]
+const PfThrustFlashAt = { 3: [0.18, 220], 4: [0.28, 225], 5: [0.36, 228], 6: [0.44, 228], 7: [0.52, 228], 8: [0.6, 230], 9: [0.7, 235], 10: [0.85, 305] };
+const PfThrustShakeAt = { 7: ["pft-shake", 228], 8: ["pft-shake", 230], 9: ["pft-shake2", 120], 10: ["pft-shake2", 305] };
+
+function PfThrustFlash({ k }) {
+  const t = Math.max(3, Math.min(10, Math.round(k) || 3));
+  const Body = PfThrustBodies[t];
+  const c = PfThrustCoreCol[t];
+  const [fo, fd] = PfThrustFlashAt[t];
+  const sh = PfThrustShakeAt[t];
+  const vo = t === 10 ? 0.92 : 0.55 + (t - 3) * 0.02;
+  return (
+    <svg className={`pft-svg pft-k${t}${sh ? " " + sh[0] : ""}`} style={sh ? { animationDelay: `${sh[1]}ms` } : undefined}
+      viewBox="0 0 200 130" preserveAspectRatio="xMidYMid slice" aria-hidden="true">
+      <defs>
+        {t !== 9 && (
+          <linearGradient id={`pftCore${t}`} x1="0" y1="0" x2="1" y2="0">
+            <stop offset="0" stopColor={c} stopOpacity="0" /><stop offset="0.55" stopColor={c} stopOpacity="0.9" />
+            <stop offset="0.88" stopColor="#FFFFFF" /><stop offset="1" stopColor="#FFFFFF" />
+          </linearGradient>
+        )}
+        <radialGradient id={`pftFlash${t}`} cx="0.5" cy={t === 9 ? 0.42 : 0.66} r="0.7">
+          <stop offset="0" stopColor="#FFFFFF" /><stop offset="0.3" stopColor="#FFE6B0" stopOpacity="0.55" /><stop offset="0.75" stopColor={PfThrustAMB} stopOpacity="0" />
+        </radialGradient>
+        {t === 4 && <>
+          <linearGradient id="pftTail4" x1="0" y1="0" x2="1" y2="0">
+            <stop offset="0" stopColor="#FF6A3A" stopOpacity="0" /><stop offset="0.6" stopColor="#FF9A4A" stopOpacity="0.75" /><stop offset="1" stopColor="#FFE6A0" />
+          </linearGradient>
+          <radialGradient id="pftOrb4">
+            <stop offset="0" stopColor="#FFFFFF" /><stop offset="0.35" stopColor="#FFE6A0" /><stop offset="0.7" stopColor="#FF9A4A" stopOpacity="0.55" /><stop offset="1" stopColor="#FF7A3A" stopOpacity="0" />
+          </radialGradient>
+        </>}
+        {t === 7 && <>
+          <linearGradient id="pftCone7" x1="0" y1="0" x2="1" y2="0">
+            <stop offset="0" stopColor="#FFF2D0" stopOpacity="0.95" /><stop offset="0.5" stopColor="#FFC870" stopOpacity="0.5" /><stop offset="1" stopColor={PfThrustAMB} stopOpacity="0" />
+          </linearGradient>
+        </>}
+        {t === 8 && (
+          <linearGradient id="pftDrill8" x1="0" y1="0" x2="1" y2="0">
+            <stop offset="0" stopColor="#D8A060" /><stop offset="0.5" stopColor="#FFF0D0" /><stop offset="1" stopColor="#FFFFFF" />
+          </linearGradient>
+        )}
+        {t === 9 && <>
+          <linearGradient id="pftColG9" x1="0" y1="0" x2="1" y2="0">
+            <stop offset="0" stopColor={PfThrustAMB} stopOpacity="0" /><stop offset="0.5" stopColor={PfThrustGOLD} stopOpacity="0.55" /><stop offset="1" stopColor={PfThrustAMB} stopOpacity="0" />
+          </linearGradient>
+          <linearGradient id="pftColC9" x1="0" y1="0" x2="1" y2="0">
+            <stop offset="0" stopColor={PfThrustAMB} stopOpacity="0.2" /><stop offset="0.35" stopColor="#FFE6A0" /><stop offset="0.5" stopColor="#FFFFFF" />
+            <stop offset="0.65" stopColor="#FFE6A0" /><stop offset="1" stopColor={PfThrustAMB} stopOpacity="0.2" />
+          </linearGradient>
+          <radialGradient id="pftGlow9">
+            <stop offset="0" stopColor="#FFFFFF" /><stop offset="0.4" stopColor="#FFE6A0" stopOpacity="0.8" /><stop offset="1" stopColor={PfThrustAMB} stopOpacity="0" />
+          </radialGradient>
+          <linearGradient id="pftSky9" x1="0" y1="0" x2="0" y2="1">
+            <stop offset="0" stopColor="#FFE6A0" stopOpacity="0.6" /><stop offset="1" stopColor="#FFE6A0" stopOpacity="0" />
+          </linearGradient>
+        </>}
+        {t === 10 && <>
+          <radialGradient id="pftVoid10"><stop offset="0" stopColor="#1C0E3A" /><stop offset="1" stopColor="#030208" /></radialGradient>
+          <radialGradient id="pftHole10">
+            <stop offset="0" stopColor="#FFFFFF" /><stop offset="0.45" stopColor="#FFF2C0" /><stop offset="0.8" stopColor={PfThrustAMB} /><stop offset="1" stopColor="#A05A20" />
+          </radialGradient>
+          <radialGradient id="pftHoleG10">
+            <stop offset="0" stopColor="#FFE6A0" stopOpacity="0.7" /><stop offset="1" stopColor={PfThrustAMB} stopOpacity="0" />
+          </radialGradient>
+          <linearGradient id="pftTun10" x1="0" y1="0" x2="1" y2="0">
+            <stop offset="0" stopColor="#FFF4D0" stopOpacity="0.8" /><stop offset="0.5" stopColor={PfThrustAMB} stopOpacity="0.45" />
+            <stop offset="0.72" stopColor="#FFE6A0" stopOpacity="0.75" /><stop offset="1" stopColor="#FFE6A0" stopOpacity="0" />
+          </linearGradient>
+        </>}
+      </defs>
+      <rect className="pft-void" x="0" y="0" width="200" height="130" fill={t === 10 ? "url(#pftVoid10)" : "#05030B"}
+        style={{ "--vo": vo, "--vo2": PfThrustF(vo * 0.88) }} />
+      <Body k={t} />
+      <rect className="pft-flash" x="0" y="0" width="200" height="130" fill={`url(#pftFlash${t})`} style={{ "--fo": fo, animationDelay: `${fd}ms` }} />
+    </svg>
+  );
+}
+
+/* ───────── 印（32×32 の静止画）：斜めの槍（左下→右上）が基本形 ───────── */
+const PfThrustSvg = (kids) => <svg viewBox="0 0 32 32" aria-hidden="true">{kids}</svg>;
+function PfThrustStarG(x, y, R, fill = "#FFFFFF", sw = 0.45) {
+  return <path d={PfThrustStarD(x, y, R)} fill={fill} stroke={PfThrustO} strokeWidth={sw} strokeLinejoin="round" />;
+}
+// 穂先（葉の形）。tip=(x2,y2)、向き (ux,uy)
+function PfThrustHeadG(x2, y2, ux, uy, hl, hw, fill, edge = PfThrustO, ew = 0.6, rib = PfThrustAMB) {
+  const nx = -uy, ny = ux;
+  const P = (t, s) => `${PfThrustF(x2 - ux * t + nx * s)} ${PfThrustF(y2 - uy * t + ny * s)}`;
+  return <>
+    <path d={`M${P(0, 0)} L${P(hl * 0.58, hw)} Q${P(hl * 0.86, hw * 0.92)} ${P(hl, hw * 0.3)} L${P(hl + 1.8, hw * 0.42)} L${P(hl + 1.8, -hw * 0.42)} L${P(hl, -hw * 0.3)} Q${P(hl * 0.86, -hw * 0.92)} ${P(hl * 0.58, -hw)} Z`}
+      fill={fill} stroke={edge} strokeWidth={ew} strokeLinejoin="round" />
+    <path d={`M${P(1.8, 0)} L${P(hl - 0.5, 0)}`} stroke={rib} strokeWidth="0.6" strokeLinecap="round" />
+  </>;
+}
+// 槍一本（柄＋穂先）
+function PfThrustSpearG(x1, y1, x2, y2, o = {}) {
+  const { sw = 1.6, hl = 9, hw = 3.2, shaft = PfThrustAMB, head = "#FFF4DC", edge = PfThrustO, ew = 0.6, rib = PfThrustAMB } = o;
+  const dx = x2 - x1, dy = y2 - y1, L = Math.hypot(dx, dy), ux = dx / L, uy = dy / L;
+  const bx = PfThrustF(x2 - ux * (hl + 1.2)), by = PfThrustF(y2 - uy * (hl + 1.2));
+  return <>
+    <line x1={x1} y1={y1} x2={bx} y2={by} stroke={PfThrustO} strokeWidth={sw + 1.3} strokeLinecap="round" opacity="0.7" />
+    <line x1={x1} y1={y1} x2={bx} y2={by} stroke={shaft} strokeWidth={sw} strokeLinecap="round" />
+    {PfThrustHeadG(x2, y2, ux, uy, hl, hw, head, edge, ew, rib)}
+  </>;
+}
+const PfThrustD45 = Math.SQRT1_2;
+
+// 段1 一角突：一本の槍、切っ先に小さな火花
+function PfThrustG1() {
+  return PfThrustSvg(<>
+    {PfThrustSpearG(5, 27, 25.5, 6.5, { sw: 1.7, hl: 10.5, hw: 3.1 })}
+    <path d="M27.5 10.5 L30 11.5 M21.5 4.5 L20.5 2" stroke="#FFE6B0" strokeWidth="1" strokeLinecap="round" />
+    {PfThrustStarG(26, 6, 3.6)}
+  </>);
+}
+// 段2 流星突：穂先が流星になり、燃える尾を引く
+function PfThrustG2() {
+  // 尾：頭 (21,11) から左下へ。幅 w、長さ l
+  const tail = (w, l) => {
+    const hx = 21, hy = 11, ux = -PfThrustD45, uy = PfThrustD45, nx = PfThrustD45, ny = PfThrustD45;
+    const P = (t, s) => `${PfThrustF(hx + ux * t + nx * s)} ${PfThrustF(hy + uy * t + ny * s)}`;
+    return `M${P(-1, w)} C${P(l * 0.25, w * 1.05)} ${P(l * 0.6, w * 0.5)} ${P(l, 0)} C${P(l * 0.6, -w * 0.5)} ${P(l * 0.25, -w * 1.05)} ${P(-1, -w)} Z`;
+  };
+  return PfThrustSvg(<>
+    <defs>
+      <linearGradient id="pftG2a" x1="0" y1="1" x2="1" y2="0">
+        <stop offset="0" stopColor="#FF6A3A" stopOpacity="0.35" /><stop offset="0.55" stopColor="#FF8A3A" /><stop offset="1" stopColor="#FFC060" />
+      </linearGradient>
+      <radialGradient id="pftG2b"><stop offset="0" stopColor="#FFFFFF" /><stop offset="0.55" stopColor="#FFE6A0" /><stop offset="1" stopColor="#FFA050" /></radialGradient>
+    </defs>
+    <path d={tail(5.2, 25)} fill="url(#pftG2a)" stroke={PfThrustO} strokeWidth="0.6" strokeLinejoin="round" />
+    <path d={tail(2.4, 17)} fill="#FFD27A" />
+    <circle cx="20.5" cy="11.5" r="5.4" fill="url(#pftG2b)" stroke={PfThrustO} strokeWidth="0.6" />
+    {PfThrustHeadG(29.5, 2.5, PfThrustD45, -PfThrustD45, 10, 2.9, "#FFFFFF", PfThrustO, 0.55)}
+    <circle cx="27" cy="20" r="1.1" fill="#FFB060" stroke={PfThrustO} strokeWidth="0.3" /><circle cx="11" cy="5" r="1" fill="#FFD27A" stroke={PfThrustO} strokeWidth="0.3" />
+  </>);
+}
+// 段3 迅雷突：槍に沿って稲妻が走る
+const PfThrustBoltD = "M2.5 0 L8 0 L5 5.2 L8.5 5.2 L1 14 L3.2 7.6 L0 7.6 Z";
+function PfThrustG3() {
+  return PfThrustSvg(<>
+    <path d={PfThrustBoltD} transform="translate(2.5 2.5) rotate(28 4 7) scale(1.25)" fill="#FFE45A" stroke={PfThrustO} strokeWidth="0.55" strokeLinejoin="round" />
+    <path d={PfThrustBoltD} transform="translate(19.5 15.5) rotate(28 4 7) scale(1.05)" fill="#FFF2A0" stroke={PfThrustO} strokeWidth="0.6" strokeLinejoin="round" />
+    {PfThrustSpearG(4.5, 27.5, 26, 6, { sw: 1.9, hl: 10.5, hw: 3.2 })}
+    <path d="M7.5 24.5 L23 9" stroke="#FFF2A0" strokeWidth="0.7" strokeLinecap="round" />
+    {PfThrustStarG(26.5, 5.5, 4, "#FFF6C0")}
+  </>);
+}
+// 段4 穿岩突：岩に穴を穿ち、破片が飛ぶ
+function PfThrustG4() {
+  return PfThrustSvg(<>
+    <path d="M12 9 L15 3.5 L22 2 L28.5 5 L30 12 L27 18.5 L20 20.5 L13.5 16.5 Z" fill="#9A8670" stroke={PfThrustO} strokeWidth="0.7" strokeLinejoin="round" />
+    <path d="M15 3.5 L22 2 L28.5 5 L23.5 8.5 L16.5 8 Z" fill="#C8B496" />
+    <path d="M28.5 5 L30 12 L27 18.5 L23 13.5 L23.5 8.5 Z" fill="#6A5A4C" />
+    <ellipse cx="20.5" cy="11.5" rx="3" ry="2.6" fill="#140A06" stroke="#FFC870" strokeWidth="0.9" />
+    <path d="M23.3 10 L25.5 8.5 L26.5 6.5 M22.5 14 L24 16 L23.5 18.5 M18 13.6 L16 15.5" fill="none" stroke="#FFD27A" strokeWidth="0.7" strokeLinecap="round" strokeLinejoin="round" />
+    {PfThrustSpearG(3, 29, 19.6, 12.4, { sw: 2, hl: 10, hw: 3.4 })}
+    {[[29, 23, 20], [7, 7, -30], [26, 26, 60], [31, 19, 10]].map(([x, y, a], i) => (
+      <path key={i} d={`M${x - 1.6} ${y} L${x} ${y - 1.4} L${x + 1.8} ${y + 0.3} L${x} ${y + 1.4} Z`} fill={i % 2 ? "#C8B496" : "#9A8670"} stroke={PfThrustO} strokeWidth="0.4" transform={`rotate(${a} ${x} ${y})`} />
+    ))}
+  </>);
+}
+// 段5 破城突：割れて押し開かれた城門を、槍が突き破る。前に円錐の衝撃波
+function PfThrustG5() {
+  const half = (side) => {
+    const e = side < 0 ? 11 : 29, m = side < 0 ? 19.4 : 20.6;
+    return `M${e} 24 L${e} 12 Q${e} 5 ${m} 4.4 L${m + side * 0.8} 8 L${m - side * 0.6} 11 L${m + side * 0.9} 14.5 L${m - side * 0.4} 18 L${m + side * 0.5} 24 Z`;
+  };
+  return PfThrustSvg(<>
+    <defs>
+      <linearGradient id="pftG5a" x1="0" y1="1" x2="1" y2="0">
+        <stop offset="0" stopColor="#FFF2D0" /><stop offset="1" stopColor="#FFC870" stopOpacity="0.5" />
+      </linearGradient>
+    </defs>
+    <g transform="rotate(-9 11 24)">
+      <path d={half(-1)} fill="#8A5A34" stroke={PfThrustO} strokeWidth="0.65" strokeLinejoin="round" />
+      <path d="M14.8 23.5 L14.8 6.4" stroke="#5A3A20" strokeWidth="1.1" />
+      <circle cx="13" cy="10" r="0.7" fill="#E0B870" /><circle cx="13" cy="19" r="0.7" fill="#E0B870" /><circle cx="17" cy="15" r="0.7" fill="#E0B870" />
+    </g>
+    <g transform="rotate(9 29 24)">
+      <path d={half(1)} fill="#9A6A3C" stroke={PfThrustO} strokeWidth="0.65" strokeLinejoin="round" />
+      <path d="M25.2 23.5 L25.2 6.4" stroke="#5A3A20" strokeWidth="1.1" />
+      <circle cx="27" cy="10" r="0.7" fill="#E0B870" /><circle cx="27" cy="19" r="0.7" fill="#E0B870" /><circle cx="23" cy="15" r="0.7" fill="#E0B870" />
+    </g>
+    {PfThrustSpearG(2, 30, 23.5, 8.5, { sw: 2.3, hl: 10, hw: 3.6 })}
+    <path d="M23.5 8.5 L31.5 3 A2.2 5 45 0 1 29 11 Z" fill="url(#pftG5a)" stroke={PfThrustO} strokeWidth="0.55" strokeLinejoin="round" />
+    {[[5.5, 13, -35], [30, 27, 25], [9, 4.5, 60]].map(([x, y, a], i) => (
+      <rect key={i} x={x - 0.9} y={y - 2.6} width="1.8" height="5.2" rx="0.4" fill={i % 2 ? "#C08048" : "#8A5A34"} stroke={PfThrustO} strokeWidth="0.45" transform={`rotate(${a} ${x} ${y})`} />
+    ))}
+  </>);
+}
+// 段6 竜牙突：螺旋の気流をまとった牙の槍
+function PfThrustG6() {
+  const L = 22;
+  const h = (sign) => {
+    const pts = []; let ph = 0;
+    for (let x = 0; x <= L; x += 0.5) {
+      const A = 1.2 + 3.2 * Math.min(1, x / (L * 0.75));
+      pts.push(`${PfThrustF(-x)} ${PfThrustF(sign * A * Math.sin(ph))}`);
+      ph += (1.9 / A) * 0.5;
+    }
+    return "M" + pts.join(" L");
+  };
+  return PfThrustSvg(<>
+    {PfThrustSpearG(4, 28, 26.5, 5.5, { sw: 2.2, hl: 11, hw: 3.7, head: "#FFF0D8" })}
+    <g transform="translate(22.5 9.5) rotate(-45)">
+      <path d={h(-1)} fill="none" stroke={PfThrustO} strokeWidth="2.1" strokeLinecap="round" opacity="0.55" />
+      <path d={h(-1)} fill="none" stroke="#FF8A4A" strokeWidth="1.1" strokeLinecap="round" />
+      <path d={h(1)} fill="none" stroke={PfThrustO} strokeWidth="2.1" strokeLinecap="round" opacity="0.55" />
+      <path d={h(1)} fill="none" stroke="#FFF0C8" strokeWidth="1.1" strokeLinecap="round" />
+    </g>
+    {PfThrustStarG(27, 5, 4.2, "#FFF0D8")}
+    {PfThrustStarG(6, 9, 1.8, "#FF9A4A", 0.4)}
+  </>);
+}
+// 段7 貫天突：雲を貫く金の槍、天へ続く光の柱
+function PfThrustG7() {
+  return PfThrustSvg(<>
+    <defs>
+      <linearGradient id="pftG7a" x1="0" y1="1" x2="1" y2="0">
+        <stop offset="0" stopColor="#E8C060" /><stop offset="0.5" stopColor="#FFFFFF" /><stop offset="1" stopColor="#FFF4C8" />
+      </linearGradient>
+      <linearGradient id="pftG7b" x1="0" y1="1" x2="1" y2="0">
+        <stop offset="0" stopColor="#FFE6A0" stopOpacity="0" /><stop offset="0.55" stopColor="#FFE6A0" stopOpacity="0.45" /><stop offset="1" stopColor="#FFF4C8" stopOpacity="0.95" />
+      </linearGradient>
+    </defs>
+    <path d="M-1 27 L27 -1 L33 5 L5 33 Z" fill="url(#pftG7b)" />
+    <path d={PfThrustCloudD(9.5, 13.5, 1.1)} fill="#ECE6F8" stroke={PfThrustO} strokeWidth="0.6" />
+    <path d={PfThrustCloudD(22.5, 21.5, 1.15)} fill="#C8C0E0" stroke={PfThrustO} strokeWidth="0.6" />
+    {PfThrustSpearG(3, 29, 26.5, 5.5, { sw: 2.6, hl: 12, hw: 4.1, shaft: PfThrustAMB, head: "url(#pftG7a)", edge: "#E8C060", ew: 0.9, rib: "#E8C060" })}
+    {PfThrustStarG(27, 5, 5.2, "#FFF4C8")}
+    {PfThrustStarG(4.5, 19, 2, PfThrustGOLD, 0.4)}
+    {PfThrustStarG(28, 26, 2, "#FFFFFF", 0.4)}
+    {PfThrustStarG(16, 3.5, 1.4, "#FFFFFF", 0.35)}
+  </>);
+}
+// 段8 天穿突：空に開いた光の穴を、金の大槍が穿つ
+function PfThrustG8() {
+  return PfThrustSvg(<>
+    <defs>
+      <radialGradient id="pftG8a"><stop offset="0" stopColor="#FFFFFF" /><stop offset="0.5" stopColor="#FFF2C0" /><stop offset="1" stopColor={PfThrustAMB} /></radialGradient>
+      <linearGradient id="pftG8b" x1="0" y1="1" x2="1" y2="0">
+        <stop offset="0" stopColor="#E8C060" /><stop offset="0.4" stopColor="#FFFFFF" /><stop offset="1" stopColor="#FFF4C8" />
+      </linearGradient>
+      <linearGradient id="pftG8c" x1="1" y1="0" x2="0" y2="1">
+        <stop offset="0" stopColor="#FFE6A0" stopOpacity="0.8" /><stop offset="1" stopColor="#FFE6A0" stopOpacity="0" />
+      </linearGradient>
+    </defs>
+    <path d="M14 4 L28 18 L4 30 Z" fill="url(#pftG8c)" />
+    <path d="M13 9 L16 3.5 L19 5 L22.5 1.5 L25 4.5 L29.5 3.5 L28.5 8 L31 11 L28 13.5 L29 18 L24.5 17 L22 20.5 L19.5 17 L15 18.5 L15.5 14 L12 12.5 Z" fill="#1A1036" stroke="#9A7AFF" strokeWidth="0.9" strokeLinejoin="round" />
+    <path d="M15.5 10 L18 6.5 L20.5 7.5 L23 4.5 L24.5 7 L27.5 6.5 L26.5 10 L28.5 12 L26 13.5 L26 16 L23 15 L21.5 17.5 L19.5 15 L17 15.5 L17.5 13 Z" fill="url(#pftG8a)" stroke="#E8C060" strokeWidth="0.8" strokeLinejoin="round" />
+    {PfThrustSpearG(2.5, 29.5, 21.5, 10.5, { sw: 2.8, hl: 12, hw: 4.4, head: "url(#pftG8b)", edge: "#E8C060", ew: 0.9, rib: "#E8C060" })}
+    {PfThrustStarG(21.5, 10.5, 4.6, "#FFFFFF")}
+    {PfThrustStarG(5, 7, 2.4, PfThrustGOLD, 0.4)}
+    {PfThrustStarG(28, 27, 2.2, "#FFFFFF", 0.4)}
+  </>);
+}
+
+const PFG_THRUST = [PfThrustG1, PfThrustG2, PfThrustG3, PfThrustG4, PfThrustG5, PfThrustG6, PfThrustG7, PfThrustG8];
+/* ---- blunt ---- */
+/*
+  打撃（斧・槌）の必殺技「〜砕」8段の演出（PfFlash）と、必殺ゲージの印8つ（PF_GLYPHS）。
+  接頭辞：関数・定数 PfBlunt / pfb、CSS クラス pfb-、@keyframes pfb…、グラデーション id pfb…。
+  ★ 全段に共通：銅の振り下ろしの弧 → 着弾（爆ぜ・地の輪・閃光一回）→ 段ごとの「砕ける物」。
+  ★ 段8（星砕）だけは振りの代わりに巨大な星が落ちる。
+  ⚠️ 0.9秒以内にすべて不透明度0。閃光は一度きり。点滅なし。
+  ⚠️ 位置決めは外側の <g transform>、CSS アニメーションは内側。transform-box: fill-box は
+     アニメーションするクラスにだけ付ける（全要素に付けると外側の rotate/scale の基点がずれる）。
+*/
+
+const PfBluntO = "#2A3458";
+const PfBluntCu = "#D89A6A";
+const PfBluntGold = "#FFD86A";
+
+const pfbRnd = (i, s = 1) => { const x = Math.sin(i * 91.7 + s * 47.3) * 43758.5453; return x - Math.floor(x); };
+const pfbDots = (m) => Array.from({ length: m }, (_, i) => i);
+const pfbF = (v) => (Math.round(v * 100) / 100).toString();
+const pfbLine = (pts) => `M${pts.map((p) => `${pfbF(p[0])} ${pfbF(p[1])}`).join(" L")}`;
+const pfbPoly = (pts) => `${pfbLine(pts)} Z`;
+function pfbArc(cx, cy, r, a0, a1, sweep) {
+  const p = (a) => [cx + r * Math.cos((a * Math.PI) / 180), cy - r * Math.sin((a * Math.PI) / 180)];
+  const s = p(a0), e = p(a1);
+  return `M${pfbF(s[0])} ${pfbF(s[1])} A${r} ${r} 0 0 ${sweep} ${pfbF(e[0])} ${pfbF(e[1])}`;
+}
+/* 不揃いな尖りの爆ぜ（星に見えないよう尖りの長さをばらす） */
+function pfbBurstD(n, R, r, seed) {
+  const pts = [];
+  for (let i = 0; i < n * 2; i++) {
+    const a = ((i * 180) / n + 7) * Math.PI / 180;
+    const rr = i % 2 === 0 ? R * (0.62 + 0.5 * pfbRnd(i, seed)) : r;
+    pts.push([Math.sin(a) * rr, -Math.cos(a) * rr]);
+  }
+  return pfbPoly(pts);
+}
+/* 四方に光る星 */
+const pfbStarD = (x, y, R, q = 0.26) => {
+  const s = R * q;
+  return `M${x} ${y - R}L${x + s} ${y - s}L${x + R} ${y}L${x + s} ${y + s}L${x} ${y + R}L${x - s} ${y + s}L${x - R} ${y}L${x - s} ${y - s}Z`;
+};
+/* 地面（奥行きで潰した平面）を放射状に走る亀裂 */
+function pfbGroundCracks(cx, cy, angs, Ls, flat, seed, r0 = 0) {
+  return angs.map((deg, i) => {
+    const a0 = (deg * Math.PI) / 180;
+    const pts = [[cx + Math.cos(a0) * r0, cy + Math.sin(a0) * r0 * flat]];
+    for (let j = 1; j <= 5; j++) {
+      const a = ((deg + (pfbRnd(i * 11 + j, seed) - 0.5) * 24) * Math.PI) / 180;
+      const r = r0 + ((Ls[i] - r0) * j) / 5;
+      pts.push([cx + Math.cos(a) * r, cy + Math.sin(a) * r * flat]);
+    }
+    return pts;
+  });
+}
+
+/* ───────── 演出 ───────── */
+function PfBluntFlash({ k }) {
+  const t = Math.max(1, Math.min(8, (k || 3) - 2));
+  const kk = t + 2;
+  const id = (s) => `pfb${s}${kk}`;
+  const IP = { 3: [100, 88], 4: [100, 78], 5: [100, 92], 6: [100, 106], 7: [100, 104], 8: [100, 92], 9: [100, 42], 10: [100, 100] }[kk];
+  const w = 2.6 + (t - 1) * 0.8;
+  const up = kk === 9; // 天砕：下からすくい上げる。他は頭上から振り下ろす
+  const SW = up ? { r: 70, a0: 145 } : { r: 50 + t * 6, a0: -150 };
+  const swingD = up
+    ? pfbArc(IP[0] - SW.r, IP[1], SW.r, 215, 360, 0)
+    : pfbArc(IP[0] - SW.r, IP[1], SW.r, 150, 0, 1);
+  // 槌頭：弧の先を走る重い塊（柄は描かない＝直交する線を作らない）。打つ面が白熱
+  const HL = 8 + w * 1.7, HW = 6 + w * 1.4;
+  const head = (
+    <g className="pfb-head" style={{ transformOrigin: `${IP[0] - SW.r}px ${IP[1]}px`, "--a0": `${SW.a0}deg` }}>
+      <g transform={`translate(${IP[0]} ${up ? IP[1] + HL / 2 : IP[1] - HL / 2})`}>
+        <rect x={pfbF(-HW / 2)} y={pfbF(-HL / 2)} width={pfbF(HW)} height={pfbF(HL)} rx={pfbF(HW * 0.28)} fill={`url(#${id("Head")})`} stroke="#1A1018" strokeWidth="0.8" />
+        <rect x={pfbF(-HW / 2 + 0.6)} y={pfbF(up ? -HL / 2 + 0.6 : HL / 2 - HL * 0.24 - 0.6)} width={pfbF(HW - 1.2)} height={pfbF(HL * 0.24)} rx="0.8" fill="#FFF4E2" />
+        <path d={`M${pfbF(-HW / 2 + 1)} ${pfbF(-HL / 2 + 1.5)} L${pfbF(-HW / 2 + 1)} ${pfbF(HL / 2 - 1.5)}`} stroke="#FFE2C4" strokeWidth="0.8" strokeLinecap="round" opacity="0.7" />
+      </g>
+    </g>
+  );
+
+  const chips = (n, x, y, sx, sy, cols, seed, d0 = 250, sz = 1, stg = 18) => pfbDots(n).map((i) => {
+    const r1 = pfbRnd(i, seed), r2 = pfbRnd(i, seed + 7), r3 = pfbRnd(i, seed + 13);
+    const side = i % 2 ? 1 : -1;
+    const s = sz * (0.7 + r3 * 0.8);
+    const dx = side * (6 + r1 * sx), dy = -(8 + r2 * sy);
+    return (
+      <g key={`ch${seed}-${i}`} transform={`translate(${pfbF(x + side * r3 * 8)} ${pfbF(y - r1 * 4)}) scale(${pfbF(s)})`}>
+        <path className="pfb-chip" d="M0 -2.4 L2.3 -0.5 L1 2.3 L-2.1 1.3 Z" fill={cols[i % cols.length]} stroke="#1A1018" strokeWidth="0.45"
+          style={{ "--dx": `${pfbF(dx / s)}px`, "--dy": `${pfbF(dy / s)}px`, animationDelay: `${d0 + (i % 4) * stg}ms` }} />
+      </g>
+    );
+  });
+  const dust = (n, x, y, spread, col, seed, d0 = 270, rx = 10, ry = 5) => pfbDots(n).map((i) => {
+    const side = i % 2 ? 1 : -1, r = pfbRnd(i, seed);
+    const ox = side * (4 + (Math.floor(i / 2) / Math.max(1, n / 2)) * spread * 0.5 + r * 6);
+    return (
+      <g key={`du${seed}-${i}`} transform={`translate(${pfbF(x + ox)} ${pfbF(y - r * 3)})`}>
+        <ellipse className="pfb-dust" rx={pfbF(rx * (0.7 + r * 0.6))} ry={pfbF(ry * (0.7 + r * 0.5))} fill={col}
+          style={{ "--dx": `${pfbF(side * (6 + r * spread * 0.18))}px`, "--o": pfbF(0.3 + r * 0.2), animationDelay: `${d0 + (i % 3) * 15}ms` }} />
+      </g>
+    );
+  });
+  const rings = (n, x, y, base, d0 = 244, gap = 70, cls = "") => pfbDots(n).map((i) => (
+    <g key={`rg${x}-${i}`} transform={`translate(${x} ${y})`}>
+      <ellipse className={`pfb-ring ${cls}`} rx="12" ry="2.8" fill="none" stroke={i ? "#F4C09A" : "#FFF0E0"} strokeWidth={0.75 - i * 0.12}
+        style={{ "--s": base + i * 2.5, animationDelay: `${d0 + i * gap}ms` }} />
+    </g>
+  ));
+  const glowCrack = { filter: "drop-shadow(0 0 2px #FF9A50)" };
+
+  /* ── 段ごとの情景 ── */
+  let scene = null;
+
+  if (kk === 3) { // 石砕：石がひび割れる
+    scene = <>
+      <g className="pfb-obj">
+        <g className="pfb-jolt">
+          <path d="M83 108 Q80 99 86 93 Q93 86 104 87 Q116 88.5 118.5 97 Q121 106 112 110 Q98 113.5 83 108 Z" fill={`url(#${id("Stone")})`} stroke="#1A1018" strokeWidth="0.9" />
+          <path d="M88 95 Q94 90 103 89.5" stroke="#F0E6DA" strokeWidth="1.3" fill="none" strokeLinecap="round" opacity="0.7" />
+        </g>
+        <g style={glowCrack}>
+          <path className="pfb-crack" pathLength="100" d="M100.5 88 L98 94 L102.5 99 L98.5 104.5 L100.5 111" stroke="#FFEAD0" strokeWidth="1.4" />
+          <path className="pfb-crack" pathLength="100" d="M98 94 L92 96.5 L88.5 101.5" stroke="#FFEAD0" strokeWidth="1" style={{ animationDelay: "290ms" }} />
+          <path className="pfb-crack" pathLength="100" d="M102.5 99 L109 100.5 L113.5 97.5" stroke="#FFEAD0" strokeWidth="1" style={{ animationDelay: "310ms" }} />
+        </g>
+      </g>
+      {chips(6, 100, 90, 20, 16, ["#B8A898", "#D8C8B8", PfBluntCu], 3)}
+      {dust(4, 100, 111, 30, "#9A887A", 3)}
+      {rings(1, 100, 111, 4)}
+    </>;
+  }
+
+  if (kk === 4) { // 岩砕：岩が二つに割れる
+    const split = "M101 77 L97 86 L104 94 L98 103 L102 114";
+    scene = <>
+      <g transform="translate(101 96)"><path className="pfb-ray" d="M0 -30 L7 -2 L0 28 L-7 -2 Z" fill={`url(#${id("Ray")})`} /></g>
+      <g className="pfb-obj">
+        <g className="pfb-halfL">
+          <path d="M101 77 L97 86 L104 94 L98 103 L102 114 L80 114 Q69 110 71 98 Q73 84 88 78.5 Z" fill={`url(#${id("Rock")})`} />
+          <path d="M102 114 L80 114 Q69 110 71 98 Q73 84 88 78.5 L101 77" fill="none" stroke="#1A1018" strokeWidth="0.9" strokeLinejoin="round" />
+          <path d="M75 97 Q78 87 88 81.5" stroke="#E8D8CC" strokeWidth="1.1" fill="none" strokeLinecap="round" opacity="0.6" />
+        </g>
+        <g className="pfb-halfR">
+          <path d="M101 77 L97 86 L104 94 L98 103 L102 114 L121 114 Q131 110 129.5 98 Q128 84 114 78.5 Z" fill={`url(#${id("Rock")})`} />
+          <path d="M102 114 L121 114 Q131 110 129.5 98 Q128 84 114 78.5 L101 77" fill="none" stroke="#1A1018" strokeWidth="0.9" strokeLinejoin="round" />
+          <path d="M108 82 Q120 83.5 125.5 92" stroke="#E8D8CC" strokeWidth="1" fill="none" strokeLinecap="round" opacity="0.4" />
+        </g>
+      </g>
+      <g style={glowCrack}><path className="pfb-crack" pathLength="100" d={split} stroke="#FFF0DC" strokeWidth="1.8" style={{ animationDelay: "236ms" }} /></g>
+      {chips(10, 100, 80, 30, 22, ["#A89488", "#C8B4A6", PfBluntCu, "#7A6460"], 4)}
+      {dust(4, 100, 114, 40, "#9A887A", 4)}
+      {rings(2, 100, 114, 4.5)}
+    </>;
+  }
+
+  if (kk === 5) { // 鉄砕：鉄板がへこみ、火花が散る
+    const sparks = pfbDots(18).map((i) => {
+      const a = -168 + i * (156 / 17) + (pfbRnd(i, 51) - 0.5) * 8;
+      const len = 4 + pfbRnd(i, 52) * 5, dist = 18 + pfbRnd(i, 53) * 26;
+      return (
+        <g key={`sp${i}`} transform={`translate(100 90) rotate(${pfbF(a)})`}>
+          <line className="pfb-spark" x1="0" y1="0" x2={pfbF(len)} y2="0" stroke={["#FFF6D0", "#FFD27A", "#FF9A4A"][i % 3]} strokeWidth={pfbF(0.8 + (i % 3) * 0.3)} strokeLinecap="round"
+            style={{ "--r": `${pfbF(dist)}px`, animationDelay: `${236 + (i % 5) * 14}ms` }} />
+        </g>
+      );
+    });
+    scene = <>
+      <g className="pfb-obj">
+        <g className="pfb-jolt">
+          <rect x="66" y="72" width="68" height="40" rx="2.5" fill={`url(#${id("Iron")})`} stroke="#10141E" strokeWidth="1" />
+          <rect x="69" y="75" width="62" height="34" rx="1.5" fill="none" stroke="#E0E8F4" strokeWidth="0.6" opacity="0.45" />
+          {[[71, 77], [129, 77], [71, 107], [129, 107], [85, 77], [115, 107]].map(([x, y], i) => (
+            <circle key={`rv${i}`} cx={x} cy={y} r="1.6" fill="#E8EEF6" stroke="#1A2030" strokeWidth="0.5" />
+          ))}
+        </g>
+        <g transform="translate(100 92)">
+          <g className="pfb-dent">
+            <ellipse rx="13" ry="9" fill={`url(#${id("Dent")})`} stroke="#1A2030" strokeWidth="0.7" />
+            <path d="M-10 4 Q0 11 11 3" stroke="#F4F8FC" strokeWidth="1.3" fill="none" strokeLinecap="round" />
+          </g>
+        </g>
+        <g style={glowCrack}>
+          <path className="pfb-crack" pathLength="100" d="M112 89 L118 86 L123 88 L129 84" stroke="#FFE2BC" strokeWidth="1.1" style={{ animationDelay: "280ms" }} />
+          <path className="pfb-crack" pathLength="100" d="M88 95 L82 99 L76 97 L70 101" stroke="#FFE2BC" strokeWidth="1.1" style={{ animationDelay: "300ms" }} />
+        </g>
+      </g>
+      <g transform="translate(100 92)"><ellipse className="pfb-heat" rx="24" ry="15" fill={`url(#${id("Heat")})`} /></g>
+      {sparks}
+      {rings(1, 100, 113, 5.5)}
+    </>;
+  }
+
+  if (kk === 6) { // 地砕：地面に放射状の亀裂
+    const cr = pfbGroundCracks(100, 106, [-172, -146, -120, -60, -32, -8, 20, 54, 128, 160], [96, 74, 42, 46, 76, 98, 82, 48, 46, 80], 0.3, 6, 12);
+    const branches = [0, 4, 6, 9].map((i) => {
+      const p = cr[i][2], q = cr[i][3];
+      const side = i % 2 ? 1 : -1;
+      return [p, [p[0] + (q[0] - p[0]) * 0.5, p[1] + side * 7], [p[0] + (q[0] - p[0]) * 0.9, p[1] + side * 9]];
+    });
+    const slabs = [[0, 3], [1, 3], [4, 3], [5, 2], [6, 3], [9, 3]].map(([ci, pi], n) => {
+      const [x, y] = cr[ci][pi];
+      const s = 0.8 + (y - 90) / 40;
+      return (
+        <g key={`sl${n}`} transform={`translate(${pfbF(x)} ${pfbF(y + 1)}) rotate(${n % 2 ? 10 : -12}) scale(${pfbF(s)})`}>
+          <g className="pfb-slab" style={{ animationDelay: `${262 + n * 12}ms` }}>
+            <path d="M-6 0 L-4 -10 L3 -12 L6 0 Z" fill="#4A3438" stroke="#1A1014" strokeWidth="0.6" />
+            <path d="M-4 -10 L3 -12" stroke="#F0B080" strokeWidth="1" strokeLinecap="round" />
+          </g>
+        </g>
+      );
+    });
+    scene = <>
+      <path className="pfb-obj" d="M-10 98 L210 98 L210 135 L-10 135 Z" fill={`url(#${id("Ground")})`} />
+      <g style={glowCrack}>
+        {cr.map((pts, i) => (
+          <path key={`gc${i}`} className="pfb-crack" pathLength="100" d={pfbLine(pts)} stroke="#FFE2BC" strokeWidth={i % 3 ? 1.3 : 1.7}
+            style={{ animationDelay: `${236 + (i % 3) * 18}ms` }} />
+        ))}
+        {branches.map((pts, i) => (
+          <path key={`gb${i}`} className="pfb-crack" pathLength="100" d={pfbLine(pts)} stroke="#FFD2A0" strokeWidth="0.9" style={{ animationDelay: `${300 + i * 12}ms` }} />
+        ))}
+      </g>
+      <g className="pfb-obj"><g transform="translate(100 106)"><g className="pfb-dent">
+        <ellipse rx="13" ry="3.8" fill="#0E0608" stroke="#FFB070" strokeWidth="1.1" />
+        <ellipse cy="0.6" rx="7" ry="1.6" fill="#FF9A50" opacity="0.55" />
+      </g></g></g>
+      {slabs}
+      {chips(12, 100, 104, 50, 30, ["#6A4E48", "#8A6A5A", PfBluntCu, "#B89478"], 6)}
+      {dust(4, 100, 108, 90, "#8A6E60", 6)}
+      {rings(2, 100, 107, 6.5, 290)}
+    </>;
+  }
+
+  if (kk === 7) { // 山砕：山の影が崩れ、土煙
+    const MTN = [
+      { p: [[100, 16], [80, 36], [62, 62], [78, 66], [96, 72], [104, 52], [95, 34]], dx: -12, dy: 36, r: -12, dl: 300, rim: "M62 62 L80 36 L100 16" },
+      { p: [[100, 16], [95, 34], [104, 52], [120, 46], [134, 48], [118, 36]], dx: 13, dy: 34, r: 10, dl: 300, rim: "M100 16 L118 36 L134 48" },
+      { p: [[62, 62], [50, 54], [36, 72], [25, 92], [48, 90], [72, 96], [103, 92], [96, 72], [78, 66]], dx: -16, dy: 22, r: -7, dl: 340, rim: "M25 92 L36 72 L50 54 L62 62" },
+      { p: [[134, 48], [150, 40], [168, 66], [177, 88], [150, 90], [126, 86], [103, 92], [96, 72], [104, 52], [120, 46]], dx: 16, dy: 22, r: 7, dl: 340, rim: "M134 48 L150 40 L168 66 L177 88" },
+      { p: [[25, 92], [14, 112], [99, 112], [103, 92], [72, 96], [48, 90]], dx: -10, dy: 12, r: -3, dl: 380 },
+      { p: [[177, 88], [186, 112], [99, 112], [103, 92], [126, 86], [150, 90]], dx: 10, dy: 12, r: 3, dl: 380 },
+    ];
+    scene = <>
+      <g className="pfb-show"><g opacity="0.94">
+        {MTN.map((m, i) => (
+          <g key={`mt${i}`} className="pfb-fall" style={{ "--dx": `${m.dx}px`, "--dy": `${m.dy}px`, "--r": `${m.r}deg`, animationDelay: `${m.dl}ms` }}>
+            <path d={pfbPoly(m.p)} fill={`url(#${id("Mtn")})`} stroke={`url(#${id("Mtn")})`} strokeWidth="0.7" strokeLinejoin="round" />
+            {m.rim && <path d={m.rim} stroke="#E8A878" strokeWidth="1.1" fill="none" strokeLinejoin="round" opacity="0.8" />}
+          </g>
+        ))}
+      </g></g>
+      <g style={glowCrack}>
+        <path className="pfb-crack" pathLength="100" d="M99 112 L103 92 L96 72 L104 52 L95 34 L100 16" stroke="#FFEAD0" strokeWidth="2" style={{ animationDelay: "236ms" }} />
+        {["M96 72 L78 66 L62 62", "M104 52 L120 46 L134 48", "M103 92 L72 96 L48 90 L25 92", "M103 92 L126 86 L150 90 L177 88"].map((d, i) => (
+          <path key={`mf${i}`} className="pfb-crack" pathLength="100" d={d} stroke="#FFD8AA" strokeWidth="1.2" style={{ animationDelay: `${262 + i * 10}ms` }} />
+        ))}
+      </g>
+      {dust(10, 100, 112, 150, "#A88068", 7, 280, 18, 8)}
+      {chips(10, 100, 74, 50, 18, ["#5A4256", "#7A5A6A", PfBluntCu, "#3A2A36"], 7, 300, 1.2)}
+      {rings(1, 100, 110, 8.5)}
+    </>;
+  }
+
+  if (kk === 8) { // 城砕：城壁が崩れ落ちる
+    const B = [];
+    const add = (x, y, bw, bh, row) => B.push({ x, y, bw, bh, row });
+    [0, 1, 2].forEach((row) => {
+      const y = 84 - row * 12;
+      if (row === 1) { add(20, y, 10, 12, row); for (let c = 0; c < 7; c++) add(30 + c * 20, y, 20, 12, row); add(170, y, 10, 12, row); }
+      else for (let c = 0; c < 8; c++) add(20 + c * 20, y, 20, 12, row);
+    });
+    [48, 36].forEach((y, n) => { add(20, y, 20, 12, 3 + n); add(160, y, 20, 12, 3 + n); });
+    for (let c = 1; c <= 6; c++) add(20 + c * 20 + 4.5, 52, 11, 8, 3);
+    [21, 32, 161, 172].forEach((x) => add(x, 28, 7, 8, 5));
+    const blocks = B.map((b, i) => {
+      const cx = b.x + b.bw / 2, side = cx < 100 ? -1 : 1, r1 = pfbRnd(i, 81), r2 = pfbRnd(i, 82);
+      const dx = side * (3 + r1 * 10) + (cx - 100) * 0.08;
+      const dy = 30 + r2 * 18 + b.row * 6;
+      const rot = side * (20 + r1 * 70);
+      const dl = 250 + Math.abs(cx - 100) * 1.2 + b.row * 10;
+      return (
+        <g key={`bk${i}`} className="pfb-fall" style={{ "--dx": `${pfbF(dx)}px`, "--dy": `${pfbF(dy)}px`, "--r": `${pfbF(rot)}deg`, animationDelay: `${Math.round(dl)}ms`, animationDuration: "420ms" }}>
+          <rect x={b.x} y={b.y} width={b.bw} height={b.bh} rx="0.6" fill={`url(#${id("Brick")})`} stroke="#160E1A" strokeWidth="0.8" />
+        </g>
+      );
+    });
+    scene = <>
+      <g transform="translate(100 80)"><ellipse className="pfb-glow" rx="64" ry="34" fill={`url(#${id("Glow")})`} /></g>
+      <g className="pfb-show">{blocks}</g>
+      <g style={glowCrack}>
+        <path className="pfb-crack" pathLength="100" d="M100 96 L97 88 L103 80 L98 72 L102 64 L99 56" stroke="#FFEAD0" strokeWidth="1.8" style={{ animationDelay: "236ms" }} />
+        <path className="pfb-crack" pathLength="100" d="M97 88 L88 85 L80 88 L72 84" stroke="#FFD8AA" strokeWidth="1.1" style={{ animationDelay: "262ms" }} />
+        <path className="pfb-crack" pathLength="100" d="M103 80 L112 76 L120 79 L128 75" stroke="#FFD8AA" strokeWidth="1.1" style={{ animationDelay: "270ms" }} />
+      </g>
+      {dust(8, 100, 100, 160, "#9A8090", 8, 300, 18, 8)}
+      {chips(8, 100, 90, 40, 22, ["#8A7486", "#5A4A62", PfBluntCu], 8, 260, 1.2)}
+      {rings(2, 100, 98, 7.5)}
+    </>;
+  }
+
+  if (kk === 9) { // 天砕：空がガラスのようにひび割れて砕ける
+    const N = 9, cx = IP[0], cy = IP[1];
+    const th = pfbDots(N).map((i) => 24 + i * 40 + (pfbRnd(i, 9) - 0.5) * 16);
+    const RAD = [0, 14, 32, 56, 90, 150];
+    const P = (i, j) => {
+      const ii = ((i % N) + N) % N;
+      const a = ((th[ii] + (j ? (pfbRnd(ii * 7 + j, 19) - 0.5) * 12 : 0)) * Math.PI) / 180;
+      return [cx + Math.cos(a) * RAD[j], cy + Math.sin(a) * RAD[j]];
+    };
+    const lerp = (a, b, f) => [a[0] + (b[0] - a[0]) * f, a[1] + (b[1] - a[1]) * f];
+    let web = "";
+    for (let j = 1; j <= 3; j++) {
+      for (let i = 0; i < N; i++) {
+        if (j === 3 && pfbRnd(i, 31) < 0.45) continue;
+        const a = lerp(P(i, j), P(i, j + 1), 0.15 + 0.25 * pfbRnd(i * 3 + j, 41));
+        const b = lerp(P(i + 1, j), P(i + 1, j + 1), 0.6 + 0.25 * pfbRnd(i * 5 + j, 43));
+        web += `${pfbLine([a, b])} `;
+      }
+    }
+    const shards = [];
+    [1, 2].forEach((j) => pfbDots(N).forEach((i) => {
+      const q = [P(i, j), P(i + 1, j), P(i + 1, j + 1), P(i, j + 1)];
+      const c = [(q[0][0] + q[1][0] + q[2][0] + q[3][0]) / 4, (q[0][1] + q[1][1] + q[2][1] + q[3][1]) / 4];
+      const rel = q.map((p) => [(p[0] - c[0]) * 0.84, (p[1] - c[1]) * 0.84]);
+      const r = pfbRnd(i * 2 + j, 61);
+      const n = shards.length;
+      shards.push(
+        <g key={`sd${n}`} transform={`translate(${pfbF(c[0])} ${pfbF(c[1])})`}>
+          <path className="pfb-shard" d={pfbPoly(rel)} fill="#D8E8FF" fillOpacity="0.28" stroke="#FFFFFF" strokeOpacity="0.9" strokeWidth="0.7" strokeLinejoin="round"
+            style={{ "--dx": `${pfbF((c[0] - cx) * 0.3 + (r - 0.5) * 16)}px`, "--dy": `${pfbF(108 - c[1] + r * 10)}px`, "--r": `${pfbF((n % 2 ? 1 : -1) * (60 + r * 120))}deg`, animationDelay: `${Math.round(330 + j * 14 + r * 40)}ms` }} />
+        </g>
+      );
+    }));
+    scene = <>
+      <path className="pfb-obj" d="M-10 -10 L70 -10 L-10 64 Z" fill="#DDEBFF" fillOpacity="0.07" />
+      <path className="pfb-obj" d="M120 -10 L160 -10 L60 140 L20 140 Z" fill="#DDEBFF" fillOpacity="0.05" />
+      <g transform={`translate(${cx} ${cy})`}><ellipse className="pfb-glow" rx="56" ry="46" fill={`url(#${id("Glow")})`} /></g>
+      <g style={{ filter: "drop-shadow(0 0 2px #F0B890)" }}>
+        {pfbDots(N).map((i) => (
+          <path key={`ry${i}`} className="pfb-crack" pathLength="100" d={pfbLine(pfbDots(6).map((j) => P(i, j)))} stroke="#FFFFFF" strokeWidth={i % 2 ? 1.1 : 1.5}
+            style={{ animationDelay: `${232 + (i % 3) * 12}ms` }} />
+        ))}
+        <path className="pfb-web" d={web} fill="none" stroke="#FFF4E6" strokeWidth="0.9" strokeLinecap="round" />
+      </g>
+      {shards}
+      {[[4, 1, 3.6], [9, 2, 3], [13, 1, 2.6], [16, 2, 3.2]].map(([i, j, R], n) => {
+        const p = P(i, j);
+        return (
+          <g key={`tw${n}`} transform={`translate(${pfbF(p[0])} ${pfbF(p[1])})`}>
+            <path className="pfb-twk" d={pfbStarD(0, 0, R, 0.22)} fill={n % 2 ? "#FFFFFF" : PfBluntGold} style={{ animationDelay: `${330 + n * 25}ms` }} />
+          </g>
+        );
+      })}
+      {[47, 100, 153].map((x, i) => rings(1, x, 108, 2.6, 520 + i * 20, 0, "pfb-sm"))}
+    </>;
+  }
+
+  if (kk === 10) { // 星砕：巨大な星が落ちて地を割る
+    const cr = pfbGroundCracks(100, 108, [-174, -150, -124, -56, -28, -6, 24, 150], [100, 80, 50, 50, 82, 100, 70, 72], 0.32, 10, 8);
+    const chasmTop = [], chasmBot = [];
+    for (let x = 8; x <= 192; x += 11.5) {
+      const h = 6.5 * Math.pow(Math.max(0, 1 - Math.abs(x - 100) / 96), 1.1);
+      chasmTop.push([x, 108 - h * (0.35 + pfbRnd(x, 71) * 0.35)]);
+      chasmBot.unshift([x, 108 + h * (0.7 + pfbRnd(x, 72) * 0.4)]);
+    }
+    const slabs = pfbDots(8).map((n) => {
+      const side = n % 2 ? 1 : -1;
+      const x = 100 + side * (10 + Math.floor(n / 2) * 18 + pfbRnd(n, 73) * 6);
+      const y = 107 + (n % 4 === 1 ? 4 : -1);
+      return (
+        <g key={`sl${n}`} transform={`translate(${pfbF(x)} ${pfbF(y)}) rotate(${side * (8 + n * 3)}) scale(${pfbF(1.5 - Math.floor(n / 2) * 0.15)})`}>
+          <g className="pfb-slab" style={{ animationDelay: `${300 + n * 6}ms` }}>
+            <path d="M-6 0 L-4 -10 L3 -12 L6 0 Z" fill="#4A3034" stroke="#1A0E12" strokeWidth="0.6" />
+            <path d="M-4 -10 L3 -12" stroke={PfBluntGold} strokeWidth="1" strokeLinecap="round" />
+          </g>
+        </g>
+      );
+    });
+    scene = <>
+      {pfbDots(14).map((i) => (
+        <circle key={`st${i}`} className="pfb-star" cx={(i * 47) % 200} cy={(i * 31) % 96} r={i % 5 ? 0.55 : 1} fill="#FFFFFF" style={{ animationDelay: `${(i * 23) % 160}ms` }} />
+      ))}
+      <path className="pfb-obj" d="M-10 100 L210 100 L210 135 L-10 135 Z" fill={`url(#${id("Ground")})`} />
+      <g transform="translate(100 108)"><ellipse className="pfb-pre" rx="34" ry="8" fill={`url(#${id("Glow")})`} /></g>
+      {/* 落ちる星（着弾で消える） */}
+      <g transform={`translate(${IP[0]} ${IP[1]})`}><g className="pfb-meteorOut"><g className="pfb-meteor">
+        <g transform="rotate(-54.8)">
+          <path d="M0 -17 L175 -2 L175 2 L0 17 Z" fill={`url(#${id("Trail")})`} />
+          <path d="M0 -7 L150 -0.8 L150 0.8 L0 7 Z" fill="#FFF6DC" fillOpacity="0.8" />
+        </g>
+        <circle r="27" fill={`url(#${id("Orb")})`} />
+        <path d={pfbStarD(0, 0, 34, 0.13)} fill="#FFFFFF" transform="rotate(20)" />
+        <path d={pfbStarD(0, 0, 17, 0.22)} fill={PfBluntGold} stroke="#FFFFFF" strokeWidth="0.6" transform="rotate(20)" />
+        <circle r="6.5" fill="#FFFFFF" />
+      </g></g></g>
+      {/* 光の円蓋（輪郭線なしの光の塊） */}
+      <g transform="translate(100 108)"><ellipse className="pfb-glow" rx="92" ry="13" fill={`url(#${id("Glow")})`} style={{ animationDelay: "300ms" }} /></g>
+      <g transform="translate(100 108)"><path className="pfb-dome" d="M-58 0 A58 32 0 0 1 58 0 Z" fill={`url(#${id("Dome")})`} /></g>
+      <g transform="translate(100 108)"><path className="pfb-dome" d="M-58 0 A58 32 0 0 1 58 0 Z" fill={`url(#${id("Dome")})`} style={{ animationDelay: "370ms" }} /></g>
+      <g style={{ filter: "drop-shadow(0 0 2.5px #FFB060)" }}>
+        {cr.map((pts, i) => (
+          <path key={`gc${i}`} className="pfb-crack" pathLength="100" d={pfbLine(pts)} stroke="#FFE6A8" strokeWidth={i % 2 ? 1.4 : 1.9}
+            style={{ animationDelay: `${300 + (i % 3) * 14}ms` }} />
+        ))}
+        <g transform="translate(100 108)">
+          <path className="pfb-chasm" d={pfbPoly([...chasmTop, ...chasmBot].map(([x, y]) => [x - 100, y - 108]))} fill="#140608" stroke="#FFC870" strokeWidth="1.1" strokeLinejoin="round" />
+        </g>
+      </g>
+      {slabs}
+      {chips(12, 100, 104, 78, 46, [PfBluntGold, PfBluntCu, "#FFF2D8", "#6A4A48"], 10, 300, 1.6, 12)}
+      {dust(6, 100, 110, 140, "#B08A6A", 10, 300, 18, 8)}
+      {pfbDots(5).map((i) => (
+        <g key={`em${i}`} transform={`translate(${100 + (i - 2) * 16} ${100 - (i % 2) * 6})`}>
+          <path className="pfb-ember" d={pfbStarD(0, 0, 2.6 + (i % 3) * 0.8, 0.24)} fill={i % 2 ? "#FFFFFF" : PfBluntGold}
+            style={{ "--dx": `${(i - 2) * 9}px`, animationDelay: `${330 + (i % 3) * 14}ms` }} />
+        </g>
+      ))}
+      {rings(3, 100, 108, 6, 300, 40)}
+    </>;
+  }
+
+  const fo = Math.min(0.9, 0.2 + (t - 1) * 0.1);
+  return (
+    <svg className={`pfb-svg pfb-k${kk}`} viewBox="0 0 200 130" preserveAspectRatio="xMidYMid slice" aria-hidden="true">
+      <defs>
+        <radialGradient id={id("Flash")} cx={IP[0] / 200} cy={IP[1] / 130} r="0.75">
+          <stop offset="0" stopColor="#FFFFFF" stopOpacity="1" />
+          <stop offset="0.3" stopColor={kk === 10 ? "#FFE6A0" : "#FFD8B0"} stopOpacity="0.6" />
+          <stop offset="0.8" stopColor={PfBluntCu} stopOpacity="0" />
+        </radialGradient>
+        {kk !== 10 && <linearGradient id={id("Head")} x1="0" y1="0" x2="1" y2="0">
+          <stop offset="0" stopColor="#F4C09A" /><stop offset="0.45" stopColor={PfBluntCu} /><stop offset="1" stopColor="#7A4A34" />
+        </linearGradient>}
+        {kk === 3 && <linearGradient id={id("Stone")} x1="0" y1="0" x2="0" y2="1"><stop offset="0" stopColor="#B8A898" /><stop offset="1" stopColor="#5E5048" /></linearGradient>}
+        {kk === 4 && <>
+          <linearGradient id={id("Rock")} gradientUnits="userSpaceOnUse" x1="0" y1="77" x2="0" y2="114"><stop offset="0" stopColor="#A89084" /><stop offset="1" stopColor="#4E3C3A" /></linearGradient>
+          <linearGradient id={id("Ray")} x1="0" y1="0" x2="0" y2="1">
+            <stop offset="0" stopColor="#FFF4E6" stopOpacity="0" /><stop offset="0.35" stopColor="#FFF4E6" /><stop offset="0.7" stopColor="#F4C09A" /><stop offset="1" stopColor={PfBluntCu} stopOpacity="0" />
+          </linearGradient>
+        </>}
+        {kk === 5 && <>
+          <linearGradient id={id("Iron")} x1="0" y1="0" x2="0" y2="1"><stop offset="0" stopColor="#BCC6D8" /><stop offset="0.5" stopColor="#7A8498" /><stop offset="1" stopColor="#3E4658" /></linearGradient>
+          <radialGradient id={id("Dent")} cx="0.45" cy="0.4"><stop offset="0" stopColor="#1E2230" /><stop offset="1" stopColor="#6A7488" /></radialGradient>
+          <radialGradient id={id("Heat")}><stop offset="0" stopColor="#FFE0A0" stopOpacity="0.9" /><stop offset="0.45" stopColor="#FF8A40" stopOpacity="0.45" /><stop offset="1" stopColor="#FF6A30" stopOpacity="0" /></radialGradient>
+        </>}
+        {(kk === 6 || kk === 10) && <linearGradient id={id("Ground")} x1="0" y1="0" x2="0" y2="1">
+          <stop offset="0" stopColor="#3A2830" stopOpacity="0" /><stop offset="0.18" stopColor="#3A2830" stopOpacity="0.85" /><stop offset="1" stopColor="#120A10" stopOpacity="0.95" />
+        </linearGradient>}
+        {kk === 7 && <linearGradient id={id("Mtn")} gradientUnits="userSpaceOnUse" x1="0" y1="16" x2="0" y2="112"><stop offset="0" stopColor="#6E4E62" /><stop offset="1" stopColor="#24161F" /></linearGradient>}
+        {kk === 8 && <linearGradient id={id("Brick")} x1="0" y1="0" x2="0" y2="1"><stop offset="0" stopColor="#A08CA6" /><stop offset="1" stopColor="#56465E" /></linearGradient>}
+        {(kk === 8 || kk === 9 || kk === 10) && <radialGradient id={id("Glow")}>
+          <stop offset="0" stopColor="#FFFFFF" stopOpacity="0.95" /><stop offset="0.35" stopColor={kk === 8 ? "#FFC890" : "#FFE6A0"} stopOpacity="0.6" /><stop offset="1" stopColor={PfBluntCu} stopOpacity="0" />
+        </radialGradient>}
+        {kk === 10 && <>
+          <radialGradient id={id("Void")}><stop offset="0" stopColor="#2A1838" /><stop offset="1" stopColor="#030106" /></radialGradient>
+          <linearGradient id={id("Trail")} x1="0" y1="0" x2="1" y2="0">
+            <stop offset="0" stopColor="#FFE6A0" stopOpacity="0.95" /><stop offset="0.35" stopColor="#F0A060" stopOpacity="0.55" /><stop offset="1" stopColor={PfBluntCu} stopOpacity="0" />
+          </linearGradient>
+          <radialGradient id={id("Orb")}>
+            <stop offset="0" stopColor="#FFFFFF" /><stop offset="0.3" stopColor="#FFE6A0" stopOpacity="0.85" /><stop offset="0.65" stopColor="#F0A060" stopOpacity="0.35" /><stop offset="1" stopColor={PfBluntCu} stopOpacity="0" />
+          </radialGradient>
+          <radialGradient id={id("Dome")} cx="0.5" cy="1" r="1">
+            <stop offset="0" stopColor="#FFFFFF" stopOpacity="0.9" /><stop offset="0.4" stopColor="#FFE6A0" stopOpacity="0.5" /><stop offset="1" stopColor="#F0A060" stopOpacity="0" />
+          </radialGradient>
+        </>}
+      </defs>
+      {/* 沈む（星砕だけ星のある深い闇） */}
+      <rect className={`pfb-void${kk === 10 ? " pfb-deep" : ""}`} x="0" y="0" width="200" height="130" fill={kk === 10 ? `url(#${id("Void")})` : "#05030B"} />
+      <g className={kk >= 8 ? `pfb-shake${kk === 10 ? " pfb-big" : ""}` : undefined}>
+        {scene}
+        {/* 振りの弧（段8は星が振りの代わり） */}
+        {kk !== 10 && <g>
+          <path className="pfb-swing" pathLength="100" d={swingD} stroke={PfBluntCu} strokeOpacity="0.45" strokeWidth={pfbF(w * 2.2)} style={{ "--d": "46px" }} />
+          <path className="pfb-swing" pathLength="100" d={swingD} stroke="#F4C09A" strokeWidth={pfbF(w)} style={{ "--d": "34px" }} />
+          <path className="pfb-swing" pathLength="100" d={swingD} stroke="#FFF8F0" strokeWidth={pfbF(w * 0.42)} style={{ "--d": "22px" }} />
+          {head}
+        </g>}
+        {/* 着弾の爆ぜ */}
+        <g transform={`translate(${IP[0]} ${IP[1]})${kk === 6 || kk === 7 || kk === 10 ? " scale(1 0.55)" : ""}`}>
+          <g className="pfb-burst" style={kk === 10 ? { animationDelay: "290ms" } : undefined}>
+            <path d={pfbBurstD(11, 9 + t * 2.2, (9 + t * 2.2) * 0.38, kk)} fill={kk >= 9 ? "#FFD890" : "#F0A868"} fillOpacity="0.85" />
+            <path d={pfbBurstD(11, (9 + t * 2.2) * 0.6, (9 + t * 2.2) * 0.24, kk + 5)} fill="#FFF8EC" />
+          </g>
+        </g>
+      </g>
+      {/* 閃き。⚠️ 着弾の直後に一度だけ */}
+      <rect className="pfb-flash" x="0" y="0" width="200" height="130" fill={`url(#${id("Flash")})`}
+        style={{ "--fo": fo, animationDelay: kk === 10 ? "290ms" : undefined }} />
+    </svg>
+  );
+}
+
+/* ───────── 印（静止画） ───────── */
+const PfBluntSvg = (kids) => <svg viewBox="0 0 32 32" aria-hidden="true">{kids}</svg>;
+/* 銅に光る亀裂（暗い縁・銅・白い芯の三重） */
+function PfBluntCrack({ d, w = 1.5, gold = false }) {
+  return (<>
+    <path d={d} fill="none" stroke={PfBluntO} strokeWidth={w + 1.1} strokeLinecap="round" strokeLinejoin="round" opacity="0.65" />
+    <path d={d} fill="none" stroke={gold ? PfBluntGold : PfBluntCu} strokeWidth={w} strokeLinecap="round" strokeLinejoin="round" />
+    <path d={d} fill="none" stroke="#FFF6EA" strokeWidth={w * 0.38} strokeLinecap="round" strokeLinejoin="round" />
+  </>);
+}
+function PfBluntChip({ x, y, s = 1, a = 0, f = PfBluntCu }) {
+  return <path d={`M${x} ${y - 2 * s}L${x + 2 * s} ${y - 0.4 * s}L${x + 0.8 * s} ${y + 1.9 * s}L${x - 1.8 * s} ${y + 1.1 * s}Z`} fill={f} stroke={PfBluntO} strokeWidth="0.45" strokeLinejoin="round" transform={`rotate(${a} ${x} ${y})`} />;
+}
+function PfBluntStar({ x, y, R, f = "#FFFFFF", sw = 0.45 }) {
+  return <path d={pfbStarD(x, y, R)} fill={f} stroke={PfBluntO} strokeWidth={sw} strokeLinejoin="round" />;
+}
+/* 土煙のもくもく */
+const PfBluntPuff = (x, y, s) =>
+  `M${x - 4 * s} ${y + 1.5 * s}C${x - 6 * s} ${y + 1.5 * s} ${x - 6 * s} ${y - 1.5 * s} ${x - 3.5 * s} ${y - 1.2 * s}C${x - 3 * s} ${y - 3.6 * s} ${x + 0.5 * s} ${y - 3.8 * s} ${x + 1.2 * s} ${y - 1.8 * s}C${x + 3 * s} ${y - 3 * s} ${x + 5.6 * s} ${y - 1.2 * s} ${x + 4.2 * s} ${y + 0.2 * s}C${x + 6 * s} ${y + 0.6 * s} ${x + 5.6 * s} ${y + 1.5 * s} ${x + 4 * s} ${y + 1.5 * s}Z`;
+
+// 段1 石砕：石がひび割れる
+function PfBluntG1() {
+  return PfBluntSvg(<>
+    <defs><linearGradient id="pfbG1a" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stopColor="#E8DCCC" /><stop offset="1" stopColor="#A08C7C" /></linearGradient></defs>
+    <path d="M4.5 25 Q2.5 18 7.5 14 Q12.5 10 19.5 10.5 Q27 12 28.5 18.5 Q30 26 23 28.5 Q13 30.5 4.5 25 Z" fill="url(#pfbG1a)" stroke={PfBluntO} strokeWidth="0.75" />
+    <path d="M8.5 16.5 Q12.5 13 18 12.8" stroke="#FFF8EE" strokeWidth="1.1" fill="none" strokeLinecap="round" opacity="0.85" />
+    <PfBluntCrack d="M17.5 11 L15.2 16.5 L18.6 20.2 L15.4 24.4 L17 29" w={1.5} />
+    <path d="M15.6 8.4 L13.6 4.6 M19.4 8.4 L21.6 4.8" stroke={PfBluntCu} strokeWidth="1.2" strokeLinecap="round" />
+    <PfBluntChip x={7} y={8} s={1} a={20} f="#D8C8B8" />
+    <PfBluntChip x={26} y={7.5} s={0.9} a={-30} f="#C8B4A4" />
+  </>);
+}
+// 段2 岩砕：岩が二つに割れ、割れ目から光
+function PfBluntG2() {
+  return PfBluntSvg(<>
+    <defs><linearGradient id="pfbG2a" gradientUnits="userSpaceOnUse" x1="0" y1="5" x2="0" y2="29"><stop offset="0" stopColor="#DCC8B8" /><stop offset="1" stopColor="#866A5E" /></linearGradient></defs>
+    <path d="M16 1.5 L18.6 15 L16 31 L13.4 15 Z" fill="#FFF6EA" stroke={PfBluntCu} strokeWidth="0.9" strokeLinejoin="round" />
+    <g transform="rotate(-10 14.5 29)">
+      <path d="M14.5 5.5 L12 11 L15 16 L12 22 L14 29 L5 29 Q1 26 2 19 Q3 9.5 14.5 5.5 Z" fill="url(#pfbG2a)" stroke={PfBluntO} strokeWidth="0.8" strokeLinejoin="round" />
+      <path d="M4.5 18 Q6 12 11 9" stroke="#FFF8EE" strokeWidth="1" fill="none" strokeLinecap="round" opacity="0.75" />
+    </g>
+    <g transform="rotate(10 17.5 29)">
+      <path d="M17.5 5.5 L15 11 L18 16 L15 22 L17 29 L27 29 Q31 26 30 19 Q29 9.5 17.5 5.5 Z" fill="url(#pfbG2a)" stroke={PfBluntO} strokeWidth="0.8" strokeLinejoin="round" />
+    </g>
+    <PfBluntChip x={6} y={4.5} s={1.1} a={15} f="#D8C4B4" />
+    <PfBluntChip x={26.5} y={4} s={1} a={-25} f={PfBluntCu} />
+  </>);
+}
+// 段3 鉄砕：鉄板がへこみ、火花が散る
+function PfBluntG3() {
+  return PfBluntSvg(<>
+    <defs>
+      <linearGradient id="pfbG3a" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stopColor="#F2F6FC" /><stop offset="0.55" stopColor="#B4BED0" /><stop offset="1" stopColor="#76829A" /></linearGradient>
+      <radialGradient id="pfbG3b" cx="0.45" cy="0.4"><stop offset="0" stopColor="#323A50" /><stop offset="1" stopColor="#8A96AC" /></radialGradient>
+    </defs>
+    <g transform="rotate(-7 16 21)">
+      <rect x="4" y="12.5" width="24" height="17.5" rx="2.5" fill="url(#pfbG3a)" stroke={PfBluntO} strokeWidth="0.8" />
+      {[[7, 15.5], [25, 15.5], [7, 27], [25, 27]].map(([x, y], i) => <circle key={i} cx={x} cy={y} r="1.15" fill="#FFFFFF" stroke={PfBluntO} strokeWidth="0.4" />)}
+      <ellipse cx="16" cy="21.5" rx="5.8" ry="4.4" fill="url(#pfbG3b)" stroke={PfBluntO} strokeWidth="0.6" />
+      <path d="M11.4 23.4 Q16 27.4 20.8 23" stroke="#FFFFFF" strokeWidth="1.1" fill="none" strokeLinecap="round" />
+    </g>
+    {[[-152, 6.5, "#FFB860", 1.6], [-126, 8, "#FFE080", 1.8], [-62, 8.5, "#FFF4C0", 1.8], [-34, 6.5, "#FFB860", 1.6]].map(([a, L, c, sw], i) => {
+      const r = (a * Math.PI) / 180, x0 = 16 + Math.cos(r) * 4.2, y0 = 18 + Math.sin(r) * 4.2;
+      return <g key={i}>
+        <path d={`M${pfbF(x0)} ${pfbF(y0)} L${pfbF(x0 + Math.cos(r) * L)} ${pfbF(y0 + Math.sin(r) * L)}`} stroke={PfBluntO} strokeWidth={sw + 1} strokeLinecap="round" opacity="0.55" />
+        <path d={`M${pfbF(x0)} ${pfbF(y0)} L${pfbF(x0 + Math.cos(r) * L)} ${pfbF(y0 + Math.sin(r) * L)}`} stroke={c} strokeWidth={sw} strokeLinecap="round" />
+      </g>;
+    })}
+    <PfBluntStar x={16} y={4} R={2.6} f="#FFF4C0" sw={0.4} />
+  </>);
+}
+// 段4 地砕：地面の塊に陥没、放射状の亀裂、跳ね上がる地の板
+function PfBluntG4() {
+  return PfBluntSvg(<>
+    <defs>
+      <linearGradient id="pfbG4a" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stopColor="#E8CCAE" /><stop offset="1" stopColor="#B48C6C" /></linearGradient>
+      <linearGradient id="pfbG4b" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stopColor="#8A6450" /><stop offset="1" stopColor="#4E3632" /></linearGradient>
+    </defs>
+    <path d="M1.2 19.6 L2.6 25.4 L7.6 28 L12.6 26.6 L17.6 28.6 L23.4 27 L28.6 27.8 L30.8 20.6 Z" fill="url(#pfbG4b)" stroke={PfBluntO} strokeWidth="0.75" strokeLinejoin="round" />
+    <path d="M1.2 19.6 L4.4 15.4 L10 14.2 L16.2 13 L22.6 13.8 L28.2 15.2 L30.8 20.6 L25.2 23.8 L18 25 L10.8 24.6 L4.8 22.8 Z" fill="url(#pfbG4a)" stroke={PfBluntO} strokeWidth="0.75" strokeLinejoin="round" />
+    <PfBluntCrack d="M11.4 19.2 L7.6 17.8 L3.2 18.8" w={1.6} />
+    <PfBluntCrack d="M20.6 18.6 L24.6 17.2 L29 18.8" w={1.6} />
+    <PfBluntCrack d="M13 20.8 L10.4 23 L6.8 22.6" w={1.3} />
+    <PfBluntCrack d="M19.2 21 L22.2 23.2 L25.6 22.6" w={1.3} />
+    <PfBluntCrack d="M14 17.4 L12.6 15.4 L9.4 14.8" w={1.1} />
+    <ellipse cx="16" cy="19.2" rx="5" ry="2.5" fill="#3A2420" stroke={PfBluntCu} strokeWidth="1.1" />
+    <ellipse cx="16" cy="19.6" rx="2.6" ry="1.1" fill="#FFE0B8" />
+    <path d="M4.6 15.8 L5.8 9.8 L10.4 9.4 L10.2 14.6 Z" fill="#8A6450" stroke={PfBluntO} strokeWidth="0.6" strokeLinejoin="round" />
+    <path d="M5.8 9.8 L10.4 9.4" stroke={PfBluntCu} strokeWidth="1.1" strokeLinecap="round" />
+    <path d="M22.4 14.2 L22.6 8.6 L27 9.8 L27.6 15.2 Z" fill="#8A6450" stroke={PfBluntO} strokeWidth="0.6" strokeLinejoin="round" />
+    <path d="M22.6 8.6 L27 9.8" stroke={PfBluntCu} strokeWidth="1.1" strokeLinecap="round" />
+    <PfBluntChip x={16} y={7} s={1.4} a={-20} f={PfBluntCu} />
+    <PfBluntChip x={12.5} y={3.6} s={0.9} a={30} f="#B89478" />
+    <PfBluntChip x={20.5} y={3.2} s={1} a={60} f="#D8B898" />
+  </>);
+}
+// 段5 山砕：山の影が崩れ、頂が落ち、土煙
+function PfBluntG5() {
+  return PfBluntSvg(<>
+    <defs><linearGradient id="pfbG5a" gradientUnits="userSpaceOnUse" x1="0" y1="6" x2="0" y2="29"><stop offset="0" stopColor="#D8B4A4" /><stop offset="1" stopColor="#7E5868" /></linearGradient></defs>
+    <path d="M1.5 29 L10 13.5 L13.5 17.5 L16.6 11.4 L19 13.6 L21.4 11.6 L30.5 29 Z" fill="url(#pfbG5a)" stroke={PfBluntO} strokeWidth="0.8" strokeLinejoin="round" />
+    <path d="M3.4 26.6 L10 14.6 L13.4 18.4 L16.4 12.6" stroke="#FFF2E4" strokeWidth="0.9" fill="none" strokeLinejoin="round" opacity="0.75" />
+    <g transform="translate(4.5 -3.5) rotate(24 19 10)">
+      <path d="M16.6 11.4 L19 4.5 L21.4 11.6 L19 13.6 Z" fill="#E4C4B4" stroke={PfBluntO} strokeWidth="0.7" strokeLinejoin="round" />
+    </g>
+    <PfBluntCrack d="M19 13.6 L17 17.6 L19.6 21.2 L16.6 25 L18 29" w={1.7} />
+    <path d={PfBluntPuff(6, 27.5, 1.05)} fill="#F2E4D6" stroke={PfBluntO} strokeWidth="0.6" />
+    <path d={PfBluntPuff(26.5, 27.8, 0.95)} fill="#E8D6C6" stroke={PfBluntO} strokeWidth="0.6" />
+    <PfBluntChip x={12} y={6.5} s={1} a={30} f={PfBluntCu} />
+    <PfBluntStar x={5} y={5} R={2.4} f="#FFF2E4" sw={0.4} />
+  </>);
+}
+// 段6 城砕：城壁が崩れ落ちる
+function PfBluntG6() {
+  return PfBluntSvg(<>
+    <defs><linearGradient id="pfbG6a" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stopColor="#E6DAEC" /><stop offset="1" stopColor="#8A7898" /></linearGradient></defs>
+    <path d="M4.5 30 L4.5 10 L4.5 6 L8.5 6 L8.5 9.5 L11.5 9.5 L11.5 6 L15.5 6 L15.5 9.5 L17.5 9.5 L19.5 12.5 L22 13.5 L21 17.5 L23.5 19.5 L23.5 30 Z"
+      fill="url(#pfbG6a)" stroke={PfBluntO} strokeWidth="0.85" strokeLinejoin="round" />
+    <path d="M6.5 15 L15 15 M6.5 21.5 L13 21.5" stroke="#6A5878" strokeWidth="0.7" strokeLinecap="round" opacity="0.6" />
+    <path d="M9.5 30 L9.5 25.5 Q13 21.5 16.5 25.5 L16.5 30 Z" fill="#2A1E3A" stroke={PfBluntO} strokeWidth="0.5" />
+    <PfBluntCrack d="M19.5 12.5 L17 16.6 L19.4 19.8 L16.8 23.6" w={1.7} />
+    {[[26.5, 8.5, 4.2, 3.2, 25], [28.6, 16, 3.6, 2.8, -20], [26.4, 23.4, 3.4, 2.6, 40]].map(([x, y, bw, bh, a], i) => (
+      <rect key={i} x={x - bw / 2} y={y - bh / 2} width={bw} height={bh} rx="0.4" fill="url(#pfbG6a)" stroke={PfBluntO} strokeWidth="0.6" transform={`rotate(${a} ${x} ${y})`} />
+    ))}
+    <path d={PfBluntPuff(27, 29, 0.85)} fill="#F0E4F0" stroke={PfBluntO} strokeWidth="0.55" />
+    <PfBluntChip x={23.5} y={4.5} s={0.9} a={10} f={PfBluntCu} />
+    <PfBluntStar x={2.8} y={3.2} R={2.3} f="#FFF2E4" sw={0.4} />
+    <PfBluntStar x={30} y={4} R={1.7} f="#FFFFFF" sw={0.35} />
+  </>);
+}
+// 段7 天砕：空がガラスのように割れる（金の縁）
+function PfBluntG7() {
+  return PfBluntSvg(<>
+    <defs><radialGradient id="pfbG7a" cx="0.38" cy="0.35"><stop offset="0" stopColor="#D8ECFF" /><stop offset="0.6" stopColor="#7A98DC" /><stop offset="1" stopColor="#4A5AA8" /></radialGradient></defs>
+    <circle cx="15" cy="16" r="12.6" fill="none" stroke={PfBluntO} strokeWidth="0.6" />
+    <circle cx="15" cy="16" r="11.6" fill="url(#pfbG7a)" stroke={PfBluntGold} strokeWidth="1.5" />
+    <path d="M21.2 19.8 L26 21.8 L24.6 25.6 L19.8 24 Z" fill="#1E1638" stroke={PfBluntGold} strokeWidth="0.7" strokeLinejoin="round" />
+    <PfBluntCrack d="M13 13 L17.6 14.2 L22 13.4 L26.4 15" w={1.3} gold />
+    <PfBluntCrack d="M13 13 L14.2 18 L12.8 22.6 L14.2 27.4" w={1.3} gold />
+    <PfBluntCrack d="M13 13 L9.6 15.6 L5.6 16.4 L3.6 19.4" w={1.1} gold />
+    <PfBluntCrack d="M13 13 L10.6 9.4 L8.8 5.6" w={1.1} gold />
+    <PfBluntCrack d="M13 13 L16.4 9.6 L19.8 5.2" w={1.1} gold />
+    <PfBluntCrack d="M17.6 14.2 L15.6 17.6 M10.6 9.4 L14.4 10.4" w={0.8} gold />
+    {[[27.6, 26.6, 1.3, 30], [29, 21.2, 1, -40], [23.8, 29.2, 1.05, 70]].map(([x, y, s, a], i) => (
+      <path key={i} d={`M${x} ${y - 2.2 * s}L${x + 2 * s} ${y + 1.4 * s}L${x - 1.8 * s} ${y + 1.2 * s}Z`} fill="#E6F0FF" stroke={PfBluntGold} strokeWidth="0.6" strokeLinejoin="round" transform={`rotate(${a} ${x} ${y})`} />
+    ))}
+    <PfBluntStar x={27.5} y={5} R={3.4} f={PfBluntGold} sw={0.45} />
+    <PfBluntStar x={3.4} y={4.4} R={2} f="#FFFFFF" sw={0.4} />
+    <PfBluntStar x={3.2} y={27.5} R={1.7} f="#FFF4C8" sw={0.35} />
+  </>);
+}
+// 段8 星砕：巨大な星が落ちて地を割る（金・最上位）
+function PfBluntG8() {
+  return PfBluntSvg(<>
+    <defs>
+      <linearGradient id="pfbG8a" x1="1" y1="0" x2="0" y2="1"><stop offset="0" stopColor={PfBluntCu} stopOpacity="0.2" /><stop offset="0.5" stopColor="#FFC870" /><stop offset="1" stopColor="#FFF6DC" /></linearGradient>
+      <linearGradient id="pfbG8b" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stopColor="#D49A78" /><stop offset="1" stopColor="#6A4038" /></linearGradient>
+      <radialGradient id="pfbG8c"><stop offset="0" stopColor="#FFFFFF" /><stop offset="0.45" stopColor={PfBluntGold} stopOpacity="0.85" /><stop offset="1" stopColor={PfBluntGold} stopOpacity="0" /></radialGradient>
+    </defs>
+    <path d="M12.5 12.2 L31 -0.6 L31.6 0.8 L17.8 17.4 Z" fill="url(#pfbG8a)" stroke={PfBluntO} strokeWidth="0.45" strokeLinejoin="round" />
+    <path d="M0.8 23.6 L12.6 22.4 L11.4 26.2 L13.4 31.4 L0.8 31.4 Z" fill="url(#pfbG8b)" stroke={PfBluntO} strokeWidth="0.75" strokeLinejoin="round" />
+    <path d="M19 22.4 L31.2 23.6 L31.2 31.4 L18 31.4 L20.2 26.6 Z" fill="url(#pfbG8b)" stroke={PfBluntO} strokeWidth="0.75" strokeLinejoin="round" />
+    <path d="M12.6 22.4 L19 22.4 L20.2 26.6 L18 31.4 L13.4 31.4 L11.4 26.2 Z" fill="#FFF2C8" stroke={PfBluntGold} strokeWidth="0.9" strokeLinejoin="round" />
+    <ellipse cx="15.6" cy="21" rx="11" ry="4.6" fill="url(#pfbG8c)" />
+    <path d={pfbStarD(15.6, 14, 9.8, 0.3)} fill={PfBluntGold} stroke={PfBluntO} strokeWidth="0.7" strokeLinejoin="round" transform="rotate(22 15.6 14)" />
+    <path d={pfbStarD(15.6, 14, 5.4, 0.3)} fill="#FFFFFF" transform="rotate(22 15.6 14)" />
+    <PfBluntChip x={4} y={17.5} s={1.25} a={-15} f={PfBluntGold} />
+    <PfBluntChip x={28} y={18.5} s={1.15} a={35} f={PfBluntCu} />
+    <PfBluntChip x={6.5} y={12} s={0.85} a={60} f="#FFF2D8" />
+    <PfBluntStar x={4} y={4.5} R={2.8} f="#FFFFFF" sw={0.4} />
+    <PfBluntStar x={26.5} y={10.5} R={2} f={PfBluntGold} sw={0.4} />
+    <PfBluntStar x={9.5} y={2.6} R={1.5} f="#FFF4C8" sw={0.35} />
+  </>);
+}
+
+const PFG_BLUNT = [PfBluntG1, PfBluntG2, PfBluntG3, PfBluntG4, PfBluntG5, PfBluntG6, PfBluntG7, PfBluntG8];
+/* ---- shoot ---- */
+/*
+  射撃（弓）の必殺「矢」8段（PfFlash）と、ゲージの印8つ（PF_GLYPHS）。接頭辞 pfs / PfShoot。
+  ★ 矢の雨：何本もの矢がばらばらに当たる。段が上がるほど本数・空の広さ・光が増え、段7〜8で金が入る。
+  ⚠️ 位置決め（transform 属性）は外側の <g>、CSS アニメーションは内側。回転・移動を局所原点で行う類は transform-box:view-box。
+  ⚠️ 普通の必殺：0.9秒以内に全部消える（最後は不透明度0）。閃光は一回きり。
+*/
+const pfsO = "#2A3458";
+const pfsGold = "#FFD86A";
+const pfsGreen = "#9AD8A8";
+const pfsN = (m) => Array.from({ length: m }, (_, i) => i);
+const pfsR = (i, s = 1) => { const v = Math.sin(i * 12.9898 + s * 78.233) * 43758.5453; return v - Math.floor(v); };
+const pfsF = (v) => Math.round(v * 100) / 100;
+const pfsRad = (a) => (a * Math.PI) / 180;
+const pfsPoly = (P, ox = 0, oy = 0) => "M" + P.map(([x, y]) => `${pfsF(x + ox)} ${pfsF(y + oy)}`).join(" L") + " Z";
+
+/* 演出用の細身の矢。切っ先 (ox, oy)、+x 向き */
+function pfsArrowD(L, s = 1, ox = 0, oy = 0) {
+  return pfsPoly([[0, 0], [-4.4 * s, -2 * s], [-3.4 * s, -0.45 * s], [-L + 5 * s, -0.45 * s], [-L + 2.2 * s, -2.3 * s], [-L - 0.8 * s, -2.3 * s], [-L + 0.8 * s, -0.45 * s], [-L, 0],
+    [-L + 0.8 * s, 0.45 * s], [-L - 0.8 * s, 2.3 * s], [-L + 2.2 * s, 2.3 * s], [-L + 5 * s, 0.45 * s], [-3.4 * s, 0.45 * s], [-4.4 * s, 2 * s]], ox, oy);
+}
+/* 鏃だけ（金の鏃を重ねる用） */
+const pfsHeadD = (s = 1, ox = 0, oy = 0) => pfsPoly([[0.3 * s, 0], [-4.7 * s, -2.3 * s], [-3.5 * s, 0], [-4.7 * s, 2.3 * s]], ox, oy);
+/* 四方に光る星 */
+function pfsStarD(cx, cy, r, q = 0.24) {
+  const k = r * q;
+  return `M${pfsF(cx)} ${pfsF(cy - r)} L${pfsF(cx + k)} ${pfsF(cy - k)} L${pfsF(cx + r)} ${pfsF(cy)} L${pfsF(cx + k)} ${pfsF(cy + k)} L${pfsF(cx)} ${pfsF(cy + r)} L${pfsF(cx - k)} ${pfsF(cy + k)} L${pfsF(cx - r)} ${pfsF(cy)} L${pfsF(cx - k)} ${pfsF(cy - k)} Z`;
+}
+/* 中心の周りの小さな粒（火の粉・飛沫）。一つの path にまとめる */
+function pfsDotsD(cx, cy, n, R, r, rot = 0) {
+  return pfsN(n).map((i) => {
+    const a = pfsRad(rot + (i * 360) / n + (pfsR(i, n + rot) - 0.5) * 30), rr = R * (0.35 + 0.65 * pfsR(i * 3 + 1, rot + 2));
+    const x = cx + Math.cos(a) * rr, y = cy + Math.sin(a) * rr;
+    return `M${pfsF(x + r)} ${pfsF(y)} A${r} ${r} 0 1 0 ${pfsF(x - r)} ${pfsF(y)} A${r} ${r} 0 1 0 ${pfsF(x + r)} ${pfsF(y)} Z`;
+  }).join(" ");
+}
+/* 画面座標 (sx, sy) を、原点 (ox, oy)・角度 a の局所座標へ */
+function pfsLoc(sx, sy, ox, oy, a) {
+  const c = Math.cos(pfsRad(a)), s = Math.sin(pfsRad(a)), dx = sx - ox, dy = sy - oy;
+  return [dx * c + dy * s, -dx * s + dy * c];
+}
+/* 一列ぶんの矢を一つの path に（画面上の着弾点の並び → 局所座標） */
+function pfsRowD(tg, O, a, L, s, head) {
+  return tg.map(([x, y]) => { const [lx, ly] = pfsLoc(x, y, O[0], O[1], a); return head ? pfsHeadD(s, lx, ly) : pfsArrowD(L, s, lx, ly); }).join(" ");
+}
+
+/* ── 段1の弧：放物線を弧長で等分して、位置と向きの keyframes を作る ── */
+const pfsArc = (() => {
+  const x0 = -8, y0 = 102, x1 = 104, y1 = 86, H = 66;
+  const P = (t) => [x0 + (x1 - x0) * t, y0 + (y1 - y0) * t - 4 * H * t * (1 - t)];
+  const N = 240, pts = [P(0)], cum = [0];
+  for (let i = 1; i <= N; i++) { const p = P(i / N), q = pts[i - 1]; pts.push(p); cum.push(cum[i - 1] + Math.hypot(p[0] - q[0], p[1] - q[1])); }
+  const at = (f) => { if (f <= 0) return 0; const L = f * cum[N]; let i = 1; while (i < N && cum[i] < L) i++; return i; };
+  const K = 14;
+  let kf = "";
+  for (let j = 0; j <= K; j++) {
+    const i = at(j / K), p = pts[i], q = pts[Math.max(0, i - 1)], r = pts[Math.min(N, Math.max(1, i + (i === N ? 0 : 1)))];
+    const qq = i === N ? pts[N - 1] : q;
+    const ang = (Math.atan2(r[1] - qq[1], r[0] - qq[0]) * 180) / Math.PI;
+    kf += `${pfsF((j / K) * 46)}%{transform:translate(${pfsF(p[0] - x1)}px,${pfsF(p[1] - y1)}px) rotate(${pfsF(ang)}deg)${j === 0 ? ";opacity:0" : j === 1 ? ";opacity:1" : ""}}`;
+  }
+  const endA = (Math.atan2(pts[N][1] - pts[N - 1][1], pts[N][0] - pts[N - 1][0]) * 180) / Math.PI;
+  kf += `50%{transform:translate(${pfsF(Math.cos(pfsRad(endA)) * 1.6)}px,${pfsF(Math.sin(pfsRad(endA)) * 1.6)}px) rotate(${pfsF(endA)}deg)}`;
+  kf += `76%{transform:translate(${pfsF(Math.cos(pfsRad(endA)) * 1.6)}px,${pfsF(Math.sin(pfsRad(endA)) * 1.6)}px) rotate(${pfsF(endA)}deg);opacity:1}`;
+  kf += `100%{transform:translate(${pfsF(Math.cos(pfsRad(endA)) * 1.6)}px,${pfsF(Math.sin(pfsRad(endA)) * 1.6)}px) rotate(${pfsF(endA)}deg);opacity:0}`;
+  const d = "M" + pfsN(31).map((i) => { const p = P(i / 30); return `${pfsF(p[0])} ${pfsF(p[1])}`; }).join(" L");
+  return { x1, y1, kf, d };
+})();
+
+/* 飛ぶ矢：外側で着弾点と向き、内側で -d から 0 へ飛ぶ。着弾は t + 0.42·dur */
+function PfShootArrow({ x, y, a, L = 18, s = 1, d = 120, t = 0, dur = 520, fill = "#F2FFF4", tail = null, glow }) {
+  return (
+    <g transform={`translate(${pfsF(x)} ${pfsF(y)}) rotate(${pfsF(a)})`}>
+      <g className="pfs-fly" style={{ "--d": `${-d}px`, animationDelay: `${t}ms`, animationDuration: `${dur}ms`, ...(glow ? { filter: `drop-shadow(0 0 2px ${glow})` } : {}) }}>
+        {tail}
+        <path d={pfsArrowD(L, s)} fill={fill} />
+      </g>
+    </g>
+  );
+}
+/* 着弾のきらめき（四方の星）と小さな輪。絶対座標で置き、fill-box で弾ける */
+function PfShootHit({ x, y, t, r = 1, c = "#BFF5E0", star = "#FFFFFF", ring = true }) {
+  return <>
+    {ring && <circle className="pfs-ring" cx={pfsF(x)} cy={pfsF(y)} r={pfsF(4.5 * r)} fill="none" stroke={c} strokeWidth={pfsF(0.7 * r)} style={{ animationDelay: `${t}ms` }} />}
+    <path className="pfs-hit" d={pfsStarD(x, y, 6 * r, 0.22)} fill={star} style={{ animationDelay: `${t}ms` }} />
+  </>;
+}
+const pfsTail = (L, T, w, id) => <path d={`M${pfsF(-L - T)} 0 L${pfsF(-L + 1)} ${-w} L${pfsF(-L + 1)} ${w} Z`} fill={`url(#${id})`} />;
+
+/* ───────── 段1 一矢：一本の矢が弧を描いて刺さる ───────── */
+function PfShootS1() {
+  const { x1, y1, d } = pfsArc;
+  return <>
+    <path className="pfs-trace" d={d} pathLength="100" fill="none" stroke={pfsGreen} strokeWidth="2.6" strokeOpacity="0.28" strokeLinecap="round" />
+    <path className="pfs-trace" d={d} pathLength="100" fill="none" stroke="#E4FBEA" strokeWidth="0.7" strokeLinecap="round" />
+    <g transform={`translate(${x1} ${y1})`}>
+      <g className="pfs-arc" style={{ filter: "drop-shadow(0 0 2px #9AD8A8)" }}><path d={pfsArrowD(21, 1.15)} fill="#F4FFF6" /></g>
+    </g>
+    <PfShootHit x={x1 + 1} y={y1 + 1} t={380} r={1.3} />
+    <path className="pfs-ember" d={pfsDotsD(x1, y1, 6, 4, 0.7, 20)} fill="#CFF5DA" style={{ animationDelay: "385ms" }} />
+  </>;
+}
+
+/* ───────── 段2 疾風矢：風の筋に乗った矢が数本、若葉が舞う ───────── */
+const pfsS2 = [[44, 86, 15, 90], [82, 95, 22, 140], [118, 82, 11, 190], [156, 93, 19, 240]];
+function PfShootS2({ k }) {
+  return <>
+    {pfsN(9).map((i) => {
+      const yb = 10 + i * 12.5;
+      return <path key={`g${i}`} className="pfs-gust" pathLength="100" d={`M-20 ${yb} C40 ${yb - 10} 120 ${yb + 12} 222 ${yb - 4}`} fill="none"
+        stroke={i % 3 === 0 ? "#FFFFFF" : i % 3 === 1 ? "#BFF5E0" : pfsGreen} strokeWidth={0.6 + (i % 3) * 0.45} strokeLinecap="round" style={{ animationDelay: `${(i * 53) % 240}ms` }} />;
+    })}
+    {pfsN(6).map((i) => (
+      <g key={`lf${i}`} transform={`translate(${6 + i * 14} ${22 + ((i * 37) % 64)})`}>
+        <path className="pfs-leaf" d="M0 0 C2 -2.4 6 -2.4 8.5 0 C6 2.4 2 2.4 0 0 Z M0.5 0 L7.5 0" fill={i % 2 ? pfsGreen : "#C8F0B0"} stroke="#5E9A70" strokeWidth="0.3"
+          style={{ "--lx": `${120 + i * 8}px`, "--ly": `${(i % 2 ? -1 : 1) * (8 + i * 2)}px`, "--lr": `${360 + i * 70}deg`, animationDelay: `${30 + i * 35}ms` }} />
+      </g>
+    ))}
+    {pfsS2.map(([x, y, a, t], i) => (
+      <PfShootArrow key={`a${i}`} x={x} y={y} a={a} L={19} s={1.05} d={170} t={t} dur={480} tail={pfsTail(19, 34, 1.3, `pfsTr${k}`)} />
+    ))}
+    {pfsS2.map(([x, y, , t], i) => <PfShootHit key={`h${i}`} x={x + 1} y={y} t={t + 200} r={1.05} />)}
+  </>;
+}
+
+/* ───────── 段3 雷鳴矢：雷雲の下、稲妻の尾を引く矢。最後に一本の落雷 ───────── */
+const pfsS3 = [[52, 86, 50, 110], [102, 95, 46, 180], [150, 84, 52, 250]];
+const pfsZig = [-3, 2.6, -2, 3.4, -2.6, 2, -3, 1.4];
+function PfShootS3() {
+  const zig = (L) => `M${-L + 1} 0 ` + pfsZig.map((y, j) => `L${pfsF(-L - (j + 1) * 6.5)} ${y}`).join(" ");
+  const zap = (x, y, i) => [-150, -38, 64].map((a0) => {
+    const a = pfsRad(a0 + i * 12), c = Math.cos(a), s = Math.sin(a), n = -s, m = c;
+    return `M${pfsF(x)} ${pfsF(y)} L${pfsF(x + c * 4 + n * 1.6)} ${pfsF(y + s * 4 + m * 1.6)} L${pfsF(x + c * 7 - n * 1.4)} ${pfsF(y + s * 7 - m * 1.4)} L${pfsF(x + c * 11)} ${pfsF(y + s * 11)}`;
+  }).join(" ");
+  return <>
+    <g className="pfs-cloud" style={{ "--co": 0.97 }}>
+      <path d="M-10 -4 L210 -4 L210 14 C200 22 188 18 180 24 C170 31 156 22 146 28 C134 34 122 24 110 29 C98 35 86 25 74 30 C62 36 50 25 38 29 C26 33 14 24 4 27 L-10 26 Z" fill="#1A1E34" />
+      {[[22, 20, 20, 7], [64, 24, 24, 8], [112, 22, 26, 8], [160, 21, 22, 7]].map(([x, y, rx, ry], i) => <ellipse key={i} cx={x} cy={y} rx={rx} ry={ry} fill="#21263F" />)}
+      <path d="M-10 9 C20 3 40 14 70 9 C100 4 120 15 150 9 C175 4 195 12 210 8" fill="none" stroke="#4A5684" strokeWidth="1.2" opacity="0.6" />
+    </g>
+    <g style={{ filter: "drop-shadow(0 0 2px #D8FF9A)" }}>
+      {pfsS3.map(([x, y, a, t], i) => (
+        <PfShootArrow key={`a${i}`} x={x} y={y} a={a} L={19} s={1.1} d={150} t={t} dur={460} fill="#FFFFF2"
+          tail={<><path d={zig(19)} fill="none" stroke="#D8FF9A" strokeWidth="3.2" strokeOpacity="0.35" strokeLinejoin="round" />
+            <path d={zig(19)} fill="none" stroke="#FFFBD0" strokeWidth="1.1" strokeLinejoin="round" /></>} />
+      ))}
+    </g>
+    {pfsS3.map(([x, y, , t], i) => <path key={`z${i}`} className="pfs-zap" pathLength="100" d={zap(x, y, i)} fill="none" stroke="#F4FFB8" strokeWidth="0.9" strokeLinejoin="round" style={{ animationDelay: `${t + 192}ms` }} />)}
+    {pfsS3.map(([x, y, , t], i) => <PfShootHit key={`h${i}`} x={x} y={y} t={t + 192} r={1.1} c="#E8FFB0" />)}
+    <path className="pfs-bolt" pathLength="100" d="M94 4 L86 28 L99 31 L88 56 L101 59 L102 94" fill="none" stroke="#D8FF9A" strokeWidth="5" strokeOpacity="0.35" strokeLinejoin="round" />
+    <path className="pfs-bolt" pathLength="100" d="M94 4 L86 28 L99 31 L88 56 L101 59 L102 94" fill="none" stroke="#FFFFFF" strokeWidth="1.8" strokeLinejoin="round" />
+  </>;
+}
+
+/* ───────── 段4 驟雨矢：斜めの雨と、雨のように降る矢。足もとに波紋 ───────── */
+const pfsS4 = pfsN(15).map((i) => {
+  const r1 = pfsR(i, 2), r2 = pfsR(i, 5), r3 = pfsR(i, 9);
+  return { x: 14 + i * 12 + (r1 - 0.5) * 6, y: 80 + r2 * 28, a: 75 + (r1 - 0.5) * 8, t: 50 + Math.round(r3 * 260) };
+});
+function PfShootS4() {
+  const rainD = (sd) => pfsN(9).map((j) => { const x = -20 + pfsR(j, sd) * 230, y = -34 + pfsR(j, sd + 3) * 120; return `M${pfsF(x)} ${pfsF(y)} l2.6 10.4`; }).join(" ");
+  return <>
+    {pfsN(2).map((i) => <ellipse key={`m${i}`} className="pfs-cloud" cx={50 + i * 100} cy={6 + i * 4} rx="80" ry="16" fill="#4A5878" style={{ "--co": 0.5 }} />)}
+    {pfsN(3).map((i) => <path key={`r${i}`} className="pfs-rain" d={rainD(11 + i * 4)} stroke="#CFE8DA" strokeWidth="0.5" strokeLinecap="round"
+      style={{ "--rx": "14px", "--ry": "56px", animationDelay: `${i * 140}ms` }} />)}
+    {pfsS4.map(({ x, y, a, t }, i) => <PfShootArrow key={`a${i}`} x={x} y={y} a={a} L={15} s={0.85} d={115} t={t} dur={420} fill={i % 3 ? "#EAFFF0" : "#FFFFFF"} />)}
+    {pfsS4.map(({ x, y, t }, i) => <ellipse key={`p${i}`} className="pfs-ring" cx={pfsF(x)} cy={pfsF(y + 1)} rx="3.6" ry="1.1" fill="none" stroke="#BFF5E0" strokeWidth="0.7"
+      style={{ "--rs": 2.6, animationDelay: `${t + 176}ms`, animationDuration: "320ms" }} />)}
+  </>;
+}
+
+/* ───────── 段5 嵐矢：渦を巻く嵐。矢が渦に乗って巡り、最後に渦の底から降る ───────── */
+const pfsS5C = [100, 54];
+const pfsS5D = [[48, 90], [84, 97], [118, 93], [154, 88]].map(([x, y], i) => {
+  const sx = 72 + i * 19, sy = 40, a = (Math.atan2(y - sy, x - sx) * 180) / Math.PI;
+  return { x, y, a, d: Math.hypot(x - sx, y - sy) + 6, t: 280 + i * 22 };
+});
+function PfShootS5({ k }) {
+  const arm = (off, len) => "M" + pfsN(26).map((j) => {
+    const th = 0.25 + (j / 25) * len, r = 5 + 11 * th, a = -th + pfsRad(off);
+    return `${pfsF(Math.cos(a) * r * 1.08)} ${pfsF(Math.sin(a) * r * 0.62)}`;
+  }).join(" L");
+  return <>
+    <ellipse className="pfs-glow" cx={pfsS5C[0]} cy={pfsS5C[1]} rx="86" ry="46" fill={`url(#pfsSt${k})`} style={{ "--go": 0.95 }} />
+    <g transform={`translate(${pfsS5C[0]} ${pfsS5C[1]})`}>
+      <g className="pfs-vortex" style={{ "--vr": "330deg" }}>
+        {pfsN(6).map((i) => <path key={i} d={arm(i * 60, 3 + (i % 3) * 0.4)} fill="none" stroke={i % 2 ? "#7FB892" : "#CFF5DA"} strokeWidth={i % 2 ? 0.8 : 1.5} strokeLinecap="round" />)}
+      </g>
+    </g>
+    {pfsN(8).map((i) => {
+      const th = i * 45 + pfsR(i) * 14, r0 = 82 + pfsR(i, 3) * 10, r1 = 20 + pfsR(i, 4) * 10, t = (i * 23) % 120;
+      const sty = { animationDelay: `${t}ms`, animationDuration: "560ms" };
+      return (
+        <g key={`o${i}`} transform={`translate(${pfsS5C[0]} ${pfsS5C[1]}) rotate(${pfsF(th)})`}>
+          <g className="pfs-orbit" style={{ ...sty, "--or": `${pfsF(200 + pfsR(i, 6) * 60)}deg` }}>
+            <g className="pfs-spiral" style={{ ...sty, "--r0": `${pfsF(r0)}px`, "--r1": `${pfsF(r1)}px` }}>
+              <path transform="rotate(112)" d={pfsArrowD(16, 0.95)} fill="#EFFFF2" />
+            </g>
+          </g>
+        </g>
+      );
+    })}
+    {pfsS5D.map(({ x, y, a, d, t }, i) => <PfShootArrow key={`d${i}`} x={x} y={y} a={a} L={19} s={1.1} d={d} t={t} dur={340} fill="#FFFFFF" tail={pfsTail(19, 26, 1.3, `pfsTr${k}`)} />)}
+    {pfsS5D.map(({ x, y, t }, i) => <PfShootHit key={`h${i}`} x={x} y={y} t={t + 143} r={1.2} />)}
+    <ellipse className="pfs-ring" cx="100" cy="98" rx="24" ry="6" fill="none" stroke="#CFF5DA" strokeWidth="1.4" style={{ "--rs": 3.4, animationDelay: "460ms", animationDuration: "320ms" }} />
+  </>;
+}
+
+/* ───────── 段6 流星矢：星空から燃える尾を引いて降る矢。着弾で火の花 ───────── */
+const pfsS6 = [[100, 96, 122, 70], [68, 80, 126, 120], [132, 84, 118, 170], [36, 90, 128, 220], [166, 92, 116, 270]];
+function PfShootS6({ k }) {
+  return <>
+    {pfsN(12).map((i) => <circle key={`s${i}`} className="pfs-tw" cx={(i * 47 + 11) % 200} cy={(i * 29 + 5) % 70} r={i % 4 ? 0.5 : 0.9} fill="#FFFFFF" style={{ animationDelay: `${(i * 37) % 110}ms` }} />)}
+    <g style={{ filter: "drop-shadow(0 0 3px #FFB060)" }}>
+      {pfsS6.map(([x, y, a, t], i) => (
+        <PfShootArrow key={`m${i}`} x={x} y={y} a={a} L={20} s={1.2} d={175} t={t} dur={420} fill="#FFFFFF"
+          tail={<>
+            <path d="M-17 -3.4 L-96 0 L-17 3.4 Z" fill={`url(#pfsMo${k})`} />
+            <path d="M-3 -1.3 L-74 0 L-3 1.3 Z" fill={`url(#pfsMc${k})`} />
+          </>} />
+      ))}
+    </g>
+    {pfsS6.map(([x, y, , t], i) => <path key={`b${i}`} className="pfs-burst" d={`M${x} ${y - 9} L${x + 2.2} ${y - 3} L${x + 8} ${y - 5} L${x + 3.6} ${y} L${x + 9} ${y + 4} L${x + 2.6} ${y + 3} L${x} ${y + 8} L${x - 2.6} ${y + 3} L${x - 9} ${y + 4} L${x - 3.6} ${y} L${x - 8} ${y - 5} L${x - 2.2} ${y - 3} Z`}
+      fill={`url(#pfsBu${k})`} style={{ animationDelay: `${t + 174}ms` }} />)}
+    {pfsS6.map(([x, y, , t], i) => <ellipse key={`r${i}`} className="pfs-ring" cx={x} cy={y + 3} rx="9" ry="3" fill={`url(#pfsPo${k})`} style={{ "--rs": 2.4, animationDelay: `${t + 176}ms` }} />)}
+    {pfsS6.map(([x, y, , t], i) => <path key={`e${i}`} className="pfs-ember" d={pfsDotsD(x, y - 1, 7, 5, 0.8, i * 17)} fill="#FFF0B0" style={{ animationDelay: `${t + 178}ms` }} />)}
+  </>;
+}
+
+/* ───────── 段7 千本矢：空を覆う矢の幕が、波のように次々と降る ───────── */
+const pfsS7 = (() => {
+  const a = 62, O = [100, 95], rows = [];
+  for (let r = 0; r < 9; r++) {
+    const tg = [];
+    for (let j = 0; j < 13; j++) {
+      const n = r * 13 + j;
+      tg.push([-14 + j * 17.5 + (r % 2) * 8.7 + (pfsR(n, 7) - 0.5) * 6, 78 + pfsR(n, 8) * 30]);
+    }
+    rows.push(tg);
+  }
+  return { a, O, rows };
+})();
+function PfShootS7({ k }) {
+  const { a, O, rows } = pfsS7;
+  const spark = (sd) => pfsN(12).map((j) => pfsStarD(8 + j * 16 + pfsR(j, sd) * 8, 82 + pfsR(j, sd + 1) * 24, 2.2 + pfsR(j, sd + 2) * 2.4, 0.22)).join(" ");
+  return <>
+    <rect className="pfs-cloud" x="0" y="0" width="200" height="80" fill={`url(#pfsSh${k})`} style={{ "--co": 0.9 }} />
+    {pfsN(6).map((i) => <path key={`v${i}`} className="pfs-gust" pathLength="100" d={`M${-30 + i * 40} -12 l${pfsF(Math.cos(pfsRad(a)) * 110)} ${pfsF(Math.sin(pfsRad(a)) * 110)}`}
+      fill="none" stroke="#CFF5DA" strokeWidth="0.7" strokeLinecap="round" style={{ animationDelay: `${40 + i * 30}ms`, animationDuration: "420ms" }} />)}
+    <ellipse className="pfs-dust" cx="100" cy="106" rx="98" ry="8" fill={pfsGreen} style={{ animationDelay: "260ms" }} />
+    <g transform={`translate(${O[0]} ${O[1]}) rotate(${a})`}>
+      {rows.map((tg, r) => (
+        <g key={r} className="pfs-fly" style={{ "--d": "-165px", animationDelay: `${60 + r * 36}ms`, animationDuration: "440ms" }}>
+          <path d={pfsRowD(tg, O, a, r === 8 ? 21 : 17, r === 8 ? 1.15 : 0.9)} fill={r % 2 ? "#BFE8CA" : "#EEFFF2"} />
+          {(r === 4 || r === 8) && <path d={pfsRowD(tg, O, a, 0, r === 8 ? 1.15 : 0.9, true)} fill={pfsGold} />}
+        </g>
+      ))}
+    </g>
+    <path className="pfs-spk" d={spark(3)} fill="#FFFFFF" style={{ animationDelay: "250ms" }} />
+    <path className="pfs-spk" d={spark(9)} fill="#FFF0B0" style={{ animationDelay: "420ms" }} />
+  </>;
+}
+
+/* ───────── 段8 天穹矢：天の穹が光り、空一面の矢が三方から降り注ぐ ───────── */
+const pfsS8 = (() => {
+  // 三方（左・中・右）× 四層（遠・中遠・中・近）。遠い層ほど小さく低く浮かび、近い層ほど大きく高い所から降る
+  const groups = [[76, 40, [4, 74]], [90, 100, [62, 138]], [104, 160, [126, 196]]];
+  const layers = [
+    { L: 10, s: 0.58, n: 11, d: 54, fill: "#86C49A", t: 20 },
+    { L: 13, s: 0.75, n: 8, d: 68, fill: "#BFE8CA", t: 50 },
+    { L: 17, s: 0.95, n: 6, d: 84, fill: "#EEFFF2", t: 80 },
+    { L: 24, s: 1.25, n: 3, d: 104, fill: "#FFFFFF", t: 110, gold: true },
+  ];
+  const rows = [];
+  groups.forEach(([a, cx, [xa, xb]], gi) => layers.forEach((ly, li) => {
+    const tg = pfsN(ly.n).map((j) => { const n = gi * 50 + li * 12 + j; return [xa + ((j + 0.5) / ly.n) * (xb - xa) + (pfsR(n, 21) - 0.5) * 5, 80 + pfsR(n, 22) * 28 - li * 2]; });
+    rows.push({ a, O: [cx, 95], tg, ...ly, t: ly.t + gi * 15 });
+  }));
+  return rows;
+})();
+function PfShootS8({ k }) {
+  const glint = pfsN(26).map((j) => pfsStarD(4 + pfsR(j, 31) * 192, 3 + pfsR(j, 32) * 58, 1.2 + pfsR(j, 33) * 1.8, 0.2)).join(" ");
+  return <>
+    {pfsN(10).map((i) => <circle key={`s${i}`} className="pfs-tw" cx={(i * 53 + 7) % 200} cy={(i * 31 + 3) % 80} r={i % 4 ? 0.5 : 0.9} fill="#FFFFFF" style={{ animationDelay: `${(i * 29) % 140}ms` }} />)}
+    <ellipse className="pfs-glow" cx="100" cy="-6" rx="150" ry="64" fill={`url(#pfsSky${k})`} style={{ "--go": 0.95 }} />
+    <path className="pfs-aurora" d="M-10 20 C30 6 60 28 100 14 C140 0 170 24 214 10" fill="none" stroke={pfsGreen} strokeWidth="9" strokeOpacity="0.22" strokeLinecap="round" />
+    <path className="pfs-aurora" d="M-10 20 C30 6 60 28 100 14 C140 0 170 24 214 10" fill="none" stroke="#FFE9A0" strokeWidth="0.8" strokeOpacity="0.75" strokeLinecap="round" style={{ animationDelay: "40ms" }} />
+    <path className="pfs-glint" d={glint} fill="#FFF6D0" />
+    {pfsS8.map((r, i) => (
+      <g key={`v${i}`} transform={`translate(${r.O[0]} ${r.O[1]}) rotate(${r.a})`}>
+        <g className="pfs-vault" style={{ "--d": `${-r.d}px`, animationDelay: `${r.t}ms` }}>
+          <path d={pfsRowD(r.tg, r.O, r.a, r.L, r.s)} fill={r.fill} />
+          {r.gold && <path d={pfsRowD(r.tg, r.O, r.a, 0, r.s, true)} fill={pfsGold} />}
+        </g>
+      </g>
+    ))}
+    <ellipse className="pfs-glow" cx="100" cy="102" rx="104" ry="22" fill={`url(#pfsGd${k})`} style={{ "--go": 1, animationDelay: "400ms", animationDuration: "420ms" }} />
+    <ellipse className="pfs-ring" cx="100" cy="103" rx="36" ry="7" fill="none" stroke="#FFE9A0" strokeWidth="2" style={{ "--rs": 2.8, animationDelay: "410ms", animationDuration: "400ms" }} />
+    <ellipse className="pfs-ring" cx="100" cy="103" rx="36" ry="7" fill="none" stroke={pfsGreen} strokeWidth="1.2" style={{ "--rs": 3.4, animationDelay: "440ms", animationDuration: "360ms" }} />
+    {pfsN(7).map((i) => <path key={`k${i}`} className="pfs-hit" d={pfsStarD(18 + i * 27.5, 84 + ((i * 11) % 3) * 9, 6 + (i % 3) * 2.2, 0.2)} fill={i % 2 ? "#FFFFFF" : pfsGold}
+      style={{ animationDelay: `${410 + ((i * 3) % 7) * 11}ms` }} />)}
+  </>;
+}
+
+const pfsVo = [0.5, 0.55, 0.64, 0.66, 0.74, 0.84, 0.88, 0.94];
+const pfsFo = [0.18, 0.24, 0.36, 0.36, 0.46, 0.58, 0.7, 0.9];
+const pfsFt = [380, 360, 470, 330, 440, 245, 300, 420];
+const pfsFc = [[0.52, 0.66], [0.5, 0.7], [0.5, 0.72], [0.5, 0.72], [0.5, 0.72], [0.5, 0.7], [0.5, 0.72], [0.5, 0.76]];
+
+function PfShootFlash({ k }) {
+  const kk = Math.max(3, Math.min(10, k | 0 || 3));
+  const tier = kk - 2;
+  const S = [PfShootS1, PfShootS2, PfShootS3, PfShootS4, PfShootS5, PfShootS6, PfShootS7, PfShootS8][tier - 1];
+  const tint = ["#CFF5DA", "#CFF5DA", "#E8FFB0", "#CFF5DA", "#CFF5DA", "#FFD27A", "#E8FFEE", "#FFE9A0"][tier - 1];
+  return (
+    <svg className={`pfs-svg pfs-k${kk}`} viewBox="0 0 200 130" preserveAspectRatio="xMidYMid slice" aria-hidden="true">
+      <defs>
+        {(tier === 2 || tier === 5) && <linearGradient id={`pfsTr${kk}`} x1="0" y1="0" x2="1" y2="0">
+          <stop offset="0" stopColor={pfsGreen} stopOpacity="0" /><stop offset="1" stopColor="#DFFAE8" stopOpacity="0.8" />
+        </linearGradient>}
+        <radialGradient id={`pfsFl${kk}`} cx={pfsFc[tier - 1][0]} cy={pfsFc[tier - 1][1]} r="0.7">
+          <stop offset="0" stopColor="#FFFFFF" stopOpacity="1" /><stop offset="0.35" stopColor={tint} stopOpacity="0.55" /><stop offset="0.8" stopColor={tint} stopOpacity="0" />
+        </radialGradient>
+        {tier >= 6 && <radialGradient id={`pfsVoid${kk}`} cx="0.5" cy="0.15" r="0.9">
+          <stop offset="0" stopColor={tier === 8 ? "#123A30" : "#141A30"} /><stop offset="1" stopColor="#010204" />
+        </radialGradient>}
+        {tier === 5 && <radialGradient id={`pfsSt${kk}`}>
+          <stop offset="0" stopColor="#24382F" stopOpacity="0.95" /><stop offset="0.55" stopColor="#10181C" stopOpacity="0.8" /><stop offset="1" stopColor="#0A0E14" stopOpacity="0" />
+        </radialGradient>}
+        {tier === 6 && <>
+          <linearGradient id={`pfsMo${kk}`} x1="1" y1="0" x2="0" y2="0">
+            <stop offset="0" stopColor="#FFB060" stopOpacity="0.9" /><stop offset="0.5" stopColor="#FF7A3A" stopOpacity="0.45" /><stop offset="1" stopColor="#9AD8A8" stopOpacity="0" />
+          </linearGradient>
+          <linearGradient id={`pfsMc${kk}`} x1="1" y1="0" x2="0" y2="0">
+            <stop offset="0" stopColor="#FFFFFF" /><stop offset="0.35" stopColor="#FFE9A0" stopOpacity="0.9" /><stop offset="1" stopColor="#FFD27A" stopOpacity="0" />
+          </linearGradient>
+          <radialGradient id={`pfsPo${kk}`}>
+            <stop offset="0" stopColor="#FFFFFF" /><stop offset="0.4" stopColor="#FFE9A0" stopOpacity="0.7" /><stop offset="1" stopColor="#FFB060" stopOpacity="0" />
+          </radialGradient>
+          <radialGradient id={`pfsBu${kk}`}>
+            <stop offset="0" stopColor="#FFFFFF" /><stop offset="0.5" stopColor="#FFF0B0" /><stop offset="1" stopColor="#FFC070" />
+          </radialGradient>
+        </>}
+        {tier === 7 && <linearGradient id={`pfsSh${kk}`} x1="0" y1="0" x2="0" y2="1">
+          <stop offset="0" stopColor="#000000" stopOpacity="0.95" /><stop offset="1" stopColor="#000000" stopOpacity="0" />
+        </linearGradient>}
+        {tier === 8 && <>
+          <radialGradient id={`pfsSky${kk}`}>
+            <stop offset="0" stopColor="#FFF6D0" stopOpacity="0.9" /><stop offset="0.45" stopColor="#9AD8A8" stopOpacity="0.45" /><stop offset="1" stopColor="#9AD8A8" stopOpacity="0" />
+          </radialGradient>
+          <radialGradient id={`pfsGd${kk}`}>
+            <stop offset="0" stopColor="#FFFFFF" stopOpacity="1" /><stop offset="0.4" stopColor="#FFE9A0" stopOpacity="0.75" /><stop offset="1" stopColor="#9AD8A8" stopOpacity="0" />
+          </radialGradient>
+        </>}
+      </defs>
+      <rect className="pfs-void" x="0" y="0" width="200" height="130" fill={tier >= 6 ? `url(#pfsVoid${kk})` : "#04060A"} style={{ "--vo": pfsVo[tier - 1] }} />
+      <S k={kk} />
+      <rect className="pfs-flash" x="0" y="0" width="200" height="130" fill={`url(#pfsFl${kk})`} style={{ "--fo": pfsFo[tier - 1], animationDelay: `${pfsFt[tier - 1]}ms` }} />
+    </svg>
+  );
+}
+
+/* ═════════ 印（ゲージ中央の 32×32 静止画）═════════
+   矢はすべて右下へ向かう。段が上がるほど：太く・本数が増え・きらめきが増え・段7〜8で金。 */
+function pfsGArrowP(L, s) {
+  return [[0, 0], [-7 * s, -3.7 * s], [-5.6 * s, -1 * s], [-L + 5.4 * s, -1 * s], [-L + 2.6 * s, -3 * s], [-L - 0.6 * s, -3 * s], [-L + 1.2 * s, -1 * s], [-L - 0.3 * s, 0],
+    [-L + 1.2 * s, 1 * s], [-L - 0.6 * s, 3 * s], [-L + 2.6 * s, 3 * s], [-L + 5.4 * s, 1 * s], [-5.6 * s, 1 * s], [-7 * s, 3.7 * s]];
+}
+function PfShootGA({ x, y, a, L = 18, s = 1, shaft = pfsGreen, head = "#F4FFF6", fl = "#DDF8E4", sw = 0.6 }) {
+  const S = pfsPoly(pfsGArrowP(L, s));
+  const F = pfsPoly([[-L + 5.4 * s, -1 * s], [-L + 2.6 * s, -3 * s], [-L - 0.6 * s, -3 * s], [-L + 1.2 * s, -1 * s]]) + " " +
+    pfsPoly([[-L + 5.4 * s, 1 * s], [-L + 2.6 * s, 3 * s], [-L - 0.6 * s, 3 * s], [-L + 1.2 * s, 1 * s]]);
+  return (
+    <g transform={`translate(${x} ${y}) rotate(${a})`}>
+      <path d={S} fill={shaft} />
+      <path d={pfsPoly([[0, 0], [-7 * s, -3.7 * s], [-5.6 * s, 0], [-7 * s, 3.7 * s]])} fill={head} />
+      <path d={F} fill={fl} />
+      <path d={S} fill="none" stroke={pfsO} strokeWidth={sw} strokeLinejoin="round" />
+    </g>
+  );
+}
+function PfShootGStar({ x, y, r, f = "#FFFFFF", sw = 0.45 }) {
+  return <path d={pfsStarD(x, y, r, 0.26)} fill={f} stroke={pfsO} strokeWidth={sw} strokeLinejoin="round" />;
+}
+/* 縁取り付きの線（暗い太線の上に明るい線） */
+function PfShootGLine({ d, c = "#DFFAEA", w = 1.4, o = 2.6 }) {
+  return <><path d={d} fill="none" stroke={pfsO} strokeWidth={o} strokeLinecap="round" strokeLinejoin="round" opacity="0.65" /><path d={d} fill="none" stroke={c} strokeWidth={w} strokeLinecap="round" strokeLinejoin="round" /></>;
+}
+const pfsGSvg = (kids) => <svg viewBox="0 0 32 32" aria-hidden="true">{kids}</svg>;
+
+// 1 一矢：弧の軌跡と、一本の矢
+function PfShootG1() {
+  return pfsGSvg(<>
+    <PfShootGLine d="M2.5 29.5 C2.5 17 7 7 13.5 7.5" c="#BFF5E0" w={1} o={2.1} />
+    <PfShootGA x={27.5} y={27} a={54} L={23} s={0.95} sw={0.6} />
+    <PfShootGStar x={28} y={27.5} r={3.4} />
+  </>);
+}
+// 2 疾風矢：風の筋に乗った三本
+function PfShootG2() {
+  return pfsGSvg(<>
+    <PfShootGLine d="M1.5 15 C7 11 11 13 14 10" c="#BFF5E0" w={1.3} />
+    <PfShootGLine d="M2 29 C8 26 12 29 17 26" c="#BFF5E0" w={1.3} />
+    <PfShootGA x={30} y={8.5} a={28} L={16} s={0.72} sw={0.55} />
+    <PfShootGA x={29} y={17.5} a={28} L={17} s={0.78} sw={0.55} />
+    <PfShootGA x={25} y={25} a={28} L={15} s={0.72} sw={0.55} />
+  </>);
+}
+// 3 雷鳴矢：稲妻の尾を引く二本
+function PfShootG3() {
+  const bolt = (x, y, a, L) => {
+    const c = Math.cos(pfsRad(a)), s = Math.sin(pfsRad(a));
+    const pts = [[-L + 1, 0], [-L - 2.6, -2.4], [-L - 5, 1.8], [-L - 8, -1.6], [-L - 10.5, 1.4]];
+    return "M" + pts.map(([u, v]) => `${pfsF(x + u * c - v * s)} ${pfsF(y + u * s + v * c)}`).join(" L");
+  };
+  return pfsGSvg(<>
+    <PfShootGLine d={bolt(29.5, 15, 38, 13)} c="#FFF08A" w={1.5} o={2.8} />
+    <PfShootGLine d={bolt(24, 28, 38, 13)} c="#FFF08A" w={1.5} o={2.8} />
+    <PfShootGA x={29.5} y={15} a={38} L={13} s={0.82} sw={0.6} />
+    <PfShootGA x={24} y={28} a={38} L={13} s={0.82} sw={0.6} />
+    <PfShootGStar x={8} y={24} r={2.4} f="#FFF6C0" sw={0.4} />
+  </>);
+}
+// 4 驟雨矢：雨のように降る四本
+function PfShootG4() {
+  return pfsGSvg(<>
+    {[[4, 4], [12, 1.5], [26, 3], [19, 9], [3, 17]].map(([x, y], i) => <PfShootGLine key={i} d={`M${x} ${y} l1.4 3.6`} c="#CFE8F2" w={1.1} o={2.1} />)}
+    <PfShootGA x={10} y={24} a={68} L={15} s={0.7} sw={0.55} />
+    <PfShootGA x={17} y={30} a={68} L={15} s={0.7} sw={0.55} />
+    <PfShootGA x={24} y={21} a={68} L={15} s={0.7} sw={0.55} />
+    <PfShootGA x={30.5} y={28} a={68} L={15} s={0.7} sw={0.55} />
+    <PfShootGStar x={6} y={30} r={2.2} sw={0.4} />
+  </>);
+}
+// 5 嵐矢：渦を巻く嵐と、渦に乗って巡る矢
+function PfShootG5() {
+  const sp = "M" + pfsN(34).map((j) => { const th = (j / 33) * 6.7, r = 0.8 + 1.62 * th; return `${pfsF(15 + Math.cos(-th) * r * 1.18)} ${pfsF(14.5 + Math.sin(-th) * r * 0.78)}`; }).join(" L");
+  return pfsGSvg(<>
+    <PfShootGLine d={sp} c="#BFF5E0" w={1.7} o={3} />
+    <PfShootGA x={31} y={25.5} a={14} L={17} s={0.8} sw={0.6} />
+    <PfShootGA x={2.5} y={6.5} a={196} L={13} s={0.7} sw={0.6} />
+    <PfShootGStar x={27} y={6} r={2.3} sw={0.4} />
+  </>);
+}
+// 6 流星矢：燃える尾を引く三本
+function PfShootG6() {
+  const fl = (x, y, a, L, id) => (
+    <path d={`M${-L + 3} -2.9 Q${-L - 4} -3.6 ${-L - 11} 0 Q${-L - 4} 3.6 ${-L + 3} 2.9 Z`} transform={`translate(${x} ${y}) rotate(${a})`} fill={`url(#${id})`} stroke={pfsO} strokeWidth="0.5" />
+  );
+  return pfsGSvg(<>
+    <defs>
+      <linearGradient id="pfsG6a" x1="1" y1="0" x2="0" y2="0"><stop offset="0" stopColor="#FFF4B0" /><stop offset="0.45" stopColor="#FFB060" /><stop offset="1" stopColor="#FF6A3A" /></linearGradient>
+    </defs>
+    {fl(30, 13, 45, 11, "pfsG6a")}{fl(24, 23, 45, 11, "pfsG6a")}{fl(14, 30, 45, 11, "pfsG6a")}
+    <PfShootGA x={30} y={13} a={45} L={11} s={0.8} sw={0.6} head="#FFFFFF" />
+    <PfShootGA x={24} y={23} a={45} L={11} s={0.8} sw={0.6} head="#FFFFFF" />
+    <PfShootGA x={14} y={30} a={45} L={11} s={0.8} sw={0.6} head="#FFFFFF" />
+    <PfShootGStar x={5} y={22} r={2.3} f="#FFE9A0" sw={0.4} />
+    <PfShootGStar x={22} y={4} r={2.6} sw={0.4} />
+  </>);
+}
+// 7 千本矢：空を覆う矢の幕。金の鏃
+function PfShootG7() {
+  const P = [[31, 12], [26, 18], [21, 24], [16, 30], [24, 7.5], [19, 13.5], [14, 19.5], [9, 25.5]];
+  return pfsGSvg(<>
+    {P.map(([x, y], i) => <PfShootGA key={i} x={x} y={y} a={48} L={12} s={0.72} sw={0.6} head={pfsGold} fl={i < 4 ? "#DDF8E4" : "#BFF5E0"} />)}
+    <PfShootGStar x={6} y={6} r={3} f={pfsGold} sw={0.45} />
+    <PfShootGStar x={29} y={28} r={2.6} sw={0.4} />
+    <PfShootGStar x={3.5} y={15} r={1.8} sw={0.35} />
+  </>);
+}
+// 8 天穹矢：金に輝く天穹（空の弧）から、空一面の矢が斜めに降り注ぐ。中央に金の大矢
+function PfShootG8() {
+  return pfsGSvg(<>
+    <defs>
+      <linearGradient id="pfsG8a" x1="0" y1="0" x2="1" y2="0"><stop offset="0" stopColor="#E8C060" /><stop offset="0.5" stopColor="#FFF4C8" /><stop offset="1" stopColor="#E8C060" /></linearGradient>
+      <linearGradient id="pfsG8b" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stopColor="#FFFFFF" /><stop offset="1" stopColor="#E8FFEE" /></linearGradient>
+    </defs>
+    <path d="M1 12.5 Q16 -3.5 31 12.5 Q16 4 1 12.5 Z" fill="url(#pfsG8a)" stroke={pfsO} strokeWidth="0.65" strokeLinejoin="round" />
+    {[[31.5, 21], [22.5, 16.5], [14, 31], [7.5, 25]].map(([x, y], i) => <PfShootGA key={i} x={x} y={y} a={50} L={11} s={0.62} sw={0.55} head={pfsGold} />)}
+    <PfShootGA x={27} y={30.5} a={50} L={22} s={1.02} sw={0.7} head={pfsGold} shaft="url(#pfsG8b)" fl="#FFE9A0" />
+    <PfShootGStar x={16} y={4.2} r={3.5} f={pfsGold} sw={0.45} />
+    <PfShootGStar x={4} y={4.5} r={2} sw={0.35} />
+    <PfShootGStar x={28} y={4.5} r={2} sw={0.35} />
+    <PfShootGStar x={3.5} y={17} r={1.7} f="#FFF4C8" sw={0.35} />
+  </>);
+}
+
+const PFG_SHOOT = [PfShootG1, PfShootG2, PfShootG3, PfShootG4, PfShootG5, PfShootG6, PfShootG7, PfShootG8];
+/* ---- dance ---- */
+/*
+  【秘奥義・四武の舞 Dance of Four Arms】
+  ★ 剣・槍・斧・弓が画面中央で輪になって舞い、輪が一段ずつ回って「いま撃つ武器」を下（敵の側）へ向ける。
+    斬撃の一閃 → 突撃の突き → 打撃の衝撃 → 射撃の矢の雨 → 四色の光の花が開いて散る。
+  ★ hits（戦闘の計算と同じ斬る回数）ぶん、数字が出る時刻（120 + h×110ms）に当たりの光を出す。
+  ⚠️ 1.88秒で全部消える（FX_MS_BLAST 1900 以内）。閃光は花の一回きり。
+  ⚠️ 十字にしない：輪の武器は互いに離して接線寄りに傾ける。技の線どうしは浅い角度（20〜30°）にずらす。
+  ⚠️ 位置は外側の g（transform 属性）、動きは内側の g（CSS）。
+*/
+const PfDanceC = ["#DDE6F6", "#F0B860", "#D89A6A", "#9AD8A8"]; // 剣・槍・斧・弓
+const PfDanceGOLD = "#FFD86A";
+const PfDanceO = "#2A3458";
+const PfDanceN = (m) => Array.from({ length: m }, (_, i) => i);
+/* 四方に光る星 */
+const PfDanceStar = (x, y, R, r = R * 0.28) =>
+  `M${x} ${y - R}L${x + r} ${y - r}L${x + R} ${y}L${x + r} ${y + r}L${x} ${y + R}L${x - r} ${y + r}L${x - R} ${y}L${x - r} ${y - r}Z`;
+/* 花弁（中心から r0→r1、幅 w）を角度の数だけ一本の path に */
+const PfDancePetals = (angles, r0, r1, w) => angles.map((a) => {
+  const t = (a * Math.PI) / 180, c = Math.cos(t), s = Math.sin(t);
+  const P = (x, y) => `${(x * c - y * s).toFixed(2)} ${(x * s + y * c).toFixed(2)}`;
+  const m = (r0 + r1) / 2;
+  return `M${P(0, -r0)}Q${P(w, -m)} ${P(0, -r1)}Q${P(-w, -m)} ${P(0, -r0)}Z`;
+}).join("");
+
+/* ── 舞う武器（切っ先が −y、中心が原点。見えない枠で中心を揃える） ── */
+function PfDanceSword() {
+  return <>
+    <rect x="-9" y="-13.5" width="18" height="27" fill="none" />
+    <path d="M-1.4 3.4 L-1.4 -5.5 Q-1.2 -10.6 1 -12.8 Q1.7 -8.6 1.4 -4.4 L1.4 3.4 Z" fill="url(#pfdSteel)" stroke="#FFFFFF" strokeWidth="0.3" />
+    <ellipse cx="0" cy="4.2" rx="2.5" ry="1.05" fill={PfDanceGOLD} />
+    <rect x="-0.95" y="5" width="1.9" height="6.8" rx="0.6" fill="#4A3A78" stroke="#DDE6F6" strokeWidth="0.3" />
+  </>;
+}
+function PfDanceSpear() {
+  return <>
+    <rect x="-9" y="-13.5" width="18" height="27" fill="none" />
+    <path d="M0 -4.6 L0 12.5" stroke="#C89A5A" strokeWidth="1.4" strokeLinecap="round" />
+    <path d="M0 -13.2 Q2.7 -8.6 0.95 -4.4 L-0.95 -4.4 Q-2.7 -8.6 0 -13.2 Z" fill="#F0B860" stroke="#FFF0C8" strokeWidth="0.35" />
+  </>;
+}
+function PfDanceAxe() {
+  return <>
+    <rect x="-9" y="-13.5" width="18" height="27" fill="none" />
+    <path d="M0 -12 L0 12.5" stroke="#9A6A44" strokeWidth="1.6" strokeLinecap="round" />
+    <path d="M0.4 -9.6 L2.8 -10.4 Q4.6 -12.8 7.6 -13.4 Q9.6 -7.6 7.6 -1.8 Q4.6 -2.4 2.8 -4.8 L0.4 -5.6 Z" fill="#D89A6A" stroke="#FFE0C0" strokeWidth="0.45" />
+  </>;
+}
+function PfDanceBow() {
+  return <>
+    <rect x="-9" y="-13.5" width="18" height="27" fill="none" />
+    <path d="M-1.4 -12.5 L-1.4 12.5" stroke="#E8FFF0" strokeWidth="0.45" />
+    <path d="M-1.4 -12.5 Q7.6 0 -1.4 12.5" fill="none" stroke="#9AD8A8" strokeWidth="2.2" strokeLinecap="round" />
+    <rect x="1.6" y="-1.7" width="1.9" height="3.4" rx="0.6" fill={PfDanceGOLD} />
+  </>;
+}
+const PfDanceArms = [PfDanceSword, PfDanceSpear, PfDanceAxe, PfDanceBow];
+/* 撃つ時刻（輪の下に来て光る） */
+const PfDanceFire = [110, 410, 670, 950];
+/* 当たりの光の位置（i 番目の数字の時刻にいちばん近い技の当たり場所） */
+const PfDanceHitAt = [[54, 110], [100, 94], [146, 77], [97, 91], [106, 96], [66, 104], [134, 105], [100, 99], [40, 92], [158, 97], [78, 88], [124, 84]];
+const PfDanceHitCol = (i) => PfDanceC[i < 3 ? 0 : i < 5 ? 1 : i < 8 ? 2 : 3];
+
+function PfDanceFlash({ hits }) {
+  const H = Math.max(1, Math.min(12, (hits | 0) || 8));
+  const NA = 10 + Math.min(6, H >> 1); // 矢の本数（hits が多いほど少し濃い雨）
+  return (
+    <svg className="pfd-svg" viewBox="0 0 200 130" preserveAspectRatio="xMidYMid slice" aria-hidden="true">
+      <defs>
+        <radialGradient id="pfdDimG"><stop offset="0" stopColor="#170F2E" /><stop offset="1" stopColor="#030208" /></radialGradient>
+        <linearGradient id="pfdSteel" x1="0" y1="1" x2="0" y2="0"><stop offset="0" stopColor="#AFC2E8" /><stop offset="0.55" stopColor="#FFFFFF" /><stop offset="1" stopColor="#EEF4FF" /></linearGradient>
+        <linearGradient id="pfdSlashCore" x1="0" y1="0" x2="1" y2="0">
+          <stop offset="0" stopColor="#DDE6F6" stopOpacity="0" /><stop offset="0.25" stopColor="#DDE6F6" /><stop offset="0.55" stopColor="#FFFFFF" />
+          <stop offset="0.85" stopColor="#DDE6F6" /><stop offset="1" stopColor="#DDE6F6" stopOpacity="0" />
+        </linearGradient>
+        <linearGradient id="pfdAmberTrail" x1="0" y1="0" x2="1" y2="0">
+          <stop offset="0" stopColor="#F0B860" stopOpacity="0" /><stop offset="0.6" stopColor="#F0B860" stopOpacity="0.8" /><stop offset="1" stopColor="#FFF4DC" />
+        </linearGradient>
+        <linearGradient id="pfdArrowTrail" x1="0" y1="0" x2="1" y2="0">
+          <stop offset="0" stopColor="#9AD8A8" stopOpacity="0" /><stop offset="1" stopColor="#D8FFE2" stopOpacity="0.9" />
+        </linearGradient>
+        <radialGradient id="pfdQuake"><stop offset="0" stopColor="#FFE6C8" /><stop offset="0.4" stopColor="#D89A6A" stopOpacity="0.7" /><stop offset="1" stopColor="#D89A6A" stopOpacity="0" /></radialGradient>
+        <radialGradient id="pfdBloomG"><stop offset="0" stopColor="#FFFFFF" /><stop offset="0.45" stopColor="#FFE9B0" stopOpacity="0.7" /><stop offset="1" stopColor="#FFD86A" stopOpacity="0" /></radialGradient>
+        <radialGradient id="pfdFlashG"><stop offset="0" stopColor="#FFFFFF" stopOpacity="1" /><stop offset="0.35" stopColor="#FFE9B0" stopOpacity="0.55" /><stop offset="0.8" stopColor="#FFD86A" stopOpacity="0" /></radialGradient>
+      </defs>
+      {/* 沈む */}
+      <rect className="pfd-dim" x="0" y="0" width="200" height="130" fill="url(#pfdDimG)" />
+      <g className="pfd-shake">
+        {/* ── 武器の円陣（画面中央。人物の背後には置かない）。輪が一段ずつ回り、撃つ武器を下へ ── */}
+        <g transform="translate(100 40)">
+          <g className="pfd-orbit">
+            <circle r="42" fill="none" />
+            {PfDanceArms.map((W, i) => (
+              <g key={`w${i}`} transform={`rotate(${180 - i * 90})`}>
+                {/* 舞の尾（回る向きの後ろ側の弧） */}
+                <path d="M-17.09 -15.39 A23 23 0 0 1 -4.78 -22.5" fill="none" stroke={PfDanceC[i]} strokeWidth="2" strokeLinecap="round" opacity="0.55" />
+                <g transform="translate(0 -23) scale(1.25)">
+                  <g className="pfd-wpn" style={{ animationDelay: `${Math.max(0, PfDanceFire[i] - 136)}ms` }}><W /></g>
+                </g>
+              </g>
+            ))}
+          </g>
+        </g>
+
+        {/* ── ① 斬撃の一閃（剣・銀）。刃が斜めに斬り抜ける ── */}
+        <g transform="rotate(-20 100 94)">
+          <g className="pfd-slash">
+            <path d="M-40 94 Q100 82 240 94 Q100 106 -40 94 Z" fill="#DDE6F6" opacity="0.3" />
+            <path d="M-30 94 Q100 90.4 230 94 Q100 97.6 -30 94 Z" fill="url(#pfdSlashCore)" />
+          </g>
+          <g className="pfd-slash pfd-slash2">
+            <path d="M-20 86 Q100 84.2 220 86 Q100 87.8 -20 86 Z" fill="url(#pfdSlashCore)" opacity="0.8" />
+          </g>
+          <g className="pfd-swfly">
+            <g transform="translate(0 94) rotate(90) scale(1.7)"><PfDanceSword /></g>
+          </g>
+        </g>
+
+        {/* ── ② 突撃の突き（槍・琥珀）。右上から一体を貫く ── */}
+        <g transform="translate(100 92) rotate(140)">
+          <g className="pfd-trail">
+            <path d="M-170 0 Q-60 -7 0 0 Q-60 7 -170 0 Z" fill="url(#pfdAmberTrail)" opacity="0.7" />
+            <path d="M-150 0 Q-50 -2.2 0 0 Q-50 2.2 -150 0 Z" fill="url(#pfdAmberTrail)" />
+          </g>
+          <g className="pfd-spear">
+            <g transform="translate(-25 0) rotate(90) scale(1.9)"><PfDanceSpear /></g>
+          </g>
+          {PfDanceN(3).map((i) => (
+            <g key={`cn${i}`} transform={`translate(${5 + i * 7} 0)`}>
+              <path className="pfd-cone" style={{ animationDelay: `${470 + i * 40}ms` }} d="M0 -7 Q6 0 0 7" fill="none" stroke="#F8D49A" strokeWidth={1.6 - i * 0.35} strokeLinecap="round" />
+            </g>
+          ))}
+          {[-40, -14, 14, 40].map((a, i) => (
+            <g key={`sp${i}`} transform={`rotate(${a})`}>
+              <path className="pfd-spark" style={{ animationDelay: `${470 + (i % 3) * 25}ms` }} d="M4 0 L10 0" stroke="#FFE2A8" strokeWidth="1" strokeLinecap="round" />
+            </g>
+          ))}
+          <g transform="translate(2 0)">
+            <g className="pfd-tip">
+              <path d={PfDanceStar(0, 0, 10)} fill="#FFF4DC" />
+              <circle r="2.6" fill="#FFFFFF" />
+            </g>
+          </g>
+        </g>
+
+        {/* ── ③ 打撃の衝撃（斧・銅）。斧が地を打ち、波と亀裂と礫 ── */}
+        <g transform="translate(100 104)">
+          <ellipse className="pfd-qglow" rx="34" ry="9" fill="url(#pfdQuake)" />
+          {PfDanceN(2).map((i) => (
+            <ellipse key={`qr${i}`} className="pfd-qring" style={{ animationDelay: `${720 + i * 90}ms` }} rx="14" ry="3" fill="none" stroke="#F2C49A" strokeWidth={0.5 - i * 0.18} />
+          ))}
+          <path className="pfd-crack" fill="none" stroke="#FFD0A0" strokeWidth="1.1" strokeLinejoin="round" strokeLinecap="round"
+            d="M0 0 L10 -1 L16 2 L26 0 L34 3 L46 1 L60 4 M3 1 L12 6 L22 7 L30 12 L38 13 M0 0 L-9 1 L-17 -1 L-25 2 L-37 0 L-50 3 L-64 1 M-3 1 L-11 6 L-22 6 L-30 11 L-40 12 M2 -1 L9 -6 L17 -6 M-2 -1 L-8 -5 L-16 -6" />
+          {PfDanceN(8).map((i) => {
+            const a = (-160 + i * 20) * Math.PI / 180, d = 26 + (i % 3) * 10;
+            return (
+              <g key={`ch${i}`} transform={`translate(${(i - 3.5) * 2.8} -1)`}>
+                <path className="pfd-chip" d={i % 2 ? "M0 -2.4 L2.6 -0.4 L1.2 2.2 L-2 1.4 Z" : "M-1.6 -1.8 L2 -1.2 L1.6 1.8 L-1.8 1 Z"} fill={["#D89A6A", "#8A5A3A", "#F2C49A"][i % 3]} stroke="#2A1A10" strokeWidth="0.3"
+                  style={{ "--dx": `${(Math.cos(a) * d).toFixed(1)}px`, "--dy": `${(Math.sin(a) * d).toFixed(1)}px`, animationDelay: `${725 + (i % 4) * 15}ms` }} />
+              </g>
+            );
+          })}
+          <g className="pfd-axe">
+            <g transform="translate(-7.5 -23) rotate(115) scale(2.2)"><PfDanceAxe /></g>
+          </g>
+        </g>
+
+        {/* ── ④ 射撃の矢の雨（弓・若緑）。左上から斜めに降る ── */}
+        <g className="pfd-arrows">
+          {PfDanceN(NA).map((i) => {
+            const x = 18 + ((i * 53) % 166), y = 78 + ((i * 29) % 34);
+            return (
+              <g key={`ar${i}`} transform={`translate(${x} ${y}) rotate(68)`}>
+                <g className="pfd-arrow" style={{ animationDelay: `${860 + ((i * 47) % 300)}ms` }}>
+                  <path d="M-46 0 L-4 -0.9 L-4 0.9 Z" fill="url(#pfdArrowTrail)" />
+                  <path d="M-15 0 L-3 0 M0 0 L-4.4 -1.8 L-3.3 0 L-4.4 1.8 Z M-15 0 L-18 -2 M-13 0 L-16 -2 M-15 0 L-18 2 M-13 0 L-16 2"
+                    fill="#EFFFF4" stroke="#EFFFF4" strokeWidth="0.75" strokeLinecap="round" strokeLinejoin="round" />
+                </g>
+              </g>
+            );
+          })}
+        </g>
+
+        {/* ── 当たりの光。数字が出る時刻（120 + h×110ms）に合わせる ── */}
+        {PfDanceN(H).map((i) => (
+          <g key={`ht${i}`} transform={`translate(${PfDanceHitAt[i][0]} ${PfDanceHitAt[i][1]})`}>
+            <path className="pfd-hit" style={{ animationDelay: `${120 + i * 110}ms` }} d={PfDanceStar(0, 0, 6)} fill={PfDanceHitCol(i)} stroke="#FFFFFF" strokeWidth="0.5" />
+          </g>
+        ))}
+
+        {/* ── ⑤ 四色の光の花。開いて散る ── */}
+        <g transform="translate(100 60)">
+          <g className="pfd-bloom">
+            <circle r="30" fill="url(#pfdBloomG)" />
+            {PfDanceC.map((c, ci) => (
+              <path key={`pt${ci}`} d={PfDancePetals([0, 120, 240].map((a) => a + ci * 30), 7, 40, 13)} fill={c} stroke="#FFFFFF" strokeWidth="0.4" opacity="0.92" />
+            ))}
+            <path d={PfDancePetals(PfDanceN(12).map((k) => 15 + k * 30), 5, 22, 7)} fill={PfDanceGOLD} opacity="0.9" />
+            <circle r="5.5" fill="#FFF8E0" />
+          </g>
+        </g>
+        {PfDanceN(12).map((i) => {
+          const a = (i * 30 + 8) * Math.PI / 180, d = 46 + (i % 3) * 14;
+          return (
+            <g key={`pf${i}`} transform={`translate(${100 + Math.cos(a) * 10} ${60 + Math.sin(a) * 10})`}>
+              <path className="pfd-petal" d="M0 -3.2 Q2.2 0 0 3.2 Q-2.2 0 0 -3.2 Z" fill={PfDanceC[i % 4]}
+                style={{ "--dx": `${(Math.cos(a) * d).toFixed(1)}px`, "--dy": `${(Math.sin(a) * d + 14).toFixed(1)}px`, animationDelay: `${1340 + (i * 11) % 60}ms` }} />
+            </g>
+          );
+        })}
+        {[[58, 30], [146, 34], [40, 70], [164, 74], [80, 108], [122, 110]].map(([x, y], i) => (
+          <g key={`gl${i}`} transform={`translate(${x} ${y})`}>
+            <path className="pfd-glint" style={{ animationDelay: `${1370 + i * 35}ms` }} d={PfDanceStar(0, 0, 4.5)} fill={i % 2 ? "#FFFFFF" : PfDanceGOLD} />
+          </g>
+        ))}
+      </g>
+      {/* 閃き。⚠️ 花が開く瞬間に一度だけ */}
+      <rect className="pfd-flash" x="0" y="0" width="200" height="130" fill="url(#pfdFlashG)" />
+    </svg>
+  );
+}
+
+/* ── 印：四つの武器が左下の結び目から斜めに扇を開く（弓・剣・槍・斧）。金の縁。
+   ⚠️ 開きは6°〜69°（隣どうし約21°）。交差させない・直交させない。弓の腹と斧の刃は外側へ ── */
+function PfDanceG10() {
+  const O = PfDanceO, G = PfDanceGOLD;
+  const P = "translate(6.2 26.6)";
+  const sword = "M-2.4 -8.8 L-2.5 -17.8 Q-1.7 -22.6 0.7 -24.6 Q2.9 -19.8 2.5 -15.6 L2.4 -8.8 Z";
+  const spear = "M0 -25.4 Q4 -19.2 1.6 -13.6 L-1.6 -13.6 Q-4 -19.2 0 -25.4 Z";
+  const axe = "M0.8 -19.6 L3 -20.4 Q5 -23 8.2 -23.2 Q10.2 -17.6 8.2 -12 Q5 -12.2 3 -14.8 L0.8 -15.6 Z";
+  const bow = "M0 -24 Q-9.4 -14 0 -4";
+  return (
+    <svg viewBox="0 0 32 32" aria-hidden="true">
+      <defs>
+        <linearGradient id="pfdG10s" x1="0" y1="1" x2="0" y2="0"><stop offset="0" stopColor="#B8C8E8" /><stop offset="0.6" stopColor="#FFFFFF" /><stop offset="1" stopColor="#F4F8FF" /></linearGradient>
+      </defs>
+      {/* 弓（若緑）。腹は外（左）へ */}
+      <g transform={`${P} rotate(6)`}>
+        <path d="M0 -24 L0 -4" stroke="#E8FFF0" strokeWidth="0.7" />
+        <path d={bow} fill="none" stroke={O} strokeWidth="4" strokeLinecap="round" opacity="0.75" />
+        <path d={bow} fill="none" stroke="#E8C060" strokeWidth="3.2" strokeLinecap="round" />
+        <path d={bow} fill="none" stroke="#9AD8A8" strokeWidth="2.1" strokeLinecap="round" />
+      </g>
+      {/* 剣（銀） */}
+      <g transform={`${P} rotate(27)`}>
+        <rect x="-1.5" y="-7.6" width="3" height="6.2" rx="0.8" fill="#4A3A78" stroke={O} strokeWidth="0.5" />
+        <path d={sword} fill="url(#pfdG10s)" stroke="#E8C060" strokeWidth="1" strokeLinejoin="round" />
+        <path d={sword} fill="none" stroke={O} strokeWidth="0.4" />
+        <path d="M0 -9.8 L0.4 -20.8" stroke="#9FB8E8" strokeWidth="0.7" />
+        <ellipse cy="-8.2" rx="3.3" ry="1.5" fill={G} stroke={O} strokeWidth="0.5" />
+      </g>
+      {/* 槍（琥珀） */}
+      <g transform={`${P} rotate(48)`}>
+        <path d="M0 -2 L0 -14.2" stroke={O} strokeWidth="3.2" strokeLinecap="round" opacity="0.75" />
+        <path d="M0 -2 L0 -14.2" stroke="#D0A060" strokeWidth="2" strokeLinecap="round" />
+        <path d={spear} fill="#F0B860" stroke="#E8C060" strokeWidth="1" strokeLinejoin="round" />
+        <path d={spear} fill="none" stroke={O} strokeWidth="0.4" />
+        <path d="M0 -15.2 L0 -22.4" stroke="#FFF0C8" strokeWidth="0.8" strokeLinecap="round" />
+      </g>
+      {/* 斧（銅）。刃は外（右下）へ */}
+      <g transform={`${P} rotate(69)`}>
+        <path d="M0 -2 L0 -21.6" stroke={O} strokeWidth="3.2" strokeLinecap="round" opacity="0.75" />
+        <path d="M0 -2 L0 -21.6" stroke="#A8744A" strokeWidth="2" strokeLinecap="round" />
+        <path d={axe} fill="#D89A6A" stroke="#E8C060" strokeWidth="1" strokeLinejoin="round" />
+        <path d={axe} fill="none" stroke={O} strokeWidth="0.4" />
+        <path d="M8.6 -21.6 Q9.8 -17.6 8.6 -13.6" fill="none" stroke="#FFE6CC" strokeWidth="0.9" strokeLinecap="round" />
+      </g>
+      {/* 金の結び目ときらめき */}
+      <circle cx="6.2" cy="26.6" r="3.8" fill={G} stroke={O} strokeWidth="0.65" />
+      <circle cx="6.2" cy="26.6" r="1.4" fill="#FFFFFF" />
+      <path d={PfDanceStar(27.4, 4.6, 3.8)} fill={G} stroke={O} strokeWidth="0.45" strokeLinejoin="round" />
+      <path d={PfDanceStar(29, 13.4, 2.1)} fill="#FFFFFF" stroke={O} strokeWidth="0.4" strokeLinejoin="round" />
+      <path d={PfDanceStar(18.6, 29, 2)} fill="#FFFFFF" stroke={O} strokeWidth="0.4" strokeLinejoin="round" />
+    </svg>
+  );
+}
+
+const PFG_DANCE = [PfDanceG10];
+const PFG_PHYS = { thrust: PFG_THRUST, blunt: PFG_BLUNT, shoot: PFG_SHOOT };
+/* 秘奥義の演出の器。⚠️ 剣の舞（FxDance）と同じ器・同じ名前の出し方 */
+/* 秘槍・秘弓・秘斧・四武の衝陣・エターナルエレメンツの演出（2026-10-04）。⚠️ 外枠は剣の舞と同じ（fx-dance） */
+function FxSecret({ label, hits, variant }) {
+  const F = { thrust: PfSpearFlash, shoot: PfBowFlash, blunt: PfAxeFlash, aegis: PfAegisFlash, eternal: PfEternalFlash }[variant];
+  return (
+    <span className="fx fx-arcana fx-dance" aria-hidden="true">
+      {F ? <F hits={hits} /> : null}
+      {label && <b className="dn-label">{label}</b>}
+    </span>
+  );
+}
+function FxFour({ label, hits }) {
+  return (
+    <span className="fx fx-arcana fx-dance" aria-hidden="true">
+      <PfDanceFlash hits={hits} />
+      {label && <b className="dn-label">{label}</b>}
+    </span>
+  );
+}
+/* ---- 第2弾（2026-10-04 Aki）：秘槍・秘弓・秘斧、四武の衝陣、エターナルエレメンツ ---- */
+/* ---- PfSpearFlash（2026-10-04） ---- */
+/*
+  【秘槍・槍の華 Spear Blossom】（剣の舞の兄弟。悪魔と死神が重なったときだけの激レア技）
+  ★ 光の槍が花びらのように輪に開き（花が咲く）、hits 回、画面中央下の主へ一本ずつ抜けて突き刺さる。最後に花が散る。
+  ★ 当たりは数字の出る時刻（120 + h×110ms）に合わせる。
+  ⚠️ 1.9秒以内に全部消える（hits=14 で 1.88秒）。閃光は花が散る一回きり。
+  ⚠️ 十字にしない：槍はすべて上の花から下の主へ向かう（鉛直から ±35° 以内）。順番は輪を一周する順で、隣どうしの角度が近い。
+  ⚠️ 位置は外側の g（transform 属性）、動きは内側の g（CSS）。
+*/
+const PfSpearAMB = "#F0B860";
+const PfSpearSAK = "#F6AFC4";
+const PfSpearSAK2 = "#FFD9E4";
+const PfSpearGOLD = "#FFD86A";
+const PfSpearN = (m) => Array.from({ length: m }, (_, i) => i);
+const PfSpearF = (v) => Math.round(v * 100) / 100;
+/* 四方に光る星 */
+const PfSpearStar = (x, y, R, r = R * 0.26) =>
+  `M${x} ${y - R}L${x + r} ${y - r}L${x + R} ${y}L${x + r} ${y + r}L${x} ${y + R}L${x - r} ${y + r}L${x - R} ${y}L${x - r} ${y - r}Z`;
+/* 花の中心と、主（突き刺さる先） */
+const PfSpearCX = 100, PfSpearCY = 40;
+const PfSpearJX = [-5, 4, -2, 6, -7, 3, -4, 7, -5, 1, 5, -6, 2, -3];
+const PfSpearJY = [0, -3, 4, -1, 3, -4, 1, 2, -2, 4, -3, 1, -1, 3];
+
+function PfSpearFlash({ hits }) {
+  const H = Math.max(1, Math.min(14, (hits | 0) || 8));
+  /* 花が散る時刻と、全部消える時刻 */
+  const F = Math.min(1520, Math.max(760, 120 + H * 110 - 20));
+  const END = F + 360;
+  /* 一撃ずつ：輪のどの花弁から抜けるか・どこへ刺さるか */
+  const shots = PfSpearN(H).map((i) => {
+    const a = (i % 12) * 30 + (i >= 12 ? 15 : 0);
+    const t = (a * Math.PI) / 180;
+    const sx = PfSpearCX + Math.sin(t) * 24, sy = PfSpearCY - Math.cos(t) * 24;
+    const tx = 100 + PfSpearJX[i], ty = 92 + PfSpearJY[i];
+    const ang = (Math.atan2(ty - sy, tx - sx) * 180) / Math.PI;
+    const L = Math.hypot(tx - sx, ty - sy);
+    return { i, slot: i % 12, tx, ty, ang, L, t: 120 + i * 110 };
+  });
+  const goneAt = {};
+  shots.forEach((s) => { if (s.i < 12) goneAt[s.slot] = s.t - 100; });
+  return (
+    <svg className="pfsp-svg" viewBox="0 0 200 130" preserveAspectRatio="xMidYMid slice" aria-hidden="true">
+      <defs>
+        <radialGradient id="pfspDimG" cx="0.5" cy="0.4"><stop offset="0" stopColor="#24122A" /><stop offset="1" stopColor="#05030A" /></radialGradient>
+        <radialGradient id="pfspHaloG"><stop offset="0" stopColor="#FFE6EE" stopOpacity="0.75" /><stop offset="0.45" stopColor="#F6AFC4" stopOpacity="0.32" /><stop offset="1" stopColor="#F6AFC4" stopOpacity="0" /></radialGradient>
+        <radialGradient id="pfspCoreG"><stop offset="0" stopColor="#FFF8E8" /><stop offset="0.6" stopColor="#FFE0A0" /><stop offset="1" stopColor="#F0B860" /></radialGradient>
+        <linearGradient id="pfspTrail" x1="0" y1="0" x2="1" y2="0">
+          <stop offset="0" stopColor="#F6AFC4" stopOpacity="0" /><stop offset="0.55" stopColor="#F0B860" stopOpacity="0.75" /><stop offset="1" stopColor="#FFF4DC" />
+        </linearGradient>
+        <linearGradient id="pfspHead" x1="0" y1="1" x2="0" y2="0"><stop offset="0" stopColor="#F0B860" /><stop offset="0.6" stopColor="#FFE6B0" /><stop offset="1" stopColor="#FFFFFF" /></linearGradient>
+        <radialGradient id="pfspWoundG"><stop offset="0" stopColor="#FFF4DC" stopOpacity="0.95" /><stop offset="0.4" stopColor="#F0B860" stopOpacity="0.55" /><stop offset="1" stopColor="#F6AFC4" stopOpacity="0" /></radialGradient>
+        <radialGradient id="pfspFlashG" cx="0.5" cy="0.45"><stop offset="0" stopColor="#FFFFFF" /><stop offset="0.35" stopColor="#FFE0EA" stopOpacity="0.55" /><stop offset="0.8" stopColor="#F6AFC4" stopOpacity="0" /></radialGradient>
+      </defs>
+      {/* 沈む */}
+      <rect className="pfsp-dim" style={{ animationDuration: `${END}ms` }} x="0" y="0" width="200" height="130" fill="url(#pfspDimG)" />
+
+      {/* 主に集まる光（刺さるほど強く） */}
+      <g transform="translate(100 92)">
+        <circle className="pfsp-wound" style={{ animationDuration: `${F + 220 - 100}ms` }} r="20" fill="url(#pfspWoundG)" />
+      </g>
+
+      {/* ── 槍の華。光の槍が花びらのように輪に開く ── */}
+      <g transform={`translate(${PfSpearCX} ${PfSpearCY}) scale(1.3)`}>
+        <g className="pfsp-scatter" style={{ animationDelay: `${F}ms` }}>
+          <g className="pfsp-open">
+            <circle r="38" fill="url(#pfspHaloG)" />
+            {/* 桜色の花弁（槍のあいだ） */}
+            {PfSpearN(12).map((j) => (
+              <g key={`pt${j}`} transform={`rotate(${j * 30 + 15})`}>
+                <path d="M0 -4 Q6.4 -11 2.4 -19.5 L0 -17 L-2.4 -19.5 Q-6.4 -11 0 -4 Z" fill={j % 2 ? PfSpearSAK : PfSpearSAK2} stroke="#FFFFFF" strokeWidth="0.3" opacity="0.88" />
+              </g>
+            ))}
+            {/* 光の槍（切っ先が外）。抜けた花弁から消える */}
+            {PfSpearN(12).map((j) => (
+              <g key={`rs${j}`} transform={`rotate(${j * 30})`}>
+                <g className="pfsp-bud" style={{ animationDelay: `${j * 8}ms` }}>
+                  <g className={goneAt[j] != null ? "pfsp-gone" : undefined} style={goneAt[j] != null ? { animationDelay: `${goneAt[j]}ms` } : undefined}>
+                    <path d="M0 -6 L0 -17.5" stroke="#E8B868" strokeWidth="1.1" strokeLinecap="round" />
+                    <path d="M0 -28 Q3 -21.5 0 -16.5 Q-3 -21.5 0 -28 Z" fill="url(#pfspHead)" stroke="#FFF4DC" strokeWidth="0.35" />
+                  </g>
+                </g>
+              </g>
+            ))}
+            <circle r="5" fill="url(#pfspCoreG)" stroke="#FFFFFF" strokeWidth="0.4" />
+            {PfSpearN(6).map((j) => (
+              <circle key={`st${j}`} cx={PfSpearF(Math.cos(j * 1.047 + 0.5) * 7.5)} cy={PfSpearF(Math.sin(j * 1.047 + 0.5) * 7.5)} r="0.9" fill={PfSpearGOLD} />
+            ))}
+          </g>
+        </g>
+      </g>
+
+      {/* ── 抜けて突き刺さる槍。数字の出る時刻に当たる ── */}
+      <g className="pfsp-spears">
+        {shots.map((s) => (
+          <g key={`sh${s.i}`} transform={`translate(${s.tx} ${s.ty}) rotate(${PfSpearF(s.ang)})`}>
+            <g className="pfsp-trail" style={{ "--d": `${PfSpearF(-s.L)}px`, animationDelay: `${s.t - 100}ms` }}>
+              <path d={`M${PfSpearF(-s.L - 16)} 0 Q-30 -3.4 -8 0 Q-30 3.4 ${PfSpearF(-s.L - 16)} 0 Z`} fill="url(#pfspTrail)" />
+            </g>
+            {/* 刺さった槍は花が散るまで残る（主に槍の束が咲く） */}
+            <g className="pfsp-melt" style={{ animationDelay: `${F}ms` }}>
+              <g className="pfsp-fly" style={{ "--d": `${PfSpearF(-s.L)}px`, animationDelay: `${s.t - 100}ms` }}>
+                <path d="M-30 0 L-8 0" stroke="#F8D49A" strokeWidth="1.8" strokeLinecap="round" />
+                <path d="M-30 0 L-8 0" stroke="#FFF6E2" strokeWidth="0.6" strokeLinecap="round" />
+                <path d="M4 0 Q-3 -3.6 -11.5 0 Q-3 3.6 4 0 Z" fill="#FFF0D0" stroke="#FFFFFF" strokeWidth="0.4" />
+                <path d="M-11.5 0 Q-13.5 -2.6 -15 -1 Q-13.6 0 -15 1 Q-13.5 2.6 -11.5 0 Z" fill={PfSpearSAK} />
+              </g>
+            </g>
+          </g>
+        ))}
+      </g>
+
+      {/* ── 当たり。桜色の星と、散る火花 ── */}
+      {shots.map((s) => (
+        <g key={`ht${s.i}`} transform={`translate(${s.tx} ${s.ty})`}>
+          <path className="pfsp-hit" style={{ animationDelay: `${s.t}ms` }} d={PfSpearStar(0, 0, 7)} fill={s.i % 2 ? PfSpearSAK2 : "#FFF4DC"} stroke={PfSpearAMB} strokeWidth="0.5" />
+          {[-30, 20, 65].map((a, k) => (
+            <g key={k} transform={`rotate(${PfSpearF(s.ang + 180 + a)})`}>
+              <path className="pfsp-spark" style={{ animationDelay: `${s.t}ms` }} d="M3 0 L8 0" stroke={k === 1 ? PfSpearSAK : "#FFE2A8"} strokeWidth="0.9" strokeLinecap="round" />
+            </g>
+          ))}
+        </g>
+      ))}
+
+      {/* ── 花が散る。輪の花弁と、主に咲いた花弁が舞い上がって落ちる ── */}
+      {PfSpearN(18).map((i) => {
+        const a = (i * 20 + 7) * Math.PI / 180, d = 40 + (i % 3) * 16;
+        return (
+          <g key={`fp${i}`} transform={`translate(${PfSpearF(PfSpearCX + Math.cos(a) * 12)} ${PfSpearF(PfSpearCY + Math.sin(a) * 12)})`}>
+            <path className="pfsp-petal" d="M0 -3 Q2.6 -1 0.6 3 L0 2.2 L-0.6 3 Q-2.6 -1 0 -3 Z" fill={i % 3 ? PfSpearSAK : PfSpearAMB} stroke="#FFFFFF" strokeWidth="0.25"
+              style={{ "--dx": `${PfSpearF(Math.cos(a) * d)}px`, "--dy": `${PfSpearF(Math.sin(a) * d * 0.8 + 18)}px`, animationDelay: `${F + (i * 7) % 30}ms` }} />
+          </g>
+        );
+      })}
+      {PfSpearN(10).map((i) => {
+        const a = (-165 + i * 16.5) * Math.PI / 180, d = 26 + (i % 3) * 10;
+        return (
+          <g key={`wp${i}`} transform="translate(100 90)">
+            <path className="pfsp-petal" d="M0 -2.6 Q2.2 -0.8 0.5 2.6 L0 1.9 L-0.5 2.6 Q-2.2 -0.8 0 -2.6 Z" fill={i % 2 ? PfSpearSAK2 : PfSpearSAK}
+              style={{ "--dx": `${PfSpearF(Math.cos(a) * d)}px`, "--dy": `${PfSpearF(Math.sin(a) * d + 10)}px`, animationDelay: `${F + 20 + (i * 11) % 40}ms` }} />
+          </g>
+        );
+      })}
+      {[[56, 24], [146, 28], [38, 64], [164, 60], [74, 108], [128, 110]].map(([x, y], i) => (
+        <g key={`gl${i}`} transform={`translate(${x} ${y})`}>
+          <path className="pfsp-glint" style={{ animationDelay: `${F + 20 + i * 15}ms` }} d={PfSpearStar(0, 0, 4)} fill={i % 2 ? "#FFFFFF" : PfSpearGOLD} />
+        </g>
+      ))}
+      {/* 閃き。⚠️ 花が散る瞬間に一度だけ */}
+      <rect className="pfsp-flash" style={{ animationDelay: `${F}ms` }} x="0" y="0" width="200" height="130" fill="url(#pfspFlashG)" />
+    </svg>
+  );
+}
+
+/* 印は既存のものを使う（今回は演出だけ） */
+
+/* ---- PfBowFlash（2026-10-04） ---- */
+/*
+  【秘弓・矢の雨 Arrow Rain】（剣の舞の兄弟。悪魔と死神が重なったときだけの激レア技）
+  ★ 空が暗くなり、無数の矢が斜めに降り注ぐ。hits 回、大きな矢が敵の列のばらばらの位置に刺さる。
+    刺さった矢は最後まで残り、終わりに若緑の光の粒になって立ちのぼって消える。
+  ★ 大きな矢の当たりは数字の出る時刻（120 + h×110ms）に合わせる。
+  ⚠️ 1.9秒以内に全部消える（hits=14 で 1.88秒）。閃光は終わりの一回きり。
+  ⚠️ 十字にしない：矢はすべて同じ角度（64°）で降る。互いに平行なので交わらない。矢羽も浅い角度。
+  ⚠️ 位置は外側の g（transform 属性）、動きは内側の g（CSS）。
+*/
+const PfBowG = "#9AD8A8";
+const PfBowG2 = "#D8FFE2";
+const PfBowGOLD = "#FFD86A";
+const PfBowANG = 64;
+const PfBowN = (m) => Array.from({ length: m }, (_, i) => i);
+const PfBowF = (v) => Math.round(v * 100) / 100;
+const PfBowStar = (x, y, R, r = R * 0.26) =>
+  `M${x} ${y - R}L${x + r} ${y - r}L${x + R} ${y}L${x + r} ${y + r}L${x} ${y + R}L${x - r} ${y + r}L${x - R} ${y}L${x - r} ${y - r}Z`;
+/* 大きな矢の刺さる場所（敵の列 y 82〜112 のばらばらの位置。続けて同じ辺りに落ちない順） */
+const PfBowAt = [[100, 96], [52, 104], [148, 88], [76, 110], [124, 100], [38, 92], [162, 106], [90, 86], [136, 108], [60, 98], [114, 90], [46, 112], [154, 94], [84, 102]];
+
+function PfBowFlash({ hits }) {
+  const H = Math.max(1, Math.min(14, (hits | 0) || 8));
+  const F = Math.min(1520, Math.max(760, 120 + H * 110 - 20));
+  const END = F + 360;
+  const NR = 44; // 雨の矢
+  const span = Math.max(300, F - 300);
+  return (
+    <svg className="pfbw-svg" viewBox="0 0 200 130" preserveAspectRatio="xMidYMid slice" aria-hidden="true">
+      <defs>
+        <linearGradient id="pfbwDimG" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stopColor="#020806" /><stop offset="0.55" stopColor="#0A1410" /><stop offset="1" stopColor="#120C1E" /></linearGradient>
+        <linearGradient id="pfbwSkyG" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stopColor="#000000" stopOpacity="0.9" /><stop offset="1" stopColor="#000000" stopOpacity="0" /></linearGradient>
+        <linearGradient id="pfbwRainT" x1="0" y1="0" x2="1" y2="0"><stop offset="0" stopColor="#9AD8A8" stopOpacity="0" /><stop offset="1" stopColor="#D8FFE2" stopOpacity="0.75" /></linearGradient>
+        <linearGradient id="pfbwBigT" x1="0" y1="0" x2="1" y2="0"><stop offset="0" stopColor="#9AD8A8" stopOpacity="0" /><stop offset="0.6" stopColor="#9AD8A8" stopOpacity="0.7" /><stop offset="1" stopColor="#F4FFF6" /></linearGradient>
+        <radialGradient id="pfbwRingG"><stop offset="0" stopColor="#F4FFF6" stopOpacity="0.9" /><stop offset="0.5" stopColor="#9AD8A8" stopOpacity="0.5" /><stop offset="1" stopColor="#9AD8A8" stopOpacity="0" /></radialGradient>
+        <radialGradient id="pfbwFlashG" cx="0.5" cy="0.7"><stop offset="0" stopColor="#FFFFFF" /><stop offset="0.4" stopColor="#D8FFE2" stopOpacity="0.5" /><stop offset="0.85" stopColor="#9AD8A8" stopOpacity="0" /></radialGradient>
+      </defs>
+      {/* 沈む */}
+      <rect className="pfbw-dim" style={{ animationDuration: `${END}ms` }} x="0" y="0" width="200" height="130" fill="url(#pfbwDimG)" />
+      {/* 空が暗くなる。低い雲の縁だけが若緑に光る */}
+      <g className="pfbw-sky" style={{ animationDuration: `${F + 260}ms` }}>
+        <rect x="0" y="0" width="200" height="64" fill="url(#pfbwSkyG)" />
+        {[[30, 10, 46, 11], [96, 4, 58, 12], [164, 12, 48, 10], [64, 22, 40, 7], [134, 24, 44, 8]].map(([x, y, rx, ry], i) => (
+          <g key={`cl${i}`} transform={`translate(${x} ${y})`}>
+            <ellipse rx={rx} ry={ry} fill="#060C0A" opacity="0.85" />
+            <path d={`M${-rx * 0.8} ${ry * 0.5} Q0 ${ry * 1.15} ${rx * 0.8} ${ry * 0.5}`} fill="none" stroke={PfBowG} strokeWidth="0.6" opacity="0.45" />
+          </g>
+        ))}
+      </g>
+
+      {/* ── 無数の矢の雨（細い。降り抜けて消える） ── */}
+      <g className="pfbw-rainl">
+        {PfBowN(NR).map((i) => {
+          const x = -14 + ((i * 41) % 214) + (i % 3) * 2, y = 40 + ((i * 29) % 88);
+          return (
+            <g key={`rn${i}`} transform={`translate(${x} ${y}) rotate(${PfBowANG})`}>
+              <g className="pfbw-rain" style={{ animationDelay: `${80 + ((i * 97) % span)}ms` }}>
+                <path d="M-40 0 L-3 -0.6 L-3 0.6 Z" fill="url(#pfbwRainT)" />
+                <path d="M0.5 0 L-3.2 -1.4 L-2.4 0 L-3.2 1.4 Z M-12 0 L-14.6 -1.6 M-12 0 L-14.6 1.6 M-12 0 L-2.4 0" fill="#E8FFF0" stroke="#E8FFF0" strokeWidth="0.5" strokeLinecap="round" />
+              </g>
+            </g>
+          );
+        })}
+      </g>
+
+      {/* ── 大きな矢。数字の出る時刻に刺さり、終わりまで残る ── */}
+      <g className="pfbw-bigl">
+        {PfBowN(H).map((i) => {
+          const [x, y] = PfBowAt[i], t = 120 + i * 110;
+          return (
+            <g key={`bg${i}`} transform={`translate(${x} ${y}) rotate(${PfBowANG})`}>
+              <g className="pfbw-btrail" style={{ animationDelay: `${t - 110}ms` }}>
+                <path d="M-150 0 Q-60 -3 -6 0 Q-60 3 -150 0 Z" fill="url(#pfbwBigT)" />
+              </g>
+              <g className="pfbw-melt" style={{ animationDelay: `${F}ms` }}>
+                <g className="pfbw-big" style={{ animationDelay: `${t - 110}ms` }}>
+                  <path d="M-36 0 L-4 0" stroke="#E8FFF0" strokeWidth="1.3" strokeLinecap="round" />
+                  <path d="M3.4 0 L-5 -3 L-3.4 0 L-5 3 Z" fill="#F4FFF6" stroke="#FFFFFF" strokeWidth="0.3" strokeLinejoin="round" />
+                  <path d="M-28 0 L-32 -3.2 L-37.4 -3.2 L-33.4 0 L-37.4 3.2 L-32 3.2 Z" fill={PfBowG} stroke="#E8FFF0" strokeWidth="0.3" strokeLinejoin="round" />
+                </g>
+              </g>
+            </g>
+          );
+        })}
+      </g>
+      {/* 当たり：地に広がる若緑の輪、星、草の粒 */}
+      {PfBowN(H).map((i) => {
+        const [x, y] = PfBowAt[i], t = 120 + i * 110;
+        return (
+          <g key={`ht${i}`} transform={`translate(${x} ${y})`}>
+            <ellipse className="pfbw-ring" style={{ animationDelay: `${t}ms` }} rx="11" ry="3.2" fill="url(#pfbwRingG)" />
+            <ellipse className="pfbw-ring2" style={{ animationDelay: `${t}ms` }} rx="6" ry="1.8" fill="none" stroke={PfBowG2} strokeWidth="0.5" />
+            <path className="pfbw-hit" style={{ animationDelay: `${t}ms` }} d={PfBowStar(0, 0, 6)} fill={i % 2 ? "#F4FFF6" : PfBowG2} stroke={PfBowG} strokeWidth="0.5" />
+            {[-150, -105, -40].map((a, k) => (
+              <g key={k} transform={`rotate(${a})`}>
+                <path className="pfbw-spark" style={{ animationDelay: `${t}ms` }} d="M3 0 L7 0" stroke={k === 1 ? "#FFFFFF" : PfBowG} strokeWidth="0.9" strokeLinecap="round" />
+              </g>
+            ))}
+          </g>
+        );
+      })}
+
+      {/* ── 終わり：刺さった矢が光の粒になって立ちのぼる ── */}
+      {PfBowN(H).map((i) => {
+        const [x, y] = PfBowAt[i];
+        return PfBowN(2).map((k) => (
+          <g key={`up${i}-${k}`} transform={`translate(${PfBowF(x - 8 - k * 6)} ${PfBowF(y - 10 - k * 8)})`}>
+            <path className="pfbw-mote" style={{ "--dy": `${-20 - ((i + k) % 3) * 8}px`, animationDelay: `${F + ((i * 13 + k * 29) % 70)}ms` }}
+              d={k ? "M0 -1.6 A1.6 1.6 0 1 0 0.01 -1.6 Z" : PfBowStar(0, 0, 3)} fill={k ? PfBowG2 : "#FFFFFF"} />
+          </g>
+        ));
+      })}
+      {[[28, 40], [172, 46], [64, 70], [140, 66], [104, 30]].map(([x, y], i) => (
+        <g key={`gl${i}`} transform={`translate(${x} ${y})`}>
+          <path className="pfbw-glint" style={{ animationDelay: `${F + 20 + i * 18}ms` }} d={PfBowStar(0, 0, 4)} fill={i % 2 ? "#FFFFFF" : PfBowGOLD} />
+        </g>
+      ))}
+      {/* 閃き。⚠️ 終わりに一度だけ */}
+      <rect className="pfbw-flash" style={{ animationDelay: `${F}ms` }} x="0" y="0" width="200" height="130" fill="url(#pfbwFlashG)" />
+    </svg>
+  );
+}
+
+/* 印は既存のものを使う（今回は演出だけ） */
+
+/* ---- PfAxeFlash（2026-10-04） ---- */
+/*
+  【秘斧・斧の宴 Feast of Axes】（剣の舞の兄弟。悪魔と死神が重なったときだけの激レア技）
+  ★ 斧がいくつも宙で回り（宴の輪舞）、hits 回、一本ずつ降ってきて横一列の敵全体へ叩きつける。
+    叩くたびに衝撃が列を横に走り、地面の亀裂が伸び、敵の守り（盾の形の光）にひびが入る。最後の一撃で盾が砕ける。
+  ★ 叩きつけは数字の出る時刻（120 + h×110ms）に合わせる。
+  ⚠️ 1.9秒以内に全部消える（hits=14 で 1.88秒）。閃光は終わりの一回きり。揺れは小さく。
+  ⚠️ 十字にしない：輪の斧は互いに離す。盾に紋（十字など）は描かない。ひびは浅い角度のぎざぎざ。
+  ⚠️ 位置は外側の g（transform 属性）、動きは内側の g（CSS）。
+*/
+const PfAxeCU = "#D89A6A";
+const PfAxeCU2 = "#F2C49A";
+const PfAxeGOLD = "#FFD86A";
+const PfAxeN = (m) => Array.from({ length: m }, (_, i) => i);
+const PfAxeF = (v) => Math.round(v * 100) / 100;
+const PfAxeStar = (x, y, R, r = R * 0.26) =>
+  `M${x} ${y - R}L${x + r} ${y - r}L${x + R} ${y}L${x + r} ${y + r}L${x} ${y + R}L${x - r} ${y + r}L${x - R} ${y}L${x - r} ${y - r}Z`;
+/* 斧（柄が縦、刃は右上。中心が原点。見えない枠で中心を揃える） */
+function PfAxeShape() {
+  return <>
+    <rect x="-9" y="-13.5" width="18" height="27" fill="none" />
+    <path d="M0 -12 L0 12.5" stroke="#9A6A44" strokeWidth="1.7" strokeLinecap="round" />
+    <path d="M0.4 -9.6 L2.8 -10.4 Q4.6 -12.8 7.6 -13.4 Q9.6 -7.6 7.6 -1.8 Q4.6 -2.4 2.8 -4.8 L0.4 -5.6 Z" fill={PfAxeCU} stroke="#FFE0C0" strokeWidth="0.45" />
+    <path d="M7.9 -12.2 Q9.2 -7.6 7.9 -3" fill="none" stroke="#FFF2E2" strokeWidth="0.6" strokeLinecap="round" />
+  </>;
+}
+/* 輪で回る小ぶりの斧（柄を短く。⚠️ 柄が長いと五本の柄がつながって五芒星に見える） */
+function PfAxeMini() {
+  return <>
+    <rect x="-6" y="-9" width="14" height="18" fill="none" />
+    <path d="M0 -9 L0 6" stroke="#9A6A44" strokeWidth="1.7" strokeLinecap="round" />
+    <path d="M0.4 -7.6 L2.8 -8.4 Q4.6 -10.8 7.6 -11.4 Q9.6 -5.6 7.6 0.2 Q4.6 -0.4 2.8 -2.8 L0.4 -3.6 Z" fill={PfAxeCU} stroke="#FFE0C0" strokeWidth="0.45" />
+    <path d="M7.9 -10.2 Q9.2 -5.6 7.9 -1" fill="none" stroke="#FFF2E2" strokeWidth="0.6" strokeLinecap="round" />
+  </>;
+}
+/* 輪の斧の向きをばらばらにする（揃うと星形に見える） */
+const PfAxePhase = [0, 131, 47, 203, 289];
+/* 叩きつける位置（列のあちこち。続けて同じ辺りに落ちない順） */
+const PfAxeX = [100, 50, 150, 75, 125, 40, 160, 90, 140, 60, 115, 45, 155, 85];
+const PfAxeGY = 108; // 地面
+/* 敵の守り（盾の光） */
+const PfAxeSH = [[47, 84], [100, 82], [153, 84]];
+const PfAxeShieldD = "M0 -12 Q6 -12 10 -9 L9.4 1.5 Q7.6 8.6 0 13 Q-7.6 8.6 -9.4 1.5 L-10 -9 Q-6 -12 0 -12 Z";
+const PfAxeCracks = [
+  "M-1 -11 L1.5 -6 L-1 -2.5 L2 1.5 L0.5 5",
+  "M-9.6 -3 L-5 -1.5 L-3 2 L1 3.4 L4 7.5",
+  "M9.6 -6.5 L5.2 -4.4 L3.6 -0.4 L6.4 3.6 L4.2 9",
+];
+const PfAxeShards = [
+  "M0 -12 Q6 -12 10 -9 L4 -4 Z", "M10 -9 L9.4 1.5 L3 -1 Z", "M9.4 1.5 Q7.6 8.6 0 13 L2 3 Z", "M0 13 Q-7.6 8.6 -9.4 1.5 L-2 3 Z",
+  "M-9.4 1.5 L-10 -9 L-3 -1 Z", "M-10 -9 Q-6 -12 0 -12 L-3 -4 Z", "M-3 -3 L3 -3 L2 3 L-2 3 Z",
+];
+
+function PfAxeFlash({ hits }) {
+  const H = Math.max(1, Math.min(14, (hits | 0) || 8));
+  const F = Math.min(1520, Math.max(760, 120 + H * 110 - 20));
+  const END = F + 360;
+  const T = (i) => 120 + i * 110;
+  const tLast = T(H - 1);
+  const crackAt = (c) => T(Math.min(H - 1, Math.floor(((c + 1) * H) / 4)));
+  return (
+    <svg className="pfax-svg" viewBox="0 0 200 130" preserveAspectRatio="xMidYMid slice" aria-hidden="true">
+      <defs>
+        <radialGradient id="pfaxDimG" cx="0.5" cy="0.35"><stop offset="0" stopColor="#24160E" /><stop offset="1" stopColor="#050306" /></radialGradient>
+        <radialGradient id="pfaxRingG"><stop offset="0" stopColor="#FFE6C8" stopOpacity="0.45" /><stop offset="0.6" stopColor="#D89A6A" stopOpacity="0.15" /><stop offset="1" stopColor="#D89A6A" stopOpacity="0" /></radialGradient>
+        <radialGradient id="pfaxWaveG"><stop offset="0" stopColor="#FFF0DC" stopOpacity="0.95" /><stop offset="0.35" stopColor="#F2C49A" stopOpacity="0.6" /><stop offset="1" stopColor="#D89A6A" stopOpacity="0" /></radialGradient>
+        <linearGradient id="pfaxShieldG" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stopColor="#E8F2FF" stopOpacity="0.55" /><stop offset="1" stopColor="#9AB8E8" stopOpacity="0.18" /></linearGradient>
+        <linearGradient id="pfaxGroundG" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stopColor="#3A2214" stopOpacity="0" /><stop offset="0.3" stopColor="#3A2214" stopOpacity="0.75" /><stop offset="1" stopColor="#160C08" stopOpacity="0.9" /></linearGradient>
+        <radialGradient id="pfaxFlashG" cx="0.5" cy="0.75"><stop offset="0" stopColor="#FFFFFF" /><stop offset="0.35" stopColor="#FFE6C8" stopOpacity="0.55" /><stop offset="0.85" stopColor="#D89A6A" stopOpacity="0" /></radialGradient>
+      </defs>
+      {/* 沈む */}
+      <rect className="pfax-dim" style={{ animationDuration: `${END}ms` }} x="0" y="0" width="200" height="130" fill="url(#pfaxDimG)" />
+
+      <g className="pfax-shake" style={{ animationDelay: `${T(0)}ms`, animationIterationCount: H }}>
+        {/* 地面と、伸びていく亀裂 */}
+        <g className="pfax-ground" style={{ animationDuration: `${END}ms` }}>
+          <rect x="0" y="102" width="200" height="28" fill="url(#pfaxGroundG)" />
+        </g>
+        <g className="pfax-crackl" style={{ animationDelay: `${F}ms` }}>
+          <path className="pfax-crack pfax-crackglow" style={{ animationDelay: `${T(0)}ms`, animationDuration: `${Math.max(110, H * 110)}ms` }} fill="none" stroke="#FF9A50" strokeWidth="2.6" strokeLinejoin="round" strokeLinecap="round" opacity="0.5"
+            d="M100 110 L112 108.5 L120 111 L133 109 L141 112 L155 110 L166 113 L180 111 L204 113 M100 110 L89 111.5 L80 109 L66 111 L58 108.5 L44 111 L33 109 L19 112 L-4 110" />
+          <path className="pfax-crack" style={{ animationDelay: `${T(0)}ms`, animationDuration: `${Math.max(110, H * 110)}ms` }} fill="none" stroke="#FFD8B0" strokeWidth="1" strokeLinejoin="round" strokeLinecap="round"
+            d="M100 110 L112 108.5 L120 111 L133 109 L141 112 L155 110 L166 113 L180 111 L204 113 M100 110 L89 111.5 L80 109 L66 111 L58 108.5 L44 111 L33 109 L19 112 L-4 110 M120 111 L126 116 L138 118 L146 124 M80 109 L72 115 L60 117 L52 124 M155 110 L160 106 L170 104 M44 111 L38 106 L28 104.5 M141 112 L150 119 L163 121 M58 108.5 L50 116 L40 120" />
+        </g>
+
+        {/* ── 敵の守り。盾の形の光。叩くたびにひびが入り、最後の一撃で砕ける ── */}
+        {PfAxeSH.map(([x, y], si) => (
+          <g key={`sh${si}`} transform={`translate(${x} ${y}) scale(1.15)`}>
+            <g className="pfax-shield" style={{ animationDelay: `${tLast + 20}ms` }}>
+              <g className="pfax-shin" style={{ animationDelay: `${40 + si * 40}ms` }}>
+                <path d={PfAxeShieldD} fill="url(#pfaxShieldG)" stroke="#D8E8FF" strokeWidth="0.9" strokeLinejoin="round" />
+                <path d="M0 -9.4 Q4.6 -9.4 7.6 -7.2 L7.1 1 Q5.6 6.6 0 10 Q-5.6 6.6 -7.1 1 L-7.6 -7.2 Q-4.6 -9.4 0 -9.4 Z" fill="none" stroke="#FFFFFF" strokeWidth="0.4" opacity="0.6" />
+                <path d="M0 -3 L2.4 0.6 L0 4.2 L-2.4 0.6 Z" fill="#E8F2FF" opacity="0.8" />
+                {PfAxeCracks.map((d, c) => (
+                  <path key={c} className="pfax-scrack" style={{ animationDelay: `${crackAt(c)}ms` }} d={d} fill="none" stroke="#FFFFFF" strokeWidth="0.7" strokeLinejoin="round" strokeLinecap="round" />
+                ))}
+              </g>
+            </g>
+            {PfAxeShards.map((d, k) => {
+              const a = (-150 + k * 50) * Math.PI / 180, dd = 16 + (k % 3) * 7;
+              return (
+                <path key={`sd${k}`} className="pfax-shard" d={d} fill="#EEF6FF" stroke="#FFFFFF" strokeWidth="0.35"
+                  style={{ "--dx": `${PfAxeF(Math.cos(a) * dd)}px`, "--dy": `${PfAxeF(Math.sin(a) * dd + 6)}px`, animationDelay: `${tLast + 20 + (k % 3) * 10}ms` }} />
+              );
+            })}
+          </g>
+        ))}
+
+        {/* ── 叩きつけ：降ってくる斧、列を横に走る衝撃、礫 ── */}
+        {PfAxeN(H).map((i) => {
+          const x = PfAxeX[i], t = T(i);
+          return (
+            <g key={`hx${i}`} transform={`translate(${x} ${PfAxeGY})`}>
+              <ellipse className="pfax-wave" style={{ animationDelay: `${t}ms` }} rx="46" ry="5" fill="url(#pfaxWaveG)" />
+              <ellipse className="pfax-wring" style={{ animationDelay: `${t}ms` }} rx="12" ry="2.4" fill="none" stroke="#FFE0C0" strokeWidth="0.6" />
+              {PfAxeN(4).map((k) => {
+                const a = (-150 + k * 40 + (i % 2) * 14) * Math.PI / 180, d = 14 + ((i + k) % 3) * 7;
+                return (
+                  <path key={`ch${k}`} className="pfax-chip" d={k % 2 ? "M0 -2 L2.2 -0.4 L1 1.9 L-1.7 1.2 Z" : "M-1.4 -1.5 L1.7 -1 L1.4 1.5 L-1.5 0.9 Z"}
+                    fill={["#D89A6A", "#8A5A3A", "#F2C49A"][(i + k) % 3]} stroke="#2A1A10" strokeWidth="0.3"
+                    style={{ "--dx": `${PfAxeF(Math.cos(a) * d)}px`, "--dy": `${PfAxeF(Math.sin(a) * d)}px`, animationDelay: `${t}ms` }} />
+                );
+              })}
+              <g className="pfax-drop" style={{ animationDelay: `${t - 110}ms` }}>
+                <g transform="translate(-4.5 -19) rotate(115) scale(1.6)"><PfAxeShape /></g>
+              </g>
+              <path className="pfax-hit" style={{ animationDelay: `${t}ms` }} d={PfAxeStar(0, -1, 6)} fill="#FFF0DC" stroke={PfAxeCU} strokeWidth="0.5" />
+            </g>
+          );
+        })}
+      </g>
+
+      {/* ── 宴の輪舞。宙で回る斧の輪（画面中央の上。人物の背後には置かない） ── */}
+      <g transform="translate(100 40)">
+        <g className="pfax-fly" style={{ animationDelay: `${F}ms` }}>
+          <g className="pfax-orbit" style={{ animationDuration: `${END}ms` }}>
+            <circle r="40" fill="url(#pfaxRingG)" />
+            {PfAxeN(5).map((j) => (
+              <g key={`ra${j}`} transform={`rotate(${j * 72}) translate(0 -27) rotate(${PfAxePhase[j]})`}>
+                <g className="pfax-spin" style={{ animationDuration: `${END}ms` }}>
+                  <PfAxeMini />
+                </g>
+              </g>
+            ))}
+            {PfAxeN(5).map((j) => (
+              <g key={`rs${j}`} transform={`rotate(${j * 72 + 36}) translate(0 -30)`}>
+                <path d={PfAxeStar(0, 0, 2.2)} fill={PfAxeGOLD} opacity="0.8" />
+              </g>
+            ))}
+          </g>
+        </g>
+      </g>
+
+      {[[30, 30], [170, 34], [56, 60], [146, 58], [100, 14]].map(([x, y], i) => (
+        <g key={`gl${i}`} transform={`translate(${x} ${y})`}>
+          <path className="pfax-glint" style={{ animationDelay: `${F + 20 + i * 18}ms` }} d={PfAxeStar(0, 0, 4)} fill={i % 2 ? "#FFFFFF" : PfAxeGOLD} />
+        </g>
+      ))}
+      {/* 閃き。⚠️ 終わりに一度だけ */}
+      <rect className="pfax-flash" style={{ animationDelay: `${F}ms` }} x="0" y="0" width="200" height="130" fill="url(#pfaxFlashG)" />
+    </svg>
+  );
+}
+
+/* 印は既存のものを使う（今回は演出だけ） */
+
+/* ---- PfAegisFlash（2026-10-04） ---- */
+/*
+  【秘奥義・四武の衝陣 Bulwark of Four Arms】HPが危ないときに一度だけ撃てる逆転の奥義。
+  ★ 画面上に四つの武器が斜めの陣を組み、順に技を放つ：
+    剣の三日月斬り → 槍の落とし突き（菱形の衝撃）→ 斧の回転叩きつけ（衝撃の弧）→ 弓の斜めの矢の雨。
+  ★ そのあと、画面手前に四枚の菱形の光の板が下からせり上がって組み合わさり、金の縁の盾になる
+    （4ターン敵の攻撃を受けない印）。盾の下側に四つの小さな菱形の灯がともる。
+  ★ hits（1〜14）ぶん、150 + i×110ms に当たりの光を出す（数字の間隔と揃える）。
+  ⚠️ 1.88秒で全部消える。閃光は盾が組み上がる瞬間の一回きり。
+  ⚠️ 十字にしない：武器の技の線は 20°・70°・118° と浅くずらし、同時に交差させない。盾の中に縦横の線は引かない。
+  ⚠️ 位置は外側の g（transform 属性）、動きは内側の g（CSS）。
+*/
+const PfAegisC = ["#DDE6F6", "#F0B860", "#D89A6A", "#9AD8A8"]; // 剣・槍・斧・弓
+const PfAegisGOLD = "#FFD86A";
+const PfAegisN = (m) => Array.from({ length: m }, (_, i) => i);
+const PfAegisStar = (x, y, R, r = R * 0.28) =>
+  `M${x} ${y - R}L${x + r} ${y - r}L${x + R} ${y}L${x + r} ${y + r}L${x} ${y + R}L${x - r} ${y + r}L${x - R} ${y}L${x - r} ${y - r}Z`;
+const PfAegisRhomb = (w, h) => `M0 ${-h}L${w} 0L0 ${h}L${-w} 0Z`;
+
+/* ── 武器（切っ先が −y、中心が原点。見えない枠で中心を揃える） ── */
+function PfAegisSword() {
+  return <>
+    <rect x="-8" y="-14" width="16" height="28" fill="none" />
+    <path d="M-1.9 4 L-1.9 -6 Q-1.6 -11.4 0 -14 Q1.6 -11.4 1.9 -6 L1.9 4 Z" fill="url(#pfagSteel)" stroke="#FFFFFF" strokeWidth="0.35" />
+    <path d="M0 2.6 L0 -10.4" stroke="#9FB8E8" strokeWidth="0.5" />
+    <path d="M-3.6 3.4 Q0 6.2 3.6 3.4 Q0 5 -3.6 3.4 Z" fill={PfAegisGOLD} stroke="#FFF2C0" strokeWidth="0.3" />
+    <rect x="-1" y="5.2" width="2" height="6.4" rx="0.7" fill="#3A3070" stroke="#DDE6F6" strokeWidth="0.3" />
+    <circle cx="0" cy="12.4" r="1.3" fill={PfAegisGOLD} />
+  </>;
+}
+function PfAegisSpear() {
+  return <>
+    <rect x="-8" y="-14" width="16" height="28" fill="none" />
+    <path d="M0 -3.4 L0 13.4" stroke="#B8884E" strokeWidth="1.5" strokeLinecap="round" />
+    <path d="M0 -14 Q3.2 -9.2 1.2 -4 L-1.2 -4 Q-3.2 -9.2 0 -14 Z" fill="#F0B860" stroke="#FFF0C8" strokeWidth="0.35" />
+    <path d="M0 -12.4 L0 -5.6" stroke="#FFF4DC" strokeWidth="0.5" />
+    <ellipse cx="0" cy="-3.2" rx="1.9" ry="0.9" fill={PfAegisGOLD} />
+    <path d="M0.4 -2.4 Q3.6 0 2.4 4.4 Q1.6 1.4 0.4 -0.4 Z" fill="#F2A040" opacity="0.9" />
+  </>;
+}
+function PfAegisAxe() {
+  return <>
+    <rect x="-9" y="-14" width="18" height="28" fill="none" />
+    <path d="M0 -12.6 L0 13.4" stroke="#8A5A38" strokeWidth="1.7" strokeLinecap="round" />
+    <path d="M0.5 -10.4 L3 -10.4 Q5.6 -14.2 8.8 -13.4 Q11 -7.2 8.8 -1 Q5.6 -0.4 3 -4.2 L0.5 -4.2 Z" fill="#D89A6A" stroke="#FFE0C0" strokeWidth="0.45" />
+    <path d="M9.2 -12.2 Q10.6 -7.2 9.2 -2.2" fill="none" stroke="#FFF0DE" strokeWidth="0.7" strokeLinecap="round" />
+    <circle cx="0" cy="-7.3" r="1.2" fill={PfAegisGOLD} />
+  </>;
+}
+function PfAegisBow() {
+  return <>
+    <rect x="-8" y="-14" width="16" height="28" fill="none" />
+    <path d="M-1.6 -12.6 L-1.6 12.6" stroke="#E8FFF0" strokeWidth="0.45" />
+    <path d="M-1.6 -12.6 Q2 -11 3.4 -6.4 Q4.8 0 3.4 6.4 Q2 11 -1.6 12.6" fill="none" stroke="#9AD8A8" strokeWidth="2.1" strokeLinecap="round" />
+    <path d="M-1.6 -12.6 Q-2.6 -13.6 -2 -14.2 M-1.6 12.6 Q-2.6 13.6 -2 14.2" fill="none" stroke="#9AD8A8" strokeWidth="1.2" strokeLinecap="round" />
+    <path d="M3.6 -2 L3.6 2" stroke={PfAegisGOLD} strokeWidth="2.2" strokeLinecap="round" />
+  </>;
+}
+const PfAegisArms = [PfAegisSword, PfAegisSpear, PfAegisAxe, PfAegisBow];
+/* 陣の位置（画面上部に斜めに並ぶ。輪にはしない）と、光る時刻 */
+const PfAegisPos = [[30, 34, -18], [74, 20, -6], [126, 20, 6], [170, 34, 18]];
+const PfAegisFire = [40, 280, 480, 720];
+/* 当たりの位置（i 番目の数字に対応）。0-1 剣、2-3 槍、4-5 斧、6〜 弓 */
+const PfAegisHitAt = [[58, 96], [82, 104], [100, 90], [106, 99], [144, 98], [154, 90],
+  [40, 100], [122, 108], [72, 88], [162, 104], [94, 112], [134, 86], [52, 90], [114, 101]];
+const PfAegisHitCol = (i) => PfAegisC[i < 2 ? 0 : i < 4 ? 1 : i < 6 ? 2 : 3];
+/* 盾の四枚の板：中心 x, y, 半幅, 半高, 傾き */
+const PfAegisPanels = [[71, 87, 11, 21, -11], [89.5, 84, 12, 27, -4], [110.5, 84, 12, 27, 4], [129, 87, 11, 21, 11]];
+const PfAegisShieldD = "M57 66 Q100 50 143 66 L141 92 Q130 112 100 121 Q70 112 59 92 Z";
+
+function PfAegisFlash({ hits }) {
+  const H = Math.max(1, Math.min(14, (hits | 0) || 8));
+  const lastHit = 150 + (H - 1) * 110;
+  const rainEnd = Math.max(1000, lastHit - 40);
+  const dimMs = Math.max(1800, Math.min(1880, lastHit + 300)); // 矢が多いときは暗さを少し長く
+  const NA = 12 + Math.max(0, H - 8); // 矢の本数
+  return (
+    <svg className="pfag-svg" viewBox="0 0 200 130" preserveAspectRatio="xMidYMid slice" aria-hidden="true">
+      <defs>
+        <radialGradient id="pfagDimG" cx="0.5" cy="0.62"><stop offset="0" stopColor="#1A1230" /><stop offset="1" stopColor="#030208" /></radialGradient>
+        <linearGradient id="pfagSteel" x1="0" y1="1" x2="0" y2="0"><stop offset="0" stopColor="#A8BCE6" /><stop offset="0.6" stopColor="#FFFFFF" /><stop offset="1" stopColor="#EEF4FF" /></linearGradient>
+        <linearGradient id="pfagCres" x1="0" y1="0" x2="1" y2="0.4">
+          <stop offset="0" stopColor="#DDE6F6" stopOpacity="0" /><stop offset="0.35" stopColor="#FFFFFF" /><stop offset="0.8" stopColor="#DDE6F6" /><stop offset="1" stopColor="#9FC0F0" stopOpacity="0" />
+        </linearGradient>
+        <linearGradient id="pfagAmber" x1="0" y1="0" x2="1" y2="0">
+          <stop offset="0" stopColor="#F0B860" stopOpacity="0" /><stop offset="0.7" stopColor="#F0B860" stopOpacity="0.85" /><stop offset="1" stopColor="#FFF4DC" />
+        </linearGradient>
+        <linearGradient id="pfagArrowT" x1="0" y1="0" x2="1" y2="0">
+          <stop offset="0" stopColor="#9AD8A8" stopOpacity="0" /><stop offset="1" stopColor="#E0FFE8" stopOpacity="0.9" />
+        </linearGradient>
+        <radialGradient id="pfagQuake"><stop offset="0" stopColor="#FFE6C8" /><stop offset="0.45" stopColor="#D89A6A" stopOpacity="0.7" /><stop offset="1" stopColor="#D89A6A" stopOpacity="0" /></radialGradient>
+        <linearGradient id="pfagBody" x1="0" y1="0" x2="0" y2="1">
+          <stop offset="0" stopColor="#FFF6DC" stopOpacity="0.32" /><stop offset="1" stopColor="#FFD86A" stopOpacity="0.08" />
+        </linearGradient>
+        <linearGradient id="pfagSheen" x1="0" y1="0" x2="1" y2="0">
+          <stop offset="0" stopColor="#FFFFFF" stopOpacity="0" /><stop offset="0.5" stopColor="#FFFFFF" stopOpacity="0.75" /><stop offset="1" stopColor="#FFFFFF" stopOpacity="0" />
+        </linearGradient>
+        {PfAegisC.map((c, i) => (
+          <linearGradient key={`pg${i}`} id={`pfagPanel${i}`} x1="0" y1="0" x2="0.3" y2="1">
+            <stop offset="0" stopColor="#FFFFFF" stopOpacity="0.85" /><stop offset="0.35" stopColor={c} stopOpacity="0.75" /><stop offset="1" stopColor={c} stopOpacity="0.3" />
+          </linearGradient>
+        ))}
+        <radialGradient id="pfagFlashG" cx="0.5" cy="0.65"><stop offset="0" stopColor="#FFFFFF" /><stop offset="0.35" stopColor="#FFE9B0" stopOpacity="0.55" /><stop offset="0.8" stopColor="#FFD86A" stopOpacity="0" /></radialGradient>
+        <clipPath id="pfagClip"><path d={PfAegisShieldD} /></clipPath>
+      </defs>
+
+      {/* 沈む */}
+      <rect className="pfag-dim" x="0" y="0" width="200" height="130" fill="url(#pfagDimG)" style={{ animationDuration: `${dimMs}ms` }} />
+
+      <g className="pfag-shake">
+        {/* ── 陣：四つの武器が画面上部に斜めに並び、自分の番で光って跳ねる ── */}
+        <g className="pfag-camp">
+          {PfAegisArms.map((W, i) => (
+            <g key={`w${i}`} transform={`translate(${PfAegisPos[i][0]} ${PfAegisPos[i][1]}) rotate(${PfAegisPos[i][2]}) scale(1.05)`}>
+              <g className="pfag-wpn" style={{ animationDelay: `${PfAegisFire[i]}ms` }}>
+                <ellipse cx="0" cy="13" rx="7" ry="1.6" fill={PfAegisC[i]} opacity="0.35" />
+                <W />
+              </g>
+            </g>
+          ))}
+        </g>
+
+        {/* ── ① 剣：三日月の斬撃が敵の左側を薙ぐ ── */}
+        <g transform="translate(14 58)">
+          <g className="pfag-cres">
+            <path d="M0 0 Q48 62 146 54 Q54 48 0 0 Z" fill="#DDE6F6" opacity="0.28" />
+            <path d="M2 1 Q50 56 142 53 Q56 50 2 1 Z" fill="url(#pfagCres)" />
+          </g>
+        </g>
+        <g transform="translate(22 40)">
+          <g className="pfag-cres pfag-cres2">
+            <path d="M0 0 Q40 50 120 50 Q48 42 0 0 Z" fill="url(#pfagCres)" opacity="0.75" />
+          </g>
+        </g>
+        <g transform="translate(14 58) rotate(26)">
+          <g className="pfag-swfly">
+            <g transform="translate(-28 0) rotate(90) scale(2)"><PfAegisSword /></g>
+          </g>
+        </g>
+
+        {/* ── ② 槍：上から落ちる突き。菱形の衝撃が広がる ── */}
+        <g transform="translate(101 92) rotate(72)">
+          <g className="pfag-strail">
+            <path d="M-150 0 Q-50 -6 0 0 Q-50 6 -150 0 Z" fill="url(#pfagAmber)" opacity="0.7" />
+            <path d="M-130 0 Q-40 -1.8 0 0 Q-40 1.8 -130 0 Z" fill="url(#pfagAmber)" />
+          </g>
+          <g className="pfag-spear">
+            <g transform="translate(-28 0) rotate(90) scale(2)"><PfAegisSpear /></g>
+          </g>
+        </g>
+        <g transform="translate(101 92)">
+          {PfAegisN(3).map((i) => (
+            <path key={`rr${i}`} className="pfag-rring" style={{ animationDelay: `${300 + i * 70}ms` }} d={PfAegisRhomb(9, 4)} fill="none" stroke={i === 1 ? "#FFF0C8" : "#F0B860"} strokeWidth={0.9 - i * 0.2} />
+          ))}
+          <g className="pfag-tip">
+            <path d={PfAegisStar(0, 0, 9)} fill="#FFF4DC" />
+            <circle r="2.4" fill="#FFFFFF" />
+          </g>
+        </g>
+
+        {/* ── ③ 斧：回りながら落ちて右側を叩く。衝撃の弧と礫 ── */}
+        <g transform="translate(148 101)">
+          <ellipse className="pfag-qglow" rx="30" ry="8" fill="url(#pfagQuake)" />
+          {PfAegisN(2).map((i) => (
+            <path key={`dm${i}`} className="pfag-dome" style={{ animationDelay: `${470 + i * 90}ms` }} d="M-10 0 Q-10 -8 0 -8 Q10 -8 10 0" fill="none" stroke="#F2C49A" strokeWidth={0.8 - i * 0.25} />
+          ))}
+          {PfAegisN(9).map((i) => {
+            const a = (-165 + i * 18.5) * Math.PI / 180, d = 22 + (i % 3) * 9;
+            return (
+              <g key={`ch${i}`} transform={`translate(${(i - 4) * 2.4} -1)`}>
+                <path className="pfag-chip" d={i % 2 ? "M0 -2.2 L2.4 -0.4 L1 2 L-1.8 1.2 Z" : "M-1.5 -1.6 L1.9 -1.1 L1.5 1.7 L-1.7 0.9 Z"} fill={["#D89A6A", "#8A5A3A", "#F2C49A"][i % 3]} stroke="#2A1A10" strokeWidth="0.3"
+                  style={{ "--dx": `${(Math.cos(a) * d).toFixed(1)}px`, "--dy": `${(Math.sin(a) * d).toFixed(1)}px`, animationDelay: `${475 + (i % 4) * 15}ms` }} />
+              </g>
+            );
+          })}
+          <g transform="translate(-4 -16) rotate(-30) scale(1.9)">
+            <g className="pfag-axe"><PfAegisAxe /></g>
+          </g>
+        </g>
+
+        {/* ── ④ 弓：右上の弓から、斜めの矢の雨 ── */}
+        <g className="pfag-arrows">
+          {PfAegisN(NA).map((i) => {
+            const x = 24 + ((i * 59) % 150), y = 82 + ((i * 31) % 32);
+            const dl = 760 + Math.round(((i * 37) % NA) / Math.max(1, NA - 1) * (rainEnd - 760));
+            return (
+              <g key={`ar${i}`} transform={`translate(${x} ${y}) rotate(118)`}>
+                <g className="pfag-arrow" style={{ animationDelay: `${dl}ms` }}>
+                  <path d="M-40 0 L-4 -0.8 L-4 0.8 Z" fill="url(#pfagArrowT)" />
+                  <path d="M-14 0 L-3 0 M0 0 L-4.2 -1.7 L-3.2 0 L-4.2 1.7 Z M-14 0 L-17 -1.8 M-12 0 L-15 -1.8 M-14 0 L-17 1.8 M-12 0 L-15 1.8"
+                    fill="#EFFFF4" stroke="#EFFFF4" strokeWidth="0.7" strokeLinecap="round" strokeLinejoin="round" />
+                </g>
+              </g>
+            );
+          })}
+        </g>
+
+        {/* ── 当たりの光。150 + i×110ms ── */}
+        {PfAegisN(H).map((i) => (
+          <g key={`ht${i}`} transform={`translate(${PfAegisHitAt[i][0]} ${PfAegisHitAt[i][1]})`}>
+            <path className="pfag-hit" style={{ animationDelay: `${150 + i * 110}ms` }} d={PfAegisStar(0, 0, 6)} fill={PfAegisHitCol(i)} stroke="#FFFFFF" strokeWidth="0.5" />
+          </g>
+        ))}
+      </g>
+
+      {/* ── ⑤ 盾：四枚の菱形の板がせり上がって組み合わさる（画面手前） ── */}
+      <g transform="translate(100 90) scale(1.22) translate(-100 -90)">
+      <g className="pfag-shield">
+        <g className="pfag-body">
+          <path d={PfAegisShieldD} fill="url(#pfagBody)" />
+        </g>
+        {PfAegisPanels.map(([x, y, w, h, r], i) => (
+          <g key={`pn${i}`} transform={`translate(${x} ${y}) rotate(${r})`}>
+            <g className="pfag-panel" style={{ animationDelay: `${900 + i * 70}ms` }}>
+              <path d={PfAegisRhomb(w, h)} fill={`url(#pfagPanel${i})`} stroke={PfAegisC[i]} strokeWidth="1.1" strokeLinejoin="round" />
+              <path d={PfAegisRhomb(w * 0.5, h * 0.55)} fill="#FFFFFF" opacity="0.28" transform={`translate(${-w * 0.12} ${-h * 0.18})`} />
+              <path d={PfAegisRhomb(w, h)} fill="none" stroke={PfAegisGOLD} strokeWidth="0.45" strokeLinejoin="round" />
+            </g>
+          </g>
+        ))}
+        {/* 金の縁が走って組み上がる */}
+        <path className="pfag-rim" d={PfAegisShieldD} fill="none" stroke={PfAegisGOLD} strokeWidth="1.7" strokeLinejoin="round" />
+        <path className="pfag-rim pfag-rim2" d={PfAegisShieldD} fill="none" stroke="#FFF6DC" strokeWidth="0.5" strokeLinejoin="round" />
+        {/* 斜めの照り（盾の中だけ） */}
+        <g clipPath="url(#pfagClip)">
+          <g transform="translate(40 50) rotate(22)">
+            <g className="pfag-sheen"><rect x="0" y="-20" width="16" height="110" fill="url(#pfagSheen)" /></g>
+          </g>
+        </g>
+        {/* 4ターンの灯：盾の下に四つの小さな菱形 */}
+        {PfAegisN(4).map((i) => (
+          <g key={`pp${i}`} transform={`translate(${88 + i * 8} 108)`}>
+            <path className="pfag-pip" style={{ animationDelay: `${1230 + i * 55}ms` }} d={PfAegisRhomb(2.2, 3.2)} fill={PfAegisC[i]} stroke={PfAegisGOLD} strokeWidth="0.6" />
+          </g>
+        ))}
+        {[[50, 62], [152, 60], [100, 46], [64, 112], [138, 112]].map(([x, y], i) => (
+          <g key={`gl${i}`} transform={`translate(${x} ${y})`}>
+            <path className="pfag-glint" style={{ animationDelay: `${1190 + i * 45}ms` }} d={PfAegisStar(0, 0, 4)} fill={i % 2 ? "#FFFFFF" : PfAegisGOLD} />
+          </g>
+        ))}
+      </g>
+      </g>
+
+      {/* 閃き。⚠️ 盾が組み上がる瞬間に一度だけ */}
+      <rect className="pfag-flash" x="0" y="0" width="200" height="130" fill="url(#pfagFlashG)" />
+    </svg>
+  );
+}
+
+/* ---- PfEternalFlash（2026-10-04） ---- */
+/*
+  【エターナルエレメンツ Eternal Elements】HPが危ないときに一度だけ撃てる逆転の奥義。
+  ★ 地・火・水・風・光・闇の六つの光球が、画面の左右から交互に一つずつ現れ、中央下の一体へ放たれて着弾する。
+    着弾は属性ごとに違う：地＝礫、火＝炎の舌、水＝しぶきの輪、風＝つむじの弧、光＝四方の星、闇＝吸い込む輪。
+  ★ 最後に六色の光が帯になって画面をやわらかく包み（6ターン状態異常を受けない印）、消える。
+  ★ hits（1〜14）ぶん、320 + i×110ms に当たりの光。六つの球の着弾も最初と最後の当たりに揃える。
+  ⚠️ 2.38秒以内に全部消える。閃光は最後の球の着弾の一回きり。
+  ⚠️ 六つの球を線で結ばない。輪にして頭上・背後に置かない（球は左右から順に出て、同時に並ばない）。
+  ⚠️ 位置は外側の g（transform 属性）、動きは内側の g（CSS）。
+*/
+const PfEternalC = ["#A8744A", "#E8483A", "#3A8AE8", "#4AB860", "#F0C830", "#6A3A9A"]; // 地・火・水・風・光・闇
+const PfEternalLite = ["#E8C49A", "#FFB070", "#A8D8FF", "#B8F0C0", "#FFF4B0", "#C8A0F0"];
+const PfEternalGOLD = "#FFD86A";
+const PfEternalO = "#2A3458";
+const PfEternalN = (m) => Array.from({ length: m }, (_, i) => i);
+const PfEternalStar = (x, y, R, r = R * 0.28) =>
+  `M${x} ${y - R}L${x + r} ${y - r}L${x + R} ${y}L${x + r} ${y + r}L${x} ${y + R}L${x - r} ${y + r}L${x - R} ${y}L${x - r} ${y - r}Z`;
+/* 狙う一体 */
+const PfEternalTX = 100, PfEternalTY = 94;
+/* 球が現れる場所：左右から交互に、高さを変えて（輪にしない） */
+const PfEternalFrom = [[16, 52], [184, 44], [26, 22], [176, 18], [62, 14], [140, 12]];
+const PfEternalT0 = 320;
+
+/* 着弾の形（属性ごと）。原点が着弾点 */
+function PfEternalBurst({ e, d }) {
+  const c = PfEternalC[e], l = PfEternalLite[e];
+  const st = (extra) => ({ animationDelay: `${d}ms`, ...extra });
+  if (e === 0) return <>{PfEternalN(6).map((i) => {
+    const a = (-160 + i * 28) * Math.PI / 180, r = 18 + (i % 3) * 7;
+    return <path key={i} className="pfet-fly" style={st({ "--dx": `${(Math.cos(a) * r).toFixed(1)}px`, "--dy": `${(Math.sin(a) * r).toFixed(1)}px` })}
+      d={i % 2 ? "M0 -2.4 L2.6 -0.4 L1.2 2.2 L-2 1.4 Z" : "M-1.8 -1.8 L2.2 -1.2 L1.6 1.9 L-1.9 1 Z"} fill={i % 2 ? c : l} stroke="#2A1A10" strokeWidth="0.3" />;
+  })}</>;
+  if (e === 1) return <>{[-34, -12, 10, 32].map((a, i) => (
+    <g key={i} transform={`rotate(${a})`}>
+      <path className="pfet-flame" style={st({ animationDelay: `${d + i * 20}ms` })} d="M0 -2 Q4 -9 0 -20 Q-4 -9 0 -2 Z" fill={i % 2 ? c : l} />
+    </g>
+  ))}</>;
+  if (e === 2) return <>
+    <ellipse className="pfet-ring" style={st()} rx="8" ry="2.6" fill="none" stroke={l} strokeWidth="0.9" />
+    <ellipse className="pfet-ring" style={st({ animationDelay: `${d + 70}ms` })} rx="8" ry="2.6" fill="none" stroke={c} strokeWidth="0.6" />
+    {PfEternalN(5).map((i) => {
+      const a = (-150 + i * 30) * Math.PI / 180;
+      return <path key={i} className="pfet-fly" style={st({ "--dx": `${(Math.cos(a) * 20).toFixed(1)}px`, "--dy": `${(Math.sin(a) * 22).toFixed(1)}px` })}
+        d="M0 -2.4 C1.6 -0.4 1.6 1.6 0 1.9 C-1.6 1.6 -1.6 -0.4 0 -2.4 Z" fill={l} />;
+    })}
+  </>;
+  if (e === 3) return <>{PfEternalN(3).map((i) => (
+    <g key={i} transform={`rotate(${i * 120 + 20})`}>
+      <path className="pfet-swirl" style={st({ animationDelay: `${d + i * 25}ms` })} d="M6 0 A6 6 0 0 1 -3 5.2" fill="none" stroke={i % 2 ? c : l} strokeWidth="1.3" strokeLinecap="round" />
+    </g>
+  ))}</>;
+  if (e === 4) return <>
+    <path className="pfet-starb" style={st()} d={PfEternalStar(0, 0, 16, 3)} fill={l} />
+    <path className="pfet-starb" style={st({ animationDelay: `${d + 40}ms` })} d={PfEternalStar(0, 0, 9, 2.4)} fill="#FFFFFF" />
+  </>;
+  return <>
+    <ellipse className="pfet-implode" style={st()} rx="24" ry="10" fill="none" stroke={l} strokeWidth="0.9" />
+    <ellipse className="pfet-implode" style={st({ animationDelay: `${d + 60}ms` })} rx="24" ry="10" fill="none" stroke={c} strokeWidth="1.4" />
+    <ellipse className="pfet-core" style={st({ animationDelay: `${d + 120}ms` })} rx="6" ry="3.4" fill="#1A0A2A" stroke={l} strokeWidth="0.8" />
+  </>;
+}
+
+function PfEternalFlash({ hits }) {
+  const H = Math.max(1, Math.min(14, (hits | 0) || 8));
+  const lastHit = PfEternalT0 + (H - 1) * 110;
+  const D = Math.max(180, ((H - 1) * 110) / 5); // 球と球の着弾の間隔
+  const land = PfEternalN(6).map((j) => Math.round(PfEternalT0 + j * D));
+  const bandAt = land[5] + 90; // 帯が包み始める時刻
+  const bandMs = Math.min(700, 2370 - bandAt);
+  const endMs = bandAt + bandMs;
+  return (
+    <svg className="pfet-svg" viewBox="0 0 200 130" preserveAspectRatio="xMidYMid slice" aria-hidden="true">
+      <defs>
+        <radialGradient id="pfetDimG" cx="0.5" cy="0.7"><stop offset="0" stopColor="#160F2C" /><stop offset="1" stopColor="#030208" /></radialGradient>
+        {PfEternalC.map((c, i) => (
+          <radialGradient key={`og${i}`} id={`pfetOrb${i}`}>
+            <stop offset="0" stopColor="#FFFFFF" /><stop offset="0.35" stopColor={PfEternalLite[i]} /><stop offset="0.7" stopColor={c} /><stop offset="1" stopColor={c} stopOpacity="0" />
+          </radialGradient>
+        ))}
+        {PfEternalC.map((c, i) => (
+          <linearGradient key={`tg${i}`} id={`pfetTail${i}`} x1="1" y1="0" x2="0" y2="0">
+            <stop offset="0" stopColor={PfEternalLite[i]} stopOpacity="0.9" /><stop offset="1" stopColor={c} stopOpacity="0" />
+          </linearGradient>
+        ))}
+        {PfEternalC.map((c, i) => (
+          <linearGradient key={`bg${i}`} id={`pfetBand${i}`} x1="0" y1="0" x2="1" y2="0">
+            <stop offset="0" stopColor={c} stopOpacity="0" /><stop offset="0.25" stopColor={c} stopOpacity="0.36" />
+            <stop offset="0.5" stopColor={PfEternalLite[i]} stopOpacity="0.5" /><stop offset="0.75" stopColor={c} stopOpacity="0.36" /><stop offset="1" stopColor={c} stopOpacity="0" />
+          </linearGradient>
+        ))}
+        <radialGradient id="pfetHalo"><stop offset="0" stopColor="#FFFFFF" stopOpacity="0.9" /><stop offset="0.4" stopColor="#FFF4D8" stopOpacity="0.4" /><stop offset="1" stopColor="#FFF4D8" stopOpacity="0" /></radialGradient>
+        <radialGradient id="pfetVeil" cx="0.5" cy="0.6"><stop offset="0" stopColor="#FFFFFF" stopOpacity="0.22" /><stop offset="1" stopColor="#FFF0D0" stopOpacity="0" /></radialGradient>
+        <radialGradient id="pfetFlashG" cx="0.5" cy="0.72"><stop offset="0" stopColor="#FFFFFF" /><stop offset="0.35" stopColor="#FFF0C8" stopOpacity="0.5" /><stop offset="0.8" stopColor="#FFE090" stopOpacity="0" /></radialGradient>
+      </defs>
+
+      {/* 沈む */}
+      <rect className="pfet-dim" x="0" y="0" width="200" height="130" fill="url(#pfetDimG)" style={{ animationDuration: `${endMs}ms` }} />
+
+      <g className="pfet-shake" style={{ animationDelay: `${land[5]}ms` }}>
+        {/* ── 狙いの一体の足元に、着弾の光だまり ── */}
+        <g transform={`translate(${PfEternalTX} ${PfEternalTY + 8})`}>
+          <ellipse className="pfet-pool" style={{ animationDelay: `${land[0] - 40}ms`, animationDuration: `${land[5] - land[0] + 520}ms` }} rx="30" ry="7" fill="url(#pfetHalo)" />
+        </g>
+
+        {/* ── 六つの光球。現れて、ためて、放たれる ── */}
+        {PfEternalN(6).map((j) => {
+          const [fx, fy] = PfEternalFrom[j];
+          const dx = fx - PfEternalTX, dy = fy - PfEternalTY;
+          const dist = Math.hypot(dx, dy);
+          const ang = (Math.atan2(-dy, -dx) * 180) / Math.PI; // 進む向き
+          const L = land[j];
+          return (
+            <g key={`ob${j}`}>
+              {/* 現れる場所での小さな光の渦（ため） */}
+              <g transform={`translate(${fx} ${fy})`}>
+                <g className="pfet-gather" style={{ animationDelay: `${L - 330}ms` }}>
+                  <circle r="9" fill={`url(#pfetOrb${j})`} opacity="0.55" />
+                  {PfEternalN(3).map((k) => (
+                    <path key={k} d={`M${(7 * Math.cos(k * 2.09)).toFixed(2)} ${(7 * Math.sin(k * 2.09)).toFixed(2)} A7 7 0 0 1 ${(7 * Math.cos(k * 2.09 + 1)).toFixed(2)} ${(7 * Math.sin(k * 2.09 + 1)).toFixed(2)}`}
+                      fill="none" stroke={PfEternalLite[j]} strokeWidth="0.8" strokeLinecap="round" />
+                  ))}
+                </g>
+              </g>
+              {/* 飛ぶ球と尾（外側の g が着弾点と向き、内側で −dist から 0 へ） */}
+              <g transform={`translate(${PfEternalTX} ${PfEternalTY}) rotate(${ang.toFixed(1)})`}>
+                <g className="pfet-orb" style={{ "--d0": `${(-dist).toFixed(1)}px`, animationDelay: `${L - 330}ms` }}>
+                  <path d="M-46 0 Q-14 -4.4 0 -4.6 L0 4.6 Q-14 4.4 -46 0 Z" fill={`url(#pfetTail${j})`} className="pfet-tail" style={{ animationDelay: `${L - 330}ms` }} />
+                  <circle r="7.5" fill={`url(#pfetOrb${j})`} />
+                  <circle r="2.6" fill="#FFFFFF" />
+                </g>
+              </g>
+              {/* 着弾：色の光と、属性の形 */}
+              <g transform={`translate(${PfEternalTX + ((j % 3) - 1) * 4} ${PfEternalTY + ((j % 2) ? -3 : 2)})`}>
+                <circle className="pfet-impact" style={{ animationDelay: `${L}ms` }} r="13" fill={`url(#pfetOrb${j})`} />
+                <PfEternalBurst e={j} d={L} />
+              </g>
+            </g>
+          );
+        })}
+
+        {/* ── 当たりの光。320 + i×110ms ── */}
+        {PfEternalN(H).map((i) => {
+          const x = PfEternalTX + [0, -9, 8, -4, 11, -12, 5, -7, 13, -2, 9, -11, 3, -5][i];
+          const y = PfEternalTY + [-4, 3, -9, 8, 1, -6, 9, -12, -2, 6, -8, 4, -14, 1][i];
+          return (
+            <g key={`ht${i}`} transform={`translate(${x} ${y})`}>
+              <path className="pfet-hit" style={{ animationDelay: `${PfEternalT0 + i * 110}ms` }} d={PfEternalStar(0, 0, 5.5)}
+                fill={PfEternalLite[Math.min(5, Math.floor((PfEternalT0 + i * 110 - PfEternalT0 + D * 0.5) / D))]} stroke="#FFFFFF" strokeWidth="0.5" />
+            </g>
+          );
+        })}
+      </g>
+
+      {/* ── 六色の帯がやわらかく画面を包む（6ターン状態異常を受けない印） ── */}
+      <g className="pfet-wrap" style={{ animationDelay: `${bandAt}ms`, animationDuration: `${bandMs}ms` }}>
+        <rect x="0" y="0" width="200" height="130" fill="url(#pfetVeil)" />
+        {PfEternalN(6).map((i) => {
+          const y = 10 + i * 19.5;
+          const a = i % 2 ? 5 : -5;
+          return (
+            <g key={`bd${i}`} transform={`translate(0 ${y})`}>
+              <g className={`pfet-band ${i % 2 ? "pfet-bandR" : "pfet-bandL"}`} style={{ animationDelay: `${bandAt + i * 35}ms`, animationDuration: `${bandMs}ms` }}>
+                <path d={`M-60 0 Q-10 ${a} 40 0 T140 0 T240 0 T340 0 L340 11 Q290 ${11 - a} 240 11 T140 11 T40 11 T-60 11 Z`} fill={`url(#pfetBand${i})`} />
+                <path d={`M-60 5.5 Q-10 ${5.5 + a} 40 5.5 T140 5.5 T240 5.5 T340 5.5`} fill="none" stroke="#FFFFFF" strokeWidth="0.35" opacity="0.35" />
+              </g>
+            </g>
+          );
+        })}
+        {[[34, 30], [168, 46], [60, 104], [146, 96], [100, 20], [18, 78], [184, 112]].map(([x, y], i) => (
+          <g key={`gl${i}`} transform={`translate(${x} ${y})`}>
+            <path className="pfet-glint" style={{ animationDelay: `${bandAt + 120 + i * 45}ms` }} d={PfEternalStar(0, 0, 3.6)} fill={i % 2 ? "#FFFFFF" : PfEternalLite[i % 6]} />
+          </g>
+        ))}
+      </g>
+
+      {/* 閃き。⚠️ 最後の球の着弾に一度だけ */}
+      <rect className="pfet-flash" x="0" y="0" width="200" height="130" fill="url(#pfetFlashG)" style={{ animationDelay: `${land[5]}ms` }} />
+    </svg>
+  );
+}
+
+/* ── 印：六色の小さな光球が輪に並び、中心に白い核、金の縁。⚠️ 球どうしを線で結ばない ── */
+function PfEternalG10() {
+  const O = PfEternalO, G = PfEternalGOLD;
+  return (
+    <svg viewBox="0 0 32 32" aria-hidden="true">
+      <defs>
+        {PfEternalC.map((c, i) => (
+          <radialGradient key={i} id={`pfetG${i}`} cx="0.38" cy="0.36" r="0.7">
+            <stop offset="0" stopColor="#FFFFFF" /><stop offset="0.4" stopColor={PfEternalLite[i]} /><stop offset="1" stopColor={c} />
+          </radialGradient>
+        ))}
+        <radialGradient id="pfetGCore"><stop offset="0" stopColor="#FFFFFF" /><stop offset="0.6" stopColor="#FFFBEA" /><stop offset="1" stopColor="#FFE9A8" /></radialGradient>
+        <radialGradient id="pfetGGlow"><stop offset="0" stopColor="#FFFFFF" stopOpacity="0.55" /><stop offset="1" stopColor="#FFFFFF" stopOpacity="0" /></radialGradient>
+      </defs>
+      {/* 金の縁 */}
+      <circle cx="16" cy="16" r="14.6" fill="none" stroke={O} strokeWidth="2.6" opacity="0.65" />
+      <circle cx="16" cy="16" r="14.6" fill="none" stroke={G} strokeWidth="1.5" />
+      <circle cx="16" cy="16" r="13.5" fill="none" stroke="#FFF2C0" strokeWidth="0.4" opacity="0.8" />
+      {/* 中心の白い核 */}
+      <circle cx="16" cy="16" r="6.4" fill="url(#pfetGGlow)" />
+      <circle cx="16" cy="16" r="3.5" fill="url(#pfetGCore)" stroke={O} strokeWidth="0.55" />
+      {/* 六つの光球（上から 地・火・水・風・光・闇） */}
+      {PfEternalC.map((c, i) => {
+        const a = (-90 + i * 60) * Math.PI / 180;
+        const x = 16 + Math.cos(a) * 8.6, y = 16 + Math.sin(a) * 8.6;
+        return (
+          <g key={i}>
+            <circle cx={x.toFixed(2)} cy={y.toFixed(2)} r="3.25" fill={`url(#pfetG${i})`} stroke={O} strokeWidth="0.6" />
+            <circle cx={(x - 0.9).toFixed(2)} cy={(y - 0.9).toFixed(2)} r="0.8" fill="#FFFFFF" opacity="0.9" />
+          </g>
+        );
+      })}
+    </svg>
+  );
+}
+
+
+const PFG_ETERNAL = [PfEternalG10];
+
+/* ==== PHYS_FLASH END ==== */
 function SwordFlash({ k }) {
   const dots = (m) => Array.from({ length: m }, (_, i) => i);
   const w = 1.4 + (k - 3) * 0.55;
@@ -38408,7 +42680,7 @@ function FxSpellArt({ fam, lv }) {
   );
 }
 
-function FxFlash({ suit, run, label, tone, fam, tgt }) {
+function FxFlash({ suit, run, label, tone, fam, tgt, phys }) {
   const k = Math.min(10, Math.max(3, run || 3));
   /*
     ⚠️ 2026-09-27（Aki）：棒（魔法・単体）の必殺は、当てた敵を絵の中心に寄せる。
@@ -38418,7 +42690,8 @@ function FxFlash({ suit, run, label, tone, fam, tgt }) {
   const arRef = useRef(null);
   useLayoutEffect(() => {
     const ar = arRef.current;
-    if (!ar || suit !== "wands" || tgt == null) return;
+    /* ★ 2026-10-03：突撃（一体を貫く）も当てた敵へ寄せる */
+    if (!ar || (suit !== "wands" && phys !== "thrust") || tgt == null) return;
     const root = ar.parentElement;
     const scene = root && root.parentElement;
     const foe = scene && scene.querySelector(`.bt-foes [data-foe="${tgt}"]`);
@@ -38427,7 +42700,7 @@ function FxFlash({ suit, run, label, tone, fam, tgt }) {
     const dx = (f.left + f.width / 2) - (r.left + r.width / 2);
     const dy = (f.top + f.height / 2) - (r.top + r.height / 2);
     ar.style.transform = `translate(${Math.round(dx)}px, ${Math.round(dy)}px)`;
-  }, [suit, tgt]);
+  }, [suit, tgt, phys]);
   const dots = (m) => Array.from({ length: m }, (_, i) => i);
   /* ⚠️ 棒は構えの属性で絵を変える。火（と構えなし）は元の爆発 */
   /* ⚠️ 下位（3〜9枚）が出来ている属性は、その段の絵に差し替える（lower） */
@@ -38445,7 +42718,9 @@ function FxFlash({ suit, run, label, tone, fam, tgt }) {
           ⚠️ 枚数は線の太さと閃光の強さで表す。本数は常に一本。
         */}
         {/* ⚠️ 2026-09-27：段ごとの情景に作り直した（SwordFlash）。旧の三つの i は CSS ごと残してある */}
-        {suit === "swords" && <SwordFlash k={k} />}
+        {/* ★ 2026-10-03：剣は物理の構えで演出が変わる（斬撃＝一閃） */}
+        {suit === "swords" && (phys === "thrust" ? <PfThrustFlash k={k} /> : phys === "blunt" ? <PfBluntFlash k={k} />
+          : phys === "shoot" ? <PfShootFlash k={k} /> : <SwordFlash k={k} />)}
         {/*
           棒（魔法）。
           ⚠️ 集まって終わりにしないこと。単体攻撃なので、一点で爆ぜないと
@@ -57865,6 +62140,310 @@ const ZK_T_psychic = [
 ];
 /* ---- /zk:psychic ---- */
 /* ==== ZK_TYPES END ==== */
+/* ==== ZK_MIMIC BEGIN ====
+  ミミック（宝箱マスの魔物）。2026-10-03。どの属性の土地でも同じ姿。
+*/
+// ZKT/mimic.jsx — ミミック（宝箱に化けた魔物）。小MAPの宝箱マスで出る。
+// 系統の色は使わない（どの土地でも出る）。木の茶・金の帯と錠は盤の宝箱の絵に合わせ、目だけ金に光らせる。
+function ZkMimic1Defs() {
+  return (
+    <defs>
+      <linearGradient id="zkMimic1Wood" x1="0.1" y1="0" x2="0.7" y2="1"><stop offset="0" stopColor="#DCA466" /><stop offset="0.5" stopColor="#9C6030" /><stop offset="1" stopColor="#52300F" /></linearGradient>
+      <linearGradient id="zkMimic1WoodSide" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stopColor="#8E562A" /><stop offset="1" stopColor="#3A1C0A" /></linearGradient>
+      <linearGradient id="zkMimic1Lid" x1="0.1" y1="0" x2="0.6" y2="1"><stop offset="0" stopColor="#D49A5A" /><stop offset="0.55" stopColor="#965A28" /><stop offset="1" stopColor="#5A3010" /></linearGradient>
+      <linearGradient id="zkMimic1LidS" x1="0" y1="1" x2="0.9" y2="0.1"><stop offset="0" stopColor="#ECB878" /><stop offset="0.55" stopColor="#A86A32" /><stop offset="1" stopColor="#5E3412" /></linearGradient>
+      <linearGradient id="zkMimic1Gold" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stopColor="#FFF4C0" /><stop offset="0.4" stopColor="#F0C830" /><stop offset="1" stopColor="#A87418" /></linearGradient>
+      <linearGradient id="zkMimic1Palate" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stopColor="#7A2638" /><stop offset="0.45" stopColor="#3A0C20" /><stop offset="1" stopColor="#12030C" /></linearGradient>
+      <radialGradient id="zkMimic1Maw" cx="0.5" cy="0.5" r="0.6"><stop offset="0" stopColor="#4A0C26" /><stop offset="0.6" stopColor="#22061A" /><stop offset="1" stopColor="#0E0208" /></radialGradient>
+      <linearGradient id="zkMimic1Throat" x1="0" y1="0.4" x2="1" y2="0.6"><stop offset="0" stopColor="#6A1A34" /><stop offset="0.5" stopColor="#2A0818" /><stop offset="1" stopColor="#0E0208" /></linearGradient>
+      <linearGradient id="zkMimic1Tooth" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stopColor="#FFFBEA" /><stop offset="0.6" stopColor="#EADBB4" /><stop offset="1" stopColor="#B8A07A" /></linearGradient>
+      <linearGradient id="zkMimic1Tongue" x1="0.1" y1="0" x2="0.9" y2="0.5"><stop offset="0" stopColor="#F27AA0" /><stop offset="0.45" stopColor="#C8366E" /><stop offset="1" stopColor="#6A1448" /></linearGradient>
+      <linearGradient id="zkMimic1Leg" x1="0.2" y1="0" x2="0.8" y2="1"><stop offset="0" stopColor="#A05C6A" /><stop offset="0.5" stopColor="#5A2840" /><stop offset="1" stopColor="#24101C" /></linearGradient>
+      <linearGradient id="zkMimic1LegFar" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stopColor="#5A2E40" /><stop offset="1" stopColor="#1A0812" /></linearGradient>
+      <radialGradient id="zkMimic1Iris" cx="0.4" cy="0.4" r="0.6"><stop offset="0" stopColor="#FFFDE8" /><stop offset="0.45" stopColor="#FFE070" /><stop offset="1" stopColor="#E0A018" /></radialGradient>
+      <radialGradient id="zkMimic1Glow"><stop offset="0" stopColor="#FFE680" stopOpacity="0.85" /><stop offset="0.45" stopColor="#F0C830" stopOpacity="0.32" /><stop offset="1" stopColor="#F0C830" stopOpacity="0" /></radialGradient>
+      <radialGradient id="zkMimic1Coin" cx="0.35" cy="0.35"><stop offset="0" stopColor="#FFFBE0" /><stop offset="0.5" stopColor="#F0C830" /><stop offset="1" stopColor="#A87418" /></radialGradient>
+    </defs>
+  );
+}
+// 暗い脚の縁に入れる金の細い線
+const ZkMimic1Rim = { stroke: "#F0C830", strokeWidth: 0.6, strokeOpacity: 0.6, strokeLinejoin: "round" };
+// 爪の脚。腰が原点、下へ伸びる。横向き（爪は -x）か、正面（爪は下）
+function ZkMimic1Leg({ far, front }) {
+  const fill = far ? "url(#zkMimic1LegFar)" : "url(#zkMimic1Leg)";
+  if (front) {
+    return (
+      <g>
+        <path d="M-3.8 -1 C-4.8 3 -3.4 6.4 -5 9.8 C-6 12 -4.6 13.4 -2.6 13.4 L2.6 13.4 C4.6 13.4 6 12 5 9.8 C3.4 6.4 4.8 3 3.8 -1 Z" fill={fill} {...ZkMimic1Rim} />
+        <path d="M-4.4 12.6 L-5.6 16 L-2.6 13.2 Z M-1.2 13.2 L-0.8 16.8 L1 13.2 Z M2.4 13 L4.2 16 L4.6 12.4 Z" fill="url(#zkMimic1Tooth)" />
+        {!far && <path d="M-2.6 1 C-3.2 4 -2.4 6 -3.4 9" fill="none" stroke="#E8A0B0" strokeWidth="0.8" opacity="0.45" strokeLinecap="round" />}
+      </g>
+    );
+  }
+  return (
+    <g>
+      <path d="M-4.2 -1 C-6.2 2.6 -5.6 5.8 -4.2 7.8 C-3.6 8.8 -4.8 9.8 -7 10.6 L-8.8 11.3 C-10 11.9 -9.8 13.4 -8.2 13.4 L2 13.4 C3.6 13.4 4.2 12 3.2 10.6 C2.2 9 1.8 7.4 3.4 5.4 C5.4 3.2 5.2 1 4.6 -1 Z" fill={fill} {...ZkMimic1Rim} />
+      <path d="M-7 10.8 C-9.6 10.4 -11.4 11.4 -12 13.2 C-10.6 12.4 -9 12.4 -7.4 12.9 Z M-4.6 11.6 C-6.8 11.6 -8.4 12.8 -8.8 14.4 C-7.6 13.6 -6.2 13.4 -4.4 12.9 Z M-1.8 12.2 C-3.6 12.4 -4.6 13.4 -4.8 14.6 C-3.8 13.8 -2.8 13.6 -1.4 12.9 Z" fill="url(#zkMimic1Tooth)" />
+      {!far && <path d="M-2.6 1 C-3.4 4 -2.8 6 -3.8 8.4" fill="none" stroke="#E8A0B0" strokeWidth="0.8" opacity="0.45" strokeLinecap="round" />}
+    </g>
+  );
+}
+// 口の奥で光る金の目。中心が原点。外側の g で位置・向き・大きさを決める
+function ZkMimic1Eye({ w = 1, d = "0ms" }) {
+  return (
+    <g>
+      <g className="zk-shine" style={{ animationDelay: d }}><circle r="7" fill="url(#zkMimic1Glow)" /></g>
+      <g className="zk-blink" style={{ animationDelay: d }}>
+        <path d={`M-3.4 0.4 Q-0.6 ${-2.8 * w} 3.4 -0.6 Q0.4 ${2.6 * w} -3.4 0.4 Z`} fill="url(#zkMimic1Iris)" />
+        <ellipse cx="-0.2" cy="0" rx="0.62" ry={1.7 * w} fill="#3A1A04" />
+        <circle cx="-1.4" cy="-0.6" r="0.55" fill="#FFFFFF" />
+      </g>
+    </g>
+  );
+}
+// 長い舌。根元が原点、+y へ垂れる
+function ZkMimic1Tongue() {
+  return (
+    <g>
+      <path d="M-4.2 0 C-5 6 -3 10 -4.2 15 C-5.4 20 -4.6 26 -1.8 29.4 C0.6 32 5.6 31.6 7.4 27.6 C8.6 24.8 7 22 4.8 22.6 C3.4 23 3.6 25 2.2 25.2 C0.8 25.4 0.4 22 1.2 18.6 C2.2 13.6 4.6 8 4.2 0 Z" transform="translate(1.6 1)" fill="#1A0610" opacity="0.32" />
+      <path d="M-4.2 0 C-5 6 -3 10 -4.2 15 C-5.4 20 -4.6 26 -1.8 29.4 C0.6 32 5.6 31.6 7.4 27.6 C8.6 24.8 7 22 4.8 22.6 C3.4 23 3.6 25 2.2 25.2 C0.8 25.4 0.4 22 1.2 18.6 C2.2 13.6 4.6 8 4.2 0 Z" fill="url(#zkMimic1Tongue)" />
+      <path d="M0.2 2 C0 9 -1.2 15 -1.6 20 C-1.8 25 1 28.6 4.4 27.4" fill="none" stroke="#5A0E36" strokeWidth="0.8" opacity="0.7" strokeLinecap="round" />
+      <path d="M-2.8 2.6 C-3.4 8 -2.2 11 -3.2 16 C-3.8 19.6 -3.4 23 -2 25.6" fill="none" stroke="#FFD0E0" strokeWidth="1" opacity="0.5" strokeLinecap="round" />
+    </g>
+  );
+}
+// 宝箱からこぼれる金貨
+function ZkMimic1Coins({ pts }) {
+  return (
+    <g>
+      {pts.map(([x, y, r, dl], i) => (
+        <g key={i} transform={`translate(${x} ${y}) rotate(${-20 + i * 25})`}><g className="zk-bob" style={{ animationDelay: `${dl}ms` }}>
+          <ellipse rx={r} ry={r * 0.86} fill="url(#zkMimic1Coin)" stroke="#8A5A10" strokeWidth="0.35" />
+          <ellipse rx={r * 0.55} ry={r * 0.45} fill="none" stroke="#FFF4C0" strokeWidth="0.4" opacity="0.7" />
+        </g></g>
+      ))}
+    </g>
+  );
+}
+
+/* 横：蓋を大きく開け、左へ跳びかかる */
+function ZkMimic1S() {
+  return (
+    <g>
+      <ZkMimic1Defs />
+      <g className="zk-breathe"><g transform="translate(-5 0) rotate(9 66 92) translate(66 92) scale(1.06) translate(-66 -92)">
+      <g transform="translate(43 76) rotate(40) scale(1.1)"><ZkMimic1Leg far /></g>
+      <g transform="translate(65 76) rotate(-38) scale(1.1)"><ZkMimic1Leg far /></g>
+      <path d="M70 52 L33 53 C37 40 44 28 55.8 16.8 Z" fill="url(#zkMimic1Throat)" />
+      <g transform="translate(59 40.6) rotate(-30) scale(0.62)"><ZkMimic1Eye w={0.75} d="-300ms" /></g>
+      <g transform="translate(55.4 45.6) rotate(-16) scale(1)"><ZkMimic1Eye /></g>
+      <g transform="translate(37 77) rotate(70) scale(1.2)"><ZkMimic1Leg /></g>
+      <g transform="translate(61 77.4) rotate(-40) scale(1.2)"><ZkMimic1Leg /></g>
+      <path d="M32 52 L70 52 L70 76 Q70 78 68 78 L34 78 Q32 78 32 76 Z" fill="url(#zkMimic1Wood)" />
+      <path d="M44.6 55.6 L44.6 74.6 M57.4 55.6 L57.4 74.6" stroke="#3C200A" strokeWidth="0.5" opacity="0.55" />
+      <path d="M35 57 Q34.6 65 35 73" fill="none" stroke="#FFE0B0" strokeWidth="1" opacity="0.45" strokeLinecap="round" />
+      <path d="M31.4 51.6 L70.6 51.6 L70.6 55.6 L31.4 55.6 Z M32 74.6 L70 74.6 L70 76.4 Q70 78 68.4 78 L33.6 78 Q32 78 32 76.4 Z M32 55.6 L34.6 55.6 L34.6 74.6 L32 74.6 Z M67.4 55.6 L70 55.6 L70 74.6 L67.4 74.6 Z" fill="url(#zkMimic1Gold)" />
+      <circle cx="37" cy="53.6" r="0.55" fill="#FFF6D0" /><circle cx="51" cy="53.6" r="0.55" fill="#FFF6D0" /><circle cx="65" cy="53.6" r="0.55" fill="#FFF6D0" /><circle cx="39" cy="76.3" r="0.55" fill="#FFF6D0" /><circle cx="51" cy="76.3" r="0.55" fill="#FFF6D0" /><circle cx="63" cy="76.3" r="0.55" fill="#FFF6D0" />
+      <path d="M29.4 54.6 L32 54.6 L32 64 L29.4 64 Q28.6 59.3 29.4 54.6 Z" fill="url(#zkMimic1Gold)" stroke="#7A5010" strokeWidth="0.3" />
+      <path d="M34.9 52.2 L36.9 45 L38.9 52.2 Z M39.4 52.2 L41.5 49 L43.5 52.2 Z M44 52.2 L46 48.2 L48 52.2 Z M48.6 52.2 L50.6 48.8 L52.6 52.2 Z M53.2 52.2 L55.2 48.4 L57.2 52.2 Z M57.7 52.2 L59.7 49 L61.8 52.2 Z M62.3 52.2 L64.3 48.2 L66.3 52.2 Z" fill="url(#zkMimic1Tooth)" stroke="#8A7650" strokeWidth="0.25" strokeLinejoin="round" />
+      <g transform="translate(70 52) rotate(68)">
+      <path d="M-38 0 C-38 -9.4 -30 -14 -19 -14 C-8 -14 0 -9.4 0 0 Z" fill="url(#zkMimic1LidS)" />
+      <path d="M-25.4 -0.6 L-25.4 -13.2 M-12.6 -0.6 L-12.6 -13.2" stroke="#3C200A" strokeWidth="0.5" opacity="0.5" />
+      <path d="M-36.2 -0.6 C-36.2 -8.4 -29 -12.4 -19 -12.4 C-9 -12.4 -1.8 -8.4 -1.8 -0.6" fill="none" stroke="url(#zkMimic1Gold)" strokeWidth="2.6" />
+      <path d="M-27 -10.8 C-22 -13 -15 -13 -10 -11.8" fill="none" stroke="#FFF6D0" strokeWidth="0.8" opacity="0.6" strokeLinecap="round" />
+      <path d="M-38.8 -0.6 L-36 -0.6 L-36 4.6 Q-37.4 6 -38.8 4.6 Z" fill="url(#zkMimic1Gold)" stroke="#7A5010" strokeWidth="0.3" />
+      <path d="M-36.1 0 L-34.1 7.2 L-32.1 0 Z M-31.6 0 L-29.5 3.4 L-27.5 0 Z M-27 0 L-25 4 L-23 0 Z M-22.4 0 L-20.4 3.2 L-18.4 0 Z M-17.8 0 L-15.8 3.8 L-13.8 0 Z M-13.3 0 L-11.3 3.4 L-9.2 0 Z M-8.7 0 L-6.7 4 L-4.7 0 Z" fill="url(#zkMimic1Tooth)" stroke="#8A7650" strokeWidth="0.25" strokeLinejoin="round" />
+      </g>
+      <circle cx="70" cy="52" r="2.2" fill="url(#zkMimic1Gold)" stroke="#7A5010" strokeWidth="0.3" />
+      <g transform="translate(43 50.4) rotate(80) scale(-1 1)"><g className="zk-tongue"><ZkMimic1Tongue /></g></g>
+      </g></g>
+      <ZkMimic1Coins pts={[[16, 30, 2.6, 0], [26, 20, 2, -1300]]} />
+      <g className="zk-stomp"><ellipse cx="68" cy="92" rx="10" ry="2.2" fill="#E8D0A8" opacity="0.45" /></g>
+    </g>
+  );
+}
+/* 斜め：蓋を半開きに構え、舌を垂らす（左手前） */
+function ZkMimic1Q() {
+  return (
+    <g>
+      <ZkMimic1Defs />
+      <g className="zk-breathe"><g transform="rotate(-4 50 90) translate(50 90) scale(1.05) translate(-50 -90)">
+      <g transform="translate(73.5 65.7) rotate(-22) scale(1.0)"><ZkMimic1Leg far /></g>
+      <path d="M40.4 44.6 L42.4 33.6 L41.4 28.9 L39.9 25.3 L37.9 22.6 L35.6 20.6 L32.6 19.9 L26.7 25.3 L65.7 19.3 L71.6 13.9 L74.6 14.6 L76.9 16.6 L78.9 19.3 L80.4 22.9 L81.4 27.6 L79.4 38.6 Z" fill="url(#zkMimic1Palate)" />
+      <path d="M37.8 37.6 L72.1 32.3 M34.4 32.8 L68.7 27.5" stroke="#9A3A50" strokeWidth="0.6" opacity="0.35" fill="none" />
+      <path d="M20.6 52 L59.6 46 L79.4 38.6 L40.4 44.6 Z" fill="url(#zkMimic1Maw)" />
+      <g transform="translate(50.1 40.9) rotate(-12) scale(1.12)"><ZkMimic1Eye w={0.8} d="0ms" /></g>
+      <g transform="translate(64.9 38.6) rotate(-10) scale(0.78)"><ZkMimic1Eye w={0.62} d="-300ms" /></g>
+      <path d="M32.6 19.9 L26.7 25.3 L65.7 19.3 L71.6 13.9 Z" fill="url(#zkMimic1Lid)" />
+      <path d="M38.9 18.8 L37 19.3 L33 24.2 L35.3 23.9 L39.4 18.9 L41.3 18.4 Z" fill="url(#zkMimic1Gold)" />
+      <path d="M63.1 15.1 L61.2 15.6 L57.1 20.5 L59.5 20.1 L63.5 15.2 L65.4 14.7 Z" fill="url(#zkMimic1Gold)" />
+      <path d="M29.4 21.2 L28.6 22 L26.7 25.2 L65.7 19.2 L67.6 16 L68.4 15.2 Z" fill="url(#zkMimic1Gold)" />
+      <path d="M79.4 38.6 L81.4 27.6 L80.4 22.9 L78.9 19.3 L76.9 16.6 L74.6 14.6 L71.6 13.9 L65.7 19.3 Z" fill="url(#zkMimic1Lid)" />
+      <path d="M80.9 27.7 L79.5 22.6 L77.5 18.9 L75 16.2 L71.7 14.9" fill="none" stroke="url(#zkMimic1Gold)" strokeWidth="1.6" />
+      <path d="M27.6 25.4 L26.4 31.3 L31.2 24.8 Z M31.7 24.8 L32.1 27.4 L35.4 24.2 Z M35.9 24.1 L35.9 27.6 L39.5 23.6 Z M40 23.5 L40.4 26.3 L43.7 22.9 Z M44.2 22.8 L44.4 26 L47.9 22.3 Z M48.4 22.2 L48.5 25.3 L52 21.6 Z M52.5 21.6 L52.9 24.2 L56.2 21 Z M56.7 20.9 L56.7 24.4 L60.4 20.4 Z M60.9 20.3 L60 25.5 L64.5 19.7 Z" fill="url(#zkMimic1Tooth)" stroke="#8A7650" strokeWidth="0.25" strokeLinejoin="round" />
+      <path d="M44.3 22.6 L48 22 L45.8 26.5 L43.3 28 L42.1 27.1 Z" fill="url(#zkMimic1Gold)" stroke="#7A5010" strokeWidth="0.3" />
+      <g transform="translate(29.4 76.3) rotate(2) scale(1.12)"><ZkMimic1Leg /></g>
+      <g transform="translate(56.7 72.1) rotate(-20) scale(1.08)"><ZkMimic1Leg /></g>
+      <path d="M59.6 73 L79.4 65.6 L79.4 38.6 L59.6 46 Z" fill="url(#zkMimic1WoodSide)" />
+      <path d="M59.7 49.2 L79.4 41.7 L79.4 38.2 L59.7 45.7 Z M59.7 73 L79.4 65.5 L79.4 62.9 L59.7 70.4 Z M59.7 73 L61.1 72.5 L61.1 45.5 L59.7 46 Z" fill="url(#zkMimic1Gold)" opacity="0.85" />
+      <path d="M20.6 79 L59.6 73 L59.6 46 L20.6 52 Z" fill="url(#zkMimic1Wood)" />
+      <path d="M33.9 74 L33.9 53.4 M45.6 72.2 L45.6 51.6" stroke="#3C200A" strokeWidth="0.5" opacity="0.55" />
+      <path d="M21.9 73.8 L21.9 56.4" stroke="#FFE0B0" strokeWidth="1" opacity="0.45" strokeLinecap="round" />
+      <path d="M20.3 55.5 L59.6 49.5 L59.6 45.8 L20.3 51.8 Z M20.6 79.1 L59.6 73.1 L59.6 70.3 L20.6 76.3 Z M26.8 78.1 L29.2 77.7 L29.2 50.7 L26.8 51.1 Z M51 74.4 L53.3 74 L53.3 47 L51 47.4 Z" fill="url(#zkMimic1Gold)" />
+      <circle cx="23.6" cy="53.3" r="0.55" fill="#FFF6D0" /><circle cx="23.6" cy="77.2" r="0.55" fill="#FFF6D0" /><circle cx="33" cy="51.9" r="0.55" fill="#FFF6D0" /><circle cx="33" cy="75.8" r="0.55" fill="#FFF6D0" /><circle cx="47" cy="49.7" r="0.55" fill="#FFF6D0" /><circle cx="47" cy="73.6" r="0.55" fill="#FFF6D0" /><circle cx="56.4" cy="48.3" r="0.55" fill="#FFF6D0" /><circle cx="56.4" cy="72.2" r="0.55" fill="#FFF6D0" />
+      <path d="M37.1 60.6 L42.7 59.7 L42.7 49.9 L37.1 50.8 Z" fill="url(#zkMimic1Gold)" stroke="#7A5010" strokeWidth="0.3" />
+      <circle cx="39.9" cy="54.5" r="1" fill="#3A2408" /><path d="M39.9 54.5 L39.9 57.4" stroke="#3A2408" strokeWidth="1" strokeLinecap="round" />
+      <path d="M21.9 51.8 L23.7 46.4 L25.6 51.2 Z M26.1 51.2 L27.9 46.9 L29.7 50.6 Z M30.2 50.5 L32.1 47 L33.9 50 Z M34.4 49.9 L36.2 45.8 L38 49.3 Z M38.5 49.2 L40.4 44.8 L42.2 48.7 Z M42.7 48.6 L44.5 44.9 L46.4 48 Z M46.9 48 L48.7 43.7 L50.5 47.4 Z M51 47.3 L52.9 43.8 L54.7 46.8 Z M55.2 46.7 L57 40.7 L58.8 46.1 Z" fill="url(#zkMimic1Tooth)" stroke="#8A7650" strokeWidth="0.25" strokeLinejoin="round" />
+      <path d="M60.6 45.6 L62.5 42 L64.4 44.1 Z M64.9 43.9 L66.9 40.3 L68.8 42.5 Z M69.3 42.3 L71.2 38.7 L73.1 40.8 Z M73.6 40.6 L75.6 37 L77.5 39.2 Z" fill="url(#zkMimic1Tooth)" stroke="#8A7650" strokeWidth="0.25" strokeLinejoin="round" />
+      <g transform="translate(34.1 50.5) rotate(8) scale(1.0)"><g className="zk-tongue"><ZkMimic1Tongue /></g></g>
+      </g></g>
+    </g>
+  );
+}
+/* 正面：蓋を開け、歯と舌でこちらを威嚇（左の前脚を振り上げる） */
+function ZkMimic1F() {
+  return (
+    <g>
+      <ZkMimic1Defs />
+      <g className="zk-breathe"><g transform="rotate(5 50 90)">
+      <g transform="translate(31.9 71.8) rotate(6) scale(1.12)"><ZkMimic1Leg far front /></g>
+      <g transform="translate(69.8 72) rotate(-8) scale(0.95)"><ZkMimic1Leg far front /></g>
+      <path d="M25.2 44.4 L26 32.9 L25.9 28.1 L25.6 24.7 L25.3 22.2 L24.8 20.6 L24.1 20.2 L22.6 26.6 L76.4 28.3 L77.9 21.9 L78.5 22.2 L79 23.9 L79.4 26.4 L79.7 29.8 L79.8 34.5 L79 46 Z" fill="url(#zkMimic1Palate)" />
+      <path d="M27.2 38.4 L75.2 39.9 M26.5 34 L74.5 35.5" stroke="#9A3A50" strokeWidth="0.6" opacity="0.35" fill="none" />
+      <path d="M21 54 L74.8 55.6 L79 46 L25.2 44.4 Z" fill="url(#zkMimic1Maw)" />
+      <g transform="translate(43.2 44.6) rotate(14) scale(1.2)"><ZkMimic1Eye w={0.85} d="0ms" /></g>
+      <g transform="translate(60.9 45.2) rotate(-18) scale(1.02)"><ZkMimic1Eye w={0.7} d="-300ms" /></g>
+      <path d="M24.1 20.2 L22.6 26.6 L76.4 28.3 L77.9 21.9 Z" fill="url(#zkMimic1Lid)" />
+      <path d="M32.8 20.3 L32.4 21.1 L31.3 26.8 L34.2 26.9 L35.2 21.2 L35.7 20.4 Z" fill="url(#zkMimic1Gold)" />
+      <path d="M66.4 21.4 L66 22.2 L64.9 27.8 L67.8 27.9 L68.8 22.3 L69.3 21.5 Z" fill="url(#zkMimic1Gold)" />
+      <path d="M23.3 22.2 L23.2 23.1 L22.7 26.5 L76.4 28.2 L76.9 24.8 L77.1 23.8 Z" fill="url(#zkMimic1Gold)" />
+      <path d="M79 46 L79.8 34.5 L79.7 29.8 L79.4 26.4 L79 23.9 L78.5 22.2 L77.9 21.9 L76.4 28.3 Z" fill="url(#zkMimic1Lid)" />
+      <path d="M79.7 34.7 L79.6 29.6 L79.2 26.1 L78.7 23.7 L78 22.8" fill="none" stroke="url(#zkMimic1Gold)" strokeWidth="1.6" />
+      <path d="M24 27 L25.3 34.5 L28.5 27.1 Z M29.1 27.1 L31 30.7 L33.7 27.3 Z M34.3 27.3 L36 31.9 L38.9 27.4 Z M39.5 27.5 L41.3 31.3 L44 27.6 Z M44.6 27.6 L46.4 31.9 L49.2 27.8 Z M49.8 27.8 L51.5 32 L54.3 27.9 Z M55 27.9 L56.8 31.6 L59.5 28.1 Z M60.1 28.1 L61.8 32.8 L64.7 28.2 Z M65.3 28.3 L67.1 32.1 L69.8 28.4 Z M70.4 28.4 L71.8 36 L75 28.6 Z" fill="url(#zkMimic1Tooth)" stroke="#8A7650" strokeWidth="0.25" strokeLinejoin="round" />
+      <path d="M47.2 27.4 L51.8 27.5 L51.2 32.5 L48.7 33.8 L46.6 32.4 Z" fill="url(#zkMimic1Gold)" stroke="#7A5010" strokeWidth="0.3" />
+      <g transform="translate(25 71.5) rotate(118) scale(1.2)"><ZkMimic1Leg front /></g>
+      <g transform="translate(67.7 79.1) rotate(-12) scale(1.08)"><ZkMimic1Leg front /></g>
+      <path d="M74.8 81.6 L79 72 L79 46 L74.8 55.6 Z" fill="url(#zkMimic1WoodSide)" />
+      <path d="M74.9 58.8 L79.1 49.2 L79.1 45.7 L74.9 55.3 Z M74.9 81.6 L79.1 72 L79.1 69.4 L74.9 79 Z M74.9 81.6 L75.2 80.9 L75.2 54.9 L74.9 55.6 Z" fill="url(#zkMimic1Gold)" opacity="0.85" />
+      <path d="M21 80 L74.8 81.6 L74.8 55.6 L21 54 Z" fill="url(#zkMimic1Wood)" />
+      <path d="M39.3 77.5 L39.3 57.9 M56.5 78.1 L56.5 58.5" stroke="#3C200A" strokeWidth="0.5" opacity="0.55" />
+      <path d="M22.6 75 L22.6 58.6" stroke="#FFE0B0" strokeWidth="1" opacity="0.45" strokeLinecap="round" />
+      <path d="M20.6 57.4 L74.8 59.1 L74.8 55.4 L20.6 53.7 Z M21 80 L74.8 81.7 L74.8 78.9 L21 77.2 Z M29.6 80.3 L32.5 80.4 L32.5 54.4 L29.6 54.3 Z M63.2 81.3 L66.1 81.4 L66.1 55.4 L63.2 55.3 Z" fill="url(#zkMimic1Gold)" />
+      <circle cx="24.8" cy="55.8" r="0.55" fill="#FFF6D0" /><circle cx="24.8" cy="78.7" r="0.55" fill="#FFF6D0" /><circle cx="37.3" cy="56.2" r="0.55" fill="#FFF6D0" /><circle cx="37.3" cy="79.1" r="0.55" fill="#FFF6D0" /><circle cx="58.4" cy="56.9" r="0.55" fill="#FFF6D0" /><circle cx="58.4" cy="79.8" r="0.55" fill="#FFF6D0" /><circle cx="70.9" cy="57.3" r="0.55" fill="#FFF6D0" /><circle cx="70.9" cy="80.2" r="0.55" fill="#FFF6D0" />
+      <path d="M44.4 65.8 L51.3 66 L51.3 56.2 L44.4 56 Z" fill="url(#zkMimic1Gold)" stroke="#7A5010" strokeWidth="0.3" />
+      <circle cx="47.8" cy="60.4" r="1" fill="#3A2408" /><path d="M47.8 60.4 L47.8 63.2" stroke="#3A2408" strokeWidth="1" strokeLinecap="round" />
+      <path d="M22.3 53.9 L24.6 48.3 L26.9 54 Z M27.5 54 L29.8 49.7 L32.1 54.2 Z M32.7 54.2 L35 50.7 L37.3 54.3 Z M37.9 54.4 L40.2 50.2 L42.5 54.5 Z M43.1 54.5 L45.4 50 L47.6 54.7 Z M48.3 54.7 L50.5 51 L52.8 54.8 Z M53.5 54.8 L55.7 50.5 L58 55 Z M58.6 55 L60.9 51.5 L63.2 55.1 Z M63.8 55.2 L66.1 51 L68.4 55.3 Z M69 55.3 L71.3 48.5 L73.6 55.5 Z" fill="url(#zkMimic1Tooth)" stroke="#8A7650" strokeWidth="0.25" strokeLinejoin="round" />
+      <g transform="translate(39.3 54.8) rotate(16) scale(1.1)"><g className="zk-tongue"><ZkMimic1Tongue /></g></g>
+      </g></g>
+      <ZkMimic1Coins pts={[[16, 34, 2.4, -600]]} />
+    </g>
+  );
+}
+const ZK_T_mimic = [[ZkMimic1S, ZkMimic1Q, ZkMimic1F]];
+/*
+  熊（2026-10-05）。道中の熊マスで戦う敵。ツキノワグマ（黒・胸に白いV）とヒグマ（茶・北海道）。
+  ⚠️ 絵の器は 0〜100、足元は y=96。[横, 斜め, 正面] の三つ。左右反転は ZkPose がする（横・斜めは左向きに描く）。
+  ⚠️ defs・id は使わない（同じ絵が並ぶ）。光は左上から。胸の印は三日月にしない（V字）。
+*/
+function zkBearMake(c) {
+  const ol = { stroke: c.line, strokeWidth: 1.1, strokeLinejoin: "round" };
+  const claws = (x, y, s) => (
+    <path d={`M${x - 3 * s} ${y} l-0.8 ${2.4 * s} M${x} ${y + 0.4} l-0.4 ${2.6 * s} M${x + 3 * s} ${y} l0.2 ${2.4 * s}`}
+      stroke={c.claw} strokeWidth={1.1 * s} strokeLinecap="round" fill="none" />
+  );
+  const eye = (x, y, r) => (
+    <g><circle cx={x} cy={y} r={r} fill="#1A0E08" /><circle cx={x - r * 0.35} cy={y - r * 0.35} r={r * 0.38} fill="#FFF4E0" /></g>
+  );
+  /* 横：四つ足で低く構え、左を向く（肩の盛り上がり） */
+  function S() {
+    return (
+      <g className="zk-breathe">
+        <ellipse cx="52" cy="95" rx="34" ry="3.6" fill="rgba(10,6,20,0.45)" />
+        {/* 奥の脚 */}
+        <path d="M66 74 Q70 86 69 94 L61 94 Q60 84 58 76 Z" fill={c.dark} {...ol} />
+        <path d="M32 74 Q33 86 33 94 L25 94 Q24 84 24 76 Z" fill={c.dark} {...ol} />
+        {/* 胴 */}
+        <path d="M22 66 Q22 50 40 47 Q52 42 64 48 Q80 50 82 66 Q82 80 66 80 L34 80 Q22 80 22 66 Z" fill={c.fur} {...ol} />
+        <path d="M30 54 Q42 46 56 47" fill="none" stroke={c.hi} strokeWidth="2.4" strokeLinecap="round" opacity="0.6" />
+        <path d="M60 78 Q76 78 80 66 Q81 74 72 80 Z" fill={c.dark} opacity="0.55" />
+        {/* 手前の脚 */}
+        <path d="M70 72 Q75 86 74 95 L64 95 Q64 86 61 76 Z" fill={c.fur} {...ol} />
+        <path d="M36 72 Q37 86 37 95 L27 95 Q27 86 26 76 Z" fill={c.fur} {...ol} />
+        {claws(32, 94.4, 0.9)}{claws(69, 94.4, 0.9)}
+        {/* 頭 */}
+        <path d="M30 50 Q26 40 18 42 Q8 44 7 52 Q6 58 12 60 Q20 63 28 60 Q34 56 30 50 Z" fill={c.fur} {...ol} />
+        <path d="M12 52 Q6 52 4 55 Q4 59 9 59.4 Q14 59.6 15 56 Z" fill={c.snout} {...ol} />
+        <ellipse cx="4.8" cy="54.6" rx="2" ry="1.6" fill="#140A06" />
+        <path d="M9 59 Q12 61 15 59.6" stroke={c.line} strokeWidth="0.9" fill="none" />
+        <circle cx="24" cy="41" r="4.2" fill={c.fur} {...ol} /><circle cx="24" cy="41" r="1.8" fill={c.dark} />
+        {eye(16.5, 48.5, 1.6)}
+        {c.vmark && <path d="M25 62 L29 68 L33 61" fill="none" stroke={c.vmark} strokeWidth="2.2" strokeLinejoin="round" strokeLinecap="round" />}
+      </g>
+    );
+  }
+  /* 斜め：後ろ脚で立ち上がり、前脚を振りかざす（威嚇） */
+  function Q() {
+    return (
+      <g className="zk-breathe">
+        <ellipse cx="50" cy="95" rx="24" ry="3.4" fill="rgba(10,6,20,0.45)" />
+        {/* 脚 */}
+        <path d="M40 76 Q37 88 38 95 L48 95 Q48 86 50 78 Z" fill={c.fur} {...ol} />
+        <path d="M56 76 Q60 88 60 95 L68 95 Q68 86 64 76 Z" fill={c.dark} {...ol} />
+        {claws(43, 94.4, 0.8)}{claws(63, 94.4, 0.8)}
+        {/* 胴 */}
+        <path d="M34 60 Q32 40 48 34 Q64 32 68 48 Q72 66 66 78 Q58 84 46 82 Q34 78 34 60 Z" fill={c.fur} {...ol} />
+        <path d="M40 46 Q44 38 52 36" fill="none" stroke={c.hi} strokeWidth="2.4" strokeLinecap="round" opacity="0.6" />
+        <path d="M62 50 Q68 64 64 78 Q60 80 58 78 Q64 64 60 50 Z" fill={c.dark} opacity="0.55" />
+        {c.vmark && <path d="M43 50 L50 58 L57 49" fill="none" stroke={c.vmark} strokeWidth="2.6" strokeLinejoin="round" strokeLinecap="round" />}
+        {/* 振りかざす前脚 */}
+        <path d="M38 44 Q28 36 24 26 Q22 20 27 19 Q31 19 33 24 Q36 32 44 38 Z" fill={c.fur} {...ol} />
+        <path d="M24 21 l-3 -2 M26 19 l-1.6 -3.2 M29 19 l0 -3.4" stroke={c.claw} strokeWidth="1.2" strokeLinecap="round" />
+        <path d="M64 42 Q72 36 74 28 Q75 22 70 22 Q66 23 66 28 Q64 34 58 38 Z" fill={c.dark} {...ol} />
+        <path d="M71 23 l2 -3 M68 22.4 l0.6 -3.4 M73.6 25 l3 -1.6" stroke={c.claw} strokeWidth="1.2" strokeLinecap="round" />
+        {/* 頭 */}
+        <path d="M38 30 Q36 18 47 16 Q58 15 60 26 Q61 34 52 37 Q42 38 38 30 Z" fill={c.fur} {...ol} />
+        <circle cx="39.5" cy="18" r="4" fill={c.fur} {...ol} /><circle cx="39.5" cy="18" r="1.7" fill={c.dark} />
+        <circle cx="56" cy="17" r="4" fill={c.fur} {...ol} /><circle cx="56" cy="17" r="1.7" fill={c.dark} />
+        <path d="M41 30 Q40 26 45 25 Q51 25 51 30 Q50 35 45 35 Q41 34 41 30 Z" fill={c.snout} {...ol} />
+        <ellipse cx="44.4" cy="27.4" rx="2.2" ry="1.6" fill="#140A06" />
+        <path d="M42 32.6 Q45 34.6 48.6 32.4" stroke="#5A1010" strokeWidth="1.2" fill="#8A2020" />
+        {eye(43, 22.6, 1.5)}{eye(52, 22.2, 1.5)}
+      </g>
+    );
+  }
+  /* 正面：四つ足でこちらを向き、頭を低くして睨む */
+  function F() {
+    return (
+      <g className="zk-breathe">
+        <ellipse cx="50" cy="95" rx="30" ry="3.6" fill="rgba(10,6,20,0.45)" />
+        {/* 胴（奥） */}
+        <path d="M22 70 Q20 50 50 46 Q80 50 78 70 Q76 84 50 84 Q24 84 22 70 Z" fill={c.dark} {...ol} />
+        <path d="M28 58 Q38 50 50 49" fill="none" stroke={c.hi} strokeWidth="2.2" strokeLinecap="round" opacity="0.5" />
+        {/* 前脚 */}
+        <path d="M32 70 Q30 84 31 95 L42 95 Q42 84 42 72 Z" fill={c.fur} {...ol} />
+        <path d="M58 72 Q58 84 58 95 L69 95 Q70 84 68 70 Z" fill={c.fur} {...ol} />
+        {claws(36.5, 94.4, 0.9)}{claws(63.5, 94.4, 0.9)}
+        {c.vmark && <path d="M41 66 L50 74 L59 66" fill="none" stroke={c.vmark} strokeWidth="2.6" strokeLinejoin="round" strokeLinecap="round" />}
+        {/* 頭 */}
+        <circle cx="34" cy="40" r="6" fill={c.fur} {...ol} /><circle cx="34" cy="40" r="2.6" fill={c.dark} />
+        <circle cx="66" cy="40" r="6" fill={c.fur} {...ol} /><circle cx="66" cy="40" r="2.6" fill={c.dark} />
+        <path d="M33 54 Q31 38 50 37 Q69 38 67 54 Q66 64 50 66 Q34 64 33 54 Z" fill={c.fur} {...ol} />
+        <path d="M38 46 Q44 40 52 40" fill="none" stroke={c.hi} strokeWidth="2" strokeLinecap="round" opacity="0.55" />
+        <path d="M42 57 Q42 50 50 50 Q58 50 58 57 Q57 63 50 63 Q43 63 42 57 Z" fill={c.snout} {...ol} />
+        <ellipse cx="50" cy="53.4" rx="3" ry="2" fill="#140A06" />
+        <path d="M46 59 Q50 61.6 54 59" stroke={c.line} strokeWidth="1" fill="none" />
+        {eye(43, 48, 1.7)}{eye(57, 48, 1.7)}
+        <path d="M40 44.6 L45.6 46.2 M60 44.6 L54.4 46.2" stroke={c.line} strokeWidth="1.2" strokeLinecap="round" />
+      </g>
+    );
+  }
+  return [S, Q, F];
+}
+const ZK_T_bear = [zkBearMake({ fur: "#3A3238", dark: "#221C20", hi: "#7A6E76", snout: "#9A7A5C", line: "#0A0608", claw: "#E8E0D0", vmark: "#EFE8DC" })];
+const ZK_T_higuma = [zkBearMake({ fur: "#7A4A2A", dark: "#4E2C16", hi: "#B88050", snout: "#C09A70", line: "#2A1408", claw: "#F0E8D8", vmark: null })];
+
+
+/* ==== ZK_MIMIC END ==== */
 const ZK_ART = {
   ground: ZK_T_ground,
   rock: ZK_T_rock,
@@ -70673,7 +75252,7 @@ function zkArtOf(elem, star, seed) {
   ⚠️ 倒れたら傾けて沈める。消すと並びが動いて目が迷う。
   ⚠️ 攻撃を受けた瞬間だけ揺らす。常時動かすと、どれが今殴られたのか分からない。
 */
-function FoeFigure({ res, ratio, down, hit, size, dying, art, actId }) {
+function FoeFigure({ res, ratio, down, hit, size, dying, art, actId, onFace }) {
   const kind = res.phys > 0 ? "armor" : res.mag > 0 ? "ward" : "plain";
   /*
     ★ 姿は6通り（横・斜め・正面 × 左右）。殴られたとき・動いたときに引き直す（同じものを引けば変わらない）。
@@ -70682,6 +75261,8 @@ function FoeFigure({ res, ratio, down, hit, size, dying, art, actId }) {
   const [pose, setPose] = useState(() => zkNextPose());
   useEffect(() => { if (hit && !down) setPose(zkNextPose()); }, [hit]); // eslint-disable-line react-hooks/exhaustive-deps
   useEffect(() => { if (actId != null && !down) setPose(zkNextPose()); }, [actId]); // eslint-disable-line react-hooks/exhaustive-deps
+  /* ★ 正面（pose%3===2）かどうかを戦闘へ知らせる。正面の敵へはダメージが大きい（BT_FACE_DEAL） */
+  useEffect(() => { if (onFace) onFace(!down && pose % 3 === 2); }, [pose, down]); // eslint-disable-line react-hooks/exhaustive-deps
   return (
     <div className={`bt-fig ${kind}${down ? " down" : ""}${hit ? " hit" : ""}${dying ? " dying" : ""}`}
       style={{ "--fig": `${size}px` }}>
@@ -70745,6 +75326,12 @@ const BATTLE_FOE_MS = 720;
 const SPEED_STEPS = [1, 1.5, 2, 3];
 const SPEED_BASE_OPEN = 1;
 const SPEED_ANIM = { 1: 1, 1.5: 1.4, 2: 1.8, 3: 2.6 };
+/*
+  小MAPの実際の速さ（2026-10-05 Aki「MAPの倍速が遅い。今の2速を3速と同じ速さに」）。
+  ★ 段は同じ四つ（▷〜▷▷▷▷）のまま、地図だけ一段ずつ速くする：▷ ×1 ／ ▷▷ ×2 ／ ▷▷▷ ×3 ／ ▷▷▷▷ ×4。
+  ⚠️ 戦闘の速さ（SPEED_ANIM）は変えない。地図の一手の下限 340ms はそのまま。
+*/
+const ADV_MAP_RATE = { 1: 1, 1.5: 2, 2: 3, 3: 4 };
 /* 速さの表示。⚠️ 三角の数（最大四つ） */
 function speedLabel(v) {
   const i = SPEED_STEPS.indexOf(v);
@@ -70775,7 +75362,34 @@ function loadSpeed() {
 }
 function saveSpeed(v) { try { localStorage.setItem(LS_BT_SPEED, String(v)); } catch (e) { /* 残せなくても遊べる */ } }
 
-function BattlePanel({ lang, star, stageName, onEnd, theme, rank, zako, startHP, startMult, startSp, startPot, seed, forceForm }) {
+/*
+  小MAPの特別なマスの変化を、組んだ戦いに乗せる（2026-10-03）。
+  ★ zkind … 雑魚の種類（gild 金の敵／elite 精鋭／mimic ミミック）。強さは ZAKO_KIND_K。
+    ミミックは一体にまとめる（総HP・総攻撃は編成のまま、倍率だけ掛ける）。
+  ★ mods.cards … 手札の増減。⚠️ 3枚より減らさない。
+*/
+function battleSetupMod(st, zkind, mods) {
+  let s = st;
+  const kk = zkind && ZAKO_KIND_K[zkind];
+  if (kk && s.zako) {
+    if (zkind === "mimic" || zkind === "bear" || zkind === "higuma") {
+      const totHP = (s.foeHPList || []).reduce((x, y) => x + y, 0) || (s.foeHP * (s.foes || 1));
+      const totAtk = (s.foeAtkList || []).reduce((x, y) => x + y, 0) || 1;
+      const h = Math.max(1, Math.round(totHP * kk.hp)), at = Math.max(1, Math.round(totAtk * kk.atk));
+      s = { ...s, foes: 1, sizes: [2.6], foeHPList: [h], foeAtkList: [at], foeHP: h };
+    } else {
+      s = { ...s,
+        foeHPList: (s.foeHPList || []).map((h) => Math.max(1, Math.round(h * kk.hp))),
+        foeAtkList: (s.foeAtkList || []).map((x) => Math.max(1, Math.round(x * kk.atk))),
+        foeHP: Math.max(1, Math.round(s.foeHP * kk.hp)) };
+    }
+    s = { ...s, zkind };
+  }
+  const dc = (mods && mods.cards) || 0;
+  if (dc) s = { ...s, cards: Math.max(3, (s.cards || 3) + dc) };
+  return s;
+}
+function BattlePanel({ lang, star, stageName, onEnd, theme, rank, zako, startHP, startMult, startSp, startPot, seed, forceForm, curse, mods, zkind, autoSp }) {
   const a = advT(lang);
   /* ⚠️ 土地柄を受け取る。無ければ町。戦っている場所が地図と揃うこと */
   const themeKey = theme || "town";
@@ -70788,22 +75402,46 @@ function BattlePanel({ lang, star, stageName, onEnd, theme, rank, zako, startHP,
     ⚠️ 戦闘の間に読み直さない。始まってから振り直したのと同じになる。
   */
   const skNow = useMemo(() => battleSkillOf(star), [star]);
-  const setup = useMemo(() => (zako
+  const setup = useMemo(() => battleSetupMod(zako
     ? zakoSetup(star, rank || 0, zako, seed, skNow)
-    : battleSetup(star, rank || 0, stageName, skNow, forceForm)),
-    [star, rank, zako, stageName, seed, skNow, forceForm]);
+    : battleSetup(star, rank || 0, stageName, skNow, forceForm), zako ? zkind : null, mods),
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+    [star, rank, zako, stageName, seed, skNow, forceForm, zkind]);
+  /*
+    小MAPの特別なマスの変化（2026-10-03）。⚠️ 戦いの最初に一度だけ読む（途中で変わらない）。
+    ★ 最大HP … 表示・回復の上限・自分の回復量はこの値。⚠️ 敵の一撃の上限（FOE_HIT_CAP）は元の最大HPで測る
+      （下げた最大HPで測ると、一撃が軽くなって最大HPを削った意味が消える）。
+  */
+  const runK = useMemo(() => {
+    const m = mods || {};
+    /*
+      ★ 属性の倍率 … 地の利（land）＋天の利（sky）＋特別なマス（attr）を足し合わせる。⚠️ ATTR_TOTAL_LO〜HI で止める。
+      ★ 必殺ゲージの溜まり … 4本それぞれ（charge は { swords: 0.15, … } の割合）。
+    */
+    const attr = {};
+    ATTR_KEYS.forEach((k) => {
+      const v = 1 + ((m.land || {})[k] || 0) + ((m.sky || {})[k] || 0) + ((m.attr || {})[k] || 0);
+      attr[k] = Math.max(ATTR_TOTAL_LO, Math.min(ATTR_TOTAL_HI, v));
+    });
+    const chg = {};
+    SP_SUITS.forEach((k) => { chg[k] = Math.max(0.3, 1 + (((m.charge && typeof m.charge === "object") ? m.charge[k] : 0) || 0)); });
+    return { hp: 1 + (m.maxHp || 0), charge: chg, attr, heal: Math.max(0.3, 1 + (m.heal || 0)), potHeal: m.potHeal || 0,
+      res: m.res || {}, bossCut: Math.min(ADV_RUN_CAP.bossCut, m.bossCut || 0), bossUp: m.bossUp || 0 };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
   /*
     ⚠️⚠️ ステータスを state に必ず入れること。battleApply が state.stats を読む。
       入れ忘れると一枚目の処理で例外が出て、1ターン目のまま止まる（実際そうなった）。
   */
-  const S0 = useMemo(() => statsOf(rank || 0), [rank]);
+  const S0base = useMemo(() => statsOf(rank || 0), [rank]);
+  const S0 = useMemo(() => (runK.hp === 1 ? S0base : { ...S0base, maxHP: Math.max(1, Math.round(S0base.maxHP * runK.hp)) }), [S0base, runK]);
   const [st, setSt] = useState(() => ({
     /* ⚠️ 削られたまま入れること。全快で始めると持ち越しが無意味になる */
-    hp: startHP != null ? startHP : statsOf(rank || 0).maxHP,
+    hp: startHP != null ? Math.min(startHP, S0.maxHP) : S0.maxHP,
     /* ⚠️ 倍率も引き継ぐ。道中で積んだものが主の戦いで効く */
     mult: startMult && startMult > 1 ? startMult : 1, take: 1,
-    /* ⚠️ 計算に要るものは全部ここに置く。画面側で別に持たない */
-    stats: statsOf(rank || 0),
+    /* ⚠️ 計算に要るものは全部ここに置く。画面側で別に持たない（最大HPは小MAPの変化を乗せた値） */
+    stats: S0,
     /* ⚠️ setup を作り直さない。三度呼ぶと乱数の絡む値がずれる */
     foeDefP: setup.defP,
     foeDefM: setup.defM,
@@ -70815,7 +75453,17 @@ function BattlePanel({ lang, star, stageName, onEnd, theme, rank, zako, startHP,
     /* ⚠️ ★。敵の回避（foeEvadeOf）が battleApply の中で読む */
     star,
     /* ⚠️ 装備はここに入れて、battleApply から state.eq で読む。計算側で loadEquip しない */
-    eq: equipBonus(equippedGear()),
+    eq: (() => {
+      /*
+        ★ 小MAPの耐性のマスを足す。装備（各30%まで）に、マスのぶん（各 ADV_RUN_CAP.res まで）を上乗せ。
+        ⚠️ 2026-10-03：これまでは足した値を30%で止めていて、装備で30%ある人にはマスが無意味だった。
+        ⚠️ 全部を足した防ぐ確率は debuffBlockRate の DEBUFF_BLOCK_CAP で止まる（完全耐性にはならない）。
+      */
+      const e = equipBonus(equippedGear());
+      /* ⚠️ 2026-10-04：装備の値に混ぜず、別に持つ（出どころごとの上限を debuffBlockRate で別々に掛ける） */
+      e.runRes = { ...(runK.res || {}) };
+      return e;
+    })(),
     /* ⚠️ 編成の弱点。段が変わっても同じものを持ち回る */
     weak: setup.weak,
     /* ⚠️ ⑧の不死身。battleApply と必殺技のあとで clampImmortal が読む */
@@ -70832,6 +75480,14 @@ function BattlePanel({ lang, star, stageName, onEnd, theme, rank, zako, startHP,
     /* ⚠️ 雑魚は体ごとにHPが違う（編成）。一律で作らないこと */
     foes: Array.from({ length: setup.foes }, (_, i) => {
       const h = (setup.foeHPList && setup.foeHPList[i]) || setup.foeHP;
+      /*
+        ★ 小MAPの砲台（bossCut）と挑戦状（bossUp）。主戦だけ。主がいれば主だけ、いなければ全員。
+        ⚠️ 削りは12%まで。主の技の境目（75%）を越えて飛ばさない。
+      */
+      if (!zako && (runK.bossCut || runK.bossUp) && (setup.bossAt == null || setup.bossAt === i)) {
+        const mx = Math.max(1, Math.round(h * (1 + runK.bossUp)));
+        return { hp: Math.max(1, Math.round(mx * (1 - runK.bossCut))), max: mx };
+      }
       return { hp: h, max: h };
     }),
     turn: 0, phase: "ready", hand: [], shown: 0, drawn: 0, note: "",
@@ -70842,6 +75498,18 @@ function BattlePanel({ lang, star, stageName, onEnd, theme, rank, zako, startHP,
     */
     fams: Array.from({ length: 8 }, (_, i) => familyOf(foeElemOf(i, stageName))),
     stance: null, stanceNext: null, stanceManual: false,
+    /*
+      物理の構え（2026-10-03）。types … 敵の番号ごとのタイプ（物理の相性を引く）。phys / physNext / physManual は魔法の構えと同じ形。
+      attrK … 魔法6・物理4の倍率（地の利・天の利・特別なマス）。healK … 受ける回復の倍率。
+    */
+    types: Array.from({ length: 8 }, (_, i) => foeElemOf(i, stageName)),
+    phys: null, physNext: null, physManual: false,
+    physOpen: advProgress().physOpen || PHYS_KEYS.slice(),
+    fourOpen: advProgress().fourOpen !== false,
+    eternalOpen: advProgress().eternalOpen !== false,
+    /* ⚠️ 逆転の奥義は一戦闘に一回 */
+    aegisUsed: false, eternalUsed: false,
+    attrK: runK.attr, healK: runK.heal,
     /* 育ちで開いた属性と必殺ゲージ（2026-09-27）。⚠️ 開いていない構えは選べず、オートも選ばない */
     elemOpen: advProgress().elems, spOpen: advProgress().spOpen,
     /* スートの覚醒（45県目＝棒・46県目＝剣）。その札は一枚で二回働く */
@@ -70857,6 +75525,8 @@ function BattlePanel({ lang, star, stageName, onEnd, theme, rank, zako, startHP,
   const [jolt, setJolt] = useState(null);
   /* ⚠️ 敵の手を札の場所に出す。自分の技と見分けが付くように赤黒い札で */
   const [foeAct, setFoeAct] = useState(null);
+  /* ★ 敵ごとの「正面を向いているか」。FoeFigure が姿を変えるたびに書き込む（BT_FACE_DEAL） */
+  const faceRef = useRef({});
   /*
     エフェクト。
     ⚠️ 数字と別に持つこと。数字は900ms、エフェクトは620msで消えるので、
@@ -70947,11 +75617,27 @@ function BattlePanel({ lang, star, stageName, onEnd, theme, rank, zako, startHP,
     return { ...v, ctrl: { suit: k, left: CTRL_TURNS }, ctrlCd: { ...(v.ctrlCd || {}), [k]: CTRL_TURNS + CTRL_CD } };
   });
   /* 手動の必殺技。⚠️ 満タンのときだけ構えられる。構えたら次の札の瞬間に放つ */
-  const spMax = spMaxOf(setup.star, setup.cards);
+  /* ⚠️ 2026-10-03：溜まりは4本それぞれ（小MAPの闘技場・魔導塔・酒場・市場など） */
+  const spMaxSu = (su) => spMaxOf(setup.star, setup.cards, runK.charge[su] || 1);
+  /*
+    逆転の奥義が撃てるか（CLUTCH_HP の注）。⚠️ 撃つ瞬間の状態で決める。返すのは "aegis" / "eternal" / null。
+  */
+  const clutchOf = (v, su) => {
+    if (!v || !su) return null;
+    const mx = (v.stats || S0).maxHP;
+    if (!(v.hp > 0 && v.hp <= mx * CLUTCH_HP)) return null;
+    const cap = spRunOf(setup.star);
+    if (spTierOf(((v.sp || {})[su] || 0) / spMaxSu(su), cap) < cap) return null;
+    if (su === "swords" && (v.physOpen || []).length >= PHYS_KEYS.length && v.fourOpen !== false && !v.aegisUsed) return "aegis";
+    if (su === "wands" && (!Array.isArray(v.elemOpen) || v.elemOpen.length >= FAMILY_KEYS.length) && v.eternalOpen !== false && !v.eternalUsed) return "eternal";
+    return null;
+  };
   const pressSp = (k) => setSt((v) => {
     if (v.phase === "win" || v.phase === "lose" || v.phase === "ready" || v.phase === "dying") return v;
+    /* ⚠️ 小MAPのイベント「必殺の封印」中は撃てない。封じの鎖で封じられた必殺も撃てない */
+    if (curse && (curse.noSp || (curse.spSeal || []).includes(k))) return v;
     /* ⚠️ 3枚の段に届いていれば構えられる（満タンを待たなくてよい） */
-    if (spTierOf(((v.sp || {})[k] || 0) / spMax, spRunOf(setup.star)) < 3 || v.spFire) return v;
+    if (spTierOf(((v.sp || {})[k] || 0) / spMaxSu(k), spRunOf(setup.star)) < 3 || v.spFire) return v;
     return { ...v, spFire: k };
   });
   /* ポーション。⚠️ 1ターンに1個。手番は使わない */
@@ -70959,7 +75645,7 @@ function BattlePanel({ lang, star, stageName, onEnd, theme, rank, zako, startHP,
     const v = stRef.current;
     if (v.phase === "win" || v.phase === "lose" || v.phase === "ready") return;
     if ((v.potions || 0) <= 0 || v.potTurn === v.turn || v.hp >= S0.maxHP) return;
-    const add = Math.round(S0.maxHP * (advProgress().potHeal || POTION_HEAL));
+    const add = Math.round(S0.maxHP * ((advProgress().potHeal || POTION_HEAL) + runK.potHeal) * runK.heal);
     setSt((w) => ({ ...w, hp: Math.min(S0.maxHP, w.hp + add), potions: (w.potions || 0) - 1, potTurn: w.turn }));
     pushHist("heal", v.turn, `${a.potion} +${add}`);
     pop("me", `＋${add}`, "heal"); fx("me", "heal");
@@ -71060,7 +75746,9 @@ function BattlePanel({ lang, star, stageName, onEnd, theme, rank, zako, startHP,
     /* ⚠️ 再生速度（fxRateOf）に合わせて、消すまでの時間も伸び縮みさせる */
     /* ⚠️ 大アルカナの第二版は0.9秒（FX_MS_ARC） */
     const arc2 = kind === "major" && extra && ARC2_READY[extra.n];
-    const ms = Math.round(((kind === "blast" || kind === "dance") ? FX_MS_BLAST : kind === "bossSp" ? FX_MS_BOSS : arc2 ? FX_MS_ARC : FX_MS) / fxRateOf(kind, speedRef.current));
+    /* ⚠️ 2026-10-03：突撃・打撃・射撃の必殺は0.9秒の絵（FX_MS_ARC）。一閃などは今までどおり */
+    const physLong = kind === "flash" && extra && extra.phys && extra.phys !== "slash";
+    const ms = Math.round((kind === "eternal" ? 2400 : (kind === "blast" || kind === "dance" || kind === "four") ? FX_MS_BLAST : kind === "bossSp" ? FX_MS_BOSS : (arc2 || physLong) ? FX_MS_ARC : FX_MS) / fxRateOf(kind, speedRef.current));
     timers.current.push(setTimeout(() => setFxs((v) => v.filter((x) => x.id !== id)), ms));
     mark(ms);
   };
@@ -71250,7 +75938,7 @@ function BattlePanel({ lang, star, stageName, onEnd, theme, rank, zako, startHP,
       return found ? { ...found, reversed: c.reversed } : c;
     });
     /* ⚠️ 星は開始時に回復する。ここで払わないと、引く前に落ちる場面が出る */
-    const heal = s.fx.star > 0 ? Math.round(S0.maxHP * 0.12) : 0;
+    const heal = s.fx.star > 0 ? Math.round(S0.maxHP * 0.12 * runK.heal) : 0;
     if (heal) pop("me", `+${heal}`, "heal");
     /*
       腐食で不発になる札。
@@ -71319,9 +76007,14 @@ function BattlePanel({ lang, star, stageName, onEnd, theme, rank, zako, startHP,
     setSt((v) => ({
       ...v, hand: [...marked, ...shieldCards], shown: 0, phase: "play", turn: v.turn + 1,
       /* ⚠️ 構えはターンの始めにだけ変わる。手動の予約があればそれ、無ければオート */
-      stance: v.stanceManual ? (v.stanceNext || v.stance || stanceAuto(v, S0.maxHP, setup.foeAtkList))
+      /* ⚠️ 2026-09-30：小MAPのイベント「属性の封印」中は、構えが封印の属性に固定される */
+      stance: (curse && curse.elem) ? curse.elem
+        : v.stanceManual ? (v.stanceNext || v.stance || stanceAuto(v, S0.maxHP, setup.foeAtkList))
         : stanceAuto(v, S0.maxHP, setup.foeAtkList),
       stanceNext: null,
+      /* ★ 物理の構え。手動で選んでいなければオート（physAuto） */
+      phys: v.physManual ? (v.physNext || v.phys || physAuto(v)) : physAuto(v),
+      physNext: null,
       /* 制御盤。⚠️ ターンの始めに一つ減らす（このターンの山には効いた後） */
       ctrl: (v.ctrl && v.ctrl.left > 1) ? { ...v.ctrl, left: v.ctrl.left - 1 } : null,
       ctrlCd: Object.fromEntries(CTRL_SUITS.map((k) => [k, Math.max(0, ((v.ctrlCd || {})[k] || 0) - 1)])),
@@ -71396,6 +76089,61 @@ function BattlePanel({ lang, star, stageName, onEnd, theme, rank, zako, startHP,
     }));
   };
 
+  /*
+    物理の必殺を当てる（並びの必殺・手動の必殺・四武の舞の共通）。PHYS_FLASH_K の注を参照。
+    ★ 相性は「撃った武器の属性」で引く（四武の舞は一波ごとに変わる）。倍率も同じ（地の利・天の利・特別なマス）。
+    ⚠️ dBase … 数字を出すまでの遅れ（四武の舞の各波を演出に合わせる）。返すのは突撃で狙った敵の番号。
+  */
+  /*
+    ★ allHit（2026-10-05 Aki「手動の物理必殺は全部全体攻撃に統一」）：槍・弓も敵ぜんぶへ一撃ずつ。
+      ⚠️ 一点（槍1.5）・ばらばら（弓0.7）の係数は、全体に当てる前提の剣と同じ 1.0 にそろえる（斧は守り崩しの代わりに0.8のまま）。
+  */
+  const physFlash = (next, ptype, base, run, nm, turn, k0, dBase, allHit) => {
+    const kk = (k0 || 1) * (allHit && ptype !== "blunt" ? 1 : (PHYS_FLASH_K[ptype] || 1));
+    const pm = (i2) => {
+      const r = physRel(ptype, (next.types || [])[i2]);
+      return r === "up" ? 1 + PHYS_DEAL_UP : r === "down" ? 1 - PHYS_DEAL_DOWN : 1;
+    };
+    const hit = (i2, delay) => {
+      const f2 = next.foes[i2];
+      if (!f2 || f2.hp <= 0) return false;
+      if (reflects(next, i2, "swords")) { pop(`foe${i2}`, a.reflected, "info"); return false; }
+      const d = Math.round(base * kk * stanceDealMul(next, i2) * pm(i2) * attrMulOf(next, ptype))
+        + Math.round(f2.max * 0.001 * run * kk);
+      f2.hp -= d;
+      pushHist("deal", turn, `${nm} → ${foeLabelOf(i2, setup, a)} -${d}`);
+      const dl = (dBase || 0) + (delay || 0);
+      if (dl > 0) timers.current.push(setTimeout(() => pop(`foe${i2}`, `-${d}`, "holo"), dl));
+      else pop(`foe${i2}`, `-${d}`, "holo");
+      return true;
+    };
+    const alive = () => next.foes.map((_, i2) => i2).filter((i2) => next.foes[i2].hp > 0);
+    if (ptype === "thrust" && !allHit) {
+      const b = next.bossAt;
+      const t = (typeof b === "number" && next.foes[b] && next.foes[b].hp > 0) ? b
+        : alive().reduce((m, i2) => (m < 0 || next.foes[i2].hp > next.foes[m].hp ? i2 : m), -1);
+      if (t >= 0) hit(t, 0);
+      return t >= 0 ? t : null;
+    }
+    if (ptype === "shoot" && !allHit) {
+      /* ⚠️ 本数は撃つ前の生きている数で決める。跳ね返す敵には向けない */
+      const n = alive().length + 1;
+      for (let j = 0; j < n; j++) {
+        const al = alive().filter((i2) => !reflects(next, i2, "swords"));
+        if (!al.length) break;
+        hit(al[Math.floor(Math.random() * al.length)], j * 90);
+      }
+      return null;
+    }
+    alive().forEach((i2) => {
+      if (hit(i2, 0) && ptype === "blunt") {
+        next.foeGuard = { ...(next.foeGuard || {}), [i2]: 0 };
+        next.foeThorn = { ...(next.foeThorn || {}), [i2]: 0 };
+      }
+    });
+    if (ptype === "blunt" && next.foeBuff && next.foeBuff.def) next.foeBuff = { ...next.foeBuff, def: null };
+    return null;
+  };
   /* 一枚ぶん進める。⚠️ battleApply の結果だけを見て画面を作る */
   const step = () => {
     const s = stRef.current;
@@ -71414,6 +76162,8 @@ function BattlePanel({ lang, star, stageName, onEnd, theme, rank, zako, startHP,
       ...s,
       foes: s.foes.map((f) => ({ ...f })),
       shown: to,
+      /* ★ いま画面で正面を向いている敵（BT_FACE_DEAL） */
+      face: { ...faceRef.current },
     };
     /*
       ⚠️⚠️ 読みと書きを分けること。
@@ -71437,7 +76187,7 @@ function BattlePanel({ lang, star, stageName, onEnd, theme, rank, zako, startHP,
         const su = String(card.id).split("-")[0];
         if (SP_SUITS.indexOf(su) >= 0 && (!Array.isArray(next.spOpen) || next.spOpen.includes(su))) {
           next.sp = { ...(next.sp || {}) };
-          next.sp[su] = Math.min(spMaxOf(setup.star, setup.cards), (next.sp[su] || 0) + 1);
+          next.sp[su] = Math.min(spMaxSu(su), (next.sp[su] || 0) + 1);
         }
       }
       let out = battleApply(next, card);
@@ -71488,9 +76238,13 @@ function BattlePanel({ lang, star, stageName, onEnd, theme, rank, zako, startHP,
           ⚠️ 魔法（棒）だけ。剣の数字には付けない（構えの与ダメは両方に効くが、見せ分けは魔法の手触りとして）。
         */
         const rel = out.kind === "wands" ? stanceRel(s.stance, (s.fams || [])[h.i]) : null;
+        /* ★ 2026-10-03：剣は物理の構えの相性を同じ出方で見せる（弱点は大きく物理の色で光る・耐性は小さい） */
+        const prel = out.kind === "swords" ? physRel(s.phys, (s.types || [])[h.i]) : null;
         pop(`foe${h.i}`, `-${h.d}`, out.crit ? "crit" : out.kind === "wands" ? "mag" : "dmg",
           rel === "up" || rel === "both" ? { cls: "st-up", ec: STANCE_ICON_COLOR[s.stance] }
-            : rel === "same" ? { cls: "st-same" } : undefined);
+            : rel === "same" ? { cls: "st-same" }
+            : prel === "up" ? { cls: "st-up", ec: PHYS_COLOR[s.phys] }
+            : prel === "down" ? { cls: "st-same" } : undefined);
         /*
           ⚠️ ワンド（魔法）は、いまの構えの属性で呪文の絵を変える（FxSpell）。
             構えが決まる前（null）は、従来の環（FxBurst）。
@@ -71575,7 +76329,7 @@ function BattlePanel({ lang, star, stageName, onEnd, theme, rank, zako, startHP,
       next.dmgSum = 0; next.healSum = 0; next.healOver = 0;
 
       /*
-        【エレメンタルブラスト】
+        【コスモフォース】
         ★ 星・月・太陽が同時に効いているターンの終わりに発動する。
           いま効いているものをすべて消し去り、四つの必殺技を最大段で撃つ。
         ⚠️⚠️ 宣言はここに置くこと。使うより後ろに置くと、
@@ -71589,7 +76343,7 @@ function BattlePanel({ lang, star, stageName, onEnd, theme, rank, zako, startHP,
       const blast = next.fx.star > 0 && next.fx.moon > 0 && next.fx.sun > 0;
       /*
         秘剣・剣の舞。
-        ★ エレメンタルブラストと対をなす物理版。
+        ★ コスモフォースと対をなす物理版。
           あちらは星・月・太陽（地味バフ三枚）、こちらは悪魔・死神（危険札二枚）。
         ⚠️⚠️ 悪魔は必殺技を封じる札。そこへ死神が重なったときだけ封が破れる。
           「枷が極まると逆に解ける」。ここが剣の舞の芯なので、
@@ -71603,7 +76357,7 @@ function BattlePanel({ lang, star, stageName, onEnd, theme, rank, zako, startHP,
         && (s.turnNext && s.turnNext.halveTurns > 0) && next.fx.death > 0;
 
       /*
-        エレメンタルブラストの本体。
+        コスモフォースの本体。
         ⚠️ 順に撃つこと。同時に出すと絵が重なって何も読めない。
         ⚠️ 撃つ順は 聖杯（倍率）→ 剣（全体）→ 棒（単体）→ 貨幣（回復）。
           先に倍率を積んでから殴ると、四つが噛み合って一続きに見える。
@@ -71666,20 +76420,43 @@ function BattlePanel({ lang, star, stageName, onEnd, theme, rank, zako, startHP,
         const S4 = next.stats || statsOf(rank || 0);
         const topMul2 = FLASH_MUL[7];
         /* ⚠️ 段で斬る回数が変わる。七段で★の数ぶん（満額） */
-        const hits = Math.max(1, Math.round((setup.star | 0) * danceRate));
+        const hits0 = Math.max(1, Math.round((setup.star | 0) * danceRate));
         const k = (6.5 + 0.1 * setup.star) / Math.max(1, setup.star);
+        /*
+          物理の構えで技が変わる（2026-10-04 Aki「秘槍・槍の華、秘弓・矢の雨、秘斧・斧の宴も」）。⚠️ 総量はおおむね剣の舞と同じ。
+            斬撃 秘剣・剣の舞 … 一撃ごとに一番HPの低い敵（今まで）
+            突撃 秘槍・槍の華 … すべて主（いなければHPが一番高い敵）へ
+            射撃 秘弓・矢の雨 … 回数×1.5、一本0.7倍で、ばらばらの敵へ
+            打撃 秘斧・斧の宴 … 回数×0.6、一撃0.5倍で敵全体へ。守り・棘・防御UPを崩す
+        */
+        const pkD = next.phys || "slash";
+        const hits = pkD === "shoot" ? Math.round(hits0 * 1.5) : pkD === "blunt" ? Math.max(1, Math.round(hits0 * 0.6)) : hits0;
+        const kD = pkD === "shoot" ? 0.7 : pkD === "blunt" ? 0.5 : 1;
+        const dmgTo = (t2) => Math.round(S4.power * CARD_COEF.swords * next.mult * topMul2 * k * kD * stanceDealMul(next, t2)
+          * physDealMul(next, t2) * attrMulOf(next, pkD));
+        const aliveD = () => next.foes.map((_, i2) => i2).filter((i2) => next.foes[i2].hp > 0);
         for (let h = 0; h < hits; h++) {
-          let t2 = -1, low = Infinity;
-          next.foes.forEach((f2, i2) => {
-            if (f2.hp <= 0) return;
-            if (f2.hp < low) { low = f2.hp; t2 = i2; }
+          const al = aliveD();
+          if (!al.length) break;
+          let tg = [];
+          if (pkD === "blunt") tg = al;
+          else if (pkD === "shoot") tg = [al[Math.floor(Math.random() * al.length)]];
+          else if (pkD === "thrust") {
+            const b = next.bossAt;
+            tg = [(typeof b === "number" && next.foes[b] && next.foes[b].hp > 0) ? b : al.reduce((m, i2) => (next.foes[i2].hp > next.foes[m].hp ? i2 : m), al[0])];
+          } else tg = [al.reduce((m, i2) => (next.foes[i2].hp < next.foes[m].hp ? i2 : m), al[0])];
+          tg.forEach((t2) => {
+            const d = dmgTo(t2);
+            next.foes[t2].hp -= d;
+            if (pkD === "blunt") {
+              next.foeGuard = { ...(next.foeGuard || {}), [t2]: 0 };
+              next.foeThorn = { ...(next.foeThorn || {}), [t2]: 0 };
+            }
+            /* ⚠️ 一撃ずつ遅らせる。まとめて出すと数字が重なって読めない */
+            timers.current.push(setTimeout(() => pop(`foe${t2}`, `-${d}`, "holo"), 120 + h * 110));
           });
-          if (t2 < 0) break;
-          const d = Math.round(S4.power * CARD_COEF.swords * next.mult * topMul2 * k * stanceDealMul(next, t2));
-          next.foes[t2].hp -= d;
-          /* ⚠️ 一撃ずつ遅らせる。まとめて出すと数字が重なって読めない */
-          timers.current.push(setTimeout(() => pop(`foe${t2}`, `-${d}`, "holo"), 120 + h * 110));
         }
+        if (pkD === "blunt" && next.foeBuff && next.foeBuff.def) next.foeBuff = { ...next.foeBuff, def: null };
         /*
           ⚠️⚠️ 消すのは悪魔と死神だけ。ブラストのように全部消さないこと。
             星や太陽まで消えると、危険札を抜けた見返りが帳消しになる。
@@ -71687,8 +76464,9 @@ function BattlePanel({ lang, star, stageName, onEnd, theme, rank, zako, startHP,
         next.fx = { ...next.fx, death: 0 };
         next.pending = { ...next.pending, halve: false, halveTurns: 0,
           allRev: false, allRevTurns: 0 };
-        next.note = a.danceName;
-        fx("all", "dance", { label: a.danceName, hits });
+        const nmD = (a.danceNames && a.danceNames[pkD]) || a.danceName;
+        next.note = nmD;
+        fx("all", "dance", { label: nmD, hits, variant: pkD });
       }
 
       /*
@@ -71705,14 +76483,18 @@ function BattlePanel({ lang, star, stageName, onEnd, theme, rank, zako, startHP,
       */
       const noFlash = (s.turnNext && s.turnNext.halve) || (s.fx && s.fx.dread > 0);
       /* ⚠️ 複数あれば順に。剣3枚＋棒3枚なら二つとも出る */
-      ((noFlash || blast) ? [] : flashRunOf(s.hand)).forEach((fr, fi) => {
+      /* ⚠️ 封じの鎖で封じられたスートの並びの必殺は出ない */
+      ((noFlash || blast) ? [] : flashRunOf(s.hand).filter((fr) => !(curse && (curse.spSeal || []).includes(fr.suit)))).forEach((fr, fi) => {
         /* ⚠️ 2026-09-27（Aki）：棒（単体）の必殺は、当てた敵を絵の中心にする */
         let tgtF = null;
         const tier = Math.min(8, fr.run - 2);
         const mul = FLASH_MUL[tier - 1];
         /* ⚠️ 棒は構えの属性の名前（構えが無ければ元の名前） */
         const wfam = fr.suit === "wands" ? next.stance : null;
+        /* ★ 剣は物理の構えの名前（斬撃は一閃のまま） */
+        const pk = fr.suit === "swords" ? (next.phys || "slash") : null;
         const nm = (wfam && a.wandFlashName && a.wandFlashName[wfam] && a.wandFlashName[wfam][tier - 1])
+          || (pk && pk !== "slash" && a.physFlashName && a.physFlashName[pk] && a.physFlashName[pk][tier - 1])
           || (a.flashName && a.flashName[fr.suit] && a.flashName[fr.suit][tier - 1]) || "";
         const S2 = next.stats || statsOf(rank || 0);
         if (fr.suit === "swords") {
@@ -71723,17 +76505,8 @@ function BattlePanel({ lang, star, stageName, onEnd, theme, rank, zako, startHP,
             ⚠️ 敵ごとに最大HPが違うので、体ごとに計算すること。
           */
           const base = Math.round(S2.power * CARD_COEF.swords * next.mult * mul);
-          next.foes.forEach((f2, i2) => {
-            if (f2.hp <= 0) return;
-            /* ⚠️ 物理反射の敵には通らない（跳ね返しはしない。必殺技まで返すと理不尽） */
-            if (reflects(next, i2, "swords")) { pop(`foe${i2}`, a.reflected, "info"); return; }
-            const d = Math.round(base * stanceDealMul(next, i2)) + Math.round(f2.max * 0.001 * fr.run);
-            f2.hp -= d;
-            /* ⚠️ 剣も同じ。遅らせると、倒した敵のぶんが出ない */
-            pushHist("deal", s.turn, `${nm} → ${foeLabelOf(i2, setup, a)} -${d}`);
-            /* ⚠️ 必殺技の数字は holo。札一枚ぶんの数字と見分けが付かないと、効いた実感が出ない */
-            pop(`foe${i2}`, `-${d}`, "holo");
-          });
+          /* ★ 2026-10-03：物理の構えで当て方が変わる（physFlash）。⚠️ 物理反射の敵には通らない（中で見ている） */
+          tgtF = physFlash(next, pk, base, fr.run, nm, s.turn);
         } else if (fr.suit === "wands") {
           /* ★ 棒は単体攻撃。最もHPの高い敵へ ―― 全体攻撃では届かない相手を狙う */
           /*
@@ -71767,7 +76540,7 @@ function BattlePanel({ lang, star, stageName, onEnd, theme, rank, zako, startHP,
                 それ以上だと基礎ダメージを上回り、割合の札になってしまう。
             */
             /* ⚠️ 棒の必殺はちりょく（mind）。ちからではない */
-            const d = Math.round(S2.mind * CARD_COEF.swords * next.mult * mul * 3.0 * stanceDealMul(next, t2)
+            const d = Math.round(S2.mind * CARD_COEF.swords * next.mult * mul * 3.0 * stanceDealMul(next, t2) * attrMulOf(next, next.stance)
               + next.foes[t2].max * 0.001 * fr.run);
             next.foes[t2].hp -= d;
             /*
@@ -71802,7 +76575,7 @@ function BattlePanel({ lang, star, stageName, onEnd, theme, rank, zako, startHP,
               ブルーアースは全快 ―― 名前どおりの働きになる。
           */
           /* ⚠️ 貨幣の必殺（回復）はたいりょくが受け持つ */
-          const h = Math.round(S2.maxHP * (fr.run / 10) * statK(S2.vital));
+          const h = Math.round(S2.maxHP * (fr.run / 10) * statK(S2.vital) * runK.heal);
           next.hp = Math.min(S2.maxHP, next.hp + h);
           timers.current.push(setTimeout(() => pop("me", `＋${h}`, "holo"), 240));
           /* ⚠️ 2026-09-27（Aki）：青の回復必殺は状態異常も消す */
@@ -71811,8 +76584,8 @@ function BattlePanel({ lang, star, stageName, onEnd, theme, rank, zako, startHP,
         next.note = nm;
         /* ⚠️ 二つ目以降は遅らせる。同時に出すと絵が重なって読めない */
         timers.current.push(setTimeout(() => {
-          fx("all", "flash", { suit: fr.suit, run: fr.run, label: nm, fam: wfam, tgt: tgtF,
-            tone: (wfam && WAND_FLASH_TONE[wfam]) || FLASH_TONE[fr.suit] });
+          fx("all", "flash", { suit: fr.suit, run: fr.run, label: nm, fam: wfam, tgt: (fr.suit === "wands" || pk === "thrust") ? tgtF : null, phys: pk,
+            tone: (wfam && WAND_FLASH_TONE[wfam]) || (pk && pk !== "slash" && PHYS_COLOR[pk]) || FLASH_TONE[fr.suit] });
         }, fi * 380));
       });
     }
@@ -71820,30 +76593,52 @@ function BattlePanel({ lang, star, stageName, onEnd, theme, rank, zako, startHP,
       手動の必殺技を放つ（構えていれば、この札の瞬間に）。
       ⚠️ 悪魔・すさまじい殺気のあいだは放たない。構えたまま待つ。
     */
-    if (next.spFire && !((s.turnNext && s.turnNext.halve) || (s.fx && s.fx.dread > 0))) {
+    /* ⚠️ 逆転の奥義（衝陣・エターナル）は殺気の最中でも撃てる。悪魔の枷の最中は撃てない */
+    const clutchNow = next.spFire ? clutchOf(next, next.spFire) : null;
+    if (next.spFire && !(s.turnNext && s.turnNext.halve) && (!(s.fx && s.fx.dread > 0) || clutchNow)) {
       const su = next.spFire;
       /* ⚠️ 撃つ瞬間の溜まりで枚数が決まる（構えてから溜まった分も乗る） */
       const cap = spRunOf(setup.star);
-      const run = Math.max(3, spTierOf(((next.sp || {})[su] || 0) / spMaxOf(setup.star, setup.cards), cap));
+      const run = Math.max(3, spTierOf(((next.sp || {})[su] || 0) / spMaxSu(su), cap));
       const tier = Math.min(8, run - 2);
       const mul = FLASH_MUL[tier - 1];
       /* 満タン（上限の枚数）に対する威力の比。回復はこの比で縮める */
       const capK = mul / FLASH_MUL[Math.min(8, cap - 2) - 1];
       const wfam = su === "wands" ? next.stance : null;
-      const nm = (wfam && a.wandFlashName && a.wandFlashName[wfam] && a.wandFlashName[wfam][tier - 1])
+      const pk = su === "swords" ? (next.phys || "slash") : null;
+      /* ★ 逆転の奥義（clutchOf）。四武の衝陣（剣）・エターナルエレメンツ（棒） */
+      const four = clutchNow === "aegis";
+      const eternal = clutchNow === "eternal";
+      const nm = four ? a.fourName : eternal ? a.eternalName
+        : (wfam && a.wandFlashName && a.wandFlashName[wfam] && a.wandFlashName[wfam][tier - 1])
+        || (pk && pk !== "slash" && a.physFlashName && a.physFlashName[pk] && a.physFlashName[pk][tier - 1])
         || (a.flashName && a.flashName[su] && a.flashName[su][tier - 1]) || "";
       const S5 = next.stats || statsOf(rank || 0);
       let tgtM = null;
       if (su === "swords") {
         const base = Math.round(S5.power * CARD_COEF.swords * next.mult * mul);
-        next.foes.forEach((f2, i2) => {
-          if (f2.hp <= 0) return;
-          if (reflects(next, i2, "swords")) { pop(`foe${i2}`, a.reflected, "info"); return; }
-          const d = Math.round(base * stanceDealMul(next, i2)) + Math.round(f2.max * 0.001 * run);
-          f2.hp -= d;
-          pushHist("deal", s.turn, `${nm} → ${foeLabelOf(i2, setup, a)} -${d}`);
-          pop(`foe${i2}`, `-${d}`, "holo");
+        if (four) PHYS_KEYS.forEach((pk2) => physFlash(next, pk2, base, run, nm, s.turn, PHYS_FOUR_K, PHYS_FOUR_AT[pk2]));
+        else tgtM = physFlash(next, pk, base, run, nm, s.turn, 1, 0, true);
+      } else if (su === "wands" && eternal) {
+        /*
+          エターナルエレメンツ。六属性を順に、いちばんHPの高い敵へ（跳ね返す敵は避ける）。
+          ⚠️ 一撃ごとにその属性の相性（stanceDealMul）と倍率（attrMulOf）で当たる。
+        */
+        FAMILY_KEYS.forEach((e, ei) => {
+          let tE = -1, topE = -1;
+          next.foes.forEach((f2, i2) => {
+            if (f2.hp <= 0 || reflects({ ...next, stance: e }, i2, "wands")) return;
+            if (f2.hp > topE) { topE = f2.hp; tE = i2; }
+          });
+          if (tE < 0) return;
+          const d = Math.round(S5.mind * CARD_COEF.swords * next.mult * mul * 3.0 * ETERNAL_K
+            * stanceDealMul({ stance: e, fams: next.fams, face: next.face }, tE) * attrMulOf(next, e) + next.foes[tE].max * 0.001 * run);
+          next.foes[tE].hp -= d;
+          pushHist("deal", s.turn, `${nm}（${a.familyName ? a.familyName[e] : e}）→ ${foeLabelOf(tE, setup, a)} -${d}`);
+          timers.current.push(setTimeout(() => pop(`foe${tE}`, `-${d}`, "holo"), ETERNAL_AT[ei]));
         });
+        /* ★ 今かかっている状態異常も消す */
+        cureDebuffs(next);
       } else if (su === "wands") {
         let t5 = -1, top5 = -1;
         next.foes.forEach((f2, i2) => {
@@ -71852,7 +76647,7 @@ function BattlePanel({ lang, star, stageName, onEnd, theme, rank, zako, startHP,
         });
         if (t5 < 0) next.foes.forEach((f2, i2) => { if (f2.hp > 0) pop(`foe${i2}`, a.reflected, "info"); });
         if (t5 >= 0) {
-          const d = Math.round(S5.mind * CARD_COEF.swords * next.mult * mul * 3.0 * stanceDealMul(next, t5)
+          const d = Math.round(S5.mind * CARD_COEF.swords * next.mult * mul * 3.0 * stanceDealMul(next, t5) * attrMulOf(next, next.stance)
             + next.foes[t5].max * 0.001 * run);
           next.foes[t5].hp -= d;
           pushHist("deal", s.turn, `${nm} → ${foeLabelOf(t5, setup, a)} -${d}`);
@@ -71865,16 +76660,27 @@ function BattlePanel({ lang, star, stageName, onEnd, theme, rank, zako, startHP,
         if (next.mult > before5) pop("me", `×${next.mult.toFixed(2)}`, "holo");
       } else {
         /* ⚠️ 満タンなら従来どおり（上限の枚数/10）。途中で撃つと威力の比の分だけ少ない */
-        const h = Math.round(S5.maxHP * (cap / 10) * capK * statK(S5.vital));
+        const h = Math.round(S5.maxHP * (cap / 10) * capK * statK(S5.vital) * runK.heal);
         next.hp = Math.min(S5.maxHP, next.hp + h);
         /* ⚠️ 2026-09-27（Aki）：青の回復必殺は状態異常も消す（手動でも同じ） */
         if (cureDebuffs(next)) timers.current.push(setTimeout(() => pop("me", a.cureAll || "CURE", "holo"), 520));
         pop("me", `＋${h}`, "holo");
       }
       next.sp = { ...(next.sp || {}), [su]: 0 };
+      /*
+        逆転の奥義の代償と守り。⚠️ ゲージ4本すべて0（貨幣の倍率は残す）。守りは tickFx が敵の手番のあとに一つずつ減らす。
+      */
+      if (four || eternal) {
+        next.sp = { swords: 0, wands: 0, cups: 0, pentacles: 0 };
+        if (four) { next.fx = { ...next.fx, aegis: AEGIS_TURNS }; next.aegisUsed = true; }
+        else { next.fx = { ...next.fx, eternal: ETERNAL_TURNS }; next.eternalUsed = true; }
+        pushHist("fx", s.turn, nm);
+      }
       next.spFire = null; next.note = nm;
-      fx("all", "flash", { suit: su, run, label: nm, fam: wfam, tgt: tgtM,
-        tone: (wfam && WAND_FLASH_TONE[wfam]) || FLASH_TONE[su] });
+      if (eternal) fx("all", "eternal", { label: nm, hits: 6 });
+      else if (four) fx("all", "four", { label: nm, hits: next.foes.filter((f) => f.hp > 0).length + 4 });
+      else fx("all", "flash", { suit: su, run, label: nm, fam: wfam, tgt: (su === "wands" || pk === "thrust") ? tgtM : null, phys: pk,
+        tone: (wfam && WAND_FLASH_TONE[wfam]) || (pk && pk !== "slash" && PHYS_COLOR[pk]) || FLASH_TONE[su] });
     }
     /* ⚠️ 不死身は必殺技のあとにも掛ける。札のあとだけだと必殺で死ぬ */
     clampImmortal(next);
@@ -72014,7 +76820,8 @@ function BattlePanel({ lang, star, stageName, onEnd, theme, rank, zako, startHP,
         pd[k] = true;
         const el = foeElemOf(bIdx !== null ? bIdx : 0, stageName);
         const cut = BOSS_PCT_CUT[k] * ((s.fx && s.fx.temperance > 0) ? 0.5 : 1);
-        const d = Math.max(0, Math.min(Math.floor(next.hp) - 1, Math.round(next.hp * cut)));
+        /* ⚠️ 四武の衝陣の守りの最中は受けない */
+        const d = (next.fx && next.fx.aegis > 0) ? 0 : Math.max(0, Math.min(Math.floor(next.hp) - 1, Math.round(next.hp * cut)));
         next.hp -= d;
         const nm = (a.bossPctName && a.bossPctName[el]) || "";
         next.note = nm;
@@ -72065,7 +76872,7 @@ function BattlePanel({ lang, star, stageName, onEnd, theme, rank, zako, startHP,
         }
         if (sp.guardBoss) next.bossGuard = (next.bossGuard || 0) + (sp.turns || 3);
         if (sp.drainPct) {
-          const d = Math.round(next.hp * sp.drainPct * w);
+          const d = (next.fx && next.fx.aegis > 0) ? 0 : Math.round(next.hp * sp.drainPct * w);
           next.hp -= d; b.hp = Math.min(b.max, b.hp + d);
           pop("me", `-${d}`, "dmg");
         }
@@ -72179,6 +76986,26 @@ function BattlePanel({ lang, star, stageName, onEnd, theme, rank, zako, startHP,
         return { ...f, downAt: at };
       });
     }
+    /*
+      虚脱（2026-10-03）。必殺ゲージ4本を、今ある量の sapCutOf(★) 割ずつ削る。
+      ⚠️ 剣で満タン・四武の舞の手前でも削れる（積みを崩す手）。0 のゲージは何も起きない。
+      ⚠️ 削れたゲージが一本も無ければ空振り（false）。削った量は自分の上に出す。
+    */
+    const sapGauges = (nx) => {
+      const cut = sapCutOf(setup.star);
+      const sp0 = { ...(nx.sp || {}) };
+      let lost = 0;
+      SP_SUITS.forEach((su) => {
+        const v = sp0[su] || 0;
+        if (v <= 0) return;
+        const d = Math.max(1, Math.round(v * cut));
+        sp0[su] = Math.max(0, v - d); lost += d;
+      });
+      if (!lost) return false;
+      nx.sp = sp0;
+      pop("me", a.sapPop(Math.round(cut * 100)), "dmg");
+      return true;
+    };
     /* ⚠️ 高難度（★10〜）の手。道中は使わない */
     const hard = setup.zako ? null : hardFoeOf(setup.star);
     /*
@@ -72186,6 +77013,7 @@ function BattlePanel({ lang, star, stageName, onEnd, theme, rank, zako, startHP,
       ⚠️ 殴りはしない。腐食も封じる枚数だけ。
     */
     const extraDebuff = (k) => {
+      if (next.fx && next.fx.eternal > 0) return false;
       if ((k === "roar" || k === "despair" || k === "rot") && s.fx.hermit > 0) return false;
       if ((k === "roar" || k === "despair") && s.fx.sun > 0) return false;
       if (DEBUFF_WARD_KEY[k] && Math.random() < debuffBlockRate(k, s.eq, s.sk, next.stats || S0)) return false;
@@ -72218,6 +77046,7 @@ function BattlePanel({ lang, star, stageName, onEnd, theme, rank, zako, startHP,
         next.fx = { ...next.fx, dread: Math.max(next.fx.dread || 0, FOE_MOVES.dread.dread + (hard.dur || 0)) };
         return true;
       }
+      if (k === "sap") return sapGauges(next);
       return false;
     };
     next.foes.forEach((f, i) => {
@@ -72327,7 +77156,7 @@ function BattlePanel({ lang, star, stageName, onEnd, theme, rank, zako, startHP,
           太陽と同じ「通常攻撃に化ける」では隠者の価値が消える。
         ⚠️ 隠者が優先。両方効いていれば無駄行動になる。
       */
-      const blocked = (move === "roar" || move === "despair" || move === "rot"
+      const blocked = (move === "roar" || move === "despair" || move === "rot" || move === "sap"
         || move === "guard" || move === "guardHi" || move === "guardEdge");
       if (blocked && s.fx.hermit > 0) {
         next.note = a.fxName.hermit;
@@ -72335,13 +77164,20 @@ function BattlePanel({ lang, star, stageName, onEnd, theme, rank, zako, startHP,
         fx(`foe${i}`, "block");
         return;
       }
-      if (blocked && s.fx.sun > 0 && (move === "roar" || move === "despair")) {
+      if (blocked && s.fx.sun > 0 && (move === "roar" || move === "despair" || move === "sap")) {
         move = "hit";
       }
       /*
         耐性で防ぐ。⚠️ 防いだら何も起きない（殴りもしない）。
         ⚠️ 防いだことを必ず画面に出す。見えない耐性は、効いていないのと同じに感じる。
       */
+      /* ⚠️ エターナルエレメンツの守りの最中は、妨害を一切受けない（殴りもしない） */
+      if (DEBUFF_KEYS.includes(move) && next.fx && next.fx.eternal > 0) {
+        next.note = a.eternalBlock;
+        pop("me", a.eternalBlock, "info");
+        fx(`foe${i}`, "block");
+        return;
+      }
       if (DEBUFF_WARD_KEY[move]
         && Math.random() < debuffBlockRate(move, s.eq, s.sk, next.stats || S0)) {
         next.note = a.resisted;
@@ -72472,6 +77308,20 @@ function BattlePanel({ lang, star, stageName, onEnd, theme, rank, zako, startHP,
           そもそも何が封じられたのか分からない。
         ⚠️ 上書き。重ねると永久に封じられる。
       */
+      if (move === "sap") {
+        /*
+          虚脱。⚠️ ★3以下は使わない（通常攻撃に化ける）。殴らない。
+          ⚠️ 削るゲージが無ければ空振り（何もしない）。
+        */
+        if (setup.star <= 3) { move = "hit"; }
+        else {
+          const ok = sapGauges(next);
+          next.note = ok ? a.foeSap : a.foeSapFail;
+          if (ok) fx("all", "major", { n: 15, label: a.foeSap, tone: "#4A6ACC" });
+          else fx(`foe${i}`, "block");
+          return;
+        }
+      }
       if (move === "dread") {
         /*
           ⚠️ 月が効いているあいだは通らない。
@@ -72531,6 +77381,8 @@ function BattlePanel({ lang, star, stageName, onEnd, theme, rank, zako, startHP,
             * foeBandMulOf(setup.star, ratio)
             * next.take * (s.fx.moon > 0 ? 0.6 : 1) * shCut2 * stanceTakeMul(next, i) * foeRampOf(s.turn, setup.zako, setup.star)
             * ((s.fx && s.fx.temperance > 0) ? 0.5 : 1)));
+        /* ⚠️ 四武の衝陣の守りの最中は受けない */
+        if (next.fx && next.fx.aegis > 0) { pop("me", a.aegisBlock, "info"); return; }
         next.hp -= d2;
         pop("me", `-${d2}`, "dmg");
         return;
@@ -72647,19 +77499,21 @@ function BattlePanel({ lang, star, stageName, onEnd, theme, rank, zako, startHP,
           ⚠️ 上限は最大HPから取る。いまのHPから取ると、瀕死ほど軽くなって死ななくなる。
         */
         /* ⚠️ 猛り（foeRampOf）が1を超えたら上限も同じだけ上げる。上限で頭打ちだと、長引くほどこちらが一方的に有利になる */
-        const cap = Math.round(S0.maxHP * FOE_HIT_CAP * Math.max(1, foeRampOf(s.turn, setup.zako, setup.star)));
+        const cap = Math.round(S0base.maxHP * FOE_HIT_CAP * Math.max(1, foeRampOf(s.turn, setup.zako, setup.star)));
         /*
           敵の会心。⚠️ うんが高いほど受けにくい（foeCritRate）。
           ⚠️ 上限（40%）は会心にも掛ける。会心で一撃死を戻さない。
         */
         const fbc = (next.foeBuff && next.foeBuff.crit && next.foeBuff.crit.t > 0) ? next.foeBuff.crit.amt : 0;
         const fcrit = !flat && Math.random() < foeCritRate(S0.luck) + fbc;
-        const d = flat ? 10 : Math.min(cap, Math.max(1, Math.round(raw * scale * (fcrit ? FOE_CRIT_MUL : 1))));
+        /* ⚠️ 四武の衝陣の守りの最中は受けない（0にして「無効」と出す） */
+        const shieldOn = !!(next.fx && next.fx.aegis > 0);
+        const d = shieldOn ? 0 : flat ? 10 : Math.min(cap, Math.max(1, Math.round(raw * scale * (fcrit ? FOE_CRIT_MUL : 1))));
       /* ⚠️ 自分が受けた傷。誰の何の手かも残す */
       pushHist("take", s.turn, `${a.foeMoveName && a.foeMoveName[move] ? a.foeMoveName[move] : move} -${d}`);
         next.hp -= d;
         /* ⚠️ 連撃は一発ずつ数字を出す。まとめると軽く見える */
-        timers.current.push(setTimeout(() => pop("me", `${fcrit ? a.foeCrit : ""}-${d}`, fcrit ? "crit" : "dmg"), k * 130));
+        timers.current.push(setTimeout(() => pop("me", shieldOn ? a.aegisBlock : `${fcrit ? a.foeCrit : ""}-${d}`, shieldOn ? "info" : fcrit ? "crit" : "dmg"), k * 130));
         /*
           衝撃。⚠️ 最大HPに対する重さで三段階。
             軽い（〜8%）小さく震える ／ 中（〜20%）強く揺れる ／ 重い（20%〜）画面ごと揺れて赤く閃く
@@ -72747,6 +77601,14 @@ function BattlePanel({ lang, star, stageName, onEnd, theme, rank, zako, startHP,
       timers.current.push(id); return () => clearTimeout(id);
     }
     if (st.phase === "idle") {
+      /*
+        オート（自動で進む）のとき、逆転の奥義の条件がそろっていれば、ひとりでに構える（2026-10-04 Aki）。
+        ⚠️ 手で遊んでいるときは構えない（撃つかどうかは本人が決める）。
+      */
+      if (autoSp && !st.spFire && !(curse && curse.noSp)) {
+        const su = clutchOf(st, "swords") ? "swords" : clutchOf(st, "wands") ? "wands" : null;
+        if (su && !(curse && (curse.spSeal || []).includes(su))) setSt((v) => (v.spFire ? v : { ...v, spFire: su }));
+      }
       const id = setTimeout(dealTurn, 520 / speed);
       timers.current.push(id); return () => clearTimeout(id);
     }
@@ -72775,6 +77637,61 @@ function BattlePanel({ lang, star, stageName, onEnd, theme, rank, zako, startHP,
       */}
       {/* ⚠️ 重い一撃だけ、画面の縁を赤く閃かせる。毎回だとうるさい */}
       {jolt && jolt.lv >= 3 && <div key={`hurt${jolt.id}`} className="bt-hurt" aria-hidden="true" />}
+      {/*
+        決戦の前に（2026-10-03 Aki：「ボス戦の直前に、どの倍率が上がっている・下がっているかを確かめさせてから始める」）。
+        ★ 主戦だけ。地の利・天の利・特別なマスを足した倍率を並べ、下の構え（魔法・物理）を選んでから始める。
+        ⚠️ 敵の相性は出さない（伏せる）。出すのはこちらの倍率だけ。
+      */}
+      {st.phase === "ready" && !zako && mods && (() => {
+        const pct = (v) => (Math.abs(v - 1) < 0.005 ? "±0" : `${v > 1 ? "+" : "−"}${Math.round(Math.abs(v - 1) * 100)}%`);
+        const cls = (v) => (v > 1.005 ? "up" : v < 0.995 ? "down" : "");
+        const elOpen = Array.isArray(st.elemOpen) ? st.elemOpen : FAMILY_KEYS;
+        const phOpen = Array.isArray(st.physOpen) ? st.physOpen : PHYS_KEYS;
+        const spOpen = Array.isArray(st.spOpen) ? st.spOpen : SP_SUITS;
+        const bossK = (1 + (runK.bossUp || 0)) * (1 - (runK.bossCut || 0));
+        return (
+          <div className="bt-prep">
+            <b className="bt-prep-t">{a.prep.title}</b>
+            <div className="bt-prep-row"><i>{a.prep.magic}</i>
+              {FAMILY_KEYS.filter((k) => elOpen.includes(k)).map((k) => (
+                <span key={k} className={cls(runK.attr[k])}><StanceGlyph fam={k} size={12} />{pct(runK.attr[k])}</span>
+              ))}
+            </div>
+            <div className="bt-prep-row"><i>{a.prep.phys}</i>
+              {PHYS_KEYS.filter((k) => phOpen.includes(k)).map((k) => (
+                <span key={k} className={cls(runK.attr[k])}><PhysGlyph k={k} size={12} />{pct(runK.attr[k])}</span>
+              ))}
+            </div>
+            {spOpen.length > 0 && (
+              <div className="bt-prep-row"><i>{a.prep.charge}</i>
+                {SP_SUITS.filter((k) => spOpen.includes(k)).map((k) => (
+                  <span key={k} className={cls(runK.charge[k])}>{suitLabel(k, lang)}{pct(runK.charge[k])}</span>
+                ))}
+              </div>
+            )}
+            <div className="bt-prep-row">
+              <i>{a.prep.heal}</i><span className={cls(runK.heal)}>{pct(runK.heal)}</span>
+              <i>{a.prep.maxHp}</i><span className={cls(runK.hp)}>{pct(runK.hp)}</span>
+              {Math.abs(bossK - 1) > 0.005 && <><i>{a.prep.bossHp}</i><span className={cls(2 - bossK)}>{pct(bossK)}</span></>}
+            </div>
+            {/*
+              妨害を防ぐ確率（2026-10-03 Aki「全耐性を足すと完全耐性になるのはおかしい」）。
+              ★ 装備・技・能力・小MAPのマスを全部足し、上限（DEBUFF_BLOCK_CAP）を通した値を出す。
+              ⚠️ その★で来ない妨害は出さない（★3以下は一つも来ない。波動は★7から）。
+            */}
+            {setup.star >= 4 && (
+              <div className="bt-prep-row"><i>{a.prep.res}</i>
+                {["roar", "rot", "despair", "miasma", "dread", "sap"].filter((mv) => mv !== "despair" || setup.star >= 7).map((mv) => {
+                  const r = debuffBlockRate(mv, st.eq, st.sk, st.stats);
+                  return <span key={mv} className={r >= DEBUFF_BLOCK_CAP - 1e-9 ? "up cap" : r > 0.005 ? "up" : ""}>{a.prep.resShort[mv]}{Math.round(r * 100)}%</span>;
+                })}
+                <em className="bt-prep-cap">{a.prep.resCap}</em>
+              </div>
+            )}
+            <p className="bt-prep-hint">{a.prep.hint}</p>
+          </div>
+        );
+      })()}
       <div ref={fieldRef} className={`bt-field${st.phase === "ready" ? " ready" : ""}${((st.turnNext && st.turnNext.halveTurns > 0) || (st.next && st.next.halveTurns > 0)) ? " devil" : ""}`}>
         <BattleScene theme={themeKey} foes={setup.foes} star={setup.star}
           elems={mapElemsOf(stageName)} />
@@ -72786,7 +77703,8 @@ function BattlePanel({ lang, star, stageName, onEnd, theme, rank, zako, startHP,
         {/* 画面の型の切り替え（左上）。⚠️ PCでは画面が高いので、スマホ用の伸び縮みを切る */}
         <button type="button" className="bt-layout" title={a.layoutTip}
           onClick={() => { const v = layout === "sp" ? "pc" : "sp"; setLayout(v); try { localStorage.setItem(LS_BT_LAYOUT, v); } catch (e) { /* */ } }}>
-          {layout === "sp" ? "📱" : "🖥"}
+          {/* ★ 2026-10-05 Aki：絵文字ではなく文字で（SP／PC） */}
+          {layout === "sp" ? "SP" : "PC"}
         </button>
         <div className="bt-tools">
         {/*
@@ -72829,6 +77747,8 @@ function BattlePanel({ lang, star, stageName, onEnd, theme, rank, zako, startHP,
             <button className="draw-btn adv-go" onClick={dealTurn}>
               <span className="adv-go-shine" />
               <Sparkles size={18} />{a.btStart}
+              {/* ⚠️ オート（小MAPのオートと連動）。主戦は倍率を読む間を長めに */}
+              {autoSp && <AutoCount sec={zako ? 1.5 : 3} onGo={dealTurn} />}
             </button>
           </div>
         )}
@@ -72853,6 +77773,7 @@ function BattlePanel({ lang, star, stageName, onEnd, theme, rank, zako, startHP,
             <button type="button" className={`adv-back${(!zako && st.phase === "win") ? " win" : ""}`}
               onClick={() => onEnd && onEnd(st.phase === "win", st.hp, st.mult, st.sp, st.potions)}>
               {(!zako && st.phase === "win") ? a.toConquer : a.btBack}
+              {autoSp && <AutoCount sec={2.5} onGo={() => onEnd && onEnd(st.phase === "win", st.hp, st.mult, st.sp, st.potions)} />}
             </button>
           </div>
         )}
@@ -72860,11 +77781,14 @@ function BattlePanel({ lang, star, stageName, onEnd, theme, rank, zako, startHP,
         {/* 大アルカナ。⚠️ 戦場全体を覆う。敵の上だけだと、場が変わった感じが出ない */}
         {fxs.filter((x) => x.where === "all").map((x) => (
           x.kind === "blast" ? <FxBlast key={x.id} label={x.label} /> :
-          x.kind === "dance" ? <FxDance key={x.id} label={x.label} hits={x.hits} /> :
+          x.kind === "dance" ? (x.variant && x.variant !== "slash" ? <FxSecret key={x.id} label={x.label} hits={x.hits} variant={x.variant} />
+            : <FxDance key={x.id} label={x.label} hits={x.hits} />) :
+          x.kind === "four" ? <FxSecret key={x.id} label={x.label} hits={x.hits} variant="aegis" /> :
+          x.kind === "eternal" ? <FxSecret key={x.id} label={x.label} hits={x.hits} variant="eternal" /> :
           x.kind === "bossSp" ? <FxBossSp key={x.id} spKey={x.key} stage={x.stage} fam={x.fam} label={x.label} elem={x.elem} /> :
           x.kind === "block" ? <FxBlock key={x.id} /> :
           x.kind === "flash"
-            ? <FxFlash key={x.id} suit={x.suit} run={x.run} label={x.label} tone={x.tone} fam={x.fam} tgt={x.tgt} />
+            ? <FxFlash key={x.id} suit={x.suit} run={x.run} label={x.label} tone={x.tone} fam={x.fam} tgt={x.tgt} phys={x.phys} />
             : <FxArcana key={x.id} n={x.n} label={x.label} tone={x.tone} aw={x.aw} />
         ))}
         <div className={`bt-foes n${setup.foes}`}>
@@ -72903,8 +77827,10 @@ function BattlePanel({ lang, star, stageName, onEnd, theme, rank, zako, startHP,
                 ★ 属性の色枠の外に、格の金属枠（2026-09-28 Aki）。雑魚＝銅、区分の主＝銀、県の大主＝金。
                 ★ 県の大主のお供は区分の主（銀枠・区分の主の絵）。区分の主のお供は雑魚（銅枠）。
               */
-              <div key={i} data-foe={i} className={`bt-foe el-${foeElemOf(i, stageName)}${f.born ? " born" : ""} tier-${
+              <div key={i} data-foe={i} className={`bt-foe el-${foeElemOf(i, stageName)}${f.born ? " born" : ""}${setup.zkind ? ` zk-${setup.zkind}` : ""} tier-${
                 isPrefBossStage && st.bossAt === i ? "au"
+                  /* ★ 道中の金の敵は金枠、精鋭は銀枠（区分の主の絵）、ミミックは銅枠（2026-10-03） */
+                  : setup.zkind === "gild" ? "au" : (setup.zkind === "elite" || setup.zkind === "bear" || setup.zkind === "higuma") ? "ag"
                   : isPrefBossStage || (st.bossAt === i && isAreaBossStage) ? "ag" : "cu"}`}
                 style={{ "--fig": `${figPx}px`, "--elc2": FAMILY_COLOR[familyOf(foeElemOf(i, stageName))] }}>
                 {/* ⚠️ 溜めている敵は光らせる。次に大技が来ることを示す */}
@@ -72923,11 +77849,15 @@ function BattlePanel({ lang, star, stageName, onEnd, theme, rank, zako, startHP,
                   dying={f.hp <= 0}
                   hit={pops.some((p) => p.where === `foe${i}` && (p.tone === "dmg" || p.tone === "mag" || p.tone === "crit"))}
                   size={figPx}
-                  art={(isPrefBossStage || (st.bossAt === i && isAreaBossStage)
+                  art={setup.zkind === "mimic" ? { kinds: ZK_T_mimic[0], band: 2 }
+                    : setup.zkind === "bear" ? { kinds: ZK_T_bear[0], band: 2 }
+                    : setup.zkind === "higuma" ? { kinds: ZK_T_higuma[0], band: 2 }
+                    : (isPrefBossStage || setup.zkind === "elite" || (st.bossAt === i && isAreaBossStage)
                     /* ⚠️ 県の大主の絵（48種）ができるまでは、大主本人も区分の主の絵で代える */
                     ? zkBossArtOf : zkArtOf)(
                     foeElemOf(i, stageName), setup.star, `${stageName}#${i}`)}
-                  actId={foeAct && foeAct.i === i ? foeAct.id : null} />
+                  actId={foeAct && foeAct.i === i ? foeAct.id : null}
+                  onFace={(v) => { faceRef.current[i] = v; }} />
                 <div className="bt-bar">
                   <span className="bt-bar-fill foe" style={{ width: `${ratio * 100}%` }} />
                   {lost > 0 && <span className="bt-bar-lost" style={{ width: `${lost * 100}%` }} />}
@@ -73051,11 +77981,30 @@ function BattlePanel({ lang, star, stageName, onEnd, theme, rank, zako, startHP,
           {/* ⚠️ 粘っていることを数字で出す。見えない補正は無いのと同じ */}
           {/* ⚠️ いまの構え。自分のHPの横に置く（誰の構えか分かるように） */}
           {st.stance && <span className="bt-me-stance" style={{ "--sc": STANCE_ICON_COLOR[st.stance] }}><StanceGlyph fam={st.stance} size={13} /></span>}
+          {st.phys && <span className="bt-me-stance" style={{ "--sc": PHYS_COLOR[st.phys] }}><PhysGlyph k={st.phys} size={13} /></span>}
           {gritCutOf(st.hp, S0.maxHP) > 0 && (
             <span className="bt-grit">{a.gritTag(Math.round(gritCutOf(st.hp, S0.maxHP) * 100))}</span>
           )}
           {st.mult > 1.001 && <span className="bt-mult">×{st.mult.toFixed(2)}</span>}
         </div>
+        {/*
+          ポーション。2026-10-03 Aki：「必殺と並べず、HPゲージの近くの空いた場所」。⚠️ HPの数字の行の右端に置く
+        */}
+        {(() => {
+          const potCd = (st.potions || 0) <= 0 || st.potTurn === st.turn;
+          return (
+            <button type="button" className={`bt-sp bt-pot bt-pot-hp${potCd ? " cd" : ""}`} disabled={potCd}
+              title={a.potionTip.replace(/\d+%/, `${Math.round(((advProgress().potHeal || POTION_HEAL) + runK.potHeal) * runK.heal * 100)}%`)} onClick={drinkPotion}>
+              <span className="bt-sp-orb bt-pot-orb">
+                <svg viewBox="0 0 24 24" aria-hidden="true">
+                  <path d="M9 2 h6 v2 h-1 v4 l5 8 a3 3 0 0 1 -2.6 4.5 h-8.8 A3 3 0 0 1 5 16 l5 -8 V4 H9 Z" fill="rgba(255,255,255,0.12)" stroke="#FFE0E8" strokeWidth="1.4" />
+                  <path d="M7.2 14 h9.6 l1.6 2.6 a2 2 0 0 1 -1.8 3 H7.4 a2 2 0 0 1 -1.8 -3 Z" fill="#FF5A7A" />
+                </svg>
+                <b className="bt-ctrl-n">{st.potions || 0}</b>
+              </span>
+            </button>
+          );
+        })()}
         {pops.filter((p) => p.where === "me").map((p) => (
           <span key={p.id} className={`bt-pop ${p.tone}`}>{p.text}</span>
         ))}
@@ -73242,11 +78191,9 @@ function BattlePanel({ lang, star, stageName, onEnd, theme, rank, zako, startHP,
       <div className="bt-ctrl-row">
         <div className="bt-stance-box">
       {/*
-        構えの六つ。
-        ⚠️⚠️ 押しても、効くのは次のターンから（予約）。すぐ効くと毎ターン切り替えるのが最適になる。
-        ★ 手動で押すまではオート（毎ターン最適な構えを選ぶ）。
-          光っている構えをもう一度押すとオートへ戻る。
-        ⚠️ 盾はここから外した（使われていなかった）。盾の計算は残っているが、段は常に0。
+        構え。2026-10-03 Aki：「物理選択と魔法選択を。オートという文字は場所の邪魔だから要らない」。
+        ★ 左に魔法の六つ、右に物理の四つを一列に。オートで選ばれている構えには小さな「A」だけ付ける。
+        ⚠️⚠️ 押しても、効くのは次のターンから（予約）。光っている構えをもう一度押すとオートへ戻る。
       */}
       <div className="bt-stance-grid">
         {FAMILY_KEYS.map((k) => {
@@ -73255,6 +78202,11 @@ function BattlePanel({ lang, star, stageName, onEnd, theme, rank, zako, startHP,
           /* ⚠️ まだ開いていない属性は「？」で伏せる（何が来るかの楽しみ。制覇で開く） */
           if (Array.isArray(st.elemOpen) && !st.elemOpen.includes(k)) {
             return <button key={k} type="button" className="bt-stance locked" disabled aria-label="?">？</button>;
+          }
+          /* ⚠️ 属性の封印中は、封印の属性以外を押せない（暗く伏せる） */
+          if (curse && curse.elem && curse.elem !== k) {
+            return <button key={k} type="button" className="bt-stance sealed" disabled aria-label={a.familyName[k]}
+              style={{ "--sc": STANCE_ICON_COLOR[k] }}><StanceGlyph fam={k} size={17} /></button>;
           }
           return (
             <button key={k} type="button"
@@ -73270,10 +78222,28 @@ function BattlePanel({ lang, star, stageName, onEnd, theme, rank, zako, startHP,
             </button>
           );
         })}
+        <i className="bt-stance-sep" aria-hidden="true" />
+        {PHYS_KEYS.map((k) => {
+          const now = st.phys === k;
+          const next = st.physNext === k;
+          if (Array.isArray(st.physOpen) && !st.physOpen.includes(k)) {
+            return <button key={k} type="button" className="bt-stance locked" disabled aria-label="?">？</button>;
+          }
+          return (
+            <button key={k} type="button"
+              className={`bt-stance phys${now ? " on" : ""}${next ? " next" : ""}${now && !st.physManual ? " auto" : ""}`}
+              style={{ "--sc": PHYS_COLOR[k] }}
+              aria-label={a.physName[k]} title={a.physTip(a.physName[k])}
+              onClick={() => setSt((v) => {
+                const cur = v.physNext || v.phys;
+                if (v.physManual && cur === k) return { ...v, physManual: false, physNext: null };
+                return { ...v, physManual: true, physNext: k };
+              })}>
+              <PhysGlyph k={k} size={17} />
+            </button>
+          );
+        })}
       </div>
-      <span className="bt-stance-mode">
-        {!st.stanceManual ? a.stanceAuto : st.stanceNext && st.stanceNext !== st.stance ? a.stanceReserved : a.stanceManual}
-      </span>
         </div>
         {/*
           必殺技＋ポーション（札の枠の下。2026-09-27 制御盤から手動の必殺技へ）。
@@ -73294,7 +78264,7 @@ function BattlePanel({ lang, star, stageName, onEnd, theme, rank, zako, startHP,
                 </button>
               );
             }
-            const r = Math.min(1, ((st.sp || {})[k] || 0) / spMax);
+            const r = Math.min(1, ((st.sp || {})[k] || 0) / spMaxSu(k));
             const cap = spRunOf(setup.star);
             const run = spTierOf(r, cap);
             const full = r >= 1;
@@ -73303,12 +78273,13 @@ function BattlePanel({ lang, star, stageName, onEnd, theme, rank, zako, startHP,
             const stage = run >= 9 ? 4 : run >= 7 ? 3 : run >= 5 ? 2 : run >= 3 ? 1 : 0;
             return (
               <button key={k} type="button"
-                className={`bt-sp sp-${k} stage-${stage}${full ? " full" : ""}${armed ? " armed" : ""}`}
-                disabled={run < 3 || !!st.spFire}
+                className={`bt-sp sp-${k} stage-${stage}${full ? " full" : ""}${armed ? " armed" : ""}${curse && (curse.noSp || (curse.spSeal || []).includes(k)) ? " sealed" : ""}`}
+                disabled={run < 3 || !!st.spFire || !!(curse && (curse.noSp || (curse.spSeal || []).includes(k)))}
                 title={a.spTip(suitLabel(k, lang))} onClick={() => pressSp(k)}>
                 <span className="bt-sp-orb">
                   <SpRing k={k} r={r} cap={cap} stage={stage} />
-                  <SpGlyph k={k} fam={st.stance || "fire"} tier={Math.max(3, run) - 2} />
+                  <SpGlyph k={k} fam={k === "swords" ? (clutchOf(st, "swords") === "aegis" ? "__four" : (st.phys || "slash")) : k === "wands" ? (clutchOf(st, "wands") === "eternal" ? "__eternal" : (st.stance || "fire")) : (st.stance || "fire")}
+                    tier={Math.max(3, run) - 2} />
                   <i className="bt-sp-glow" />
                 </span>
                 {/*
@@ -73316,7 +78287,7 @@ function BattlePanel({ lang, star, stageName, onEnd, theme, rank, zako, startHP,
                   ⚠️ 技の名前は出さない（Aki：「名前は書かずに発動だけ」）。枚数の数字も出さない。
                 */}
                 <span className="bt-sp-cap">
-                  <i className="go">{armed ? a.spArmed : run >= 3 ? (
+                  <i className="go">{curse && (curse.noSp || (curse.spSeal || []).includes(k)) ? a.spSealed : armed ? a.spArmed : run >= 3 ? (
                     <>
                       <svg viewBox="0 0 12 12" aria-hidden="true"><circle cx="6" cy="6" r="1.6" fill="currentColor" />
                         <path d="M2.6 6 A3.4 3.4 0 0 1 9.4 6 M1 6 A5 5 0 0 1 11 6" fill="none" stroke="currentColor" strokeWidth="0.9" strokeLinecap="round" /></svg>
@@ -73327,25 +78298,6 @@ function BattlePanel({ lang, star, stageName, onEnd, theme, rank, zako, startHP,
               </button>
             );
           })}
-          {/*
-            ポーション。2026-09-29 Aki：「〇型に統一」。必殺の丸と同じ器・同じ下の札（押せるとき「回復」）。
-          */}
-          {(() => {
-            const potCd = (st.potions || 0) <= 0 || st.potTurn === st.turn;
-            return (
-              <button type="button" className={`bt-sp bt-pot${potCd ? " cd" : ""}`} disabled={potCd}
-                title={a.potionTip.replace(/\d+%/, `${Math.round((advProgress().potHeal || POTION_HEAL) * 100)}%`)} onClick={drinkPotion}>
-                <span className="bt-sp-orb bt-pot-orb">
-                  <svg viewBox="0 0 24 24" aria-hidden="true">
-                    <path d="M9 2 h6 v2 h-1 v4 l5 8 a3 3 0 0 1 -2.6 4.5 h-8.8 A3 3 0 0 1 5 16 l5 -8 V4 H9 Z" fill="rgba(255,255,255,0.12)" stroke="#FFE0E8" strokeWidth="1.4" />
-                    <path d="M7.2 14 h9.6 l1.6 2.6 a2 2 0 0 1 -1.8 3 H7.4 a2 2 0 0 1 -1.8 -3 Z" fill="#FF5A7A" />
-                  </svg>
-                  <b className="bt-ctrl-n">{st.potions || 0}</b>
-                </span>
-                <span className="bt-sp-cap"><i className="go">{a.potGo}</i></span>
-              </button>
-            );
-          })()}
         </div>
       </div>
 
@@ -73396,7 +78348,7 @@ function BattlePanel({ lang, star, stageName, onEnd, theme, rank, zako, startHP,
         <details className="bt-guide bad" key={`dbg-${star}-${zako || "boss"}`}>
           <summary>{a.debuffList}</summary>
           <ul className="bt-guide-list">
-            {["roar", "rot", "despair", "miasma", "dread", "guard", "guardHi", "guardEdge",
+            {["roar", "rot", "despair", "miasma", "dread", "sap", "guard", "guardHi", "guardEdge",
               "wind", "heavy", "combo", "hit", "heal"].map((k) => (
               <li key={k}>
                 <b>{(a.foeActName && a.foeActName[k]) || k}</b>
@@ -74688,6 +79640,7 @@ const EQUIP_OPT_I18N = {
     resDread: ["波動（大アルカナ封じ）を防ぐ確率", "+", "%"],
     resMiasma: ["瘴気（回復封じ）を防ぐ確率", "+", "%"],
     resKill: ["殺気（必殺封じ）を防ぐ確率", "+", "%"],
+    resSap: ["虚脱（必殺ゲージ削り）を防ぐ確率", "+", "%"],
     box: ["宝箱マスが出る確率", "+", "%"],
     eye: ["宝箱を開けるとき引く回数", "+", "回"],
   },
@@ -74729,6 +79682,7 @@ const EQUIP_OPT_I18N = {
     resDread: ["Chance to resist Despair", "+", "%"],
     resMiasma: ["Chance to resist Miasma", "+", "%"],
     resKill: ["Chance to resist Killing intent", "+", "%"],
+    resSap: ["Chance to resist Sap", "+", "%"],
     box: ["Chest square chance", "+", "%"],
     eye: ["Draws when opening a chest", "+", ""],
   },
@@ -74749,7 +79703,7 @@ const EQUIP_OPT_SHORT = {
     atk: "攻撃", def: "防御", sword: "剣", wand: "棒", cup: "聖杯", coin: "貨幣",
     crit: "会心率", critMul: "会心ダメ", first: "先制", burst: "必殺", body: "HP",
     resRoar: "轟音耐性", resRot: "腐食耐性", resDread: "波動耐性", resMiasma: "瘴気耐性",
-    resKill: "殺気耐性", box: "宝箱率", eye: "装備のレア率UP",
+    resKill: "殺気耐性", resSap: "虚脱耐性", box: "宝箱率", eye: "装備のレア率UP",
   },
   en: {
     reach: "Reach", reviveCut: "Revive HP−", foeInfo: "Foe HP", drain: "Drain",
@@ -74761,7 +79715,7 @@ const EQUIP_OPT_SHORT = {
     atk: "ATK", def: "DEF", sword: "Swords", wand: "Wands", cup: "Cups", coin: "Pentacles",
     crit: "Crit rate", critMul: "Crit dmg", first: "Opener", burst: "Finisher", body: "HP",
     resRoar: "Roar res", resRot: "Rot res", resDread: "Despair res", resMiasma: "Miasma res",
-    resKill: "Intent res", box: "Chest rate", eye: "Gear rarity up",
+    resKill: "Intent res", resSap: "Sap res", box: "Chest rate", eye: "Gear rarity up",
   },
 };
 const LS_EQ_SHORT = "tarot_eq_short";
@@ -75569,7 +80523,93 @@ function familyOf(elem) { return ELEM_FAMILY[elem] || "light"; }
   ⚠️ オートは毎ターンの始めに選び直す（stanceAuto）。手動で選んだら、手動のまま。
 */
 const STANCE_BEATS = { water: "fire", fire: "wind", wind: "earth", earth: "water", light: "dark", dark: "light" };
+/*
+  【物理の構え】2026-10-03 Aki（A案）：斬撃・突撃・打撃・射撃。剣の札・剣の並びの必殺・剣の手動の必殺・剣の舞がこの属性になる。
+  ★ 敵の18タイプごとに、物理の弱点（+30%）と耐性（−30%）を一つずつ。残り二つはふつう。
+    ⚠️⚠️ 4種の平均は必ず1.00（どのタイプも 1.3＋0.7＋1＋1）。表を変えるときも崩さないこと。
+    ⚠️ 4種それぞれ「弱点になるタイプの数」と「耐性になるタイプの数」を同じにしてある（斬5/5・突4/4・打5/5・射4/4）。
+  ★ 敵の相性は画面に出さない（Aki：「マスクでいいや」）。当たったときの数字の出方（弱点は大きく光る・耐性は小さい）で覚えていく。
+  ⚠️ 受けるダメージには効かせない（守りは魔法の構えが受け持つ）。
+*/
+const PHYS_KEYS = ["slash", "thrust", "blunt", "shoot"];
+const PHYS_COLOR = { slash: "#DDE6F6", thrust: "#F0B860", blunt: "#D89A6A", shoot: "#9AD8A8" };
+const PHYS_AFF = {
+  normal: ["slash", "thrust"], fire: ["shoot", "slash"], water: ["thrust", "blunt"], electric: ["blunt", "thrust"],
+  grass: ["slash", "blunt"], ice: ["blunt", "slash"], fight: ["shoot", "blunt"], poison: ["shoot", "slash"],
+  ground: ["thrust", "shoot"], fly: ["shoot", "blunt"], psychic: ["blunt", "shoot"], bug: ["slash", "thrust"],
+  rock: ["blunt", "slash"], ghost: ["slash", "blunt"], dragon: ["thrust", "slash"], dark: ["slash", "shoot"],
+  steel: ["blunt", "thrust"], fairy: ["thrust", "shoot"],
+};
+const PHYS_DEAL_UP = 0.30, PHYS_DEAL_DOWN = 0.30;
+/*
+  物理の必殺の当て方（2026-10-03 Aki：「物理必殺の4系統」）。base（一閃の一体ぶん）に掛ける倍率。
+    斬撃 … 生きている敵ぜんぶに 1.0（一閃。今までどおり）
+    突撃 … 主（いなければ最もHPの高い敵）一体に 1.5
+    打撃 … ぜんぶに 0.8。当たった敵の構え（守り・棘）と、敵ぜんたいの防御UPを崩す
+    射撃 … 「生きている敵の数＋1」本の矢を、ばらばらに 0.7 ずつ
+  秘奥義「四武の舞」… 武器が四つそろい、剣のゲージ満タンで手動の必殺を撃ったとき。斬→突→打→射の四波を PHYS_FOUR_K ずつ。
+    一波ごとにその武器の相性で当たるので、どの敵にも必ずどれかの弱点が入る。
+  ⚠️⚠️ 威力の釣り合いは、いろいろ入れ終えてから最後にまとめて測る（2026-10-03 Aki：毎回は合わせない）。
+  2026-10-03 Aki「槍だけ強すぎないか」→ 突撃 2.0→1.5、射撃 0.8→0.7（期待値の計算で。勝率は測っていない）。
+    主戦は主を倒せば段が進むので、主に入る量がそのまま強さになる。主に入る期待値（敵N体＝主＋取り巻き）：
+                N=1    N=2    N=3    N=4  | 雑魚戦の合計（N=3）
+      旧 突撃  2.00   2.00   2.00   2.00  |  2.0
+      旧 射撃  1.60   1.20   1.07   1.00  |  3.2（斬撃 3.0 を上回っていた）
+      新 突撃  1.50   1.50   1.50   1.50  |  1.5
+      新 射撃  1.40   1.05   0.93   0.88  |  2.8
+         斬撃  1.00   1.00   1.00   1.00  |  3.0
+         打撃  0.80   0.80   0.80   0.80  |  2.4 ＋守り崩し
+*/
+const PHYS_FLASH_K = { slash: 1.0, thrust: 1.5, blunt: 0.8, shoot: 0.7 };
+const PHYS_FOUR_K = 0.55;
+/*
+  逆転の奥義（2026-10-04 Aki）。⚠️ どちらも HP が赤（最大HPの CLUTCH_HP 以下）のとき、満タンのゲージで手動で撃つ。一戦闘に一回。
+    撃つと必殺ゲージ4本がすべて0になる（積んだ貨幣の倍率は残す）。オート（自動で進む）なら条件がそろい次第ひとりでに撃つ。
+  ★ 秘奥義・四武の衝陣（剣・40段）… 斬→突→打→射の四技（各 PHYS_FOUR_K）のあと、AEGIS_TURNS ターン敵の攻撃を受けない。
+  ★ エターナルエレメンツ（棒・45段）… 地→火→水→風→光→闇の六技（各 ETERNAL_K、その属性の相性と倍率）のあと、
+     ETERNAL_TURNS ターン状態異常を受けない（撃った瞬間に今の状態異常も消える）。
+  ⚠️ 殺気（必殺封じ）の最中でも撃てる（逆転の手なので）。悪魔の枷の最中は撃てない。
+*/
+const CLUTCH_HP = 0.30, AEGIS_TURNS = 4, ETERNAL_TURNS = 6, ETERNAL_K = 0.45;
+const ETERNAL_AT = [320, 430, 540, 650, 760, 870];
+/* 四武の舞の一波ごとの演出の時刻（PfDanceFlash の斬・突・打・射に合わせる） */
+const PHYS_FOUR_AT = { slash: 90, thrust: 360, blunt: 600, shoot: 860 };
+function physRel(phys, type) {
+  const a = PHYS_AFF[type];
+  if (!a || !phys) return null;
+  return a[0] === phys ? "up" : a[1] === phys ? "down" : null;
+}
+function physDealMul(state, i) {
+  const r = physRel(state && state.phys, ((state && state.types) || [])[i]);
+  return r === "up" ? 1 + PHYS_DEAL_UP : r === "down" ? 1 - PHYS_DEAL_DOWN : 1;
+}
+/* 地の利・天の利・特別なマスを足し合わせた、その属性の倍率。⚠️ 剣は物理の構え、棒は魔法の構えの属性で引く */
+function attrMulOf(state, key) { return (state && state.attrK && key && state.attrK[key]) || 1; }
+/*
+  オートの物理の構え。⚠️ 開いている物理の中から、主を重く見て与ダメが一番伸びるものを選ぶ（倍率も読む）。
+  ⚠️ 同点なら今の構えのまま（毎ターン揺れないように）。
+*/
+function physAuto(s) {
+  const foes = (s && s.foes) || [];
+  const alive = foes.map((f, i) => ({ f, i })).filter((x) => x.f.hp > 0);
+  const ALL = (s && Array.isArray(s.physOpen) && s.physOpen.length) ? s.physOpen : PHYS_KEYS;
+  if (!alive.length) return (s && s.phys) || ALL[0];
+  let best = (s && s.phys && ALL.indexOf(s.phys) >= 0) ? s.phys : ALL[0], bv = -Infinity;
+  const val = (p) => alive.reduce((v, x) => v + (x.i === s.bossAt ? 1 : 0.35)
+    * physDealMul({ phys: p, types: s.types }, x.i) * attrMulOf(s, p), 0);
+  bv = val(best);
+  ALL.forEach((p) => { const v = val(p); if (v > bv + 1e-9) { bv = v; best = p; } });
+  return best;
+}
 const STANCE_DEAL_UP = 0.30, STANCE_DEAL_SAME = 0.15, STANCE_TAKE_SAME = 0.30, STANCE_TAKE_WEAK = 0.20;
+/*
+  ★ 2026-10-05 Aki「敵が正面を向いている場合はダメージが大きくなるように」。
+    正面の姿（ZkPose の pose%3===2）の敵に与えるダメージ ×(1+BT_FACE_DEAL)。
+  ⚠️ 姿は画面の FoeFigure が持ち、BattlePanel の faceRef に写す。一枚ぶん進めるたびに next.face へ写して計算に渡す。
+    器（headless）には face が無いので 1 のまま。勝率は最後の実測でまとめて見る。
+  ★ 正面は 6 通り中 2 通り（1/3）。平均で +10% ほど。
+*/
+const BT_FACE_DEAL = 0.30;
 /* 構えと相手の関係。"up"＝有利 ／ "same"＝同じ系統 ／ "down"＝不利 ／ null＝無関係 */
 function stanceRel(me, foe) {
   if (!me || !foe) return null;
@@ -75580,7 +80620,8 @@ function stanceRel(me, foe) {
 }
 function stanceDealMul(state, i) {
   const r = stanceRel(state && state.stance, ((state && state.fams) || [])[i]);
-  return (r === "up" || r === "both") ? 1 + STANCE_DEAL_UP : r === "same" ? 1 - STANCE_DEAL_SAME : 1;
+  const fc = (state && state.face && state.face[i]) ? 1 + BT_FACE_DEAL : 1;
+  return fc * ((r === "up" || r === "both") ? 1 + STANCE_DEAL_UP : r === "same" ? 1 - STANCE_DEAL_SAME : 1);
 }
 function stanceTakeMul(state, i) {
   const r = stanceRel(state && state.stance, ((state && state.fams) || [])[i]);
@@ -75609,18 +80650,28 @@ function stanceAuto(s, maxHP, atkList) {
   /* ⚠️ 育ちで開いた属性の中からだけ選ぶ（s.elemOpen。無ければ六つ全部） */
   const ALL = (s && Array.isArray(s.elemOpen) && s.elemOpen.length) ? s.elemOpen : FAMILY_KEYS;
   const cands = ALL.filter((m) => magR.every((x) => stanceRel(m, (s.fams || [])[x.i]) === null));
-  let best = (cands[0] || ALL[0]), bv = -Infinity;
+  const best = (cands[0] || ALL[0]);
+  const cand = [];
   (cands.length ? cands : ALL).forEach((m) => {
     const t = { stance: m, fams: s.fams };
     let deal = 0, take = 0;
+    /* ★ 2026-10-03：地の利・天の利・特別なマスの倍率も読む（風が上がっている手なら風に寄せる） */
+    const am = attrMulOf(s, m);
     alive.forEach((x, k) => {
-      deal += wDeal[k] * (stanceDealMul(t, x.i) - 1);
+      deal += wDeal[k] * (stanceDealMul(t, x.i) * am - 1);
       take += thr[k] * (stanceTakeMul(t, x.i) - 1);
     });
-    const v = defend ? -take * 1000 + deal : deal * 1000 - take;
-    if (v > bv + 1e-9) { bv = v; best = m; }
+    /*
+      ⚠️ 2026-10-04 Aki「オートは倍率が一番高いのを選んでくれる親切高性能オートに」。
+      ★ いつも与ダメ（相性×地の利・天の利・マスの倍率）が一番伸びる属性を選ぶ。守りは同点のときの決め手だけ。
+      ★ 例外：守る場面（HPが減った・溜めている敵がいる）で、与ダメが一番の9割以上ある守りの属性があれば、そちらを取る。
+    */
+    cand.push({ m, deal, take });
   });
-  return best;
+  const top = Math.max(...cand.map((c) => c.deal));
+  const pool2 = defend ? cand.filter((c) => c.deal >= top - Math.abs(top) * 0.1 - 1e-9) : cand.filter((c) => c.deal >= top - 1e-9);
+  pool2.sort((x, y) => (x.take - y.take) || (y.deal - x.deal));
+  return pool2.length ? pool2[0].m : best;
 }
 const FOE_ELEMS = ["normal", "fire", "water", "electric", "grass", "ice", "fight", "poison",
   "ground", "fly", "psychic", "bug", "rock", "ghost", "dragon", "dark", "steel", "fairy"];
@@ -75998,6 +81049,43 @@ function ElemHitArt({ elem }) {
   ★ 形でも見分けられるようにする（色覚と暗所のため）：山・炎・雫・風・日輪・三日月。
 */
 const STANCE_ICON_COLOR = { earth: "#C8925E", fire: "#FF6A50", water: "#5AA8FF", wind: "#6AD880", light: "#FFD84A", dark: "#B088E8" };
+/*
+  物理の構えの印（2026-10-03）。剣＝斬撃・槍＝突撃・斧＝打撃・弓＝射撃。
+  ⚠️ 十字に見せない（弓の弦と矢を直交させない。矢は斜め）。
+*/
+function PhysGlyph({ k, size }) {
+  const c = PHYS_COLOR[k] || "#FFF3D6";
+  const z = size || 18;
+  const body = k === "thrust" ? (
+    <g>
+      <path d="M4.5 19.5 L16.2 7.8" stroke={c} strokeWidth="2" strokeLinecap="round" />
+      <path d="M15 5.2 L20.4 3.6 L18.8 9 L16.6 8.6 L15.4 7.4 Z" fill={c} />
+    </g>
+  ) : k === "blunt" ? (
+    <g>
+      <path d="M5 20 L15.2 8.6" stroke={c} strokeWidth="2.2" strokeLinecap="round" />
+      <path d="M12.4 4.2 Q20.6 4.4 20.4 12 L15.6 9.8 L13.2 7.6 Z" fill={c} />
+    </g>
+  ) : k === "shoot" ? (
+    <g fill="none" stroke={c} strokeLinecap="round">
+      <path d="M7.5 3 Q19.5 9 7.5 21" strokeWidth="2" />
+      <path d="M7.5 3.4 L7.5 20.6" strokeWidth="0.9" opacity="0.8" />
+      <path d="M4 19.5 L18.5 5" strokeWidth="1.6" />
+      <path d="M15.4 4.6 L19.4 4.1 L18.9 8.1" strokeWidth="1.6" strokeLinejoin="round" />
+    </g>
+  ) : (
+    <g>
+      <path d="M5.6 18.4 L16.6 7.4 L19.6 4.4 L18.4 8.8 L7.4 19.8 Z" fill={c} />
+      <path d="M4.2 14.6 L9.4 19.8" stroke={c} strokeWidth="1.8" strokeLinecap="round" />
+      <path d="M3.4 20.6 L5.6 18.4" stroke={c} strokeWidth="2.2" strokeLinecap="round" />
+    </g>
+  );
+  return <svg viewBox="0 0 24 24" width={z} height={z} aria-hidden="true">{body}</svg>;
+}
+/* 属性の印（魔法6は StanceGlyph、物理4は PhysGlyph） */
+function AttrGlyph({ k, size }) {
+  return PHYS_KEYS.indexOf(k) >= 0 ? <PhysGlyph k={k} size={size} /> : <StanceGlyph fam={k} size={size} />;
+}
 function StanceGlyph({ fam, size }) {
   const c = STANCE_ICON_COLOR[fam] || "#FFF3D6";
   const z = size || 18;
@@ -76074,29 +81162,33 @@ function MyHeart({ st, maxHP }) {
       strokeDasharray={dash ? "2 2.6" : undefined} />;
   });
   return (
-    <svg viewBox="-4 -4 56 56" className={`bt-heart lv${lv}${de.length ? " de" : ""}`} aria-hidden="true"
+    /*
+      ★ 2026-10-05「スマホを軽く」：輪と心を別の svg に分け、脈（拡大・薄さ）を svg の要素ごと動かす。
+      ⚠️ svg の中の <g> を動かすと毎フレーム描き直しになる。要素ごとなら GPU がずらすだけで済む。見た目は同じ。
+    */
+    <span className={`bt-heart lv${lv}${de.length ? " de" : ""}`} aria-hidden="true"
       style={fill ? { "--hc": fill } : undefined}>
       {(de.length > 0 || bu.length > 0) && (
-        <g className="bt-heart-rings">
+        <svg viewBox="-4 -4 56 56" className="bt-heart-rings">
           {arcs(de, 25, true)}
           {arcs(bu, 22, false)}
-        </g>
+        </svg>
       )}
       {lv < 3 ? (
-        <g className="bt-heart-body">
+        <svg viewBox="-4 -4 56 56" className="bt-heart-body">
           <path d={HEART_PATH} className="bt-heart-fill" />
           {lv >= 1 && <path d="M24 15 L22 20 L26 24 L23 29" className="bt-heart-crack" />}
           {lv >= 2 && <path d="M23 29 L25 34 L22 38 M26 24 L31 22 L33 25 M22 20 L17 19" className="bt-heart-crack" />}
           {lv >= 2 && <path d="M36 12 L38 16 L34 15 Z" className="bt-heart-chip" />}
-        </g>
+        </svg>
       ) : (
         /* 割れたハート。⚠️ 二つに分けて、少し離して脈打たせる */
-        <g className="bt-heart-body broken">
+        <svg viewBox="-4 -4 56 56" className="bt-heart-body broken">
           <path className="bt-heart-fill half l" d="M24 42 C6 30 4 18 12 12 C18 7.5 22 11 24 15 L22 20 L26 24 L23 29 L25 34 Z" />
           <path className="bt-heart-fill half r" d="M24 15 C26 11 30 7.5 36 12 C44 18 42 30 24 42 L25 34 L23 29 L26 24 L22 20 Z" />
-        </g>
+        </svg>
       )}
-    </svg>
+    </span>
   );
 }
 
@@ -76114,6 +81206,29 @@ function MyHeart({ st, maxHP }) {
 function DebuffArt({ move, lv, star }) {
   const L = Math.max(1, Math.min(4, lv || 1));
   const n = (m) => Array.from({ length: m }, (_, i) => i);
+  /*
+    虚脱（2026-10-03）。必殺ゲージ4本（剣・棒・聖杯・貨幣の色の小瓶）の中身が下へ抜け、滴が落ちる。
+    ⚠️ 位置は外側の g の transform、動きは内側の CSS（db-sapfill は fill-box・% の原点）。
+  */
+  if (move === "sap") {
+    const cols = ["#DDE6F6", "#FF9A5A", "#7AE08E", "#6AB4FF"];
+    return (
+      <g className="fa">
+        {L >= 3 && <circle className="db-dark" cx="24" cy="24" r="24" fill="#0A1030" />}
+        {cols.map((c, k) => (
+          <g key={k} transform={`translate(${9 + k * 10} ${14})`}>
+            <rect x="-3.6" y="0" width="7.2" height="20" rx="3.2" fill="#141A30" stroke="#8A9AD0" strokeWidth="0.9" />
+            <rect className="db-sapfill" style={{ animationDelay: `${k * 80}ms` }} x="-2.6" y="1.2" width="5.2" height="17.6" rx="2.4" fill={c} />
+            <path className="db-drip" style={{ animationDelay: `${220 + k * 80}ms` }} d="M0 22 q1.8 4 0 4.4 q-1.8 -0.4 0 -4.4" fill={c} />
+          </g>
+        ))}
+        {L >= 2 && n(L + 1).map((k) => (
+          <path key={`w${k}`} className="db-sound" style={{ animationDelay: `${k * 110}ms` }}
+            d={`M${6 + k * 9} 8 q3 -4 6 0`} fill="none" stroke="#8AA8FF" strokeWidth="1.4" strokeLinecap="round" />
+        ))}
+      </g>
+    );
+  }
   if (move === "roar") return (
     <g className="fa">
       {L >= 4 && <circle className="db-dark" cx="24" cy="24" r="24" fill="#200808" />}
@@ -76823,7 +81938,7 @@ function FoeActAura({ lv, move }) {
 
 function FoeActArt({ move, elem, lv, star }) {
   /* ⚠️ 妨害は★の段と効き目で描き分ける（DebuffArt） */
-  if (["roar", "rot", "despair", "miasma", "dread"].includes(move)) return <DebuffArt move={move} lv={lv} star={star} />;
+  if (["roar", "rot", "despair", "miasma", "dread", "sap"].includes(move)) return <DebuffArt move={move} lv={lv} star={star} />;
   const P = (d, ex) => {
     /* ⚠️ key は広げて渡さない（React が警告を出す）。取り出して直に渡す */
     const { key, ...rest } = ex || {};
@@ -77542,6 +82657,2743 @@ function SkillPanel({ lang, onClose }) {
 }
 
 /*
+  【ご当地グルメ】2026-10-05 Aki「ご当地料理の絵を実装する。有名なものはレア度を低く、知名度は低いがすごく魅力があるものはレア度を高く、
+    効果の高さと連動して興味を持ってもらう」「絶対に海外の人に受けない料理は除外（鮒ずしなど癖の強いものは無し）。
+    銘菓などの甘味を中心に、保存が利くもの・通販で買えるもの。ラーメンなど食べに来てもらうものと、お土産の数のバランスを意識」。
+  ★ 区分ごとに3品（tier 1＝顔・有名 ／ 2＝地元の味 ／ 3＝隠れた逸品）。いまは試作の4道府県（北海道・京都・香川・茨城）20区分60品。
+    type … visit＝現地で食べる（27品）／ gift＝お土産・お取り寄せ（33品）。
+  ★ 手に入れ方 … その区分の名所でボスに勝つと一品（GOURMET_DROP の重み。tier1 60%・tier2 30%・tier3 10%）。
+  ★ 使い方 … 収集帳で「持って行く」を一品選ぶと、次の探索の始めに食べて、その探索のあいだ効く（一つ減る）。
+    効果は tier で 5・10・15（%。耐性は点）。⚠️ 図鑑は一度手に入れたら残る（数が0になっても絵は消えない）。
+  ⚠️ 名前は一般名（企業の商品名にしない）。正しさは Aki の確認が要る。
+  ⚠️ 絵は一品ずつ固有（FOOD_ART）。
+*/
+const GOURMET = [
+  { id: "hk_misoramen", pref: "hokkaido", area: "石狩", tier: 1, type: "visit", name: "味噌ラーメン", en: "Miso Ramen", eff: "maxHp" },
+  { id: "hk_namachoco", pref: "hokkaido", area: "石狩", tier: 2, type: "gift", name: "生チョコレート", en: "Nama Chocolate", eff: "heal" },
+  { id: "hk_ishikarinabe", pref: "hokkaido", area: "石狩", tier: 3, type: "visit", name: "石狩鍋", en: "Ishikari Hot Pot", eff: "maxHp" },
+  { id: "hk_shioramen", pref: "hokkaido", area: "渡島", tier: 1, type: "visit", name: "塩ラーメン", en: "Shio Ramen", eff: "maxHp" },
+  { id: "hk_ikameshi", pref: "hokkaido", area: "渡島", tier: 2, type: "gift", name: "いかめし", en: "Squid Stuffed with Rice", eff: "magic" },
+  { id: "hk_cookie", pref: "hokkaido", area: "渡島", tier: 3, type: "gift", name: "修道院のバタークッキー", en: "Monastery Butter Cookies", eff: "heal" },
+  { id: "hk_shoyuramen", pref: "hokkaido", area: "上川", tier: 1, type: "visit", name: "醤油ラーメン（旭川）", en: "Asahikawa Shoyu Ramen", eff: "maxHp" },
+  { id: "hk_melonjelly", pref: "hokkaido", area: "上川", tier: 2, type: "gift", name: "メロンゼリー", en: "Melon Jelly", eff: "charge" },
+  { id: "hk_lavender", pref: "hokkaido", area: "上川", tier: 3, type: "visit", name: "ラベンダーソフトクリーム", en: "Lavender Soft Serve", eff: "heal" },
+  { id: "hk_butadon", pref: "hokkaido", area: "十勝", tier: 1, type: "visit", name: "豚丼", en: "Butadon (Grilled Pork Bowl)", eff: "phys" },
+  { id: "hk_buttersand", pref: "hokkaido", area: "十勝", tier: 2, type: "gift", name: "レーズンバターサンド", en: "Raisin Butter Sandwich", eff: "heal" },
+  { id: "hk_cheese", pref: "hokkaido", area: "十勝", tier: 3, type: "gift", name: "十勝のナチュラルチーズ", en: "Tokachi Natural Cheese", eff: "phys" },
+  { id: "hk_robata", pref: "hokkaido", area: "釧路", tier: 1, type: "visit", name: "炉端焼き", en: "Robatayaki", eff: "maxHp" },
+  { id: "hk_zangi", pref: "hokkaido", area: "釧路", tier: 2, type: "visit", name: "ザンギ", en: "Zangi (Fried Chicken)", eff: "phys" },
+  { id: "hk_marimo", pref: "hokkaido", area: "釧路", tier: 3, type: "gift", name: "まりも羊羹", en: "Marimo Yokan", eff: "heal" },
+  { id: "hk_kaibashira", pref: "hokkaido", area: "オホーツク", tier: 1, type: "gift", name: "干し貝柱", en: "Dried Scallops", eff: "magic" },
+  { id: "hk_shioyakisoba", pref: "hokkaido", area: "オホーツク", tier: 2, type: "visit", name: "塩焼きそば（北見）", en: "Kitami Salt Yakisoba", eff: "maxHp" },
+  { id: "hk_hakka", pref: "hokkaido", area: "オホーツク", tier: 3, type: "gift", name: "ハッカ飴", en: "Mint Candy", eff: "res" },
+  { id: "ky_parfait", pref: "kyoto", area: "京都市", tier: 1, type: "visit", name: "抹茶パフェ", en: "Matcha Parfait", eff: "heal" },
+  { id: "ky_yatsuhashi", pref: "kyoto", area: "京都市", tier: 2, type: "gift", name: "八ツ橋", en: "Yatsuhashi", eff: "heal" },
+  { id: "ky_konpeito", pref: "kyoto", area: "京都市", tier: 3, type: "gift", name: "金平糖", en: "Konpeito", eff: "heal" },
+  { id: "ky_ujimatcha", pref: "kyoto", area: "山城", tier: 1, type: "gift", name: "宇治抹茶", en: "Uji Matcha", eff: "res" },
+  { id: "ky_chadango", pref: "kyoto", area: "山城", tier: 2, type: "gift", name: "茶だんご", en: "Tea Dango", eff: "heal" },
+  { id: "ky_chasoba", pref: "kyoto", area: "山城", tier: 3, type: "gift", name: "茶そば", en: "Green Tea Soba", eff: "res" },
+  { id: "ky_kuromame", pref: "kyoto", area: "南丹", tier: 1, type: "gift", name: "丹波黒豆の甘納豆", en: "Tamba Black Bean Sweets", eff: "heal" },
+  { id: "ky_botan", pref: "kyoto", area: "南丹", tier: 2, type: "visit", name: "ぼたん鍋", en: "Botan Nabe (Boar Hot Pot)", eff: "phys" },
+  { id: "ky_miyamasoft", pref: "kyoto", area: "南丹", tier: 3, type: "visit", name: "美山の牛乳ソフトクリーム", en: "Miyama Milk Soft Serve", eff: "heal" },
+  { id: "ky_nikujaga", pref: "kyoto", area: "中丹", tier: 1, type: "visit", name: "肉じゃが", en: "Nikujaga", eff: "maxHp" },
+  { id: "ky_shibukawa", pref: "kyoto", area: "中丹", tier: 2, type: "gift", name: "丹波栗の渋皮煮", en: "Tamba Chestnuts in Syrup", eff: "heal" },
+  { id: "ky_manganji", pref: "kyoto", area: "中丹", tier: 3, type: "visit", name: "万願寺とうがらし", en: "Manganji Pepper", eff: "magic" },
+  { id: "ky_barazushi", pref: "kyoto", area: "丹後", tier: 1, type: "visit", name: "ばらずし", en: "Barazushi", eff: "magic" },
+  { id: "ky_chienomochi", pref: "kyoto", area: "丹後", tier: 2, type: "visit", name: "知恵の餅", en: "Chie no Mochi", eff: "heal" },
+  { id: "ky_burishabu", pref: "kyoto", area: "丹後", tier: 3, type: "visit", name: "寒ブリのしゃぶしゃぶ", en: "Winter Yellowtail Shabu-shabu", eff: "maxHp" },
+  { id: "kg_hamachi", pref: "kagawa", area: "東讃", tier: 1, type: "visit", name: "ハマチの刺身", en: "Hamachi Sashimi", eff: "magic" },
+  { id: "kg_kawara", pref: "kagawa", area: "東讃", tier: 2, type: "gift", name: "瓦せんべい", en: "Kawara Senbei", eff: "heal" },
+  { id: "kg_wasanbon", pref: "kagawa", area: "東讃", tier: 3, type: "gift", name: "和三盆", en: "Wasanbon Sugar Sweets", eff: "heal" },
+  { id: "kg_udon", pref: "kagawa", area: "中讃", tier: 1, type: "visit", name: "讃岐うどん", en: "Sanuki Udon", eff: "maxHp" },
+  { id: "kg_honetsuki", pref: "kagawa", area: "中讃", tier: 2, type: "visit", name: "骨付鳥", en: "Honetsuki-dori (Roast Chicken Leg)", eff: "phys" },
+  { id: "kg_shoyumame", pref: "kagawa", area: "中讃", tier: 3, type: "gift", name: "しょうゆ豆", en: "Shoyu Mame (Sweet Soy Fava Beans)", eff: "heal" },
+  { id: "kg_anmochizoni", pref: "kagawa", area: "西讃", tier: 1, type: "visit", name: "あん餅雑煮", en: "Anmochi Zoni", eff: "maxHp" },
+  { id: "kg_oiri", pref: "kagawa", area: "西讃", tier: 2, type: "gift", name: "おいり", en: "Oiri (Colorful Rice Puffs)", eff: "heal" },
+  { id: "kg_momo", pref: "kagawa", area: "西讃", tier: 3, type: "gift", name: "三豊の桃", en: "Mitoyo Peaches", eff: "charge" },
+  { id: "kg_olive", pref: "kagawa", area: "小豆", tier: 1, type: "gift", name: "オリーブオイル", en: "Olive Oil", eff: "magic" },
+  { id: "kg_somen", pref: "kagawa", area: "小豆", tier: 2, type: "gift", name: "手延べそうめん", en: "Hand-pulled Somen", eff: "magic" },
+  { id: "kg_shoyu", pref: "kagawa", area: "小豆", tier: 3, type: "gift", name: "木桶仕込みの醤油", en: "Barrel-aged Soy Sauce", eff: "magic" },
+  { id: "ib_soba", pref: "ibaraki", area: "県北", tier: 1, type: "visit", name: "常陸秋そば", en: "Hitachi Aki Soba", eff: "maxHp" },
+  { id: "ib_shamo", pref: "ibaraki", area: "県北", tier: 2, type: "visit", name: "奥久慈しゃもの親子丼", en: "Okukuji Shamo Oyakodon", eff: "phys" },
+  { id: "ib_apple", pref: "ibaraki", area: "県北", tier: 3, type: "gift", name: "奥久慈のりんご", en: "Okukuji Apples", eff: "charge" },
+  { id: "ib_hoshiimo", pref: "ibaraki", area: "県央", tier: 1, type: "gift", name: "干し芋", en: "Hoshi-imo (Dried Sweet Potato)", eff: "heal" },
+  { id: "ib_anko", pref: "ibaraki", area: "県央", tier: 2, type: "visit", name: "あんこう鍋", en: "Anglerfish Hot Pot", eff: "maxHp" },
+  { id: "ib_noshiume", pref: "ibaraki", area: "県央", tier: 3, type: "gift", name: "のし梅", en: "Noshi-ume (Plum Jelly Sheets)", eff: "heal" },
+  { id: "ib_melon", pref: "ibaraki", area: "鹿行", tier: 1, type: "gift", name: "鉾田のメロン", en: "Hokota Melon", eff: "charge" },
+  { id: "ib_yakiimo", pref: "ibaraki", area: "鹿行", tier: 2, type: "gift", name: "焼き芋（なめがた）", en: "Namegata Roasted Sweet Potato", eff: "heal" },
+  { id: "ib_hamaguri", pref: "ibaraki", area: "鹿行", tier: 3, type: "visit", name: "鹿島灘はまぐり", en: "Kashima-nada Clams", eff: "maxHp" },
+  { id: "ib_renkon", pref: "ibaraki", area: "県南", tier: 1, type: "gift", name: "れんこんチップス", en: "Lotus Root Chips", eff: "magic" },
+  { id: "ib_curry", pref: "ibaraki", area: "県南", tier: 2, type: "visit", name: "土浦カレー", en: "Tsuchiura Curry", eff: "maxHp" },
+  { id: "ib_fukure", pref: "ibaraki", area: "県南", tier: 3, type: "gift", name: "福来みかんのお菓子", en: "Fukure Mandarin Sweets", eff: "heal" },
+  { id: "ib_nashi", pref: "ibaraki", area: "県西", tier: 1, type: "gift", name: "梨", en: "Japanese Pear", eff: "charge" },
+  { id: "ib_hitachigyu", pref: "ibaraki", area: "県西", tier: 2, type: "visit", name: "常陸牛のステーキ", en: "Hitachi Beef Steak", eff: "phys" },
+  { id: "ib_sashimacha", pref: "ibaraki", area: "県西", tier: 3, type: "gift", name: "さしま茶", en: "Sashima Tea", eff: "res" },
+];
+const GOURMET_DROP = { 1: 60, 2: 30, 3: 10 };
+const GOURMET_EFF_V = { 1: 5, 2: 10, 3: 15 };
+const LS_GOURMET = "oo_gourmet", LS_GOURMET_SEEN = "oo_gourmet_seen", LS_GOURMET_PACK = "oo_gourmet_pack";
+function loadGourmet(key) { try { return JSON.parse(localStorage.getItem(key || LS_GOURMET) || "{}") || {}; } catch (e) { return {}; } }
+function saveGourmet(v, key) { try { localStorage.setItem(key || LS_GOURMET, JSON.stringify(v)); } catch (e) { /* 残せなくても遊べる */ } }
+function loadGourmetPack() { try { return localStorage.getItem(LS_GOURMET_PACK) || null; } catch (e) { return null; } }
+function saveGourmetPack(id) { try { if (id) localStorage.setItem(LS_GOURMET_PACK, id); else localStorage.removeItem(LS_GOURMET_PACK); } catch (e) { /* */ } }
+/* その区分で一品引く。⚠️ 区分に料理が無ければ null */
+function rollGourmet(pref, area) {
+  const list = GOURMET.filter((d) => d.pref === pref && d.area === area);
+  if (!list.length) return null;
+  const tot = list.reduce((x, d) => x + GOURMET_DROP[d.tier], 0);
+  let p = Math.random() * tot;
+  for (const d of list) { p -= GOURMET_DROP[d.tier]; if (p < 0) return d; }
+  return list[list.length - 1];
+}
+function addGourmet(id) {
+  const h = loadGourmet(); h[id] = (h[id] || 0) + 1; saveGourmet(h);
+  const sn = loadGourmet(LS_GOURMET_SEEN); const fresh = !sn[id]; sn[id] = true; saveGourmet(sn, LS_GOURMET_SEEN);
+  return { count: h[id], fresh };
+}
+/* 食べた効果を、探索のはじめの変化（advRun0 の形）に足す。⚠️ 値は GOURMET_EFF_V */
+function gourmetRunMod(d, m0) {
+  const v = GOURMET_EFF_V[d.tier] || 5, m = { ...m0 };
+  if (d.eff === "maxHp") m.maxHp = (m.maxHp || 0) + v / 100;
+  else if (d.eff === "heal") m.heal = (m.heal || 0) + v / 100;
+  else if (d.eff === "res") { m.res = { ...(m.res || {}) }; RUN_RES_KEYS.forEach((k) => { m.res[k] = (m.res[k] || 0) + v; }); }
+  else if (d.eff === "charge") { m.charge = { ...(m.charge || {}) }; SP_SUITS.forEach((k) => { m.charge[k] = (m.charge[k] || 0) + v / 100; }); }
+  else if (d.eff === "magic") { m.attr = { ...(m.attr || {}) }; FAMILY_KEYS.forEach((k) => { m.attr[k] = (m.attr[k] || 0) + v / 100; }); }
+  else if (d.eff === "phys") { m.attr = { ...(m.attr || {}) }; PHYS_KEYS.forEach((k) => { m.attr[k] = (m.attr[k] || 0) + v / 100; }); }
+  return m;
+}
+const GOURMET_I18N = {
+  ja: { title: "ご当地グルメ", have: (a2, b) => `${a2} / ${b} 品`, none: "まだ何も味わっていない",
+    tier: { 1: "定番", 2: "地元の味", 3: "隠れた逸品" }, type: { visit: "食べに行こう", gift: "お取り寄せ・お土産" },
+    eff: (k, v) => ({ maxHp: `最大HP +${v}%`, heal: `受ける回復 +${v}%`, res: `妨害の耐性すべて +${v}`, charge: `必殺の溜まり（4本） +${v}%`,
+      magic: `魔法の倍率 +${v}%`, phys: `物理の倍率 +${v}%` })[k],
+    pack: "持って行く", packed: "持って行く料理", unpack: "やめる", packNote: "次の探索の始めに食べて、その探索のあいだ効きます（一つ減ります）。",
+    got: "ご当地グルメを味わった", gotLog: (n) => `ご当地グルメ「${n}」を手に入れた。`, ate: (n) => `「${n}」を食べてから出発した。`,
+    odd: (p) => `${p}%` },
+  en: { title: "Local Food", have: (a2, b) => `${a2} / ${b}`, none: "Nothing tasted yet",
+    tier: { 1: "Classic", 2: "Local favorite", 3: "Hidden gem" }, type: { visit: "Go eat it there", gift: "Order online / souvenir" },
+    eff: (k, v) => ({ maxHp: `Max HP +${v}%`, heal: `Healing +${v}%`, res: `All debuff res +${v}`, charge: `Finisher charge (all 4) +${v}%`,
+      magic: `Magic multiplier +${v}%`, phys: `Physical multiplier +${v}%` })[k],
+    pack: "Take along", packed: "Taking along", unpack: "Cancel", packNote: "Eaten at the start of your next journey; lasts for that journey (uses one).",
+    got: "You tasted a local dish", gotLog: (n) => `You got the local dish "${n}".`, ate: (n) => `You ate "${n}" before setting out.`,
+    odd: (p) => `${p}%` },
+};
+const gourmetT = (lang) => GOURMET_I18N[lang] || GOURMET_I18N.en;
+// ---- 担当1 共通部品 ----
+function Food1Shadow({ cx = 24, cy = 42.5, rx = 17, ry = 2.6 }) {
+  return <ellipse cx={cx} cy={cy} rx={rx} ry={ry} fill="#000" opacity="0.35" />;
+}
+function Food1Steam({ x = 24, y = 13, s = 1 }) {
+  return (
+    <g fill="none" stroke="#fff" strokeLinecap="round" opacity="0.45" strokeWidth={0.9 * s}>
+      <path d={`M${x - 6 * s},${y} c-1.5,-2 1.5,-3.5 0,-5.5 c-1.2,-1.6 0.8,-2.6 0.2,-4`} />
+      <path d={`M${x},${y - 1} c-1.6,-2.2 1.6,-3.8 0,-6 c-1.2,-1.6 0.8,-2.8 0.2,-4.2`} />
+      <path d={`M${x + 6 * s},${y} c-1.5,-2 1.5,-3.5 0,-5.5 c-1.2,-1.6 0.8,-2.6 0.2,-4`} />
+    </g>
+  );
+}
+// 丼：外側＋縁。中身は呼び出し側で cx24 cy22.5 rx16.5 ry5.2 の内側に描く
+function Food1Bowl({ body = "#7a1f1a", light = "#a8362c", dark = "#4a100c", rim = "#2a0806", band }) {
+  return (
+    <g>
+      <ellipse cx="24" cy="40" rx="7.5" ry="1.8" fill={dark} />
+      <path d="M5,22 C5,32 12,39.5 18,40.5 L30,40.5 C36,39.5 43,32 43,22 Z" fill={body} stroke={rim} strokeWidth="0.6" />
+      <path d="M6.5,24 C7,31 11.5,37 17,39 C13,35 10.5,30 10,24 Z" fill={light} opacity="0.85" />
+      <path d="M41.5,24 C41,31 36.5,37 31,39.5 C35,35 38,30 38.5,24 Z" fill={dark} opacity="0.8" />
+      {band && <path d="M6.2,27.5 C14,31 34,31 41.8,27.5 L41,29.6 C33,33 15,33 7,29.6 Z" fill={band} opacity="0.9" />}
+      <path d="M9,26 C10,30 12,33 14,35" stroke="#fff" strokeWidth="0.8" fill="none" opacity="0.35" strokeLinecap="round" />
+      <ellipse cx="24" cy="22" rx="19" ry="6.5" fill={body} stroke={rim} strokeWidth="0.6" />
+      <ellipse cx="24" cy="22.4" rx="17.4" ry="5.7" fill={dark} />
+    </g>
+  );
+}
+function Food1Chashu({ x, y, r = 4.2, rot = 0 }) {
+  return (
+    <g transform={`translate(${x},${y}) rotate(${rot})`}>
+      <ellipse cx="0" cy="0.5" rx={r} ry={r * 0.62} fill="#5a2a14" />
+      <ellipse cx="0" cy="0" rx={r} ry={r * 0.6} fill="#9a4a24" stroke="#4a200c" strokeWidth="0.45" />
+      <ellipse cx="0.2" cy="0" rx={r * 0.72} ry={r * 0.42} fill="#e6b49a" />
+      <path d={`M${-r * 0.5},${-r * 0.1} c${r * 0.3},${r * 0.25} ${r * 0.7},${-r * 0.2} ${r},${r * 0.1}`} stroke="#f6dccb" strokeWidth="0.5" fill="none" />
+      <ellipse cx={-r * 0.35} cy={-r * 0.2} rx={r * 0.25} ry={r * 0.12} fill="#fff" opacity="0.4" />
+    </g>
+  );
+}
+function Food1Negi({ x, y }) {
+  return (
+    <g>
+      <circle cx={x} cy={y} r="0.85" fill="#4f9a3a" stroke="#2e6a20" strokeWidth="0.25" />
+      <circle cx={x} cy={y} r="0.4" fill="#c8eaa0" />
+    </g>
+  );
+}
+
+// 1 味噌ラーメン
+function FoodHkMisoramen() {
+  return (
+    <g>
+      <Food1Shadow />
+      <Food1Bowl body="#8a2418" light="#b5412e" dark="#4e110a" rim="#2a0604" band="#1e1a18" />
+      <ellipse cx="24" cy="22.6" rx="16.5" ry="5.2" fill="#b86a2a" />
+      <ellipse cx="22" cy="22" rx="14" ry="4" fill="#cf8a3e" />
+      <g fill="none" stroke="#f2d070" strokeWidth="0.9" strokeLinecap="round">
+        <path d="M10,24 q1,-1 2,0 t2,0 t2,0 t2,0" />
+        <path d="M11,25.5 q1,-1 2,0 t2,0 t2,0 t2,0" />
+        <path d="M28,25.6 q1,-1 2,0 t2,0 t2,0" />
+      </g>
+      {/* もやし */}
+      <g stroke="#f4f0dc" strokeWidth="0.8" strokeLinecap="round" fill="none">
+        <path d="M18,20 q3,-3 6,-1" /><path d="M19,21 q4,-4 8,-0.5" /><path d="M20,19 q2,-2 5,-2.5" />
+        <path d="M17,21.5 q5,-3 10,0" /><path d="M22,18.5 q2,-1 4,0.5" />
+      </g>
+      <path d="M17,22 q7,-7 12,-0.5 q-6,1.5 -12,0.5 z" fill="#efe6c4" opacity="0.5" />
+      {/* コーン */}
+      <g fill="#f5c42a" stroke="#b8860b" strokeWidth="0.2">
+        <circle cx="30" cy="21" r="0.8" /><circle cx="31.6" cy="21.6" r="0.8" /><circle cx="33" cy="22.3" r="0.8" />
+        <circle cx="30.8" cy="22.6" r="0.8" /><circle cx="32.4" cy="23.4" r="0.8" /><circle cx="29.4" cy="22.4" r="0.8" />
+      </g>
+      {/* バター */}
+      <path d="M22,15.6 l4.6,0.6 l-0.4,3.2 l-4.6,-0.6 z" fill="#fbe58a" stroke="#c9a640" strokeWidth="0.35" />
+      <path d="M22,15.6 l4.6,0.6 l0.9,-0.9 l-4.5,-0.6 z" fill="#fff6c8" stroke="#c9a640" strokeWidth="0.3" />
+      <path d="M26.6,16.2 l0.9,-0.9 l-0.3,3.1 l-1,1 z" fill="#e2c35a" />
+      <Food1Chashu x={13.5} y={21} r={4} rot={-12} />
+      <Food1Negi x={27} y={25.5} /><Food1Negi x={25} y={26} /><Food1Negi x={35.5} y={20.5} />
+      <Food1Steam x={24} y={12} />
+    </g>
+  );
+}
+
+// 2 生チョコレート
+function FoodHkNamachoco() {
+  const pcs = [];
+  const P = (i, j) => [9 + i * 6.2 + j * 2.2, 22 + j * 3.6 - i * 1.2];
+  for (let j = 0; j < 3; j++)
+    for (let i = 0; i < 4; i++) {
+      if (i === 3 && j === 0) continue;
+      const [x, y] = P(i, j);
+      pcs.push(
+        <g key={i + "_" + j}>
+          <path d={`M${x},${y} l5.4,-1.05 l1.9,3.15 l-5.4,1.05 z`} fill="#6a3a1c" stroke="#2e1608" strokeWidth="0.3" />
+          <path d={`M${x + 1.9},${y + 3.15} l5.4,-1.05 l0,1.2 l-5.4,1.05 z`} fill="#3e1e0c" />
+          <path d={`M${x},${y} l1.9,3.15 l0,1.2 l-1.9,-3.15 z`} fill="#4e2812" />
+          <path d={`M${x + 0.8},${y + 0.4} l3.6,-0.7`} stroke="#a8704a" strokeWidth="0.5" opacity="0.8" />
+          <circle cx={x + 3.2} cy={y + 1.3} r="0.35" fill="#8a5434" />
+          <circle cx={x + 4.6} cy={y + 1.9} r="0.3" fill="#8a5434" />
+        </g>
+      );
+    }
+  return (
+    <g>
+      <Food1Shadow cy={41} rx={20} ry={3} />
+      {/* 箱 */}
+      <path d="M4,25 L33,19 L44,33 L15,39 Z" fill="#2a1a12" stroke="#120804" strokeWidth="0.5" />
+      <path d="M15,39 L44,33 L44,35.5 L15,41.5 Z" fill="#5a3a26" />
+      <path d="M4,25 L15,39 L15,41.5 L4,27.5 Z" fill="#7a5236" />
+      <path d="M5.2,25.3 L32.6,19.8 L42.8,32.8 L15.4,38.2 Z" fill="#d9cdb4" />
+      {pcs}
+      {/* ココアの粉 */}
+      <g fill="#8a5434" opacity="0.6">
+        <circle cx="31" cy="21.5" r="0.4" /><circle cx="33" cy="23" r="0.3" /><circle cx="35" cy="22.4" r="0.35" />
+      </g>
+      {/* 楊枝で刺した一粒 */}
+      <path d="M36,6 L32,16" stroke="#e8cf9a" strokeWidth="0.8" strokeLinecap="round" />
+      <path d="M31,13 l4.6,0.9 l-1,4.2 l-4.6,-0.9 z" fill="#6a3a1c" stroke="#2e1608" strokeWidth="0.35" />
+      <path d="M30,17.2 l4.6,0.9 l0,1.3 l-4.6,-0.9 z" fill="#3e1e0c" />
+      <path d="M31.6,13.8 l3,0.6" stroke="#b07a52" strokeWidth="0.5" />
+    </g>
+  );
+}
+
+// 3 石狩鍋
+function FoodHkIshikarinabe() {
+  return (
+    <g>
+      <Food1Shadow rx={19} />
+      {/* 取っ手 */}
+      <path d="M3,22 q-1.5,2 0.5,4 l3,-0.5 l-0.5,-3.5 z" fill="#6a4a30" stroke="#2e1e10" strokeWidth="0.5" />
+      <path d="M45,22 q1.5,2 -0.5,4 l-3,-0.5 l0.5,-3.5 z" fill="#4a3220" stroke="#2e1e10" strokeWidth="0.5" />
+      {/* 土鍋 */}
+      <path d="M4,22 C4,33 12,39.5 24,39.5 C36,39.5 44,33 44,22 Z" fill="#7a5638" stroke="#2e1e10" strokeWidth="0.6" />
+      <path d="M5.5,24 C6,31 11,36.5 18,38.5 C12,34 9.5,29 9.5,24 Z" fill="#a07a56" />
+      <path d="M42.5,24 C42,31 37,36.5 30,38.5 C36,34 38.5,29 38.5,24 Z" fill="#4a3020" />
+      <g fill="#e8dcc0" opacity="0.5">
+        <circle cx="14" cy="31" r="0.4" /><circle cx="20" cy="35" r="0.35" /><circle cx="28" cy="34" r="0.4" /><circle cx="34" cy="30" r="0.35" />
+      </g>
+      <ellipse cx="24" cy="22" rx="20" ry="6.8" fill="#f2ead6" stroke="#2e1e10" strokeWidth="0.6" />
+      <ellipse cx="24" cy="22.4" rx="18.2" ry="5.8" fill="#9a6a3a" />
+      <ellipse cx="24" cy="22.6" rx="17.6" ry="5.4" fill="#c88a42" />
+      {/* キャベツ */}
+      <path d="M8,22 q3,-4 8,-2 q-1,3 -3,5 q-3,0.5 -5,-3z" fill="#bfe08a" stroke="#6e9a3c" strokeWidth="0.4" />
+      <path d="M9.5,21.5 q2.5,0.5 5,-0.5" stroke="#eef8d6" strokeWidth="0.5" fill="none" />
+      <path d="M33,25.5 q4,-1 7,-3 q0,3 -3,4.5 q-3,0.5 -4,-1.5z" fill="#a8d070" stroke="#6e9a3c" strokeWidth="0.4" />
+      {/* 鮭 */}
+      <path d="M17,17 l9,-1 l1.5,5 l-9,1.5 z" fill="#f08a5a" stroke="#9a3a1a" strokeWidth="0.45" />
+      <path d="M18,18.2 l8,-0.9 M18.5,19.8 l8,-1 M19,21.2 l7.8,-1" stroke="#fde0cc" strokeWidth="0.45" />
+      <path d="M17,17 l-0.4,1.5 l2,4.2 l-0.1,-1.2 z" fill="#5a5a6a" />
+      <path d="M25,23 l8,-2 l1,4 l-8.4,1.8 z" fill="#ee7e4e" stroke="#9a3a1a" strokeWidth="0.45" />
+      <path d="M25.8,24.2 l7,-1.7 M26.2,25.6 l7,-1.6" stroke="#fde0cc" strokeWidth="0.45" />
+      {/* 豆腐 */}
+      <path d="M11,25 l4,-0.6 l0.6,2.6 l-4,0.6 z" fill="#fbf8ee" stroke="#a89a80" strokeWidth="0.35" />
+      <path d="M11,25 l4,-0.6 l1,-0.8 l-4,0.5 z" fill="#ffffff" stroke="#a89a80" strokeWidth="0.3" />
+      <path d="M29,17 l4,-0.4 l0.4,2.6 l-4,0.4 z" fill="#fbf8ee" stroke="#a89a80" strokeWidth="0.35" />
+      {/* ねぎ（斜め切り） */}
+      <ellipse cx="20" cy="25.5" rx="1.6" ry="0.8" fill="#f4f8e6" stroke="#7aa850" strokeWidth="0.35" />
+      <ellipse cx="34.5" cy="19.5" rx="1.5" ry="0.75" fill="#7ab84e" stroke="#3e7020" strokeWidth="0.35" />
+      <ellipse cx="13" cy="18.5" rx="1.5" ry="0.75" fill="#7ab84e" stroke="#3e7020" strokeWidth="0.35" />
+      <Food1Steam x={24} y={12} />
+    </g>
+  );
+}
+
+// 4 塩ラーメン
+function FoodHkShioramen() {
+  return (
+    <g>
+      <Food1Shadow />
+      <Food1Bowl body="#f2ece0" light="#ffffff" dark="#b8ae9c" rim="#5a5244" band="#2a4a8a" />
+      <ellipse cx="24" cy="22.6" rx="16.5" ry="5.2" fill="#d8a838" />
+      <ellipse cx="23" cy="22.2" rx="14.5" ry="4.2" fill="#f0c858" opacity="0.9" />
+      {/* まっすぐ細麺 */}
+      <g stroke="#fff2c0" strokeWidth="0.55" strokeLinecap="round">
+        <path d="M14,25 L22,26.6" /><path d="M14,24 L23,25.8" /><path d="M15,23.2 L24,25" />
+        <path d="M26,26.4 L33,25.2" /><path d="M27,25.6 L34,24.4" />
+      </g>
+      {/* 海苔 */}
+      <path d="M30,9 L38,12 L36.5,22 L28.5,19.6 Z" fill="#1a2418" stroke="#050a04" strokeWidth="0.45" />
+      <path d="M31,10.5 L36.6,12.6" stroke="#3a5232" strokeWidth="0.5" />
+      <Food1Chashu x={14} y={21} r={4.2} rot={-8} />
+      {/* 麩（車麸） */}
+      <ellipse cx="24.5" cy="20" rx="3" ry="1.9" fill="#f6ead4" stroke="#b08a5a" strokeWidth="0.4" />
+      <ellipse cx="24.5" cy="20" rx="2" ry="1.2" fill="none" stroke="#c8a070" strokeWidth="0.4" />
+      <ellipse cx="24.5" cy="20" rx="0.9" ry="0.55" fill="#d8b888" />
+      {/* ねぎ */}
+      <Food1Negi x={20} y={24} /><Food1Negi x={22} y={23} /><Food1Negi x={21} y={22} /><Food1Negi x={27} y={23.5} /><Food1Negi x={18.5} y={23} />
+      <ellipse cx="11" cy="24" rx="1.2" ry="0.5" fill="#fff" opacity="0.5" />
+      <Food1Steam x={22} y={12} />
+    </g>
+  );
+}
+
+// 5 いかめし
+function Food1Squid({ x, y, rot = 0 }) {
+  return (
+    <g transform={`translate(${x},${y}) rotate(${rot})`}>
+      <path d="M-14,0 C-14,-4.5 4,-5.5 10,-4 L13,-6.5 L14.5,0 L13,6.5 L10,4 C4,5.5 -14,4.5 -14,0 Z" fill="#9a3a1a" stroke="#3a1206" strokeWidth="0.55" />
+      <path d="M-12,-1.5 C-8,-4 4,-4.5 9,-3 C3,-2.4 -6,-2 -12,-1.5 Z" fill="#c8602e" />
+      <path d="M-11,-2 C-6,-3.4 2,-3.6 7,-3" stroke="#ffd8a8" strokeWidth="0.7" fill="none" strokeLinecap="round" opacity="0.8" />
+      <path d="M-12,2 C-6,4 4,4 9,3" stroke="#5a1a08" strokeWidth="0.8" fill="none" opacity="0.7" />
+      {/* 口元に押し込んだ足と、のぞく米 */}
+      <ellipse cx="-14.2" cy="0" rx="1.2" ry="2.6" fill="#e8dcc0" stroke="#5a1a08" strokeWidth="0.35" />
+      <g fill="none" stroke="#7a2a0c" strokeWidth="0.8" strokeLinecap="round">
+        <path d="M-14.6,-1.6 q-2,-0.6 -2.4,-2.2" /><path d="M-14.8,0 q-2.4,0.2 -3,-1" /><path d="M-14.6,1.6 q-2,0.8 -2.2,2.4" />
+      </g>
+    </g>
+  );
+}
+function FoodHkIkameshi() {
+  return (
+    <g>
+      <Food1Shadow rx={20} />
+      <ellipse cx="24" cy="36" rx="21" ry="6" fill="#c8c0b0" stroke="#4a4438" strokeWidth="0.5" />
+      <ellipse cx="24" cy="35.4" rx="19" ry="5" fill="#ece6da" />
+      <Food1Squid x={22} y={22} rot={-10} />
+      <Food1Squid x={24} y={30} rot={-4} />
+      {/* 輪切り断面 */}
+      <g transform="translate(38,33)">
+        <ellipse cx="0" cy="0.6" rx="5" ry="3.6" fill="#5a1a08" />
+        <ellipse cx="0" cy="0" rx="5" ry="3.6" fill="#a8441e" stroke="#3a1206" strokeWidth="0.5" />
+        <ellipse cx="0" cy="0" rx="3.8" ry="2.6" fill="#e8d6b4" />
+        <g fill="#fffaf0" stroke="#c8a878" strokeWidth="0.15">
+          <ellipse cx="-1.6" cy="-0.6" rx="0.8" ry="0.45" /><ellipse cx="0.2" cy="-1.2" rx="0.8" ry="0.45" />
+          <ellipse cx="1.8" cy="-0.2" rx="0.8" ry="0.45" /><ellipse cx="-0.6" cy="0.8" rx="0.8" ry="0.45" />
+          <ellipse cx="1.2" cy="1.2" rx="0.8" ry="0.45" /><ellipse cx="-2.2" cy="0.9" rx="0.6" ry="0.4" />
+        </g>
+      </g>
+      {/* たれ */}
+      <path d="M8,36 q6,2 14,1.5" stroke="#7a2a0c" strokeWidth="1" fill="none" opacity="0.6" strokeLinecap="round" />
+    </g>
+  );
+}
+
+// 6 修道院のバタークッキー
+function Food1Cookie({ x, y, r = 6 }) {
+  return (
+    <g>
+      <ellipse cx={x} cy={y + 0.9} rx={r} ry={r * 0.55} fill="#8a5a24" />
+      <ellipse cx={x} cy={y} rx={r} ry={r * 0.55} fill="#d89a48" stroke="#5a3410" strokeWidth="0.45" />
+      <ellipse cx={x - 0.3} cy={y - 0.2} rx={r * 0.78} ry={r * 0.4} fill="#f0c878" />
+      <ellipse cx={x - r * 0.3} cy={y - r * 0.2} rx={r * 0.35} ry={r * 0.14} fill="#fff0c8" opacity="0.7" />
+      <g fill="#b07430">
+        <circle cx={x - r * 0.3} cy={y} r="0.35" /><circle cx={x + r * 0.3} cy={y} r="0.35" />
+        <circle cx={x} cy={y - r * 0.18} r="0.35" /><circle cx={x} cy={y + r * 0.18} r="0.35" />
+      </g>
+    </g>
+  );
+}
+function FoodHkCookie() {
+  return (
+    <g>
+      <Food1Shadow rx={19} />
+      {/* 紙袋 */}
+      <path d="M8,10 L26,8 L28,34 L10,36 Z" fill="#c49a64" stroke="#5a3e1e" strokeWidth="0.55" />
+      <path d="M8,10 L26,8 L26.4,11 L8.3,13 Z" fill="#a87e4a" />
+      <path d="M8,10 l1.5,-1.5 l1.5,1.4 l1.5,-1.5 l1.5,1.4 l1.5,-1.5 l1.5,1.4 l1.5,-1.5 l1.5,1.4 l1.5,-1.5 l1.5,1.4 l1.5,-1.5 l1.5,1.3" fill="none" stroke="#5a3e1e" strokeWidth="0.45" />
+      <path d="M10,15 L11.6,34" stroke="#e0bc88" strokeWidth="1.2" opacity="0.6" />
+      <path d="M24,12 L25.8,33" stroke="#8a643a" strokeWidth="1" opacity="0.6" />
+      <ellipse cx="17.5" cy="22" rx="5" ry="3.5" fill="#efe2c8" opacity="0.85" />
+      <ellipse cx="17.5" cy="22" rx="3.2" ry="2" fill="none" stroke="#8a643a" strokeWidth="0.4" />
+      {/* バター */}
+      <path d="M33,28 l8,-1.5 l2,3 l-8,1.6 z" fill="#fff4b8" stroke="#a88a30" strokeWidth="0.4" />
+      <path d="M35,31.1 l8,-1.6 l0,2.8 l-8,1.6 z" fill="#f2dc78" stroke="#a88a30" strokeWidth="0.4" />
+      <path d="M33,28 l2,3.1 l0,2.8 l-2,-3 z" fill="#e2c460" stroke="#a88a30" strokeWidth="0.4" />
+      <path d="M34.5,28.4 l5,-0.9" stroke="#fff" strokeWidth="0.5" opacity="0.8" />
+      <Food1Cookie x={31} y={21.5} r={6} />
+      <Food1Cookie x={16} y={36} r={6.5} />
+      <Food1Cookie x={28} y={37} r={6.5} />
+    </g>
+  );
+}
+
+// 7 醤油ラーメン（旭川）
+function FoodHkShoyuramen() {
+  return (
+    <g>
+      <Food1Shadow />
+      <Food1Bowl body="#1e1a1a" light="#4a4040" dark="#0a0808" rim="#000" band="#8a1a14" />
+      <ellipse cx="24" cy="22.6" rx="16.5" ry="5.2" fill="#4a2410" />
+      <ellipse cx="23" cy="22.4" rx="14.5" ry="4.2" fill="#6e3818" />
+      {/* 油の膜 */}
+      <g fill="#e8a858" opacity="0.6">
+        <ellipse cx="11" cy="23.4" rx="1.4" ry="0.55" /><ellipse cx="14" cy="25" rx="1" ry="0.4" />
+        <ellipse cx="34" cy="25" rx="1.6" ry="0.55" /><ellipse cx="37" cy="23" rx="0.9" ry="0.35" />
+        <ellipse cx="22" cy="26.4" rx="1.2" ry="0.4" /><ellipse cx="30" cy="19.6" rx="0.8" ry="0.3" />
+      </g>
+      <ellipse cx="10" cy="22" rx="1.6" ry="0.5" fill="#fff" opacity="0.55" />
+      <g fill="none" stroke="#e8c260" strokeWidth="0.85" strokeLinecap="round">
+        <path d="M16,26 q1,-1 2,0 t2,0 t2,0 t2,0" /><path d="M17,24.6 q1,-1 2,0 t2,0 t2,0 t2,0" />
+      </g>
+      {/* メンマ */}
+      <g stroke="#7a5418" strokeWidth="0.35">
+        <path d="M27,19 l6,-1.2 l0.5,1.3 l-6,1.2 z" fill="#c89a48" />
+        <path d="M28,21 l6,-1 l0.4,1.3 l-6,1 z" fill="#d6a854" />
+        <path d="M27.5,22.8 l5.6,-0.4 l0.2,1.3 l-5.6,0.4 z" fill="#b88a3a" />
+      </g>
+      <Food1Chashu x={14} y={20.6} r={4.3} rot={-10} />
+      <Food1Chashu x={21.5} y={19} r={3.6} rot={6} />
+      <Food1Negi x={36} y={21.5} /><Food1Negi x={34.5} y={22.8} /><Food1Negi x={37.5} y={23} /><Food1Negi x={25} y={24.5} /><Food1Negi x={27} y={25.5} />
+      <Food1Steam x={24} y={12} />
+    </g>
+  );
+}
+
+// 8 メロンゼリー
+function FoodHkMelonjelly() {
+  return (
+    <g>
+      <Food1Shadow rx={18} />
+      {/* 外皮（半球） */}
+      <path d="M6,22 C6,34 14,40.5 24,40.5 C34,40.5 42,34 42,22 Z" fill="#8aa848" stroke="#2e4214" strokeWidth="0.6" />
+      <path d="M7.5,24 C8,32 13,37.5 19,39.5 C13,35 10.5,30 10.5,24 Z" fill="#b8cc78" />
+      <path d="M40.5,24 C40,32 35,37.5 29,39.5 C35,35 37.5,30 37.5,24 Z" fill="#5a7428" />
+      {/* 網目（曲線） */}
+      <g fill="none" stroke="#e8ecc8" strokeWidth="0.45" opacity="0.75">
+        <path d="M9,27 q5,3 9,1 q4,-2 8,1 q4,3 10,0" />
+        <path d="M12,33 q4,2 8,0 q4,-2 8,1 q4,2 7,-1" />
+        <path d="M15,24 q-1,5 2,9 q2,3 1,6" />
+        <path d="M24,24.5 q2,4 -1,8 q-2,4 1,7" />
+        <path d="M33,24 q1,5 -2,8 q-2,3 0,6" />
+      </g>
+      {/* 果肉の縁 */}
+      <ellipse cx="24" cy="22" rx="18" ry="6.2" fill="#d8e8a0" stroke="#2e4214" strokeWidth="0.5" />
+      <ellipse cx="24" cy="22.2" rx="16.4" ry="5.4" fill="#f2a050" />
+      {/* ゼリー */}
+      <ellipse cx="24" cy="22.4" rx="15" ry="4.8" fill="#ff8a2a" />
+      <ellipse cx="24" cy="23" rx="12" ry="3.4" fill="#e86a14" opacity="0.7" />
+      <ellipse cx="19" cy="20.8" rx="6" ry="1.5" fill="#ffd0a0" opacity="0.75" />
+      <ellipse cx="16" cy="20.8" rx="2" ry="0.6" fill="#fff" opacity="0.9" />
+      <ellipse cx="31" cy="24" rx="2.5" ry="0.6" fill="#ffc890" opacity="0.6" />
+      {/* スプーン */}
+      <path d="M36,8 L30,20" stroke="#c8ccd4" strokeWidth="1" strokeLinecap="round" />
+      <ellipse cx="29.6" cy="21" rx="1.6" ry="1" fill="#e8ecf2" stroke="#6a7080" strokeWidth="0.35" />
+    </g>
+  );
+}
+
+// 9 ラベンダーソフトクリーム
+function FoodHkLavender() {
+  const sprig = (x, y, h, lean) => {
+    const buds = [];
+    for (let k = 0; k < 6; k++) {
+      const t = k / 6;
+      buds.push(<ellipse key={k} cx={x + lean * t - 0.5} cy={y - h * t} rx="0.8" ry="1.1" fill={k % 2 ? "#8a5ac8" : "#a87ae0"} />);
+      buds.push(<ellipse key={"b" + k} cx={x + lean * t + 0.6} cy={y - h * t - 0.6} rx="0.75" ry="1" fill="#6a3aa8" />);
+    }
+    return (
+      <g key={x}>
+        <path d={`M${x},${y + 12} Q${x + lean * 0.3},${y + 3} ${x + lean},${y - h}`} stroke="#5a7a3a" strokeWidth="0.6" fill="none" />
+        {buds}
+      </g>
+    );
+  };
+  return (
+    <g>
+      <Food1Shadow rx={11} cy={43} />
+      {sprig(8, 22, 10, -2)}
+      {sprig(11, 24, 12, 1)}
+      {sprig(38, 23, 11, 2)}
+      {/* コーン */}
+      <path d="M17,25 L24,43 L31,25 Z" fill="#d8a050" stroke="#6a4214" strokeWidth="0.55" />
+      <path d="M17,25 L24,43 L21,25 Z" fill="#e8bc6a" />
+      <path d="M27,25 L24,43 L31,25 Z" fill="#b07a32" />
+      <g stroke="#8a5a20" strokeWidth="0.45" fill="none">
+        <path d="M19,25 L26.5,37" /><path d="M22.5,25 L28.2,33.5" /><path d="M26,25 L29.6,30" /><path d="M17.6,27 L24.6,39" />
+      </g>
+      <path d="M16.5,24 L31.5,24 L31,26.4 L17,26.4 Z" fill="#c88a40" stroke="#6a4214" strokeWidth="0.45" />
+      {/* ソフトクリーム */}
+      <path d="M15,24.5 C13,22 15.5,19.5 18,19.6 C32,19 34,21 33,24 C30,25.5 18,25.5 15,24.5 Z" fill="#b89ad8" stroke="#5a3a8a" strokeWidth="0.5" />
+      <path d="M16.5,19.8 C15.5,17 18,15 21,15.2 C29,15 32,16.8 31,19.6 C27,20.8 20,20.8 16.5,19.8 Z" fill="#c4a8e0" stroke="#5a3a8a" strokeWidth="0.5" />
+      <path d="M18.5,15.4 C18,12.6 21,11 24,11.4 C28,11.6 29.6,13 28.6,15.4 C25.5,16.3 21,16.3 18.5,15.4 Z" fill="#cdb4e6" stroke="#5a3a8a" strokeWidth="0.5" />
+      <path d="M21,11.6 C21.5,9 23.5,7.6 25.5,6.5 C25.6,8.5 27,10 26.6,11.6 C24.6,12.2 22.6,12.2 21,11.6 Z" fill="#d6c0ec" stroke="#5a3a8a" strokeWidth="0.5" />
+      {/* 陰影とハイライト */}
+      <path d="M28,20 C31,20 32.5,21.5 32.4,23.6 C30,24.6 27,24.8 25,24.8 C28,23.6 29,22 28,20 Z" fill="#8a6ab8" opacity="0.6" />
+      <path d="M26,16 C29,16 30.6,17.4 30.4,19.2 C28.5,19.8 26.5,20 25,20 C27,19 27.3,17.4 26,16 Z" fill="#8a6ab8" opacity="0.55" />
+      <path d="M16.6,22 C17,21 18,20.6 19.5,20.6" stroke="#fff" strokeWidth="0.7" fill="none" opacity="0.7" strokeLinecap="round" />
+      <path d="M18,17.6 C18.5,16.5 19.5,16 21,16" stroke="#fff" strokeWidth="0.7" fill="none" opacity="0.7" strokeLinecap="round" />
+      <path d="M20,13.6 C20.4,12.6 21.4,12.2 22.6,12.2" stroke="#fff" strokeWidth="0.6" fill="none" opacity="0.7" strokeLinecap="round" />
+    </g>
+  );
+}
+
+// 10 豚丼
+function FoodHkButadon() {
+  const slices = [
+    [13, 19, -25], [20, 16.6, -8], [28, 16.6, 8], [35, 19.4, 25],
+    [33, 23.4, 160], [24, 24.6, 180], [15, 23.4, 200], [24, 20.4, 0],
+  ];
+  return (
+    <g>
+      <Food1Shadow />
+      <Food1Bowl body="#1a1210" light="#4a3630" dark="#080404" rim="#000" band="#a0281c" />
+      <ellipse cx="24" cy="22.6" rx="16.8" ry="5.4" fill="#f4f0e6" />
+      <g fill="#ffffff" stroke="#d8d0c0" strokeWidth="0.15">
+        <ellipse cx="9" cy="23" rx="0.8" ry="0.45" /><ellipse cx="38.5" cy="23.5" rx="0.8" ry="0.45" /><ellipse cx="20" cy="27" rx="0.8" ry="0.45" />
+      </g>
+      {slices.map(([x, y, r], i) => (
+        <g key={i} transform={`translate(${x},${y}) rotate(${r})`}>
+          <path d="M-5,0 C-5,-3 5,-3.4 5.4,-0.4 C5.6,2.4 -4.6,3 -5,0 Z" fill="#5a2208" stroke="#2a0e02" strokeWidth="0.45" />
+          <path d="M-4.2,-0.4 C-3.6,-2.4 4,-2.6 4.6,-0.6 C3.6,0.8 -3.2,1 -4.2,-0.4 Z" fill="#9a4418" />
+          <path d="M-3,-1.2 C-1,-2 2,-2 3.4,-1.2" stroke="#ffd0a0" strokeWidth="0.55" fill="none" opacity="0.8" />
+          <path d="M-4.6,1 C-2,2 2,2 5,0.8" stroke="#2a0e02" strokeWidth="0.5" fill="none" opacity="0.7" />
+        </g>
+      ))}
+      <g fill="#6ab83a" stroke="#2e6a14" strokeWidth="0.3">
+        <circle cx="23" cy="21.6" r="1" /><circle cx="25" cy="21.3" r="1" /><circle cx="24" cy="22.8" r="1" />
+      </g>
+      <g fill="#c8f0a0"><circle cx="22.7" cy="21.3" r="0.3" /><circle cx="24.7" cy="21" r="0.3" /></g>
+      <Food1Steam x={24} y={11} />
+    </g>
+  );
+}
+
+// 11 レーズンバターサンド
+function Food1Sand({ x, y, cut }) {
+  // 平行四辺形の上面 + 前面断面
+  const top = `M${x},${y} l12,-2 l5,4 l-12,2 z`;
+  return (
+    <g>
+      {/* 下のビスケット前面 */}
+      <path d={`M${x + 5},${y + 4} l12,-2 l0,2.2 l-12,2 z`} fill="#b87a3a" stroke="#5a3410" strokeWidth="0.4" transform="translate(0,6.4)" />
+      <path d={`M${x},${y} l5,4 l0,2.2 l-5,-4 z`} fill="#c88a48" stroke="#5a3410" strokeWidth="0.4" transform="translate(0,6.4)" />
+      {/* クリーム */}
+      <path d={`M${x + 5},${y + 6.2} l12,-2 l0,4.2 l-12,2 z`} fill={cut ? "#fbf0d4" : "#f4e6c4"} stroke="#a88a5a" strokeWidth="0.35" />
+      <path d={`M${x},${y + 2.2} l5,4 l0,4.2 l-5,-4 z`} fill="#e8d6aa" stroke="#a88a5a" strokeWidth="0.35" />
+      {cut && (
+        <g fill="#4a1a2a" stroke="#2a0a14" strokeWidth="0.2">
+          <ellipse cx={x + 7} cy={y + 8.2} rx="0.9" ry="0.6" /><ellipse cx={x + 10} cy={y + 7.2} rx="0.9" ry="0.6" />
+          <ellipse cx={x + 13} cy={y + 7.4} rx="0.9" ry="0.6" /><ellipse cx={x + 15.5} cy={y + 6} rx="0.8" ry="0.55" />
+          <ellipse cx={x + 8.5} cy={y + 9.6} rx="0.7" ry="0.5" /><ellipse cx={x + 12} cy={y + 9} rx="0.7" ry="0.5" />
+        </g>
+      )}
+      {!cut && (
+        <g fill="#5a2a30"><ellipse cx={x + 2} cy={y + 5} rx="0.6" ry="0.5" /><ellipse cx={x + 3.6} cy={y + 6.8} rx="0.6" ry="0.5" /></g>
+      )}
+      {/* 上のビスケット */}
+      <path d={`M${x + 5},${y + 4} l12,-2 l0,2.2 l-12,2 z`} fill="#c08040" stroke="#5a3410" strokeWidth="0.4" />
+      <path d={`M${x},${y} l5,4 l0,2.2 l-5,-4 z`} fill="#d09450" stroke="#5a3410" strokeWidth="0.4" />
+      <path d={top} fill="#e0a85a" stroke="#5a3410" strokeWidth="0.45" />
+      <path d={`M${x + 2},${y + 0.6} l9,-1.5`} stroke="#fbe0a8" strokeWidth="0.6" opacity="0.8" />
+      <g fill="#a86a2a"><circle cx={x + 6} cy={y + 1.5} r="0.35" /><circle cx={x + 10} cy={y + 1} r="0.35" /><circle cx={x + 9} cy={y + 2.6} r="0.35" /><circle cx={x + 13} cy={y + 1.8} r="0.35" /></g>
+    </g>
+  );
+}
+function FoodHkButtersand() {
+  return (
+    <g>
+      <Food1Shadow rx={19} cy={41} />
+      <Food1Sand x={4} y={13} cut={false} />
+      <Food1Sand x={20} y={22} cut={true} />
+    </g>
+  );
+}
+
+// 12 十勝のナチュラルチーズ
+function FoodHkCheese() {
+  return (
+    <g>
+      <Food1Shadow rx={20} cy={42} />
+      {/* 木の板 */}
+      <path d="M3,32 L36,26 L46,34 L13,40.5 Z" fill="#b07838" stroke="#4a2c10" strokeWidth="0.55" />
+      <path d="M13,40.5 L46,34 L46,36 L13,42.5 Z" fill="#7a4a1e" />
+      <path d="M3,32 L13,40.5 L13,42.5 L3,34 Z" fill="#9a6228" />
+      <g stroke="#8a5622" strokeWidth="0.4" fill="none" opacity="0.8">
+        <path d="M8,33.5 q10,-2 30,-5.5" /><path d="M11,36.5 q12,-2.5 31,-5.6" /><path d="M14,38.8 q10,-2 28,-5" />
+      </g>
+      {/* 奥のホール */}
+      <path d="M6,20 C6,15 30,12 36,16 L36,24 C30,27 8,28 6,24 Z" fill="#d8a838" stroke="#5a3e10" strokeWidth="0.5" />
+      <ellipse cx="21" cy="17.5" rx="15" ry="3.6" fill="#f0c860" stroke="#5a3e10" strokeWidth="0.5" />
+      <ellipse cx="17" cy="16.8" rx="7" ry="1.3" fill="#fbe39a" opacity="0.8" />
+      <path d="M7,21 C12,23.5 28,23 35,19.5" stroke="#b8862a" strokeWidth="0.6" fill="none" />
+      {/* 手前の扇形の一切れ */}
+      <path d="M14,30 L34,23 L34,32 L14,38 Z" fill="#f8e09a" stroke="#5a3e10" strokeWidth="0.5" />
+      <path d="M14,30 L34,23 C37,25 38,27 38,29 L18,34 C17,32.6 15.6,31 14,30 Z" fill="#fff0b8" stroke="#5a3e10" strokeWidth="0.5" />
+      <path d="M38,29 L38,35 L34,32 L34,23 C37,25 38,27 38,29 Z" fill="#d8a838" stroke="#5a3e10" strokeWidth="0.5" />
+      <path d="M38,29 L18,34 L18,40 L38,35 Z" fill="#c89428" stroke="#5a3e10" strokeWidth="0.5" opacity="0" />
+      {/* 断面の穴 */}
+      <g fill="#d8b050" stroke="#a87e24" strokeWidth="0.3">
+        <ellipse cx="19" cy="32" rx="1.4" ry="1.1" /><ellipse cx="25" cy="30" rx="1.1" ry="0.9" />
+        <ellipse cx="29.5" cy="29.5" rx="1.5" ry="1.2" /><ellipse cx="22.5" cy="34.2" rx="0.9" ry="0.7" />
+        <ellipse cx="31.6" cy="26" rx="0.8" ry="0.6" />
+      </g>
+      <g fill="#fff8d8"><ellipse cx="18.6" cy="31.6" rx="0.5" ry="0.3" /><ellipse cx="29" cy="29" rx="0.5" ry="0.3" /></g>
+      <path d="M16,29.6 L32,24" stroke="#fff" strokeWidth="0.6" opacity="0.7" />
+    </g>
+  );
+}
+
+// 13 炉端焼き
+function FoodHkRobata() {
+  return (
+    <g>
+      <Food1Shadow rx={21} cy={43} />
+      {/* 炉 */}
+      <path d="M3,26 L45,26 L42,40 L6,40 Z" fill="#3a2a22" stroke="#0e0806" strokeWidth="0.6" />
+      <path d="M3,26 L6,40 L8,40 L5.4,26 Z" fill="#5a4436" />
+      <path d="M5,27 L43,27 L41,32 L7,32 Z" fill="#1a0e0a" />
+      {/* 炭 */}
+      <g>
+        <ellipse cx="11" cy="30.5" rx="3" ry="1.6" fill="#e84a1a" /><ellipse cx="17" cy="31" rx="3.2" ry="1.5" fill="#ff7a2a" />
+        <ellipse cx="24" cy="30.4" rx="3" ry="1.6" fill="#d83a14" /><ellipse cx="30" cy="31" rx="3.2" ry="1.5" fill="#ff8a30" />
+        <ellipse cx="37" cy="30.5" rx="3" ry="1.5" fill="#e04a18" />
+        <ellipse cx="17" cy="30.6" rx="1.6" ry="0.6" fill="#ffd060" /><ellipse cx="30" cy="30.6" rx="1.6" ry="0.6" fill="#ffd060" />
+        <ellipse cx="24" cy="31.8" rx="1.4" ry="0.5" fill="#3a1a10" /><ellipse cx="11" cy="31.5" rx="1.2" ry="0.5" fill="#3a1a10" />
+      </g>
+      {/* 網（平行の棒のみ） */}
+      <g stroke="#8a8a90" strokeWidth="0.5">
+        <path d="M5,28.2 L43,28.2" /><path d="M5.5,29.8 L42.5,29.8" />
+      </g>
+      {/* ホッケの開き */}
+      <path d="M4,24 C6,18 16,16 22,19 L24,17 L24.5,23 L22,24 C16,27 6,28 4,24 Z" fill="#c88a40" stroke="#4a2a0c" strokeWidth="0.5" />
+      <path d="M6,23 C9,19.5 16,18.5 21,20.2 C16,21 10,21.5 6,23 Z" fill="#f0c070" />
+      <path d="M6,24 C11,22.8 16,22.6 21.5,21.6" stroke="#6a3a10" strokeWidth="0.8" fill="none" />
+      <path d="M8,25.6 C12,25 17,24.4 21,23" stroke="#3a2a20" strokeWidth="0.8" fill="none" opacity="0.6" />
+      <g stroke="#5a2a08" strokeWidth="0.6" opacity="0.7"><path d="M9,20.6 l1,3" /><path d="M13,19.6 l1,3.4" /><path d="M17,19.4 l0.8,3" /></g>
+      {/* ホタテ */}
+      <path d="M26,25 C25,20 29,16.6 32,16.6 C35,16.6 39,20 38,25 Z" fill="#e8b890" stroke="#5a3418" strokeWidth="0.5" />
+      <path d="M27,24.6 C26.6,21 29,18.5 32,18.5 C35,18.5 37.4,21 37,24.6 Z" fill="#f8e8d0" />
+      <ellipse cx="32" cy="22.4" rx="3.2" ry="1.9" fill="#fff6e8" stroke="#c8a888" strokeWidth="0.35" />
+      <ellipse cx="31" cy="21.8" rx="1.3" ry="0.6" fill="#fff" />
+      <path d="M33,23.6 c1,-0.4 2,-0.2 2.4,0.6" stroke="#e89a50" strokeWidth="0.8" fill="none" />
+      {/* とうもろこし */}
+      <g transform="translate(40.5,19) rotate(70)">
+        <rect x="-6" y="-2.2" width="12" height="4.4" rx="2.2" fill="#e8b020" stroke="#6a4a08" strokeWidth="0.45" />
+        <g fill="#ffd84a">
+          <circle cx="-4" cy="-1" r="0.6" /><circle cx="-2.4" cy="-1" r="0.6" /><circle cx="-0.8" cy="-1" r="0.6" /><circle cx="0.8" cy="-1" r="0.6" /><circle cx="2.4" cy="-1" r="0.6" /><circle cx="4" cy="-1" r="0.6" />
+        </g>
+        <g fill="#a86a10"><circle cx="-1.6" cy="0.8" r="0.5" /><circle cx="1.6" cy="0.9" r="0.5" /></g>
+      </g>
+      <Food1Steam x={22} y={14} s={0.8} />
+    </g>
+  );
+}
+
+// 14 ザンギ
+function FoodHkZangi() {
+  const pieces = [
+    [14, 29, 6, 4.4, -10], [26, 30, 6.4, 4.6, 8], [36, 28.6, 5.6, 4.2, 15],
+    [19, 22.6, 6, 4.4, -5], [30, 22, 5.8, 4.4, 10], [24.5, 16.4, 5.6, 4.2, 0],
+  ];
+  return (
+    <g>
+      <Food1Shadow rx={20} />
+      <ellipse cx="24" cy="35" rx="21" ry="6.5" fill="#c8ccd2" stroke="#4a4e56" strokeWidth="0.5" />
+      <ellipse cx="24" cy="34.4" rx="19" ry="5.4" fill="#f4f6f8" />
+      {/* レタス */}
+      <path d="M5,31 q2,-6 9,-5 q-2,3 -1,6 q-4,2 -8,-1z" fill="#7ac040" stroke="#3a7018" strokeWidth="0.4" />
+      {pieces.map(([x, y, rx, ry, r], i) => (
+        <g key={i} transform={`translate(${x},${y}) rotate(${r})`}>
+          <path d={`M${-rx},0 C${-rx},${-ry * 1.1} ${-rx * 0.2},${-ry * 1.2} ${rx * 0.4},${-ry} C${rx * 1.1},${-ry * 0.8} ${rx * 1.05},${ry * 0.4} ${rx * 0.6},${ry * 0.8} C0,${ry * 1.15} ${-rx * 0.9},${ry * 0.9} ${-rx},0 Z`} fill="#a8581a" stroke="#4a1e04" strokeWidth="0.5" />
+          <path d={`M${-rx * 0.8},${-ry * 0.2} C${-rx * 0.7},${-ry * 0.9} ${rx * 0.2},${-ry * 0.95} ${rx * 0.6},${-ry * 0.5} C${rx * 0.2},${-ry * 0.1} ${-rx * 0.4},${0} ${-rx * 0.8},${-ry * 0.2} Z`} fill="#d88a36" />
+          <g fill="#f4c068">
+            <circle cx={-rx * 0.4} cy={-ry * 0.5} r="0.45" /><circle cx={0} cy={-ry * 0.7} r="0.4" /><circle cx={rx * 0.3} cy={-ry * 0.45} r="0.35" />
+            <circle cx={-rx * 0.1} cy={-ry * 0.3} r="0.3" />
+          </g>
+          <g fill="#6a2a08"><circle cx={rx * 0.4} cy={ry * 0.3} r="0.45" /><circle cx={-rx * 0.3} cy={ry * 0.45} r="0.4" /></g>
+        </g>
+      ))}
+      {/* レモン */}
+      <path d="M33,36 C35,32 41,31 44,33.5 C41,35.5 37,37 33,36 Z" fill="#fbe04a" stroke="#8a7010" strokeWidth="0.45" />
+      <path d="M34.5,35.2 C36.5,33 40,32.6 42.5,33.6" stroke="#fffbe0" strokeWidth="0.6" fill="none" />
+      <path d="M33,36 C37,37.5 41,36.5 44,33.5 L44.2,34.5 C41,37.6 37,38.4 33.2,36.8 Z" fill="#e8b818" />
+    </g>
+  );
+}
+
+// 15 まりも羊羹
+function FoodHkMarimo() {
+  return (
+    <g>
+      <Food1Shadow rx={18} />
+      <ellipse cx="24" cy="37" rx="19" ry="5" fill="#2a4a6a" stroke="#0e1e2e" strokeWidth="0.5" />
+      <ellipse cx="24" cy="36.4" rx="17" ry="4" fill="#3e6a94" />
+      {/* 包まれた一つ（左奥） */}
+      <circle cx="13" cy="27.5" r="6.2" fill="#3a7a2a" stroke="#123a0a" strokeWidth="0.5" />
+      <circle cx="13" cy="27.5" r="6.2" fill="#c8e8c0" opacity="0.18" />
+      <path d="M8,25 C9,22.5 11,21.6 13,21.6" stroke="#fff" strokeWidth="0.9" fill="none" opacity="0.75" strokeLinecap="round" />
+      <path d="M13,21.4 l-0.8,-1.4 l1.6,0 z" fill="#2a5a1e" stroke="#123a0a" strokeWidth="0.3" />
+      <path d="M16,32 C18,30 19,27 18.6,24.6" stroke="#1e4a14" strokeWidth="0.8" fill="none" opacity="0.6" />
+      {/* はじけた皮 */}
+      <path d="M22,33 C21,30 23,28 25,29 C27,30 28,32 33,32 C36,32 39,30 40,33 C38,36 25,36.5 22,33 Z" fill="#4a8a34" stroke="#123a0a" strokeWidth="0.5" opacity="0.9" />
+      <path d="M24,32.6 C26,33.6 34,34 38.6,33" stroke="#9ad080" strokeWidth="0.5" fill="none" />
+      {/* 飛び出した羊羹 */}
+      <circle cx="30.5" cy="24" r="5.6" fill="#2e6a1e" stroke="#0e2a06" strokeWidth="0.55" />
+      <circle cx="29.6" cy="23" r="4.4" fill="#4a9a30" />
+      <circle cx="28.4" cy="21.6" r="2.2" fill="#78c050" />
+      <ellipse cx="27.6" cy="20.6" rx="1.2" ry="0.7" fill="#eaffd8" opacity="0.9" />
+      {/* 楊枝 */}
+      <path d="M44,10 L33.5,19.5" stroke="#e8cf9a" strokeWidth="0.9" strokeLinecap="round" />
+      <path d="M44,10 L33.5,19.5" stroke="#a88a50" strokeWidth="0.3" strokeLinecap="round" />
+      {/* はじける動きの短い線 */}
+      <g stroke="#e8ffd8" strokeWidth="0.5" strokeLinecap="round" opacity="0.8">
+        <path d="M37.6,22 l1.6,-0.4" /><path d="M37,26 l1.5,0.6" /><path d="M23.6,20 l-1.4,-0.8" />
+      </g>
+    </g>
+  );
+}
+
+// 16 干し貝柱
+function Food1Scallop({ x, y, r = 3.2 }) {
+  return (
+    <g>
+      {/* 背の高い円柱、側面に縦の繊維、上面は少しへこんだ琥珀 */}
+      <path d={`M${x - r},${y} L${x - r * 0.92},${y + r * 1.1} A${r * 0.92},${r * 0.5} 0 0 0 ${x + r * 0.92},${y + r * 1.1} L${x + r},${y} Z`} fill="#a8641c" stroke="#3a1e04" strokeWidth="0.45" />
+      <path d={`M${x - r},${y} L${x - r * 0.92},${y + r * 1.1} A${r * 0.92},${r * 0.5} 0 0 0 ${x - r * 0.2},${y + r * 1.55} L${x - r * 0.3},${y + 0.5} Z`} fill="#d08a34" />
+      <g stroke="#6a3a0c" strokeWidth="0.3" fill="none" opacity="0.7">
+        <path d={`M${x + r * 0.2},${y + 0.6} q0.3,${r * 0.5} 0,${r * 0.95}`} /><path d={`M${x + r * 0.6},${y + 0.4} q0.3,${r * 0.5} 0,${r * 0.85}`} />
+        <path d={`M${x - r * 0.6},${y + 0.4} q0.3,${r * 0.5} 0,${r * 0.85}`} />
+      </g>
+      <ellipse cx={x} cy={y} rx={r} ry={r * 0.5} fill="#e8a848" stroke="#3a1e04" strokeWidth="0.45" />
+      <ellipse cx={x + r * 0.1} cy={y + r * 0.05} rx={r * 0.62} ry={r * 0.28} fill="#c8822c" />
+      <ellipse cx={x - r * 0.4} cy={y - r * 0.15} rx={r * 0.32} ry={r * 0.12} fill="#fff4c8" opacity="0.85" />
+    </g>
+  );
+}
+function FoodHkKaibashira() {
+  return (
+    <g>
+      <Food1Shadow rx={20} />
+      {/* ホタテの殻（斜めに寝かせた貝殻、波打つ縁と耳） */}
+      <g transform="translate(16,21) rotate(-14)">
+        <path d="M0,10 L-11,3 C-12,-4 -7,-10 0,-10 C7,-10 12,-4 11,3 Z" fill="#e8b494" stroke="#6a3418" strokeWidth="0.55" />
+        <path d="M-11,3 q1,-2.2 2.2,-0.6 q0.6,-3 2.4,-1 q0.8,-3 2.4,-1.2 q1.2,-2.6 2.4,-0.6 q1.4,-2.4 2.4,-0.4 q1.6,-2 2.2,0 q1.8,-1.6 2,0.6 q1.6,-0.8 1,1.2" fill="none" stroke="#a8603a" strokeWidth="0.45" />
+        <path d="M0,10 L-11,3 C-12,-4 -7,-10 0,-10 C-5,-6 -7,0 -6,6 Z" fill="#fbdcc4" />
+        <path d="M0,10 L11,3 C12,-3 9,-8 4,-9.6 C7,-5 7.4,1 5.6,6.6 Z" fill="#c07a56" />
+        <g fill="none" stroke="#b8704a" strokeWidth="0.6" opacity="0.85">
+          <path d="M0,9 C-6,3 -8,-3 -6.6,-8" /><path d="M0,9 C-3,3 -3.6,-3 -2.4,-9.6" />
+          <path d="M0,9 C1.4,3 1.6,-3 2.2,-9.6" /><path d="M0,9 C4.4,3 6,-3 6.2,-8.2" />
+        </g>
+        <path d="M-4,9.4 L4,9.4 L5,12.4 L-5,12.4 Z" fill="#dca282" stroke="#6a3418" strokeWidth="0.45" />
+        <path d="M-7.6,-4 C-6,-7.4 -3,-8.6 -0.6,-8.8" stroke="#fff" strokeWidth="0.7" fill="none" opacity="0.6" strokeLinecap="round" />
+      </g>
+      {/* 貝柱 */}
+      <Food1Scallop x={36} y={26} r={3.4} />
+      <Food1Scallop x={28.5} y={31} r={3.8} />
+      <Food1Scallop x={38.5} y={33.5} r={3.5} />
+      <Food1Scallop x={20} y={35.5} r={3.6} />
+      <Food1Scallop x={30} y={37.5} r={3.2} />
+    </g>
+  );
+}
+
+// 17 塩焼きそば（北見）
+function FoodHkShioyakisoba() {
+  return (
+    <g>
+      <Food1Shadow rx={21} cy={43} />
+      {/* 木の台 */}
+      <ellipse cx="24" cy="36" rx="21.5" ry="6.8" fill="#8a5428" stroke="#3a1e08" strokeWidth="0.55" />
+      <ellipse cx="24" cy="38" rx="21.5" ry="5" fill="#6a3a18" opacity="0.6" />
+      {/* 鉄板 */}
+      <ellipse cx="24" cy="31" rx="20" ry="8.4" fill="#2a2a2e" stroke="#000" strokeWidth="0.6" />
+      <ellipse cx="24" cy="30.4" rx="18.6" ry="7.4" fill="#45454c" />
+      <path d="M8,28 C10,25 16,23.4 22,23.2" stroke="#8a8a94" strokeWidth="0.8" fill="none" opacity="0.7" strokeLinecap="round" />
+      {/* 麺 */}
+      <path d="M9,30 C9,22 18,18 25,18 C33,18 39,22 39,29 C36,34 14,35 9,30 Z" fill="#e8dcb4" stroke="#8a7a50" strokeWidth="0.5" />
+      <g fill="none" stroke="#c8b480" strokeWidth="0.55" strokeLinecap="round">
+        <path d="M11,28 q3,-3 6,-1 t6,-1 t6,0 t7,-1" /><path d="M12,31 q3,-2 6,0 t6,-1 t6,0 t6,-1" />
+        <path d="M14,24 q3,-3 6,-1 t6,-1 t6,1" /><path d="M16,21 q3,-2 5,0 t6,-1" />
+      </g>
+      <g fill="none" stroke="#fff8e0" strokeWidth="0.5" strokeLinecap="round" opacity="0.9">
+        <path d="M12,26.6 q3,-3 6,-1.4" /><path d="M15,22.6 q3,-2.4 6,-1" /><path d="M21,30.2 q3,-1.6 6,-0.4" />
+      </g>
+      <g fill="#a87a3a" opacity="0.6"><circle cx="20" cy="27" r="0.5" /><circle cx="31" cy="25" r="0.5" /><circle cx="15" cy="29" r="0.4" /></g>
+      {/* キャベツ */}
+      <path d="M12,23 q3,-3 6,-1 q-2,2.4 -6,1z" fill="#9ad060" stroke="#4a7a20" strokeWidth="0.35" />
+      <path d="M30,30 q4,-2 7,0 q-3,2 -7,0z" fill="#b8e078" stroke="#4a7a20" strokeWidth="0.35" />
+      <path d="M22,31.6 q2,-1.6 4,0 q-2,1.4 -4,0z" fill="#9ad060" stroke="#4a7a20" strokeWidth="0.3" />
+      {/* 玉ねぎ */}
+      <g fill="none" stroke="#f6f0f8" strokeWidth="0.8" strokeLinecap="round">
+        <path d="M33,22 q2,1 3,3" /><path d="M17,30.6 q-1.6,-1 -2.4,-2.6" />
+      </g>
+      {/* ホタテ */}
+      {[[21, 22.6], [28, 21.4], [26, 27], [34.5, 26]].map(([x, y], i) => (
+        <g key={i}>
+          <ellipse cx={x} cy={y + 0.6} rx="2.4" ry="1.5" fill="#c8a888" />
+          <ellipse cx={x} cy={y} rx="2.4" ry="1.5" fill="#fbf4ea" stroke="#9a7a5a" strokeWidth="0.35" />
+          <ellipse cx={x - 0.6} cy={y - 0.4} rx="0.9" ry="0.4" fill="#fff" />
+          <path d={`M${x + 0.2},${y + 0.8} q1,0 1.8,-0.6`} stroke="#d8a060" strokeWidth="0.5" fill="none" />
+        </g>
+      ))}
+      <Food1Steam x={24} y={15} s={0.85} />
+    </g>
+  );
+}
+
+// 18 ハッカ飴
+function Food1Candy({ x, y, s = 1, rot = 0 }) {
+  return (
+    <g transform={`translate(${x},${y}) rotate(${rot}) scale(${s})`}>
+      <path d="M-4.6,-2.4 C-4.6,-4 -3.4,-4.4 0,-4.4 C3.4,-4.4 4.6,-4 4.6,-2.4 L4.6,2.4 C4.6,4 3.4,4.4 0,4.4 C-3.4,4.4 -4.6,4 -4.6,2.4 Z" fill="#c8dce8" stroke="#5a7488" strokeWidth="0.5" />
+      <path d="M-3.4,-1.8 C-3.4,-3 -2.4,-3.2 0,-3.2 C2.4,-3.2 3.4,-3 3.4,-1.8 L3.4,1.8 C3.4,3 2.4,3.2 0,3.2 C-2.4,3.2 -3.4,3 -3.4,1.8 Z" fill="#eef6fb" opacity="0.9" />
+      <path d="M-2.4,2.4 C0,1 1.6,-1 2.4,-2.6" stroke="#b8d0e0" strokeWidth="1.2" fill="none" opacity="0.7" strokeLinecap="round" />
+      <path d="M-3,-2.6 L-0.5,-2.8" stroke="#fff" strokeWidth="0.8" strokeLinecap="round" />
+      <circle cx="-3" cy="-1.4" r="0.45" fill="#fff" />
+      <path d="M4.6,-2 L4.6,2.4 C4.6,4 3.4,4.4 0,4.4" stroke="#8aa4b8" strokeWidth="0.7" fill="none" opacity="0.7" />
+    </g>
+  );
+}
+function Food1Mint({ x, y, rot = 0, s = 1 }) {
+  return (
+    <g transform={`translate(${x},${y}) rotate(${rot}) scale(${s})`}>
+      <path d="M0,0 C-3,-1 -4,-5 0,-9 C4,-5 3,-1 0,0 Z" fill="#3e9a4a" stroke="#14501c" strokeWidth="0.45" />
+      <path d="M0,0 C-3,-1 -4,-5 0,-9 C-1.5,-5 -1,-2 0,0 Z" fill="#6ac06a" />
+      <path d="M0,-0.5 L0,-8" stroke="#a8e0a0" strokeWidth="0.4" />
+      <g stroke="#a8e0a0" strokeWidth="0.3" fill="none"><path d="M0,-3 l-1.8,-1.2" /><path d="M0,-5 l1.8,-1.2" /><path d="M0,-6.4 l-1.4,-1" /></g>
+    </g>
+  );
+}
+function FoodHkHakka() {
+  return (
+    <g>
+      <Food1Shadow rx={19} />
+      <ellipse cx="24" cy="36" rx="20" ry="5.6" fill="#7a9ab0" stroke="#2a4458" strokeWidth="0.5" />
+      <ellipse cx="24" cy="35.4" rx="18" ry="4.6" fill="#d4e6f0" />
+      <Food1Mint x={11} y={31} rot={-50} s={1.1} />
+      <Food1Mint x={13} y={31} rot={-15} s={0.95} />
+      <Food1Candy x={17} y={32} rot={-12} />
+      <Food1Candy x={29} y={33} rot={14} />
+      <Food1Candy x={23} y={24.5} rot={4} />
+      <Food1Candy x={36} y={25} rot={-20} s={0.85} />
+      {/* ひんやりした光（飴の周りの淡い冷気） */}
+      <g fill="none" stroke="#d8f4ff" strokeLinecap="round" opacity="0.4" strokeWidth="0.8">
+        <path d="M14,22 q3,-3 7,-2.4" /><path d="M30,19 q4,-2 8,0" /><path d="M33,38.6 q4,0.6 7,-1.6" />
+      </g>
+      <circle cx="25" cy="21.6" r="0.7" fill="#fff" opacity="0.9" />
+      <circle cx="31" cy="30.4" r="0.6" fill="#fff" opacity="0.9" />
+    </g>
+  );
+}
+
+// 19 抹茶パフェ
+function FoodKyParfait() {
+  return (
+    <g>
+      <Food1Shadow rx={11} cy={44} />
+      {/* 脚 */}
+      <ellipse cx="24" cy="42.6" rx="7" ry="1.6" fill="#c8dce4" stroke="#4a6070" strokeWidth="0.45" />
+      <path d="M23,37 L25,37 L25.4,42 L22.6,42 Z" fill="#d8e8f0" stroke="#4a6070" strokeWidth="0.4" />
+      {/* グラス内容（下から） */}
+      <path d="M15,17 L33,17 L30,35 C28,38 20,38 18,35 Z" fill="#e8f2f4" />
+      <path d="M17.4,30.5 L30.6,30.5 L30,35 C28,38 20,38 18,35 Z" fill="#4a7a20" />
+      {/* 抹茶ゼリーの角 */}
+      <g fill="#6a9a2a" stroke="#2e5208" strokeWidth="0.3">
+        <path d="M19,31.5 l2.6,-0.2 l0.2,2.4 l-2.6,0.2 z" /><path d="M23.6,32 l2.6,0 l0,2.4 l-2.6,0 z" /><path d="M27,31.2 l2.4,0.3 l-0.3,2.4 l-2.4,-0.3 z" />
+      </g>
+      <g fill="#c8f080" opacity="0.8"><circle cx="19.8" cy="32" r="0.35" /><circle cx="24.4" cy="32.5" r="0.35" /></g>
+      <path d="M16.8,26.5 L31.2,26.5 L30.6,30.5 L17.4,30.5 Z" fill="#fbf8ee" />
+      <path d="M16.8,26.5 q2,1.6 4,0 t4,0 t4,0 t2.4,0" fill="none" stroke="#e8e0cc" strokeWidth="0.5" />
+      <path d="M16.2,22 L31.8,22 L31.2,26.5 L16.8,26.5 Z" fill="#5a2a2a" />
+      <g fill="#7a3a38"><ellipse cx="19" cy="23.6" rx="1" ry="0.6" /><ellipse cx="23" cy="24.8" rx="1" ry="0.6" /><ellipse cx="28" cy="23.4" rx="1" ry="0.6" /></g>
+      <path d="M15.6,18.5 L32.4,18.5 L31.8,22 L16.2,22 Z" fill="#f4f0e4" />
+      {/* グラスの光 */}
+      <path d="M15,17 L33,17 L30,35 C28,38 20,38 18,35 Z" fill="none" stroke="#6a8898" strokeWidth="0.55" />
+      <path d="M16.6,19 L18.6,34" stroke="#fff" strokeWidth="0.9" opacity="0.7" strokeLinecap="round" />
+      <path d="M31.6,19 L29.8,32" stroke="#fff" strokeWidth="0.4" opacity="0.4" />
+      <ellipse cx="24" cy="17" rx="9" ry="1.6" fill="#f4f0e4" stroke="#6a8898" strokeWidth="0.45" />
+      {/* 上：抹茶アイス・白玉・あんこ・ウエハース */}
+      <path d="M33,4 L36.4,4.6 L33.6,16 L30.4,15.4 Z" fill="#e8c078" stroke="#7a5420" strokeWidth="0.4" />
+      <path d="M33.6,6 L35.6,6.4 M33.2,8 L35.2,8.4 M32.8,10 L34.8,10.4 M32.4,12 L34.4,12.4" stroke="#b88a40" strokeWidth="0.35" />
+      <circle cx="24" cy="11.4" r="6" fill="#6a9a30" stroke="#2e5208" strokeWidth="0.5" />
+      <path d="M18,12 C18,8 21,5.4 24,5.4 C21,7 19.6,9.4 19.6,13 Z" fill="#8aba48" />
+      <path d="M18.4,14 C20,16.6 28,16.6 29.6,14" stroke="#3e6a14" strokeWidth="0.6" fill="none" />
+      <ellipse cx="21.4" cy="8.6" rx="1.4" ry="0.8" fill="#d8f0a8" opacity="0.8" />
+      <g fill="#4a7a18" opacity="0.8"><circle cx="25" cy="8" r="0.35" /><circle cx="27" cy="10" r="0.35" /><circle cx="23" cy="10.6" r="0.3" /><circle cx="26" cy="12.6" r="0.3" /></g>
+      <ellipse cx="14.6" cy="15" rx="2.6" ry="2.2" fill="#fbfaf4" stroke="#8a8270" strokeWidth="0.45" />
+      <ellipse cx="13.8" cy="14.2" rx="0.9" ry="0.6" fill="#fff" />
+      <ellipse cx="19" cy="16.2" rx="2.4" ry="2" fill="#fbfaf4" stroke="#8a8270" strokeWidth="0.45" />
+      <path d="M27,15.8 C27,13.6 31,13.2 32,15.4 C31,17 28,17 27,15.8 Z" fill="#4a1e1e" stroke="#2a0a0a" strokeWidth="0.4" />
+      <ellipse cx="29" cy="14.6" rx="0.8" ry="0.4" fill="#8a4a44" />
+    </g>
+  );
+}
+
+// 20 八ツ橋
+function FoodKyYatsuhashi() {
+  // 焼き八ツ橋：琴の形に反った細長い瓦状の煎餅（3/4 視点）
+  const baked = (x, y, rot) => (
+    <g transform={`translate(${x},${y}) rotate(${rot})`}>
+      <path d="M-11,3 Q0,-5 11,3 L11,4.3 Q0,-3.7 -11,4.3 Z" fill="#7a4612" stroke="#3a1e06" strokeWidth="0.45" />
+      <path d="M-11,3 Q0,-5 11,3 L14,0.6 Q3,-7.6 -8,0.6 Z" fill="#c4823a" stroke="#3a1e06" strokeWidth="0.5" strokeLinejoin="round" />
+      <path d="M-7,1.4 Q1.5,-5.2 10,0.8" stroke="#f2c884" strokeWidth="0.8" fill="none" strokeLinecap="round" opacity="0.9" />
+      <path d="M-9,2.6 Q0,-3.6 10,2.6" stroke="#9a5a1e" strokeWidth="0.5" fill="none" opacity="0.8" />
+      <g fill="#7a4612" opacity="0.7"><circle cx="-3" cy="-1.6" r="0.3" /><circle cx="4" cy="-2" r="0.3" /><circle cx="8" cy="0.4" r="0.3" /><circle cx="0.6" cy="-3.2" r="0.25" /></g>
+    </g>
+  );
+  // 生八ツ橋：正方形を三角に折って皿に寝かせたもの、開いた辺からあん
+  const nama = (x, y, rot, skin, skinD) => (
+    <g transform={`translate(${x},${y}) rotate(${rot})`}>
+      <path d="M-8.5,3.4 L8.5,3.4 L8.8,4.8 L-8.8,4.8 Z" fill={skinD} stroke="#4a4030" strokeWidth="0.4" />
+      <path d="M8.5,3.4 L2,-4.6 L3.2,-4.4 L9.6,3.2 Z" fill="#4a1418" stroke="#2a0a0c" strokeWidth="0.35" />
+      <path d="M-8.5,3.4 C-3,4 3,4 8.5,3.4 C6,0 4,-2.6 2,-4.6 C-1.6,-2 -5.6,1 -8.5,3.4 Z" fill={skin} stroke="#4a4030" strokeWidth="0.5" strokeLinejoin="round" />
+      <path d="M-4,2.2 C-1,-0.2 0.6,-1.4 1.8,-2.6 C2.6,-0.6 3.4,1.4 3.6,2.6 C0.6,2.9 -2,2.8 -4,2.2 Z" fill={skinD} opacity="0.55" />
+      <path d="M-6.4,2.4 C-4,0.4 -1.6,-1.4 1.2,-3.4" stroke="#fff" strokeWidth="0.6" opacity="0.6" strokeLinecap="round" fill="none" />
+      <path d="M7,3 C6.2,1.6 5,0 4,-1.2" stroke="#7a2e30" strokeWidth="0.9" opacity="0.8" strokeLinecap="round" fill="none" />
+      <g fill="#d8cca8" opacity="0.7"><circle cx="-2" cy="1.6" r="0.3" /><circle cx="2.6" cy="0.4" r="0.3" /></g>
+    </g>
+  );
+  return (
+    <g>
+      <Food1Shadow rx={20} />
+      <path d="M3,34 L41,30 L45,38 L7,42 Z" fill="#2e2a3a" stroke="#0a0810" strokeWidth="0.5" />
+      <path d="M4.4,34.4 L40.4,30.6 L43.6,37.4 L7.6,41.2 Z" fill="#4a4258" />
+      {baked(19, 20, -6)}
+      {baked(21, 25.5, -4)}
+      {nama(14, 34, -4, "#f6f0e2", "#d6caae")}
+      {nama(32, 31.5, 4, "#b0d080", "#7ea050")}
+      <g fill="#d8b878" opacity="0.7"><circle cx="9" cy="37" r="0.3" /><circle cx="38" cy="35" r="0.3" /><circle cx="26" cy="38" r="0.3" /></g>
+    </g>
+  );
+}
+
+const FOOD_ART_1 = {
+  hk_misoramen: FoodHkMisoramen,
+  hk_namachoco: FoodHkNamachoco,
+  hk_ishikarinabe: FoodHkIshikarinabe,
+  hk_shioramen: FoodHkShioramen,
+  hk_ikameshi: FoodHkIkameshi,
+  hk_cookie: FoodHkCookie,
+  hk_shoyuramen: FoodHkShoyuramen,
+  hk_melonjelly: FoodHkMelonjelly,
+  hk_lavender: FoodHkLavender,
+  hk_butadon: FoodHkButadon,
+  hk_buttersand: FoodHkButtersand,
+  hk_cheese: FoodHkCheese,
+  hk_robata: FoodHkRobata,
+  hk_zangi: FoodHkZangi,
+  hk_marimo: FoodHkMarimo,
+  hk_kaibashira: FoodHkKaibashira,
+  hk_shioyakisoba: FoodHkShioyakisoba,
+  hk_hakka: FoodHkHakka,
+  ky_parfait: FoodKyParfait,
+  ky_yatsuhashi: FoodKyYatsuhashi,
+};
+const Food2Ol = "#2a1608";
+
+function Food2Shadow({ cx = 24, cy = 42.5, rx = 17, ry = 3 }) {
+  return <ellipse cx={cx} cy={cy} rx={rx} ry={ry} fill="#000" opacity="0.32" />;
+}
+
+function Food2Steam({ x = 24, y = 12, s = 1 }) {
+  return (
+    <g fill="none" stroke="#fff" strokeLinecap="round" opacity="0.55" strokeWidth={0.9 * s}>
+      <path d={`M${x - 5 * s} ${y} q${-1.6 * s} ${-2.5 * s} 0 ${-5 * s} q${1.6 * s} ${-2.5 * s} 0 ${-5 * s}`} />
+      <path d={`M${x} ${y - 1 * s} q${-1.6 * s} ${-2.5 * s} 0 ${-5 * s} q${1.6 * s} ${-2.5 * s} 0 ${-5 * s}`} opacity="0.8" />
+      <path d={`M${x + 5 * s} ${y} q${-1.6 * s} ${-2.5 * s} 0 ${-5 * s} q${1.6 * s} ${-2.5 * s} 0 ${-4 * s}`} opacity="0.6" />
+    </g>
+  );
+}
+
+/* とげとげの金平糖ひとつぶ */
+function Food2Kon({ x, y, r = 2.2, c, d }) {
+  const bumps = [];
+  const outl = [];
+  for (let i = 0; i < 12; i++) {
+    const a = (i / 12) * Math.PI * 2 + x;
+    const k = i % 2 ? 0.9 : 0.98;
+    outl.push(<circle key={"o" + i} cx={x + Math.cos(a) * r * k} cy={y + Math.sin(a) * r * k} r={r * 0.3} fill={d} />);
+    bumps.push(<circle key={i} cx={x + Math.cos(a) * r * k} cy={y + Math.sin(a) * r * k} r={r * 0.22} fill={c} />);
+  }
+  return (
+    <g>
+      {outl}
+      <circle cx={x} cy={y} r={r * 0.95} fill={d} />
+      {bumps}
+      <circle cx={x} cy={y} r={r * 0.9} fill={c} />
+      <circle cx={x + r * 0.3} cy={y + r * 0.3} r={r * 0.5} fill={d} opacity="0.35" />
+      <circle cx={x - r * 0.2} cy={y - r * 0.15} r={r * 0.2} fill={d} opacity="0.3" />
+      <circle cx={x + r * 0.35} cy={y - r * 0.35} r={r * 0.17} fill={d} opacity="0.3" />
+      <circle cx={x - r * 0.4} cy={y - r * 0.4} r={r * 0.24} fill="#fff" opacity="0.9" />
+    </g>
+  );
+}
+
+/* 21 金平糖 */
+function FoodKyKonpeito() {
+  const cols = [
+    ["#fbf6ee", "#bdb2a2"], ["#f7a9c4", "#c9668a"], ["#f8e07a", "#c9a43a"], ["#9fd8f2", "#4e9cc4"],
+  ];
+  const pts = [
+    [21, 38, 0], [26.5, 39, 1], [32, 38.5, 2], [37, 39.5, 3], [29.5, 34.8, 3], [35, 34.5, 0],
+    [40.5, 36, 1], [24, 34.5, 2], [17, 39.5, 1], [12.5, 38.8, 3], [43, 40, 2],
+  ];
+  return (
+    <g>
+      <Food2Shadow rx={19} />
+      {/* 横たわった小瓶 */}
+      <g transform="rotate(-28 15 24)">
+        <rect x="6" y="14" width="15" height="17" rx="3" fill="#cfe6ee" opacity="0.35" stroke="#7fa6b4" strokeWidth="0.6" />
+        <rect x="9.5" y="9.5" width="8" height="5" rx="1" fill="#cfe6ee" opacity="0.3" stroke="#7fa6b4" strokeWidth="0.5" />
+        <rect x="9" y="8" width="9" height="2.3" rx="0.8" fill="#c7a26a" stroke="#6b4a22" strokeWidth="0.4" />
+        <Food2Kon x={10} y={27} r={1.7} c="#f7a9c4" d="#c9668a" />
+        <Food2Kon x={15} y={27.5} r={1.7} c="#fbf6ee" d="#bdb2a2" />
+        <Food2Kon x={12.5} y={23} r={1.7} c="#9fd8f2" d="#4e9cc4" />
+        <Food2Kon x={17.5} y={23.5} r={1.6} c="#f8e07a" d="#c9a43a" />
+        <Food2Kon x={9.5} y={19.5} r={1.5} c="#f8e07a" d="#c9a43a" />
+        <path d="M8 16 v12" stroke="#fff" strokeWidth="1.2" opacity="0.55" strokeLinecap="round" />
+        <path d="M10.5 10.5 v3" stroke="#fff" strokeWidth="0.7" opacity="0.6" strokeLinecap="round" />
+      </g>
+      {pts.map(([x, y, i], k) => (
+        <Food2Kon key={k} x={x} y={y} r={k % 3 === 0 ? 2.5 : 2.1} c={cols[i][0]} d={cols[i][1]} />
+      ))}
+    </g>
+  );
+}
+
+/* 22 宇治抹茶 */
+function FoodKyUjimatcha() {
+  return (
+    <g>
+      <Food2Shadow rx={19} />
+      {/* 茶碗 */}
+      <path d="M5 22 Q6 38 16 40 L26 40 Q36 38 37 22 Z" fill="#1c1714" stroke="#000" strokeWidth="0.6" />
+      <path d="M8 24 Q9 35 16 37.5" fill="none" stroke="#5a4c44" strokeWidth="1.4" opacity="0.7" strokeLinecap="round" />
+      <path d="M33 25 Q32 34 27 37.5" fill="none" stroke="#000" strokeWidth="1.5" opacity="0.5" />
+      <path d="M15 40 h12 v2 h-12 z" fill="#2a2420" />
+      <path d="M7 30 q3 2 6 0.5" fill="none" stroke="#6a3a22" strokeWidth="0.8" opacity="0.6" />
+      <ellipse cx="21" cy="22" rx="16" ry="4.6" fill="#2b2420" stroke="#000" strokeWidth="0.6" />
+      {/* 抹茶の泡 */}
+      <ellipse cx="21" cy="22.3" rx="14.2" ry="3.7" fill="#5f9a1e" />
+      <ellipse cx="20" cy="22" rx="12" ry="2.9" fill="#86c02e" />
+      <ellipse cx="18" cy="21.6" rx="7" ry="1.7" fill="#b3dc5a" />
+      <g fill="#d8f08c" opacity="0.9">
+        <circle cx="14" cy="21.5" r="0.45" /><circle cx="16.5" cy="22.6" r="0.35" /><circle cx="20" cy="21" r="0.4" />
+        <circle cx="23.5" cy="22.4" r="0.35" /><circle cx="26" cy="21.4" r="0.3" /><circle cx="18" cy="23.2" r="0.3" />
+      </g>
+      {/* 茶筅 */}
+      <g transform="rotate(14 41 26)">
+        <rect x="39.3" y="8" width="3.4" height="13" rx="1.2" fill="#d9c08a" stroke="#6b5226" strokeWidth="0.5" />
+        <path d="M40 9 v11" stroke="#f3e2b4" strokeWidth="0.7" opacity="0.8" />
+        <path d="M39.3 21 Q35.5 31 37.5 38 L44.5 38 Q46.5 31 42.7 21 Z" fill="#e6d29e" stroke="#6b5226" strokeWidth="0.5" />
+        <g stroke="#a8884c" strokeWidth="0.35">
+          <path d="M40 22 Q37.5 30 38.5 37.5" fill="none" /><path d="M40.8 22 Q39.6 30 40.2 37.8" fill="none" />
+          <path d="M41.6 22 Q42 30 41.9 37.8" fill="none" /><path d="M42.2 22 Q44.3 30 43.6 37.5" fill="none" />
+        </g>
+        <path d="M37.5 38 Q41 36 44.5 38" fill="none" stroke="#8a6a34" strokeWidth="0.6" />
+      </g>
+    </g>
+  );
+}
+
+/* 23 茶だんご */
+function Food2Dango({ ox, oy }) {
+  const balls = [0, 1, 2].map((i) => {
+    const x = ox + i * 5.6;
+    const y = oy - i * 5.6;
+    return (
+      <g key={i}>
+        <circle cx={x} cy={y} r="4.1" fill="#8fae5c" stroke="#3e5222" strokeWidth="0.5" />
+        <circle cx={x - 0.5} cy={y - 0.5} r="3.4" fill="#adc97a" />
+        <circle cx={x - 1} cy={y - 1} r="2.2" fill="#c7dc9c" />
+        <ellipse cx={x - 1.6} cy={y - 1.8} rx="1" ry="0.7" fill="#fff" opacity="0.75" />
+      </g>
+    );
+  });
+  return (
+    <g>
+      <path d={`M${ox - 8} ${oy + 8} L${ox + 16} ${oy - 16}`} stroke="#c9a46a" strokeWidth="1.1" strokeLinecap="round" />
+      <path d={`M${ox - 8} ${oy + 8} L${ox - 3} ${oy + 3}`} stroke="#8a6a3a" strokeWidth="0.4" />
+      {balls}
+      <path d={`M${ox + 13.5} ${oy - 13.5} L${ox + 15.5} ${oy - 15.5}`} stroke="#c9a46a" strokeWidth="1.1" strokeLinecap="round" />
+    </g>
+  );
+}
+function FoodKyChadango() {
+  return (
+    <g>
+      <Food2Shadow rx={19} />
+      <ellipse cx="24" cy="36" rx="20" ry="6" fill="#efe6d4" stroke="#7d6a4c" strokeWidth="0.6" />
+      <ellipse cx="24" cy="35.4" rx="17" ry="4.4" fill="#f8f2e6" />
+      <Food2Dango ox={10} oy={32} />
+      <Food2Dango ox={21.5} oy={37} />
+    </g>
+  );
+}
+
+/* 24 茶そば */
+function FoodKyChasoba() {
+  return (
+    <g>
+      <Food2Shadow rx={20} />
+      {/* ざる */}
+      <ellipse cx="20" cy="31" rx="18" ry="8.5" fill="#a07c42" stroke="#4e3612" strokeWidth="0.6" />
+      <ellipse cx="20" cy="30.3" rx="16" ry="7" fill="#c9a464" />
+      <g stroke="#9a7638" strokeWidth="0.35" fill="none">
+        <ellipse cx="20" cy="30.3" rx="13" ry="5.6" /><ellipse cx="20" cy="30.3" rx="10" ry="4.3" />
+        <path d="M6 28 Q20 34 34 28" /><path d="M7 32 Q20 37.5 33 32" />
+      </g>
+      {/* 緑のそば */}
+      <path d="M7 29 Q8 21 20 19.5 Q32 21 33 29 Q20 33 7 29 Z" fill="#3e5824" stroke="#1e2c10" strokeWidth="0.5" />
+      <g fill="none" strokeLinecap="round">
+        {[0, 1, 2, 3, 4, 5, 6, 7].map((i) => {
+          const y = 21 + i * 1.1;
+          const w = 9 + Math.min(i, 7 - i) * 1.5 + 2;
+          return (
+            <g key={i}>
+              <path d={`M${20 - w} ${y + 1.6} Q${20 - w / 2} ${y - 0.8} ${20} ${y + 0.4} Q${20 + w / 2} ${y + 1.6} ${20 + w} ${y}`} stroke="#6f8c3e" strokeWidth="0.95" />
+              <path d={`M${20 - w + 1} ${y + 1} Q${20 - w / 2} ${y - 1.2} ${19} ${y - 0.2}`} stroke={i % 2 ? "#a8c070" : "#94ae5e"} strokeWidth="0.55" />
+            </g>
+          );
+        })}
+        <path d="M12 21.2 Q17 19.4 23 20.2" stroke="#cfe09a" strokeWidth="0.6" />
+      </g>
+      {/* 刻みのり */}
+      <g stroke="#1f2418" strokeWidth="0.5">
+        <path d="M17 20.5 l1.6 -0.5" /><path d="M20.5 21 l1.5 0.4" /><path d="M23 20.2 l1.4 -0.6" />
+      </g>
+      {/* そばちょこ */}
+      <path d="M33 30 L34.4 40.5 Q38.5 42 42.6 40.5 L44 30 Z" fill="#e8ecf0" stroke="#3e4650" strokeWidth="0.6" />
+      <path d="M34.3 33 Q38.5 34.5 43.6 33" fill="none" stroke="#3d5f9c" strokeWidth="0.9" />
+      <path d="M34.6 36 Q38.5 37.3 43.3 36" fill="none" stroke="#3d5f9c" strokeWidth="0.6" />
+      <path d="M35 31 L35.8 40" stroke="#fff" strokeWidth="0.8" opacity="0.8" />
+      <ellipse cx="38.5" cy="30" rx="5.5" ry="1.7" fill="#d8dde2" stroke="#3e4650" strokeWidth="0.5" />
+      <ellipse cx="38.5" cy="30.2" rx="4.7" ry="1.2" fill="#3a1e0c" />
+      <ellipse cx="37.3" cy="29.9" rx="1.6" ry="0.4" fill="#a0603a" opacity="0.8" />
+    </g>
+  );
+}
+
+/* 25 丹波黒豆の甘納豆 */
+function FoodKyKuromame() {
+  const beans = [
+    [17, 28, -20], [22.5, 27, 10], [28, 28.5, -5], [33, 27.5, 25], [15, 32.5, 15], [20.5, 32, -15],
+    [26, 33, 20], [31.5, 32.5, -10], [24, 23.5, 0], [19, 24.5, 30], [29.5, 24, -25], [36, 31.5, 5],
+  ];
+  return (
+    <g>
+      <Food2Shadow rx={19} />
+      <ellipse cx="25" cy="32" rx="20" ry="8.5" fill="#d9cdb4" stroke="#5c4a2c" strokeWidth="0.6" />
+      <ellipse cx="25" cy="31" rx="17.5" ry="6.8" fill="#f0e8d6" />
+      <path d="M9 31 Q11 36 20 37.5" fill="none" stroke="#a89470" strokeWidth="0.8" opacity="0.6" />
+      {beans.map(([x, y, r], i) => (
+        <g key={i} transform={`rotate(${r} ${x} ${y})`}>
+          <ellipse cx={x} cy={y} rx="3.4" ry="2.7" fill="#120c14" stroke="#000" strokeWidth="0.4" />
+          <ellipse cx={x - 0.3} cy={y - 0.3} rx="2.6" ry="1.9" fill="#2a2030" />
+          <ellipse cx={x - 1.2} cy={y - 1} rx="1.2" ry="0.6" fill="#8e86a0" opacity="0.9" />
+          <circle cx={x + 1} cy={y + 0.6} r="0.35" fill="#fff" />
+          <circle cx={x + 1.8} cy={y - 0.6} r="0.3" fill="#fff" />
+          <circle cx={x - 0.2} cy={y + 1.5} r="0.3" fill="#fff" opacity="0.9" />
+          <circle cx={x - 2} cy={y + 0.8} r="0.25" fill="#fff" opacity="0.9" />
+        </g>
+      ))}
+      <g fill="#fff" opacity="0.85">
+        <circle cx="12" cy="30" r="0.3" /><circle cx="38" cy="29" r="0.3" /><circle cx="23" cy="36.5" r="0.3" />
+      </g>
+    </g>
+  );
+}
+
+/* 26 ぼたん鍋 */
+function FoodKyBotan() {
+  const petals = [];
+  const ring = (n, rx, ry, sc, off) => {
+    for (let i = 0; i < n; i++) {
+      const a = (i / n) * Math.PI * 2 + off;
+      const x = 24 + Math.cos(a) * rx;
+      const y = 26.5 + Math.sin(a) * ry;
+      const deg = (a * 180) / Math.PI + 90;
+      petals.push(
+        <g key={petals.length} transform={`translate(${x} ${y}) rotate(${deg}) scale(${sc} ${sc * 0.62})`}>
+          <ellipse cx="0" cy="0" rx="3.6" ry="4.2" fill="#b8323a" stroke="#5a0e14" strokeWidth="0.5" />
+          <path d="M-3.4 -1.4 Q0 -5.4 3.4 -1.4" fill="none" stroke="#f4e4dc" strokeWidth="1.3" />
+          <ellipse cx="-0.8" cy="0.8" rx="1.6" ry="1.5" fill="#d8525a" />
+        </g>
+      );
+    }
+  };
+  ring(9, 9.5, 5.6, 1, 0);
+  ring(6, 5, 3, 0.9, 0.5);
+  ring(4, 1.8, 1.1, 0.75, 0.2);
+  return (
+    <g>
+      <Food2Shadow rx={20} cy={43} />
+      {/* 土鍋 */}
+      <path d="M3 26 Q4 39 24 41 Q44 39 45 26 Z" fill="#6a4a34" stroke="#24140a" strokeWidth="0.6" />
+      <path d="M6 29 Q9 37 20 39" fill="none" stroke="#9a7458" strokeWidth="1.2" opacity="0.7" />
+      <path d="M3 30 q-2 0 -2 2 q0 2 2 2" fill="none" stroke="#4a3020" strokeWidth="1.3" />
+      <path d="M45 30 q2 0 2 2 q0 2 -2 2" fill="none" stroke="#4a3020" strokeWidth="1.3" />
+      <ellipse cx="24" cy="26" rx="21" ry="9" fill="#e8dcc4" stroke="#24140a" strokeWidth="0.6" />
+      <ellipse cx="24" cy="26.4" rx="19" ry="7.8" fill="#a8743c" />
+      <ellipse cx="22" cy="25.5" rx="15" ry="5.6" fill="#bf8a4a" />
+      {/* 白菜・ねぎ・きのこ */}
+      <path d="M6 25 Q8 19.5 13 21 Q10 25 8 30 Z" fill="#eef0c8" stroke="#8a9a4a" strokeWidth="0.4" />
+      <path d="M7 24 Q9 21 12 21.5" fill="none" stroke="#9ac04a" strokeWidth="1" />
+      <path d="M38 21 Q43 22 42.5 27 Q39 26 36 23 Z" fill="#7ab04a" stroke="#3e6a1e" strokeWidth="0.4" />
+      <g fill="#f4f0e0" stroke="#9a8a6a" strokeWidth="0.35">
+        <ellipse cx="37" cy="31" rx="1.8" ry="1.2" /><ellipse cx="40" cy="29.5" rx="1.8" ry="1.2" />
+        <ellipse cx="9" cy="31.5" rx="1.6" ry="1.1" />
+      </g>
+      <g fill="#7a4a24" stroke="#3a200c" strokeWidth="0.3">
+        <path d="M30 31.5 q2 -2 4 0 z" /><path d="M12.5 32.5 q2 -2 4 0 z" />
+      </g>
+      {petals}
+      <Food2Steam x={24} y={15} s={0.8} />
+    </g>
+  );
+}
+
+/* 27 美山の牛乳ソフトクリーム */
+function FoodKyMiyamasoft() {
+  return (
+    <g>
+      {/* 茅葺き屋根の影 */}
+      <g opacity="0.55">
+        <path d="M2 26 L12 13 L22 13 L30 26 Z" fill="#4a3a2a" />
+        <path d="M5 26 h22 v8 h-22 z" fill="#2e2418" />
+        <path d="M14 29 h4 v5 h-4 z" fill="#c9a050" opacity="0.6" />
+        <path d="M12 13 L17 9.5 L22 13" fill="#3a2c1c" />
+        <path d="M30 28 L37 20 L44 28 Z" fill="#3a2e22" opacity="0.7" />
+      </g>
+      <Food2Shadow cx={28} rx={8} ry={2} />
+      {/* コーン */}
+      <path d="M22.5 25 L28 43 L33.5 25 Z" fill="#d49a4c" stroke="#5c3610" strokeWidth="0.6" />
+      <g stroke="#a8702e" strokeWidth="0.5">
+        <path d="M23.5 28 L32 30" /><path d="M24.4 31 L31.2 33" /><path d="M25.3 34 L30.4 36" />
+        <path d="M32.5 28 L26 37" /><path d="M33 26 L24 30" />
+      </g>
+      <path d="M23.5 25.5 L27.5 41" stroke="#f0c47c" strokeWidth="0.8" opacity="0.7" />
+      <path d="M22 24 h12 v2.4 h-12 z" fill="#e0aa5c" stroke="#5c3610" strokeWidth="0.5" />
+      {/* ソフトクリーム */}
+      <path d="M21 24.5 Q20 21 23 20 Q21 17.5 24.5 16 Q23.5 13 27 12 Q27.5 9 29 7.5 Q30 11 31.5 12.5 Q34.5 14 32.5 16.5 Q35.5 18 33.5 20.2 Q36.5 21.5 35 24.5 Z" fill="#fbfaf4" stroke="#8a8a80" strokeWidth="0.55" />
+      <g fill="none" stroke="#cfcdc0" strokeWidth="0.8">
+        <path d="M22.5 21 Q28 22.8 34 20.8" /><path d="M24 16.8 Q29 18.6 33 16.6" /><path d="M26.5 12.6 Q29.5 14 31.8 12.8" />
+      </g>
+      <path d="M33 22 Q35 23 34.5 24.4 L28 24.5 Q32 24 33 22 Z" fill="#dedbd0" />
+      <g fill="none" stroke="#fff" strokeLinecap="round">
+        <path d="M23 22 Q24 20.6 26 20.6" strokeWidth="1" /><path d="M25 17.6 Q26 16.3 27.6 16.3" strokeWidth="0.9" />
+        <path d="M27.6 13 Q28.2 11.6 29 11.2" strokeWidth="0.8" />
+      </g>
+    </g>
+  );
+}
+
+/* 28 肉じゃが */
+function FoodKyNikujaga() {
+  return (
+    <g>
+      <Food2Shadow rx={18} />
+      {/* 小鉢 */}
+      <path d="M5 25 Q6 38 18 40 L30 40 Q42 38 43 25 Z" fill="#3a5a7a" stroke="#14202e" strokeWidth="0.6" />
+      <path d="M8 28 Q10 36 18 38" fill="none" stroke="#6a8aaa" strokeWidth="1.2" opacity="0.7" />
+      <path d="M14 33 q3 1.5 5 0 M28 34 q3 1.5 5 0" fill="none" stroke="#e8e0cc" strokeWidth="0.6" opacity="0.6" />
+      <path d="M18 40 h12 v1.8 h-12 z" fill="#2a4058" />
+      <ellipse cx="24" cy="25" rx="19" ry="6.5" fill="#e8e0cc" stroke="#14202e" strokeWidth="0.6" />
+      <ellipse cx="24" cy="25.4" rx="17.3" ry="5.3" fill="#7a4a1c" />
+      {/* 牛肉 */}
+      <path d="M9 25 Q13 21 18 23 Q15 27 10 27.5 Z" fill="#5a3418" stroke="#2a1608" strokeWidth="0.4" />
+      <path d="M29 26 Q34 23 39 25 Q35 28.5 30 28 Z" fill="#6a3c1a" stroke="#2a1608" strokeWidth="0.4" />
+      {/* 玉ねぎ */}
+      <path d="M17 26.5 Q21 23.5 25 26" fill="none" stroke="#e8c88a" strokeWidth="1.3" opacity="0.9" />
+      <path d="M26 21.5 Q30 19.5 33 22" fill="none" stroke="#e8c88a" strokeWidth="1.2" opacity="0.85" />
+      {/* じゃがいも */}
+      {[[15, 20.5, 5, 4], [24, 19, 5.2, 4.4], [32, 20, 4.6, 3.8], [20, 25.5, 4.4, 3.4]].map(([x, y, rx, ry], i) => (
+        <g key={i}>
+          <path d={`M${x - rx} ${y + 0.5} Q${x - rx} ${y - ry} ${x} ${y - ry} Q${x + rx} ${y - ry + 0.4} ${x + rx} ${y} Q${x + rx - 0.6} ${y + ry} ${x} ${y + ry} Q${x - rx + 0.4} ${y + ry} ${x - rx} ${y + 0.5} Z`} fill="#d9a548" stroke="#6a4212" strokeWidth="0.5" />
+          <path d={`M${x - rx + 1} ${y} Q${x - rx + 1} ${y - ry + 1} ${x} ${y - ry + 0.9}`} fill="none" stroke="#f4d488" strokeWidth="1.2" />
+          <ellipse cx={x + 1} cy={y + 1} rx={rx * 0.5} ry={ry * 0.4} fill="#b8822c" opacity="0.6" />
+        </g>
+      ))}
+      {/* 人参 */}
+      <path d="M27 23.5 l5 -1.5 l1 3.4 l-5 1.5 z" fill="#e8742a" stroke="#7a3410" strokeWidth="0.4" />
+      <path d="M27.4 23.6 l4.4 -1.3" stroke="#ffb070" strokeWidth="0.6" />
+      <path d="M9.5 21 l3.5 -2.5 l2 2.8 l-3.5 2.5 z" fill="#e8742a" stroke="#7a3410" strokeWidth="0.4" />
+      {/* 絹さや */}
+      <path d="M17 17 Q22 14 27 16 Q22 17.6 17 17 Z" fill="#5aa83a" stroke="#2a5a14" strokeWidth="0.4" />
+      <path d="M18 16.6 Q22 15.2 25.5 16" fill="none" stroke="#a8e07a" strokeWidth="0.5" />
+      <path d="M29 26 Q33 23.5 37.5 25.5 Q33 26.8 29 26 Z" fill="#5aa83a" stroke="#2a5a14" strokeWidth="0.4" />
+      <Food2Steam x={24} y={14} s={0.7} />
+    </g>
+  );
+}
+
+/* 29 丹波栗の渋皮煮 */
+function FoodKyShibukawa() {
+  const nuts = [[17, 25, -15], [26, 23.5, 10], [31.5, 28, 25], [21, 30, -5]];
+  return (
+    <g>
+      <Food2Shadow rx={18} />
+      {/* ガラスの器 */}
+      <path d="M17 38 L31 38 L29 41 L19 41 Z" fill="#cfe8f0" opacity="0.5" stroke="#6a9aaa" strokeWidth="0.5" />
+      <path d="M5 24 Q6 36 24 37.5 Q42 36 43 24 Z" fill="#bfe0ea" opacity="0.35" stroke="#6a9aaa" strokeWidth="0.6" />
+      <path d="M7 24.5 Q8 34 24 35.8 Q40 34 41 24.5 Z" fill="#c07a20" opacity="0.55" />
+      <ellipse cx="24" cy="24" rx="19" ry="5.5" fill="#d8eef4" opacity="0.3" stroke="#6a9aaa" strokeWidth="0.6" />
+      <ellipse cx="24" cy="24.3" rx="17" ry="4.4" fill="#b8681a" opacity="0.8" />
+      {nuts.map(([x, y, r], i) => (
+        <g key={i} transform={`rotate(${r} ${x} ${y})`}>
+          <path d={`M${x} ${y - 5.5} Q${x + 5.5} ${y - 2} ${x + 4.8} ${y + 2.5} Q${x} ${y + 5} ${x - 4.8} ${y + 2.5} Q${x - 5.5} ${y - 2} ${x} ${y - 5.5} Z`} fill="#5a2410" stroke="#220a02" strokeWidth="0.5" />
+          <path d={`M${x - 4.6} ${y + 2.2} Q${x} ${y + 5} ${x + 4.6} ${y + 2.2} Q${x} ${y + 3.4} ${x - 4.6} ${y + 2.2} Z`} fill="#a8783c" />
+          <path d={`M${x - 3} ${y - 2} Q${x - 1.5} ${y - 4.5} ${x} ${y - 4.5}`} fill="none" stroke="#c86a3a" strokeWidth="1.1" strokeLinecap="round" />
+          <ellipse cx={x - 2} cy={y - 1.6} rx="1.1" ry="0.6" fill="#fff" opacity="0.85" />
+          <path d={`M${x + 2} ${y - 1} q1 1 0.6 2.4`} fill="none" stroke="#3a1206" strokeWidth="0.5" />
+        </g>
+      ))}
+      <path d="M8 26 Q9 32 15 34.5" fill="none" stroke="#fff" strokeWidth="1" opacity="0.6" strokeLinecap="round" />
+      <path d="M38 25.5 Q37.5 30 34 33" fill="none" stroke="#fff" strokeWidth="0.6" opacity="0.4" strokeLinecap="round" />
+    </g>
+  );
+}
+
+/* 30 万願寺とうがらし */
+function Food2Pepper({ y, flip }) {
+  return (
+    <g transform={flip ? `translate(48 0) scale(-1 1)` : undefined}>
+      <path d={`M10 ${y} Q12 ${y - 5.5} 22 ${y - 5} Q30 ${y - 5} 36 ${y - 2.5} Q41 ${y} 41 ${y + 2} Q37 ${y + 5.2} 27 ${y + 5} Q15 ${y + 5.4} 10 ${y} Z`} fill="#3a8a1e" stroke="#123006" strokeWidth="0.6" />
+      <path d={`M17 ${y - 3.5} Q19 ${y} 17 ${y + 3.6} M27 ${y - 4.4} Q29 ${y} 27.5 ${y + 3.8}`} fill="none" stroke="#256010" strokeWidth="0.7" />
+      <path d={`M12 ${y - 1.5} Q14 ${y - 4.6} 22 ${y - 4.2} Q30 ${y - 4.2} 35 ${y - 2}`} fill="none" stroke="#9ad85c" strokeWidth="1.4" strokeLinecap="round" />
+      <path d={`M14 ${y - 2.4} q2 -0.6 3.5 -0.5 M23 ${y - 3.2} q2 0 3.4 0.2`} fill="none" stroke="#e4ffc0" strokeWidth="0.6" strokeLinecap="round" />
+      <g fill="#1a2208" opacity="0.85">
+        <path d={`M19 ${y - 1} q2 -1.4 4 0 q-2 1.2 -4 0 z`} /><path d={`M30 ${y} q2 -1.2 3.6 0.2 q-2 1 -3.6 -0.2 z`} />
+        <path d={`M24 ${y + 2} q1.6 -1 3 0 q-1.6 0.8 -3 0 z`} />
+      </g>
+      <path d={`M10 ${y} Q7.5 ${y - 1} 7 ${y - 2.6} Q9 ${y - 3} 11 ${y - 1.2} Z`} fill="#4e7a26" stroke="#1e3a0a" strokeWidth="0.4" />
+      <path d={`M8 ${y - 1.6} Q5.5 ${y - 3} 5 ${y - 5}`} fill="none" stroke="#6a8a34" strokeWidth="1.2" strokeLinecap="round" />
+    </g>
+  );
+}
+function FoodKyManganji() {
+  return (
+    <g>
+      <Food2Shadow rx={20} />
+      <ellipse cx="24" cy="32" rx="21.5" ry="9" fill="#cdd4d8" stroke="#3a444a" strokeWidth="0.6" />
+      <ellipse cx="24" cy="31.3" rx="19" ry="7.2" fill="#eef1f2" />
+      <path d="M6 33 Q12 39 24 39.6" fill="none" stroke="#a8b2b8" strokeWidth="0.8" />
+      <ellipse cx="24" cy="33" rx="15" ry="4.2" fill="#5a2c10" opacity="0.4" />
+      <Food2Pepper y={34} flip />
+      <Food2Pepper y={28.5} />
+      {/* かつお節 */}
+      <g stroke="#9a6448" strokeWidth="0.3">
+        {[[18, 26, 20, "#f4d0bc"], [22, 25, -30, "#e6b096"], [26, 26.6, 40, "#f8e0d2"], [20.5, 28.8, -10, "#dca084"], [28.5, 29, 15, "#f0c4ac"], [24.5, 29.8, 60, "#ecbca4"], [31, 27, -40, "#e4aa90"]].map(([x, y, r, c], i) => (
+          <g key={i} transform={`rotate(${r} ${x} ${y})`}>
+            <path d={`M${x - 1.8} ${y} L${x - 0.6} ${y - 1.3} L${x + 1.9} ${y - 0.9} L${x + 1.4} ${y + 0.7} L${x - 0.8} ${y + 1} Z`} fill={c} opacity="0.95" />
+            <path d={`M${x - 0.8} ${y - 0.6} L${x + 1.2} ${y - 0.4}`} stroke="#fff4ec" strokeWidth="0.35" />
+          </g>
+        ))}
+      </g>
+    </g>
+  );
+}
+
+/* 31 ばらずし */
+function FoodKyBarazushi() {
+  return (
+    <g>
+      <Food2Shadow rx={21} />
+      {/* まつぶた（浅い木箱） */}
+      <path d="M3 25 L13 15 L45 15 L35 25 Z" fill="#c89858" stroke="#4a2c10" strokeWidth="0.6" />
+      <path d="M3 25 L35 25 L35 31 L3 31 Z" fill="#a8763a" stroke="#4a2c10" strokeWidth="0.6" />
+      <path d="M35 25 L45 15 L45 21 L35 31 Z" fill="#8a5c26" stroke="#4a2c10" strokeWidth="0.6" />
+      <path d="M4 27 h30 M4 29.3 h30" stroke="#c8965a" strokeWidth="0.35" opacity="0.7" />
+      {/* 酢飯 */}
+      <path d="M5.5 24 L13.8 16.2 L42.5 16.2 L34 24 Z" fill="#f6f2e6" />
+      {/* さばのおぼろ */}
+      <path d="M7 23.4 L14.5 16.8 L41 16.8 L33.5 23.4 Z" fill="#e8b0a0" />
+      <g fill="#d8908a">
+        <circle cx="12" cy="21" r="0.5" /><circle cx="20" cy="19" r="0.5" /><circle cx="30" cy="18" r="0.5" /><circle cx="25" cy="22.5" r="0.5" /><circle cx="36" cy="19.5" r="0.5" />
+      </g>
+      {/* 錦糸卵 */}
+      <g stroke="#f8d84a" strokeWidth="0.8" strokeLinecap="round">
+        <path d="M10 22 l3 -1" /><path d="M14 19 l3 0.6" /><path d="M18 21.5 l2.6 -1.2" /><path d="M23 18 l3 0.4" />
+        <path d="M27 21.5 l3 -0.8" /><path d="M32 18.5 l2.6 0.8" /><path d="M35.5 20.5 l2.5 -1" /><path d="M21 23 l2.5 -0.4" />
+      </g>
+      {/* かまぼこ */}
+      <g>
+        <path d="M15 22.6 q1.6 -2.4 3.4 0 z" fill="#fff" stroke="#d04a64" strokeWidth="0.5" />
+        <path d="M29 20.3 q1.6 -2.4 3.4 0 z" fill="#fff" stroke="#d04a64" strokeWidth="0.5" />
+      </g>
+      {/* 椎茸 */}
+      <ellipse cx="22" cy="20" rx="1.8" ry="1" fill="#5a3418" stroke="#2a1608" strokeWidth="0.3" />
+      <ellipse cx="34" cy="22" rx="1.6" ry="0.9" fill="#5a3418" stroke="#2a1608" strokeWidth="0.3" />
+      <ellipse cx="17" cy="17.8" rx="1.4" ry="0.8" fill="#5a3418" stroke="#2a1608" strokeWidth="0.3" />
+      {/* 紅しょうが */}
+      <g stroke="#e0283a" strokeWidth="0.6" strokeLinecap="round">
+        <path d="M12.5 19.5 l1 0.5" /><path d="M26 19.8 l1.1 -0.4" /><path d="M38 17.8 l1 0.4" /><path d="M30.5 22.8 l1 -0.3" />
+      </g>
+      {/* 木目のハイライト */}
+      <path d="M13 15 L45 15" stroke="#e8c088" strokeWidth="0.6" />
+    </g>
+  );
+}
+
+/* 32 知恵の餅 */
+function FoodKyChienomochi() {
+  const mochi = [[14, 30], [26, 31.5], [20, 24.5]];
+  return (
+    <g>
+      <Food2Shadow rx={19} />
+      <ellipse cx="22" cy="31" rx="20" ry="8.5" fill="#b8b4a4" stroke="#3a382c" strokeWidth="0.6" />
+      <ellipse cx="22" cy="30.3" rx="17.5" ry="6.8" fill="#e6e2d2" />
+      <path d="M6 31 Q8 36 18 37.6" fill="none" stroke="#c8c2ae" strokeWidth="1" />
+      {mochi.map(([x, y], i) => (
+        <g key={i}>
+          <ellipse cx={x + 0.5} cy={y + 2} rx="5.6" ry="1.6" fill="#000" opacity="0.25" />
+          <path d={`M${x - 5} ${y + 1.4} Q${x - 5.6} ${y - 4.2} ${x} ${y - 4.4} Q${x + 5.6} ${y - 4.2} ${x + 5} ${y + 1.4} Q${x} ${y + 3.2} ${x - 5} ${y + 1.4} Z`} fill="#4a1e24" stroke="#1a0608" strokeWidth="0.5" />
+          <path d={`M${x + 4.6} ${y + 1} Q${x + 4.4} ${y - 2} ${x + 2} ${y - 3}`} fill="none" stroke="#2a0c10" strokeWidth="1.2" opacity="0.7" />
+          <path d={`M${x - 4} ${y - 0.2} Q${x - 3.8} ${y - 3.4} ${x - 0.2} ${y - 3.6}`} fill="none" stroke="#9a5a60" strokeWidth="1.3" strokeLinecap="round" />
+          <ellipse cx={x - 2} cy={y - 2.6} rx="1.1" ry="0.55" fill="#e8c8c8" opacity="0.85" />
+          <g fill="#2e0e12" opacity="0.7">
+            <circle cx={x + 1.5} cy={y - 1} r="0.45" /><circle cx={x - 1} cy={y + 0.6} r="0.4" /><circle cx={x + 2.8} cy={y + 0.4} r="0.35" /><circle cx={x + 0.4} cy={y - 2.4} r="0.3" />
+          </g>
+        </g>
+      ))}
+      {/* 松の小枝 */}
+      <path d="M33 33 Q37 30 43 28.5" fill="none" stroke="#5a3a1a" strokeWidth="0.9" strokeLinecap="round" />
+      <g stroke="#2e6a2e" strokeWidth="0.55" strokeLinecap="round">
+        {[0, 1, 2, 3, 4, 5].map((i) => {
+          const x = 35 + i * 1.5;
+          const y = 31.7 - i * 0.55;
+          return (
+            <g key={i}>
+              <path d={`M${x} ${y} l${-1.2} ${-3.6}`} /><path d={`M${x} ${y} l${0.8} ${-3.8}`} />
+              <path d={`M${x} ${y} l${1.8} ${2.8}`} stroke="#3e8a3a" /><path d={`M${x} ${y} l${-0.6} ${3}`} stroke="#3e8a3a" />
+            </g>
+          );
+        })}
+        <path d="M43 28.5 l1.6 -3" /><path d="M43 28.5 l2.8 -0.6" />
+      </g>
+    </g>
+  );
+}
+
+/* 33 寒ブリのしゃぶしゃぶ */
+function FoodKyBurishabu() {
+  return (
+    <g>
+      <Food2Shadow rx={20} cy={43} />
+      {/* 鍋 */}
+      <path d="M4 30 Q5 40 24 41.5 Q43 40 44 30 Z" fill="#3a3a40" stroke="#101014" strokeWidth="0.6" />
+      <path d="M7 32 Q10 38.5 20 40" fill="none" stroke="#6a6a74" strokeWidth="1.1" opacity="0.8" />
+      <ellipse cx="24" cy="30" rx="20" ry="7.5" fill="#55555e" stroke="#101014" strokeWidth="0.6" />
+      <ellipse cx="24" cy="30.4" rx="18.2" ry="6.3" fill="#c9b47a" />
+      <ellipse cx="22" cy="30" rx="14" ry="4.4" fill="#ddca92" />
+      {/* 昆布 */}
+      <path d="M8 32 Q14 29 20 32.5 Q15 34.5 8 32 Z" fill="#3e4a2a" stroke="#1e2410" strokeWidth="0.3" />
+      {/* 水菜 */}
+      <g stroke="#5ab03a" strokeWidth="0.7" strokeLinecap="round" fill="none">
+        <path d="M30 34 Q34 30 39 27.5" /><path d="M31 34.5 Q35 32 41 30" /><path d="M29 33 Q32 29 35 26.5" />
+        <path d="M33 33.5 q1 -1.6 2.4 -2.4" stroke="#8ad85a" />
+      </g>
+      <g stroke="#f0f4e8" strokeWidth="0.6" strokeLinecap="round">
+        <path d="M27 35 l3 -1" /><path d="M28 36 l3.4 -1.6" />
+      </g>
+      <Food2Steam x={18} y={25} s={0.65} />
+      {/* 箸（平行） */}
+      <path d="M44 5 L27 20.5" stroke="#6a3a1a" strokeWidth="1.2" strokeLinecap="round" />
+      <path d="M46 7.5 L29.5 22.5" stroke="#7a4824" strokeWidth="1.2" strokeLinecap="round" />
+      {/* ブリの切り身 */}
+      <path d="M24 17 Q29 14.5 34 17 Q32.5 21 33 25 Q30 27 28 24.5 Q25 22 24 17 Z" fill="#f2c0b4" stroke="#8a3a2e" strokeWidth="0.5" />
+      <path d="M24.5 17.3 Q29 15.2 33.6 17.3" fill="none" stroke="#fbe8e0" strokeWidth="1.3" />
+      <path d="M26 20 Q29 19 31.8 21" fill="none" stroke="#fff4ee" strokeWidth="0.6" opacity="0.9" />
+      <path d="M28 24.3 Q30.5 26.5 33 24.8" fill="none" stroke="#b8484a" strokeWidth="1.2" />
+      <path d="M27 22.4 Q30 23.5 32.5 22.5" fill="none" stroke="#e89a8c" strokeWidth="0.6" />
+      <g fill="#ddca92" opacity="0.8"><circle cx="30.5" cy="27" r="0.4" /><circle cx="31.4" cy="28.6" r="0.3" /></g>
+    </g>
+  );
+}
+
+/* 34 ハマチの刺身 */
+function FoodKgHamachi() {
+  return (
+    <g>
+      <Food2Shadow rx={21} />
+      {/* 長皿 */}
+      <path d="M2 30 Q4 23 14 22 L40 21 Q47 22 46 29 Q44 37 34 38 L10 38.5 Q2 37 2 30 Z" fill="#2c3a4a" stroke="#0c121a" strokeWidth="0.6" />
+      <path d="M4 30 Q6 25 14 24 L39 23 Q44.5 24 44 29 Q42 35.5 34 36 L10 36.5 Q4 35.5 4 30 Z" fill="#41566a" />
+      <path d="M6 28 Q8 25.5 14 25" fill="none" stroke="#8aa2b8" strokeWidth="0.8" opacity="0.7" />
+      {/* 大根のつま */}
+      <g stroke="#f4f4f0" strokeWidth="0.55" strokeLinecap="round">
+        {[0, 1, 2, 3, 4, 5, 6, 7, 8, 9].map((i) => (
+          <path key={i} d={`M${7 + i * 0.9} ${33 - (i % 3) * 0.6} q${2 - (i % 2) * 3} ${-4} ${i % 2 ? 1 : -1} ${-7}`} fill="none" opacity={i % 2 ? 0.95 : 0.75} />
+        ))}
+      </g>
+      {/* 大葉 */}
+      <path d="M11 33 Q10 22 20 19 Q22 27 15 33 Z" fill="#3e8a2a" stroke="#1a4a10" strokeWidth="0.5" />
+      <path d="M12 32 Q14 25 19.5 20" fill="none" stroke="#7ac04a" strokeWidth="0.5" />
+      <path d="M14 28 l-1.4 -0.6 M15.6 25.6 l-1.4 -0.8 M14.4 28.6 l1.6 -0.2" stroke="#7ac04a" strokeWidth="0.3" />
+      {/* 刺身 */}
+      {[0, 1, 2, 3, 4].map((i) => {
+        const x = 18 + i * 4.6;
+        return (
+          <g key={i} transform={`rotate(-12 ${x} 29)`}>
+            <path d={`M${x - 3} 34.5 Q${x - 3.6} 26 ${x - 1.4} 23.5 L${x + 3} 23.5 Q${x + 4} 28 ${x + 3} 34.5 Z`} fill="#f4c4b4" stroke="#9a4e40" strokeWidth="0.5" />
+            <path d={`M${x + 1.2} 23.6 Q${x + 2.6} 28 ${x + 2} 34.4 L${x + 3} 34.5 Q${x + 4} 28 ${x + 3} 23.5 Z`} fill="#b84050" />
+            <path d={`M${x - 1.4} 24.5 Q${x - 2.4} 28 ${x - 2} 32`} fill="none" stroke="#fff" strokeWidth="0.8" opacity="0.8" strokeLinecap="round" />
+            <path d={`M${x - 0.8} 27 q1.2 0.4 2 0 M${x - 1} 30.5 q1.2 0.4 2 0`} fill="none" stroke="#fce6dc" strokeWidth="0.35" />
+          </g>
+        );
+      })}
+      {/* わさび */}
+      <path d="M38 34.5 Q37.5 31 40 30.5 Q42.5 31 42 34.5 Z" fill="#9ac84a" stroke="#4a6a1a" strokeWidth="0.4" />
+      <circle cx="39.3" cy="32" r="0.6" fill="#d4f08a" />
+    </g>
+  );
+}
+
+/* 35 瓦せんべい */
+function Food2Kawara({ dx, dy, light }) {
+  const top = light ? "#d0883c" : "#a8642a";
+  const face = light ? "#dc9a4e" : "#b8743a";
+  return (
+    <g transform={`translate(${dx} ${dy})`}>
+      {/* 厚み */}
+      <path d="M5 28 Q24 33 39 25 L39 27.6 Q24 35.6 5 30.6 Z" fill="#6a3410" stroke="#2a1204" strokeWidth="0.5" />
+      {/* 表面（瓦の反り） */}
+      <path d="M5 28 L12 15.5 Q28 19 44 12.5 L39 25 Q24 33 5 28 Z" fill={top} stroke="#2a1204" strokeWidth="0.6" />
+      <path d="M7.5 27 L13.3 17 Q28 20.4 42 14.6 L37.6 24.2 Q24 31 7.5 27 Z" fill={face} />
+      <path d="M13.5 17.4 Q28 20.8 41.6 15" fill="none" stroke="#f4c07c" strokeWidth="0.9" opacity="0.8" strokeLinecap="round" />
+      <path d="M8 27 Q24 31 37.6 24.2" fill="none" stroke="#8a4a16" strokeWidth="0.9" opacity="0.7" />
+    </g>
+  );
+}
+function FoodKgKawara() {
+  return (
+    <g>
+      <Food2Shadow rx={20} />
+      <Food2Kawara dx={1} dy={8} />
+      <Food2Kawara dx={-1} dy={3} light />
+      {/* 焼印（波と松の文様） */}
+      <g fill="none" stroke="#5a2808" strokeWidth="0.75" strokeLinecap="round" opacity="0.85">
+        <path d="M14 27.4 q2 -2.2 4 -0.2 q2 2 4 0 q2 -2 4 -0.2 q2 1.8 4 -0.6" />
+        <path d="M16 24.2 q2 -2 4 -0.2 q2 1.8 4 0 q2 -1.8 4 -0.4" opacity="0.75" />
+        <path d="M24 20.6 q2 -2.6 4.4 -0.4 q-2.2 0.6 -4.4 0.4 z" />
+        <path d="M28.4 20.2 q2 -2.2 4 -0.6" />
+      </g>
+      <g fill="#6a3410" opacity="0.5">
+        <circle cx="12" cy="24" r="0.35" /><circle cx="36" cy="19" r="0.4" /><circle cx="33" cy="25" r="0.35" /><circle cx="19" cy="29.4" r="0.3" />
+      </g>
+    </g>
+  );
+}
+
+/* 36 和三盆 */
+function Food2Petal5({ x, y, r, c, d, round }) {
+  const p = [];
+  for (let i = 0; i < 5; i++) {
+    const a = (i / 5) * Math.PI * 2 - Math.PI / 2;
+    const px = x + Math.cos(a) * r * 0.62;
+    const py = y + Math.sin(a) * r * 0.62;
+    p.push(
+      <g key={i} transform={`rotate(${(a * 180) / Math.PI + 90} ${px} ${py})`}>
+        {round ? (
+          <circle cx={px} cy={py} r={r * 0.5} fill={c} stroke={d} strokeWidth="0.35" />
+        ) : (
+          <path d={`M${px} ${py + r * 0.55} Q${px - r * 0.62} ${py} ${px - r * 0.3} ${py - r * 0.5} L${px} ${py - r * 0.28} L${px + r * 0.3} ${py - r * 0.5} Q${px + r * 0.62} ${py} ${px} ${py + r * 0.55} Z`} fill={c} stroke={d} strokeWidth="0.35" />
+        )}
+      </g>
+    );
+  }
+  return (
+    <g>
+      {p}
+      <circle cx={x} cy={y} r={r * 0.32} fill={c} />
+      <circle cx={x} cy={y} r={r * 0.14} fill={d} opacity="0.7" />
+      <circle cx={x - r * 0.35} cy={y - r * 0.55} r={r * 0.16} fill="#fff" opacity="0.8" />
+    </g>
+  );
+}
+function FoodKgWasanbon() {
+  return (
+    <g>
+      <Food2Shadow rx={20} />
+      {/* 漆の皿 */}
+      <ellipse cx="24" cy="31" rx="21.5" ry="9.5" fill="#1a0c0c" stroke="#000" strokeWidth="0.6" />
+      <ellipse cx="24" cy="30.2" rx="19.5" ry="7.8" fill="#8a1a1a" />
+      <ellipse cx="24" cy="30.8" rx="17" ry="6.2" fill="#6a1010" />
+      <path d="M8 28 Q12 24 22 23" fill="none" stroke="#e8706a" strokeWidth="1" opacity="0.6" strokeLinecap="round" />
+      {/* 桜 */}
+      <Food2Petal5 x={13.5} y={29} r={5} c="#f8c8d4" d="#c07890" />
+      <Food2Petal5 x={30} y={33.5} r={4.4} c="#fbd8e0" d="#c07890" />
+      {/* 梅 */}
+      <Food2Petal5 x={23} y={26} r={4.6} c="#fff6e8" d="#b8a080" round />
+      <Food2Petal5 x={36} y={26.5} r={3.8} c="#f8e8a0" d="#b89a40" round />
+      {/* 波 */}
+      <g>
+        <path d="M17 37 Q17 32.5 21 32.5 Q24.5 32.5 24.5 35.5 Q22.5 34 21 35.3 Q20 36.6 21.5 37.8 Z" fill="#c8e4f0" stroke="#5a8aa8" strokeWidth="0.4" />
+        <path d="M18.2 36 Q18.6 33.6 21 33.4" fill="none" stroke="#fff" strokeWidth="0.6" opacity="0.8" />
+        <path d="M5.5 33 Q6 29.6 9 29.6 Q11.8 29.6 11.8 32 Q10.2 31 9 32 Q8.2 33 9.4 34 Z" fill="#d0ecd8" stroke="#5a9a70" strokeWidth="0.4" />
+      </g>
+    </g>
+  );
+}
+
+/* 37 讃岐うどん */
+function FoodKgUdon() {
+  return (
+    <g>
+      <Food2Shadow rx={19} />
+      {/* 丼 */}
+      <path d="M4 23 Q5 38 17 40.5 L31 40.5 Q43 38 44 23 Z" fill="#f2ead8" stroke="#3a2e1c" strokeWidth="0.6" />
+      <path d="M38 26 Q37 35 30 38.5" fill="none" stroke="#b8a888" strokeWidth="1.6" opacity="0.7" />
+      <path d="M5 29 Q24 34 43 29" fill="none" stroke="#2a4a8a" strokeWidth="1.1" />
+      <path d="M6.5 32.5 Q24 37 41.5 32.5" fill="none" stroke="#2a4a8a" strokeWidth="0.5" />
+      <path d="M8 26 Q9 34 15 37.5" fill="none" stroke="#fff" strokeWidth="1.2" opacity="0.8" strokeLinecap="round" />
+      <path d="M17 40.5 h14 v1.6 h-14 z" fill="#d8ccb0" stroke="#3a2e1c" strokeWidth="0.4" />
+      <ellipse cx="24" cy="23" rx="20" ry="6.6" fill="#faf4e6" stroke="#3a2e1c" strokeWidth="0.6" />
+      {/* いりこ出汁 */}
+      <ellipse cx="24" cy="23.4" rx="18.2" ry="5.4" fill="#d8b464" />
+      <ellipse cx="22" cy="23" rx="14" ry="3.8" fill="#e8c87c" />
+      {/* 太いうどん */}
+      <g fill="none" strokeLinecap="round">
+        {[
+          "M9 24 Q16 19 24 22 Q31 25 38 21",
+          "M10 22 Q17 26 25 23.5 Q32 21 39 24",
+          "M12 26 Q19 21.5 27 25 Q33 27.5 37 25.5",
+          "M13 20.5 Q20 24 28 20.5 Q33 18.6 36 20.5",
+        ].map((d, i) => (
+          <g key={i}>
+            <path d={d} stroke="#c8b890" strokeWidth="2.9" />
+            <path d={d} stroke="#fbf8ee" strokeWidth="2.2" />
+            <path d={d} stroke="#fff" strokeWidth="0.6" opacity="0.9" transform="translate(-0.3 -0.6)" />
+          </g>
+        ))}
+      </g>
+      {/* 天かす */}
+      <g fill="#e0a840" stroke="#8a5a18" strokeWidth="0.25">
+        <circle cx="29" cy="20.8" r="0.9" /><circle cx="31" cy="22" r="0.7" /><circle cx="27.5" cy="22.4" r="0.6" />
+        <circle cx="30" cy="23.6" r="0.8" /><circle cx="32.5" cy="20.5" r="0.6" />
+      </g>
+      {/* ねぎ */}
+      <g fill="#7ac43a" stroke="#2e6a10" strokeWidth="0.3">
+        <ellipse cx="18" cy="21.4" rx="1" ry="0.6" /><ellipse cx="20.2" cy="22.4" rx="0.9" ry="0.55" />
+        <ellipse cx="16.6" cy="23" rx="0.9" ry="0.55" /><ellipse cx="19" cy="24.2" rx="0.8" ry="0.5" />
+        <ellipse cx="21.5" cy="20.8" rx="0.8" ry="0.5" />
+      </g>
+      <g fill="#d8f0a8"><circle cx="18" cy="21.4" r="0.35" /><circle cx="20.2" cy="22.4" r="0.3" /><circle cx="16.6" cy="23" r="0.3" /></g>
+      <Food2Steam x={24} y={13} s={0.8} />
+    </g>
+  );
+}
+
+/* 38 骨付鳥 */
+function FoodKgHonetsuki() {
+  return (
+    <g>
+      <Food2Shadow rx={21} />
+      {/* 皿 */}
+      <ellipse cx="24" cy="32" rx="22" ry="9" fill="#d8d8d4" stroke="#3a3a36" strokeWidth="0.6" />
+      <ellipse cx="24" cy="31.3" rx="19.6" ry="7.3" fill="#f6f6f2" />
+      {/* スパイスの脂 */}
+      <path d="M8 32 Q12 28.5 22 29.5 Q34 30 37 34 Q28 37.5 16 36.5 Q9 35.5 8 32 Z" fill="#e0901e" opacity="0.75" />
+      <g fill="#8a2a0a" opacity="0.8">
+        <circle cx="12" cy="33" r="0.35" /><circle cx="18" cy="35" r="0.35" /><circle cx="27" cy="35.4" r="0.35" /><circle cx="32" cy="33.6" r="0.3" /><circle cx="22" cy="31" r="0.3" />
+      </g>
+      <ellipse cx="14" cy="33.5" rx="2" ry="0.5" fill="#fff4c0" opacity="0.6" />
+      {/* キャベツ */}
+      <g stroke="#9ac85a" strokeWidth="0.6" strokeLinecap="round" fill="none">
+        <path d="M34 27 q3 -1.5 6 0.5" /><path d="M35 28.5 q3 -1.3 6.5 0.2" /><path d="M33.5 29.8 q3 -0.8 6 0.6" />
+        <path d="M36 26 q2.5 -0.8 4.5 0.6" stroke="#d8eca8" /><path d="M36.5 30.8 q2.5 -0.4 4.5 0.6" stroke="#e8f4c8" />
+      </g>
+      {/* 鶏もも */}
+      <path d="M8 27 Q6 19 13 15.5 Q21 13 26.5 18 Q29 21 30 24 Q28 28 22 30 Q13 32 8 27 Z" fill="#9a4a14" stroke="#3a1404" strokeWidth="0.6" />
+      <path d="M10 26 Q8.5 20 14 17 Q20 15 24.5 19 Q22 25 15 27.5 Q11.5 28.5 10 26 Z" fill="#c8701e" />
+      <path d="M11.5 22 Q12.5 18.5 16 17.5" fill="none" stroke="#f4b860" strokeWidth="1.4" strokeLinecap="round" />
+      <path d="M17 19.5 Q19.5 18.4 21.5 19.8" fill="none" stroke="#f0a850" strokeWidth="0.9" strokeLinecap="round" />
+      <g fill="#5a2006" opacity="0.7">
+        <ellipse cx="22" cy="25" rx="1.6" ry="0.8" /><ellipse cx="13" cy="25" rx="1.2" ry="0.6" /><ellipse cx="26" cy="21.5" rx="1" ry="0.6" />
+      </g>
+      <g fill="#2a0e04"><circle cx="15" cy="21" r="0.3" /><circle cx="19" cy="23" r="0.3" /><circle cx="17" cy="25" r="0.25" /><circle cx="21" cy="21.5" r="0.25" /></g>
+      {/* 骨 */}
+      <path d="M27.5 21 L35 17" stroke="#efe6d0" strokeWidth="2.6" strokeLinecap="round" />
+      <path d="M27.5 21 L35 17" stroke="#c8b898" strokeWidth="0.6" transform="translate(0.4 0.9)" />
+      <circle cx="35.5" cy="15.8" r="1.6" fill="#f4ecd8" stroke="#6a5a3a" strokeWidth="0.5" />
+      <circle cx="36.8" cy="17.6" r="1.5" fill="#f4ecd8" stroke="#6a5a3a" strokeWidth="0.5" />
+      <circle cx="35.2" cy="15.4" r="0.5" fill="#fff" />
+      <Food2Steam x={18} y={12} s={0.6} />
+    </g>
+  );
+}
+
+/* 39 しょうゆ豆 */
+function FoodKgShoyumame() {
+  const beans = [
+    [15, 24, -25], [21, 22.5, 10], [27, 23, -10], [33, 24.5, 20], [18, 27.5, 15], [24.5, 27, -20], [30.5, 28, 5], [24, 19.5, 30],
+  ];
+  return (
+    <g>
+      <Food2Shadow rx={18} />
+      {/* 小鉢（白磁に藍） */}
+      <path d="M6 24 Q7 38 18 40 L30 40 Q41 38 42 24 Z" fill="#eef0f2" stroke="#2a3440" strokeWidth="0.6" />
+      <path d="M9 30 q2.5 -2 5 0 q2.5 2 5 0 q2.5 -2 5 0 q2.5 2 5 0 q2.5 -2 5 0" fill="none" stroke="#3a5a9a" strokeWidth="0.7" />
+      <path d="M36 27 Q35 35 29 38" fill="none" stroke="#a8b0b8" strokeWidth="1.4" opacity="0.7" />
+      <path d="M18 40 h12 v1.6 h-12 z" fill="#d0d4d8" />
+      <ellipse cx="24" cy="24" rx="18" ry="6" fill="#f8f8fa" stroke="#2a3440" strokeWidth="0.6" />
+      <ellipse cx="24" cy="24.4" rx="16.4" ry="4.9" fill="#3a1606" />
+      <ellipse cx="22" cy="24" rx="12" ry="3.2" fill="#5a2408" />
+      {beans.map(([x, y, r], i) => (
+        <g key={i} transform={`rotate(${r} ${x} ${y})`}>
+          <path d={`M${x - 3.6} ${y} Q${x - 3.6} ${y - 2.8} ${x} ${y - 2.8} Q${x + 3.8} ${y - 2.6} ${x + 3.4} ${y + 0.4} Q${x + 3} ${y + 2.8} ${x} ${y + 2.6} Q${x - 3.6} ${y + 2.6} ${x - 3.6} ${y} Z`} fill="#7a3a12" stroke="#2a0e02" strokeWidth="0.5" />
+          <path d={`M${x - 2.6} ${y - 0.6} Q${x - 2.2} ${y - 2.2} ${x} ${y - 2.2}`} fill="none" stroke="#c8783a" strokeWidth="1" strokeLinecap="round" />
+          <path d={`M${x + 1.6} ${y - 1.6} Q${x + 3} ${y} ${x + 2} ${y + 1.6}`} fill="none" stroke="#1a0802" strokeWidth="0.8" strokeLinecap="round" />
+          <path d={`M${x - 1.5} ${y + 1} q1.4 0.8 2.6 0`} fill="none" stroke="#4a1a06" strokeWidth="0.4" />
+          <ellipse cx={x - 1.4} cy={y - 1.5} rx="0.8" ry="0.4" fill="#fff" opacity="0.85" />
+        </g>
+      ))}
+    </g>
+  );
+}
+
+/* 40 あん餅雑煮 */
+function FoodKgAnmochizoni() {
+  return (
+    <g>
+      <Food2Shadow rx={19} />
+      {/* 漆の椀 */}
+      <path d="M4 23 Q5 37 17 39.5 L31 39.5 Q43 37 44 23 Z" fill="#8a1414" stroke="#2a0404" strokeWidth="0.6" />
+      <path d="M7 26 Q9 34.5 17 37.5" fill="none" stroke="#e05a4a" strokeWidth="1.3" opacity="0.7" strokeLinecap="round" />
+      <path d="M38 27 Q36 35 30 38" fill="none" stroke="#3a0404" strokeWidth="1.6" opacity="0.6" />
+      <path d="M17 39.5 L18 42 L30 42 L31 39.5 Z" fill="#6a0e0e" stroke="#2a0404" strokeWidth="0.4" />
+      <ellipse cx="24" cy="23" rx="20" ry="6.6" fill="#1a0a0a" stroke="#000" strokeWidth="0.6" />
+      {/* 白味噌の汁 */}
+      <ellipse cx="24" cy="23.4" rx="18.4" ry="5.5" fill="#e8d8b0" />
+      <ellipse cx="22.5" cy="23" rx="14" ry="3.8" fill="#f4e8c8" />
+      {/* 丸いあん餅 */}
+      <ellipse cx="21" cy="22.5" rx="7" ry="4.2" fill="#fbfaf4" stroke="#8a8270" strokeWidth="0.5" />
+      <ellipse cx="22" cy="23.6" rx="4.2" ry="2" fill="#5a2a30" opacity="0.35" />
+      <path d="M19.5 24.4 Q22.5 25.6 25.5 24" fill="none" stroke="#4a1a22" strokeWidth="1.1" strokeLinecap="round" opacity="0.8" />
+      <ellipse cx="19" cy="21" rx="3" ry="1.2" fill="#fff" />
+      {/* 大根・人参の輪切り */}
+      <ellipse cx="32.5" cy="21.5" rx="4" ry="2" fill="#f4f2e4" stroke="#a8a48a" strokeWidth="0.4" />
+      <ellipse cx="32.5" cy="21.5" rx="2.6" ry="1.2" fill="none" stroke="#dcd8c0" strokeWidth="0.3" />
+      <ellipse cx="31" cy="25.6" rx="3.4" ry="1.7" fill="#ec7a2a" stroke="#8a3a0a" strokeWidth="0.4" />
+      <ellipse cx="31" cy="25.6" rx="1.9" ry="0.9" fill="#f8a050" />
+      <ellipse cx="12" cy="25" rx="2.8" ry="1.4" fill="#ec7a2a" stroke="#8a3a0a" strokeWidth="0.4" />
+      <ellipse cx="12" cy="25" rx="1.5" ry="0.7" fill="#f8a050" />
+      {/* 青ねぎ */}
+      <g fill="#6ab83a" stroke="#2e6a10" strokeWidth="0.3">
+        <ellipse cx="26.5" cy="20" rx="0.9" ry="0.5" /><ellipse cx="28" cy="23" rx="0.8" ry="0.45" />
+        <ellipse cx="14" cy="21.5" rx="0.9" ry="0.5" /><ellipse cx="16" cy="25.8" rx="0.8" ry="0.45" /><ellipse cx="36" cy="24" rx="0.8" ry="0.45" />
+      </g>
+      <Food2Steam x={24} y={13} s={0.8} />
+    </g>
+  );
+}
+
+const FOOD_ART_2 = {
+  ky_konpeito: FoodKyKonpeito,
+  ky_ujimatcha: FoodKyUjimatcha,
+  ky_chadango: FoodKyChadango,
+  ky_chasoba: FoodKyChasoba,
+  ky_kuromame: FoodKyKuromame,
+  ky_botan: FoodKyBotan,
+  ky_miyamasoft: FoodKyMiyamasoft,
+  ky_nikujaga: FoodKyNikujaga,
+  ky_shibukawa: FoodKyShibukawa,
+  ky_manganji: FoodKyManganji,
+  ky_barazushi: FoodKyBarazushi,
+  ky_chienomochi: FoodKyChienomochi,
+  ky_burishabu: FoodKyBurishabu,
+  kg_hamachi: FoodKgHamachi,
+  kg_kawara: FoodKgKawara,
+  kg_wasanbon: FoodKgWasanbon,
+  kg_udon: FoodKgUdon,
+  kg_honetsuki: FoodKgHonetsuki,
+  kg_shoyumame: FoodKgShoyumame,
+  kg_anmochizoni: FoodKgAnmochizoni,
+};
+/* ===== 共通（担当3） ===== */
+function Food3Shadow({ cx = 24, cy = 42, rx = 16 }) {
+  return <ellipse cx={cx} cy={cy} rx={rx} ry={2.8} fill="#000" opacity={0.32} />;
+}
+function Food3Steam({ x = 24, y = 14 }) {
+  return (
+    <g fill="none" stroke="#fff" strokeLinecap="round" strokeWidth={0.9} opacity={0.45}>
+      <path d={`M${x - 3} ${y} c-1.6 -2 1.2 -3.5 -0.2 -6`} />
+      <path d={`M${x} ${y - 1} c-1.6 -2.2 1.4 -3.8 -0.1 -6.8`} opacity={0.8} />
+      <path d={`M${x + 3} ${y} c-1.4 -2 1.2 -3.2 -0.2 -5.5`} />
+    </g>
+  );
+}
+
+/* ===== 1. おいり ===== */
+const Food3OiriCols = [
+  ["#f7a8c4", "#c86a8c"],
+  ["#f8e27c", "#c9a83a"],
+  ["#a8d8f2", "#5f9ec0"],
+  ["#fbf6ee", "#bdb2a0"],
+];
+const Food3OiriBalls = (() => {
+  const out = [];
+  const rows = [
+    [17.2, [20.2, 23.0]],
+    [19.4, [17.6, 20.4, 23.2, 26.0]],
+    [21.7, [15.4, 18.2, 21.0, 23.8, 26.6, 29.0]],
+    [24.0, [13.0, 15.8, 18.6, 21.4, 24.2, 27.0, 29.8]],
+    [26.2, [11.6, 14.4, 17.2, 20.0, 22.8, 25.6, 28.4, 31.0]],
+  ];
+  let i = 0;
+  rows.forEach(([y, xs]) => xs.forEach((x) => out.push([x + ((i * 37) % 5) * 0.12, y, (i++ * 7 + 3) % 4])));
+  [[34.5, 37.6], [37.6, 40.2], [31.4, 40.6], [40.2, 37.0], [35.2, 41.2], [38.6, 33.8]].forEach(([x, y]) => out.push([x, y, (i++ * 7 + 3) % 4]));
+  return out;
+})();
+function FoodKgOiri() {
+  return (
+    <g>
+      <Food3Shadow cx={25} rx={17} />
+      {/* 小鉢 */}
+      <path d="M9.5 26.5 Q10.5 37.5 21 38.2 Q31.5 37.5 32.5 26.5 Z" fill="#2d4f86" stroke="#13223d" strokeWidth={0.6} />
+      <path d="M24 26.5 Q31.5 27 32.5 26.5 Q31.6 37 21 38.2 Q28 35 27.5 26.6 Z" fill="#1d3866" />
+      <path d="M12 29 Q13 34 17 36" fill="none" stroke="#7fa6dc" strokeWidth={0.9} strokeLinecap="round" opacity={0.7} />
+      <path d="M11 31.5 Q21 34.5 31.5 31.5" fill="none" stroke="#e6d39a" strokeWidth={0.6} opacity={0.6} />
+      <ellipse cx={21} cy={38.4} rx={5.2} ry={1.2} fill="#1a2c50" stroke="#13223d" strokeWidth={0.4} />
+      <ellipse cx={21} cy={26.5} rx={11.5} ry={3.3} fill="#16264a" stroke="#13223d" strokeWidth={0.5} />
+      {Food3OiriBalls.map(([x, y, c], k) => (
+        <g key={k}>
+          <circle cx={x} cy={y} r={1.5} fill={Food3OiriCols[c][0]} stroke={Food3OiriCols[c][1]} strokeWidth={0.3} />
+          <circle cx={x + 0.45} cy={y + 0.5} r={0.8} fill={Food3OiriCols[c][1]} opacity={0.35} />
+          <circle cx={x - 0.5} cy={y - 0.55} r={0.45} fill="#fff" opacity={0.85} />
+        </g>
+      ))}
+      {/* 小鉢の前縁 */}
+      <path d="M9.6 26.8 Q21 31.6 32.4 26.8" fill="none" stroke="#5d86c4" strokeWidth={0.7} opacity={0.8} />
+    </g>
+  );
+}
+
+/* ===== 2. 三豊の桃 ===== */
+function FoodKgMomo() {
+  return (
+    <g>
+      <Food3Shadow cx={25} rx={18} />
+      {/* 丸ごとの桃 */}
+      <path d="M19 13.5 C26 12.5 30.5 18.5 29.6 25 C28.8 32 23.5 35.4 19 35.4 C13.8 35.4 8.6 31.4 8.6 25 C8.6 18 13 13.6 19 13.5 Z" fill="#f8cf9e" stroke="#7a2a2a" strokeWidth={0.6} />
+      <ellipse cx={22.5} cy={24} rx={7} ry={9.5} fill="#ee7a72" opacity={0.75} />
+      <ellipse cx={24} cy={25} rx={4.6} ry={7.5} fill="#d8455a" opacity={0.55} />
+      <path d="M27 31 C24 34.5 21 35.4 19 35.4 C21.5 33 25 29 27.5 24 Z" fill="#b8344a" opacity={0.45} />
+      <path d="M19 14.2 Q15.6 22 17.2 34.6" fill="none" stroke="#b9405a" strokeWidth={0.7} opacity={0.65} />
+      <ellipse cx={13.2} cy={21} rx={2.2} ry={4} fill="#fff" opacity={0.35} transform="rotate(18 13.2 21)" />
+      <circle cx={12.4} cy={19.4} r={0.8} fill="#fff" opacity={0.6} />
+      {/* 葉 */}
+      <path d="M19.4 14 L20.6 11" stroke="#5a3a1e" strokeWidth={0.9} strokeLinecap="round" />
+      <path d="M20.4 11.6 C23 7.5 28.5 7 31.5 8.6 C28.5 11.8 24 13 20.4 11.6 Z" fill="#4f9a3c" stroke="#24521c" strokeWidth={0.5} />
+      <path d="M20.6 11.5 Q26 9.6 31 8.7" fill="none" stroke="#9fd07c" strokeWidth={0.4} />
+      <path d="M20 11.8 C16.5 9 12.5 9.5 10.6 11.4 C13.5 13.6 17 13.6 20 11.8 Z" fill="#3e8430" stroke="#24521c" strokeWidth={0.5} />
+      {/* 切った桃 */}
+      <ellipse cx={33} cy={36} rx={9} ry={6} fill="#c8384a" stroke="#6a1a22" strokeWidth={0.6} />
+      <ellipse cx={33} cy={35.5} rx={8.1} ry={5.2} fill="#fff3e2" />
+      <ellipse cx={34} cy={36.2} rx={6} ry={3.6} fill="#fbe6cc" />
+      <ellipse cx={33.5} cy={35.7} rx={4.2} ry={2.8} fill="#f3a48e" opacity={0.75} />
+      <ellipse cx={33.5} cy={35.7} rx={2.6} ry={1.8} fill="#8a3826" stroke="#5a1e14" strokeWidth={0.4} />
+      <path d="M31.5 35.4 Q33.5 34.6 35.4 35.6 M31.8 36.3 Q33.5 35.5 35.2 36.6" fill="none" stroke="#5a1e14" strokeWidth={0.3} />
+      <path d="M27 33.4 Q30 31.6 34 31.4" fill="none" stroke="#fff" strokeWidth={0.7} strokeLinecap="round" opacity={0.85} />
+      <circle cx={38.6} cy={34} r={0.6} fill="#fff" opacity={0.8} />
+      {/* 果汁 */}
+      <path d="M25.5 38.5 q-0.8 1.6 0 2.4 q0.8 -0.8 0 -2.4 Z" fill="#fde9c8" opacity={0.85} />
+      <ellipse cx={40.5} cy={41.4} rx={2.4} ry={0.7} fill="#fbe4c0" opacity={0.6} />
+    </g>
+  );
+}
+
+/* ===== 3. オリーブオイル ===== */
+function FoodKgOlive() {
+  return (
+    <g>
+      <Food3Shadow cx={24} rx={17} />
+      {/* 瓶 */}
+      <path d="M16.2 6.5 h4.6 v3.2 h-4.6 Z" fill="#c99a62" stroke="#5a3a1e" strokeWidth={0.5} />
+      <path d="M16.8 7.4 h3.4" stroke="#e8c494" strokeWidth={0.5} />
+      <path d="M16.4 9.7 h4.2 v4.8 C20.6 16 24.8 16.8 24.8 20 V37.5 Q24.8 40 22 40 H15 Q12.2 40 12.2 37.5 V20 C12.2 16.8 16.4 16 16.4 14.5 Z" fill="#a8a232" stroke="#2f3410" strokeWidth={0.6} />
+      <path d="M16.4 9.7 h4.2 v3 h-4.2 Z" fill="#d6e2c8" opacity={0.5} />
+      <path d="M21.2 18.6 C23.4 19.4 23.8 20.4 23.8 21.6 V37.4 Q23.8 39 22 39.2 H19 Q22 37.6 21.6 33 Z" fill="#6f6c18" opacity={0.85} />
+      <path d="M13.2 20.5 V37" stroke="#e8e27a" strokeWidth={1.4} strokeLinecap="round" opacity={0.75} />
+      <path d="M14.6 21.5 V30" stroke="#fff" strokeWidth={0.6} strokeLinecap="round" opacity={0.7} />
+      <path d="M16.4 12.7 h4.2" stroke="#d8d24a" strokeWidth={0.5} />
+      {/* 首の麻ひもと札 */}
+      <path d="M16.3 14 Q18.5 15 20.7 14" fill="none" stroke="#c8a870" strokeWidth={0.7} />
+      <path d="M20.6 14.2 L23.2 18.8" stroke="#c8a870" strokeWidth={0.4} />
+      <path d="M22.4 18.4 l2.6 -0.6 l1 4 l-2.6 0.6 Z" fill="#efe2c2" stroke="#7a5a30" strokeWidth={0.35} />
+      {/* 枝 */}
+      <path d="M22 41 Q30 37 41 29" fill="none" stroke="#6a4a2a" strokeWidth={0.9} strokeLinecap="round" />
+      <path d="M28 37.5 C30 34 33 33 35 33.2 C33.5 35.4 31 37 28 37.5 Z" fill="#6f8f5a" stroke="#34482a" strokeWidth={0.4} />
+      <path d="M33 34 C36 30.4 39.5 30 41.5 30.6 C39.5 32.6 36.5 34 33 34 Z" fill="#8ca673" stroke="#34482a" strokeWidth={0.4} />
+      <path d="M36.6 31.6 C37 28 39.4 25.8 41.6 25.2 C41.2 27.8 39.5 30.4 36.6 31.6 Z" fill="#5f7d4c" stroke="#34482a" strokeWidth={0.4} />
+      <path d="M30.5 36.4 C31.6 39.4 34 40.8 36.4 41 C35.6 38.8 33.6 37 30.5 36.4 Z" fill="#a7b98f" stroke="#34482a" strokeWidth={0.4} />
+      {/* 実 */}
+      <ellipse cx={27.4} cy={39.4} rx={2.1} ry={2.7} fill="#7ea33a" stroke="#34481a" strokeWidth={0.5} transform="rotate(-25 27.4 39.4)" />
+      <ellipse cx={26.8} cy={38.4} rx={0.6} ry={0.9} fill="#e0f0a0" opacity={0.8} />
+      <ellipse cx={32.4} cy={39.6} rx={2.3} ry={2.9} fill="#2b1d33" stroke="#120a18" strokeWidth={0.5} transform="rotate(20 32.4 39.6)" />
+      <ellipse cx={31.7} cy={38.6} rx={0.6} ry={1} fill="#8a6aa0" opacity={0.85} />
+      <ellipse cx={37.8} cy={34.6} rx={2} ry={2.6} fill="#3a2442" stroke="#120a18" strokeWidth={0.5} transform="rotate(-10 37.8 34.6)" />
+      <ellipse cx={37.2} cy={33.7} rx={0.5} ry={0.8} fill="#9a7ab0" opacity={0.85} />
+      <ellipse cx={40.6} cy={37.8} rx={1.9} ry={2.4} fill="#8fb046" stroke="#34481a" strokeWidth={0.5} transform="rotate(15 40.6 37.8)" />
+      <ellipse cx={40.1} cy={37} rx={0.5} ry={0.8} fill="#e8f6b0" opacity={0.8} />
+    </g>
+  );
+}
+
+/* ===== 4. 手延べそうめん ===== */
+function FoodKgSomen() {
+  return (
+    <g>
+      <Food3Shadow cx={24} rx={18} />
+      {/* ガラス器 */}
+      <path d="M7 23 Q8 35.5 21 36.5 Q34 35.5 35 23 Z" fill="#a8dcf2" opacity={0.5} stroke="#8cc4dc" strokeWidth={0.6} />
+      <ellipse cx={21} cy={37} rx={6} ry={1.3} fill="#bfe2f2" opacity={0.6} stroke="#8cc4dc" strokeWidth={0.4} />
+      <ellipse cx={21} cy={23} rx={14} ry={4.4} fill="#9fd4ea" opacity={0.45} stroke="#8cc4dc" strokeWidth={0.6} />
+      {/* 氷 */}
+      <rect x={9.5} y={20.5} width={5} height={4.4} rx={0.8} fill="#eef9ff" opacity={0.8} stroke="#9cc8de" strokeWidth={0.4} transform="rotate(-15 12 22.7)" />
+      <rect x={28} y={19.6} width={5} height={4.6} rx={0.8} fill="#eef9ff" opacity={0.8} stroke="#9cc8de" strokeWidth={0.4} transform="rotate(20 30.5 22)" />
+      {/* そうめん */}
+      <path d="M11 24 C11 18 16 15.5 21 15.6 C27 15.6 31 18.5 31 24 Q21 27.5 11 24 Z" fill="#f7f2e4" stroke="#b9ae94" strokeWidth={0.5} />
+      <g fill="none" strokeWidth={0.38} strokeLinecap="round">
+        {["M12 23.6 Q14 19 18 18.6 Q21 18.4 22.6 20 Q24.4 17.6 28 18.6 Q30.6 19.8 30.4 23.4",
+          "M13 22 Q15.6 17.4 20 17 Q23 16.8 24.6 18.4 Q27 16.6 29.4 19",
+          "M12.6 24.6 Q15 21 18.4 21.4 Q20.6 22.4 21.6 21.2 Q23.6 19.4 26.6 20.4 Q29.6 21.6 29.6 24.4",
+          "M15.4 19.4 Q18 16 22 16.2 Q25.6 16.4 27.4 18",
+          "M14.6 25.4 Q17 23 20 23.6 Q23.4 24.6 25.2 22.8 Q27.4 21.8 28.6 24.8",
+          "M16.6 21.6 Q18.6 19.6 21 20.2"].map((d, k) => (
+          <path key={k} d={d} stroke={k % 2 ? "#cfc4aa" : "#ffffff"} />
+        ))}
+      </g>
+      <path d="M13.5 20.5 Q16 16.8 20 16.4" fill="none" stroke="#fff" strokeWidth={0.8} strokeLinecap="round" />
+      <path d="M15 23 Q18 20.4 21.6 21.6 Q24 20.4 26 21.4" fill="none" stroke="#f08aa4" strokeWidth={0.5} />
+      <path d="M18 24.6 Q22 22.6 27.6 23.4" fill="none" stroke="#7cc06a" strokeWidth={0.5} />
+      <rect x={18} y={13.5} width={4.4} height={3.6} rx={0.7} fill="#eef9ff" opacity={0.75} stroke="#9cc8de" strokeWidth={0.4} transform="rotate(10 20 15)" />
+      {/* ガラスの映り込み */}
+      <path d="M9 26 Q10 32 14 34.4" fill="none" stroke="#fff" strokeWidth={0.8} strokeLinecap="round" opacity={0.7} />
+      <path d="M7.2 23.4 Q21 30 34.8 23.4" fill="none" stroke="#e8f8ff" strokeWidth={0.5} opacity={0.8} />
+      {/* つゆ猪口 */}
+      <path d="M33.5 32 L34.6 40 Q38 41.4 41.4 40 L42.5 32 Z" fill="#f2efe6" stroke="#5a5040" strokeWidth={0.5} />
+      <path d="M33.8 34.4 Q38 35.6 42.2 34.4" fill="none" stroke="#3a5a9a" strokeWidth={0.6} />
+      <path d="M40 32.5 L39.4 40.6 Q41 40.4 41.4 40 L42.5 32 Z" fill="#c8c2b2" opacity={0.6} />
+      <ellipse cx={38} cy={32} rx={4.5} ry={1.4} fill="#4a2810" stroke="#5a5040" strokeWidth={0.5} />
+      <ellipse cx={37} cy={31.8} rx={1.8} ry={0.45} fill="#a8683a" opacity={0.8} />
+      {/* 薬味 */}
+      <ellipse cx={10.5} cy={40} rx={5} ry={1.7} fill="#ece6d6" stroke="#5a5040" strokeWidth={0.4} />
+      <ellipse cx={9} cy={39.4} rx={1.8} ry={0.9} fill="#f2d070" stroke="#b99430" strokeWidth={0.3} />
+      {[[11.4, 39.2], [12.6, 39.8], [11.8, 40.4], [13.2, 39.1]].map(([x, y], k) => (
+        <circle key={k} cx={x} cy={y} r={0.55} fill="#8ccf5a" stroke="#3f7a26" strokeWidth={0.25} />
+      ))}
+    </g>
+  );
+}
+
+/* ===== 5. 木桶仕込みの醤油 ===== */
+function FoodKgShoyu() {
+  return (
+    <g>
+      <Food3Shadow cx={24} rx={19} />
+      {/* 木桶 */}
+      <path d="M4 19 L6 38 Q19 43 32 38 L34 19 Z" fill="#b57c44" stroke="#4a2a12" strokeWidth={0.6} />
+      <path d="M26 19 L34 19 L32 38 Q29 39.6 25 40.4 Z" fill="#875528" />
+      <path d="M4 19 L6 38 Q8 38.8 10 39.4 L8.4 19 Z" fill="#cf9a62" />
+      <g stroke="#6a4020" strokeWidth={0.35} opacity={0.8}>
+        <path d="M10.5 26 L11.2 30" /><path d="M16 26.5 L16.3 30.6" /><path d="M21.6 26.6 L21.5 30.6" /><path d="M27 26.2 L26.6 30.2" />
+        <path d="M11.4 34.4 L11.8 38" /><path d="M16.5 35 L16.6 39.6" /><path d="M21.6 35 L21.4 39.6" /><path d="M26.6 34.6 L26.2 38.6" />
+      </g>
+      {/* たが */}
+      <path d="M4.5 22.4 Q19 27.4 33.6 22.4 L33.3 25.2 Q19 30.2 4.8 25.2 Z" fill="#7a6232" stroke="#3a2a10" strokeWidth={0.4} />
+      <path d="M5.4 30.6 Q19 35.6 32.8 30.6 L32.5 33.4 Q19 38.4 5.7 33.4 Z" fill="#7a6232" stroke="#3a2a10" strokeWidth={0.4} />
+      <path d="M5 23.4 Q19 28.2 33.4 23.4 M5.8 31.6 Q19 36.4 32.6 31.6" fill="none" stroke="#b49a5a" strokeWidth={0.45} />
+      {/* 縁と中の醤油 */}
+      <ellipse cx={19} cy={19} rx={15} ry={4.6} fill="#c99260" stroke="#4a2a12" strokeWidth={0.6} />
+      <ellipse cx={19} cy={19.3} rx={13.4} ry={3.6} fill="#2e0e06" />
+      <ellipse cx={19} cy={19.8} rx={12.4} ry={2.8} fill="#4a170a" />
+      <path d="M9 19.2 Q14 17.4 21 17.6" fill="none" stroke="#a04a28" strokeWidth={0.8} strokeLinecap="round" opacity={0.75} />
+      <ellipse cx={24} cy={20.4} rx={3} ry={0.6} fill="#7a2a14" opacity={0.8} />
+      <path d="M5 17.6 Q10 15.2 17 14.6" fill="none" stroke="#e8bc88" strokeWidth={0.6} strokeLinecap="round" />
+      {/* 醤油差し */}
+      <path d="M34.6 21 h3.6 v1.6 h-3.6 Z" fill="#3a2a20" stroke="#120a06" strokeWidth={0.4} />
+      <path d="M38 21.6 q2 -0.6 2.6 -2.2" fill="none" stroke="#3a2a20" strokeWidth={0.9} strokeLinecap="round" />
+      <path d="M35 22.6 h2.8 v2 C37.8 26 42 27 42 32 Q42 39.4 36.4 39.4 Q30.8 39.4 30.8 32 C30.8 27 35 26 35 24.6 Z" fill="#cfe2ea" opacity={0.45} stroke="#3a3030" strokeWidth={0.5} />
+      <path d="M31.3 30.5 Q36.4 29 41.5 30.5 Q42 39 36.4 39 Q30.8 39 31.3 30.5 Z" fill="#5a1a0a" />
+      <path d="M38 30.2 Q41.5 30.6 41.5 33 Q41.5 38.6 37 39 Q40 36 38 30.2 Z" fill="#2e0a04" opacity={0.85} />
+      <path d="M32.4 32 Q32.6 36.4 35 38" fill="none" stroke="#c0502a" strokeWidth={0.7} strokeLinecap="round" opacity={0.7} />
+      <path d="M33 27.4 Q32 29 32 30.2" fill="none" stroke="#fff" strokeWidth={0.6} strokeLinecap="round" opacity={0.8} />
+      {/* しずくと醤油皿 */}
+      <path d="M40.9 22 q-0.9 1.6 0 2.4 q0.9 -0.8 0 -2.4 Z" fill="#6a1e0c" stroke="#2a0804" strokeWidth={0.25} />
+      <ellipse cx={8} cy={40.6} rx={5} ry={1.6} fill="#f2eee4" stroke="#5a5040" strokeWidth={0.4} />
+      <ellipse cx={8} cy={40.5} rx={3.4} ry={0.95} fill="#5a1a0a" />
+      <ellipse cx={7.2} cy={40.3} rx={1.2} ry={0.3} fill="#c0602e" opacity={0.8} />
+    </g>
+  );
+}
+
+/* ===== 6. 常陸秋そば ===== */
+function FoodIbSoba() {
+  return (
+    <g>
+      <Food3Shadow cx={24} rx={19} />
+      {/* せいろ */}
+      <path d="M4 30 L44 30 L42 35.6 L6 35.6 Z" fill="#7a1e16" stroke="#2a0806" strokeWidth={0.6} />
+      <path d="M33 30 L44 30 L42 35.6 L31 35.6 Z" fill="#5a120c" />
+      <path d="M5 31.2 L43 31.2" stroke="#c0503a" strokeWidth={0.5} opacity={0.8} />
+      <path d="M7 22 L41 22 L44 30 L4 30 Z" fill="#d9bf86" stroke="#5a4020" strokeWidth={0.5} />
+      <g stroke="#a88a52" strokeWidth={0.35}>
+        <path d="M6.5 23.4 L41.5 23.4" /><path d="M6 25 L42 25" /><path d="M5.4 26.6 L42.6 26.6" /><path d="M4.8 28.3 L43.2 28.3" />
+      </g>
+      <path d="M7 22 L41 22 L41.4 23 L6.6 23 Z" fill="#8a2a1c" />
+      {/* そば */}
+      <path d="M8.6 27.4 Q8 23 11 21.6 Q12 18.6 15.4 18.4 Q17.4 15.6 21 16.2 Q24 14.6 27 16.4 Q31 16 32.4 18.8 Q36 19.6 36.4 22.6 Q38.4 24.6 37.6 27.4 Q23 30.6 8.6 27.4 Z" fill="#7a6e5e" stroke="#2e261c" strokeWidth={0.6} />
+      <path d="M27 16.4 Q31 16 32.4 18.8 Q36 19.6 36.4 22.6 Q38.4 24.6 37.6 27.4 Q32 28.8 27 29 Q33 24 27 16.4 Z" fill="#5a5044" opacity={0.8} />
+      <g fill="none" strokeWidth={0.42} strokeLinecap="round">
+        {[["M10 26.4 Q13 21 19 20.4 Q25 20 28 22.6 Q31 25 35.8 25.4", "#c4baa4"], ["M9.6 24.6 Q12 20 17 19.4 Q22 18.6 25 21 Q28.4 23.6 34 22", "#4a4034"], ["M11.6 22.4 Q15 18.6 20 18.2 Q25 17.8 28 19.8 Q31 21.6 35 21", "#c4baa4"],
+          ["M13 27.6 Q16 24 21 23.6 Q26 23.4 29 25.6 Q32 27.6 36.6 26.6", "#4a4034"], ["M15 20.6 Q19 16.8 24 17.2 Q28.4 17.6 31.6 19.6", "#4a4034"], ["M16 25.6 Q19 22.4 23.4 22.4 Q27.6 22.6 30 24.2", "#d6ccb6"],
+          ["M18.4 18.6 Q22 15.8 26.6 17", "#d6ccb6"], ["M11 25.8 Q12.6 23.6 15.6 23", "#d6ccb6"], ["M29.6 23.4 Q32.6 22.6 36 24.4", "#d6ccb6"], ["M20 28.2 Q24 26.6 28 27.8", "#c4baa4"]].map(([d, c], k) => (
+          <path key={k} d={d} stroke={c} />
+        ))}
+      </g>
+      {[[14, 22], [19, 21.4], [24.6, 19.2], [27.4, 24], [31.6, 22.8], [17, 25.4], [22.4, 26.4], [29, 18.4], [12.6, 25]].map(([x, y], k) => (
+        <circle key={k} cx={x} cy={y} r={0.22} fill="#2a2018" />
+      ))}
+      <path d="M12.4 21.4 Q15.4 18.6 20 18" fill="none" stroke="#efe6d0" strokeWidth={0.6} strokeLinecap="round" opacity={0.8} />
+      {/* つゆ猪口 */}
+      <path d="M33 33 L34 40.4 Q37.5 41.8 41 40.4 L42 33 Z" fill="#2c3e6a" stroke="#101a30" strokeWidth={0.5} />
+      <path d="M39.6 33.4 L39 40.9 Q40.4 40.8 41 40.4 L42 33 Z" fill="#1a2848" />
+      <path d="M34 35 Q34.4 38 35.6 39.6" fill="none" stroke="#7a94c8" strokeWidth={0.6} opacity={0.8} />
+      <ellipse cx={37.5} cy={33} rx={4.5} ry={1.4} fill="#3a1e0c" stroke="#101a30" strokeWidth={0.5} />
+      <ellipse cx={36.6} cy={32.8} rx={1.8} ry={0.4} fill="#9a6036" />
+      {/* 薬味皿 */}
+      <ellipse cx={10} cy={39.6} rx={6} ry={2} fill="#efe9da" stroke="#5a5040" strokeWidth={0.4} />
+      <path d="M5.2 39.4 Q7 38 8.4 39.4 Q7 40.6 5.2 39.4 Z" fill="#9cc65a" stroke="#4a7022" strokeWidth={0.35} />
+      <circle cx={6.6} cy={39} r={0.4} fill="#d8ef9a" />
+      {[[10.4, 39], [11.6, 39.6], [12.8, 38.9], [11.2, 40.4], [13.8, 39.8], [12.4, 40.6]].map(([x, y], k) => (
+        <g key={k}>
+          <circle cx={x} cy={y} r={0.62} fill={k % 2 ? "#e8f2c8" : "#6fae3e"} stroke="#3f6e22" strokeWidth={0.25} />
+          <circle cx={x} cy={y} r={0.22} fill="#3f6e22" opacity={0.5} />
+        </g>
+      ))}
+    </g>
+  );
+}
+
+/* ===== 7. 奥久慈しゃもの親子丼 ===== */
+function FoodIbShamo() {
+  return (
+    <g>
+      <Food3Shadow cx={24} rx={17} />
+      <Food3Steam x={24} y={15} />
+      {/* 丼 */}
+      <path d="M8.4 23 Q9.4 37 24 38 Q38.6 37 39.6 23 Z" fill="#8c2018" stroke="#2a0604" strokeWidth={0.6} />
+      <path d="M30 23 L39.6 23 Q38.6 37 24 38 Q34 34 32 23 Z" fill="#5e140e" />
+      <path d="M10.5 26 Q11.4 32 16 35" fill="none" stroke="#d65a46" strokeWidth={0.9} strokeLinecap="round" opacity={0.75} />
+      <path d="M9.4 29.6 Q24 34.4 38.6 29.6" fill="none" stroke="#d8b25a" strokeWidth={0.6} opacity={0.75} />
+      <ellipse cx={24} cy={38.4} rx={6.5} ry={1.4} fill="#3a0a06" stroke="#2a0604" strokeWidth={0.4} />
+      <ellipse cx={24} cy={23} rx={15.6} ry={5} fill="#1a0604" stroke="#2a0604" strokeWidth={0.6} />
+      {/* 卵とじ */}
+      <path d="M9.8 23 Q10 19 16 18 Q24 16.4 32 18 Q38 19 38.2 23 Q35 27 24 27.4 Q13 27 9.8 23 Z" fill="#f0c03e" stroke="#9a6a12" strokeWidth={0.45} />
+      <path d="M11 22 Q14 19.6 19 20.4 Q16 23 12 24 Z M28 19.4 Q33 18.6 36.4 21 Q33 22.4 29 21.6 Z M17 25 Q22 23.6 27 25.6 Q22 26.8 17 25 Z" fill="#f9e08a" />
+      <path d="M30 24.6 Q34 23.4 37 23.6 Q34 26 30 24.6 Z M13 20 Q16 18.6 19 19 Z" fill="#e2972a" opacity={0.8} />
+      {/* 鶏肉 */}
+      {[[14.4, 22.4, -10], [21, 19.6, 8], [29.6, 22.6, -6], [18.4, 24.8, 14], [26, 25.2, -4]].map(([x, y, r], k) => (
+        <g key={k} transform={`rotate(${r} ${x} ${y})`}>
+          <path d={`M${x - 2.8} ${y + 0.8} L${x - 2.2} ${y - 1.2} L${x - 0.6} ${y - 2} L${x + 1.4} ${y - 1.6} L${x + 2.8} ${y - 0.4} L${x + 2.4} ${y + 1.4} L${x + 0.4} ${y + 1.9} L${x - 1.6} ${y + 1.8} Z`} fill="#e8c69a" stroke="#6a3a18" strokeWidth={0.4} strokeLinejoin="round" />
+          <path d={`M${x - 0.6} ${y - 2} L${x + 1.4} ${y - 1.6} L${x + 2.8} ${y - 0.4} L${x + 2.4} ${y + 1.4} Q${x + 1} ${y} ${x - 0.6} ${y - 2} Z`} fill="#b8743a" />
+          <path d={`M${x - 2} ${y + 0.4} Q${x - 0.6} ${y - 0.4} ${x + 0.6} ${y + 0.6}`} fill="none" stroke="#c89a68" strokeWidth={0.3} />
+          <path d={`M${x - 1.8} ${y - 0.9} L${x - 0.6} ${y - 1.5}`} stroke="#fff4e0" strokeWidth={0.45} strokeLinecap="round" />
+        </g>
+      ))}
+      {/* 玉ねぎ */}
+      <path d="M33 20.4 Q35 19.6 36.6 20.8" fill="none" stroke="#f6eccc" strokeWidth={0.6} />
+      <path d="M11.6 24.4 Q13 25.6 15 25.4" fill="none" stroke="#f6eccc" strokeWidth={0.6} />
+      {/* 黄身 */}
+      <circle cx={24.6} cy={22.4} r={2.6} fill="#f08a12" stroke="#a04a06" strokeWidth={0.45} />
+      <circle cx={25.2} cy={23} r={1.6} fill="#d86a08" opacity={0.55} />
+      <ellipse cx={23.6} cy={21.4} rx={0.9} ry={0.55} fill="#fff" opacity={0.85} />
+      {/* 三つ葉 */}
+      <path d="M27 21 Q29.5 18.5 31 16.4" fill="none" stroke="#6ab04a" strokeWidth={0.5} />
+      <path d="M26.6 22 Q29 21 32 21.4" fill="none" stroke="#6ab04a" strokeWidth={0.5} />
+      {[[31, 15.6, -30], [32.6, 17, 40], [29.6, 15.2, -90], [32.8, 21.2, 10], [33.8, 22.4, 70], [33.2, 19.8, -40]].map(([x, y, r], k) => (
+        <ellipse key={k} cx={x} cy={y} rx={1.5} ry={1} fill={k % 2 ? "#4f9a34" : "#6cc04a"} stroke="#24561a" strokeWidth={0.3} transform={`rotate(${r} ${x} ${y})`} />
+      ))}
+    </g>
+  );
+}
+
+/* ===== 8. 奥久慈のりんご ===== */
+function FoodIbApple() {
+  return (
+    <g>
+      <Food3Shadow cx={25} rx={18} />
+      {/* 丸ごと */}
+      <path d="M19 16 C23 13 30.4 14.4 30.4 22.6 C30.4 30.6 25.4 35 20.6 34.6 C19.6 34.4 18.6 34.4 17.4 34.6 C12.4 35 7.6 30.4 7.6 22.6 C7.6 14.4 15 13 19 16 Z" fill="#c81e28" stroke="#4a0608" strokeWidth={0.6} />
+      <path d="M24 15 C29 15.6 30.4 18.6 30.4 22.6 C30.4 30.6 25.4 35 20.6 34.6 C25 31 27 25 24 15 Z" fill="#8a0c16" opacity={0.85} />
+      <g fill="none" stroke="#e85a42" strokeWidth={0.45} opacity={0.6}>
+        <path d="M11 20 Q10.6 27 14 31.6" /><path d="M14 18.4 Q13.4 26 16.4 32.6" /><path d="M21.6 18 Q23 25 21.6 32" />
+      </g>
+      <ellipse cx={12.6} cy={20.6} rx={2} ry={3.6} fill="#fff" opacity={0.4} transform="rotate(15 12.6 20.6)" />
+      <circle cx={12} cy={19} r={0.75} fill="#fff" opacity={0.75} />
+      <path d="M17 16.4 Q19 17.6 21.2 16.4" fill="none" stroke="#5a0a0a" strokeWidth={0.5} />
+      <path d="M19.2 16.6 Q19.4 13.4 21 11" fill="none" stroke="#5a3a1e" strokeWidth={0.9} strokeLinecap="round" />
+      <path d="M20.6 12 C23 9 27 9 29 10.4 C27 12.8 23.4 13.4 20.6 12 Z" fill="#4f9a3c" stroke="#24521c" strokeWidth={0.45} />
+      <path d="M20.8 12 Q25 10.8 28.8 10.5" fill="none" stroke="#9fd07c" strokeWidth={0.35} />
+      {/* 縦切りの断面 */}
+      <path d="M33 26.4 C35 25 41.6 25.4 41.8 32.4 C42 38.6 37.6 41.4 33.4 41 C29 41.4 24.4 38.8 24.6 32.4 C24.8 25.4 31 25 33 26.4 Z" fill="#b8121e" stroke="#4a0608" strokeWidth={0.6} />
+      <path d="M33 27.4 C35 26.2 40.8 26.6 40.8 32.4 C40.8 37.6 37.2 40.2 33.4 40 C29.2 40.2 25.6 37.8 25.6 32.4 C25.6 26.6 31 26.2 33 27.4 Z" fill="#fbf0cc" />
+      {/* 蜜 */}
+      <path d="M33 28.6 C36.2 29 38 31 37.6 33.8 C37.4 36.6 35 38.4 33.2 38.4 C31.2 38.4 28.8 36.6 28.6 33.8 C28.4 31 30 29 33 28.6 Z" fill="#eab450" opacity={0.6} />
+      <path d="M33 29.6 C35.4 30.4 36.4 32 36.2 34 C35.8 36 34.4 37.4 33.2 37.4 C31.6 37.4 30.2 36 30 34 C29.8 32 30.8 30.4 33 29.6 Z" fill="#dc9a30" opacity={0.6} />
+      <ellipse cx={33.2} cy={33.6} rx={1.8} ry={2.8} fill="#f6e2a8" stroke="#b8862e" strokeWidth={0.3} />
+      <path d="M33.2 31.2 q-0.8 1.2 -0.2 2.4 q0.8 -1 0.2 -2.4 Z" fill="#4a2410" transform="rotate(-25 33 32.4)" />
+      <path d="M33.4 33.4 q-0.8 1.2 -0.2 2.4 q0.8 -1 0.2 -2.4 Z" fill="#5a2c14" transform="rotate(20 33.2 34.6)" />
+      <path d="M31 31.6 Q30.4 35.6 33.2 37.6 Q36 35.6 35.4 31.6" fill="none" stroke="#c89a40" strokeWidth={0.3} opacity={0.8} />
+      <path d="M33 27.4 L33.2 30.6" stroke="#b8862e" strokeWidth={0.35} />
+      <path d="M27 30 Q27.6 28 30 27.6" fill="none" stroke="#fff" strokeWidth={0.6} strokeLinecap="round" opacity={0.9} />
+      <circle cx={38.4} cy={36.4} r={0.45} fill="#fff" opacity={0.85} />
+    </g>
+  );
+}
+
+/* ===== 9. 干し芋 ===== */
+function Food3Imo({ x, y, r, w = 15, h = 6.4 }) {
+  return (
+    <g transform={`rotate(${r} ${x} ${y})`}>
+      <path d={`M${x - w / 2} ${y - h / 2 + 0.6} Q${x - w / 2 + 0.4} ${y - h / 2} ${x - w / 2 + 2} ${y - h / 2 - 0.2} L${x + w / 2 - 1.6} ${y - h / 2 + 0.3} Q${x + w / 2} ${y - h / 2 + 0.4} ${x + w / 2} ${y} L${x + w / 2 - 0.4} ${y + h / 2 - 0.6} Q${x + w / 2 - 1} ${y + h / 2} ${x + w / 2 - 2.4} ${y + h / 2} L${x - w / 2 + 1.6} ${y + h / 2 - 0.2} Q${x - w / 2} ${y + h / 2 - 0.4} ${x - w / 2} ${y + 1} Z`}
+        fill="#e6982c" stroke="#8a4a10" strokeWidth={0.5} />
+      <ellipse cx={x} cy={y - 0.3} rx={w / 2 - 2} ry={h / 2 - 1.2} fill="#f4bc5a" opacity={0.6} />
+      <path d={`M${x - w / 2 + 1} ${y + h / 2 - 1.4} L${x + w / 2 - 1.2} ${y + h / 2 - 1.2} L${x + w / 2 - 2.4} ${y + h / 2 - 0.2} L${x - w / 2 + 1.6} ${y + h / 2 - 0.4} Z`} fill="#c0721c" opacity={0.7} />
+      <g fill="none" stroke="#f6c868" strokeWidth={0.35} opacity={0.85}>
+        <path d={`M${x - w / 2 + 1.5} ${y - 1.4} Q${x} ${y - 2} ${x + w / 2 - 1.6} ${y - 1.2}`} />
+        <path d={`M${x - w / 2 + 2.5} ${y + 0.6} Q${x} ${y} ${x + w / 2 - 2.5} ${y + 0.8}`} />
+      </g>
+      <path d={`M${x - w / 2 + 1.4} ${y - h / 2 + 0.8} L${x + 1} ${y - h / 2 + 0.6}`} stroke="#ffe0a0" strokeWidth={0.6} strokeLinecap="round" />
+      {[[-4.6, -0.6], [-1.4, 1.4], [2, -1.2], [4.8, 0.8], [-3, 1.8], [0.6, -2.2], [5.4, -1.8], [-5.6, 1.2]].map(([dx, dy], k) => (
+        <circle key={k} cx={x + dx} cy={y + dy} r={k % 3 ? 0.4 : 0.6} fill="#fff" opacity={0.75} />
+      ))}
+      <ellipse cx={x - 2} cy={y + 0.4} rx={2.2} ry={0.8} fill="#fff" opacity={0.25} />
+    </g>
+  );
+}
+function FoodIbHoshiimo() {
+  return (
+    <g>
+      <Food3Shadow cx={24} rx={19} />
+      {/* 竹ざる */}
+      <ellipse cx={24} cy={35} rx={20} ry={6.6} fill="#c8a868" stroke="#5a4020" strokeWidth={0.6} />
+      <ellipse cx={24} cy={34.4} rx={18} ry={5.4} fill="#d8bc7c" />
+      <g fill="none" stroke="#a8884a" strokeWidth={0.35}>
+        <ellipse cx={24} cy={34.4} rx={15} ry={4.4} /><ellipse cx={24} cy={34.4} rx={11.5} ry={3.3} /><ellipse cx={24} cy={34.4} rx={8} ry={2.2} />
+      </g>
+      <Food3Imo x={19.6} y={30} r={-16} h={5.2} />
+      <Food3Imo x={28.4} y={30.4} r={14} w={14} h={5} />
+      <Food3Imo x={23} y={25.4} r={-6} w={16} h={5.4} />
+      <Food3Imo x={25} y={34.6} r={3} w={15} h={5} />
+    </g>
+  );
+}
+
+/* ===== 10. あんこう鍋 ===== */
+function FoodIbAnko() {
+  return (
+    <g>
+      <Food3Shadow cx={24} rx={19} />
+      <Food3Steam x={24} y={13} />
+      {/* 土鍋 */}
+      <path d="M6 23 Q6.6 37 24 39 Q41.4 37 42 23 Z" fill="#4a3226" stroke="#1a0c06" strokeWidth={0.6} />
+      <path d="M8.2 32 Q11 38 24 39 Q37 38 39.8 32 Q24 36 8.2 32 Z" fill="#c8ac80" />
+      <path d="M34 23 L42 23 Q41.4 31 38.8 33.6 Q36 28 34 23 Z" fill="#2e1e16" />
+      <path d="M8 25 Q8.6 29.6 11 31.6" fill="none" stroke="#8a6650" strokeWidth={0.9} strokeLinecap="round" opacity={0.8} />
+      <path d="M3 24.4 Q2.4 22 5 21.6 L7 22.6 Q5 23 5.6 25 Z" fill="#4a3226" stroke="#1a0c06" strokeWidth={0.5} />
+      <path d="M45 24.4 Q45.6 22 43 21.6 L41 22.6 Q43 23 42.4 25 Z" fill="#3a261c" stroke="#1a0c06" strokeWidth={0.5} />
+      <ellipse cx={24} cy={23} rx={18} ry={5.6} fill="#5a3e2e" stroke="#1a0c06" strokeWidth={0.6} />
+      {/* 汁 */}
+      <ellipse cx={24} cy={23.2} rx={16.4} ry={4.6} fill="#c85a1c" />
+      <ellipse cx={24} cy={23.4} rx={15} ry={3.9} fill="#e47a28" />
+      <ellipse cx={20} cy={22.6} rx={6} ry={1.4} fill="#f4a24c" opacity={0.7} />
+      {/* 白菜 */}
+      <path d="M26 19.6 Q31 17.6 37 19.2 Q38 21.4 36 23 Q31 22.4 27 22.6 Z" fill="#e8f0c8" stroke="#7a8a4a" strokeWidth={0.4} />
+      <path d="M28.6 20.8 Q32 19.4 36.4 20" fill="none" stroke="#9cc05a" strokeWidth={0.6} />
+      {/* 春菊 */}
+      <path d="M9.6 22 Q11 18.6 14.6 18.8 Q15.4 20.6 14 22.4 Q12 23.4 9.6 22 Z" fill="#3f8a2e" stroke="#1e4a14" strokeWidth={0.4} />
+      <path d="M10.6 21.4 Q12.4 20 14 20.2" fill="none" stroke="#86c860" strokeWidth={0.4} />
+      {/* あんこうの身（皮つき） */}
+      {[[17.6, 21.2, -10], [22.4, 24.6, 8], [31, 24.8, -6]].map(([x, y, r], k) => (
+        <g key={k} transform={`rotate(${r} ${x} ${y})`}>
+          <path d={`M${x - 2.8} ${y + 0.6} Q${x - 2.6} ${y - 1.8} ${x} ${y - 1.8} Q${x + 2.8} ${y - 1.8} ${x + 2.8} ${y + 0.4} Q${x + 2.6} ${y + 1.8} ${x} ${y + 1.8} Q${x - 2.6} ${y + 1.8} ${x - 2.8} ${y + 0.6} Z`} fill="#f8f2e6" stroke="#8a7a6a" strokeWidth={0.4} />
+          <path d={`M${x + 0.6} ${y + 1.8} Q${x + 2.6} ${y + 1.6} ${x + 2.8} ${y + 0.4} Q${x + 2.4} ${y + 1.2} ${x + 0.6} ${y + 1.2} Z`} fill="#6a5a68" />
+          <path d={`M${x - 1.6} ${y - 0.8} Q${x} ${y - 1.3} ${x + 1.4} ${y - 0.9}`} fill="none" stroke="#fff" strokeWidth={0.5} strokeLinecap="round" />
+        </g>
+      ))}
+      {/* ねぎ（斜め切り） */}
+      <ellipse cx={26.6} cy={21} rx={1.8} ry={1} fill="#f4f6e6" stroke="#6a8a3a" strokeWidth={0.4} transform="rotate(-20 26.6 21)" />
+      <ellipse cx={12.8} cy={24.6} rx={1.8} ry={1} fill="#b8dc7a" stroke="#4a7a2a" strokeWidth={0.4} transform="rotate(15 12.8 24.6)" />
+      {/* しいたけ */}
+      <ellipse cx={35.4} cy={24.4} rx={2.2} ry={1.5} fill="#7a4a26" stroke="#3a1e0a" strokeWidth={0.4} />
+      <ellipse cx={34.9} cy={24} rx={0.9} ry={0.5} fill="#b07a4a" />
+      {/* にんじん */}
+      <ellipse cx={20.4} cy={25.6} rx={1.4} ry={0.8} fill="#f07a20" stroke="#9a3a08" strokeWidth={0.35} />
+      {/* あん肝の浮き */}
+      <circle cx={27.6} cy={23.8} r={0.5} fill="#f8c070" opacity={0.85} />
+      <circle cx={15.4} cy={23.8} r={0.4} fill="#f8c070" opacity={0.85} />
+      <path d="M8 21.6 Q14 18.4 22 17.8" fill="none" stroke="#a88470" strokeWidth={0.6} strokeLinecap="round" opacity={0.7} />
+    </g>
+  );
+}
+
+/* ===== 11. のし梅 ===== */
+function FoodIbNoshiume() {
+  return (
+    <g>
+      <Food3Shadow cx={24} rx={19} />
+      {/* 下の竹の皮 */}
+      <path d="M4 36 Q14 30 28 27 Q38 25 44 27 Q42 33 30 37 Q17 41 6 40 Z" fill="#d6b472" stroke="#5a3a14" strokeWidth={0.6} />
+      <g fill="none" stroke="#b08a44" strokeWidth={0.3}>
+        <path d="M7 37.6 Q22 31 42 28.4" /><path d="M8 39 Q24 33.6 41.6 30" />
+      </g>
+      {[[10, 38.6], [16, 36.4], [36, 31.6], [40, 30.6], [25, 35.8]].map(([x, y], k) => (
+        <ellipse key={k} cx={x} cy={y} rx={0.9} ry={0.5} fill="#8a5a22" opacity={0.6} />
+      ))}
+      {/* 梅ゼリーの板 */}
+      <path d="M10 30 L31 23.6 L38 30.2 L17 36.6 Z" fill="#c8641c" opacity={0.75} stroke="#7a3008" strokeWidth={0.5} />
+      <path d="M12.4 28.6 L32 22.6 L37.6 27.8 L18 33.8 Z" fill="#e89a3a" opacity={0.8} stroke="#8a4010" strokeWidth={0.5} />
+      <path d="M14 28.6 L31.2 23.4" stroke="#ffe0a0" strokeWidth={0.7} strokeLinecap="round" opacity={0.85} />
+      <path d="M19 33 L36.4 27.8" stroke="#a84a10" strokeWidth={0.5} opacity={0.6} />
+      <ellipse cx={24} cy={28} rx={3.4} ry={1} fill="#fff" opacity={0.3} transform="rotate(-17 24 28)" />
+      {/* 上にめくれた竹の皮 */}
+      <path d="M6 31 Q8 24 16 19.6 Q24 15 33 15.6 Q30 18 22 22.6 Q14 27.4 10.6 30.6 Z" fill="#e2c486" stroke="#5a3a14" strokeWidth={0.6} />
+      <path d="M8.4 29.4 Q14 21.6 30 16.4" fill="none" stroke="#b08a44" strokeWidth={0.3} />
+      <path d="M8.4 27 Q14 21 24 17.6" fill="none" stroke="#fff4d0" strokeWidth={0.6} strokeLinecap="round" opacity={0.7} />
+      {[[13, 24.6], [20, 20.6], [26.4, 17.6]].map(([x, y], k) => (
+        <ellipse key={k} cx={x} cy={y} rx={0.9} ry={0.45} fill="#8a5a22" opacity={0.55} />
+      ))}
+      {/* 梅の花 */}
+      <path d="M44 16 Q40 15 35.6 17.4" fill="none" stroke="#4a2a1a" strokeWidth={0.8} strokeLinecap="round" />
+      <g>
+        {[0, 72, 144, 216, 288].map((a) => {
+          const r = (a - 90) * Math.PI / 180;
+          return <circle key={a} cx={38.4 + Math.cos(r) * 1.9} cy={13.4 + Math.sin(r) * 1.9} r={1.55} fill="#fbe0e6" stroke="#c87a8a" strokeWidth={0.3} />;
+        })}
+        <circle cx={38.4} cy={13.4} r={1} fill="#e8a83a" />
+        <circle cx={38.1} cy={13.1} r={0.35} fill="#fff4b0" />
+      </g>
+      <circle cx={43} cy={14.6} r={1.2} fill="#f2a8b8" stroke="#b05a6e" strokeWidth={0.3} />
+      <circle cx={42.7} cy={14.2} r={0.4} fill="#fff" opacity={0.7} />
+    </g>
+  );
+}
+
+/* ===== 12. 鉾田のメロン ===== */
+const Food3MelonNet = (() => {
+  const out = [];
+  const cx = 20, cy = 23, R = 11.6, sp = 2.9;
+  for (let j = -4; j <= 4; j++) {
+    for (let i = -4; i <= 4; i++) {
+      const x0 = i * sp + (j % 2 ? sp / 2 : 0) + Math.sin(i * 3.1 + j * 1.7) * 0.4;
+      const y0 = j * sp * 0.88 + Math.cos(i * 2.3 + j * 2.9) * 0.4;
+      const d = Math.hypot(x0, y0) / R;
+      if (d > 0.9) continue;
+      const k = Math.sqrt(1 - d * d);
+      const x = cx + x0 * (0.75 + 0.25 * k), y = cy + y0 * (0.75 + 0.25 * k);
+      const a = Math.atan2(y0, x0) * 180 / Math.PI;
+      const w = 1 + 0.12 * Math.sin(i * 5.3 + j * 4.1);
+      out.push([+x.toFixed(2), +y.toFixed(2), +(1.62 * w * (0.45 + 0.55 * k)).toFixed(2), +(1.6 * w).toFixed(2), +(a + 8 * Math.sin(i + j)).toFixed(1)]);
+    }
+  }
+  return out;
+})();
+function FoodIbMelon() {
+  return (
+    <g>
+      <Food3Shadow cx={24} rx={18} />
+      {/* 一玉 */}
+      <circle cx={20} cy={23} r={12} fill="#9ab274" stroke="#2e3e1a" strokeWidth={0.6} />
+      <path d="M26 12.6 A12 12 0 0 1 20 35 A12 12 0 0 0 26 12.6 Z" fill="#62803e" opacity={0.9} />
+      <path d="M26 12.6 A12 12 0 0 1 32 23 A12 12 0 0 1 20 35 Q30 28 26 12.6 Z" fill="#4e6a2e" opacity={0.6} />
+      <g fill="none" stroke="#e8e6c4" strokeWidth={0.32} opacity={0.75}>
+        {Food3MelonNet.map(([x, y, rx, ry, a], k) => (
+          <ellipse key={k} cx={x} cy={y} rx={rx} ry={ry} transform={`rotate(${a} ${x} ${y})`} />
+        ))}
+      </g>
+      <ellipse cx={14.6} cy={18} rx={2.6} ry={3.6} fill="#fff" opacity={0.22} transform="rotate(30 14.6 18)" />
+      <path d="M20 11.2 Q20.4 9 22.6 8" fill="none" stroke="#7a6a3a" strokeWidth={1.1} strokeLinecap="round" />
+      {/* くし形 */}
+      <path d="M19 35.4 Q32 47.4 46 33.4 L44.6 29.6 Q32 37.6 20.4 31.2 Z" fill="#bfe08a" stroke="#2e3e1a" strokeWidth={0.5} />
+      <path d="M20.4 31.2 Q32 37.6 44.6 29.6 L44.2 31.8 Q32 39.6 20.6 33.4 Z" fill="#e4f4b0" />
+      <path d="M20.4 31.2 Q32 37.6 44.6 29.6" fill="none" stroke="#8aa04a" strokeWidth={0.45} />
+      <path d="M19 35.4 Q32 47.4 46 33.4" fill="none" stroke="#5a7a32" strokeWidth={1.4} strokeLinecap="round" />
+      <path d="M20 36.8 Q32 46.6 45.2 34.6" fill="none" stroke="#d8e4b4" strokeWidth={0.3} strokeDasharray="0.8 0.6" />
+      <path d="M21 35.4 Q32 43 44.6 33.2" fill="none" stroke="#9ccc66" strokeWidth={0.9} opacity={0.8} />
+      {[[26, 33.2], [30.4, 34.6], [35, 34.4], [39.4, 32.6]].map(([x, y], k) => (
+        <ellipse key={k} cx={x} cy={y} rx={0.8} ry={0.45} fill="#f4ecbc" stroke="#b8a868" strokeWidth={0.2} />
+      ))}
+      <path d="M24 33.6 Q31 37.2 38 35" fill="none" stroke="#fff" strokeWidth={0.55} strokeLinecap="round" opacity={0.8} />
+    </g>
+  );
+}
+
+/* ===== 13. 焼き芋（なめがた） ===== */
+function FoodIbYakiimo() {
+  return (
+    <g>
+      <Food3Shadow cx={24} rx={19} />
+      <Food3Steam x={24} y={20} />
+      {/* 包み紙 */}
+      <path d="M3 37 Q8 31 16 33 Q24 30 32 32.4 Q40 30.4 45 34.6 Q42 40 32 40.4 Q20 42 8 40.4 Z" fill="#c49a62" stroke="#5a3a18" strokeWidth={0.5} />
+      <path d="M10 39 Q14 35.4 20 36.6 M28 38.6 Q34 35 40 36.4" fill="none" stroke="#9a7240" strokeWidth={0.4} />
+      {/* 左の半分 */}
+      <path d="M4.6 33.4 Q4 30 8 27.6 Q14 24.6 20.4 24 L22.4 31 Q15 34.4 9 35.4 Q5.4 35.6 4.6 33.4 Z" fill="#7a2244" stroke="#2a0814" strokeWidth={0.6} />
+      <path d="M5 33 Q10 33.6 21.8 29.4 L22.4 31 Q15 34.4 9 35.4 Q5.4 35.6 5 33 Z" fill="#4e1028" />
+      <path d="M8 28.8 Q13 26.4 19 25.6" fill="none" stroke="#b05a7a" strokeWidth={0.7} strokeLinecap="round" opacity={0.8} />
+      <ellipse cx={11} cy={31} rx={1.2} ry={0.6} fill="#2a0a14" opacity={0.8} />
+      <ellipse cx={16} cy={28.6} rx={0.9} ry={0.5} fill="#2a0a14" opacity={0.8} />
+      <ellipse cx={21.2} cy={27.6} rx={2.8} ry={4.4} fill="#f2b234" stroke="#8a4a0a" strokeWidth={0.5} transform="rotate(-18 21.4 27.4)" />
+      <ellipse cx={21} cy={27.4} rx={1.9} ry={3.2} fill="#f8cc58" transform="rotate(-18 21.2 27.2)" />
+      <ellipse cx={20.8} cy={26.2} rx={0.5} ry={1} fill="#fff6c8" opacity={0.9} transform="rotate(-18 20.8 26.2)" />
+      {/* 右の半分 */}
+      <path d="M43.6 33.4 Q44.8 29.4 40 26.8 Q34 24 27.6 23.8 L25.8 31 Q33 34.4 39 35.4 Q43 35.8 43.6 33.4 Z" fill="#8a2a4e" stroke="#2a0814" strokeWidth={0.6} />
+      <path d="M43.4 33 Q38 33.6 26.4 29.4 L25.8 31 Q33 34.4 39 35.4 Q43 35.8 43.4 33 Z" fill="#4e1028" />
+      <path d="M31 25.2 Q36 25.6 40.4 27.6" fill="none" stroke="#c06a8a" strokeWidth={0.7} strokeLinecap="round" opacity={0.8} />
+      <ellipse cx={36} cy={29} rx={1.2} ry={0.6} fill="#2a0a14" opacity={0.8} />
+      <ellipse cx={40.6} cy={31.4} rx={0.8} ry={0.5} fill="#2a0a14" opacity={0.8} />
+      <ellipse cx={27.2} cy={27.4} rx={3} ry={4.6} fill="#f0a82a" stroke="#8a4a0a" strokeWidth={0.5} transform="rotate(15 27 27.4)" />
+      <ellipse cx={27.4} cy={27.2} rx={2.1} ry={3.4} fill="#f8c650" transform="rotate(15 27.2 27.2)" />
+      <path d="M26 25 Q27 26.4 26.6 28.6" fill="none" stroke="#d07a10" strokeWidth={0.4} opacity={0.7} />
+      <ellipse cx={26.6} cy={25.4} rx={0.5} ry={1} fill="#fff6c8" opacity={0.9} transform="rotate(15 26.6 25.4)" />
+      {/* 蜜のしたたり */}
+      <path d="M25.6 30.6 q0.4 2 1.2 2.6 q0.6 -1 -0.2 -2.8 Z" fill="#c8700e" opacity={0.85} />
+    </g>
+  );
+}
+
+/* ===== 14. 鹿島灘はまぐり ===== */
+function FoodIbHamaguri() {
+  return (
+    <g>
+      <Food3Shadow cx={24} rx={20} />
+      {/* 炭火と網（平行の棒のみ） */}
+      <path d="M3 32 L45 32 L42 41 L6 41 Z" fill="#2a1410" stroke="#120806" strokeWidth={0.5} />
+      <ellipse cx={14} cy={37} rx={6} ry={2.4} fill="#d8461a" opacity={0.75} />
+      <ellipse cx={31} cy={37.6} rx={7} ry={2.2} fill="#e8641e" opacity={0.7} />
+      <ellipse cx={22} cy={38.6} rx={4} ry={1.4} fill="#f8a03a" opacity={0.7} />
+      <g stroke="#a8a8ac" strokeWidth={0.7} strokeLinecap="round">
+        <path d="M4 33.6 L44 33.6" /><path d="M4.6 35.8 L43.4 35.8" /><path d="M5.2 38 L42.8 38" /><path d="M5.8 40.2 L42.2 40.2" />
+      </g>
+      <g stroke="#e0e0e4" strokeWidth={0.25}>
+        <path d="M4 33.3 L44 33.3" /><path d="M4.6 35.5 L43.4 35.5" />
+      </g>
+      {/* 小さなはまぐり（閉） */}
+      <path d="M5 32.6 Q5.6 27.6 10 27.2 Q14.4 27.6 15 32.6 Q10 34 5 32.6 Z" fill="#c8a882" stroke="#3a2614" strokeWidth={0.5} />
+      <path d="M6.6 30 L8 28.6 L9.4 30 L10.8 28.6 L12.2 30 L13.6 28.8" fill="none" stroke="#7a5638" strokeWidth={0.45} />
+      <path d="M6 32 Q10 33.2 14 32" fill="none" stroke="#7a5638" strokeWidth={0.4} />
+      {/* 上の殻（開いて立つ） */}
+      <path d="M24 27.6 C16.6 27.6 11.6 22 13.4 17.2 C15 12.8 20.4 11.4 24 11.4 C27.6 11.4 33 12.8 34.6 17.2 C36.4 22 31.4 27.6 24 27.6 Z" fill="#dcc8a4" stroke="#3a2614" strokeWidth={0.6} />
+      <path d="M29.6 12.4 C32 13.4 34 15 34.6 17.2 C36.4 22 31.4 27.6 24 27.6 C30 25 32 18 29.6 12.4 Z" fill="#a8845a" opacity={0.7} />
+      <g fill="none" stroke="#9a7650" strokeWidth={0.35}>
+        <path d="M15.6 21 Q24 9 32.4 21" /><path d="M17.6 23 Q24 13 30.4 23" /><path d="M19.8 25 Q24 17.4 28.2 25" />
+      </g>
+      <path d="M15 19.4 L16.6 17.4 L18 19 L19.6 16.4 L21.2 18.4 L22.8 15.8 L24.4 18 L26 15.6 L27.6 18 L29.2 16 L30.6 18.4 L32.2 16.8 L33.4 19" fill="none" stroke="#6a4224" strokeWidth={0.55} strokeLinejoin="round" />
+      <path d="M17.4 22.6 L19 21 L20.4 22.6 L22 20.6 L23.6 22.4 L25.2 20.6 L26.8 22.4 L28.4 20.8 L30 22.6" fill="none" stroke="#7a5230" strokeWidth={0.45} strokeLinejoin="round" />
+      <path d="M15.6 16.6 Q18.6 13 23 12.4" fill="none" stroke="#fff6e0" strokeWidth={0.8} strokeLinecap="round" opacity={0.85} />
+      <path d="M14.4 26.4 Q24 28.8 33.6 26.4" fill="none" stroke="#5a3a1e" strokeWidth={0.9} />
+      {/* 下の殻 */}
+      <path d="M10 28.6 Q10.6 35.6 24 36.2 Q37.4 35.6 38 28.6 Z" fill="#b8936a" stroke="#3a2614" strokeWidth={0.6} />
+      <path d="M12 31 L14 32.6 L16 31 L18 32.8 L20 31.2 L22 33 L24 31.2 L26 33 L28 31.2 L30 32.8 L32 31 L34 32.6 L36 31" fill="none" stroke="#6a4a2a" strokeWidth={0.5} />
+      <path d="M30 28.6 L38 28.6 Q37.4 35.4 24 36.2 Q34 33 30 28.6 Z" fill="#7a5a3a" opacity={0.7} />
+      <ellipse cx={24} cy={28.6} rx={14} ry={4} fill="#efe6d8" stroke="#3a2614" strokeWidth={0.5} />
+      {/* 汁 */}
+      <ellipse cx={24} cy={28.8} rx={12.6} ry={3.2} fill="#e8c86a" opacity={0.7} />
+      {/* 身 */}
+      <path d="M15 28.4 Q15.6 24.6 22 24.6 Q31 24.4 32.6 28 Q31 31 24 31.2 Q16.4 31 15 28.4 Z" fill="#f6d8ae" stroke="#9a6a3a" strokeWidth={0.5} />
+      <path d="M15.4 28.8 Q19 31 24 31.2 Q30 31 32.4 28.6 Q29 30 24 30.2 Q19 30 15.4 28.8 Z" fill="#e89a5a" />
+      <path d="M18 26.6 Q22 25.2 27 25.6" fill="none" stroke="#fff" strokeWidth={0.7} strokeLinecap="round" opacity={0.9} />
+      {[[13.4, 29.4], [34.4, 29], [30, 30.4], [12.4, 28.4]].map(([x, y], k) => (
+        <circle key={k} cx={x} cy={y} r={0.5} fill="#fff8d8" stroke="#c8a040" strokeWidth={0.2} opacity={0.9} />
+      ))}
+      {/* あふれる汁 */}
+      <path d="M36.6 30 q1 2 0.4 3.6 q-0.8 -1.6 -0.4 -3.6 Z" fill="#f0d070" opacity={0.85} />
+      <path d="M11 30.4 q-0.6 1.8 0 3 q0.6 -1.4 0 -3 Z" fill="#f0d070" opacity={0.85} />
+      <Food3Steam x={24} y={11} />
+    </g>
+  );
+}
+
+/* ===== 15. れんこんチップス ===== */
+function Food3Chip({ x, y, r = 5, rot = 0, sy = 0.6, c = 0 }) {
+  const fills = [["#f2d088", "#c48a36"], ["#ecc070", "#b07626"], ["#f6dc9c", "#c8963e"]][c];
+  const holes = [[0, 0, 0.7], [2.8, 0.4, 1.05], [1.4, 2.6, 1], [-1.4, 2.5, 0.95], [-2.9, 0.2, 1], [-1.7, -2.4, 1], [1.3, -2.7, 0.95]];
+  return (
+    <g transform={`translate(${x} ${y}) rotate(${rot}) scale(1 ${sy})`}>
+      <circle r={r} fill={fills[0]} stroke="#6a3a0e" strokeWidth={0.55} />
+      <circle r={r} fill="none" stroke={fills[1]} strokeWidth={0.9} />
+      <circle cx={-0.8} cy={-0.8} r={r * 0.62} fill="#fbe2a6" opacity={0.45} />
+      {holes.map(([hx, hy, hr], k) => (
+        <ellipse key={k} cx={hx * r / 5} cy={hy * r / 5} rx={hr * r / 5} ry={hr * r / 5 * 0.85} fill="#5a2e0c" stroke="#8a4e18" strokeWidth={0.3} />
+      ))}
+    </g>
+  );
+}
+function FoodIbRenkon() {
+  return (
+    <g>
+      <Food3Shadow cx={24} rx={18} />
+      {/* 紙の舟皿 */}
+      <path d="M6 30 L42 30 L38 40.4 L10 40.4 Z" fill="#d8b884" stroke="#5a3e1e" strokeWidth={0.6} />
+      <path d="M30 30 L42 30 L38 40.4 L30 40.4 Z" fill="#b8955e" />
+      <path d="M8 32 L10.6 39.4" stroke="#f0d8a8" strokeWidth={0.7} strokeLinecap="round" opacity={0.8} />
+      {/* チップス */}
+      <Food3Chip x={14} y={27} r={5.4} rot={-10} sy={0.62} c={1} />
+      <Food3Chip x={33} y={26.6} r={5.6} rot={8} sy={0.6} c={0} />
+      <Food3Chip x={23.6} y={22} r={5.8} rot={-25} sy={0.75} c={2} />
+      <Food3Chip x={16} y={18.6} r={5} rot={30} sy={0.8} c={0} />
+      <Food3Chip x={30.4} y={18} r={5.2} rot={-20} sy={0.85} c={1} />
+      <Food3Chip x={23.4} y={29.2} r={5.6} rot={5} sy={0.55} c={0} />
+      {/* 塩と青のり */}
+      {[[20, 21], [26.4, 19.4], [13, 26], [34, 25], [22, 28.4], [29.4, 16.6]].map(([x, y], k) => (
+        <circle key={k} cx={x} cy={y} r={0.35} fill={k % 2 ? "#fff" : "#4a8a2a"} opacity={0.9} />
+      ))}
+      {/* 舟皿の前縁 */}
+      <path d="M6 30 L42 30" stroke="#f2dcae" strokeWidth={0.7} />
+      <path d="M5.4 30.6 L42.6 30.6 L42 31.6 L6 31.6 Z" fill="#c8a670" stroke="#5a3e1e" strokeWidth={0.4} />
+    </g>
+  );
+}
+
+/* ===== 16. 土浦カレー ===== */
+function Food3Lotus({ x, y, r = 3.4, sy = 0.7, rot = 0 }) {
+  const holes = [[0, 0, 0.6], [1.6, 0.3, 0.6], [0.9, 1.5, 0.55], [-0.7, 1.6, 0.55], [-1.7, 0.2, 0.55], [-1, -1.4, 0.55], [0.8, -1.5, 0.55]];
+  return (
+    <g transform={`translate(${x} ${y}) rotate(${rot}) scale(1 ${sy})`}>
+      <circle r={r} fill="#e8c27a" stroke="#6a3a0e" strokeWidth={0.5} />
+      <circle r={r - 0.4} fill="none" stroke="#c08a3a" strokeWidth={0.6} />
+      {holes.map(([hx, hy, hr], k) => (
+        <circle key={k} cx={hx * r / 3.4} cy={hy * r / 3.4} r={hr * r / 3.4} fill="#6a3410" />
+      ))}
+      <path d={`M${-r + 0.8} ${-0.8} Q${-r + 1.4} ${-r + 1.2} ${-0.4} ${-r + 0.6}`} fill="none" stroke="#fff4c8" strokeWidth={0.5} strokeLinecap="round" opacity={0.8} />
+    </g>
+  );
+}
+function FoodIbCurry() {
+  return (
+    <g>
+      <Food3Shadow cx={24} rx={20} />
+      <Food3Steam x={30} y={17} />
+      {/* 皿 */}
+      <ellipse cx={24} cy={31} rx={21} ry={9} fill="#f4f1ea" stroke="#5a5448" strokeWidth={0.6} />
+      <ellipse cx={24} cy={31.6} rx={21} ry={9} fill="none" stroke="#b8b2a4" strokeWidth={0.8} opacity={0.6} />
+      <ellipse cx={24} cy={30.6} rx={16.6} ry={6.6} fill="#e6e1d6" />
+      <path d="M5 29 Q8 23.6 16 22.6" fill="none" stroke="#fff" strokeWidth={0.8} strokeLinecap="round" />
+      {/* ご飯 */}
+      <path d="M8.6 31 Q8 24.4 14 22.6 Q20 21.4 23 25 Q22.4 31 18 35 Q11 35.4 8.6 31 Z" fill="#fbf8f0" stroke="#a8a294" strokeWidth={0.45} />
+      {[[11, 26], [13.4, 24.4], [16, 24], [12, 29], [14.6, 27.2], [17.4, 26.4], [19.6, 25.4], [10.4, 31.6], [15.4, 30.4], [18.4, 29.4], [13, 33], [16.4, 33]].map(([x, y], k) => (
+        <ellipse key={k} cx={x} cy={y} rx={0.8} ry={0.45} fill="none" stroke="#d6d0c0" strokeWidth={0.28} transform={`rotate(${(k * 47) % 180} ${x} ${y})`} />
+      ))}
+      <ellipse cx={13} cy={25.2} rx={2.6} ry={1.2} fill="#fff" opacity={0.8} />
+      {/* カレー */}
+      <path d="M20.4 34.8 Q24.6 30 22.6 24.6 Q28 22.4 35 23.6 Q41.4 26 40 31 Q37 36 27 36.6 Q22.6 36.4 20.4 34.8 Z" fill="#8a4414" stroke="#4a1e06" strokeWidth={0.5} />
+      <path d="M22.6 24.8 Q28 23 34 24 Q30 25 26 26.6 Q24 27 22.6 24.8 Z" fill="#b8682a" />
+      <path d="M33 34.4 Q38 33 39.6 30.6 Q38.6 35 30 36.2 Z" fill="#5e2a08" opacity={0.8} />
+      {/* 具 */}
+      <path d="M25.6 32.2 l2.6 -0.6 l0.8 2 l-2.6 0.8 Z" fill="#f08a2a" stroke="#8a3a08" strokeWidth={0.35} />
+      <path d="M33 31.4 q1.8 -1.6 3.4 -0.2 q-0.2 1.8 -1.8 2 q-1.6 0 -1.6 -1.8 Z" fill="#f0d68a" stroke="#9a7a2a" strokeWidth={0.35} />
+      <path d="M36.6 26 q1.6 -0.8 2.6 0.6 q-0.6 1.4 -2 1.2 Z" fill="#6a2e10" stroke="#3a1404" strokeWidth={0.35} />
+      {/* れんこん */}
+      <Food3Lotus x={28.8} y={27.4} r={3.4} sy={0.62} rot={-8} />
+      <Food3Lotus x={34.4} y={28.8} r={3.1} sy={0.6} rot={12} />
+      <Food3Lotus x={30.6} y={32.6} r={2.8} sy={0.58} rot={0} />
+      {/* つや */}
+      <path d="M24.4 34.4 Q26 34.8 28 35" fill="none" stroke="#e8a060" strokeWidth={0.5} strokeLinecap="round" opacity={0.85} />
+      {/* 福神漬け */}
+      {[[9.6, 34], [11, 35], [12.4, 35.4]].map(([x, y], k) => (
+        <rect key={k} x={x} y={y} width={1.2} height={0.7} rx={0.2} fill="#c8282e" stroke="#6a0a10" strokeWidth={0.2} transform={`rotate(${k * 25 - 20} ${x} ${y})`} />
+      ))}
+    </g>
+  );
+}
+
+/* ===== 17. 福来みかんのお菓子 ===== */
+function Food3Mikan({ x, y, r = 3.4 }) {
+  return (
+    <g>
+      <circle cx={x} cy={y} r={r} fill="#f28a14" stroke="#7a3404" strokeWidth={0.5} />
+      <path d={`M${x + r * 0.2} ${y - r * 0.95} A${r} ${r} 0 0 1 ${x + r * 0.2} ${y + r * 0.98} Q${x + r * 0.9} ${y} ${x + r * 0.2} ${y - r * 0.95} Z`} fill="#c85a06" opacity={0.8} />
+      <ellipse cx={x - r * 0.4} cy={y - r * 0.4} rx={r * 0.35} ry={r * 0.25} fill="#ffd27a" opacity={0.8} />
+      {[[-0.3, 0.3], [0.2, -0.2], [0.4, 0.5], [-0.5, -0.1], [0.1, 0.7], [-0.1, -0.6]].map(([dx, dy], k) => (
+        <circle key={k} cx={x + dx * r} cy={y + dy * r} r={0.18} fill="#a84a06" opacity={0.6} />
+      ))}
+      <circle cx={x} cy={y - r + 0.3} r={0.55} fill="#5a7a2a" stroke="#2a3a10" strokeWidth={0.2} />
+    </g>
+  );
+}
+function Food3Cake({ x, y }) {
+  return (
+    <g>
+      {/* 紙カップ */}
+      <path d={`M${x - 5} ${y} L${x - 4} ${y + 5} Q${x} ${y + 6} ${x + 4} ${y + 5} L${x + 5} ${y} Z`} fill="#f4ecdc" stroke="#6a5a40" strokeWidth={0.45} />
+      <g stroke="#c8b898" strokeWidth={0.3}>
+        <path d={`M${x - 3} ${y + 0.6} L${x - 2.5} ${y + 5.4}`} /><path d={`M${x - 1} ${y + 0.8} L${x - 0.8} ${y + 5.8}`} />
+        <path d={`M${x + 1} ${y + 0.8} L${x + 0.9} ${y + 5.8}`} /><path d={`M${x + 3} ${y + 0.6} L${x + 2.6} ${y + 5.4}`} />
+      </g>
+      {/* 焼き菓子 */}
+      <path d={`M${x - 5.4} ${y + 0.4} Q${x - 5.6} ${y - 4.6} ${x} ${y - 4.8} Q${x + 5.6} ${y - 4.6} ${x + 5.4} ${y + 0.4} Q${x} ${y + 1.8} ${x - 5.4} ${y + 0.4} Z`} fill="#c8822e" stroke="#5a2e0a" strokeWidth={0.5} />
+      <path d={`M${x + 1.6} ${y - 4.4} Q${x + 5.6} ${y - 3.4} ${x + 5.4} ${y + 0.4} Q${x + 3} ${y + 1.2} ${x + 1} ${y + 1.2} Q${x + 4} ${y - 1.4} ${x + 1.6} ${y - 4.4} Z`} fill="#8a4a14" opacity={0.7} />
+      <path d={`M${x - 4} ${y - 1.4} Q${x - 3.4} ${y - 3.8} ${x - 0.6} ${y - 4}`} fill="none" stroke="#f2c278" strokeWidth={0.8} strokeLinecap="round" />
+      {/* 皮の砂糖漬け */}
+      <path d={`M${x - 1.4} ${y - 2.6} l2 -0.8 l0.4 0.8 l-2 0.8 Z`} fill="#f8a020" stroke="#9a4a06" strokeWidth={0.25} />
+      <path d={`M${x + 1.2} ${y - 1.2} l1.6 0.6 l-0.3 0.8 l-1.6 -0.6 Z`} fill="#f49018" stroke="#9a4a06" strokeWidth={0.25} />
+      <path d={`M${x - 3} ${y - 0.6} l1.4 -0.6 l0.3 0.7 l-1.4 0.6 Z`} fill="#fbb030" stroke="#9a4a06" strokeWidth={0.25} />
+      <circle cx={x - 0.4} cy={y - 2.8} r={0.3} fill="#fff" opacity={0.9} />
+    </g>
+  );
+}
+function FoodIbFukure() {
+  return (
+    <g>
+      <Food3Shadow cx={24} rx={19} />
+      {/* 葉 */}
+      <path d="M28 20 C31 14 37 12.4 41 13.4 C39 17.4 34 20.6 28 20 Z" fill="#3e8a34" stroke="#1e4a14" strokeWidth={0.45} />
+      <path d="M28.4 19.8 Q34 16.4 40.6 13.6" fill="none" stroke="#8ccc6a" strokeWidth={0.35} />
+      <path d="M33 21 C37 19 42 20 44 22.4 C40.6 24.4 36 23.6 33 21 Z" fill="#2e7428" stroke="#1e4a14" strokeWidth={0.45} />
+      {/* みかん */}
+      <Food3Mikan x={31} y={24} r={3.6} />
+      <Food3Mikan x={38.2} y={26.2} r={3.4} />
+      <Food3Mikan x={35} y={31.4} r={3.6} />
+      <Food3Mikan x={41.2} y={33.4} r={3} />
+      {/* 焼き菓子 */}
+      <Food3Cake x={13} y={30} />
+      <Food3Cake x={22} y={35} />
+    </g>
+  );
+}
+
+/* ===== 18. 梨 ===== */
+function FoodIbNashi() {
+  return (
+    <g>
+      <Food3Shadow cx={24} rx={18} />
+      {/* 丸ごとの梨 */}
+      <ellipse cx={19} cy={24} rx={12} ry={11} fill="#c9a04a" stroke="#4a3010" strokeWidth={0.6} />
+      <path d="M24 13.6 Q31 16 31 24 Q30.6 33 21 35 Q28 29 24 13.6 Z" fill="#94701e" opacity={0.85} />
+      <path d="M8 26 Q9 32 15 34.4 Q10 34 8 26 Z" fill="#a8802a" opacity={0.6} />
+      {[[11, 22], [13.4, 18.4], [16, 21.4], [12.6, 26.6], [15.6, 29.6], [19.4, 17], [18.6, 25.4], [21.6, 30.4], [23.6, 20.4], [26.4, 25], [24.6, 31.6], [10.4, 29], [21.4, 21.6], [27.6, 19.4]].map(([x, y], k) => (
+        <circle key={k} cx={x} cy={y} r={0.35} fill="#efdc9a" opacity={0.9} />
+      ))}
+      <ellipse cx={13.4} cy={19.4} rx={3} ry={3.8} fill="#fff4c8" opacity={0.3} transform="rotate(30 13.4 19.4)" />
+      <circle cx={12.6} cy={18.6} r={0.8} fill="#fff" opacity={0.6} />
+      <path d="M16.6 13.6 Q19 15 21.4 13.6" fill="none" stroke="#6a4a18" strokeWidth={0.5} />
+      <path d="M19 14 Q19.4 11.4 21.2 9.6" fill="none" stroke="#5a3a1e" strokeWidth={0.9} strokeLinecap="round" />
+      {/* 半分に切った梨 */}
+      <ellipse cx={33} cy={35.8} rx={10} ry={6.2} fill="#a8822a" stroke="#4a3010" strokeWidth={0.6} />
+      <path d="M23.4 36.4 Q33 44 42.6 36.4" fill="none" stroke="#7a5a18" strokeWidth={0.8} opacity={0.6} />
+      {[[27, 39.6], [31, 41], [36, 40.8], [40, 39]].map(([x, y], k) => <circle key={k} cx={x} cy={y} r={0.3} fill="#e8d08a" />)}
+      <ellipse cx={33} cy={34.5} rx={9.2} ry={5.2} fill="#fdfbee" />
+      <ellipse cx={33.6} cy={35} rx={7.6} ry={4} fill="#f6f2d8" />
+      <path d="M26 34.4 Q33 33.4 40.4 34.6" fill="none" stroke="#e6dcae" strokeWidth={0.35} />
+      <ellipse cx={33.4} cy={34.8} rx={2.6} ry={1.6} fill="#ece2b4" stroke="#c8b878" strokeWidth={0.3} transform="rotate(-8 33.4 34.8)" />
+      <path d="M32.2 34.4 q0.8 -0.8 1.8 -0.4 q-0.8 0.8 -1.8 0.4 Z" fill="#3a2410" />
+      <path d="M33.4 35.6 q0.9 -0.5 1.7 0 q-0.9 0.6 -1.7 0 Z" fill="#4a2c14" />
+      {/* みずみずしさ */}
+      <path d="M26 33 Q28 30.6 32 30.2" fill="none" stroke="#fff" strokeWidth={0.8} strokeLinecap="round" />
+      <circle cx={38.4} cy={32.8} r={0.6} fill="#fff" opacity={0.9} />
+      <circle cx={28.6} cy={36.8} r={0.45} fill="#fff" opacity={0.9} />
+      <circle cx={37} cy={37.6} r={0.4} fill="#fff" opacity={0.8} />
+      <path d="M41.8 37.6 q-0.6 1.4 0 2.2 q0.6 -0.8 0 -2.2 Z" fill="#eef6f0" opacity={0.8} />
+    </g>
+  );
+}
+
+/* ===== 19. 常陸牛のステーキ ===== */
+function FoodIbHitachigyu() {
+  return (
+    <g>
+      <Food3Shadow cx={24} rx={21} />
+      <Food3Steam x={20} y={16} />
+      {/* 木の台 */}
+      <path d="M2.6 33 Q2.6 30 6 30 H42 Q45.4 30 45.4 33 V37 Q45.4 40.4 42 40.4 H6 Q2.6 40.4 2.6 37 Z" fill="#8a5a2e" stroke="#3a2008" strokeWidth={0.6} />
+      <path d="M2.8 36 H45.2 V37 Q45.2 40.2 42 40.2 H6 Q2.8 40.2 2.8 37 Z" fill="#6a4020" />
+      {/* 鉄板 */}
+      <ellipse cx={24} cy={30} rx={20} ry={7.6} fill="#2c2c30" stroke="#0c0c0e" strokeWidth={0.6} />
+      <ellipse cx={24} cy={29.4} rx={18.4} ry={6.6} fill="#1c1c20" />
+      <path d="M6 28 Q9 23.6 18 22.6" fill="none" stroke="#7a7a84" strokeWidth={0.7} strokeLinecap="round" />
+      {/* ステーキ本体 */}
+      <path d="M8 26.6 Q8 21.4 14 20.6 Q22 19.6 27 21.6 L27.6 30 Q20 32 12 31 Q8 30.4 8 26.6 Z" fill="#6a2e14" stroke="#2a0c04" strokeWidth={0.55} />
+      <path d="M9 24.4 Q12 21.6 18 21.4 Q24 21.2 26.6 22.6 Q22 25 15 25.4 Q11 25.4 9 24.4 Z" fill="#8a4420" />
+      <g stroke="#2a0c04" strokeWidth={0.7} strokeLinecap="round" opacity={0.75}>
+        <path d="M11 24.6 L15 21.6" /><path d="M14.6 25 L18.6 21.6" /><path d="M18.4 25 L22.4 21.6" /><path d="M22 24.6 L25.6 22" />
+      </g>
+      <path d="M9.4 26.6 Q14 28 20 27.6" fill="none" stroke="#f0d8c8" strokeWidth={0.4} opacity={0.7} />
+      <path d="M10 23 Q13 21.8 16 22" fill="none" stroke="#e8a060" strokeWidth={0.5} strokeLinecap="round" />
+      {/* 切り分けた断面 */}
+      {[[29.4, 0], [33.4, 1], [37.4, 2]].map(([x, k]) => (
+        <g key={k}>
+          <path d={`M${x} ${21.6 + k * 0.6} L${x + 3.8} ${21.2 + k * 0.6} L${x + 4.4} ${31.4 - k * 0.2} L${x + 0.4} ${31.8 - k * 0.2} Z`} fill="#4a1c0c" stroke="#2a0c04" strokeWidth={0.5} />
+          <path d={`M${x + 0.5} ${22.4 + k * 0.6} L${x + 3.4} ${22 + k * 0.6} L${x + 3.9} ${30.6 - k * 0.2} L${x + 0.9} ${31 - k * 0.2} Z`} fill="#d6606a" />
+          <path d={`M${x + 1.1} ${23.8 + k * 0.6} L${x + 2.9} ${23.6 + k * 0.6} L${x + 3.3} ${29 - k * 0.2} L${x + 1.4} ${29.2 - k * 0.2} Z`} fill="#ea8a8e" />
+          <path d={`M${x + 1} ${25 + k * 0.6} Q${x + 2.4} ${26 + k * 0.4} ${x + 3.4} ${25.4 + k * 0.6} M${x + 1.2} ${28 + k * 0.4} Q${x + 2.4} ${27.4} ${x + 3.6} ${28.2}`} fill="none" stroke="#fae4e0" strokeWidth={0.35} />
+          <path d={`M${x + 0.7} ${23 + k * 0.6} L${x + 1.2} ${29.8 - k * 0.2}`} stroke="#fff" strokeWidth={0.3} opacity={0.5} />
+        </g>
+      ))}
+      {/* ガーリックチップと脂 */}
+      {[[12.4, 29.6], [15.6, 30.4], [25, 32], [42.6, 30.6]].map(([x, y], k) => (
+        <ellipse key={k} cx={x} cy={y} rx={1} ry={0.7} fill="#f2cc7a" stroke="#9a6a1e" strokeWidth={0.3} />
+      ))}
+      {[[9, 32], [19, 33], [28, 33.4], [40, 33.4], [44, 28]].map(([x, y], k) => (
+        <circle key={k} cx={x} cy={y} r={0.35} fill="#f4e8c8" opacity={0.8} />
+      ))}
+    </g>
+  );
+}
+
+/* ===== 20. さしま茶 ===== */
+function FoodIbSashimacha() {
+  return (
+    <g>
+      <Food3Shadow cx={24} rx={19} />
+      <Food3Steam x={35} y={21} />
+      {/* 急須の取っ手（手前左へ斜め） */}
+      <path d="M9.4 29 L3.6 33.6 Q3 34.6 4 35.2 L5 35.2 L11 31.4 Z" fill="#5a2a14" stroke="#200a04" strokeWidth={0.5} />
+      <path d="M4.2 33.8 L9.4 29.8" stroke="#a05a34" strokeWidth={0.4} />
+      {/* 注ぎ口 */}
+      <path d="M24.6 25 Q28 23.6 29.4 19.8 L31 20.4 Q30.4 25.6 26.6 29 Z" fill="#8a3a1c" stroke="#200a04" strokeWidth={0.5} />
+      <ellipse cx={30.2} cy={20.1} rx={0.9} ry={0.5} fill="#2a0c04" transform="rotate(20 30.2 20.1)" />
+      {/* 胴 */}
+      <ellipse cx={17} cy={29.6} rx={10} ry={7} fill="#9a4422" stroke="#200a04" strokeWidth={0.6} />
+      <path d="M21 21.6 Q26.4 24 26.4 29 Q26 35.6 17 37 Q23.6 32 21 21.6 Z" fill="#6a2a12" />
+      <path d="M8.2 28 Q9.4 24.4 13.6 23.2" fill="none" stroke="#d07a4e" strokeWidth={0.9} strokeLinecap="round" opacity={0.85} />
+      <path d="M8 30.4 Q17 33.4 26 30.4" fill="none" stroke="#6a2a12" strokeWidth={0.4} />
+      {/* 蓋とつまみ */}
+      <ellipse cx={17} cy={23} rx={6.6} ry={2} fill="#8a3a1c" stroke="#200a04" strokeWidth={0.5} />
+      <path d="M11 22.8 Q17 19.8 23 22.8 Q17 24 11 22.8 Z" fill="#a04c26" stroke="#200a04" strokeWidth={0.4} />
+      <ellipse cx={17} cy={20.8} rx={1.5} ry={1} fill="#9a4422" stroke="#200a04" strokeWidth={0.4} />
+      <ellipse cx={16.5} cy={20.5} rx={0.5} ry={0.3} fill="#e09a6a" />
+      {/* 湯のみ */}
+      <path d="M29.6 25 L30.6 38 Q35 39.6 39.4 38 L40.4 25 Z" fill="#e8e0cc" stroke="#4a4436" strokeWidth={0.5} />
+      <path d="M37 25.4 L36.4 38.8 Q38.4 38.6 39.4 38 L40.4 25 Z" fill="#c4baa2" />
+      <path d="M29.8 27.8 Q35 29.2 40.2 27.8 L40 30.4 Q37 31.4 35 30.4 Q32.6 31.6 29.9 30.2 Z" fill="#6a8a5a" opacity={0.85} />
+      <path d="M31 28.6 L31.6 36.4" stroke="#fff" strokeWidth={0.6} strokeLinecap="round" opacity={0.8} />
+      <ellipse cx={35} cy={25} rx={5.4} ry={1.6} fill="#f2ecdc" stroke="#4a4436" strokeWidth={0.5} />
+      <ellipse cx={35} cy={25.2} rx={4.6} ry={1.2} fill="#9cc43a" />
+      <ellipse cx={34.4} cy={25} rx={2.4} ry={0.55} fill="#cce872" />
+      {/* 茶葉 */}
+      {[[18, 40.2, -20], [21.4, 40.8, 30], [24.6, 40, -50], [27, 41.2, 10], [22.8, 39.2, 70], [42.4, 40.4, -30], [44, 39, 40]].map(([x, y, r], k) => (
+        <ellipse key={k} cx={x} cy={y} rx={1.3} ry={0.35} fill={k % 2 ? "#2f5a2a" : "#3e7032"} stroke="#18301a" strokeWidth={0.2} transform={`rotate(${r} ${x} ${y})`} />
+      ))}
+    </g>
+  );
+}
+
+const FOOD_ART_3 = {
+  kg_oiri: FoodKgOiri,
+  kg_momo: FoodKgMomo,
+  kg_olive: FoodKgOlive,
+  kg_somen: FoodKgSomen,
+  kg_shoyu: FoodKgShoyu,
+  ib_soba: FoodIbSoba,
+  ib_shamo: FoodIbShamo,
+  ib_apple: FoodIbApple,
+  ib_hoshiimo: FoodIbHoshiimo,
+  ib_anko: FoodIbAnko,
+  ib_noshiume: FoodIbNoshiume,
+  ib_melon: FoodIbMelon,
+  ib_yakiimo: FoodIbYakiimo,
+  ib_hamaguri: FoodIbHamaguri,
+  ib_renkon: FoodIbRenkon,
+  ib_curry: FoodIbCurry,
+  ib_fukure: FoodIbFukure,
+  ib_nashi: FoodIbNashi,
+  ib_hitachigyu: FoodIbHitachigyu,
+  ib_sashimacha: FoodIbSashimacha,
+};
+const FOOD_ART = { ...FOOD_ART_1, ...FOOD_ART_2, ...FOOD_ART_3 };
+/* ご当地グルメの札。⚠️ 名産品の札（MeiCard）と同じ大きさの二つ。まだのものは「？？？」 */
+function GourmetCard({ d, lang, big, count, seen, packed }) {
+  const t = gourmetT(lang), a = advT(lang);
+  const A = FOOD_ART[d.id];
+  return (
+    <div className={`mei-card gm-card t${d.tier}${big ? " big" : ""}${seen ? "" : " none"}${packed ? " packed" : ""}`}>
+      <span className="gm-tier">{"★".repeat(d.tier)}</span>
+      <svg viewBox="0 0 48 48" className="mei-art" aria-hidden="true">
+        {seen && A ? <A /> : <text x="24" y="31" textAnchor="middle" fontSize="20" fill="rgba(255,243,214,0.25)">？</text>}
+      </svg>
+      <b className="mei-name">{seen ? (lang === "ja" ? d.name : d.en) : "？？？"}</b>
+      <span className="mei-pref">{a.pref[d.pref] || d.pref}・{d.area}</span>
+      {seen && <i className="gm-type">{t.tier[d.tier]}／{t.type[d.type]}</i>}
+      {seen && <i className="gm-eff">{t.eff(d.eff, GOURMET_EFF_V[d.tier])}</i>}
+      {count > 1 && <u className="mei-n">×{count}</u>}
+    </div>
+  );
+}
+/* ご当地グルメの収集帳。⚠️ 都道府県→区分→3品。確率を隠さない。持って行く一品を選べる */
+function GourmetPanel({ lang, onClose }) {
+  const t = gourmetT(lang), a = advT(lang);
+  const [have, setHave] = useState(() => loadGourmet());
+  const seen = loadGourmet(LS_GOURMET_SEEN);
+  const [pack, setPack] = useState(() => loadGourmetPack());
+  const prefs = [...new Set(GOURMET.map((d) => d.pref))];
+  const got = GOURMET.filter((d) => seen[d.id]).length;
+  const tierTot = GOURMET_DROP[1] + GOURMET_DROP[2] + GOURMET_DROP[3];
+  const pk = GOURMET.find((d) => d.id === pack && (have[d.id] || 0) > 0);
+  return (
+    <div className="eq-sheet">
+      <div className="eq-sheet-head">
+        <span>{t.title}</span>
+        <span className="eq-slot-n">{t.have(got, GOURMET.length)}</span>
+        <button type="button" className="adv-back" onClick={onClose}>{a.close}</button>
+      </div>
+      {pk ? (
+        <p className="gm-pack">{t.packed}：<b>{lang === "ja" ? pk.name : pk.en}</b>（{t.eff(pk.eff, GOURMET_EFF_V[pk.tier])}）
+          <button type="button" className="adv-back" onClick={() => { saveGourmetPack(null); setPack(null); }}>{t.unpack}</button></p>
+      ) : <p className="gm-note">{t.packNote}</p>}
+      {!got && <p className="eq-empty">{t.none}</p>}
+      {prefs.map((p) => (
+        <div key={p}>
+          <p className="eq-sub">{a.pref[p] || p}<span className="eq-slot-n">{t.have(GOURMET.filter((d) => d.pref === p && seen[d.id]).length, GOURMET.filter((d) => d.pref === p).length)}</span></p>
+          {[...new Set(GOURMET.filter((d) => d.pref === p).map((d) => d.area))].map((ar) => (
+            <div key={ar} className="gm-area">
+              <span className="gm-area-t">{ar}</span>
+              <div className="mei-grid">
+                {GOURMET.filter((d) => d.pref === p && d.area === ar).map((d) => (
+                  <div key={d.id} className="mei-cell">
+                    <GourmetCard d={d} lang={lang} count={have[d.id] || 0} seen={!!seen[d.id]} packed={pack === d.id} />
+                    <span className="mei-odd">{t.odd(Math.round(GOURMET_DROP[d.tier] / tierTot * 100))}</span>
+                    {(have[d.id] || 0) > 0 && pack !== d.id && (
+                      <button type="button" className="adv-back gm-pack-btn" onClick={() => { saveGourmetPack(d.id); setPack(d.id); setHave(loadGourmet()); }}>{t.pack}</button>
+                    )}
+                  </div>
+                ))}
+              </div>
+            </div>
+          ))}
+        </div>
+      ))}
+    </div>
+  );
+}
+/*
   【名産品の収集帳】
   ★ 県ごとに並べる。まだ持っていない品は「？？？」で枠だけ見せる ――
     何が残っているか分かることが、また行く理由になる。
@@ -77709,7 +85561,7 @@ function DebugPanel({ lang, onClose }) {
   };
   const prefNames = () => doneFor(prefsAll);
   const stepAtFor = (ps) => { const at = {}; ps.forEach((p, i) => { at[p] = Math.min(ADV_STEPS - 1, i); }); return at; };
-  const ensureBuild = () => { const st = loadMajorState(); if (st && st.build) return st; startBuild("magic", "fire"); return loadMajorState(); };
+  const ensureBuild = () => { const st = loadMajorState(); if (st && st.build) return st; startBuild("magic", "fire", "slash"); return loadMajorState(); };
   const patchMajor = (f) => { const st = ensureBuild(); saveMajorState({ ...st, ...f(st) }); };
   const orderOf = (st) => MAJOR_BUILDS[st.build] || MAJOR_BUILDS.magician;
 
@@ -77893,6 +85745,9 @@ function AdvBottomBar({ lang }) {
         <button type="button" className="adv-foot-btn" onClick={() => setOpen("mei")}>
           {a.meiTitle}
         </button>
+        <button type="button" className="adv-foot-btn" onClick={() => setOpen("gourmet")}>
+          {gourmetT(lang).title}
+        </button>
         <button type="button" className="adv-foot-btn" onClick={() => setOpen("skill")}>
           {a.skillTitle}
           {skLeft > 0 && <b className="adv-foot-n">{skLeft}</b>}
@@ -77911,11 +85766,2479 @@ function AdvBottomBar({ lang }) {
       {open === "hand" && <GearListPanel lang={lang} which="hand" onClose={close} onSwitch={setOpen} />}
       {open === "skill" && <SkillPanel lang={lang} onClose={close} />}
       {open === "mei" && <MeiPanel lang={lang} onClose={close} />}
+      {open === "gourmet" && <GourmetPanel lang={lang} onClose={close} />}
       {open === "debug" && DEBUG_CHEATS && <DebugPanel lang={lang} onClose={close} />}
     </>
   );
 }
 
+/* ==== ADV_GLYPH BEGIN ====
+  小MAPの新しいマス（2026-10-03）の絵。盤の台の天面と、ルーレットの画面で使う。
+  ⚠️ 静止画。defs・グラデーション・id を使わない（同じ絵が盤に何十個も並ぶため）。
+*/
+/*
+  小MAPの新しいマス15種の絵。
+  ⚠️ 原点が台の中心。x −7.5〜7.5、y −9.5〜5.5。アプリが scale(1.85) を掛けて台に載せる。
+  ⚠️ 静止画。defs・グラデーション・id・filter・文字は使わない（同じ絵が何十個も並ぶ）。
+  ⚠️ 光は左上から。左上に艶、右下を暗く、足元に影の楕円。輪郭は暗い色で 0.3〜0.6。
+*/
+
+/* 四方に光る星（既存の宝箱の星と同じ比率）。⚠️ 十字に見えないよう、腰を細くする */
+const GlyphStar4 = (x, y, r) => {
+  const k = r * 0.28;
+  return `M${x} ${y - r} L${x + k} ${y - k} L${x + r} ${y} L${x + k} ${y + k} L${x} ${y + r} L${x - k} ${y + k} L${x - r} ${y} L${x - k} ${y - k} Z`;
+};
+const GlyphShadowFill = "rgba(10,6,20,0.5)";
+
+/* 闇商人：深いフードの紫の外套。顔は影、金の目が二つ。手に金貨の袋 */
+function GlyphMerchant() {
+  return (
+    <g>
+      <ellipse cx="0" cy="4.6" rx="6.2" ry="1.8" fill={GlyphShadowFill} />
+      <path d="M0 -9.4 C-3.4 -9.2 -4.8 -6.6 -4.7 -3.8 C-4.8 -1.2 -5.8 1.8 -6.2 4.3 Q0 5.7 6.2 4.3 C5.8 1.8 4.8 -1.2 4.7 -3.8 C4.8 -6.6 3.4 -9.2 0 -9.4 Z"
+        fill="#7444A8" stroke="#22103A" strokeWidth="0.5" />
+      <path d="M1.2 -9.1 C3.6 -8.5 4.8 -6.4 4.7 -3.8 C4.8 -1.2 5.8 1.8 6.2 4.3 Q4 5 1.6 5.2 C2.8 2 3.2 -1 3.1 -3.8 C3.2 -6.4 2.6 -8.2 1.2 -9.1 Z"
+        fill="#4A2474" />
+      <path d="M-0.8 -1.4 Q-1.2 1.6 -1.8 5" fill="none" stroke="#3A1A5E" strokeWidth="0.4" />
+      <path d="M-3.6 -4.8 Q-3.4 -7.6 -1.2 -8.6" fill="none" stroke="#C8A0F0" strokeWidth="0.7" opacity="0.6" strokeLinecap="round" />
+      <path d="M-2.8 -2.6 C-3.1 -5.6 -1.8 -7.3 0 -7.3 C1.8 -7.3 3.1 -5.6 2.8 -2.6 Q0 -1.4 -2.8 -2.6 Z" fill="#9A6AD0" />
+      <path d="M-2.2 -2.8 C-2.4 -5.2 -1.4 -6.6 0 -6.6 C1.4 -6.6 2.4 -5.2 2.2 -2.8 Q0 -1.9 -2.2 -2.8 Z" fill="#120818" />
+      <ellipse cx="-0.95" cy="-4.4" rx="1.0" ry="0.8" fill="#FFD84A" opacity="0.25" />
+      <ellipse cx="0.95" cy="-4.4" rx="1.0" ry="0.8" fill="#FFD84A" opacity="0.25" />
+      <ellipse cx="-0.95" cy="-4.4" rx="0.6" ry="0.42" fill="#FFE070" />
+      <ellipse cx="0.95" cy="-4.4" rx="0.6" ry="0.42" fill="#FFE070" />
+      {/* 金貨の袋 */}
+      <path d="M1.6 1.0 Q0.6 4.2 3.2 4.4 Q5.8 4.2 4.8 1.0 Q3.2 0.3 1.6 1.0 Z" fill="#E0A838" stroke="#5A3A0A" strokeWidth="0.45" />
+      <path d="M2.2 0.9 L1.8 -0.2 L2.8 0.4 L3.2 -0.4 L3.6 0.4 L4.6 -0.2 L4.2 0.9 Z" fill="#E0A838" stroke="#5A3A0A" strokeWidth="0.35" />
+      <ellipse cx="3.2" cy="0.6" rx="1.3" ry="0.6" fill="#2A1640" />
+      <ellipse cx="2.4" cy="2.2" rx="0.55" ry="0.8" fill="#FFF0B0" opacity="0.8" />
+    </g>
+  );
+}
+
+/* 挑戦状：赤い封蝋の巻物に、鎧の籠手が叩きつけられている */
+function GlyphChallenge() {
+  return (
+    <g>
+      <ellipse cx="0" cy="4.6" rx="6.6" ry="1.8" fill={GlyphShadowFill} />
+      {/* 巻物 */}
+      <rect x="-5.4" y="-0.6" width="10.8" height="4.4" fill="#EAD6A4" stroke="#6B4A22" strokeWidth="0.45" />
+      <path d="M-5.4 2.6 L5.4 2.6 L5.4 3.8 L-5.4 3.8 Z" fill="#CDB27A" />
+      <rect x="-7.0" y="-1.0" width="1.9" height="5.4" rx="0.95" fill="#D4B478" stroke="#6B4A22" strokeWidth="0.45" />
+      <rect x="5.1" y="-1.0" width="1.9" height="5.4" rx="0.95" fill="#B8965C" stroke="#6B4A22" strokeWidth="0.45" />
+      <path d="M-6.5 -0.4 L-6.5 3.6" stroke="#FFF2CC" strokeWidth="0.4" opacity="0.7" strokeLinecap="round" />
+      {/* 封蝋 */}
+      <path d="M2.6 3.4 L2.2 5.0 L3.0 4.6 L3.4 5.2 L3.6 3.6 Z" fill="#A01822" />
+      <circle cx="3.4" cy="2.4" r="1.5" fill="#D02430" stroke="#5A0A10" strokeWidth="0.4" />
+      <circle cx="3.4" cy="2.4" r="0.8" fill="none" stroke="#8A101C" strokeWidth="0.35" />
+      <circle cx="2.9" cy="1.9" r="0.35" fill="#FFB0B0" />
+      {/* 籠手。⚠️ 指は四本を少し開き、親指を横に張り出す（手袋の形が26pxでも読めること） */}
+      <g transform="translate(-0.5,-2.8) rotate(-14) scale(0.93)">
+        {[[-2.0, 12, 3.4, "#B0BAC6"], [-0.7, 4, 3.8, "#B0BAC6"], [0.6, -3, 3.7, "#97A1AF"], [1.9, -11, 3.2, "#8A94A2"]].map(([x, a, l, f], i) => (
+          <g key={i} transform={`translate(${x},0.4) rotate(${a})`}>
+            <rect x="-0.62" y="-0.4" width="1.24" height={l} rx="0.6" fill={f} stroke="#22282F" strokeWidth="0.4" />
+            <path d={`M-0.55 ${l * 0.42} L0.55 ${l * 0.42}`} stroke="#4A525E" strokeWidth="0.3" />
+          </g>
+        ))}
+        <path d="M-2.3 -1.8 Q-4.6 -1.6 -4.9 0.8 Q-4.7 1.9 -3.8 1.6 Q-3.4 0.2 -2.3 0.2 Z" fill="#A4AEBC" stroke="#22282F" strokeWidth="0.4" />
+        <path d="M-2.4 -2.9 Q0 -2.5 2.4 -2.9 L2.9 0.8 Q0 1.5 -2.7 0.8 Z" fill="#B8C2CE" stroke="#22282F" strokeWidth="0.45" />
+        <path d="M1.0 -2.7 Q1.8 -2.8 2.4 -2.9 L2.9 0.8 Q2.0 1.1 1.4 1.2 Q1.6 -0.8 1.0 -2.7 Z" fill="#7E8896" />
+        <path d="M-2.5 -0.8 Q0 -0.3 2.7 -0.8" fill="none" stroke="#5A6470" strokeWidth="0.35" />
+        <path d="M-3.1 -6.0 Q0 -6.8 3.1 -6.0 L2.2 -2.8 Q0 -2.4 -2.2 -2.8 Z" fill="#9AA4B2" stroke="#22282F" strokeWidth="0.45" />
+        <path d="M1.2 -6.3 Q2.4 -6.2 3.1 -6.0 L2.2 -2.8 Q1.6 -2.6 1.0 -2.6 Z" fill="#7A8492" />
+        <path d="M-2.6 -4.4 Q0 -4.9 2.6 -4.4" fill="none" stroke="#5A6470" strokeWidth="0.35" />
+        <path d="M-3.0 -5.9 Q0 -6.7 3.0 -5.9" fill="none" stroke="#E8B840" strokeWidth="0.7" />
+        <path d="M-1.8 -2.2 L-2.0 0.4" stroke="#FFFFFF" strokeWidth="0.6" opacity="0.65" strokeLinecap="round" />
+        <path d="M-2.3 -5.2 L-1.9 -3.4" stroke="#FFFFFF" strokeWidth="0.5" opacity="0.5" strokeLinecap="round" />
+      </g>
+      {/* 叩きつけた衝撃 */}
+      <path d="M3.6 -3.6 L5.2 -4.8 M4.0 -2.0 L6.0 -2.4 M-4.6 -2.8 L-6.0 -4.0" stroke="#FFF0C8" strokeWidth="0.6" strokeLinecap="round" />
+    </g>
+  );
+}
+
+/* 抜け穴：岩肌の暗い横穴。坑道の木枠。奥がほのかに明るい */
+function GlyphTunnel() {
+  return (
+    <g>
+      <ellipse cx="0" cy="4.6" rx="6.6" ry="1.8" fill={GlyphShadowFill} />
+      <path d="M-7.2 4.3 C-7.6 0 -6 -5.4 -2.6 -7.6 C-0.6 -8.8 2 -8.6 3.8 -7.2 C6.6 -5 7.6 -0.4 7.2 4.3 Q0 5.6 -7.2 4.3 Z"
+        fill="#7E7A84" stroke="#26232C" strokeWidth="0.5" />
+      <path d="M3.8 -7.2 C6.6 -5 7.6 -0.4 7.2 4.3 Q5.6 4.8 4.4 4.9 C5.2 1 4.8 -4 2.6 -7.9 Z" fill="#5C5864" />
+      <path d="M-5.8 -1.6 L-4.6 -3.2 L-5.4 -4.6 M5.4 0.8 L6.2 -1.2 L5.6 -2.6 M-1.6 -7.0 L-0.2 -6.0" fill="none" stroke="#3A3640" strokeWidth="0.35" />
+      <path d="M-6.2 -0.6 C-5.8 -4 -4 -6.4 -1.8 -7.4" fill="none" stroke="#D0CCD8" strokeWidth="0.8" opacity="0.55" strokeLinecap="round" />
+      {/* 穴 */}
+      <path d="M-2.8 4.7 L-2.8 -3.4 L2.8 -3.4 L2.8 4.7 Q0 5.0 -2.8 4.7 Z" fill="#0E0A0E" />
+      <ellipse cx="0.4" cy="1.4" rx="1.6" ry="2.0" fill="#C88A3A" opacity="0.4" />
+      <path d="M-0.4 2.8 L-0.4 0.6 Q-0.4 -0.3 0.5 -0.3 Q1.4 -0.3 1.4 0.6 L1.4 2.8 Z" fill="#F0B860" />
+      <path d="M-1.8 4.8 L-0.3 2.8 M1.8 4.8 L1.3 2.8" stroke="#5A4A3A" strokeWidth="0.4" />
+      {/* 木枠 */}
+      <rect x="-4.0" y="-3.6" width="1.3" height="8.3" fill="#A06E3C" stroke="#3A220E" strokeWidth="0.4" />
+      <rect x="2.7" y="-3.6" width="1.3" height="8.3" fill="#7A4E26" stroke="#3A220E" strokeWidth="0.4" />
+      <rect x="-4.7" y="-5.0" width="9.4" height="1.6" rx="0.3" fill="#B07A44" stroke="#3A220E" strokeWidth="0.45" />
+      <path d="M-4.3 -4.6 L4.0 -4.6" stroke="#F0C890" strokeWidth="0.4" opacity="0.7" />
+    </g>
+  );
+}
+
+/* 四つ葉：ハート形の葉が4枚。茎は曲げる。⚠️ 葉を斜めに回し、角度と大きさを揃えない（十字に見せない） */
+const GlyphCloverLeafD = "M0 0 C-0.7 -0.8 -2.7 -1.5 -2.7 -3.2 C-2.7 -4.5 -1.0 -5.0 0 -3.8 C1.0 -5.0 2.7 -4.5 2.7 -3.2 C2.7 -1.5 0.7 -0.8 0 0 Z";
+function GlyphClover() {
+  const leaves = [
+    { a: 152, s: 0.95, f: "#2E9438" },
+    { a: 238, s: 1.0, f: "#45B444" },
+    { a: 62, s: 1.02, f: "#4DBE48" },
+    { a: -28, s: 1.08, f: "#6ED65A" },
+  ];
+  return (
+    <g>
+      <ellipse cx="0" cy="4.6" rx="5.6" ry="1.7" fill={GlyphShadowFill} />
+      <path d="M-0.2 -2.8 C0.4 0.2 2.8 1.6 1.8 4.4" fill="none" stroke="#18461C" strokeWidth="1.4" strokeLinecap="round" />
+      <path d="M-0.2 -2.8 C0.4 0.2 2.8 1.6 1.8 4.4" fill="none" stroke="#4FA03C" strokeWidth="0.7" strokeLinecap="round" />
+      <g transform="translate(-0.4,-3.4)">
+        {leaves.map((l, i) => (
+          <path key={i} d={GlyphCloverLeafD} transform={`rotate(${l.a}) scale(${l.s})`}
+            fill={l.f} stroke="#18461C" strokeWidth="0.45" />
+        ))}
+        <circle cx="0" cy="0" r="0.6" fill="#2A7A2E" />
+        <ellipse cx="-2.2" cy="-3.4" rx="0.9" ry="0.6" fill="#E4FFD0" opacity="0.75" transform="rotate(-28)" />
+      </g>
+      <path d={GlyphStar4(5.2, -7.6, 1.4)} fill="#FFF6C8" />
+    </g>
+  );
+}
+
+/* 迷い道：傾いた木の道標。板は左・右上・右下。⚠️ 板は柱から片側にだけ伸ばす（十字にしない） */
+const GlyphSignBoardD = "M-0.5 -1.2 L4.8 -1.2 L6.3 0 L4.8 1.2 L-0.5 1.2 Z";
+function GlyphLost() {
+  const board = (t, f) => (
+    <g transform={t}>
+      <path d={GlyphSignBoardD} fill={f} stroke="#3E240C" strokeWidth="0.45" />
+      <path d="M-0.2 -0.75 L4.7 -0.75" stroke="#F4D098" strokeWidth="0.45" opacity="0.7" />
+      <path d="M-0.2 0.8 L4.7 0.8" stroke="#6A3E18" strokeWidth="0.4" opacity="0.6" />
+      <circle cx="0.2" cy="0" r="0.3" fill="#3E240C" />
+    </g>
+  );
+  return (
+    <g>
+      <ellipse cx="0" cy="4.6" rx="5.8" ry="1.7" fill={GlyphShadowFill} />
+      <g transform="translate(0.3,0)">
+      <path d="M-0.3 4.5 L-2.4 -8.8 L-0.9 -9.1 L1.4 4.5 Z" fill="#7A4E26" stroke="#2E1A0A" strokeWidth="0.45" />
+      <path d="M0.0 4.0 L-1.9 -8.4" stroke="#C08A52" strokeWidth="0.35" opacity="0.7" />
+      {board("translate(-1.3,-6.9) rotate(-8) scale(-1,1)", "#C68E50")}
+      {board("translate(-0.9,-4.0) rotate(-30)", "#B8824A")}
+      {board("translate(-0.3,-0.9) rotate(24)", "#A87240")}
+      <path d="M-1.4 4.6 L-2.0 3.0 M-0.8 4.6 L-0.6 3.2 M1.4 4.6 L2.0 3.3" stroke="#5E9A3A" strokeWidth="0.5" strokeLinecap="round" />
+      </g>
+    </g>
+  );
+}
+
+/* 砲台：黒鉄の大砲が車輪付きの木の台に載り、右上を向く。導火線の先に火花 */
+function GlyphCannon() {
+  return (
+    <g>
+      <ellipse cx="0" cy="4.6" rx="6.4" ry="1.8" fill={GlyphShadowFill} />
+      <circle cx="-4.0" cy="2.9" r="1.6" fill="#6A3E1C" stroke="#2E1A08" strokeWidth="0.45" />
+      <path d="M-5.8 3.6 L-5.6 0.8 L-0.4 -1.6 L2.4 -1.6 L3.4 3.6 Z" fill="#9A6434" stroke="#3A200C" strokeWidth="0.45" />
+      <path d="M-5.4 1.0 L-0.4 -1.2 L2.2 -1.2" fill="none" stroke="#D8A060" strokeWidth="0.4" opacity="0.7" />
+      <g transform="translate(-0.6,-2.6) rotate(-33)">
+        <circle cx="-5.5" cy="0" r="0.75" fill="#30343C" stroke="#0C0E12" strokeWidth="0.45" />
+        <path d="M-3.8 -1.9 L4.4 -1.35 L4.4 1.35 L-3.8 1.9 Q-5.0 1.9 -5.0 0 Q-5.0 -1.9 -3.8 -1.9 Z" fill="#30343C" stroke="#0C0E12" strokeWidth="0.5" />
+        <path d="M-3.8 0.9 L4.4 0.7 L4.4 1.35 L-3.8 1.9 Z" fill="#181A1F" />
+        <rect x="-2.6" y="-1.85" width="0.7" height="3.7" fill="#454B55" />
+        <rect x="1.4" y="-1.6" width="0.6" height="3.2" fill="#454B55" />
+        <rect x="4.0" y="-1.75" width="1.5" height="3.5" rx="0.4" fill="#3A3F48" stroke="#0C0E12" strokeWidth="0.45" />
+        <ellipse cx="5.5" cy="0" rx="0.45" ry="1.1" fill="#050608" />
+        <path d="M-3.6 -1.2 L3.8 -0.85" stroke="#9AA6B4" strokeWidth="0.6" opacity="0.75" strokeLinecap="round" />
+      </g>
+      <circle cx="1.6" cy="2.6" r="2.0" fill="#7A4A22" stroke="#2E1A08" strokeWidth="0.45" />
+      <circle cx="1.6" cy="2.6" r="1.4" fill="none" stroke="#B07A44" strokeWidth="0.35" />
+      <path d="M0.2 2.6 L3.0 2.6 M0.9 1.4 L2.3 3.8 M0.9 3.8 L2.3 1.4" stroke="#3A2410" strokeWidth="0.3" />
+      <circle cx="1.6" cy="2.6" r="0.55" fill="#2E3238" />
+      <path d="M-5.0 -1.7 Q-5.8 -2.6 -5.4 -3.8" fill="none" stroke="#C8A060" strokeWidth="0.45" />
+      <path d={GlyphStar4(-5.4, -4.4, 1.5)} fill="#FF9A2A" />
+      <circle cx="-5.4" cy="-4.4" r="0.45" fill="#FFF4B0" />
+    </g>
+  );
+}
+
+/* 鍛冶屋：黒鉄の金床と、その上に置いた槌。橙の火花 */
+function GlyphAnvil() {
+  return (
+    <g>
+      <ellipse cx="0" cy="4.6" rx="6.4" ry="1.8" fill={GlyphShadowFill} />
+      <path d="M-7.2 -3.4 Q-5.4 -1.6 -2.8 -1.4 L-2.2 -1.4 Q-1.6 0.8 -2.8 1.8 L-4.6 2.8 L-4.6 4.3 L4.8 4.3 L4.8 2.8 L3.0 1.8 Q1.8 0.8 2.4 -1.4 L5.8 -1.4 L5.8 -3.6 L-3.0 -3.6 Q-5.4 -3.6 -7.2 -3.4 Z"
+        fill="#3A3E46" stroke="#0E1014" strokeWidth="0.5" />
+      <path d="M-6.6 -3.4 Q-5 -3.5 -3 -3.5 L5.6 -3.5 L5.6 -2.9 L-3 -2.9 Q-5 -2.9 -6.6 -3.4 Z" fill="#7A8492" />
+      <path d="M1.0 -1.4 L2.4 -1.4 Q1.8 0.8 3.0 1.8 L4.8 2.8 L4.8 4.3 L2.2 4.3 L2.2 2.8 Q0.8 1.6 1.0 -1.4 Z" fill="#23262C" />
+      <path d="M-4.4 2.9 L-2.6 1.95" stroke="#6A7380" strokeWidth="0.4" />
+      {/* 槌 */}
+      <g transform="translate(2.8,-5.5) rotate(20)">
+        <rect x="-6.4" y="-0.65" width="5.4" height="1.3" rx="0.6" fill="#A86E38" stroke="#2E1A0A" strokeWidth="0.4" />
+        <rect x="-1.2" y="-1.9" width="2.4" height="3.8" rx="0.35" fill="#6A7280" stroke="#0E1014" strokeWidth="0.45" />
+        <path d="M-0.7 -1.4 L-0.7 1.4" stroke="#C8D0DC" strokeWidth="0.45" opacity="0.8" />
+        <path d="M0.5 -1.8 L1.1 -1.8 L1.1 1.8 L0.5 1.8 Z" fill="#454B55" />
+      </g>
+      <path d={GlyphStar4(5.6, -7.2, 1.4)} fill="#FF9A2A" />
+      <path d={GlyphStar4(6.5, -4.8, 0.9)} fill="#FFB84A" />
+      <circle cx="4.3" cy="-8.8" r="0.4" fill="#FFC860" />
+      <circle cx="5.6" cy="-7.2" r="0.35" fill="#FFF4B0" />
+    </g>
+  );
+}
+
+/* 竜の巣：金貨の山。奥の暗がりから赤い爬虫類の目（縦長の瞳）が一つ */
+function GlyphHoard() {
+  const coins = [[-3.6, 1.4], [-0.6, -0.6], [2.6, 1.0], [0.6, 2.8], [-5.0, 3.4], [4.6, 3.2], [-2.0, 3.0]];
+  return (
+    <g>
+      <ellipse cx="0" cy="4.6" rx="6.8" ry="1.8" fill={GlyphShadowFill} />
+      <path d="M-6.0 2.0 L-6.0 -4.0 Q-6.0 -9.4 0 -9.4 Q6.0 -9.4 6.0 -4.0 L6.0 2.0 Z" fill="#1A0C14" stroke="#060206" strokeWidth="0.5" />
+      <path d="M-5.6 -2.0 Q-5.8 -8.6 0 -9.0" fill="none" stroke="#6A4A56" strokeWidth="0.7" opacity="0.7" strokeLinecap="round" />
+      <ellipse cx="0" cy="-5.2" rx="4.6" ry="2.6" fill="#FF3A1A" opacity="0.2" />
+      <path d="M-3.8 -5.6 Q0 -9.0 3.8 -5.6" fill="none" stroke="#7A1A12" strokeWidth="0.7" />
+      <path d="M-3.4 -5.2 Q0 -8.0 3.4 -5.2 Q0 -2.6 -3.4 -5.2 Z" fill="#F04A1E" stroke="#3A0606" strokeWidth="0.4" />
+      <path d="M-2.2 -5.2 Q0 -7.0 2.2 -5.2 Q0 -3.5 -2.2 -5.2 Z" fill="#FFB43A" />
+      <ellipse cx="0" cy="-5.2" rx="0.55" ry="1.55" fill="#120404" />
+      <circle cx="-1.1" cy="-6.0" r="0.4" fill="#FFF0D0" />
+      {/* 金貨の山 */}
+      <path d="M-7.0 4.3 C-6.6 1.6 -4.6 -0.6 -2.4 -1.2 C-0.8 -2.0 1.2 -2.0 2.6 -1.2 C4.8 -0.4 6.6 1.6 7.0 4.3 Q0 5.6 -7.0 4.3 Z"
+        fill="#E6AE34" stroke="#5A3A08" strokeWidth="0.5" />
+      <path d="M2.6 -1.2 C4.8 -0.4 6.6 1.6 7.0 4.3 Q5 4.9 3.0 5.0 C4.0 2.8 3.8 0.6 2.6 -1.2 Z" fill="#B87E1C" />
+      {coins.map(([x, y], i) => (
+        <ellipse key={i} cx={x} cy={y} rx="1.1" ry="0.5" fill="#FFD860" stroke="#8A5A10" strokeWidth="0.3" />
+      ))}
+      <path d="M-5.6 2.4 Q-4.6 0.2 -2.4 -0.6" fill="none" stroke="#FFF2C0" strokeWidth="0.6" opacity="0.7" strokeLinecap="round" />
+      <path d={GlyphStar4(-4.4, -0.6, 1.1)} fill="#FFF6DF" />
+    </g>
+  );
+}
+
+/* 盗賊：黒い目隠しの覆面の丸い頭と、肩に担いだ膨らんだ袋 */
+function GlyphThief() {
+  return (
+    <g>
+      <ellipse cx="0" cy="4.6" rx="6.2" ry="1.8" fill={GlyphShadowFill} />
+      {/* 袋（背中側） */}
+      <path d="M1.0 -3.0 C0.4 -6.8 4.0 -8.2 6.2 -6.2 C7.8 -4.6 7.4 -1.0 5.0 -0.4 C3.4 0 1.6 -0.8 1.0 -3.0 Z" fill="#C89858" stroke="#4A2E10" strokeWidth="0.45" />
+      <path d="M6.6 -5.0 C7.4 -3.0 6.6 -1.0 5.0 -0.4 C3.4 0 2.2 -0.6 1.6 -1.6 C4.0 -1.2 6.0 -2.4 6.6 -5.0 Z" fill="#9A6E34" />
+      <ellipse cx="3.0" cy="-5.6" rx="1.0" ry="0.6" fill="#F4DCA8" opacity="0.8" transform="rotate(-30 3 -5.6)" />
+      <path d="M4.4 -3.6 L5.6 -3.6 L5.6 -2.4 L4.4 -2.4 Z" fill="#A47838" stroke="#5A3A14" strokeWidth="0.3" />
+      {/* 体 */}
+      <path d="M-5.0 4.4 C-5.2 0.8 -3.6 -1.0 -1.0 -1.0 C1.6 -1.0 3.0 0.8 2.8 4.4 Q-1.1 5.2 -5.0 4.4 Z" fill="#3A3448" stroke="#14101C" strokeWidth="0.45" />
+      <path d="M-5.0 1.6 Q-1.1 2.4 2.9 1.6 M-5.1 3.2 Q-1.1 4.0 2.9 3.2" fill="none" stroke="#6E6684" strokeWidth="0.55" />
+      <path d="M0.8 -0.8 C2.4 -0.2 3.0 1.6 2.8 4.4 Q1.8 4.7 0.8 4.8 C1.6 2.6 1.4 0.6 0.8 -0.8 Z" fill="#241E30" opacity="0.8" />
+      <path d="M1.4 -2.6 Q2.0 -1.2 1.9 0.0" fill="none" stroke="#8A5E2A" strokeWidth="0.8" strokeLinecap="round" />
+      <circle cx="1.9" cy="0.3" r="0.9" fill="#E8B88A" stroke="#4A2A14" strokeWidth="0.35" />
+      {/* 頭 */}
+      <circle cx="-1.0" cy="-4.4" r="3.2" fill="#EDBF92" stroke="#4A2A14" strokeWidth="0.45" />
+      <path d="M-4.2 -4.6 L-6.2 -5.6 L-5.8 -4.2 Z M-4.2 -4.0 L-6.0 -2.8 L-4.8 -3.0 Z" fill="#141018" />
+      <path d="M-4.4 -4.8 Q-1.0 -6.2 2.4 -4.8 L2.2 -3.4 Q0.4 -3.0 -1.0 -3.8 Q-2.4 -3.0 -4.2 -3.4 Z" fill="#141018" />
+      <ellipse cx="-2.4" cy="-4.4" rx="0.75" ry="0.55" fill="#F4F0FF" />
+      <ellipse cx="0.4" cy="-4.4" rx="0.75" ry="0.55" fill="#F4F0FF" />
+      <circle cx="-2.1" cy="-4.4" r="0.32" fill="#141018" />
+      <circle cx="0.7" cy="-4.4" r="0.32" fill="#141018" />
+      <path d="M-1.8 -2.2 Q-0.8 -1.7 0.0 -2.3" fill="none" stroke="#6A3A1E" strokeWidth="0.35" strokeLinecap="round" />
+      <ellipse cx="-2.4" cy="-6.3" rx="0.9" ry="0.5" fill="#FFF4E4" opacity="0.6" />
+    </g>
+  );
+}
+
+/* 呪いの石像：ひび割れた灰色の石の獣の胸像。紫に光る目、紫の靄 */
+function GlyphStatue() {
+  return (
+    <g>
+      <ellipse cx="0" cy="4.6" rx="6.0" ry="1.8" fill={GlyphShadowFill} />
+      {/* 翼 */}
+      <path d="M-2.4 -1.6 L-6.6 -6.4 L-6.2 -4.0 L-7.2 -2.6 L-5.6 -2.0 L-6.2 -0.4 L-3.0 0.4 Z" fill="#76747F" stroke="#24222A" strokeWidth="0.45" />
+      <path d="M2.4 -1.6 L6.6 -6.4 L6.2 -4.0 L7.2 -2.6 L5.6 -2.0 L6.2 -0.4 L3.0 0.4 Z" fill="#55535E" stroke="#24222A" strokeWidth="0.45" />
+      {/* 台座 */}
+      <path d="M-4.4 2.2 L4.4 2.2 L4.4 4.4 L-4.4 4.4 Z" fill="#62606C" stroke="#24222A" strokeWidth="0.45" />
+      <path d="M-5.0 1.2 L5.0 1.2 L5.0 2.4 L-5.0 2.4 Z" fill="#8A8894" stroke="#24222A" strokeWidth="0.45" />
+      <path d="M1.6 2.4 L4.4 2.4 L4.4 4.4 L1.6 4.4 Z" fill="#4A4852" />
+      {/* 胸 */}
+      <path d="M-4.2 1.3 C-4.4 -0.8 -3.4 -2.2 -1.6 -2.4 L1.6 -2.4 C3.4 -2.2 4.4 -0.8 4.2 1.3 Z" fill="#8E8C98" stroke="#26242C" strokeWidth="0.45" />
+      <path d="M1.6 -2.4 C3.4 -2.2 4.4 -0.8 4.2 1.3 L2.0 1.3 C2.4 -0.2 2.2 -1.4 1.6 -2.4 Z" fill="#6E6C78" />
+      {/* 頭 */}
+      <path d="M-3.0 -2.0 C-3.6 -3.4 -3.6 -5.2 -2.8 -6.4 L-3.8 -9.0 L-1.6 -7.2 Q0 -7.8 1.6 -7.2 L3.8 -9.0 L2.8 -6.4 C3.6 -5.2 3.6 -3.4 3.0 -2.0 Q0 -0.8 -3.0 -2.0 Z"
+        fill="#9A98A4" stroke="#26242C" strokeWidth="0.45" />
+      <path d="M1.6 -7.2 L3.8 -9.0 L2.8 -6.4 C3.6 -5.2 3.6 -3.4 3.0 -2.0 Q2.2 -1.6 1.4 -1.5 C2.4 -3.4 2.4 -5.6 1.6 -7.2 Z" fill="#76747F" />
+      <path d="M-2.8 -3.0 C-3.2 -4.4 -3.0 -5.6 -2.4 -6.2" fill="none" stroke="#DCDAE6" strokeWidth="0.6" opacity="0.6" strokeLinecap="round" />
+      <path d="M-1.6 -3.0 Q0 -4.0 1.6 -3.0 Q1.2 -1.6 0 -1.5 Q-1.2 -1.6 -1.6 -3.0 Z" fill="#84828E" stroke="#3A3842" strokeWidth="0.35" />
+      <path d="M-0.9 -2.0 L-0.6 -1.3 L-0.3 -2.0 Z M0.3 -2.0 L0.6 -1.3 L0.9 -2.0 Z" fill="#E0DEE8" />
+      <path d="M-2.7 -5.6 L-0.6 -4.8 M2.7 -5.6 L0.6 -4.8" stroke="#2E2C34" strokeWidth="0.5" strokeLinecap="round" />
+      {/* 光る目 */}
+      <ellipse cx="-1.5" cy="-4.2" rx="1.3" ry="0.9" fill="#C060FF" opacity="0.35" />
+      <ellipse cx="1.5" cy="-4.2" rx="1.3" ry="0.9" fill="#C060FF" opacity="0.35" />
+      <ellipse cx="-1.5" cy="-4.2" rx="0.75" ry="0.42" fill="#E8B0FF" />
+      <ellipse cx="1.5" cy="-4.2" rx="0.75" ry="0.42" fill="#E8B0FF" />
+      {/* ひび */}
+      <path d="M1.0 -7.2 L0.4 -6.2 L1.2 -5.4 L0.7 -4.8 M-2.6 -1.0 L-1.8 0.0 L-2.4 0.8 M3.6 2.4 L3.0 3.4 L3.4 4.2" fill="none" stroke="#2A2830" strokeWidth="0.35" />
+      {/* 紫の靄。⚠️ 頭の上には置かない（角や後光に見える）。台座から立ちのぼらせる */}
+      <ellipse cx="-4.4" cy="3.6" rx="3.0" ry="1.1" fill="#B070E8" opacity="0.35" />
+      <ellipse cx="4.8" cy="3.2" rx="2.4" ry="0.9" fill="#B070E8" opacity="0.3" />
+      <path d="M-5.6 2.8 C-7.0 1.4 -5.2 0.2 -6.6 -1.4" fill="none" stroke="#C88AF4" strokeWidth="1.0" opacity="0.55" strokeLinecap="round" />
+      <path d="M5.8 2.4 C7.0 1.0 5.6 -0.2 6.8 -1.8" fill="none" stroke="#C88AF4" strokeWidth="0.9" opacity="0.5" strokeLinecap="round" />
+    </g>
+  );
+}
+
+/* 重い霧：低く垂れこめる灰紫の霧の帯が何層も。地面を這う */
+function GlyphFog() {
+  return (
+    <g>
+      <ellipse cx="0" cy="4.6" rx="6.8" ry="1.6" fill={GlyphShadowFill} />
+      <path d="M-3.4 -3.6 Q-4.4 -4.8 -2.8 -5.2 Q-1.8 -6.6 0 -6.0 Q1.6 -7.0 3.0 -5.8 Q4.6 -6.0 4.8 -4.6 Q5.8 -4.4 5.4 -3.6 Z"
+        fill="#C6BEDA" stroke="#3A3352" strokeWidth="0.4" opacity="0.8" />
+      <path d="M-6.6 -1.4 Q-7.2 -2.8 -5.6 -3.0 Q-4.4 -4.4 -2.4 -3.8 Q-0.8 -4.8 1.0 -3.8 Q2.6 -4.2 3.6 -3.0 Q4.8 -2.8 4.4 -1.4 Z"
+        fill="#B0A6CA" stroke="#3A3352" strokeWidth="0.4" />
+      <path d="M-4.8 1.2 Q-5.6 -0.2 -3.8 -0.6 Q-2.6 -2.0 -0.4 -1.4 Q1.4 -2.4 3.2 -1.4 Q5.0 -1.8 6.0 -0.6 Q7.6 -0.4 7.2 1.2 Z"
+        fill="#9A90B8" stroke="#3A3352" strokeWidth="0.4" />
+      <path d="M-7.2 4.4 Q-7.8 2.6 -6.0 2.2 Q-4.8 0.6 -2.6 1.0 Q-0.8 -0.2 1.4 0.8 Q3.2 0.0 4.8 1.4 Q7.2 1.4 6.9 3.0 Q6.8 4.4 5.4 4.4 Z"
+        fill="#867CA6" stroke="#3A3352" strokeWidth="0.4" />
+      <path d="M-6.8 2.6 Q-5.4 1.2 -3.4 1.2 M-6.2 -1.8 Q-5.0 -3.2 -3.0 -3.2 M-2.6 -4.8 Q-1.6 -5.8 0 -5.6 M-3.6 0.0 Q-2.4 -1.2 -0.8 -1.0" fill="none" stroke="#ECE6FA" strokeWidth="0.5" opacity="0.7" strokeLinecap="round" />
+      <path d="M-7.4 0.0 L-5.8 0.0 M5.4 -3.0 L7.2 -3.0 M4.8 -2.0 L6.4 -2.0" stroke="#D4CCE8" strokeWidth="0.45" opacity="0.6" strokeLinecap="round" />
+    </g>
+  );
+}
+
+/* 巨人の果実：大きな金赤の林檎に葉が一枚。強い艶 */
+function GlyphFruit() {
+  return (
+    <g>
+      <ellipse cx="0" cy="4.8" rx="6.8" ry="1.9" fill={GlyphShadowFill} />
+      <path d="M0 -5.0 C-1.8 -6.6 -7.2 -6.4 -7.2 -1.2 C-7.2 2.8 -3.8 5.4 -1.6 4.8 Q0 4.4 1.6 4.8 C3.8 5.4 7.2 2.8 7.2 -1.2 C7.2 -6.4 1.8 -6.6 0 -5.0 Z"
+        fill="#D63A26" stroke="#4A0E08" strokeWidth="0.5" />
+      <path d="M-1.0 -5.2 C-3.0 -6.0 -6.6 -5.4 -6.6 -1.2 C-6.6 1.6 -4.8 3.6 -3.2 4.2 C-4.4 2.2 -4.6 -0.6 -3.6 -2.8 C-2.8 -4.4 -1.8 -5.0 -1.0 -5.2 Z" fill="#F07A30" />
+      <path d="M1.4 -5.2 C4.2 -6.2 7.2 -4.6 7.2 -1.2 C7.2 2.8 3.8 5.4 1.6 4.8 C4.0 3.2 5.4 0.6 5.0 -2.2 C4.8 -3.8 3.4 -4.8 1.4 -5.2 Z" fill="#9A2014" />
+      <path d="M-1.4 -4.8 Q0 -4.0 1.4 -4.8" fill="none" stroke="#6A1408" strokeWidth="0.4" />
+      <ellipse cx="-4.0" cy="-2.4" rx="1.0" ry="1.8" fill="#FFF4E0" opacity="0.9" transform="rotate(20 -4 -2.4)" />
+      <ellipse cx="-4.6" cy="0.6" rx="0.45" ry="0.6" fill="#FFF4E0" opacity="0.7" />
+      <path d="M0.1 -4.8 Q0.2 -6.8 1.2 -8.2" fill="none" stroke="#4A2A10" strokeWidth="0.9" strokeLinecap="round" />
+      <path d="M1.0 -7.2 C2.6 -9.4 5.6 -9.4 6.6 -8.2 C5.2 -6.6 2.6 -6.2 1.0 -7.2 Z" fill="#5CC048" stroke="#1A4A14" strokeWidth="0.45" />
+      <path d="M1.4 -7.3 Q4 -7.9 6.0 -8.2" fill="none" stroke="#2E7A24" strokeWidth="0.35" />
+      <path d={GlyphStar4(-6.2, -6.6, 1.3)} fill="#FFF6DF" />
+    </g>
+  );
+}
+
+/* 静かな湖：楕円の静かな水面、映り込みの光、端に葦。小さな波紋の輪が一つ */
+function GlyphLake() {
+  return (
+    <g>
+      <ellipse cx="0" cy="3.4" rx="7.2" ry="2.2" fill={GlyphShadowFill} />
+      <ellipse cx="0" cy="1.8" rx="7.3" ry="3.7" fill="#5A4A32" stroke="#241A10" strokeWidth="0.45" />
+      <ellipse cx="0" cy="1.3" rx="7.1" ry="3.4" fill="#8A7650" />
+      <ellipse cx="0" cy="1.3" rx="6.1" ry="2.8" fill="#2A6AAE" />
+      <path d="M-6.1 1.3 A6.1 2.8 0 0 1 6.1 1.3 Q0 -0.1 -6.1 1.3 Z" fill="#5AA0D8" />
+      <ellipse cx="-2.6" cy="0.6" rx="1.8" ry="0.35" fill="#E8F8FF" opacity="0.9" />
+      <ellipse cx="-0.4" cy="1.1" rx="0.8" ry="0.2" fill="#E8F8FF" opacity="0.7" />
+      <ellipse cx="2.2" cy="2.3" rx="1.6" ry="0.55" fill="none" stroke="#BCE4FF" strokeWidth="0.4" />
+      <ellipse cx="2.2" cy="2.3" rx="0.7" ry="0.24" fill="none" stroke="#BCE4FF" strokeWidth="0.3" />
+      <ellipse cx="-3.6" cy="2.4" rx="1.0" ry="0.4" fill="#5CB04A" stroke="#1E4A14" strokeWidth="0.3" />
+      {/* 葦 */}
+      <path d="M4.6 1.4 Q4.9 -2 4.4 -5.6 M5.6 1.6 Q5.8 -2 6.2 -7.0 M6.5 1.6 Q6.8 0 7.2 -3.2" fill="none" stroke="#3E6A2A" strokeWidth="0.55" strokeLinecap="round" />
+      <path d="M5.0 1.4 Q3.6 -1.2 2.8 -3.2 M6.2 1.6 Q7.4 -1.0 7.4 -1.8" fill="none" stroke="#5A8A34" strokeWidth="0.45" strokeLinecap="round" />
+      <ellipse cx="4.45" cy="-4.6" rx="0.6" ry="1.4" fill="#7A4420" stroke="#2E1A08" strokeWidth="0.3" />
+      <ellipse cx="6.1" cy="-5.8" rx="0.6" ry="1.4" fill="#7A4420" stroke="#2E1A08" strokeWidth="0.3" />
+      <path d="M-6.0 1.6 Q-6.4 -0.6 -6.0 -2.6 M-5.2 1.8 Q-5.0 0 -4.4 -1.4" fill="none" stroke="#3E6A2A" strokeWidth="0.5" strokeLinecap="round" />
+    </g>
+  );
+}
+
+/* 鎧職人：銀の騎士の兜、金の縁取り。⚠️ 覗き穴は横一文字。縦の筋を入れない（十字にしない） */
+function GlyphArmorer() {
+  return (
+    <g>
+      <ellipse cx="0" cy="4.6" rx="6.2" ry="1.8" fill={GlyphShadowFill} />
+      <path d="M-4.6 3.0 Q0 4.6 4.6 3.0 L5.0 4.4 Q0 6.0 -5.0 4.4 Z" fill="#E0B040" stroke="#5A3A08" strokeWidth="0.45" />
+      <path d="M-5.0 3.2 L-5.4 -2.6 C-5.4 -7.2 -2.8 -9.2 0 -9.2 C2.8 -9.2 5.4 -7.2 5.4 -2.6 L5.0 3.2 Q0 4.6 -5.0 3.2 Z"
+        fill="#BCC4D0" stroke="#232933" strokeWidth="0.5" />
+      <path d="M1.6 -9.0 C4.0 -8.4 5.4 -6.6 5.4 -2.6 L5.0 3.2 Q3.6 3.7 2.4 3.9 C3.6 1 3.8 -4 1.6 -9.0 Z" fill="#8A94A4" />
+      <path d="M-5.2 -2.2 Q0 -3.6 5.2 -2.2 L5.0 3.2 Q0 4.6 -5.0 3.2 Z" fill="#AAB2C0" opacity="0.6" />
+      <path d="M-4.2 -3.6 Q0 -5.0 4.2 -3.6 L4.0 -2.7 Q0 -4.0 -4.0 -2.7 Z" fill="#0C0E14" />
+      <path d="M-5.3 -2.2 Q0 -3.6 5.3 -2.2" fill="none" stroke="#E8B840" strokeWidth="0.7" />
+      <path d="M-5.0 3.2 Q0 4.6 5.0 3.2" fill="none" stroke="#E8B840" strokeWidth="0.8" />
+      <circle cx="-5.0" cy="-2.4" r="0.6" fill="#F0C850" stroke="#5A3A08" strokeWidth="0.3" />
+      <circle cx="5.0" cy="-2.4" r="0.6" fill="#C89830" stroke="#5A3A08" strokeWidth="0.3" />
+      <circle cx="1.8" cy="0.4" r="0.32" fill="#232933" />
+      <circle cx="3.0" cy="0.4" r="0.32" fill="#232933" />
+      <circle cx="1.8" cy="1.6" r="0.32" fill="#232933" />
+      <circle cx="3.0" cy="1.6" r="0.32" fill="#232933" />
+      <path d="M-4.2 -4.6 C-4.2 -7.0 -2.6 -8.4 -0.6 -8.6" fill="none" stroke="#FFFFFF" strokeWidth="0.9" opacity="0.6" strokeLinecap="round" />
+    </g>
+  );
+}
+
+/* 名医：乳鉢と乳棒、緑の薬草がのぞく。⚠️ 医療の十字は描かない */
+const GlyphHerbLeafD = "M0 0 C0.8 -1.2 0.8 -2.8 0 -3.8 C-0.8 -2.8 -0.8 -1.2 0 0 Z";
+function GlyphHealer() {
+  return (
+    <g>
+      <ellipse cx="0" cy="4.6" rx="6.2" ry="1.8" fill={GlyphShadowFill} />
+      <path d="M-5.6 -1.4 C-5.6 2.0 -3.4 3.4 -2.2 3.5 L2.2 3.5 C3.4 3.4 5.6 2.0 5.6 -1.4 Z" fill="#DCD2C2" stroke="#3A3226" strokeWidth="0.5" />
+      <path d="M2.4 -1.2 L5.6 -1.4 C5.6 2.0 3.4 3.4 2.2 3.5 C3.6 2.0 3.0 0.4 2.4 -1.2 Z" fill="#A89C88" />
+      <path d="M-3.0 3.4 L3.0 3.4 L3.3 4.5 L-3.3 4.5 Z" fill="#BDB2A0" stroke="#3A3226" strokeWidth="0.45" />
+      <path d="M-5.3 0.4 Q0 2.0 5.3 0.4" fill="none" stroke="#3E8A7C" strokeWidth="0.6" />
+      <ellipse cx="-4.0" cy="0.8" rx="0.55" ry="1.2" fill="#FFFFFF" opacity="0.7" />
+      <ellipse cx="0" cy="-1.4" rx="5.6" ry="1.6" fill="#E8E0D2" stroke="#3A3226" strokeWidth="0.5" />
+      <ellipse cx="0" cy="-1.3" rx="4.5" ry="1.1" fill="#3E4A28" />
+      {/* 乳棒 */}
+      <path d="M0.8 -1.6 L5.0 -8.0" stroke="#3A2210" strokeWidth="2.0" strokeLinecap="round" />
+      <path d="M0.8 -1.6 L5.0 -8.0" stroke="#B88A56" strokeWidth="1.3" strokeLinecap="round" />
+      <path d="M2.0 -3.0 L4.4 -6.8" stroke="#E8C898" strokeWidth="0.4" opacity="0.8" strokeLinecap="round" />
+      {/* 薬草 */}
+      <path d={GlyphHerbLeafD} transform="translate(-2.4,-1.4) rotate(-38)" fill="#4AA834" stroke="#1E4A14" strokeWidth="0.4" />
+      <path d={GlyphHerbLeafD} transform="translate(-1.6,-1.4) rotate(-6) scale(1.15)" fill="#6CCB3E" stroke="#1E4A14" strokeWidth="0.4" />
+      <path d={GlyphHerbLeafD} transform="translate(-3.4,-1.2) rotate(-70) scale(0.9)" fill="#58B83A" stroke="#1E4A14" strokeWidth="0.4" />
+      <path d={GlyphHerbLeafD} transform="translate(-0.6,-1.4) rotate(26) scale(0.85)" fill="#4AA834" stroke="#1E4A14" strokeWidth="0.4" />
+      {/* 手前の縁 */}
+      <path d="M-5.6 -1.4 A5.6 1.6 0 0 0 5.6 -1.4" fill="none" stroke="#E8E0D2" strokeWidth="1.0" />
+      <path d="M-5.6 -1.4 A5.6 1.6 0 0 0 5.6 -1.4" fill="none" stroke="#3A3226" strokeWidth="0.45" transform="translate(0,0.5)" />
+    </g>
+  );
+}
+
+const ADV_GLYPH = {
+  merchant: GlyphMerchant,
+  challenge: GlyphChallenge,
+  tunnel: GlyphTunnel,
+  clover: GlyphClover,
+  lost: GlyphLost,
+  cannon: GlyphCannon,
+  anvil: GlyphAnvil,
+  hoard: GlyphHoard,
+  thief: GlyphThief,
+  statue: GlyphStatue,
+  fog: GlyphFog,
+  fruit: GlyphFruit,
+  lake: GlyphLake,
+  armorer: GlyphArmorer,
+  healer: GlyphHealer,
+};
+
+/* 台の地の色（天面の基本色）。⚠️ 既存のマス（宝箱の金・お店の朱・雑魚の赤・回復の桃・井戸の青灰・イベントの紫…）と見分けが付くこと */
+const ADV_GLYPH_TILE = {
+  merchant: [52, 124, 116],
+  challenge: [180, 56, 62],
+  tunnel: [158, 118, 70],
+  clover: [206, 188, 96],
+  lost: [150, 112, 128],
+  cannon: [134, 128, 72],
+  anvil: [208, 112, 50],
+  hoard: [118, 64, 70],
+  thief: [116, 74, 110],
+  statue: [100, 124, 86],
+  fog: [78, 74, 120],
+  fruit: [60, 126, 78],
+  lake: [182, 164, 120],
+  armorer: [66, 92, 158],
+  healer: [86, 140, 138],
+};
+/* ---- 第2弾（2026-10-03）：魔法6属性・物理4属性・必殺ゲージ4本・回復の倍率のマス ---- */
+/*
+  小MAPの新しいマス 第2弾（15種）の絵。第1弾（glyphs.jsx）と同じ決まり。
+  ⚠️ 原点が台の中心。x −7.5〜7.5、y −9.5〜5.5。アプリが scale(1.85) を掛けて台に載せる。
+  ⚠️ 静止画。defs・グラデーション・id・filter・文字は使わない（同じ絵が何十個も並ぶ）。
+  ⚠️ 光は左上から。左上に艶、右下を暗く、足元に影の楕円。輪郭は暗い色で 0.3〜0.6。
+  ⚠️ トップレベルの名前は Glyph2 で始める（第1弾の Glyph… と衝突させない）。
+*/
+
+/* 四方に光る星（第1弾の GlyphStar4 と同じ形）。⚠️ 十字に見えないよう、腰を細くする */
+const Glyph2Star4 = (x, y, r) => {
+  const k = r * 0.28;
+  return `M${x} ${y - r} L${x + k} ${y - k} L${x + r} ${y} L${x + k} ${y + k} L${x} ${y + r} L${x - k} ${y + k} L${x - r} ${y} L${x - k} ${y - k} Z`;
+};
+const Glyph2ShadowFill = "rgba(10,6,20,0.5)";
+const Glyph2LeafD = "M0 0 C0.8 -0.9 0.8 -2.2 0 -3.0 C-0.8 -2.2 -0.8 -0.9 0 0 Z";
+
+/* 火山：小さな円錐の火山。口から溶岩と火の粉 */
+function Glyph2Volcano() {
+  return (
+    <g>
+      <ellipse cx="0" cy="4.6" rx="6.8" ry="1.8" fill={Glyph2ShadowFill} />
+      <path d="M-7.0 4.3 C-5.3 2.0 -3.8 -1.4 -2.6 -4.2 Q0 -5.0 2.6 -4.2 C3.8 -1.4 5.3 2.0 7.0 4.3 Q0 5.6 -7.0 4.3 Z"
+        fill="#6A5650" stroke="#1E1414" strokeWidth="0.5" />
+      <path d="M1.4 -4.5 Q2.2 -4.4 2.6 -4.2 C3.8 -1.4 5.3 2.0 7.0 4.3 Q5.4 4.9 3.4 5.0 C3.8 1.4 3.0 -1.8 1.4 -4.5 Z" fill="#46383A" />
+      <path d="M-6.0 3.0 C-4.6 1.0 -3.6 -1.2 -2.8 -3.4" fill="none" stroke="#B09890" strokeWidth="0.7" opacity="0.6" strokeLinecap="round" />
+      <path d="M-4.6 3.4 L-3.8 2.4 M4.4 1.6 L5.0 2.8" stroke="#2E2224" strokeWidth="0.35" />
+      {/* 火口 */}
+      <ellipse cx="0" cy="-4.3" rx="2.5" ry="0.8" fill="#2A1414" />
+      <ellipse cx="0" cy="-4.2" rx="1.8" ry="0.5" fill="#FF7A1E" />
+      {/* 溶岩の流れ */}
+      <path d="M-1.4 -4.0 C-1.8 -2.6 -0.8 -1.4 -1.8 0.2 C-2.4 1.4 -1.6 2.4 -2.2 3.6 Q-1.4 4.0 -0.8 3.6 C-0.6 2.2 -0.2 1.0 -0.4 -0.4 C-0.6 -1.8 0.2 -2.8 0.0 -4.0 Z"
+        fill="#F0581A" stroke="#5A1408" strokeWidth="0.35" />
+      <path d="M-1.0 -3.6 C-1.2 -2.4 -0.6 -1.4 -1.2 0" fill="none" stroke="#FFD04A" strokeWidth="0.45" strokeLinecap="round" />
+      <path d="M1.0 -4.0 C1.6 -3.0 2.4 -2.4 2.2 -1.0 Q1.7 -0.7 1.4 -1.2 C1.4 -2.2 0.8 -3.0 0.4 -4.0 Z" fill="#F0581A" stroke="#5A1408" strokeWidth="0.3" />
+      {/* 噴き上がる溶岩 */}
+      <path d="M-1.6 -4.6 C-2.8 -5.8 -1.8 -7.4 -0.6 -6.8 C-0.4 -8.4 1.6 -8.6 1.8 -7.0 C3.0 -6.8 2.8 -5.2 1.6 -4.6 Q0 -4.0 -1.6 -4.6 Z"
+        fill="#FF6A1A" stroke="#5A1408" strokeWidth="0.4" />
+      <path d="M-0.8 -4.7 C-1.4 -5.6 -0.6 -6.3 0 -5.8 C0.4 -6.8 1.4 -6.4 1.1 -4.7 Z" fill="#FFD04A" />
+      {/* 火の粉 */}
+      <circle cx="-3.4" cy="-7.4" r="0.55" fill="#FFD04A" stroke="#5A1408" strokeWidth="0.25" />
+      <circle cx="-2.2" cy="-9.0" r="0.4" fill="#FFE070" />
+      <circle cx="3.6" cy="-8.6" r="0.45" fill="#FFD04A" stroke="#5A1408" strokeWidth="0.25" />
+      <path d={Glyph2Star4(4.4, -5.8, 1.3)} fill="#FFC040" />
+      <circle cx="4.4" cy="-5.8" r="0.4" fill="#FFF4B0" />
+    </g>
+  );
+}
+
+/* 滝：岩の段から落ちる白い滝と、下の青い滝つぼのしぶき */
+function Glyph2Waterfall() {
+  return (
+    <g>
+      <ellipse cx="0" cy="4.6" rx="7.0" ry="1.8" fill={Glyph2ShadowFill} />
+      {/* 岩 */}
+      <path d="M-7.0 2.6 L-6.8 -2.8 L-5.4 -3.8 L-5.0 -7.0 L-2.8 -8.8 L2.4 -9.2 L4.8 -7.4 L5.2 -4.4 L6.8 -3.2 L7.0 2.6 Z"
+        fill="#8E8278" stroke="#262020" strokeWidth="0.5" />
+      <path d="M2.8 -9.0 L4.8 -7.4 L5.2 -4.4 L6.8 -3.2 L7.0 2.6 L3.6 2.6 L3.6 -3.4 Z" fill="#64595A" />
+      <path d="M-6.8 -2.8 L-5.4 -3.8 L-2.6 -3.6 L-3.0 -2.6 Z M3.0 -3.6 L5.2 -4.4 L6.8 -3.2 L4.2 -2.8 Z" fill="#B4A89C" />
+      <path d="M-5.0 -6.6 L-2.8 -8.4 L2.2 -8.8" fill="none" stroke="#D4CABE" strokeWidth="0.7" opacity="0.7" strokeLinecap="round" />
+      <path d="M-5.6 0.0 L-4.4 -1.0 M5.0 -0.6 L5.8 0.6 M-4.2 -5.0 L-3.4 -5.8" stroke="#3A3232" strokeWidth="0.35" />
+      {/* 滝つぼ */}
+      <ellipse cx="0" cy="2.8" rx="7.0" ry="2.0" fill="#5E5650" stroke="#241E1A" strokeWidth="0.45" />
+      <ellipse cx="0" cy="2.7" rx="6.0" ry="1.5" fill="#2A64B0" />
+      <path d="M-6.0 2.7 A6.0 1.5 0 0 1 6.0 2.7 Q0 1.9 -6.0 2.7 Z" fill="#5AA4E4" />
+      {/* 水の帯 */}
+      <path d="M-2.2 -8.2 Q0 -8.8 2.2 -8.2 L2.7 2.0 L-2.7 2.0 Z" fill="#EEF8FF" stroke="#2A4A6A" strokeWidth="0.4" />
+      <path d="M-1.2 -7.6 L-1.4 -3.8 M0.3 -7.8 L0.3 -4.0 M1.4 -7.4 L1.6 -4.2 M-1.6 -2.6 L-1.8 1.2 M0.0 -2.4 L0.1 1.4 M1.6 -2.6 L1.9 1.0"
+        stroke="#8AC4EC" strokeWidth="0.45" strokeLinecap="round" />
+      <path d="M-2.2 -8.2 Q0 -7.4 2.2 -8.2" fill="none" stroke="#7AB6E6" strokeWidth="0.5" />
+      {/* 段で弾ける水 */}
+      <path d="M-2.8 -3.0 Q-2.4 -3.8 -1.4 -3.4 Q-0.6 -4.0 0.4 -3.4 Q1.4 -4.0 2.2 -3.4 Q3.0 -3.6 3.0 -2.8 Q0 -2.4 -2.8 -3.0 Z" fill="#FFFFFF" stroke="#2A4A6A" strokeWidth="0.3" />
+      {/* しぶき */}
+      <circle cx="-2.4" cy="2.0" r="1.15" fill="#F4FBFF" stroke="#2A4A6A" strokeWidth="0.3" />
+      <circle cx="2.4" cy="2.0" r="1.1" fill="#DCEEFA" stroke="#2A4A6A" strokeWidth="0.3" />
+      <circle cx="0" cy="2.5" r="1.35" fill="#FFFFFF" stroke="#2A4A6A" strokeWidth="0.3" />
+      <circle cx="-4.0" cy="0.6" r="0.4" fill="#E8F6FF" />
+      <circle cx="3.9" cy="0.2" r="0.35" fill="#E8F6FF" />
+      <circle cx="-4.6" cy="1.6" r="0.3" fill="#E8F6FF" />
+      <ellipse cx="-3.8" cy="3.4" rx="1.2" ry="0.3" fill="#BCE4FF" opacity="0.8" />
+    </g>
+  );
+}
+
+/* 風車：石の胴に、斜めに回る4枚羽根。
+   ⚠️ 十字に見せない：羽根を 0°/45°/90° からずらし、横から少し見た角度（横に縮める）にして、帆は羽根の片側だけに付ける */
+function Glyph2Windmill() {
+  const blades = [
+    { a: 22, f: "#F4ECD8" },
+    { a: 112, f: "#D8CCB0" },
+    { a: 202, f: "#C4B898" },
+    { a: 292, f: "#ECE2CA" },
+  ];
+  return (
+    <g>
+      <ellipse cx="0" cy="4.6" rx="5.8" ry="1.7" fill={Glyph2ShadowFill} />
+      {/* 胴 */}
+      <path d="M-3.2 4.3 L-2.2 -3.0 L2.6 -3.0 L3.6 4.3 Q0.2 5.0 -3.2 4.3 Z" fill="#D8CCB4" stroke="#2E2820" strokeWidth="0.5" />
+      <path d="M1.2 -3.0 L2.6 -3.0 L3.6 4.3 Q2.6 4.6 1.8 4.7 Q1.8 0.6 1.2 -3.0 Z" fill="#A49478" />
+      <path d="M-2.6 3.6 L-1.8 -2.4" stroke="#FFF6E4" strokeWidth="0.6" opacity="0.7" strokeLinecap="round" />
+      <path d="M-2.6 1.2 L-1.0 1.2 M0.6 2.4 L2.4 2.4 M-1.8 -1.0 L-0.4 -1.0" stroke="#8A7C64" strokeWidth="0.35" />
+      <path d="M-0.6 4.5 L-0.6 2.8 Q0.3 1.8 1.2 2.8 L1.2 4.6 Z" fill="#3A2A1E" />
+      <path d="M-0.1 -0.2 L-0.1 -1.2 Q0.3 -1.7 0.7 -1.2 L0.7 -0.2 Z" fill="#3A2A1E" />
+      {/* 屋根 */}
+      <path d="M-2.8 -2.8 Q-2.6 -6.4 0.4 -6.6 Q3.4 -6.4 3.2 -2.8 Z" fill="#A84A2E" stroke="#3A160A" strokeWidth="0.45" />
+      <path d="M1.4 -6.4 Q3.4 -6.0 3.2 -2.8 L1.8 -2.8 Q2.2 -5.0 1.4 -6.4 Z" fill="#7A3018" />
+      <path d="M-2.0 -3.4 Q-1.8 -5.4 -0.2 -6.0" fill="none" stroke="#F0A888" strokeWidth="0.55" opacity="0.7" strokeLinecap="round" />
+      {/* 羽根 */}
+      <g transform="translate(0.4,-3.7) scale(0.82,1)">
+        {blades.map((b, i) => (
+          <g key={i} transform={`rotate(${b.a})`}>
+            <rect x="-0.3" y="-5.8" width="0.6" height="5.8" fill="#6A4424" stroke="#2E1A0A" strokeWidth="0.3" />
+            <path d="M0.3 -1.0 L2.0 -1.3 L2.4 -5.5 L0.3 -5.7 Z" fill={b.f} stroke="#3A2C1C" strokeWidth="0.4" />
+            <path d="M0.3 -2.5 L2.1 -2.6 M0.3 -4.1 L2.25 -4.2" stroke="#9A8A6C" strokeWidth="0.3" />
+          </g>
+        ))}
+      </g>
+      <circle cx="0.4" cy="-3.7" r="0.8" fill="#4A3020" stroke="#1E1008" strokeWidth="0.35" />
+      <circle cx="0.2" cy="-3.9" r="0.25" fill="#C89060" />
+      {/* 風 */}
+      <path d="M-6.9 0.4 Q-5.8 -0.6 -4.4 0.0 Q-3.6 0.4 -4.0 1.0 M4.6 2.0 Q5.8 1.4 6.9 2.0" fill="none" stroke="#F4FFF0" strokeWidth="0.55" opacity="0.8" strokeLinecap="round" />
+    </g>
+  );
+}
+
+/* 石切り場：切り出した四角い石の積み重ねと、立てかけたつるはし */
+function Glyph2Quarry() {
+  const blk = (x, y, w, h, d) => (
+    <g>
+      <path d={`M${x} ${y} L${x + d} ${y - d * 0.7} L${x + w + d} ${y - d * 0.7} L${x + w} ${y} Z`} fill="#DCD8D0" stroke="#2C2824" strokeWidth="0.45" />
+      <path d={`M${x + w} ${y} L${x + w + d} ${y - d * 0.7} L${x + w + d} ${y + h - d * 0.7} L${x + w} ${y + h} Z`} fill="#86827C" stroke="#2C2824" strokeWidth="0.45" />
+      <rect x={x} y={y} width={w} height={h} fill="#B4B0A8" stroke="#2C2824" strokeWidth="0.45" />
+      <path d={`M${x + 0.4} ${y + 0.5} L${x + 0.4} ${y + h - 0.5}`} stroke="#F4F0E8" strokeWidth="0.45" opacity="0.6" strokeLinecap="round" />
+    </g>
+  );
+  return (
+    <g>
+      <ellipse cx="0" cy="4.6" rx="7.0" ry="1.8" fill={Glyph2ShadowFill} />
+      {blk(-6.8, 1.2, 4.6, 3.2, 1.0)}
+      {blk(-1.4, 1.2, 4.4, 3.2, 1.0)}
+      {blk(-4.2, -2.4, 4.4, 3.0, 1.0)}
+      <path d="M-5.0 2.4 L-4.0 3.2 M1.2 2.0 L1.8 3.0 L1.4 3.6 M-2.0 -1.4 L-1.2 -0.6" fill="none" stroke="#5A564E" strokeWidth="0.35" />
+      {/* つるはし */}
+      <g transform="translate(4.6,-0.2) rotate(-20)">
+        <rect x="-0.5" y="-5.0" width="1.0" height="9.6" rx="0.45" fill="#B07A44" stroke="#3A220E" strokeWidth="0.4" />
+        <path d="M-0.2 -4.4 L-0.2 4.0" stroke="#E8C090" strokeWidth="0.35" opacity="0.7" />
+        <path d="M-3.4 -4.4 Q-1.6 -6.6 0 -6.6 Q1.6 -6.6 3.4 -4.4 Q1.6 -5.4 0 -5.2 Q-1.6 -5.4 -3.4 -4.4 Z" fill="#8A94A2" stroke="#1E232A" strokeWidth="0.45" />
+        <rect x="-0.8" y="-6.8" width="1.6" height="2.0" rx="0.3" fill="#5A6270" stroke="#1E232A" strokeWidth="0.4" />
+        <path d="M-2.6 -4.9 Q-1.4 -6.0 -0.2 -6.0" fill="none" stroke="#E0E6EE" strokeWidth="0.4" opacity="0.8" />
+      </g>
+      {/* 石くず */}
+      <path d="M4.2 4.4 L4.8 3.6 L5.6 3.9 L5.4 4.5 Z M-7.2 4.4 L-6.8 3.8 L-6.0 4.2 Z" fill="#9A968E" stroke="#2C2824" strokeWidth="0.3" />
+    </g>
+  );
+}
+
+/* 灯台：紅白の縞の灯台、頂上の灯が金色に光る。光の筋は左右2本だけ（後光にしない） */
+function Glyph2Lighthouse() {
+  const hw = (y) => 1.8 + ((y + 3.6) / 7.6) * 1.0;
+  const band = (y1, y2, f) => (
+    <path d={`M${-hw(y1)} ${y1} L${hw(y1)} ${y1} L${hw(y2)} ${y2} L${-hw(y2)} ${y2} Z`} fill={f} />
+  );
+  return (
+    <g>
+      <ellipse cx="0" cy="4.6" rx="6.0" ry="1.8" fill={Glyph2ShadowFill} />
+      {/* 光の筋（2本） */}
+      <path d="M-1.2 -6.1 L-7.4 -8.2 L-7.4 -4.8 L-1.2 -5.1 Z" fill="#FFEC90" opacity="0.6" />
+      <path d="M1.2 -6.1 L7.4 -8.8 L7.4 -5.4 L1.2 -5.1 Z" fill="#FFEC90" opacity="0.6" />
+      <path d="M-1.2 -5.7 L-7.0 -6.6 M1.2 -5.7 L7.0 -7.0" stroke="#FFFFFF" strokeWidth="0.5" opacity="0.6" strokeLinecap="round" />
+      {/* 岩 */}
+      <path d="M-5.6 4.4 C-5.8 3.0 -4.4 2.4 -3.2 2.8 C-2.2 2.0 2.2 2.0 3.2 2.8 C4.6 2.4 6.0 3.2 5.6 4.4 Q0 5.4 -5.6 4.4 Z" fill="#7A7480" stroke="#24222A" strokeWidth="0.45" />
+      <path d="M3.2 2.8 C4.6 2.4 6.0 3.2 5.6 4.4 Q4.4 4.8 3.4 4.9 Q4.0 3.6 3.2 2.8 Z" fill="#55505C" />
+      {/* 塔 */}
+      {band(4.0, 2.2, "#D8382C")}
+      {band(2.2, 0.4, "#F6F2EA")}
+      {band(0.4, -1.4, "#D8382C")}
+      {band(-1.4, -3.6, "#F6F2EA")}
+      <path d={`M${hw(4.0) * 0.35} 4.0 L${hw(4.0)} 4.0 L${hw(-3.6)} -3.6 L${hw(-3.6) * 0.35} -3.6 Z`} fill="#2A0A14" opacity="0.28" />
+      <path d={`M${-hw(4.0)} 4.0 L${-hw(-3.6)} -3.6 L${hw(-3.6)} -3.6 L${hw(4.0)} 4.0`} fill="none" stroke="#2A1418" strokeWidth="0.5" />
+      <path d="M-2.0 3.4 L-1.4 -3.0" stroke="#FFFFFF" strokeWidth="0.5" opacity="0.6" strokeLinecap="round" />
+      <path d="M-0.6 4.1 L-0.6 2.9 Q0 2.3 0.6 2.9 L0.6 4.1 Z" fill="#3A2420" />
+      {/* 回廊 */}
+      <path d="M-2.8 -3.4 L2.8 -3.4 L2.6 -4.4 L-2.6 -4.4 Z" fill="#3A3A48" stroke="#14141C" strokeWidth="0.4" />
+      {/* 灯室 */}
+      <ellipse cx="0" cy="-5.6" rx="2.4" ry="1.8" fill="#FFD84A" opacity="0.4" />
+      <rect x="-1.5" y="-6.8" width="3.0" height="2.4" fill="#FFD84A" stroke="#3A2A10" strokeWidth="0.4" />
+      <rect x="-1.0" y="-6.4" width="1.6" height="1.6" fill="#FFF8D0" />
+      <path d="M-0.5 -6.8 L-0.5 -4.4 M0.6 -6.8 L0.6 -4.4" stroke="#6A4A10" strokeWidth="0.3" />
+      {/* 屋根 */}
+      <path d="M-2.1 -6.7 Q-1.6 -8.7 0 -8.7 Q1.6 -8.7 2.1 -6.7 Z" fill="#C8342A" stroke="#3A0A08" strokeWidth="0.45" />
+      <path d="M-1.4 -7.0 Q-1.1 -8.1 -0.2 -8.3" fill="none" stroke="#FFB0A0" strokeWidth="0.4" opacity="0.8" />
+      <circle cx="0" cy="-9.0" r="0.35" fill="#3A0A08" />
+    </g>
+  );
+}
+
+/* 影の森：ねじれた黒い木、うろの中に紫に光る目が二つ、紫の靄。⚠️ 月は描かない */
+function Glyph2Shadow() {
+  return (
+    <g>
+      <ellipse cx="0" cy="4.6" rx="6.6" ry="1.8" fill={Glyph2ShadowFill} />
+      {/* 根 */}
+      <path d="M-3.8 4.2 Q-5.4 3.6 -6.8 4.4 M4.0 4.2 Q5.6 3.4 6.8 4.2" fill="none" stroke="#1C1424" strokeWidth="0.9" strokeLinecap="round" />
+      {/* 幹（根元が広がり、上で枝に分かれる） */}
+      <path d="M-5.0 4.4 C-3.4 3.8 -2.6 2.8 -2.6 1.2 C-2.6 -0.6 -2.0 -2.0 -1.2 -3.2 C-0.6 -4.0 0.8 -4.0 1.4 -3.2 C2.4 -2.0 2.8 -0.6 2.8 1.2 C2.8 2.8 3.6 3.8 5.2 4.4 Q0 5.4 -5.0 4.4 Z"
+        fill="#1C1424" stroke="#08040C" strokeWidth="0.45" />
+      {/* 枝。⚠️ 太く、少なく（52px でも木の形に読めること） */}
+      <g fill="none" stroke="#1C1424" strokeLinecap="round">
+        <path d="M-0.6 -3.0 C-1.8 -4.8 -3.6 -4.8 -4.8 -6.4" strokeWidth="1.8" />
+        <path d="M-4.8 -6.4 C-5.4 -7.4 -6.4 -7.4 -7.0 -8.4" strokeWidth="1.0" />
+        <path d="M-3.4 -5.2 C-3.8 -6.6 -3.0 -7.6 -3.4 -8.8" strokeWidth="0.75" />
+        <path d="M0.9 -3.0 C1.8 -5.0 3.8 -4.8 4.8 -6.0" strokeWidth="1.8" />
+        <path d="M4.8 -6.0 C5.8 -6.8 5.6 -8.0 6.8 -8.6" strokeWidth="1.0" />
+        <path d="M2.8 -4.8 C2.6 -6.4 3.6 -7.6 3.0 -9.0" strokeWidth="0.75" />
+        <path d="M0.2 -3.4 C0.6 -5.4 -0.4 -6.6 0.2 -8.0" strokeWidth="0.9" />
+      </g>
+      <path d="M-3.6 3.8 C-2.4 2.8 -2.0 1.8 -2.0 0.4 C-2.0 -1.0 -1.6 -2.2 -0.8 -3.2 C-1.6 -4.4 -2.8 -4.8 -3.8 -5.6" fill="none" stroke="#5E4C78" strokeWidth="0.6" opacity="0.9" strokeLinecap="round" />
+      <path d="M-2.2 -1.6 C-1.0 -2.4 0.8 -1.2 2.2 -2.4 M-2.0 3.0 C-0.6 2.2 1.2 3.6 2.8 2.4" fill="none" stroke="#4A3A60" strokeWidth="0.4" strokeLinecap="round" />
+      {/* うろと目 */}
+      <ellipse cx="0.1" cy="0.5" rx="1.45" ry="1.75" fill="#050208" stroke="#4A3A60" strokeWidth="0.4" />
+      <ellipse cx="-0.55" cy="0.3" rx="0.85" ry="0.65" fill="#C060FF" opacity="0.5" />
+      <ellipse cx="0.75" cy="0.3" rx="0.85" ry="0.65" fill="#C060FF" opacity="0.5" />
+      <ellipse cx="-0.55" cy="0.3" rx="0.5" ry="0.28" fill="#F0C8FF" transform="rotate(22 -0.55 0.3)" />
+      <ellipse cx="0.75" cy="0.3" rx="0.5" ry="0.28" fill="#F0C8FF" transform="rotate(-22 0.75 0.3)" />
+      {/* 紫の靄（根元を這う） */}
+      <path d="M-7.0 4.2 Q-7.2 3.0 -5.6 2.9 Q-4.6 2.0 -3.0 2.7 Q-1.6 2.2 -0.4 3.0 Q1.2 2.3 2.6 3.0 Q4.4 2.2 5.6 3.0 Q7.2 3.0 6.9 4.2 Q0 5.2 -7.0 4.2 Z"
+        fill="#D0A0FF" opacity="0.45" />
+      <path d="M-6.2 3.2 Q-5.0 2.4 -3.6 2.8 M2.8 2.9 Q4.2 2.3 5.4 2.9" fill="none" stroke="#F0DCFF" strokeWidth="0.45" opacity="0.7" strokeLinecap="round" />
+      <path d="M-7.2 2.6 Q-6.6 1.4 -5.0 1.8 Q-4.0 1.2 -3.0 2.0 Q-4.6 2.6 -7.2 2.6 Z M3.2 2.2 Q4.2 1.2 5.4 1.8 Q6.8 1.4 7.2 2.4 Q5.2 2.8 3.2 2.2 Z" fill="#D0A0FF" opacity="0.3" />
+    </g>
+  );
+}
+
+/* 刃の岩：岩に突き立った剣。⚠️ 鍔は両端を刃の側へ反らせ、剣を傾ける（十字に見せない） */
+function Glyph2Sword() {
+  return (
+    <g>
+      <ellipse cx="0" cy="4.6" rx="6.8" ry="1.8" fill={Glyph2ShadowFill} />
+      <path d="M-6.8 4.3 C-7.1 2.0 -5.6 0.6 -3.0 0.3 C-1.4 -0.5 1.6 -0.5 3.2 0.3 C5.6 0.6 7.1 2.2 6.8 4.3 Q0 5.6 -6.8 4.3 Z"
+        fill="#8E847A" stroke="#26201C" strokeWidth="0.5" />
+      <path d="M3.2 0.3 C5.6 0.6 7.1 2.2 6.8 4.3 Q5.2 4.9 3.2 5.0 C4.4 3.2 4.4 1.6 3.2 0.3 Z" fill="#645C56" />
+      <path d="M-5.8 2.6 C-5.2 1.4 -4.2 0.9 -2.8 0.8" fill="none" stroke="#D0C6BA" strokeWidth="0.7" opacity="0.6" strokeLinecap="round" />
+      <path d="M-3.4 2.6 L-2.6 3.3 L-3.0 4.0 M4.4 1.6 L3.8 2.4 L4.2 3.0" stroke="#3A322C" strokeWidth="0.35" fill="none" />
+      {/* 刺さり口 */}
+      <ellipse cx="0.5" cy="0.2" rx="1.6" ry="0.5" fill="#241C18" />
+      {/* 剣 */}
+      <g transform="translate(0.5,0.2) rotate(16) scale(1.03)">
+        <path d="M-0.85 0.2 L-0.85 -4.4 L0.85 -4.4 L0.85 0.2 Z" fill="#DCE4EE" stroke="#232933" strokeWidth="0.45" />
+        <path d="M0.15 0.2 L0.15 -4.4 L0.85 -4.4 L0.85 0.2 Z" fill="#96A2B2" />
+        <path d="M-0.4 -0.6 L-0.4 -4.0" stroke="#FFFFFF" strokeWidth="0.4" opacity="0.85" />
+        <path d="M-3.0 -3.6 Q-2.6 -5.4 0 -5.4 Q2.6 -5.4 3.0 -3.6 Q2.2 -4.4 0 -4.3 Q-2.2 -4.4 -3.0 -3.6 Z" fill="#E0B040" stroke="#5A3A08" strokeWidth="0.4" />
+        <rect x="-0.6" y="-8.0" width="1.2" height="2.7" rx="0.3" fill="#7A4A26" stroke="#2E1A0A" strokeWidth="0.4" />
+        <path d="M-0.6 -7.3 L0.6 -6.9 M-0.6 -6.5 L0.6 -6.1" stroke="#3E220E" strokeWidth="0.3" />
+        <circle cx="0" cy="-8.5" r="0.85" fill="#E0B040" stroke="#5A3A08" strokeWidth="0.4" />
+        <circle cx="-0.3" cy="-8.8" r="0.28" fill="#FFF0B0" />
+      </g>
+      {/* 手前の縁 */}
+      <path d="M-1.1 0.2 A1.6 0.5 0 0 0 2.1 0.2 L2.2 0.8 Q0.5 1.4 -1.2 0.8 Z" fill="#8E847A" />
+      <path d={Glyph2Star4(-3.8, -5.0, 1.2)} fill="#FFFFFF" />
+    </g>
+  );
+}
+
+/* 槍の陣：地面に斜めに立てた槍2本（同じ向きに傾け、交差させない）と小さな三角の旗 */
+function Glyph2Spear() {
+  const spear = (x, y, a, L, flag) => (
+    <g transform={`translate(${x},${y}) rotate(${a})`}>
+      {flag && (
+        <g>
+          <path d={`M-0.4 ${-L + 0.6} Q-2.4 ${-L + 0.6} -4.6 ${-L + 1.2} Q-2.6 ${-L + 2.2} -0.4 ${-L + 3.0} Z`} fill="#D8342A" stroke="#4A0A08" strokeWidth="0.4" />
+          <path d={`M-0.6 ${-L + 1.2} Q-2.2 ${-L + 1.2} -3.6 ${-L + 1.4}`} fill="none" stroke="#FF9A80" strokeWidth="0.4" opacity="0.8" strokeLinecap="round" />
+        </g>
+      )}
+      <rect x="-0.45" y={-L} width="0.9" height={L} fill="#9A6434" stroke="#2E1A0A" strokeWidth="0.4" />
+      <path d={`M-0.15 ${-L + 0.6} L-0.15 -0.4`} stroke="#E0B080" strokeWidth="0.3" opacity="0.7" />
+      <path d={`M0 ${-L - 2.9} C1.0 ${-L - 1.9} 1.0 ${-L - 0.8} 0.45 ${-L - 0.2} L-0.45 ${-L - 0.2} C-1.0 ${-L - 0.8} -1.0 ${-L - 1.9} 0 ${-L - 2.9} Z`}
+        fill="#CDD5E0" stroke="#232933" strokeWidth="0.4" />
+      <path d={`M0.1 ${-L - 2.5} C0.8 ${-L - 1.7} 0.8 ${-L - 0.9} 0.4 ${-L - 0.3} L0.1 ${-L - 0.3} Z`} fill="#8A96A6" />
+      <rect x="-0.6" y={-L - 0.4} width="1.2" height="0.7" rx="0.2" fill="#E0B040" stroke="#5A3A08" strokeWidth="0.3" />
+    </g>
+  );
+  return (
+    <g>
+      <ellipse cx="0" cy="4.6" rx="6.6" ry="1.8" fill={Glyph2ShadowFill} />
+      {spear(0.4, 4.0, 26, 9.4, false)}
+      {spear(-3.6, 4.0, 15, 10.2, true)}
+      {/* 土盛り */}
+      <path d="M-6.6 4.4 Q-5.6 2.8 -3.4 3.0 Q-1.2 2.2 1.0 3.0 Q3.6 2.6 5.0 3.6 Q5.6 4.0 5.6 4.4 Q0 5.4 -6.6 4.4 Z" fill="#6A8A3A" stroke="#24341A" strokeWidth="0.45" />
+      <path d="M1.4 3.2 Q3.6 2.8 5.0 3.6 Q5.6 4.0 5.6 4.4 Q4.0 4.8 2.6 4.9 Q3.2 3.8 1.4 3.2 Z" fill="#4A6828" />
+      <path d="M-5.6 3.4 Q-4.4 2.8 -3.2 3.0" fill="none" stroke="#B4D880" strokeWidth="0.5" opacity="0.8" strokeLinecap="round" />
+      <path d="M-6.0 3.8 L-6.4 2.8 M-1.6 3.0 L-1.8 2.0 M3.8 3.4 L4.2 2.4" stroke="#6A9A3A" strokeWidth="0.45" strokeLinecap="round" />
+    </g>
+  );
+}
+
+/* 木こり小屋：切り株に打ち込んだ斧と、割った薪 */
+function Glyph2Axe() {
+  return (
+    <g>
+      <ellipse cx="0" cy="4.6" rx="6.8" ry="1.8" fill={Glyph2ShadowFill} />
+      {/* 切り株 */}
+      <path d="M-3.4 -0.8 L-3.4 3.2 Q-4.0 4.0 -4.6 4.4 L6.6 4.4 Q6.0 4.0 5.4 3.2 L5.4 -0.8 Z" fill="#7A4A26" stroke="#2E1A0A" strokeWidth="0.45" />
+      <path d="M3.4 -0.6 L5.4 -0.8 L5.4 3.2 Q6.0 4.0 6.6 4.4 L3.8 4.6 Q3.8 1.8 3.4 -0.6 Z" fill="#4E2E14" />
+      <path d="M-2.2 0.6 L-2.2 3.4 M-0.4 1.2 L-0.4 4.0 M1.6 1.0 L1.6 3.8 M3.8 1.4 L3.8 3.6" stroke="#4A2A10" strokeWidth="0.35" />
+      <path d="M-2.8 0.4 L-2.8 3.0" stroke="#B07A48" strokeWidth="0.5" opacity="0.7" strokeLinecap="round" />
+      <ellipse cx="1.0" cy="-0.8" rx="4.4" ry="1.8" fill="#E6C08A" stroke="#2E1A0A" strokeWidth="0.45" />
+      <ellipse cx="1.0" cy="-0.8" rx="3.0" ry="1.15" fill="none" stroke="#B8884A" strokeWidth="0.35" />
+      <ellipse cx="1.0" cy="-0.8" rx="1.5" ry="0.55" fill="none" stroke="#B8884A" strokeWidth="0.35" />
+      {/* 斧 */}
+      <g transform="translate(0.05,-2.44) rotate(-35)">
+        <rect x="0" y="-0.5" width="7.2" height="1.0" rx="0.45" fill="#C08A52" stroke="#3A220E" strokeWidth="0.4" />
+        <path d="M0.8 -0.2 L6.8 -0.2" stroke="#F0C890" strokeWidth="0.3" opacity="0.8" />
+        <path d="M-1.1 -1.5 L1.1 -1.5 L1.1 0.3 Q1.6 1.2 2.3 2.0 L-2.3 2.0 Q-1.6 1.2 -1.1 0.3 Z" fill="#8A94A2" stroke="#1E232A" strokeWidth="0.45" />
+        <path d="M0.4 -1.4 L1.1 -1.4 L1.1 0.3 Q1.6 1.2 2.2 1.9 L0.8 1.9 Z" fill="#5E6876" />
+        <path d="M-0.6 -1.0 L-0.6 0.5" stroke="#E0E6EE" strokeWidth="0.45" opacity="0.85" strokeLinecap="round" />
+        <path d="M-2.5 2.0 L2.5 2.0" stroke="#2A140A" strokeWidth="0.6" strokeLinecap="round" />
+      </g>
+      {/* 割った薪 */}
+      <path d="M-7.0 4.3 A2.0 2.0 0 0 1 -3.0 4.3 Z" fill="#E6C08A" stroke="#2E1A0A" strokeWidth="0.45" />
+      <path d="M-7.0 4.3 A2.0 2.0 0 0 1 -3.0 4.3" fill="none" stroke="#6A4220" strokeWidth="0.7" />
+      <path d="M-5.0 4.3 L-5.0 3.4" stroke="#B8884A" strokeWidth="0.3" />
+      <path d="M-5.2 2.2 L-7.0 -0.2 A2.6 2.6 0 0 1 -2.8 0.4 Z" fill="#E6C08A" stroke="#2E1A0A" strokeWidth="0.45" />
+      <path d="M-7.0 -0.2 A2.6 2.6 0 0 1 -2.8 0.4" fill="none" stroke="#6A4220" strokeWidth="0.7" />
+      <path d="M-5.6 0.4 L-5.2 1.4" stroke="#B8884A" strokeWidth="0.3" />
+      <path d="M-2.4 -0.6 L-1.8 -0.2 L-2.6 0.0 Z M4.4 -1.4 L5.2 -1.2 L4.6 -0.8 Z" fill="#F0D4A0" stroke="#6A4220" strokeWidth="0.25" />
+    </g>
+  );
+}
+
+/* 射的場：同心円の的に矢が2本刺さり、横に弓 */
+function Glyph2Bow() {
+  const arrow = (x1, y1, x2, y2) => {
+    const dx = x2 - x1, dy = y2 - y1, l = Math.hypot(dx, dy);
+    const a = (Math.atan2(dy, dx) * 180) / Math.PI;
+    return (
+      <g transform={`translate(${x1},${y1}) rotate(${a})`}>
+        <circle cx="0" cy="0" r="0.45" fill="#2A140A" />
+        <rect x="0" y="-0.28" width={l} height="0.56" fill="#7A4A26" stroke="#2E1A0A" strokeWidth="0.25" />
+        <path d={`M${l - 1.8} -0.25 L${l - 0.6} -1.2 L${l + 0.2} -1.2 L${l - 0.6} -0.25 Z M${l - 1.8} 0.25 L${l - 0.6} 1.2 L${l + 0.2} 1.2 L${l - 0.6} 0.25 Z`}
+          fill="#3A8AE0" stroke="#10243A" strokeWidth="0.3" />
+      </g>
+    );
+  };
+  return (
+    <g>
+      <ellipse cx="0" cy="4.6" rx="6.6" ry="1.8" fill={Glyph2ShadowFill} />
+      {/* 脚 */}
+      <path d="M-3.6 1.4 L-5.0 4.4 M1.2 1.4 L2.4 4.4" stroke="#3A220E" strokeWidth="1.2" strokeLinecap="round" />
+      <path d="M-3.6 1.4 L-5.0 4.4 M1.2 1.4 L2.4 4.4" stroke="#A06A38" strokeWidth="0.6" strokeLinecap="round" />
+      {/* 的 */}
+      <ellipse cx="-0.6" cy="-2.0" rx="4.6" ry="5.0" fill="#8A6A3A" stroke="#2A1A0A" strokeWidth="0.45" />
+      <ellipse cx="-1.2" cy="-2.0" rx="4.6" ry="5.0" fill="#F4ECDC" stroke="#2A1A0A" strokeWidth="0.45" />
+      <ellipse cx="-1.2" cy="-2.0" rx="3.5" ry="3.8" fill="#D8342A" />
+      <ellipse cx="-1.2" cy="-2.0" rx="2.4" ry="2.6" fill="#F4ECDC" />
+      <ellipse cx="-1.2" cy="-2.0" rx="1.3" ry="1.4" fill="#D8342A" />
+      <ellipse cx="-1.2" cy="-2.0" rx="0.5" ry="0.55" fill="#F0C030" />
+      <path d="M-5.0 -4.0 Q-4.2 -6.2 -2.4 -6.8" fill="none" stroke="#FFFFFF" strokeWidth="0.6" opacity="0.7" strokeLinecap="round" />
+      {/* 矢 */}
+      {arrow(-1.0, -2.2, 2.8, -5.0)}
+      {arrow(-3.0, 0.4, 0.8, -1.2)}
+      {/* 弓 */}
+      <g transform="translate(5.6,-0.8) rotate(8)">
+        <path d="M-0.8 -5.4 L-0.8 5.0" stroke="#F0E8D8" strokeWidth="0.3" />
+        <path d="M-0.8 -5.4 Q2.6 0 -0.8 5.0" fill="none" stroke="#2E1A0A" strokeWidth="1.3" strokeLinecap="round" />
+        <path d="M-0.8 -5.4 Q2.6 0 -0.8 5.0" fill="none" stroke="#B07A44" strokeWidth="0.7" strokeLinecap="round" />
+        <rect x="0.4" y="-0.8" width="0.9" height="1.6" rx="0.3" fill="#5A3A1E" stroke="#2E1A0A" strokeWidth="0.3" />
+      </g>
+    </g>
+  );
+}
+
+/* 闘技場：石のアーチが並ぶ円形の闘技場（小さく、正面から） */
+function Glyph2Arena() {
+  const RX = 6.8;
+  const f = (x) => Math.sqrt(Math.max(0, 1 - (x / RX) * (x / RX)));
+  const xs = [-5.6, -3.4, -1.15, 1.15, 3.4, 5.6];
+  const arch = (x, yb, h, k) => {
+    const w = 1.5 * Math.pow(f(x), 0.8);
+    const yt = yb - h;
+    return <path key={k} d={`M${x - w / 2} ${yb} L${x - w / 2} ${yt + w / 2} A${w / 2} ${w / 2} 0 0 1 ${x + w / 2} ${yt + w / 2} L${x + w / 2} ${yb} Z`} fill="#3A2414" />;
+  };
+  return (
+    <g>
+      <ellipse cx="0" cy="4.6" rx="7.2" ry="1.8" fill={Glyph2ShadowFill} />
+      {/* 外壁 */}
+      <path d={`M${-RX} -5.4 A${RX} 1.8 0 0 0 ${RX} -5.4 L${RX} 2.8 A${RX} 1.6 0 0 1 ${-RX} 2.8 Z`} fill="#D4B47C" stroke="#3A2814" strokeWidth="0.5" />
+      <path d={`M3.6 ${-5.4 + 1.8 * f(3.6)} A${RX} 1.8 0 0 0 ${RX} -5.4 L${RX} 2.8 A${RX} 1.6 0 0 1 3.6 ${2.8 + 1.6 * f(3.6)} Z`} fill="#6A4A22" opacity="0.4" />
+      {/* 上の口（内側） */}
+      <ellipse cx="0" cy="-5.4" rx={RX} ry="1.8" fill="#E2C890" stroke="#3A2814" strokeWidth="0.5" />
+      <ellipse cx="0" cy="-5.3" rx="5.6" ry="1.25" fill="#7A5634" />
+      <ellipse cx="0" cy="-5.0" rx="3.8" ry="0.75" fill="#C8A468" />
+      {/* アーチ */}
+      {xs.map((x, i) => arch(x, -1.3 + 1.75 * f(x), 2.4, "u" + i))}
+      {xs.map((x, i) => arch(x, 2.7 + 1.6 * f(x), 2.8, "d" + i))}
+      {/* 帯 */}
+      <path d={`M${-RX} -1.0 A${RX} 1.75 0 0 0 ${RX} -1.0`} fill="none" stroke="#F0DCAE" strokeWidth="0.8" />
+      <path d={`M${-RX} -0.5 A${RX} 1.75 0 0 0 ${RX} -0.5`} fill="none" stroke="#5A3E1E" strokeWidth="0.35" />
+      <path d={`M${-RX} -5.4 A${RX} 1.8 0 0 0 ${RX} -5.4`} fill="none" stroke="#3A2814" strokeWidth="0.5" />
+      <path d="M-6.4 -4.6 L-6.4 2.2" stroke="#FFF2D0" strokeWidth="0.55" opacity="0.7" strokeLinecap="round" />
+      {/* 小旗 */}
+      <path d="M-4.6 -6.3 L-4.6 -9.0" stroke="#3A2814" strokeWidth="0.4" />
+      <path d="M-4.4 -9.0 L-2.4 -8.4 L-4.4 -7.7 Z" fill="#D8342A" stroke="#4A0A08" strokeWidth="0.3" />
+      <path d="M4.6 -6.3 L4.6 -9.0" stroke="#3A2814" strokeWidth="0.4" />
+      <path d="M4.8 -9.0 L6.8 -8.4 L4.8 -7.7 Z" fill="#3A6AD0" stroke="#0A1A4A" strokeWidth="0.3" />
+    </g>
+  );
+}
+
+/* 魔導塔：細い石の塔、頂上に橙に光る宝珠 */
+function Glyph2Tower() {
+  return (
+    <g>
+      <ellipse cx="0" cy="4.6" rx="5.6" ry="1.7" fill={Glyph2ShadowFill} />
+      {/* 台座 */}
+      <path d="M-3.4 4.4 L-3.4 2.8 L3.4 2.8 L3.4 4.4 Q0 5.0 -3.4 4.4 Z" fill="#7E8296" stroke="#1E2028" strokeWidth="0.45" />
+      <path d="M1.8 2.8 L3.4 2.8 L3.4 4.4 Q2.6 4.6 1.8 4.7 Z" fill="#5A5E70" />
+      {/* 塔 */}
+      <path d="M-2.2 2.9 L-1.6 -5.0 L1.6 -5.0 L2.2 2.9 Z" fill="#9498AC" stroke="#22242E" strokeWidth="0.45" />
+      <path d="M0.6 -5.0 L1.6 -5.0 L2.2 2.9 L0.9 2.9 Z" fill="#6A6E82" />
+      <path d="M-1.6 2.2 L-1.1 -4.4" stroke="#DCE0F0" strokeWidth="0.5" opacity="0.7" strokeLinecap="round" />
+      <path d="M-2.1 0.8 L2.1 0.8 M-1.9 -1.4 L1.9 -1.4 M-1.75 -3.4 L1.75 -3.4" stroke="#50546A" strokeWidth="0.3" />
+      <path d="M-0.6 0.8 L-0.6 2.9 M0.8 -1.4 L0.8 0.8 M-0.4 -3.4 L-0.4 -1.4" stroke="#50546A" strokeWidth="0.3" />
+      <path d="M-0.35 -0.6 L-0.35 -2.4 Q0 -2.9 0.35 -2.4 L0.35 -0.6 Z" fill="#FFB050" stroke="#3A1A08" strokeWidth="0.25" />
+      <path d="M-0.7 2.9 L-0.7 1.9 Q0 1.2 0.7 1.9 L0.7 2.9 Z" fill="#2A2230" />
+      {/* 頂 */}
+      <path d="M-2.4 -4.9 L2.4 -4.9 L2.0 -6.0 L-2.0 -6.0 Z" fill="#7E8296" stroke="#22242E" strokeWidth="0.45" />
+      <path d="M-1.8 -5.9 Q-2.8 -7.2 -1.6 -8.4 M1.8 -5.9 Q2.8 -7.2 1.6 -8.4" fill="none" stroke="#22242E" strokeWidth="0.9" strokeLinecap="round" />
+      <path d="M-1.8 -5.9 Q-2.8 -7.2 -1.6 -8.4 M1.8 -5.9 Q2.8 -7.2 1.6 -8.4" fill="none" stroke="#9498AC" strokeWidth="0.45" strokeLinecap="round" />
+      {/* 宝珠 */}
+      <circle cx="0" cy="-7.5" r="2.0" fill="#FFB040" opacity="0.4" />
+      <circle cx="0" cy="-7.5" r="1.8" fill="#FF7A1E" stroke="#5A1A04" strokeWidth="0.45" />
+      <circle cx="0.2" cy="-7.3" r="1.1" fill="#FFC060" />
+      <ellipse cx="-0.6" cy="-8.2" rx="0.6" ry="0.4" fill="#FFFFFF" opacity="0.9" />
+      <path d={Glyph2Star4(4.0, -7.8, 1.2)} fill="#FFF4C0" />
+      <circle cx="-3.6" cy="-6.6" r="0.4" fill="#FFE8A0" />
+    </g>
+  );
+}
+
+/* 酒場：泡のあふれる木のジョッキと、吊り看板 */
+function Glyph2Tavern() {
+  return (
+    <g>
+      <ellipse cx="0" cy="4.6" rx="6.6" ry="1.8" fill={Glyph2ShadowFill} />
+      {/* 看板 */}
+      <rect x="-7.0" y="-8.8" width="1.0" height="13.1" rx="0.3" fill="#8A5A30" stroke="#2E1A0A" strokeWidth="0.4" />
+      <rect x="-6.4" y="-8.9" width="5.2" height="0.8" rx="0.3" fill="#8A5A30" stroke="#2E1A0A" strokeWidth="0.4" />
+      <path d="M-6.0 -6.6 L-4.4 -8.2" stroke="#2E1A0A" strokeWidth="0.5" strokeLinecap="round" />
+      <path d="M-4.9 -8.1 L-4.9 -7.2 M-2.1 -8.1 L-2.1 -7.2" stroke="#3A3A44" strokeWidth="0.35" />
+      <rect x="-5.6" y="-7.3" width="4.2" height="2.8" rx="0.4" fill="#C8904E" stroke="#3A220E" strokeWidth="0.45" />
+      <rect x="-5.1" y="-6.85" width="3.2" height="1.9" rx="0.2" fill="none" stroke="#F0C860" strokeWidth="0.3" />
+      <path d="M-4.0 -6.5 L-2.9 -6.5 L-2.9 -5.2 L-4.0 -5.2 Z" fill="#F0C860" />
+      <path d="M-2.9 -6.2 Q-2.3 -6.0 -2.9 -5.5" fill="none" stroke="#F0C860" strokeWidth="0.3" />
+      <path d="M-5.4 -5.0 L-1.6 -5.0" stroke="#8A5A2A" strokeWidth="0.4" opacity="0.6" />
+      {/* 取っ手 */}
+      <path d="M4.2 -1.4 Q6.6 -1.4 6.5 1.0 Q6.4 3.0 4.2 2.8" fill="none" stroke="#2E1A0A" strokeWidth="1.7" strokeLinecap="round" />
+      <path d="M4.2 -1.4 Q6.6 -1.4 6.5 1.0 Q6.4 3.0 4.2 2.8" fill="none" stroke="#9A6434" strokeWidth="0.9" strokeLinecap="round" />
+      {/* ジョッキ */}
+      <path d="M-1.8 -2.8 L4.2 -2.8 L4.0 4.2 Q1.2 4.8 -1.6 4.2 Z" fill="#B07A40" stroke="#3A220E" strokeWidth="0.45" />
+      <path d="M2.4 -2.8 L4.2 -2.8 L4.0 4.2 Q3.2 4.4 2.6 4.5 Z" fill="#7A4E24" />
+      <path d="M-0.3 -1.2 L-0.3 2.0 M1.2 -1.2 L1.2 2.0 M2.7 -1.2 L2.7 2.0" stroke="#6A4020" strokeWidth="0.35" />
+      <path d="M-1.2 -1.2 L-1.2 2.0" stroke="#E8B880" strokeWidth="0.5" opacity="0.7" strokeLinecap="round" />
+      <rect x="-1.95" y="-2.0" width="6.3" height="0.8" rx="0.2" fill="#4A4E58" stroke="#1A1C22" strokeWidth="0.3" />
+      <rect x="-1.85" y="2.0" width="6.1" height="0.8" rx="0.2" fill="#4A4E58" stroke="#1A1C22" strokeWidth="0.3" />
+      <path d="M-1.6 -1.8 L1.0 -1.8 M-1.5 2.2 L1.0 2.2" stroke="#A8B0BC" strokeWidth="0.3" />
+      {/* 泡 */}
+      <path d="M-2.4 -2.4 C-3.2 -3.4 -2.4 -4.6 -1.4 -4.2 C-1.0 -5.4 0.8 -5.6 1.4 -4.6 C2.2 -5.4 4.0 -5.0 4.0 -3.8 C4.8 -3.4 4.8 -2.4 4.0 -2.2 L4.0 -1.0 Q3.6 0.2 3.2 -1.0 L3.2 -2.2 L-1.2 -2.2 L-1.2 -1.4 Q-1.6 -0.4 -2.0 -1.4 Z"
+        fill="#FFFDF4" stroke="#4A3A2A" strokeWidth="0.4" />
+      <path d="M1.6 -2.3 C2.6 -2.4 3.6 -3.0 3.8 -3.8 C4.6 -3.4 4.6 -2.5 3.9 -2.3 Z" fill="#E0D6C2" />
+      <circle cx="-0.6" cy="-3.6" r="0.35" fill="#E8DFCC" />
+      <circle cx="2.2" cy="-4.0" r="0.3" fill="#E8DFCC" />
+      <ellipse cx="-1.6" cy="-3.6" rx="0.5" ry="0.35" fill="#FFFFFF" />
+    </g>
+  );
+}
+
+/* 市場：縞の日よけの屋台と、積まれた金貨 */
+function Glyph2Market() {
+  const n = 6;
+  const stripes = [];
+  for (let i = 0; i < n; i++) {
+    const t0 = -5.6 + (11.2 * i) / n, t1 = -5.6 + (11.2 * (i + 1)) / n;
+    const b0 = -7.2 + (14.4 * i) / n, b1 = -7.2 + (14.4 * (i + 1)) / n;
+    stripes.push(
+      <path key={i} d={`M${t0} -8.8 L${t1} -8.8 L${b1} -5.8 Q${(b0 + b1) / 2} -4.4 ${b0} -5.8 Z`}
+        fill={i % 2 === 0 ? "#D8342A" : "#F6EEDC"} stroke="#4A1410" strokeWidth="0.4" />
+    );
+  }
+  const stack = (x, y, c) => {
+    const out = [];
+    for (let i = 0; i < c; i++) {
+      out.push(<ellipse key={i} cx={x} cy={y - i * 0.75} rx="1.4" ry="0.5" fill={i === c - 1 ? "#FFD860" : "#E6AE34"} stroke="#5A3A08" strokeWidth="0.35" />);
+    }
+    return out;
+  };
+  return (
+    <g>
+      <ellipse cx="0" cy="4.6" rx="7.0" ry="1.8" fill={Glyph2ShadowFill} />
+      {/* 奥 */}
+      <rect x="-5.8" y="-6.0" width="11.4" height="6.2" fill="#3A2630" />
+      {/* 柱 */}
+      <rect x="-6.5" y="-6.2" width="0.9" height="6.4" fill="#8A5A30" stroke="#2E1A0A" strokeWidth="0.35" />
+      <rect x="5.6" y="-6.2" width="0.9" height="6.4" fill="#6A4220" stroke="#2E1A0A" strokeWidth="0.35" />
+      {/* 日よけ */}
+      {stripes}
+      <rect x="-5.9" y="-9.3" width="11.8" height="0.7" rx="0.3" fill="#9A2018" stroke="#4A1410" strokeWidth="0.35" />
+      <path d="M-5.6 -8.0 L-6.6 -6.2" stroke="#FFFFFF" strokeWidth="0.45" opacity="0.6" strokeLinecap="round" />
+      {/* 金貨 */}
+      {stack(-3.2, -0.2, 4)}
+      {stack(-0.2, -0.2, 5)}
+      <circle cx="3.2" cy="-1.6" r="1.4" fill="#E6AE34" stroke="#5A3A08" strokeWidth="0.4" />
+      <circle cx="3.2" cy="-1.6" r="0.85" fill="none" stroke="#B87E1C" strokeWidth="0.35" />
+      <ellipse cx="2.8" cy="-2.1" rx="0.35" ry="0.5" fill="#FFF2C0" opacity="0.9" />
+      {/* 台 */}
+      <rect x="-7.0" y="-0.2" width="14.0" height="0.9" rx="0.3" fill="#C8925A" stroke="#3A220E" strokeWidth="0.4" />
+      <path d="M-6.6 0.7 L6.6 0.7 L6.4 4.2 L-6.4 4.2 Z" fill="#A06A38" stroke="#3A220E" strokeWidth="0.4" />
+      <path d="M3.4 0.7 L6.6 0.7 L6.4 4.2 L3.6 4.2 Z" fill="#7A4E26" />
+      <path d="M-3.2 0.8 L-3.2 4.2 M0.2 0.8 L0.2 4.2" stroke="#5A3618" strokeWidth="0.35" />
+      <path d="M-6.4 0.1 L6.0 0.1" stroke="#F0C890" strokeWidth="0.35" opacity="0.8" />
+      <path d={Glyph2Star4(-4.8, -3.6, 1.1)} fill="#FFF6DF" />
+    </g>
+  );
+}
+
+/* 薬草園：小さな畑の畝に薬草が並び、横にじょうろ */
+function Glyph2Garden() {
+  const sprout = (x, y, s, k) => (
+    <g key={k} transform={`translate(${x},${y}) scale(${s})`}>
+      <path d={Glyph2LeafD} transform="rotate(-42)" fill="#4AA834" stroke="#1E4A14" strokeWidth="0.4" />
+      <path d={Glyph2LeafD} transform="rotate(38)" fill="#3E9A2E" stroke="#1E4A14" strokeWidth="0.4" />
+      <path d={Glyph2LeafD} transform="rotate(-4) scale(1.15)" fill="#6CCB3E" stroke="#1E4A14" strokeWidth="0.4" />
+    </g>
+  );
+  const rows = [
+    { y: -2.6, x0: -4.6, x1: 2.6, s: 0.65, xs: [-3.5, -1.2, 1.1] },
+    { y: -0.2, x0: -5.4, x1: 3.0, s: 0.75, xs: [-4.2, -1.6, 0.9] },
+    { y: 2.4, x0: -6.2, x1: 3.4, s: 0.85, xs: [-4.9, -2.2, 0.4] },
+  ];
+  return (
+    <g>
+      <ellipse cx="0" cy="4.6" rx="7.0" ry="1.8" fill={Glyph2ShadowFill} />
+      {/* 畑 */}
+      <path d="M-6.9 3.4 L-5.0 -3.8 Q-4.8 -4.4 -4.2 -4.4 L3.0 -4.4 Q3.6 -4.4 3.7 -3.8 L4.4 3.4 Q4.5 4.2 3.7 4.2 L-6.1 4.2 Q-7.0 4.2 -6.9 3.4 Z"
+        fill="#5A3A22" stroke="#24140A" strokeWidth="0.45" />
+      {rows.map((r, i) => (
+        <g key={i}>
+          <rect x={r.x0} y={r.y - 0.6} width={r.x1 - r.x0} height="1.3" rx="0.6" fill="#8A5E3A" />
+          <path d={`M${r.x0 + 0.5} ${r.y - 0.35} L${r.x1 - 0.5} ${r.y - 0.35}`} stroke="#B8885A" strokeWidth="0.35" opacity="0.8" strokeLinecap="round" />
+          {r.xs.map((x, j) => sprout(x, r.y, r.s, j))}
+        </g>
+      ))}
+      {/* じょうろ */}
+      <path d="M3.4 2.6 L0.2 -0.6" stroke="#1E2A3A" strokeWidth="1.1" strokeLinecap="round" />
+      <path d="M3.4 2.6 L0.2 -0.6" stroke="#8AAAD0" strokeWidth="0.55" strokeLinecap="round" />
+      <ellipse cx="0.0" cy="-0.8" rx="0.9" ry="0.55" fill="#6A8AB0" stroke="#1E2A3A" strokeWidth="0.35" transform="rotate(-45 0 -0.8)" />
+      <path d="M3.8 1.0 Q4.8 -2.0 6.6 0.6" fill="none" stroke="#1E2A3A" strokeWidth="1.2" strokeLinecap="round" />
+      <path d="M3.8 1.0 Q4.8 -2.0 6.6 0.6" fill="none" stroke="#8AAAD0" strokeWidth="0.6" strokeLinecap="round" />
+      <path d="M3.0 1.0 L7.0 1.0 L7.2 4.0 Q5.0 4.6 2.8 4.0 Z" fill="#7A9AC0" stroke="#1E2A3A" strokeWidth="0.45" />
+      <path d="M5.6 1.0 L7.0 1.0 L7.2 4.0 Q6.5 4.2 5.9 4.3 Z" fill="#56708E" />
+      <ellipse cx="5.0" cy="1.0" rx="2.0" ry="0.45" fill="#A8C0DC" stroke="#1E2A3A" strokeWidth="0.35" />
+      <path d="M3.5 1.6 L3.4 3.6" stroke="#E8F2FF" strokeWidth="0.5" opacity="0.8" strokeLinecap="round" />
+      {/* 水 */}
+      <circle cx="-0.9" cy="0.6" r="0.3" fill="#9AD8FF" />
+      <circle cx="-0.2" cy="1.2" r="0.3" fill="#9AD8FF" />
+      <circle cx="-1.6" cy="1.3" r="0.25" fill="#9AD8FF" />
+    </g>
+  );
+}
+
+const ADV_GLYPH2 = {
+  volcano: Glyph2Volcano,
+  waterfall: Glyph2Waterfall,
+  windmill: Glyph2Windmill,
+  quarry: Glyph2Quarry,
+  lighthouse: Glyph2Lighthouse,
+  shadow: Glyph2Shadow,
+  sword: Glyph2Sword,
+  spear: Glyph2Spear,
+  axe: Glyph2Axe,
+  bow: Glyph2Bow,
+  arena: Glyph2Arena,
+  tower: Glyph2Tower,
+  tavern: Glyph2Tavern,
+  market: Glyph2Market,
+  garden: Glyph2Garden,
+};
+
+/* 台の地の色。魔法6属性は属性の色、物理4種は落ち着いた色、必殺4種は各必殺の色、回復は若草色 */
+const ADV_GLYPH2_TILE = {
+  volcano: [232, 72, 58],
+  waterfall: [58, 138, 232],
+  windmill: [74, 184, 96],
+  quarry: [168, 116, 74],
+  lighthouse: [240, 200, 48],
+  shadow: [106, 58, 154],
+  sword: [96, 108, 128],
+  spear: [134, 104, 92],
+  axe: [92, 112, 96],
+  bow: [140, 124, 96],
+  arena: [221, 230, 246],
+  tower: [255, 154, 90],
+  tavern: [122, 224, 142],
+  market: [106, 180, 255],
+  garden: [160, 196, 80],
+};
+/* ---- 第3弾（2026-10-03）：虹の丘（全属性）と妨害の耐性の六つ。⚠️ 名前は Glyph3 で始める ---- */
+/*
+  小MAPの新しいマス 第3弾（7種）の絵。第1弾（glyphs.jsx）・第2弾（glyphs2.jsx）と同じ決まり。
+  ⚠️ 原点が台の中心。x −7.5〜7.5、y −9.5〜5.5。アプリが scale(1.85) を掛けて台に載せる。
+  ⚠️ 静止画。defs・グラデーション・id・filter・文字は使わない（同じ絵が何十個も並ぶ）。
+  ⚠️ 光は左上から。左上に艶、右下を暗く、足元に影の楕円。輪郭は暗い色で 0.3〜0.6。
+  ⚠️ トップレベルの名前は Glyph3 で始める。export 名は ADV_GLYPH2 / ADV_GLYPH2_TILE のまま（render.cjs が読む）。
+*/
+
+/* 四方に光る星（第1弾・第2弾と同じ形）。⚠️ 十字に見えないよう、腰を細くする */
+const Glyph3Star4 = (x, y, r) => {
+  const k = r * 0.28;
+  return `M${x} ${y - r} L${x + k} ${y - k} L${x + r} ${y} L${x + k} ${y + k} L${x} ${y + r} L${x - k} ${y + k} L${x - r} ${y} L${x - k} ${y - k} Z`;
+};
+const Glyph3ShadowFill = "rgba(10,6,20,0.5)";
+const Glyph3Arc = (cx, cy, r) => `M${cx - r} ${cy} A${r} ${r} 0 0 1 ${cx + r} ${cy}`;
+
+/* 虹の丘：緑の丘に低く架かる虹。⚠️ 後光に見えないよう、低く横長に、両端は丘の草に沈める */
+function Glyph3Rainbow() {
+  const cy = 3.0;
+  const bands = ["#E8483A", "#F49A30", "#F6D840", "#5CC05A", "#3A8AE8", "#8A5AC8"];
+  const r0 = 6.85, w = 0.7;
+  return (
+    <g>
+      <ellipse cx="0" cy="4.6" rx="7.0" ry="1.8" fill={Glyph3ShadowFill} />
+      {/* 虹（横に少し伸ばして低い橋に） */}
+      <g transform="translate(0,3.0) scale(1,0.86) translate(0,-3.0)">
+        <path d={Glyph3Arc(0, cy, r0 + 0.32)} fill="none" stroke="#2A1E3A" strokeWidth="0.45" />
+        {bands.map((c, i) => (
+          <path key={i} d={Glyph3Arc(0, cy, r0 - i * w)} fill="none" stroke={c} strokeWidth={w + 0.04} />
+        ))}
+        <path d={Glyph3Arc(0, cy, r0 - 5 * w - 0.32)} fill="none" stroke="#2A1E3A" strokeWidth="0.4" />
+        {/* 左上の艶 */}
+        <path d={`M${-r0 + 0.2} ${cy - 1.2} A${r0 - 0.2} ${r0 - 0.2} 0 0 1 ${-1.6} ${cy - r0 + 0.4}`} fill="none" stroke="#FFFFFF" strokeWidth="0.35" opacity="0.7" strokeLinecap="round" />
+      </g>
+      {/* 丘（虹の足を覆う） */}
+      <path d="M-7.3 4.3 C-7.0 2.4 -5.0 1.4 -3.0 1.8 C-1.6 0.4 1.8 0.2 3.4 1.6 C5.2 1.2 7.2 2.2 7.3 4.3 Q0 5.6 -7.3 4.3 Z"
+        fill="#4AA83C" stroke="#163A12" strokeWidth="0.5" />
+      <path d="M2.6 1.2 C4.6 1.2 6.8 2.2 7.3 4.3 Q4.6 5.0 2.0 5.0 C4.2 3.6 4.0 2.2 2.6 1.2 Z" fill="#2E7E2A" />
+      <path d="M-6.4 3.0 C-5.6 2.0 -4.2 1.8 -3.0 2.2 M-2.2 1.4 C-1.0 0.8 0.4 0.7 1.4 1.0" fill="none" stroke="#B8F090" strokeWidth="0.55" opacity="0.75" strokeLinecap="round" />
+      {/* 草 */}
+      <path d="M-4.8 3.6 L-4.6 2.8 L-4.3 3.6 M0.6 3.0 L0.9 2.2 L1.1 3.0 M4.2 3.8 L4.5 3.0 L4.7 3.8" fill="none" stroke="#1E5A18" strokeWidth="0.35" strokeLinecap="round" />
+      {/* 小さなきらめき */}
+      <path d={Glyph3Star4(5.6, -6.6, 1.2)} fill="#FFFFFF" />
+      <circle cx="-5.8" cy="-6.2" r="0.35" fill="#FFFFFF" opacity="0.9" />
+    </g>
+  );
+}
+
+/* 静寂の谷：二つの山のあいだの谷と、谷底の小さな池。音の弧が谷へ吸い込まれて薄れていく */
+function Glyph3Silence() {
+  return (
+    <g>
+      <ellipse cx="0" cy="4.6" rx="7.0" ry="1.8" fill={Glyph3ShadowFill} />
+      {/* 左の山 */}
+      <path d="M-7.2 4.3 L-4.4 -6.8 Q-4.0 -7.4 -3.6 -6.8 L0.8 2.8 L0.6 4.6 Q-3.4 5.0 -7.2 4.3 Z" fill="#7C8AA4" stroke="#1C2230" strokeWidth="0.5" />
+      <path d="M-4.0 -7.2 Q-3.8 -7.3 -3.6 -6.8 L0.8 2.8 L0.6 4.6 Q-0.8 4.7 -2.0 4.7 Q-1.6 -1.0 -4.0 -7.2 Z" fill="#56627A" />
+      <path d="M-4.0 -7.2 L-4.6 -5.2 L-3.9 -5.6 L-3.3 -4.8 L-3.0 -5.6 Z" fill="#E8EEF6" stroke="#1C2230" strokeWidth="0.3" />
+      <path d="M-6.4 2.8 L-4.8 -4.4" stroke="#C4D0E4" strokeWidth="0.6" opacity="0.7" strokeLinecap="round" />
+      {/* 右の山 */}
+      <path d="M-0.6 2.8 L3.8 -5.4 Q4.2 -6.0 4.6 -5.4 L7.2 4.3 Q3.4 5.0 -0.4 4.6 Z" fill="#6E7C96" stroke="#1C2230" strokeWidth="0.5" />
+      <path d="M4.2 -5.8 Q4.4 -5.8 4.6 -5.4 L7.2 4.3 Q5.6 4.7 4.2 4.8 Q5.4 -0.4 4.2 -5.8 Z" fill="#4A566C" />
+      <path d="M4.2 -5.8 L3.5 -4.2 L4.2 -4.5 L4.8 -3.8 L5.0 -4.6 Z" fill="#DCE4EE" stroke="#1C2230" strokeWidth="0.3" />
+      <path d="M0.4 2.4 L3.4 -3.6" stroke="#B4C0D6" strokeWidth="0.55" opacity="0.6" strokeLinecap="round" />
+      {/* 谷底の池 */}
+      <ellipse cx="0.1" cy="3.4" rx="2.6" ry="0.95" fill="#3A4A64" stroke="#1C2230" strokeWidth="0.4" />
+      <ellipse cx="0.1" cy="3.45" rx="2.1" ry="0.6" fill="#28507A" />
+      <path d="M-1.4 3.2 Q-0.4 2.95 0.6 3.15" fill="none" stroke="#B8D8F4" strokeWidth="0.4" opacity="0.85" strokeLinecap="round" />
+      {/* 音の弧：外ほど濃く、谷へ近づくほど薄く小さく */}
+      <path d="M-2.6 -4.6 Q0.1 -7.6 2.8 -4.8" fill="none" stroke="#EEF4FF" strokeWidth="0.65" opacity="0.8" strokeLinecap="round" />
+      <path d="M-1.7 -1.9 Q0.1 -4.0 1.9 -2.0" fill="none" stroke="#EEF4FF" strokeWidth="0.5" opacity="0.55" strokeDasharray="1.1 0.6" strokeLinecap="round" />
+      <path d="M-0.9 0.6 Q0.1 -0.8 1.1 0.5" fill="none" stroke="#EEF4FF" strokeWidth="0.4" opacity="0.32" strokeDasharray="0.5 0.6" strokeLinecap="round" />
+    </g>
+  );
+}
+
+/* 塩田：白い塩の山（円錐）を二つ、手前に斜めに置いた木の熊手。⚠️ 柄と歯を直交させない */
+function Glyph3Saltpan() {
+  return (
+    <g>
+      <ellipse cx="0" cy="4.6" rx="7.0" ry="1.8" fill={Glyph3ShadowFill} />
+      {/* 塩田の水面 */}
+      <path d="M-7.0 3.6 L-5.8 1.4 L6.0 1.4 L7.0 3.6 Q0 4.6 -7.0 3.6 Z" fill="#A8C4CC" stroke="#3A4448" strokeWidth="0.4" />
+      <path d="M-5.2 2.0 L-1.0 2.0 M2.0 2.6 L5.4 2.6" stroke="#E4F2F6" strokeWidth="0.4" opacity="0.8" strokeLinecap="round" />
+      {/* 奥の大きな塩の山 */}
+      <path d="M-2.6 2.8 L1.6 -7.6 Q1.9 -8.1 2.2 -7.6 L6.6 2.8 Q2.0 3.8 -2.6 2.8 Z" fill="#F6F4EE" stroke="#3A3630" strokeWidth="0.5" />
+      <path d="M2.0 -7.9 Q2.1 -7.9 2.2 -7.6 L6.6 2.8 Q5.2 3.2 3.6 3.3 Q3.8 -2.4 2.0 -7.9 Z" fill="#C8C4BA" />
+      <path d="M-1.4 1.8 L1.4 -5.6" stroke="#FFFFFF" strokeWidth="0.6" opacity="0.9" strokeLinecap="round" />
+      <path d="M0.4 -1.4 L0.8 -1.0 M3.0 -0.4 L3.4 0.0 M1.6 1.4 L2.0 1.8" stroke="#B4AEA2" strokeWidth="0.3" />
+      {/* 手前の小さな塩の山 */}
+      <path d="M-6.8 3.8 L-3.8 -2.8 Q-3.5 -3.3 -3.2 -2.8 L-0.2 3.8 Q-3.5 4.6 -6.8 3.8 Z" fill="#FBFAF6" stroke="#3A3630" strokeWidth="0.5" />
+      <path d="M-3.4 -3.1 Q-3.3 -3.1 -3.2 -2.8 L-0.2 3.8 Q-1.2 4.1 -2.2 4.2 Q-2.2 0.4 -3.4 -3.1 Z" fill="#CECAC0" />
+      <path d="M-5.8 3.0 L-4.0 -1.4" stroke="#FFFFFF" strokeWidth="0.55" opacity="0.9" strokeLinecap="round" />
+      {/* 熊手：頭を手前の地面に置き、柄を右上の塩の山へ立てかける。歯の棒は柄に対して斜め（直交させない） */}
+      <path d="M-2.4 3.0 L6.0 -3.6" stroke="#3A220E" strokeWidth="1.05" strokeLinecap="round" />
+      <path d="M-2.4 3.0 L6.0 -3.6" stroke="#C08A4E" strokeWidth="0.55" strokeLinecap="round" />
+      <path d="M-1.2 1.9 L5.0 -3.0" stroke="#F0C890" strokeWidth="0.22" opacity="0.8" strokeLinecap="round" />
+      <g transform="translate(-3.0,3.2) rotate(14)">
+        <rect x="-2.4" y="-0.45" width="4.4" height="0.95" rx="0.3" fill="#A87440" stroke="#3A220E" strokeWidth="0.4" />
+        <path d="M-2.1 -0.2 L1.6 -0.2" stroke="#E8BC84" strokeWidth="0.3" opacity="0.8" strokeLinecap="round" />
+        <path d="M-1.9 0.5 L-2.1 1.3 M-0.8 0.5 L-1.0 1.3 M0.3 0.5 L0.1 1.3 M1.4 0.5 L1.2 1.3" stroke="#3A220E" strokeWidth="0.55" strokeLinecap="round" />
+        <path d="M-1.9 0.5 L-2.1 1.3 M-0.8 0.5 L-1.0 1.3 M0.3 0.5 L0.1 1.3 M1.4 0.5 L1.2 1.3" stroke="#B88450" strokeWidth="0.25" strokeLinecap="round" />
+      </g>
+      {/* 塩の粒 */}
+      <circle cx="-6.2" cy="-1.6" r="0.3" fill="#FFFFFF" />
+      <path d={Glyph3Star4(5.2, -6.0, 1.1)} fill="#FFFFFF" />
+    </g>
+  );
+}
+
+/* 星見台：小さな丘の上の真鍮の望遠鏡（三脚）、上に四方に光る小さな星が二つ */
+function Glyph3Stargaze() {
+  return (
+    <g>
+      <ellipse cx="0" cy="4.6" rx="6.8" ry="1.8" fill={Glyph3ShadowFill} />
+      {/* 丘 */}
+      <path d="M-7.0 4.3 C-6.6 2.2 -3.6 1.0 0 1.0 C3.6 1.0 6.6 2.2 7.0 4.3 Q0 5.6 -7.0 4.3 Z" fill="#3E7A4A" stroke="#10241A" strokeWidth="0.5" />
+      <path d="M2.4 1.2 C4.8 1.6 6.8 2.6 7.0 4.3 Q4.8 5.0 2.6 5.1 C4.6 3.6 4.2 2.2 2.4 1.2 Z" fill="#2A5634" />
+      <path d="M-5.8 2.8 C-4.6 1.8 -2.6 1.4 -1.0 1.4" fill="none" stroke="#9ADCA0" strokeWidth="0.55" opacity="0.7" strokeLinecap="round" />
+      {/* 三脚 */}
+      <path d="M-0.4 -1.4 L-3.0 3.0 M-0.4 -1.4 L2.4 3.0 M-0.4 -1.4 L-0.2 3.4" stroke="#2A1A0C" strokeWidth="0.95" strokeLinecap="round" />
+      <path d="M-0.4 -1.4 L-3.0 3.0 M-0.4 -1.4 L2.4 3.0 M-0.4 -1.4 L-0.2 3.4" stroke="#9A6A3A" strokeWidth="0.45" strokeLinecap="round" />
+      <circle cx="-0.4" cy="-1.5" r="0.75" fill="#8A6A2A" stroke="#2A1A0C" strokeWidth="0.35" />
+      {/* 筒（右上を向く） */}
+      <g transform="translate(-0.4,-2.2) rotate(-32)">
+        <path d="M-4.4 -0.65 L3.6 -1.05 L3.6 1.05 L-4.4 0.65 Z" fill="#D8A848" stroke="#3A2408" strokeWidth="0.45" />
+        <path d="M-4.4 0.15 L3.6 0.3 L3.6 1.05 L-4.4 0.65 Z" fill="#9A7020" />
+        <path d="M-3.8 -0.38 L3.0 -0.7" stroke="#FFF0B0" strokeWidth="0.35" opacity="0.85" strokeLinecap="round" />
+        <rect x="-1.0" y="-0.95" width="0.7" height="1.9" fill="#8A5E18" stroke="#3A2408" strokeWidth="0.3" />
+        {/* 対物側の太い輪 */}
+        <rect x="3.3" y="-1.45" width="1.5" height="2.9" rx="0.3" fill="#E8BC58" stroke="#3A2408" strokeWidth="0.45" />
+        <path d="M3.6 -1.1 L3.6 0.6" stroke="#FFF4C0" strokeWidth="0.35" opacity="0.8" strokeLinecap="round" />
+        <ellipse cx="4.8" cy="0" rx="0.35" ry="1.2" fill="#1A2440" />
+        {/* 接眼部 */}
+        <rect x="-5.6" y="-0.4" width="1.3" height="0.8" fill="#6A4A14" stroke="#3A2408" strokeWidth="0.3" />
+      </g>
+      {/* 星 */}
+      <path d={Glyph3Star4(-4.4, -6.6, 1.7)} fill="#FFE27A" stroke="#6A4A10" strokeWidth="0.25" />
+      <circle cx="-4.4" cy="-6.6" r="0.45" fill="#FFFBE0" />
+      <path d={Glyph3Star4(5.6, -8.2, 1.25)} fill="#FFFFFF" stroke="#4A4A6A" strokeWidth="0.2" />
+      <circle cx="1.6" cy="-8.8" r="0.3" fill="#DDE6FF" />
+    </g>
+  );
+}
+
+/* 竹林：節のある緑の竹が四本、細い笹の葉 */
+function Glyph3Bamboo() {
+  const leaf = "M0 0 Q1.4 -0.55 3.4 -0.05 Q1.4 0.45 0 0 Z";
+  const stalk = (x, top, w, tilt, f, dk, k) => {
+    const bot = 4.3;
+    const nodes = [];
+    for (let y = bot - 2.4; y > top + 0.8; y -= 2.4) nodes.push(y);
+    return (
+      <g key={k} transform={`rotate(${tilt} ${x} ${bot})`}>
+        <rect x={x - w / 2} y={top} width={w} height={bot - top} rx={w * 0.35} fill={f} stroke="#163414" strokeWidth="0.45" />
+        <rect x={x + w * 0.08} y={top + 0.2} width={w * 0.42} height={bot - top - 0.3} fill={dk} />
+        <path d={`M${x - w * 0.24} ${top + 0.5} L${x - w * 0.24} ${bot - 0.3}`} stroke="#D8F4B0" strokeWidth={w * 0.18} opacity="0.75" strokeLinecap="round" />
+        {nodes.map((y, j) => (
+          <g key={j}>
+            <path d={`M${x - w / 2 - 0.12} ${y} L${x + w / 2 + 0.12} ${y}`} stroke="#163414" strokeWidth="0.45" strokeLinecap="round" />
+            <path d={`M${x - w / 2 + 0.1} ${y - 0.3} L${x + w / 2 - 0.1} ${y - 0.3}`} stroke="#B8E890" strokeWidth="0.25" opacity="0.7" />
+          </g>
+        ))}
+      </g>
+    );
+  };
+  const leaves = [
+    [-5.4, -5.4, 200, 0.95], [-5.4, -5.4, 165, 0.85],
+    [-1.6, -8.0, -25, 0.9], [-1.6, -8.0, 205, 0.8],
+    [1.6, -4.0, -18, 1.0], [1.6, -4.0, 15, 0.85],
+    [4.4, -6.6, -35, 0.9], [4.4, -6.6, 8, 0.8],
+    [-3.6, -1.4, 190, 0.8],
+  ];
+  return (
+    <g>
+      <ellipse cx="0" cy="4.6" rx="6.8" ry="1.8" fill={Glyph3ShadowFill} />
+      {/* 下草の地面 */}
+      <path d="M-6.8 4.3 C-6.4 3.0 -3.6 2.6 0 2.6 C3.6 2.6 6.4 3.0 6.8 4.3 Q0 5.4 -6.8 4.3 Z" fill="#4A6A2A" stroke="#162410" strokeWidth="0.45" />
+      {stalk(-3.4, -6.6, 1.35, -6, "#5EAE3E", "#3E8A2C", 0)}
+      {stalk(4.2, -7.6, 1.3, 5, "#4E9E36", "#357A26", 1)}
+      {stalk(-0.6, -9.2, 1.55, -2, "#6CC046", "#469830", 2)}
+      {stalk(1.9, -5.2, 1.25, 3, "#58A83C", "#3C842A", 3)}
+      {/* 笹の葉 */}
+      {leaves.map(([x, y, a, s], i) => (
+        <path key={i} d={leaf} transform={`translate(${x},${y}) rotate(${a}) scale(${s})`} fill={i % 2 ? "#3E8E2C" : "#7AD050"} stroke="#163414" strokeWidth="0.35" />
+      ))}
+      {/* 地面の笹 */}
+      <path d="M-5.8 4.0 L-5.2 3.0 M5.4 4.0 L6.0 3.2 M-1.6 4.4 L-1.2 3.6" fill="none" stroke="#1E3A12" strokeWidth="0.35" strokeLinecap="round" />
+    </g>
+  );
+}
+
+/* 稽古場：わらを巻いた太い木の杭（巻藁）と、斜めに立てかけた木刀。
+   ⚠️ 建物・神棚・注連縄は描かない。木刀に鍔を付けない（杭・鍔と十字にならないように） */
+function Glyph3Dojo() {
+  const straw = [];
+  for (let i = 0; i < 6; i++) straw.push(-2.55 + i * 0.6);
+  return (
+    <g>
+      <ellipse cx="0" cy="4.6" rx="6.4" ry="1.8" fill={Glyph3ShadowFill} />
+      {/* 土の地面 */}
+      <ellipse cx="-0.6" cy="4.0" rx="4.4" ry="1.1" fill="#6A4A30" stroke="#24160C" strokeWidth="0.4" />
+      <ellipse cx="-1.2" cy="3.8" rx="2.6" ry="0.5" fill="#8A6444" opacity="0.8" />
+      {/* 杭 */}
+      <path d="M-2.6 4.0 L-2.6 -7.4 Q-1.2 -8.2 0.2 -7.4 L0.2 4.0 Q-1.2 4.5 -2.6 4.0 Z" fill="#9A6A3C" stroke="#2A180A" strokeWidth="0.5" />
+      <path d="M-0.6 -7.8 Q-0.1 -7.7 0.2 -7.4 L0.2 4.0 Q-0.2 4.2 -0.6 4.3 Z" fill="#6A4422" />
+      <path d="M-2.1 3.4 L-2.1 -0.4" stroke="#D4A070" strokeWidth="0.45" opacity="0.7" strokeLinecap="round" />
+      <path d="M-1.6 1.4 L-1.4 2.6 M-0.9 0.0 L-1.0 1.0" stroke="#4A2E14" strokeWidth="0.3" />
+      <ellipse cx="-1.2" cy="-7.45" rx="1.4" ry="0.45" fill="#C8945C" stroke="#2A180A" strokeWidth="0.35" />
+      {/* わら巻き */}
+      <path d="M-3.25 -6.4 L0.85 -6.4 L0.85 -1.0 Q-1.2 -0.4 -3.25 -1.0 Z" fill="#E8CC78" stroke="#3A2A0C" strokeWidth="0.5" />
+      <path d="M-0.2 -6.4 L0.85 -6.4 L0.85 -1.0 Q0.3 -0.8 -0.2 -0.75 Z" fill="#B89848" />
+      {straw.map((x, i) => (
+        <path key={i} d={`M${x} -6.1 L${x + 0.05} -1.2`} stroke="#A08030" strokeWidth="0.25" opacity="0.8" />
+      ))}
+      <path d="M-2.85 -6.0 L-2.85 -1.6" stroke="#FFF2C0" strokeWidth="0.45" opacity="0.8" strokeLinecap="round" />
+      <path d="M-3.25 -6.4 L-3.0 -7.0 L-2.6 -6.4 L-2.1 -7.1 L-1.7 -6.4 L-1.1 -7.0 L-0.7 -6.4 L-0.1 -6.95 L0.3 -6.4 L0.7 -6.9 L0.85 -6.4 Z" fill="#E8CC78" stroke="#3A2A0C" strokeWidth="0.35" strokeLinejoin="round" />
+      <path d="M-3.25 -1.0 L-3.0 -0.3 L-2.5 -0.85 L-2.0 -0.2 L-1.5 -0.7 L-0.9 -0.15 L-0.4 -0.7 L0.2 -0.25 L0.85 -1.0" fill="#D8BC68" stroke="#3A2A0C" strokeWidth="0.35" strokeLinejoin="round" />
+      {/* 縄の帯 */}
+      <path d="M-3.35 -5.2 Q-1.2 -4.7 0.95 -5.2 L0.95 -4.4 Q-1.2 -3.9 -3.35 -4.4 Z" fill="#7A5A2A" stroke="#2A1A08" strokeWidth="0.35" />
+      <path d="M-3.35 -2.8 Q-1.2 -2.3 0.95 -2.8 L0.95 -2.0 Q-1.2 -1.5 -3.35 -2.0 Z" fill="#7A5A2A" stroke="#2A1A08" strokeWidth="0.35" />
+      <path d="M-2.8 -4.9 L-2.0 -4.6 M-2.8 -2.5 L-2.0 -2.2" stroke="#C8A060" strokeWidth="0.3" opacity="0.8" />
+      {/* 木刀：杭の右に斜めに立てかける（柄が上） */}
+      <g transform="translate(4.4,4.0) rotate(-17)">
+        <path d="M-0.45 0 Q-0.7 -5.0 -0.4 -10.2 L0.45 -10.2 Q0.2 -5.0 0.45 0 Q0 0.3 -0.45 0 Z" fill="#D8B078" stroke="#3A2410" strokeWidth="0.45" />
+        <path d="M0.05 -0.4 Q-0.15 -5.0 0.1 -7.0 L0.45 -7.0 Q0.2 -5.0 0.4 -0.3 Z" fill="#A47C48" />
+        <path d="M-0.25 -1.0 Q-0.45 -4.0 -0.3 -6.8" fill="none" stroke="#FFF0D0" strokeWidth="0.3" opacity="0.85" strokeLinecap="round" />
+        {/* 柄（濃い色で区別、鍔なし） */}
+        <path d="M-0.42 -7.2 L0.48 -7.2 L0.45 -10.2 Q0 -10.5 -0.4 -10.2 Z" fill="#5A3418" stroke="#2A1408" strokeWidth="0.4" />
+        <path d="M-0.4 -7.9 L0.45 -8.2 M-0.4 -8.7 L0.45 -9.0 M-0.4 -9.5 L0.45 -9.8" stroke="#8A5A30" strokeWidth="0.25" />
+      </g>
+    </g>
+  );
+}
+
+/* 温泉：岩で囲んだ丸い湯だまりと、ゆらりと立つ三筋の湯気。
+   ⚠️ 温泉マークの記号にしない：斜めから見た岩風呂の情景にし、湯気は高さも位置も不揃いに、脇に木の桶 */
+function Glyph3Onsen() {
+  const rocks = [
+    [-6.0, 1.6, 1.5, 1.1], [-6.4, 3.2, 1.3, 1.0], [-4.6, 4.1, 1.6, 1.0], [-2.2, 4.6, 1.7, 0.95],
+    [0.6, 4.7, 1.6, 0.95], [3.2, 4.4, 1.6, 1.0], [5.4, 3.6, 1.4, 1.0], [6.2, 2.0, 1.3, 1.0],
+    [5.0, 0.6, 1.4, 0.9], [2.6, 0.0, 1.5, 0.85], [-0.2, -0.2, 1.6, 0.85], [-3.0, 0.0, 1.5, 0.85], [-5.0, 0.6, 1.3, 0.85],
+  ];
+  const back = rocks.slice(8);
+  const front = rocks.slice(0, 8);
+  const rock = ([x, y, rx, ry], i) => (
+    <g key={i}>
+      <ellipse cx={x} cy={y} rx={rx} ry={ry} fill="#8C8288" stroke="#262028" strokeWidth="0.45" />
+      <ellipse cx={x + rx * 0.25} cy={y + ry * 0.3} rx={rx * 0.7} ry={ry * 0.55} fill="#665C64" />
+      <ellipse cx={x - rx * 0.35} cy={y - ry * 0.35} rx={rx * 0.4} ry={ry * 0.3} fill="#C4BAC0" opacity="0.85" />
+    </g>
+  );
+  return (
+    <g>
+      <ellipse cx="0" cy="4.6" rx="7.2" ry="1.8" fill={Glyph3ShadowFill} />
+      {back.map(rock)}
+      {/* 湯 */}
+      <ellipse cx="0" cy="2.3" rx="5.4" ry="2.1" fill="#7ACCC4" stroke="#24403E" strokeWidth="0.4" />
+      <path d="M-4.2 1.6 Q-1.8 0.8 1.2 1.0" fill="none" stroke="#E8FFFA" strokeWidth="0.55" opacity="0.85" strokeLinecap="round" />
+      <path d="M0.6 3.4 Q2.6 3.6 4.2 2.8" fill="none" stroke="#4A9C96" strokeWidth="0.5" opacity="0.8" strokeLinecap="round" />
+      {front.map(rock)}
+      {/* 湯気：高さも位置も不揃い。縦の波線を太めの半透明で */}
+      <path d="M-3.4 1.0 C-4.2 -0.6 -2.4 -1.6 -3.0 -3.2 C-3.5 -4.4 -2.2 -5.2 -2.2 -6.2" fill="none" stroke="#FFFFFF" strokeWidth="1.5" opacity="0.28" strokeLinecap="round" />
+      <path d="M-3.4 1.0 C-4.2 -0.6 -2.4 -1.6 -3.0 -3.2 C-3.5 -4.4 -2.2 -5.2 -2.2 -6.2" fill="none" stroke="#FFF6F0" strokeWidth="0.6" opacity="0.75" strokeLinecap="round" />
+      <path d="M-0.2 1.2 C-1.0 -0.6 1.0 -1.8 0.2 -3.6 C-0.4 -5.0 1.4 -6.2 1.2 -8.2" fill="none" stroke="#FFFFFF" strokeWidth="1.7" opacity="0.3" strokeLinecap="round" />
+      <path d="M-0.2 1.2 C-1.0 -0.6 1.0 -1.8 0.2 -3.6 C-0.4 -5.0 1.4 -6.2 1.2 -8.2" fill="none" stroke="#FFF6F0" strokeWidth="0.7" opacity="0.85" strokeLinecap="round" />
+      <path d="M2.6 1.6 C2.0 0.4 3.6 -0.4 3.0 -1.8 C2.6 -2.8 3.8 -3.4 4.2 -4.2" fill="none" stroke="#FFFFFF" strokeWidth="1.4" opacity="0.25" strokeLinecap="round" />
+      <path d="M2.6 1.6 C2.0 0.4 3.6 -0.4 3.0 -1.8 C2.6 -2.8 3.8 -3.4 4.2 -4.2" fill="none" stroke="#FFF6F0" strokeWidth="0.55" opacity="0.65" strokeLinecap="round" />
+      {/* 木の桶 */}
+      <path d="M4.4 1.0 L7.2 1.0 L6.9 3.4 Q5.8 3.8 4.7 3.4 Z" fill="#D8A86A" stroke="#3A220E" strokeWidth="0.45" />
+      <path d="M6.0 1.0 L7.2 1.0 L6.9 3.4 Q6.5 3.6 6.0 3.6 Z" fill="#A87A44" />
+      <ellipse cx="5.8" cy="1.0" rx="1.4" ry="0.4" fill="#8A5E30" stroke="#3A220E" strokeWidth="0.35" />
+      <path d="M4.6 1.9 L7.1 1.9 M4.75 2.9 L6.95 2.9" stroke="#5A3A1A" strokeWidth="0.35" />
+      <path d="M4.9 1.4 L5.0 3.1" stroke="#FFE4B8" strokeWidth="0.35" opacity="0.8" strokeLinecap="round" />
+    </g>
+  );
+}
+
+const ADV_GLYPH3 = {
+  rainbow: Glyph3Rainbow,
+  silence: Glyph3Silence,
+  saltpan: Glyph3Saltpan,
+  stargaze: Glyph3Stargaze,
+  bamboo: Glyph3Bamboo,
+  dojo: Glyph3Dojo,
+  onsen: Glyph3Onsen,
+};
+
+/* 台の地の色。虹は淡い空色、ほかは各妨害の色に寄せて落ち着かせる */
+const ADV_GLYPH3_TILE = {
+  rainbow: [150, 196, 230],
+  silence: [92, 108, 136],
+  saltpan: [212, 198, 166],
+  stargaze: [40, 52, 106],
+  bamboo: [128, 178, 98],
+  dojo: [172, 82, 58],
+  onsen: [232, 148, 108],
+};
+/* 封じの鎖（2026-10-04）。⚠️ 岩に鎖が掛かる。輪は斜めに交互（直交させない）。前の弾と同じ決まり（原点が台の中心・静止画） */
+function Glyph3Chain() {
+  const links = [[-5.6, -3.2, 28], [-3.4, -4.6, -32], [-1.0, -5.4, 28], [1.6, -5.2, -32], [4.0, -4.2, 28], [5.8, -2.6, -32]];
+  return (
+    <g>
+      <ellipse cx="0.6" cy="5.0" rx="7.2" ry="1.6" fill="rgba(10,6,20,0.5)" />
+      <path d="M-6.8 4.6 L-5.6 -1.8 L-2.6 -5.0 L2.4 -5.6 L5.8 -3.0 L7.0 4.6 Z" fill="#6E6A78" stroke="#2A2638" strokeWidth="0.5" />
+      <path d="M-5.6 -1.8 L-2.6 -5.0 L-0.4 -2.0 L-3.6 1.2 Z" fill="#8E8A9A" opacity="0.8" />
+      <path d="M2.4 -5.6 L5.8 -3.0 L4.4 1.4 L1.6 -1.6 Z" fill="#4E4A5A" opacity="0.8" />
+      {links.map(([x, y, r], i) => (
+        <g key={i} transform={`translate(${x} ${y}) rotate(${r})`}>
+          <ellipse rx="1.6" ry="0.95" fill="none" stroke="#2A2230" strokeWidth="1.1" />
+          <ellipse rx="1.6" ry="0.95" fill="none" stroke={i % 2 ? "#C8B48A" : "#E6D4A6"} strokeWidth="0.6" />
+        </g>
+      ))}
+      <path d="M5.8 -2.6 Q6.6 0.6 5.4 3.0" fill="none" stroke="#2A2230" strokeWidth="1.1" strokeLinecap="round" />
+      <path d="M5.8 -2.6 Q6.6 0.6 5.4 3.0" fill="none" stroke="#D6C496" strokeWidth="0.55" strokeLinecap="round" strokeDasharray="1.2 0.8" />
+    </g>
+  );
+}
+ADV_GLYPH3.chain = Glyph3Chain;
+ADV_GLYPH3_TILE.chain = [92, 84, 104];
+/*
+  小MAPの新しいマス 第4弾（5種）の絵。第1〜3弾と同じ決まり。
+  ⚠️ 原点が台の中心。x −7.5〜7.5、y −9.5〜5.5。静止画。defs・グラデーション・id・filter・文字は使わない。
+  ⚠️ 光は左上から。輪郭は暗い色で 0.3〜0.6。足元に影の楕円。
+*/
+const Glyph4Shadow = "rgba(10,6,20,0.5)";
+const Glyph4Steam = (x, y, h) => `M${x} ${y} C${x - 0.9} ${y - h * 0.3} ${x + 0.9} ${y - h * 0.6} ${x} ${y - h}`;
+
+/* 屋台：車輪付きの木の屋台。屋根、無地ののれん三枚、赤い提灯、湯気の立つ椀 */
+function Glyph4Stall() {
+  return (
+    <g>
+      <ellipse cx="0" cy="4.7" rx="7.0" ry="1.7" fill={Glyph4Shadow} />
+      {/* 柱 */}
+      <rect x="-5.6" y="-5.2" width="0.8" height="8.4" fill="#6A4022" stroke="#2A160A" strokeWidth="0.3" />
+      <rect x="4.8" y="-5.2" width="0.8" height="8.4" fill="#4E2E18" stroke="#2A160A" strokeWidth="0.3" />
+      {/* 屋根 */}
+      <path d="M-7.0 -5.0 L-5.6 -7.6 L5.6 -7.6 L7.0 -5.0 Z" fill="#C8642E" stroke="#3A1A0A" strokeWidth="0.45" />
+      <path d="M-5.6 -7.6 L-4.8 -7.0 L5.0 -7.0 L5.6 -7.6 Z" fill="#E89050" opacity="0.8" />
+      <path d="M2.6 -7.6 L5.6 -7.6 L7.0 -5.0 L3.8 -5.0 Z" fill="#9A4A20" />
+      {/* のれん（無地・三枚） */}
+      {[-4.4, -1.4, 1.6].map((x, i) => (
+        <path key={i} d={`M${x} -5.0 L${x + 2.7} -5.0 L${x + 2.7} -2.6 L${x} -2.6 Z`} fill={i === 2 ? "#2A3A6A" : "#3A4E8C"} stroke="#141C34" strokeWidth="0.3" />
+      ))}
+      <path d="M-4.2 -4.6 L-2.0 -4.6" stroke="#8AA0D8" strokeWidth="0.35" opacity="0.7" />
+      {/* 台 */}
+      <path d="M-6.4 0.0 L6.4 0.0 L6.4 3.2 L-6.4 3.2 Z" fill="#A8703C" stroke="#3A200C" strokeWidth="0.45" />
+      <path d="M-6.4 0.0 L6.4 0.0 L6.4 0.8 L-6.4 0.8 Z" fill="#D49A5C" />
+      <path d="M2.6 0.8 L6.4 0.8 L6.4 3.2 L2.6 3.2 Z" fill="#7E5028" />
+      <path d="M-5.4 1.8 L1.6 1.8" stroke="#6A4022" strokeWidth="0.3" />
+      {/* 車輪 */}
+      <circle cx="-4.0" cy="3.6" r="1.4" fill="#5A3418" stroke="#2A160A" strokeWidth="0.4" />
+      <circle cx="-4.0" cy="3.6" r="0.4" fill="#C8A060" />
+      <circle cx="4.0" cy="3.6" r="1.4" fill="#4A2A12" stroke="#2A160A" strokeWidth="0.4" />
+      <circle cx="4.0" cy="3.6" r="0.4" fill="#A88048" />
+      {/* 椀と湯気 */}
+      <path d="M-1.6 -1.2 L1.6 -1.2 Q1.4 0.2 0 0.2 Q-1.4 0.2 -1.6 -1.2 Z" fill="#B8302A" stroke="#3A0A08" strokeWidth="0.35" />
+      <path d="M-1.6 -1.2 L1.6 -1.2" stroke="#F0D8B0" strokeWidth="0.45" />
+      <path d={Glyph4Steam(-0.6, -1.6, 2.4)} fill="none" stroke="#FFFFFF" strokeWidth="0.35" opacity="0.75" strokeLinecap="round" />
+      <path d={Glyph4Steam(0.6, -1.6, 2.0)} fill="none" stroke="#FFFFFF" strokeWidth="0.35" opacity="0.6" strokeLinecap="round" />
+      {/* 赤い提灯（軒の左に下がる） */}
+      <path d="M-6.4 -5.0 L-6.4 -4.4" stroke="#2A160A" strokeWidth="0.25" />
+      <ellipse cx="-6.4" cy="-3.2" rx="1.0" ry="1.3" fill="#E04A30" stroke="#5A1008" strokeWidth="0.35" />
+      <path d="M-7.2 -3.6 Q-6.4 -3.4 -5.6 -3.6 M-7.3 -2.8 Q-6.4 -2.6 -5.5 -2.8" fill="none" stroke="#9A2010" strokeWidth="0.2" />
+      <rect x="-6.9" y="-4.6" width="1.0" height="0.3" fill="#2A160A" />
+      <rect x="-6.9" y="-2.0" width="1.0" height="0.3" fill="#2A160A" />
+      <ellipse cx="-6.7" cy="-3.6" rx="0.25" ry="0.45" fill="#FFB890" opacity="0.8" />
+    </g>
+  );
+}
+
+/* 喫茶：受け皿にのった白いカップ（湯気）と、ひと切れのケーキ */
+function Glyph4Kissa() {
+  return (
+    <g>
+      <ellipse cx="0" cy="4.6" rx="7.0" ry="1.7" fill={Glyph4Shadow} />
+      {/* ケーキ（右奥） */}
+      <path d="M2.4 1.6 L6.8 1.6 L6.8 -1.4 L2.4 -0.6 Z" fill="#F4E2C0" stroke="#4A2E18" strokeWidth="0.35" />
+      <path d="M2.4 -0.6 L6.8 -1.4 L6.8 -2.2 L2.4 -1.4 Z" fill="#FFFFFF" stroke="#4A2E18" strokeWidth="0.3" />
+      <path d="M2.4 0.4 L6.8 -0.2" stroke="#D84A5A" strokeWidth="0.45" />
+      <circle cx="4.8" cy="-2.6" r="0.75" fill="#E0304A" stroke="#5A0A14" strokeWidth="0.25" />
+      <circle cx="4.6" cy="-2.8" r="0.22" fill="#FFFFFF" opacity="0.8" />
+      <path d="M5.4 1.6 L6.8 1.6 L6.8 -1.4 L5.4 -1.2 Z" fill="#D8C29E" />
+      {/* 受け皿 */}
+      <ellipse cx="-1.6" cy="3.0" rx="5.2" ry="1.4" fill="#F2F0EA" stroke="#3A3440" strokeWidth="0.4" />
+      <ellipse cx="-1.6" cy="2.8" rx="3.4" ry="0.8" fill="#D8D4CC" />
+      {/* カップ */}
+      <path d="M-5.0 -2.4 L1.8 -2.4 L1.2 1.6 Q-1.6 3.2 -4.4 1.6 Z" fill="#FAF8F2" stroke="#3A3440" strokeWidth="0.45" />
+      <path d="M-0.4 -2.4 L1.8 -2.4 L1.2 1.6 Q0.0 2.4 -1.2 2.4 Q0.2 0.0 -0.4 -2.4 Z" fill="#D8D4CC" />
+      <path d="M1.6 -1.4 Q3.6 -1.4 3.2 0.2 Q2.8 1.2 1.3 0.8" fill="none" stroke="#3A3440" strokeWidth="0.55" />
+      <ellipse cx="-1.6" cy="-2.4" rx="3.4" ry="0.75" fill="#6A3A1C" stroke="#3A3440" strokeWidth="0.4" />
+      <ellipse cx="-2.4" cy="-2.55" rx="1.3" ry="0.25" fill="#A86A3A" opacity="0.8" />
+      <path d="M-4.4 -1.6 L-4.0 0.8" stroke="#FFFFFF" strokeWidth="0.45" opacity="0.9" strokeLinecap="round" />
+      {/* 湯気 */}
+      <path d={Glyph4Steam(-2.6, -3.4, 4.0)} fill="none" stroke="#FFFFFF" strokeWidth="0.4" opacity="0.75" strokeLinecap="round" />
+      <path d={Glyph4Steam(-0.8, -3.4, 3.2)} fill="none" stroke="#FFFFFF" strokeWidth="0.4" opacity="0.55" strokeLinecap="round" />
+    </g>
+  );
+}
+
+/* 料亭：朱と黒の漆の重箱（二段）に金の縁、蓋の上に青い葉と小さな花の飾り */
+function Glyph4Ryotei() {
+  return (
+    <g>
+      <ellipse cx="0" cy="4.6" rx="7.0" ry="1.7" fill={Glyph4Shadow} />
+      {/* 下の段 */}
+      <path d="M-5.6 0.6 L5.6 0.6 L5.6 4.2 L-5.6 4.2 Z" fill="#B0242A" stroke="#2A0608" strokeWidth="0.45" />
+      <path d="M2.8 0.6 L5.6 0.6 L5.6 4.2 L2.8 4.2 Z" fill="#7E141A" />
+      <path d="M-5.6 0.6 L5.6 0.6" stroke="#E8C060" strokeWidth="0.45" />
+      {/* 上の段 */}
+      <path d="M-5.6 -3.0 L5.6 -3.0 L5.6 0.6 L-5.6 0.6 Z" fill="#1E1418" stroke="#08040A" strokeWidth="0.45" />
+      <path d="M2.8 -3.0 L5.6 -3.0 L5.6 0.6 L2.8 0.6 Z" fill="#120A0E" />
+      <path d="M-5.6 -3.0 L5.6 -3.0" stroke="#E8C060" strokeWidth="0.45" />
+      {/* 蓋 */}
+      <path d="M-6.0 -4.6 L6.0 -4.6 L6.0 -3.0 L-6.0 -3.0 Z" fill="#B0242A" stroke="#2A0608" strokeWidth="0.45" />
+      <path d="M3.0 -4.6 L6.0 -4.6 L6.0 -3.0 L3.0 -3.0 Z" fill="#7E141A" />
+      <path d="M-5.6 -4.3 L-1.0 -4.3" stroke="#F08080" strokeWidth="0.4" opacity="0.7" strokeLinecap="round" />
+      {/* 金の模様（波） */}
+      <path d="M-4.6 -1.0 Q-3.8 -1.9 -3.0 -1.0 Q-2.2 -0.1 -1.4 -1.0 Q-0.6 -1.9 0.2 -1.0" fill="none" stroke="#E8C060" strokeWidth="0.35" />
+      <path d="M-4.6 2.6 Q-3.8 1.7 -3.0 2.6 Q-2.2 3.5 -1.4 2.6" fill="none" stroke="#F0D080" strokeWidth="0.35" opacity="0.8" />
+      {/* 艶 */}
+      <path d="M-5.0 -2.4 L-5.0 -0.2" stroke="#FFFFFF" strokeWidth="0.4" opacity="0.5" strokeLinecap="round" />
+      {/* 葉の飾り */}
+      <path d="M-2.2 -4.6 Q-0.6 -7.6 2.6 -6.8 Q1.0 -4.4 -2.2 -4.6 Z" fill="#3E9A48" stroke="#123A18" strokeWidth="0.35" />
+      <path d="M-1.6 -4.9 Q0.4 -6.0 2.2 -6.6" fill="none" stroke="#A8E0A0" strokeWidth="0.3" />
+      {/* 小さな花（五つの丸い花びら、線で結ばない） */}
+      {[0, 1, 2, 3, 4].map((i) => {
+        const a = (i / 5) * Math.PI * 2 - Math.PI / 2;
+        return <circle key={i} cx={3.4 + Math.cos(a) * 0.75} cy={-5.6 + Math.sin(a) * 0.75} r="0.55" fill="#F6B8C8" stroke="#8A3A50" strokeWidth="0.15" />;
+      })}
+      <circle cx="3.4" cy="-5.6" r="0.35" fill="#F8D860" />
+    </g>
+  );
+}
+
+/* 柿の木：低い枝に、つやのある橙の実が三つと濃い葉。へたは小さな濃緑の塊 */
+function Glyph4Kaki() {
+  const fruit = (x, y, r, dark) => (
+    <g>
+      <ellipse cx={x} cy={y} rx={r} ry={r * 0.86} fill={dark ? "#D8601A" : "#F07A20"} stroke="#5A2006" strokeWidth="0.4" />
+      <path d={`M${x + r * 0.2} ${y - r * 0.7} Q${x + r * 1.1} ${y - r * 0.2} ${x + r * 0.5} ${y + r * 0.75} Q${x + r * 0.95} ${y} ${x + r * 0.2} ${y - r * 0.7} Z`} fill="#B84A10" opacity="0.7" />
+      <ellipse cx={x - r * 0.4} cy={y - r * 0.3} rx={r * 0.28} ry={r * 0.18} fill="#FFD0A0" opacity="0.9" />
+      <path d={`M${x - r * 0.45} ${y - r * 0.82} Q${x} ${y - r * 1.12} ${x + r * 0.45} ${y - r * 0.82} Q${x} ${y - r * 0.6} ${x - r * 0.45} ${y - r * 0.82} Z`} fill="#2E5A1E" stroke="#142A0C" strokeWidth="0.2" />
+    </g>
+  );
+  return (
+    <g>
+      <ellipse cx="0" cy="4.6" rx="7.0" ry="1.7" fill={Glyph4Shadow} />
+      {/* 幹と枝 */}
+      <path d="M-5.2 4.4 Q-5.0 0.6 -3.6 -1.6 Q-1.4 -4.6 3.8 -6.2 L4.2 -5.4 Q-0.6 -3.8 -2.6 -0.8 Q-3.8 1.4 -3.6 4.4 Z" fill="#6A4428" stroke="#2A160A" strokeWidth="0.4" />
+      <path d="M-4.6 3.8 Q-4.4 0.8 -3.4 -1.0" fill="none" stroke="#9A6A42" strokeWidth="0.35" opacity="0.8" />
+      <path d="M-1.4 -3.0 Q0.6 -1.6 2.4 -1.8" fill="none" stroke="#5A3820" strokeWidth="0.55" strokeLinecap="round" />
+      {/* 葉 */}
+      <path d="M2.0 -6.6 Q4.6 -9.0 6.8 -7.6 Q4.6 -5.6 2.0 -6.6 Z" fill="#2E7A32" stroke="#103A12" strokeWidth="0.3" />
+      <path d="M-3.4 -3.0 Q-6.4 -4.4 -6.8 -1.8 Q-4.6 -1.2 -3.4 -3.0 Z" fill="#3A8A3A" stroke="#103A12" strokeWidth="0.3" />
+      <path d="M0.2 -4.8 Q0.0 -8.0 -2.4 -8.2 Q-2.2 -5.6 0.2 -4.8 Z" fill="#2A6E2C" stroke="#103A12" strokeWidth="0.3" />
+      <path d="M2.4 -6.6 Q4.6 -8.2 6.2 -7.6" fill="none" stroke="#8ACC80" strokeWidth="0.25" />
+      {/* 実（三つ） */}
+      {fruit(3.2, -3.4, 1.9, false)}
+      {fruit(0.6, 0.4, 2.1, false)}
+      {fruit(4.6, 1.8, 1.7, true)}
+      <path d="M2.4 -1.8 L0.8 -1.4" stroke="#5A3820" strokeWidth="0.35" />
+    </g>
+  );
+}
+
+/* 床屋：赤白青の斜め縞の回転灯（銀の蓋）と、開いたはさみ（刃は斜め。直交させない） */
+function Glyph4Barber() {
+  const stripes = [];
+  /* ⚠️ 縞は筒の中だけ（clipPath を使わないので、はみ出さない範囲だけ描く） */
+  for (let i = 0; i < 5; i++) {
+    const y = -5.6 + i * 1.75;
+    stripes.push(<path key={`r${i}`} d={`M-3.6 ${y + 1.6} L-0.8 ${y} L-0.8 ${y + 0.7} L-3.6 ${y + 2.3} Z`} fill="#D8282E" />);
+    stripes.push(<path key={`b${i}`} d={`M-3.6 ${y + 2.4} L-0.8 ${y + 0.8} L-0.8 ${y + 1.2} L-3.6 ${y + 2.8} Z`} fill="#2A4AB0" />);
+  }
+  return (
+    <g>
+      <ellipse cx="0" cy="4.6" rx="7.0" ry="1.7" fill={Glyph4Shadow} />
+      {/* 台座 */}
+      <ellipse cx="-2.2" cy="3.6" rx="2.6" ry="0.9" fill="#8A929E" stroke="#22262E" strokeWidth="0.4" />
+      {/* 筒 */}
+      <rect x="-3.6" y="-5.6" width="2.8" height="8.8" fill="#FAFAFA" stroke="#22262E" strokeWidth="0.4" />
+      <g>{stripes}</g>
+      <rect x="-1.6" y="-5.6" width="0.8" height="8.8" fill="#0A0A20" opacity="0.18" />
+      <path d="M-3.2 -5.0 L-3.2 2.6" stroke="#FFFFFF" strokeWidth="0.4" opacity="0.8" strokeLinecap="round" />
+      <rect x="-3.6" y="-5.6" width="2.8" height="8.8" fill="none" stroke="#22262E" strokeWidth="0.4" />
+      {/* 銀の蓋 */}
+      <path d="M-4.0 -5.6 L-0.4 -5.6 L-0.8 -6.6 Q-2.2 -8.4 -3.6 -6.6 Z" fill="#C8D0DC" stroke="#22262E" strokeWidth="0.4" />
+      <circle cx="-2.2" cy="-7.8" r="0.55" fill="#E8EEF6" stroke="#22262E" strokeWidth="0.3" />
+      <rect x="-4.0" y="3.0" width="3.6" height="0.7" fill="#AEB6C2" stroke="#22262E" strokeWidth="0.35" />
+      {/* はさみ（開いて斜め。二枚の刃は約40度） */}
+      <g transform="translate(2.6,0.4) rotate(-28) scale(1.3)">
+        <path d="M0 0 L3.6 -0.9 L3.8 -0.6 Z" fill="#D8DEE8" stroke="#22262E" strokeWidth="0.3" />
+        <path d="M0 0 L3.4 1.6 L3.5 1.25 Z" fill="#C0C8D4" stroke="#22262E" strokeWidth="0.3" />
+        <circle cx="0" cy="0" r="0.3" fill="#22262E" />
+        <ellipse cx="-1.5" cy="-0.9" rx="1.1" ry="0.75" fill="#F0F4FA" stroke="#C02830" strokeWidth="0.5" />
+        <ellipse cx="-1.4" cy="1.0" rx="1.1" ry="0.75" fill="#F0F4FA" stroke="#C02830" strokeWidth="0.5" />
+        <ellipse cx="-1.5" cy="-0.9" rx="0.5" ry="0.3" fill="#2A3040" />
+        <ellipse cx="-1.4" cy="1.0" rx="0.5" ry="0.3" fill="#2A3040" />
+        <path d="M-0.6 -0.5 L0 0 L-0.5 0.6" fill="none" stroke="#2A2A2A" strokeWidth="0.5" />
+      </g>
+    </g>
+  );
+}
+
+const ADV_GLYPH4 = { stall: Glyph4Stall, kissa: Glyph4Kissa, ryotei: Glyph4Ryotei, kaki: Glyph4Kaki, barber: Glyph4Barber };
+const ADV_GLYPH4_TILE = {
+  stall: [196, 128, 74],
+  kissa: [150, 112, 86],
+  ryotei: [146, 62, 66],
+  kaki: [120, 140, 92],
+  barber: [150, 190, 214],
+};
+
+/* 熊マスの絵（台の上）。⚠️ 原点が台の中心、x −7.5〜7.5、y −9.5〜5.5。茂みから顔を出す熊と足跡 */
+function Glyph5Bear() {
+  return (
+    <g>
+      <ellipse cx="0" cy="4.6" rx="7.0" ry="1.7" fill="rgba(10,6,20,0.5)" />
+      {/* 木 */}
+      <rect x="4.2" y="-6.0" width="1.6" height="10.0" fill="#5A3A20" stroke="#24140A" strokeWidth="0.35" />
+      <path d="M1.6 -4.6 Q2.0 -9.4 5.2 -9.6 Q8.2 -9.4 7.8 -5.0 Q8.6 -2.8 6.0 -2.6 Q3.2 -2.2 1.6 -4.6 Z" fill="#2E6A30" stroke="#0E2E10" strokeWidth="0.35" />
+      <path d="M3.0 -6.6 Q4.0 -8.6 5.6 -8.8" fill="none" stroke="#7AC070" strokeWidth="0.35" />
+      {/* 熊の頭 */}
+      <circle cx="-4.4" cy="-6.0" r="1.3" fill="#2E272C" stroke="#0A0608" strokeWidth="0.3" />
+      <circle cx="0.2" cy="-6.0" r="1.3" fill="#2E272C" stroke="#0A0608" strokeWidth="0.3" />
+      <path d="M-6.4 -2.4 Q-6.6 -6.8 -2.1 -6.9 Q2.4 -6.8 2.2 -2.4 Q2.0 0.6 -2.1 0.8 Q-6.2 0.6 -6.4 -2.4 Z" fill="#2E272C" stroke="#0A0608" strokeWidth="0.4" />
+      <path d="M-5.4 -4.4 Q-4.2 -6.0 -2.4 -6.2" fill="none" stroke="#7A6E76" strokeWidth="0.4" strokeLinecap="round" />
+      <path d="M-3.8 -1.2 Q-3.8 -3.0 -2.1 -3.0 Q-0.4 -3.0 -0.4 -1.2 Q-0.6 0.2 -2.1 0.2 Q-3.6 0.2 -3.8 -1.2 Z" fill="#9A7A5C" />
+      <ellipse cx="-2.1" cy="-2.2" rx="0.7" ry="0.5" fill="#140A06" />
+      <circle cx="-3.8" cy="-4.0" r="0.45" fill="#F8E8C8" /><circle cx="-0.4" cy="-4.0" r="0.45" fill="#F8E8C8" />
+      {/* 茂み */}
+      <path d="M-7.4 3.8 Q-7.6 0.8 -5.2 0.6 Q-4.4 -1.0 -2.2 -0.2 Q-0.2 -1.2 1.4 0.4 Q3.6 0.2 3.6 2.4 Q3.8 4.2 0 4.4 Q-4.0 4.6 -7.4 3.8 Z" fill="#3E8A3A" stroke="#123A12" strokeWidth="0.4" />
+      <path d="M-6.2 2.0 Q-5.0 0.8 -3.4 1.2 M-1.6 0.8 Q0.0 0.0 1.4 1.0" fill="none" stroke="#9AD890" strokeWidth="0.35" />
+      {/* 足跡（大きな肉球と五つの指） */}
+      <g transform="translate(5.4 3.2) rotate(-18)" fill="#3A2A20" opacity="0.85">
+        <ellipse cx="0" cy="0.5" rx="1.0" ry="0.75" />
+        {[-0.9, -0.45, 0, 0.45, 0.9].map((x, i) => <circle key={i} cx={x} cy={-0.7 + Math.abs(x) * 0.2} r="0.24" />)}
+      </g>
+    </g>
+  );
+}
+
+ADV_GLYPH4.bear = Glyph5Bear;
+ADV_GLYPH4_TILE.bear = [70, 104, 62];
+Object.assign(ADV_GLYPH, ADV_GLYPH2, ADV_GLYPH3, ADV_GLYPH4);
+Object.assign(ADV_GLYPH_TILE, ADV_GLYPH2_TILE, ADV_GLYPH3_TILE, ADV_GLYPH4_TILE);
+/* ==== ADV_GLYPH END ==== */
+/*
+  小MAPの盤（空・遠景・地形・道・マス・駒）。
+  ★ 2026-10-05 Aki「スマホを見た目を害さずに軽く」：AdventurePanel から切り出して memo で包む。
+  ⚠️⚠️ AdventurePanel は記録・ルーレット・戦闘の途中経過などで何度も描き直される。盤（数千の部品）まで
+    毎回組み直していた（戦闘中も、画面の外の盤を組み直していた）。盤が変わるのは下の props が変わったときだけ。
+  ⚠️ 盤の中で使う値を足したら、props にも足すこと（足さないと、古い絵のまま残る）。
+*/
+const AdvBoard = memo(function AdvBoard({ walking, map, seed, pref, area, heroOn, heroKind, mapBox, cur, visited, usedNodes }) {
+  const iso = hexAt;
+  /* 六角の頂点。⚠️ 平頂。尖頭にすると横に並べたとき隙間が空く */
+  /* 六角の輪郭。⚠️ 大きさを変えて何重にも使うので、関数で持つ */
+  const hexPath = (r) => {
+    const h = r * 0.8660254;
+    return [[r, 0], [r / 2, h], [-r / 2, h], [-r, 0], [-r / 2, -h], [r / 2, -h]]
+      .map((p) => p.join(" ")).join(" L");
+  };
+  const HEX_TOP = hexPath(HEX_R);
+  /*
+    台の色。⚠️ 天面・左面・右面を、左上からの光ひとつで決める。
+      左面は天面の 0.72、右面は 0.50。面ごとに色を振ると立体に見えない。
+  */
+  /*
+    マスの色。
+    ⚠️ 天面は傾斜（linearGradient）で塗る。単色だと駒の台に見えて、土地に見えない。
+    ⚠️ 側面の明るさは左上からの光ひとつで決める。面ごとに色を振ると紙に見える。
+  */
+  const TILE_COLOR = (kind, here, seen) => {
+    const base = here ? [255, 243, 214]
+      : kind === "boss" ? [150, 70, 92]
+      : kind === "box" ? [176, 140, 66]
+      /* ⚠️ レア宝箱は紫がかった虹。ふつうの宝箱（金）と並んで見分けが付くこと */
+      : kind === "rarebox" ? [178, 128, 214]
+      /* ⚠️ ポーションは赤紫。回復（桃）と区別する */
+      : kind === "potion" ? [168, 72, 128]
+      /* ⚠️ 井戸は苔むした石の青灰。道・関所と見分けが付くこと */
+      : kind === "well" ? [96, 128, 132]
+      /* ⚠️ イベントは紫。何が起きるか分からないマス */
+      : kind === "event" ? [126, 84, 170]
+      : kind === "spot" ? [92, 148, 100]
+      : kind === "gate" ? [104, 124, 164]
+      /* ⚠️ お店は暖かい朱。宝箱の金と並んでも見分けが付くこと */
+      : kind === "shop" ? [196, 104, 78]
+      /*
+        ⚠️⚠️ 何も描かれていないマスから敵を出さないこと。
+          踏むまで分からないのは罠だけでよく、雑魚は見えていないと理不尽になる。
+        ⚠️ 罠だけは道と同じ色にする。見えたら罠にならない。
+      */
+      : kind === "zako" ? [150, 86, 86]
+      : kind === "heal" ? [214, 128, 168]
+      /* ★ 特別なマス（2026-10-03）は絵と組の地の色（ADV_GLYPH_TILE） */
+      : ADV_GLYPH_TILE[kind] ? ADV_GLYPH_TILE[kind]
+      /* ⚠️ ただの道の色は土地柄で変える。ここが変わらないと、どこも同じ場所に見える */
+      : seen ? [120, 128, 150] : theme.tile;
+    const mul = (m) => `rgb(${base.map((v) => Math.round(v * m)).join(",")})`;
+    const grad = here ? "tHere" : kind === "boss" ? "tBoss" : (kind === "box" || kind === "rarebox") ? "tBox"
+      : kind === "spot" ? "tSpot" : kind === "gate" ? "tGate"
+      : kind === "zako" ? "tZako" : (kind === "heal" || kind === "potion") ? "tHeal"
+      : seen ? "tSeen" : "tRoad";
+    return { top: (!here && ADV_GLYPH_TILE[kind]) ? mul(1) : `url(#${grad})`, left: mul(0.76), mid: mul(0.6), right: mul(0.44),
+      rim: mul(1.3), frame: mul(0.34),
+      edge: here ? "#FFF3D6" : "rgba(20,14,32,0.55)" };
+  };
+  const theme = STAGE_THEMES[themeOf(walking)] || STAGE_THEMES.town;
+  const mapElems = mapElemsOf(walking);
+  const byKey = {};
+  map.forEach((n) => { byKey[n.key] = n; });
+  const node = byKey[cur];
+  const P = iso(node);
+  return (
+      <>
+      {/* ★ 下の層：空・遠景・地形・道・マス（指で叩く層） */}
+      <svg className="adv-iso-layer" viewBox={`0 0 ${MAP_W} ${MAP_H}`}>
+        <defs>
+          {/*
+            ⚠️ 空・地面・道・マスを別の層にする。
+              一枚の平面に置くと「盤」に見えて、土地を歩いている感じが出ない。
+          */}
+          <linearGradient id="advSky" x1="0" y1="0" x2="0.3" y2="1">
+            <stop offset="0%" stopColor={theme.sky[0]} />
+            <stop offset="55%" stopColor={theme.sky[1]} />
+            <stop offset="100%" stopColor={theme.sky[2]} />
+          </linearGradient>
+          <radialGradient id="advLand" cx="50%" cy="50%" r="50%">
+            <stop offset="0%" stopColor={theme.land} />
+            <stop offset="62%" stopColor="rgba(64,78,74,0.38)" />
+            <stop offset="100%" stopColor="rgba(40,44,64,0)" />
+          </radialGradient>
+          <radialGradient id="advMist" cx="50%" cy="50%" r="50%">
+            <stop offset="0%" stopColor="rgba(150,170,220,0.16)" />
+            <stop offset="100%" stopColor="rgba(150,170,220,0)" />
+          </radialGradient>
+          {/* 宝箱の材質。⚠️ 木と金を別に持つ。同じ色で塗ると板が金に見える */}
+          {/* 駒の装束。⚠️ 台と同系にしない。暗い紫で抜く */}
+          <linearGradient id="pawnCloak" x1="0.2" y1="0" x2="0.8" y2="1">
+            <stop offset="0%" stopColor="#4A3B7E" />
+            <stop offset="100%" stopColor="#241A44" />
+          </linearGradient>
+          <linearGradient id="chestWood" x1="0" y1="0" x2="0.2" y2="1">
+            <stop offset="0%" stopColor="#9C6634" />
+            <stop offset="100%" stopColor="#5E3A18" />
+          </linearGradient>
+          <linearGradient id="chestLid" x1="0" y1="0" x2="0.3" y2="1">
+            <stop offset="0%" stopColor="#B87C42" />
+            <stop offset="100%" stopColor="#7A4A1E" />
+          </linearGradient>
+          <linearGradient id="chestGold" x1="0" y1="0" x2="1" y2="1">
+            <stop offset="0%" stopColor="#F6DE96" />
+            <stop offset="50%" stopColor="#D9A94E" />
+            <stop offset="100%" stopColor="#A87C2C" />
+          </linearGradient>
+          {/* マスの天面。⚠️ 種類ごとに傾斜を持たせる。単色だと駒の台に見える */}
+          {[["tZako", "#B06060", "#7A3A3A"], ["tHeal", "#EFA0C8", "#B45C8C"],
+            ["tRoad", "#6B6494", "#4A4470"], ["tSeen", "#8C93B4", "#666E92"],
+            ["tGate", "#7E97C8", "#54689B"], ["tBox", "#E4C173", "#A8823A"],
+            ["tSpot", "#7FCB8B", "#4C8C5C"], ["tBoss", "#E2707F", "#8E3550"],
+            ["tHere", "#FFE9B8", "#D8B26A"]].map(([id, a, b]) => (
+            <linearGradient key={id} id={id} x1="0.2" y1="0" x2="0.8" y2="1">
+              <stop offset="0%" stopColor={a} />
+              <stop offset="100%" stopColor={b} />
+            </linearGradient>
+          ))}
+          <radialGradient id="isoLightFix" cx="18%" cy="8%" r="75%">
+            <stop offset="0%" stopColor="rgba(255,236,200,0.16)" />
+            <stop offset="55%" stopColor="rgba(255,236,200,0.03)" />
+            <stop offset="100%" stopColor="rgba(255,236,200,0)" />
+          </radialGradient>
+          <radialGradient id="isoVignette" cx="50%" cy="48%" r="72%">
+            <stop offset="62%" stopColor="rgba(6,4,14,0)" />
+            <stop offset="100%" stopColor="rgba(6,4,14,0.5)" />
+          </radialGradient>
+          <linearGradient id="isoSheen" x1="0" y1="0" x2="1" y2="0">
+            <stop offset="0%" stopColor="rgba(255,243,214,0)" />
+            <stop offset="50%" stopColor="rgba(255,243,214,0.16)" />
+            <stop offset="100%" stopColor="rgba(255,243,214,0)" />
+          </linearGradient>
+          <linearGradient id="isoBeam" x1="0" y1="0" x2="0" y2="1">
+            <stop offset="0%" stopColor="rgba(255,243,214,0)" />
+            <stop offset="100%" stopColor="rgba(255,243,214,0.30)" />
+          </linearGradient>
+          <radialGradient id="isoGlow" cx="50%" cy="50%" r="50%">
+            <stop offset="0%" stopColor="rgba(255,243,214,0.55)" />
+            <stop offset="100%" stopColor="rgba(255,243,214,0)" />
+          </radialGradient>
+        </defs>
+        {/*
+          盤ぜんたい。
+          ⚠️⚠️ 視点を viewBox で動かすと、途中の絵が作られないので瞬間移動になる。
+            CSS の transform で動かせば、間を補間して滑らかに流れる。
+          ⚠️ なぞっている間だけ補間を切ること。切らないと指から遅れる。
+        */}
+        <g>
+        {/* 空 */}
+        <rect x="0" y="0" width={MAP_W} height={MAP_H} fill="url(#advSky)" />
+        {/* ⚠️ 星は等間隔に置かない。並ぶと壁紙に見える */}
+        {Array.from({ length: 46 }, (_, i) => {
+          const a = (i * 2.399) % (Math.PI * 2), d = 40 + ((i * 137) % 520);
+          const x = MAP_W / 2 + Math.cos(a) * d, y = MAP_H / 2 + Math.sin(a) * d * 0.86;
+          return <circle key={`st${i}`} cx={x} cy={y} r={0.8 + (i % 3) * 0.5}
+            fill="#DCD6FF" opacity={0.18 + (i % 4) * 0.08} />;
+        })}
+        {/*
+          遠景。⚠️⚠️ 地面より奥に置くこと。盤の上端の向こうに景色が見えて、はじめて
+            「土地を歩いている」になる。台だけでは盤に見えた。
+        */}
+        <g transform={`translate(0 ${Math.max(0, MAP_H / 2 - YSTEP * (MAP_RINGS + 0.6) - 150)})`}>
+          <Panorama kind={themeOf(walking)} w={MAP_W} h={230} uid="map" />
+          {/*
+            渡り鳥。⚠️ 生き物がいると景色が「場所」になる。台と小物だけだと模型に見えた。
+            ⚠️ 群れを二つ、違う速さで。同じ速さだと一枚の絵が滑っているように見える。
+            ⚠️ 羽ばたきは翼の形だけを動かす（位置決めの transform と分ける）。
+          */}
+          {[0, 1].map((g) => (
+            <g key={`bird${g}`} className={`mv-flock f${g}`}>
+              {[0, 1, 2, 3, 4].map((k) => (
+                <g key={k} transform={`translate(${k * 11 - (k % 2) * 3} ${Math.abs(k - 2) * 6 + g * 40})`}>
+                  <path className="mv-wing" d="M-5 0 Q-2.4 -3 0 0 Q2.4 -3 5 0"
+                    fill="none" stroke="rgba(30,24,40,0.75)" strokeWidth="1.4" strokeLinecap="round" />
+                </g>
+              ))}
+            </g>
+          ))}
+        </g>
+        {/* 地面。⚠️ マスの集まりの下に敷く。空の上に浮いていると旅に見えない */}
+        <ellipse cx={MAP_W / 2} cy={MAP_H / 2} rx={XSTEP * (MAP_RINGS + 0.6)}
+          ry={YSTEP * (MAP_RINGS + 0.6)} fill="url(#advLand)" />
+        <ellipse cx={MAP_W / 2 - 90} cy={MAP_H / 2 + 60} rx={230} ry={150} fill="url(#advMist)" />
+        <ellipse cx={MAP_W / 2 + 140} cy={MAP_H / 2 - 90} rx={200} ry={130} fill="url(#advMist)" />
+        {/*
+          空きマスの地形・川・電線。
+          ⚠️⚠️ 台より奥（先）に描くこと。台の上に景色が被ると道が読めなくなる。
+          ⚠️ 並びは奥から手前（terrainPlan で y の順に並べてある）。
+        */}
+        <TerrainLayer map={map} seed={seed} themeKey={themeOf(walking)} elems={mapElems}
+          pref={pref} area={area} heroOn={heroOn} heroKind={heroKind} box={mapBox} />
+        {/*
+          地面の景物。
+          ⚠️⚠️ 台と道だけだと盤に見える。木・岩・草を置いて、土地の上を歩かせる。
+          ⚠️ 種から置くこと。描くたびに散らすと、動くたびに木が飛び回る。
+          ⚠️ 台の近くには置かない。重なると道が読めなくなる。
+          ⚠️ 手前ほど大きく、暗く。奥ほど小さく、霞ませる。同じ大きさで撒くと壁紙になる。
+        */}
+        {(() => {
+          const items = [];
+          let s2 = (seed || 1) * 7919 + 13;
+          const rnd2 = () => (s2 = (s2 * 1103515245 + 12345) & 0x7fffffff) / 0x7fffffff;
+          /*
+            ⚠️⚠️ この層はもう撒かないこと。空きマスはすべて地形（TerrainCell）で埋めたので、
+              ここで家や田んぼを撒くと地形のマスと重なる（家と田んぼが重なっていた）。
+            ★ 数を0にして層ごと止めてある。戻すなら、地形のマスと当たらない所だけにすること。
+          */
+          for (let i = 0; i < 0; i++) {
+            const ang = rnd2() * Math.PI * 2;
+            const rad = Math.sqrt(rnd2()) * (MAP_RINGS + 0.5);
+            const x = MAP_W / 2 + Math.cos(ang) * rad * XSTEP;
+            const y = MAP_H / 2 + Math.sin(ang) * rad * YSTEP;
+            /* ⚠️ 台と道の上に立てない。近いものは捨てる */
+            if (map.some((n2) => {
+              const P2 = hexAt(n2);
+              return Math.abs(P2.x - x) < 46 && Math.abs(P2.y - y) < 40;
+            })) continue;
+            const depth = 0.55 + (y / MAP_H) * 0.75;   /* 手前ほど大きい */
+            /* ⚠️ 種類は土地柄の配合から引く。どの土地でも同じ木を撒かない */
+            const total = theme.mix.reduce((s3, m) => s3 + m[1], 0);
+            let pick = rnd2() * total, kind = theme.mix[0][0];
+            for (const [k2, w2] of theme.mix) { if (pick < w2) { kind = k2; break; } pick -= w2; }
+            items.push({ x, y, d: depth, kind, key: `sc${i}` });
+          }
+          /*
+            ⚠️⚠️ 奥（y の小さい順）から手前へ並べること。順がばらばらだと、
+              手前の木が奥の家に隠れて重なりが崩れる。
+            ⚠️⚠️ 薄くしすぎないこと（以前は0.35〜0.75で、景色に溶けて見えなかった）。
+              奥だけ少し霞ませ、手前ははっきり描く。
+          */
+          items.sort((p1, p2) => p1.y - p2.y);
+          return items.map((o) => (
+            <g key={o.key} transform={`translate(${o.x} ${o.y}) scale(${o.d.toFixed(2)})`}
+              opacity={Math.min(1, 0.72 + o.d * 0.24)}>
+              {o.kind === "tree" ? (
+                /* 木。⚠️ 三角を三段。一枚だと記号に見える */
+                <g>
+                  <ellipse cx="0" cy="1.5" rx="7" ry="2.4" fill="rgba(10,6,20,0.4)" />
+                  <rect x="-1.5" y="-5" width="3" height="7" rx="1" fill="#4A3524" />
+                  <path d="M0 -24 L8.5 -11 L-8.5 -11 Z" fill="#3E7A4A" />
+                  <path d="M0 -18 L10 -4 L-10 -4 Z" fill="#356B42" />
+                  <path d="M0 -24 L8.5 -11 L0 -11 Z" fill="#4E9159" />
+                  <path d="M0 -18 L10 -4 L0 -4 Z" fill="#3F7C4D" />
+                </g>
+              ) : o.kind === "rock" ? (
+                /* 岩。⚠️ 左上に明るい面、右下に影。台と同じ光の向きに揃える */
+                <g>
+                  <ellipse cx="0" cy="2.4" rx="9" ry="2.8" fill="rgba(10,6,20,0.4)" />
+                  <path d="M-9 2 L-5 -7 L2 -9 L8 -3 L9 2 Z" fill="#5E5878" />
+                  <path d="M-9 2 L-5 -7 L2 -9 L1 2 Z" fill="#78718F" />
+                  <path d="M-5 -7 L2 -9 L0 -6 Z" fill="#9890AE" opacity="0.7" />
+                </g>
+              ) : o.kind === "house" ? (
+                /* 家。⚠️ 屋根・壁・窓を分ける。四角一つだと箱に見える */
+                <g>
+                  <ellipse cx="0" cy="3" rx="10" ry="3" fill="rgba(10,6,20,0.4)" />
+                  <rect x="-7.5" y="-8" width="15" height="11" fill="#8C7F6E" />
+                  <rect x="-7.5" y="-8" width="7.5" height="11" fill="#A2947F" />
+                  <path d="M-9.5 -8 L0 -16 L9.5 -8 Z" fill="#7A4A3A" />
+                  <path d="M-9.5 -8 L0 -16 L0 -8 Z" fill="#8F5A46" />
+                  <rect x="-4.5" y="-5" width="3.4" height="3.4" fill="#F0D68C" />
+                  <rect x="1.2" y="-5" width="3.4" height="3.4" fill="#C9A24B" />
+                </g>
+              ) : o.kind === "block" ? (
+                /* ビル。⚠️ 高さと窓の数を変える。同じ形が並ぶと書き割りに見える */
+                <g>
+                  <ellipse cx="0" cy="3" rx="11" ry="3" fill="rgba(10,6,20,0.45)" />
+                  <rect x="-9" y="-22" width="9" height="25" fill="#4E4A6A" />
+                  <rect x="-9" y="-22" width="4.5" height="25" fill="#635E85" />
+                  <rect x="0.5" y="-32" width="8.5" height="35" fill="#453F5F" />
+                  <rect x="0.5" y="-32" width="4.2" height="35" fill="#575178" />
+                  {[0, 1, 2, 3].map((r3) => [0, 1].map((c3) => (
+                    <rect key={`${r3}${c3}`} x={-7.6 + c3 * 3.6} y={-19 + r3 * 5.6}
+                      width="2.4" height="3" fill={(r3 + c3) % 3 ? "#F0D68C" : "#3A3558"} opacity="0.9" />
+                  )))}
+                  {[0, 1, 2, 3, 4].map((r3) => (
+                    <rect key={`b${r3}`} x="2.4" y={-29 + r3 * 6.2} width="4.4" height="3.2"
+                      fill={r3 % 2 ? "#F0D68C" : "#3A3558"} opacity="0.85" />
+                  ))}
+                </g>
+              ) : o.kind === "torii" ? (
+                /* 鳥居。⚠️ 笠木は反らせる。真っ直ぐだと門に見える */
+                <g>
+                  <ellipse cx="0" cy="2.6" rx="9" ry="2.6" fill="rgba(10,6,20,0.4)" />
+                  <rect x="-6.4" y="-14" width="2.6" height="16" fill="#B4442F" />
+                  <rect x="3.8" y="-14" width="2.6" height="16" fill="#9A3626" />
+                  <rect x="-7.6" y="-10.4" width="15.2" height="2" fill="#A83B2A" />
+                  <path d="M-10 -15.6 Q0 -18.4 10 -15.6 L10 -13.2 Q0 -15.8 -10 -13.2 Z" fill="#C24C36" />
+                </g>
+              ) : o.kind === "wave" ? (
+                /* 波。⚠️ 三本を別の長さで重ねる。一本だと線に見える */
+                <g fill="none" strokeLinecap="round">
+                  <path d="M-11 0 Q-7 -3 -3 0 T5 0 T13 0" stroke="#7FB6D8" strokeWidth="1.8" opacity="0.85" />
+                  <path d="M-8 4 Q-4 1 0 4 T8 4" stroke="#A9D4EC" strokeWidth="1.5" opacity="0.7" />
+                  <path d="M-5 -5 Q-1 -8 3 -5" stroke="#6AA3C8" strokeWidth="1.3" opacity="0.6" />
+                </g>
+              ) : o.kind === "snowtree" ? (
+                /* 雪をかぶった木。⚠️ 幹を暗く、雪を上面だけに。全面白だと綿になる */
+                <g>
+                  <ellipse cx="0" cy="1.5" rx="7" ry="2.4" fill="rgba(10,6,20,0.35)" />
+                  <rect x="-1.5" y="-5" width="3" height="7" rx="1" fill="#3B2E24" />
+                  <path d="M0 -24 L8.5 -11 L-8.5 -11 Z" fill="#2E5A44" />
+                  <path d="M0 -18 L10 -4 L-10 -4 Z" fill="#27503E" />
+                  <path d="M0 -24 L6 -14.5 L-6 -14.5 Z" fill="#E8EEF8" />
+                  <path d="M0 -18 L7 -8.5 L-7 -8.5 Z" fill="#DCE4F2" opacity="0.9" />
+                </g>
+              ) : o.kind === "ice" ? (
+                /* 氷。⚠️ 面を三つに割る。一枚だと水たまりに見える */
+                <g>
+                  <path d="M-9 1 L-3 -6 L5 -5 L9 1 L2 4 Z" fill="#9FC4E4" opacity="0.85" />
+                  <path d="M-9 1 L-3 -6 L1 -2 Z" fill="#CBE2F4" opacity="0.9" />
+                  <path d="M5 -5 L9 1 L3 0 Z" fill="#7FA8CC" opacity="0.9" />
+                </g>
+              ) : o.kind === "steam" ? (
+                /* 湯けむり。⚠️ 岩と組にする。煙だけだと火事に見える */
+                <g>
+                  <ellipse cx="0" cy="2.5" rx="9" ry="2.8" fill="rgba(10,6,20,0.4)" />
+                  <path d="M-8 2 L-4 -4 L4 -4 L8 2 Z" fill="#6A5A66" />
+                  <ellipse cx="0" cy="-4" rx="6" ry="2" fill="#3E3448" />
+                  <g className="mv-float" style={{ animationDuration: "6s" }}>
+                    <ellipse cx="-2" cy="-11" rx="3.6" ry="4.4" fill="#EAE2F0" opacity="0.35" />
+                    <ellipse cx="2.4" cy="-17" rx="3" ry="3.6" fill="#EAE2F0" opacity="0.25" />
+                  </g>
+                </g>
+              ) : o.kind === "stone" ? (
+                /* 石碑。⚠️ 傾ける。真っ直ぐだと墓石に見える */
+                <g transform="rotate(-5)">
+                  <ellipse cx="0" cy="2.4" rx="7" ry="2.4" fill="rgba(10,6,20,0.4)" />
+                  <path d="M-4 2 L-4 -12 L0 -15 L4 -12 L4 2 Z" fill="#8A8478" />
+                  <path d="M-4 2 L-4 -12 L0 -15 L0 2 Z" fill="#A39C8C" />
+                  <path d="M-2.4 -9 L2.4 -9 M-2.4 -6 L2.4 -6 M-2.4 -3 L1.2 -3"
+                    stroke="#5E594E" strokeWidth="0.7" />
+                </g>
+              ) : o.kind === "rice" ? (
+                /* 田。⚠️ 畦で区切る。緑一色だと芝生に見える */
+                <g>
+                  <path d="M-12 3 L-6 -4 L12 -4 L6 3 Z" fill="#6F8A4A" />
+                  <path d="M-12 3 L-6 -4 L-1 -4 L-6 3 Z" fill="#7E9A55" />
+                  <path d="M0 -4 L-5 3 M6 -4 L1 3" stroke="#4E6234" strokeWidth="0.8" />
+                  <path d="M-9 0 L9 0" stroke="#4E6234" strokeWidth="0.7" opacity="0.7" />
+                </g>
+              ) : o.kind === "broadleaf" ? (
+                /* 広葉樹。⚠️ 針葉樹と混ぜる。同じ木ばかりだと植林地に見える */
+                <g>
+                  <ellipse cx="0" cy="1.5" rx="7" ry="2.4" fill="rgba(10,6,20,0.4)" />
+                  <rect x="-1.6" y="-7" width="3.2" height="9" rx="1" fill="#4A3524" />
+                  <circle cx="-4" cy="-12" r="6" fill="#3F7C4D" />
+                  <circle cx="4.5" cy="-11" r="5.4" fill="#356B42" />
+                  <circle cx="0" cy="-16" r="6.2" fill="#4E9159" />
+                </g>
+              ) : o.kind === "reed" ? (
+                /* 葦。⚠️ 穂を付ける。棒だけだと草と見分けが付かない */
+                <g>
+                  <path d="M-3 3 Q-4 -5 -2 -11" stroke="#6E8A55" strokeWidth="1.4" fill="none" strokeLinecap="round" />
+                  <path d="M2 3 Q3 -6 1 -13" stroke="#7C9A60" strokeWidth="1.4" fill="none" strokeLinecap="round" />
+                  <ellipse cx="-2" cy="-12" rx="1.2" ry="2.6" fill="#B49A63" />
+                  <ellipse cx="1" cy="-14" rx="1.2" ry="2.8" fill="#C7AC74" />
+                </g>
+              ) : o.kind === "sakura" ? (
+                /* 桜。⚠️ 花びらが一枚ずつ散る。丸だけだと綿に見える */
+                <g>
+                  <ellipse cx="1" cy="2" rx="9" ry="2.6" fill="rgba(10,6,20,0.4)" />
+                  <path d="M-1.4 2 L-1 -9 L1 -9 L1.4 2 Z" fill="#5A3A2A" />
+                  <g className="mv-sway">
+                    <circle cx="-5" cy="-12" r="6" fill="#F4B4C8" />
+                    <circle cx="4" cy="-13" r="6.6" fill="#F8C4D4" />
+                    <circle cx="0" cy="-18" r="5.6" fill="#FAD2DE" />
+                    <circle cx="-2" cy="-14" r="3" fill="#FFE4EC" opacity="0.8" />
+                  </g>
+                  <circle className="mv-petal" cx="6" cy="-6" r="1.1" fill="#F8C4D4" />
+                </g>
+              ) : o.kind === "cedar" ? (
+                /* 杉。⚠️ 細く高く。松（三角三段）と見分けが付くように */
+                <g>
+                  <ellipse cx="0" cy="2" rx="6" ry="2" fill="rgba(10,6,20,0.4)" />
+                  <rect x="-1" y="-6" width="2" height="8" fill="#4A3020" />
+                  <path d="M0 -34 L5 -6 L-5 -6 Z" fill="#2E5A3C" />
+                  <path d="M0 -34 L5 -6 L0 -6 Z" fill="#3E7050" />
+                </g>
+              ) : o.kind === "lantern" ? (
+                /* 石灯籠。⚠️ 火は揺らす（速く点滅させない） */
+                <g>
+                  <ellipse cx="0" cy="2" rx="5" ry="1.8" fill="rgba(10,6,20,0.4)" />
+                  <path d="M-4 2 h8 l-1 -2 h-6 Z M-1.6 0 h3.2 v-6 h-3.2 Z" fill="#8A847A" />
+                  <path d="M-3.4 -6 h6.8 v-5 h-6.8 Z" fill="#9C968A" />
+                  <path d="M-5 -11 h10 l-5 -4 Z" fill="#78726A" />
+                  <circle className="mv-flame" cx="0" cy="-8.4" r="1.5" fill="#FFD27A" />
+                  <circle className="mv-flame" cx="0" cy="-8.4" r="4" fill="rgba(255,200,110,0.25)" />
+                </g>
+              ) : o.kind === "paddy" ? (
+                /* 田んぼ。⚠️ 畦で四つに割り、稲の列を斜めに。平らな緑だけだと芝生 */
+                <g>
+                  <path d="M-12 0 L0 -6 L12 0 L0 6 Z" fill="#6A9A5A" />
+                  <path d="M-12 0 L0 -6 L12 0 L0 6 Z" fill="none" stroke="#8A7A50" strokeWidth="1" />
+                  <path d="M-6 -3 L6 3 M-6 3 L6 -3" stroke="#8A7A50" strokeWidth="0.8" />
+                  <path d="M-8 -1 l2 1 M-3 -3 l2 1 M2 1 l2 1 M4 -2 l2 1 M-2 2 l2 1" stroke="#9AD07A" strokeWidth="0.9" />
+                </g>
+              ) : o.kind === "boat" ? (
+                /* 小舟。⚠️ 水の上で上下に揺れる */
+                <g className="mv-bob">
+                  <path d="M-10 0 Q0 5 10 0 L8 -2 H-8 Z" fill="#7A5A3A" />
+                  <path d="M-8 -2 H8" stroke="#A07A50" strokeWidth="1" />
+                  <path d="M0 -2 V-14" stroke="#5A4030" strokeWidth="1" />
+                  <path d="M0 -13 L7 -5 H0 Z" fill="#EDE6D6" />
+                </g>
+              ) : o.kind === "flower" ? (
+                /* 花畑。⚠️ 色を三つ混ぜる。一色だと模様に見える */
+                <g>
+                  {[[-5, 0, "#F4D060"], [0, -2, "#F48AA8"], [4, 1, "#FFFFFF"], [-2, 2, "#F48AA8"], [6, -2, "#F4D060"]].map(([x, y, c], k) => (
+                    <g key={k}>
+                      <path d={`M${x} ${y + 2} v-3`} stroke="#4F7F52" strokeWidth="0.8" />
+                      <circle cx={x} cy={y - 1.4} r="1.3" fill={c} />
+                    </g>
+                  ))}
+                </g>
+              ) : o.kind === "sign" ? (
+                /* 道標。⚠️ 旅の目印。矢の向きを左右に振る */
+                <g>
+                  <ellipse cx="0" cy="2" rx="4" ry="1.4" fill="rgba(10,6,20,0.4)" />
+                  <rect x="-0.8" y="-14" width="1.6" height="16" fill="#6A4A30" />
+                  <path d="M-1 -13 h9 l2 2 l-2 2 h-9 Z" fill="#C8A878" />
+                  <path d="M1 -7 h-9 l-2 2 l2 2 h9 Z" fill="#B89868" />
+                </g>
+              ) : o.kind === "hut" ? (
+                /* 山小屋・茶屋。⚠️ 煙突の煙で「人がいる」ことを見せる */
+                <g>
+                  <ellipse cx="0" cy="2" rx="10" ry="2.6" fill="rgba(10,6,20,0.4)" />
+                  <rect x="-7" y="-7" width="14" height="9" fill="#8A6A4A" />
+                  <rect x="-7" y="-7" width="7" height="9" fill="#9C7A56" />
+                  <path d="M-9 -7 L0 -14 L9 -7 Z" fill="#5A4A3A" />
+                  <rect x="-2" y="-3" width="4" height="5" fill="#3A2A20" />
+                  <rect x="3" y="-13" width="2" height="4" fill="#4A3A30" />
+                  <circle className="mv-smoke" cx="4" cy="-15" r="2" fill="rgba(230,230,240,0.5)" />
+                </g>
+              ) : o.kind === "light" ? (
+                /* 街灯。⚠️ 足元に光の輪。灯だけだと浮いて見える */
+                <g>
+                  <ellipse cx="0" cy="2" rx="7" ry="2.2" fill="rgba(255,220,150,0.25)" className="mv-flame" />
+                  <rect x="-0.7" y="-18" width="1.4" height="20" fill="#5A5A6A" />
+                  <path d="M0 -18 h4 v1.4 h-4 Z" fill="#5A5A6A" />
+                  <circle cx="4" cy="-15.6" r="1.8" fill="#FFE6A8" />
+                  <circle cx="4" cy="-15.6" r="5" fill="rgba(255,230,170,0.22)" />
+                </g>
+              ) : (
+                /* 草。⚠️ 三本を別々の傾きで。揃えると刷毛に見える */
+                <g stroke="#4F7F52" strokeWidth="1.6" strokeLinecap="round" fill="none">
+                  <path d="M-4 2 Q-5 -3 -3 -6" />
+                  <path d="M0 2 Q0 -4 2 -8" />
+                  <path d="M4 2 Q6 -2 5 -5" />
+                </g>
+              )}
+            </g>
+          ));
+        })()}
+        <g>
+          {/* 道。⚠️ 台より先に描く。線が台の上を横切ると立体が崩れる */}
+          {map.map((n) => (n.next || []).map((k) => {
+            const to = byKey[k];
+            if (!to) return null;
+            const A = iso(n), B = iso(to);
+            const live = n.key === cur;
+            /* ⚠️ 二重に描く。外側の暗い縁がないと、道が背景に溶ける */
+            /*
+              ⚠️ 一本の線にしないこと。線だと「図」に見える。
+              ★ 飛び石を並べる。歩く場所に見えるし、進む向きも読み取れる。
+            */
+            /*
+              ⚠️⚠️ 台の足元（+HEX_H）に置かないこと。あそこは影の高さで、
+                上下に並ぶマスでは下のマスの胴体に隠れて、道が一切見えなくなる。
+                （実際、上下のつながりだけ描かれていないように見えていた）
+              ★ 台の面と同じ高さで結ぶ。マスの上を渡っていく絵になる。
+            */
+            const x1 = A.x, y1 = A.y, x2 = B.x, y2 = B.y;
+            const len = Math.hypot(x2 - x1, y2 - y1);
+            /*
+              ⚠️⚠️ 端から端へ等間隔に置かないこと。両端は台に隠れる。
+                実測：横は間隔67.2で見える幅28.2、縦は間隔52で見える幅17.4。
+                等間隔だと縦の道は石が1個しか見えず、繋がっていないように見える。
+                （実際「真下のマスにワープした」と見えていた）
+              ★ 台に隠れる幅を先に除き、見える帯の中だけに並べる。
+            */
+            const ang = Math.atan2(y2 - y1, x2 - x1);
+            /*
+              ⚠️⚠️ 外枠（hexPath(R * 1.1)）まで数に入れること。
+                面の六角だけで測ると、両端の石が枠の下に潜り、
+                上下のつながりは中央の1個しか見えなくなる（実際そう見えていた）。
+              ★ 1.15 は枠の1.1に少し余裕を足した値。
+            */
+            const rad = 1 / Math.hypot(Math.cos(ang) / (HEX_R * 1.15), Math.sin(ang) / (HEX_H * 1.15));
+            const t0 = Math.min(0.45, rad / len), t1 = 1 - t0;
+            const vis = len * (t1 - t0);
+            /*
+              ⚠️ 見える幅で数を決める。上下は12px程度しか空かないので、
+                石は小さめに詰めて置く。大きいままだと団子になる。
+            */
+            const n2 = Math.max(3, Math.round(vis / 4.5));
+            const dot = vis < 18 ? 1.5 : 2.1;
+            const reachEdge = live;
+            return (
+              <g key={`p${n.key}-${k}`}>
+                {/*
+                  道の帯。2026-09-27：飛び石の下に踏み固めた道を敷く（地面の上に道として見えるように）。
+                  ★ いまの台から行ける道は、金の光が先へ流れる（進める向きが一目で分かる）。
+                */}
+                <line x1={x1} y1={y1} x2={x2} y2={y2} stroke="rgba(20,14,30,0.45)" strokeWidth="9" strokeLinecap="round" />
+                <line x1={x1} y1={y1} x2={x2} y2={y2} stroke="rgba(190,176,140,0.22)" strokeWidth="6" strokeLinecap="round" />
+                {reachEdge && (
+                  <line className="mv-trail" x1={x1} y1={y1} x2={x2} y2={y2} stroke="#FFE08A" strokeWidth="2.4" strokeLinecap="round"
+                    strokeDasharray="6 10" style={{ filter: "drop-shadow(0 0 3px #FFD070)" }} />
+                )}
+                {Array.from({ length: n2 }, (_, s) => {
+                  const t = t0 + (t1 - t0) * (n2 === 1 ? 0.5 : s / (n2 - 1));
+                  const cx = x1 + (x2 - x1) * t, cy = y1 + (y2 - y1) * t;
+                  return (
+                    <g key={s}>
+                      {/* ⚠️ 石の大きさは見える幅に合わせる。上下の道では小さくしないと団子になる */}
+                      <ellipse cx={cx} cy={cy + dot * 0.7} rx={dot * (live ? 2.1 : 1.7)} ry={dot * (live ? 1.2 : 1.0)}
+                        fill="rgba(10,6,20,0.5)" />
+                      <ellipse cx={cx} cy={cy} rx={dot * (live ? 2 : 1.6)} ry={dot * (live ? 1.15 : 0.95)}
+                        fill={live ? "#E8C46A" : "rgba(158,150,196,0.62)"} />
+                    </g>
+                  );
+                })}
+              </g>
+            );
+          }))}
+          {/* 台。⚠️ 奥（row 昇順）から描く */}
+          {map.slice().sort((p, q) => (iso(p).y - iso(q).y) || (p.q - q.q)).map((n) => {
+            const P = iso(n);
+            const here = n.key === cur;
+            const reach = (byKey[cur]?.next || []).includes(n.key);
+            const seen = visited.includes(n.key);
+            const c = TILE_COLOR(n.kind, here, seen);
+            /* ⚠️ 2026-09-30 Aki：「前みたいに立体感」。台の厚みを 5→10（主は 8→14）。影も広く深く */
+            const R = HEX_R, H = HEX_H, D = n.kind === "boss" ? 14 : 10;
+            return (
+              <g key={n.key} transform={`translate(${P.x} ${P.y})`}>
+                {/* ⚠️ 光は台の下に敷く。上に載せると模様が消える */}
+                {(n.kind === "box" || n.kind === "spot" || n.kind === "boss" || n.kind === "gate"
+                  || n.kind === "shop" || n.kind === "rarebox") && (
+                  <ellipse cx="0" cy="0" rx={R * 1.7} ry={H * 1.7}
+                    fill={n.kind === "box" ? "rgba(232,196,106,0.30)"
+                      : n.kind === "rarebox" ? "rgba(200,150,255,0.45)"
+                      : n.kind === "spot" ? "rgba(126,216,130,0.26)"
+                      : n.kind === "shop" ? "rgba(240,140,110,0.30)"
+                      : n.kind === "gate" ? "rgba(159,180,216,0.26)" : "rgba(255,122,122,0.30)"}
+                    style={{ filter: "blur(6px)" }} />
+                )}
+                {/* 影。⚠️ 影がないと浮いて見える */}
+                <ellipse cx="3" cy={H + D + 2} rx={R * 1.05} ry={H * 0.42} fill="rgba(6,4,14,0.55)" />
+                <ellipse cx="2" cy={H + D + 1} rx={R * 0.8} ry={H * 0.28} fill="rgba(6,4,14,0.45)" />
+                {/*
+                  六角の厚み。⚠️ 三つの面の明るさは左上からの光ひとつで決める。
+                    左＝明るい、正面＝中、右＝暗い。面ごとに色を振ると紙に見える。
+                */}
+                <path d={`M${-R} 0 L${-R / 2} ${H} L${-R / 2} ${H + D} L${-R} ${D} Z`} fill={c.left} />
+                <path d={`M${-R / 2} ${H} L${R / 2} ${H} L${R / 2} ${H + D} L${-R / 2} ${H + D} Z`} fill={c.mid} />
+                <path d={`M${R / 2} ${H} L${R} 0 L${R} ${D} L${R / 2} ${H + D} Z`} fill={c.right} />
+                {/* 側面の下端を暗く（地面に接する所の陰）。上端に細い光（天面の縁の返り） */}
+                <path d={`M${-R} ${D * 0.55} L${-R / 2} ${H + D * 0.55} L${R / 2} ${H + D * 0.55} L${R} ${D * 0.55} L${R} ${D} L${R / 2} ${H + D} L${-R / 2} ${H + D} L${-R} ${D} Z`}
+                  fill="rgba(6,4,14,0.35)" />
+                <path d={`M${-R} 0.6 L${-R / 2} ${H + 0.6} L${R / 2} ${H + 0.6}`} fill="none" stroke="rgba(255,243,214,0.28)" strokeWidth="0.7" />
+                {/*
+                  天面。
+                  ⚠️⚠️ 一枚の面で塗らないこと。板に見える。
+                    枠 → 面 → 内枠 → 模様 → 艶 の順に重ねると「作られた台」に見える。
+                  ⚠️ 光の当たる側（左上）に艶、反対側に影。向きを揃えること。
+                */}
+                {/* 外枠。⚠️ 面より一回り大きく、暗い色で。これが台の縁になる */}
+                <path d={`M${hexPath(R * 1.1)} Z`} fill={c.frame} />
+                <path d={`M${HEX_TOP} Z`} fill={c.top} />
+                {/* 内枠。⚠️ 明るい線を一本内側に入れると、彫られたように見える */}
+                <path d={`M${hexPath(R * 0.82)} Z`} fill="none"
+                  stroke={c.rim} strokeWidth="0.9" opacity="0.45" />
+                {/* 模様。⚠️ 中心に寄せる。端に置くと縁とぶつかって汚れて見える */}
+                <path d={`M${hexPath(R * 0.42)} Z`} fill="none"
+                  stroke={c.rim} strokeWidth="0.7" opacity="0.28" />
+                {[0, 2, 4].map((i) => {
+                  const a = (i * 60 + 30) * Math.PI / 180;
+                  return <circle key={i} cx={Math.cos(a) * R * 0.62} cy={Math.sin(a) * R * 0.62}
+                    r="0.9" fill={c.rim} opacity="0.35" />;
+                })}
+                {/* 艶。⚠️ 左上だけ。全周に回すと濡れて見える */}
+                <path d={`M${-R * 0.86} ${-H * 0.18} L${-R * 0.42} ${-H * 0.86} L${R * 0.2} ${-H * 0.86}`}
+                  fill="none" stroke="#FFFFFF" strokeWidth="1.6" opacity="0.22" strokeLinecap="round" />
+                {/* 縁の光。⚠️ いる／行ける台だけ。全部に付けると強調にならない */}
+                {(here || reach) && (
+                  <path d={`M${hexPath(R * 1.02)} Z`} fill="none"
+                    stroke={here ? "#FFF3D6" : "#FFE9A8"} strokeWidth="1.5" opacity="0.9" />
+                )}
+                {/*
+                  回復。
+                  ⚠️⚠️ ピンクのハートで描くこと。色を変えただけでは何のマスか伝わらない。
+                  ⚠️ 上下に揺らす。止まっていると模様に見える。
+                */}
+                {n.kind === "heal" && (
+                  <g className="mv-bob" transform="scale(1.9)">
+                    <path d="M0 4.6 C-5.2 0.6 -6.2 -2.8 -4.2 -4.6 C-2.4 -6.2 -0.6 -5 0 -3.4
+                             C0.6 -5 2.4 -6.2 4.2 -4.6 C6.2 -2.8 5.2 0.6 0 4.6 Z"
+                      fill="#F27BA8" stroke="#FFD6E6" strokeWidth="0.7" />
+                    {/* ⚠️ 艶は左上に一点。全面を明るくすると平らに見える */}
+                    <ellipse cx="-1.8" cy="-2.6" rx="1.1" ry="0.8" fill="#FFEAF3" opacity="0.85" />
+                  </g>
+                )}
+                {/*
+                  罠。
+                  ⚠️⚠️ 踏むまでは道と同じ色にしてある（見えたら罠にならない）。
+                    ここで描くのは、踏んだあとに残る跡。
+                  ⚠️ 棘は上向きに三つ。丸や記号だと、他のマスの印と紛れる。
+                */}
+                {n.kind === "trap" && seen && (
+                  <g className="mv-bob" transform="scale(1.7)">
+                    <path d="M-4.5 3 L-3 -2.5 L-1.5 3 Z" fill="#8A6A6A" stroke="#D8A0A0" strokeWidth="0.5" />
+                    <path d="M-1 3 L0.5 -4 L2 3 Z" fill="#8A6A6A" stroke="#D8A0A0" strokeWidth="0.5" />
+                    <path d="M2.5 3 L4 -2 L5.5 3 Z" fill="#8A6A6A" stroke="#D8A0A0" strokeWidth="0.5" />
+                  </g>
+                )}
+                {/*
+                  雑魚。
+                  ⚠️ 何か居ることが分かる姿にする。無地のマスから敵が出ると理不尽になる。
+                  ⚠️ 主（六角の器）とは別の形にする。同じだと主と紛れる。
+                */}
+                {n.kind === "zako" && (
+                  <g className="mv-bob" transform="scale(1.8)">
+                    <path d="M-4 4 L-4 -1 Q0 -6 4 -1 L4 4 Z" fill="#8E3A3A" stroke="#E0A0A0" strokeWidth="0.7" />
+                    <circle cx="-1.6" cy="-0.6" r="0.9" fill="#FFD6D6" />
+                    <circle cx="1.6" cy="-0.6" r="0.9" fill="#FFD6D6" />
+                  </g>
+                )}
+                {/* 名所の目印。⚠️ 空白のマスには何も置かない。置くと全部が名所に見える */}
+                {/* ポーション。⚠️ 赤い薬の入ったフラスコ。回復（ハート）と形で分ける */}
+                {/*
+                  井戸。★ 石積みの丸い井戸と、覗き込む水面。入る井戸は水面が光る（使うと光が消える）。
+                  出る井戸は水面が暗く、縁に小さな矢印の刻み。⚠️ 動かさない（小MAPは静止）。
+                */}
+                {n.kind === "well" && (
+                  <g transform="scale(1.8)">
+                    <ellipse cx="0" cy="4.2" rx="6.2" ry="1.9" fill="rgba(6,4,14,0.5)" />
+                    <path d="M-5.4 -1 L-5.4 3 Q0 5.6 5.4 3 L5.4 -1 Z" fill="#6E7A7E" stroke="#2A3034" strokeWidth="0.45" />
+                    <path d="M-5.4 0.8 Q0 3.4 5.4 0.8 M-5.4 2.2 Q0 4.6 5.4 2.2" fill="none" stroke="#3E474B" strokeWidth="0.35" />
+                    <path d="M-3 -0.6 L-3 1.6 M0 -0.1 L0 2.8 M3 -0.6 L3 1.6" stroke="#3E474B" strokeWidth="0.35" />
+                    <ellipse cx="0" cy="-1" rx="5.4" ry="1.9" fill="#8A969A" stroke="#2A3034" strokeWidth="0.45" />
+                    <ellipse cx="0" cy="-1" rx="4.1" ry="1.3"
+                      fill={(n.wellIn || n.wellMiss) && !usedNodes.includes(n.key) ? "#7FD8F0" : "#1E3A48"} />
+                    {(n.wellIn || n.wellMiss) && !usedNodes.includes(n.key) && (
+                      <ellipse cx="-1.2" cy="-1.3" rx="1.6" ry="0.45" fill="#E8FAFF" opacity="0.85" />
+                    )}
+                    {/* 井桁（木の枠） */}
+                    <path d="M-5 -4.6 L-5 -1.2 M5 -4.6 L5 -1.2 M-5.8 -4.6 L5.8 -4.6" stroke="#8A5A34" strokeWidth="0.9" strokeLinecap="round" />
+                    {n.wellOut && <path d="M3.2 1.8 L4.6 3 L3.2 4.2" fill="none" stroke="#C8E8F0" strokeWidth="0.5" />}
+                  </g>
+                )}
+                {/* イベント（パルプンテ）。★ 紫の渦と「？」。⚠️ 動かさない。使ったら薄くする */}
+                {n.kind === "event" && (
+                  <g transform="scale(1.8)" opacity={usedNodes.includes(n.key) ? 0.35 : 1}>
+                    <ellipse cx="0" cy="4.4" rx="5.6" ry="1.7" fill="rgba(6,4,14,0.5)" />
+                    <circle cx="0" cy="-1" r="5.2" fill="#5A2E8A" stroke="#E8C8FF" strokeWidth="0.6" />
+                    <path d="M-3.4 -1 A3.4 3.4 0 1 1 0 2.4 A2.2 2.2 0 1 1 -1.2 -0.4" fill="none" stroke="#C8A0F0" strokeWidth="0.6" opacity="0.8" />
+                    <text x="0" y="1.2" textAnchor="middle" fontSize="6.2" fontWeight="700" fill="#FFF3D6">?</text>
+                    <path d="M4.6 -5.6 L5.1 -4.4 L6.3 -3.9 L5.1 -3.4 L4.6 -2.2 L4.1 -3.4 L2.9 -3.9 L4.1 -4.4 Z" fill="#FFE08A" />
+                  </g>
+                )}
+                {/* 特別なマス（2026-10-03）。⚠️ 静止画。使ったら薄くする */}
+                {ADV_GLYPH[n.kind] && (() => {
+                  const Gl = ADV_GLYPH[n.kind];
+                  return <g transform="scale(1.85)" opacity={usedNodes.includes(n.key) ? 0.38 : 1}><Gl /></g>;
+                })()}
+                {n.kind === "potion" && !usedNodes.includes(n.key) && (
+                  <g className="mv-bob" transform="scale(1.8)">
+                    <path d="M-1.6 -7 H1.6 V-4.6 L4.4 0.6 A3.4 3.4 0 0 1 1.4 5.4 H-1.4 A3.4 3.4 0 0 1 -4.4 0.6 L-1.6 -4.6 Z"
+                      fill="rgba(255,255,255,0.18)" stroke="#FFE0EC" strokeWidth="0.6" />
+                    <path d="M-3.6 1 H3.6 L4 2.2 A3 3 0 0 1 1.3 5 H-1.3 A3 3 0 0 1 -4 2.2 Z" fill="#FF4A7A" />
+                    <rect x="-2" y="-8.4" width="4" height="1.6" rx="0.5" fill="#C89060" />
+                    <ellipse cx="-1.8" cy="1.8" rx="0.8" ry="0.5" fill="#FFD0DE" opacity="0.8" />
+                  </g>
+                )}
+                {n.kind === "rarebox" && (
+                  /* レア宝箱。⚠️ 宝箱と同じ形に、虹の後光と紫の金具。いちばん目を引くこと */
+                  <g className="mv-bob" transform="scale(2.05)">
+                    <circle cx="0" cy="-2" r="8" fill="url(#isoGlow)" opacity="0.8" />
+                    <ellipse cx="0" cy="4.6" rx="6" ry="1.8" fill="rgba(10,6,20,0.5)" />
+                    <path d="M-5.6 -3.4 Q0 -9 5.6 -3.4 L5.6 -1.6 L-5.6 -1.6 Z" fill="#7A4AB8" stroke="#2A1250" strokeWidth="0.45" />
+                    <rect x="-5.6" y="-1.6" width="11.2" height="5.9" rx="0.7" fill="#5A2E90" stroke="#2A1250" strokeWidth="0.45" />
+                    <rect x="-5.9" y="-2.1" width="11.8" height="1.1" rx="0.4" fill="#F4E0FF" stroke="#B08AE8" strokeWidth="0.3" />
+                    <rect x="-4.4" y="-6.6" width="1.1" height="10.6" rx="0.4" fill="#FFD8F0" opacity="0.92" />
+                    <rect x="3.3" y="-6.6" width="1.1" height="10.6" rx="0.4" fill="#C8F0FF" opacity="0.92" />
+                    <rect x="-1.5" y="-2.6" width="3" height="3.4" rx="0.6" fill="#FFF4B0" stroke="#B08AE8" strokeWidth="0.3" />
+                    <path d="M4.8 -6.4 l0.5 1.3 1.3 0.5 -1.3 0.5 -0.5 1.3 -0.5 -1.3 -1.3 -0.5 1.3 -0.5 Z" fill="#FFFFFF" className="mv-twinkle" />
+                    <path d="M-5.6 -5 l0.4 1 1 0.4 -1 0.4 -0.4 1 -0.4 -1 -1 -0.4 1 -0.4 Z" fill="#FFFFFF" className="mv-twinkle2" />
+                  </g>
+                )}
+                {n.kind === "box" && (
+                  /*
+                    宝箱。
+                    ⚠️⚠️ 板・金具・錠・艶を分けること。ひとかたまりだと黄色い塊に見える。
+                    ⚠️ 木目は縦、金具は横。向きを揃えないと工作物に見えない。
+                    ⚠️ 光は左上から。艶と影の向きを台と揃えること。
+                  */
+                  <g className="mv-bob" transform="scale(1.85)">
+                    <ellipse cx="0" cy="4.6" rx="6" ry="1.8" fill="rgba(10,6,20,0.5)" />
+                    {/* 蓋 */}
+                    <path d="M-5.6 -3.4 Q0 -9 5.6 -3.4 L5.6 -1.6 L-5.6 -1.6 Z"
+                      fill="url(#chestLid)" stroke="#4B2E12" strokeWidth="0.45" />
+                    {/* 蓋の木目 */}
+                    <path d="M-2 -3.1 Q-1.9 -6.6 -0.1 -8.1" fill="none"
+                      stroke="rgba(60,34,12,0.5)" strokeWidth="0.35" />
+                    <path d="M2 -3.1 Q1.9 -6.6 0.1 -8.1" fill="none"
+                      stroke="rgba(60,34,12,0.5)" strokeWidth="0.35" />
+                    {/* 箱 */}
+                    <rect x="-5.6" y="-1.6" width="11.2" height="5.9" rx="0.7"
+                      fill="url(#chestWood)" stroke="#4B2E12" strokeWidth="0.45" />
+                    <path d="M-2.4 -1.4 L-2.4 4.1 M2.4 -1.4 L2.4 4.1" stroke="rgba(60,34,12,0.45)"
+                      strokeWidth="0.35" />
+                    {/* 金具。⚠️ 蓋と箱をまたぐ。またがないと帯に見えない */}
+                    <rect x="-5.9" y="-2.1" width="11.8" height="1.1" rx="0.4" fill="url(#chestGold)"
+                      stroke="#6B4A12" strokeWidth="0.3" />
+                    <rect x="-4.4" y="-6.6" width="1.1" height="10.6" rx="0.4" fill="url(#chestGold)"
+                      opacity="0.92" />
+                    <rect x="3.3" y="-6.6" width="1.1" height="10.6" rx="0.4" fill="url(#chestGold)"
+                      opacity="0.92" />
+                    {/* 錠 */}
+                    <rect x="-1.5" y="-2.6" width="3" height="3.4" rx="0.6" fill="url(#chestGold)"
+                      stroke="#6B4A12" strokeWidth="0.3" />
+                    <circle cx="0" cy="-1.2" r="0.6" fill="#3A2408" />
+                    <path d="M0 -0.9 L0 0.3" stroke="#3A2408" strokeWidth="0.5" strokeLinecap="round" />
+                    {/* 艶 */}
+                    <path d="M-4.6 -3.9 Q-3.4 -7 -0.6 -8.2" fill="none" stroke="#FFF6DF"
+                      strokeWidth="0.7" opacity="0.5" strokeLinecap="round" />
+                    {/* きらめき。⚠️ 二つまで。多いと安っぽくなる */}
+                    <path d="M4.8 -6.4 l0.5 1.3 1.3 0.5 -1.3 0.5 -0.5 1.3 -0.5 -1.3 -1.3 -0.5 1.3 -0.5 Z"
+                      fill="#FFF6DF" className="mv-twinkle" />
+                    <path d="M-5.4 1.4 l0.35 0.9 0.9 0.35 -0.9 0.35 -0.35 0.9 -0.35 -0.9 -0.9 -0.35 0.9 -0.35 Z"
+                      fill="#FFF6DF" className="mv-twinkle2" />
+                  </g>
+                )}
+                {n.kind === "spot" && (
+                  /* ⚠️ 旗は棒と布に分ける。三角だけだと記号に見える */
+                  <g className="mv-bob" transform="scale(1.85)">
+                    <rect x="-0.7" y="-10" width="1.4" height="10" rx="0.6" fill="#3A3358" />
+                    <path d="M0.7 -9.6 Q4.4 -8.2 6.6 -9.4 L6.6 -5.4 Q4.2 -4.2 0.7 -5.6 Z"
+                      fill="#7ED882" stroke="#2E6B3C" strokeWidth="0.4" />
+                    <ellipse cx="0" cy="0.6" rx="2.6" ry="1.1" fill="rgba(10,6,20,0.45)" />
+                  </g>
+                )}
+                {n.kind === "gate" && (
+                  <g transform="scale(1.85)">
+                    <rect x="-6" y="-9" width="1.8" height="9" fill="#9FB4D8" />
+                    <rect x="4.2" y="-9" width="1.8" height="9" fill="#9FB4D8" />
+                    <rect x="-7" y="-10.5" width="14" height="2" rx="0.6" fill="#B9CBE8" />
+                  </g>
+                )}
+                {n.kind === "boss" && (
+                  <g className="mv-throb" transform="scale(1.85)">
+                    <circle cx="0" cy="-7" r="8" fill="url(#isoGlow)" />
+                    <path d="M0 -12 L2.6 -7.4 L7.6 -6.8 L4 -3.4 L4.9 1.4 L0 -0.9 L-4.9 1.4 L-4 -3.4 L-7.6 -6.8 L-2.6 -7.4 Z"
+                      fill="#FF7A7A" stroke="#FFD9D9" strokeWidth="0.5" />
+                  </g>
+                )}
+              </g>
+            );
+          })}
+          {/*
+            自分と名前は、台を全部描いたあとに重ねる。
+            ⚠️⚠️ 台と同じ層に置くと、手前の台に埋もれて自分がどこに居るか分からなくなる。
+              実際そうなっていた。層を分けること。
+            ⚠️ 印は一つでは足りない。光の柱・輪・立つ姿・上の矢の四つを重ねる。
+              マスが25枚あるので、小さな印は埋もれる。
+          */}
+        </g>
+        </g>
+      </svg>
+      {/*
+        ★ 駒の層（2026-10-05「スマホを軽く」）。svg の要素ごと transform で動かす（GPU がずらすだけ）。
+        ⚠️⚠️ 以前は盤の svg の中の <g> を動かしていたので、一マス歩くたびの 620ms、盤ぜんたい（数千の部品）を
+          毎フレーム描き直していた。重なりの順（マス → 駒 → 漂う光・属性の空気）はそのまま。
+        ⚠️ % は svg 自身（＝盤と同じ MAP_W×MAP_H）に対して効くので、盤の座標と一致する。
+        ⚠️ 視点と同じ長さ・同じ緩急で動かすこと。ずれると駒だけ滑って見える。
+      */}
+      <svg className="adv-iso-layer adv-iso-hero" viewBox={`0 0 ${MAP_W} ${MAP_H}`}
+        style={{
+          transform: `translate(${(P.x / MAP_W) * 100}%, ${(P.y / MAP_H) * 100}%)`,
+          transition: "transform 620ms cubic-bezier(0.33, 0, 0.2, 1)",
+        }}>
+        <g style={{ pointerEvents: "none" }}>
+                  {/* 光の柱。⚠️ 輪郭を出さない。ぼかさないと的に見える */}
+                  <ellipse cx="0" cy="0" rx={HEX_R * 1.15} ry={HEX_H * 1.15} fill="url(#isoGlow)" />
+                  <rect x="-8" y="-120" width="16" height="120" fill="url(#isoBeam)" />
+                  <circle cx="0" cy="0" r={HEX_R + 5} fill="none"
+                    stroke="#FFF3D6" strokeWidth="1" className="mv-pulse" />
+                  {/* 立つ姿。⚠️ マスに合わせて拡大する。小さいままだと点に見える */}
+                  <ellipse cx="0" cy="3" rx="11" ry="4.6" fill="rgba(10,6,20,0.55)" />
+                  {/*
+                    ⚠️⚠️ 駒を白系にしないこと。いま居る台も明るいので、
+                      白い駒だと台に溶けて自分が見えなくなる。実際そうなっていた。
+                    ★ 装束は暗い紫、縁と留め具だけ金。顔だけ明るくする。
+                      明るい台の上に暗い影が立っている形になり、一目で分かる。
+                  */}
+                  <g className="mv-bob" transform="scale(1.85)">
+                    <path d="M-5.6 0.4 Q-5.6 -7.2 0 -7.2 Q5.6 -7.2 5.6 0.4 Z"
+                      fill="url(#pawnCloak)" stroke="#150E2A" strokeWidth="0.6" />
+                    {/* 装束の合わせ目。⚠️ 一本入れると布に見える */}
+                    <path d="M0 -6.8 L0 0.2" stroke="rgba(10,6,20,0.55)" strokeWidth="0.5" />
+                    {/* 金の縁 */}
+                    <path d="M-5.6 0.4 Q-5.6 -7.2 0 -7.2 Q5.6 -7.2 5.6 0.4"
+                      fill="none" stroke="#C9A24B" strokeWidth="0.7" opacity="0.85" />
+                    {/* 頭巾と顔 */}
+                    <circle cx="0" cy="-9.8" r="3.6" fill="#2E2450" stroke="#150E2A" strokeWidth="0.5" />
+                    <ellipse cx="0" cy="-9.4" rx="2.2" ry="2.4" fill="#F3E3C0" />
+                    <path d="M-3.6 -11 Q0 -14.6 3.6 -11 Q0 -12.4 -3.6 -11 Z" fill="#C9A24B" />
+                    {/* 目。⚠️ 点二つで十分。描き込むと縮小時に潰れる */}
+                    <circle cx="-0.8" cy="-9.6" r="0.42" fill="#241A44" />
+                    <circle cx="0.8" cy="-9.6" r="0.42" fill="#241A44" />
+                  </g>
+                  {/* 上の矢。⚠️ 台より上に出す。ここだけ見れば居場所が分かる */}
+                  <g className="mv-drop">
+                    <path d="M0 -32 L9 -47 L-9 -47 Z" fill="#FFF3D6" stroke="#160E28" strokeWidth="1.4"
+                      strokeLinejoin="round" />
+                  </g>
+        </g>
+      </svg>
+      {/* ★ 上の層：漂う光・属性の空気。⚠️ 指は通す（下のマスを叩けるように） */}
+      <svg className="adv-iso-layer no-hit" viewBox={`0 0 ${MAP_W} ${MAP_H}`}>
+        {/* ⚠️ どの盤面でも止めない。艶を一定の向きに流す */}
+        {/*
+          漂う光。⚠️ 数を絞ること。多いと画面が騒がしくなって道が読めない。
+          ⚠️ 速さと位相をばらす。揃うと点滅に見える。
+        */}
+        {Array.from({ length: 14 }, (_, i) => {
+          const ang = i * 2.39996, rad = 0.4 + ((i * 37) % 100) / 100 * MAP_RINGS;
+          return (
+            <circle key={`fl${i}`} r={1.6 + (i % 3) * 0.7}
+              cx={MAP_W / 2 + Math.cos(ang) * rad * XSTEP}
+              cy={MAP_H / 2 + Math.sin(ang) * rad * YSTEP}
+              fill="#FFF3D6" className="mv-float"
+              style={{ animationDuration: `${5 + (i % 5)}s`, animationDelay: `${i * 0.42}s` }} />
+          );
+        })}
+        {/*
+          属性の空気。⚠️ 盤の最前面に置く（台や木の上を漂う）。判定は持たせない。
+        */}
+        {/* ⚠️ 北海道・東北は属性に関係なく雪を降らせる（雪国の空気） */}
+        <ElemAmbience elems={snowRegionOf(pref) && !mapElems.includes("ice") ? [...mapElems, "ice"] : mapElems}
+          w={MAP_W} h={MAP_H} />
+              </svg>
+      </>
+  );
+});
 function AdventurePanel({ lang, items, onItem }) {
   const t = T[lang] || T.ja;
   const a = advT(lang);
@@ -77967,8 +88290,56 @@ function AdventurePanel({ lang, items, onItem }) {
       雑魚が繰り返し湧いて移動が止まらなくなる（実際そうなっていた）。
   */
   const [usedNodes, setUsedNodes] = useState([]);
+  /*
+    【一本道の盤のルーレット】2026-09-30。roul … いま回っているルーレット（無ければ null）。
+    spinsUsed … この探索で回した回数（入口と井戸）。mapCurse … イベントの封印（主戦まで続く）。
+  */
+  const [roul, setRoul] = useState(null);
+  const [spinsUsed, setSpinsUsed] = useState(0);
+  const [mapCurse, setMapCurse] = useState({});
+  /*
+    【一回の探索のあいだだけ効く変化】2026-10-03（特別なマス）。中身は advRun0 を参照。
+    ⚠️ タイマーの中から読むときは runModRef を使う（state は古い値のことがある）。
+  */
+  const [runMod, setRunMod] = useState(advRun0);
+  const runModRef = useRef(runMod);
+  runModRef.current = runMod;
+  /* いま戦っている雑魚の種類。null＝ふつう／gild 金の敵／elite 精鋭／mimic ミミック。⚠️ 決着の処理は ref で読む */
+  const [zakoKind, setZakoKind] = useState(null);
+  const zakoKindRef = useRef(null);
+  /* 黄金の道の演出（null＝出ていない） */
+  const [goldRun, setGoldRun] = useState(null);
   /* ⚠️ お店でもらった一枚。盤の上に札として出し、閉じるまで残す */
   const [meiGot, setMeiGot] = useState(null);
+  /* ボスチケット（端末に残る）。tkRoll … 使った演出中 ／ tkGot … 手に入れた知らせ */
+  const [tickets, setTickets] = useState(() => loadTickets());
+  const [tkRoll, setTkRoll] = useState(null);
+  const [tkSkip, setTkSkip] = useState(null);
+  const tkHoldRef = useRef(false);
+  const [tkGot, setTkGot] = useState(null);
+  /* 愚者の道に入った知らせ（2.8秒） */
+  const [foolShow, setFoolShow] = useState(null);
+  /* ご当地グルメを手に入れた知らせ */
+  const [gmGot, setGmGot] = useState(null);
+  /*
+    持って行く料理を食べる（探索の始め）。⚠️ 一つ減らす。無ければ何もしない。
+    ★ 最大HPが上がる料理は、今のHPも上限まで満たして出発する。
+  */
+  const eatPack = (m0) => {
+    const pid = loadGourmetPack();
+    const d = pid && GOURMET.find((x) => x.id === pid);
+    const h = loadGourmet();
+    if (!d || !(h[pid] > 0)) return m0;
+    h[pid] -= 1; saveGourmet(h);
+    if (!h[pid]) saveGourmetPack(null);
+    const m = gourmetRunMod(d, m0);
+    const GT = gourmetT(lang);
+    setTimeout(() => {
+      setLog((l) => [...l, GT.ate(lang === "ja" ? d.name : d.en)]);
+      if (m.maxHp) setHp((v) => Math.round(v * (1 + m.maxHp)));
+    }, 0);
+    return m;
+  };
   /*
     地図を進む速さ。
     ⚠️⚠️ 待ち時間を各所に直書きしないこと。散らばると、速さを変えたときに
@@ -77985,7 +88356,7 @@ function AdventurePanel({ lang, items, onItem }) {
       札も引かずに移動するので、瞬間移動したようにしか見えない（実際そうなっていた）。
     ★ 340ms を下限にする。着いたことが分かる最短の間。
   */
-  const ms = (n) => Math.max(340, Math.round(n / (advSpeedRef.current || 1)));
+  const ms = (n) => Math.max(340, Math.round(n / (ADV_MAP_RATE[advSpeedRef.current] || advSpeedRef.current || 1)));
   /*
     戦闘の入口。
     ⚠️⚠️ 戦いが始まったら、そこへ視点を移すこと。
@@ -78007,6 +88378,28 @@ function AdventurePanel({ lang, items, onItem }) {
   const goPhase = (p) => { phaseRef.current = p; setPhase(p); };
   const battleRef = useRef(null);
   const mapRef = useRef(null);
+  /*
+    ★ 2026-10-05 Aki「スマホを軽く」：盤が画面の外に出ているあいだは描かない（.adv-iso.off ＝ content-visibility: hidden）。
+    ⚠️⚠️ 戦闘は盤の下に出るので、戦っている間ずっと画面の外の盤（数千の部品）まで合成の計算に入っていた
+      （手元の計測で、戦闘中の合成の組み立て〔Layerize〕の7割が画面外の盤だった）。
+    ⚠️ 見えた瞬間に戻すので見た目は変わらない（hidden は描いた結果を捨てずに持っている）。
+  */
+  const [mapOff, setMapOff] = useState(false);
+  useEffect(() => {
+    if (typeof IntersectionObserver === "undefined") return undefined;
+    let io = null, el = null;
+    const t = setInterval(() => {
+      /* ⚠️ 盤は出たり消えたりする（地図と県の一覧を行き来する）。付け替えを見張る */
+      const cur = mapRef.current;
+      if (cur === el) return;
+      if (io) io.disconnect();
+      el = cur; io = null;
+      if (!el) { setMapOff(false); return; }
+      io = new IntersectionObserver((es) => { const e = es[es.length - 1]; setMapOff(!e.isIntersecting); }, { rootMargin: "120px 0px" });
+      io.observe(el);
+    }, 700);
+    return () => { clearInterval(t); if (io) io.disconnect(); };
+  }, []);
   /*
     ⚠️⚠️ 主戦も数えること。雑魚戦だけを見ていたので、主戦では寄せが一度も走らず、
       直前の位置（盤の下や記録のあたり）に取り残されていた。
@@ -78104,6 +88497,8 @@ function AdventurePanel({ lang, items, onItem }) {
     setZako(null); setBossEnd(null);
     /* ⚠️ 倍率も戻す。持ち越すのは一回の探索のあいだだけ */
     setCarryMult(1); setCarrySp(null); setCarryPot(advProgress().potStart); setUsedNodes([]);
+    setRoul(null); setSpinsUsed(0); setMapCurse({});
+    setRunMod(stage ? eatPack(advRun0()) : advRun0()); setZakoKind(null); zakoKindRef.current = null; setGoldRun(null);
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [stage, stepOver]);
   /*
@@ -78141,6 +88536,12 @@ function AdventurePanel({ lang, items, onItem }) {
   const [phase, setPhase] = useState("idle");  // idle→pick→flip→move→event
   const [log, setLog] = useState([]);
   const [steps, setSteps] = useState(0);
+  /* この探索で退けた道中の敵の数（制覇の記録に出す）。⚠️ setSteps(0) と同じ所で戻す */
+  const [zakoWins, setZakoWins] = useState(0);
+  /* 旅の終わりの三枚を読み終えたか。⚠️ 終えるまで「制覇する」を出さない */
+  const [jnDone, setJnDone] = useState(false);
+  /* 制覇の演出（クリア→宝箱の一覧→開封）。⚠️ 閉じたら8つの画面へ戻る */
+  const [conq, setConq] = useState(null);
   /* 通った節。⚠️ 通った道が分かると、次はどこを狙うか決められる */
   const [visited, setVisited] = useState([]);
   const timers = useRef([]);
@@ -78160,6 +88561,8 @@ function AdventurePanel({ lang, items, onItem }) {
   const svgRef = useRef(null);
   /* ⚠️ なぞっている間は補間を切る。切らないと指に遅れて付いてくる */
   const [dragging, setDragging] = useState(false);
+  /* ★ 盤（大きな svg）。視点はこの要素の transform で動かす（advBoardXf） */
+  const boardRef = useRef(null);
   useEffect(() => () => timers.current.forEach(clearTimeout), []);
   /*
     戦闘の画面へ寄せる。
@@ -78219,10 +88622,26 @@ function AdventurePanel({ lang, items, onItem }) {
   */
   const mapArea = ward || area || areasOf(pref || "")[0];
   const clearedHere = cleared.includes(walking);
-  const map = useMemo(() => (walking && pref
-    ? reshapeMap((heroKind && buildConvergeMap(pref, mapArea, seed, mapNo))
-      || buildTownMap(pref, mapArea, seed, mapNo), clearedHere, seed) : null),
-  [walking, pref, mapArea, seed, mapNo, clearedHere, heroKind]); // eslint-disable-line react-hooks/exhaustive-deps
+  /*
+    ⚠️ 2026-09-30：盤は一本道の盤（buildLaneMap）。主の道に着ける確率は、47段×8MAPの到達率に合わせる。
+  */
+  /*
+    ⚠️ 主の手前の三択（札）でも主を選ぶ確率が go（≒ goForReach(到達率)、実測で一致）だけ掛かる。
+      道のルーレットの狙いは「到達率 ÷ go」にする（掛け合わせて到達率になる）。
+  */
+  const laneReach = (() => {
+    if (dbgFlag("reach")) return 1;
+    const rc = diffOf(rank, mapNo).reach;
+    return Math.min(1, rc / Math.max(0.3, goForReach(rc)));
+  })();
+  /* ⚠️ この盤の★。特別なマスの出始め（ADV_SPECIALS の from）に使う */
+  const laneStar = isWardStage(pref, area) ? 12 : starOfStage(rank, walking);
+  /* ⚠️ 開いている魔法・物理・必殺。開いていないもののマスは置かない（倍率が上がっても使えない） */
+  const laneOpen = (() => { const pg = advProgress(); return { elems: pg.elems || [], phys: pg.physOpen || [], sp: pg.spOpen || [] }; })();
+  const laneOpenKey = `${laneOpen.elems.join()}|${laneOpen.phys.join()}|${laneOpen.sp.join()}`;
+  const map = useMemo(() => (walking && pref ? buildLaneMap(pref, mapArea, seed, mapNo, laneReach, laneStar, laneOpen) : null),
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  [walking, pref, mapArea, seed, mapNo, laneReach, laneStar, laneOpenKey]); // eslint-disable-line react-hooks/exhaustive-deps
   /*
     【動かせる範囲】2026-09-29 Aki：「スクロールできる範囲を狭く」。
     ★ 道のあるマスの広がり＋少しの余白までしか視点を動かせない。その外は描かない（TerrainLayer の clip）。
@@ -78240,7 +88659,8 @@ function AdventurePanel({ lang, items, onItem }) {
     const fit = (v, lo, hi, span) => (hi - lo <= span ? (lo + hi - span) / 2 : Math.min(Math.max(lo, v), hi - span));
     return { x: fit(x, b.x0, b.x1, VIEW_W), y: fit(y, b.y0, b.y1, VIEW_H) };
   };
-  const heroOn = !!(heroKind && map && map.some((n) => n.kind === "boss" && n.q === 0 && n.r === 0));
+  /* ⚠️ 一本道の盤では、名所の主役は入口（中心）に立つ飾り */
+  const heroOn = !!(heroKind && map);
   /*
     ⚠️ フックは早期 return より前に置く。順番が変わると React が壊れる。
     ⚠️⚠️ map を依存に入れないこと。buildTownMap は描画のたびに新しい配列を返すので、
@@ -78474,7 +88894,7 @@ function AdventurePanel({ lang, items, onItem }) {
       setStage(name);
       setSeed(Math.floor(Math.random() * 100000) + 1);
       setAt(null); setVisited([]); setPool(null); setPicked([]);
-      goPhase("idle"); setLog([]); setSteps(0);
+      goPhase("idle"); setLog([]); setSteps(0); setZakoWins(0); setJnDone(false);
     };
     /*
       ---- 局所MAP。区分の中を拡大して、名所をステージとして並べる ----
@@ -79083,60 +89503,17 @@ function AdventurePanel({ lang, items, onItem }) {
       そうすれば「道が一本しか出ていないマス」が袋小路だと一目で分かる。
     ⚠️ 寸法はトップレベルの hexAt を使う。ここで別の式を書くと自動スクロールとずれる。
   */
-  const iso = hexAt;
-  /* 六角の頂点。⚠️ 平頂。尖頭にすると横に並べたとき隙間が空く */
-  /* 六角の輪郭。⚠️ 大きさを変えて何重にも使うので、関数で持つ */
-  const hexPath = (r) => {
-    const h = r * 0.8660254;
-    return [[r, 0], [r / 2, h], [-r / 2, h], [-r, 0], [-r / 2, -h], [r / 2, -h]]
-      .map((p) => p.join(" ")).join(" L");
-  };
-  const HEX_TOP = hexPath(HEX_R);
-  /*
-    台の色。⚠️ 天面・左面・右面を、左上からの光ひとつで決める。
-      左面は天面の 0.72、右面は 0.50。面ごとに色を振ると立体に見えない。
-  */
-  /*
-    マスの色。
-    ⚠️ 天面は傾斜（linearGradient）で塗る。単色だと駒の台に見えて、土地に見えない。
-    ⚠️ 側面の明るさは左上からの光ひとつで決める。面ごとに色を振ると紙に見える。
-  */
-  const TILE_COLOR = (kind, here, seen) => {
-    const base = here ? [255, 243, 214]
-      : kind === "boss" ? [150, 70, 92]
-      : kind === "box" ? [176, 140, 66]
-      /* ⚠️ レア宝箱は紫がかった虹。ふつうの宝箱（金）と並んで見分けが付くこと */
-      : kind === "rarebox" ? [178, 128, 214]
-      /* ⚠️ ポーションは赤紫。回復（桃）と区別する */
-      : kind === "potion" ? [168, 72, 128]
-      : kind === "spot" ? [92, 148, 100]
-      : kind === "gate" ? [104, 124, 164]
-      /* ⚠️ お店は暖かい朱。宝箱の金と並んでも見分けが付くこと */
-      : kind === "shop" ? [196, 104, 78]
-      /*
-        ⚠️⚠️ 何も描かれていないマスから敵を出さないこと。
-          踏むまで分からないのは罠だけでよく、雑魚は見えていないと理不尽になる。
-        ⚠️ 罠だけは道と同じ色にする。見えたら罠にならない。
-      */
-      : kind === "zako" ? [150, 86, 86]
-      : kind === "heal" ? [214, 128, 168]
-      /* ⚠️ ただの道の色は土地柄で変える。ここが変わらないと、どこも同じ場所に見える */
-      : seen ? [120, 128, 150] : theme.tile;
-    const mul = (m) => `rgb(${base.map((v) => Math.round(v * m)).join(",")})`;
-    const grad = here ? "tHere" : kind === "boss" ? "tBoss" : (kind === "box" || kind === "rarebox") ? "tBox"
-      : kind === "spot" ? "tSpot" : kind === "gate" ? "tGate"
-      : kind === "zako" ? "tZako" : (kind === "heal" || kind === "potion") ? "tHeal"
-      : seen ? "tSeen" : "tRoad";
-    return { top: `url(#${grad})`, left: mul(0.76), mid: mul(0.6), right: mul(0.44),
-      rim: mul(1.3), frame: mul(0.34),
-      edge: here ? "#FFF3D6" : "rgba(20,14,32,0.55)" };
-  };
+  /* ⚠️ 盤の絵の道具（iso・hexPath・HEX_TOP・TILE_COLOR）は AdvBoard の中へ移した（2026-10-05） */
   /* この回の土地柄。⚠️ ステージ名から決まる。地図を組み直しても変わらない */
   const theme = STAGE_THEMES[themeOf(walking)] || STAGE_THEMES.town;
   /* ⚠️ この小MAPで出やすい属性（二つ）。見出しに色付きで出し、備えを考えさせる */
   const mapElems = mapElemsOf(walking);
   /* ⚠️ 天気は種から。歩くたびに変わると、同じ土地を歩いている感じが消える */
   const weather = weatherOf(themeOf(walking), seed);
+  /* 地の利（土地柄と名所）と天の利（その回の天気）。⚠️ どちらも見せる。戦闘には特別なマスの変化と足して渡す */
+  const landAttr = landAttrOf(walking);
+  const skyAttr = skyAttrOf(weather);
+  const battleMods = { ...runMod, land: landAttr, sky: skyAttr };
   const LAST_COL = MAP_RINGS;
   const byKey = {};
   map.forEach((n) => { byKey[n.key] = n; });
@@ -79164,7 +89541,18 @@ function AdventurePanel({ lang, items, onItem }) {
       勝ったのに旅が終わった画面が並び、制覇の導線も出ない（実際そうなっていた）。
     ★ 雑魚と戦っているあいだは over を立てない。決着してから判定する。
   */
-  const over = !zako && (dead || (node.kind === "boss" && fought) || !(node.next || []).length);
+  /* ⚠️ 外れの井戸は、ルーレットが残っていれば終わりではない（次の道へ抜ける） */
+  const unexplored = (map.lanes || []).filter((l) => !visited.includes(l.head) && l.head !== cur).map((l) => l.head);
+  /*
+    ⚠️⚠️ 2026-10-04 Aki「致命的：ボスの三択を外す以外に袋小路は無いはずなのに、井戸で終わる。一生ボスにたどり着けない」。
+    ★ 外れの井戸では探索を終わらせない。ルーレットが残っていれば道を選び直し、尽きていればボスの道へ抜ける（下の送り）。
+    ★ 探索が終わるのは、ボスの三択でボス以外を選んだときと、倒れたときだけ。
+  */
+  const wellPending = node.kind === "well" && node.wellMiss && !usedNodes.includes(node.key) && unexplored.length > 0;
+  /* ⚠️ 黄金の道の最中は終わらせない（井戸に戻って回し直す） */
+  /* ⚠️ 主のマスは先が無いが、戦う前は終わりにしない（戦闘の下に「旅はここまで」が出ていた） */
+  const over = !zako && !roul && !goldRun && (dead || (node.kind === "boss" && fought)
+    || (node.kind !== "boss" && !(node.next || []).length && !wellPending));
   /*
     ⚠️⚠️ 主のマスに着いたら、それ以上は絶対に動かさないこと。
       主は戦う場所であって、通過点ではない。next が残っていると、
@@ -79188,8 +89576,8 @@ function AdventurePanel({ lang, items, onItem }) {
   const clearedIn = inArea.filter((n) => cleared.includes(n)).length;
   /* 札を出す。⚠️ 毎回混ぜ直す。同じ並びだと位置で覚えられる */
   const deal = (self) => {
-    /* ⚠️ 終わっていたら配らない。戦闘中も配らない（遅れて発火するタイマー対策） */
-    if (over || busy || atBoss) return;
+    /* ⚠️ 終わっていたら配らない。戦闘中も配らない（遅れて発火するタイマー対策）。チケットの演出中も配らない */
+    if (over || busy || atBoss || tkRoll) return;
     /* ⚠️ 移動が決まっている最中は配らない。二重に動く */
     if (goingRef.current) return;
     /* ⚠️ 78枚から。冒険でも山を絞らない。絞ると出る札に意図が入る */
@@ -79243,20 +89631,571 @@ function AdventurePanel({ lang, items, onItem }) {
     ⚠️⚠️ 決め方は今までと同じ（山から必要枚数を引き、advanceOn の確率で選ぶ）。
       引かずに一様に選ぶと、主への到達率（GO_TABLE の実測）が変わってしまう。
   */
+  /*
+    ルーレット。2026-09-30。⚠️ 重みつきで一つ選び、回して見せてから結果を返す（見せる前に決める）。
+    ⚠️ 回っているあいだは、盤の自動の送り・札・over を止める（roul を見ている）。
+  */
+  const spinRoulette = (kind, opts, onDone, icon, title) => {
+    /* ⚠️ 重み0の目は選ばない（|| 1 にすると0が1として扱われる） */
+    const wOf = (o) => (o.w == null ? 1 : Math.max(0, o.w));
+    const tot = opts.reduce((x, o) => x + wOf(o), 0);
+    let p = Math.random() * tot, pick = 0;
+    for (let i = 0; i < opts.length; i++) { p -= wOf(opts[i]); if (p < 0) { pick = i; break; } }
+    /*
+      ⚠️ 2026-10-04 Aki「最大倍速のときはルーレットも一瞬で」。最大の速さでは、回さずに針の位置へ短く滑らせて止める。
+      ★ 結果はすぐ反映し、盤は少しだけ残す（何が出たか目で拾える最短）。
+    */
+    const fast = (advSpeedRef.current || 1) >= SPEED_STEPS[SPEED_STEPS.length - 1];
+    setRoul({ id: Date.now(), kind, opts, pick, icon: icon || null, title: title || null, fast });
+    timers.current.push(setTimeout(() => onDone(opts[pick]), fast ? 260 : ms(1700)));
+    /* ⚠️ 中身の一覧があるルーレットは読む時間を少し長く */
+    timers.current.push(setTimeout(() => setRoul(null), fast ? (opts.some((o) => o.desc) ? 750 : 520) : ms(opts.some((o) => o.desc) ? 2900 : 2300)));
+  };
+  /*
+    【特別なマス】2026-10-03。ADV_SPECIALS の注を参照。
+    ⚠️ 効果はすべてここに集める（マスごとに散らすと、上限の掛け忘れが起きる）。
+  */
+  /* 探索の中の最大HP。⚠️ 回復の上限もこれ。戦闘にも同じ倍率を渡す（mods） */
+  const runMaxOf = (m) => Math.max(1, Math.round(statsOf(rank).maxHP * (1 + ((m && m.maxHp) || 0))));
+  const seekBox = () => { const e = equipBonus(equippedGear()); return Math.round(e.box ? e.box / 100 : 0); };
+  /* ⚠️ state と ref を同時に進める。同じタイマーの中で続けて読むことがあるため */
+  const modRun = (f) => { runModRef.current = f(runModRef.current); setRunMod(f); };
+  /* ⚠️ 探索の中で拾う宝箱は必ずここを通す（闇商人・鍛冶屋・竜の巣・盗賊が対象にできるよう id を覚える） */
+  const pushRunChest = (star, hi) => {
+    const ch = pushChest(Math.max(1, Math.min(12, star)), { pref, area }, seekBox(), hi || 0);
+    modRun((m) => ({ ...m, chests: [...(m.chests || []), ch.id] }));
+    return ch;
+  };
+  const chestText = (ch) => (ch.hi ? a.advChestHi(ch.hi) : a.advChest(tierStars(ch.tier)));
+  /* 道の入口に着いたとき。⚠️ 愚者の道なら知らせる（スタートのルーレット・外れの井戸・抜け穴の三つの入り方すべて） */
+  const enterLane = (headKey) => {
+    const i = (map.lanes || []).findIndex((l2) => l2.head === headKey);
+    if (i < 0 || map.foolLane !== i) return;
+    const nm = a.sp.name[map.foolKind] || map.foolKind;
+    setLog((l) => [...l, a.foolIn(nm)]);
+    const id = Date.now();
+    setFoolShow({ id, k: map.foolKind, nm });
+    SFX.chime("maj");
+    timers.current.push(setTimeout(() => setFoolShow((v) => (v && v.id === id ? null : v)), 2800));
+  };
+  /* チケットを落とす。⚠️ 確率は TICKET_DROP。知らせは3秒で自動で閉じる（オート・放置の邪魔をしない） */
+  const grantTicket = (chance, star) => {
+    if (Math.random() >= chance * ticketDropMul(star)) return null;
+    const t0 = loadTickets();
+    /* ⚠️ 満杯の種類は外して引く。全部満杯なら何も落ちない */
+    const k = rollTicket(star, t0);
+    if (!k) return null;
+    t0[k] = Math.min(TICKET_MAX, (t0[k] || 0) + 1); saveTickets(t0); setTickets(t0);
+    const TK = ticketT(lang);
+    setLog((l) => [...l, TK.gotLog(TK.name[k])]);
+    const id = Date.now();
+    setTkGot({ k, id });
+    SFX.chime("maj");
+    timers.current.push(setTimeout(() => setTkGot((v) => (v && v.id === id ? null : v)), 3000));
+    return k;
+  };
+  /* チケットを使う（ボス前の三択）。⚠️ 当たれば bossSure。外れても三択はいつもどおり。演出の時間は速さに関係なく一定 */
+  const spendTicket = (k) => {
+    if (tkRoll || (runModRef.current.tkUsed || []).includes(k)) return;
+    const t0 = loadTickets();
+    if (!(t0[k] > 0)) return;
+    t0[k] -= 1; saveTickets(t0); setTickets(t0);
+    /* ⚠️ この探索では、この種類はもう使えない（同じ種類は一枚まで） */
+    modRun((m) => ({ ...m, tkUsed: [...(m.tkUsed || []), k] }));
+    const ok = Math.random() < TICKET_RATE[k];
+    const TK = ticketT(lang);
+    setTkRoll({ k, ok, id: Date.now() });
+    SFX.whoosh();
+    timers.current.push(setTimeout(() => {
+      if (ok) { modRun((m) => ({ ...m, bossSure: true })); SFX.chime("maj"); }
+      setLog((l) => [...l, ok ? TK.ok(TK.name[k]) : TK.ng(TK.name[k])]);
+    }, 1300));
+    timers.current.push(setTimeout(() => setTkRoll(null), 2700));
+  };
+  /* 最大HPを動かす。⚠️ 下げたら今のHPも上限まで。上げたら増えたぶんだけ今のHPも増やす */
+  const addMaxHp = (d) => {
+    const m0 = runModRef.current;
+    const nv = Math.max(ADV_RUN_CAP.maxHpLo, Math.min(ADV_RUN_CAP.maxHpHi, (m0.maxHp || 0) + d));
+    const before = runMaxOf(m0), after = runMaxOf({ maxHp: nv });
+    modRun((m) => ({ ...m, maxHp: nv }));
+    setHp((v) => (v <= 0 ? v : Math.max(1, Math.min(after, v + Math.max(0, after - before)))));
+  };
+  /* ⚠️ 2026-10-03：溜まりは4本それぞれ。su を必ず渡す */
+  const addCharge = (su, d) => modRun((m) => ({ ...m, charge: { ...(m.charge || {}),
+    [su]: Math.max(ADV_RUN_CAP.chargeLo, Math.min(ADV_RUN_CAP.chargeHi, ((m.charge || {})[su] || 0) + d)) } }));
+  const addAttr = (k2, d) => modRun((m) => ({ ...m, attr: { ...(m.attr || {}),
+    [k2]: Math.max(ADV_RUN_CAP.attrLo, Math.min(ADV_RUN_CAP.attrHi, ((m.attr || {})[k2] || 0) + d)) } }));
+  const addHeal = (d) => modRun((m) => ({ ...m, heal: Math.max(ADV_RUN_CAP.healLo, Math.min(ADV_RUN_CAP.healHi, (m.heal || 0) + d)) }));
+  /* 妨害の耐性（点）。⚠️ 一つあたり ADV_RUN_CAP.res まで。戦闘の判定で全体の上限（DEBUFF_BLOCK_CAP）も通る */
+  const addRes = (k2, d) => modRun((m) => ({ ...m, res: { ...(m.res || {}),
+    [k2]: Math.min(ADV_RUN_CAP.res, ((m.res || {})[k2] || 0) + d) } }));
+  /*
+    レアなマス（虹の丘・鎧職人）で付いた分を別に覚える（2026-10-05 Aki「レアマスによるレアバフは黄色」）。
+    ⚠️ 値そのものは attr / res に足してある。ここは表示で黄色に分けるためだけ
+  */
+  const addRare = (kind, d) => modRun((m) => ({ ...m, rare: { ...(m.rare || {}), [kind]: ((m.rare || {})[kind] || 0) + d } }));
+  /* ⚠️ 開いている必殺の中から一本（湖・霧・石像の「溜まり」は、ルーレットを回す前に決めておく） */
+  const pickSuit = () => { const op = laneOpen.sp; return op.length ? op[Math.floor(Math.random() * op.length)] : null; };
+  /*
+    ボス直行の平均加算（2026-10-04 Aki「ボス直行なら、その冒険で全部のマスを踏んだ場合の平均を加算してあげる。
+      直行の趣旨は『時短できてうれしい』。平均加算は確定。人間は不利や損に敏感だから」）。
+    ★ 直行で通らなかった特別なマス（主の道以外の、まだ踏んでいないもの）の目の平均を、ルーレット無しで全部足す。
+    ⚠️ 数値の目のマスだけ（属性・溜まり・回復・最大HP・耐性・全属性・全耐性・湖・霧・砲台）。宝箱・道・取引のマスは足さない。
+    ⚠️ 湖・霧（どの必殺かはその場で決まる）は、開いている必殺に均等に割る。
+    ★ 何をいくつ受け取ったかを記録に一行で出す。
+  */
+  const directBonus = (withBossLane) => {
+    const bi = (map.lanes || []).findIndex((l2) => l2.boss);
+    /* ⚠️ withBossLane … ボスのマスへ直接飛んだとき。ボスの道のマスも通らないので足す */
+    const skip = map.filter((n) => n.lane != null && (withBossLane || n.lane !== bi) && isAdvSpecial(n.kind)
+      && !visited.includes(n.key) && !usedNodes.includes(n.key) && n.key !== at);
+    const opSu = laneOpen.sp.length ? laneOpen.sp : SP_SUITS;
+    const add = { attr: {}, charge: {}, res: {}, heal: 0, maxHp: 0, bossCut: 0, rareAttr: 0, rareRes: 0, rareMagic: 0 };
+    let cnt = 0;
+    skip.forEach((n) => {
+      const k = n.kind, row = ADV_SPECIALS.find((x) => x.key === k) || {};
+      const ev = advNumEV(k);
+      if (!ev) return;
+      cnt++;
+      if (row.allAttr) { ATTR_KEYS.forEach((k2) => { add.attr[k2] = (add.attr[k2] || 0) + ev / 100; }); add.rareAttr += ev / 100; }
+      else if (row.res) add.res[row.res] = (add.res[row.res] || 0) + ev;
+      else if (k === "armorer") { RUN_RES_KEYS.forEach((k2) => { add.res[k2] = (add.res[k2] || 0) + ev; }); add.rareRes += ev; }
+      else if (row.attr) add.attr[row.attr] = (add.attr[row.attr] || 0) + ev / 100;
+      else if (row.suit) add.charge[row.suit] = (add.charge[row.suit] || 0) + ev / 100;
+      else if (row.heal) add.heal += ev / 100;
+      else if (k === "fruit") add.maxHp += ev / 100;
+      else if (k === "kaki") { add.maxHp += ev / 100; ATTR_KEYS.filter((k2) => PHYS_KEYS.indexOf(k2) < 0).forEach((k2) => { add.attr[k2] = (add.attr[k2] || 0) + ADV_KAKI_MAGIC / 100; }); add.rareMagic += ADV_KAKI_MAGIC / 100; }
+      else if (k === "lake" || k === "fog") opSu.forEach((su2) => { add.charge[su2] = (add.charge[su2] || 0) + ev / 100 / opSu.length; });
+      else if (k === "cannon") add.bossCut += ev / 100;
+    });
+    if (!cnt) return;
+    Object.keys(add.attr).forEach((k2) => addAttr(k2, add.attr[k2]));
+    Object.keys(add.charge).forEach((k2) => addCharge(k2, add.charge[k2]));
+    Object.keys(add.res).forEach((k2) => addRes(k2, Math.round(add.res[k2] * 10) / 10));
+    if (add.heal) addHeal(add.heal);
+    if (add.maxHp) addMaxHp(add.maxHp);
+    if (add.bossCut) modRun((m) => ({ ...m, bossCut: (m.bossCut || 0) + add.bossCut }));
+    if (add.rareAttr) addRare("attr", add.rareAttr);
+    if (add.rareMagic) addRare("magic", add.rareMagic);
+    if (add.rareRes) addRare("res", Math.round(add.rareRes * 10) / 10);
+    setLog((l) => [...l, a.sp.directBonus(cnt)]);
+  };
+  const applySpecial = (k, key, alive, su, descOf) => {
+    const S = a.sp;
+    const say = (extra) => setLog((l) => [...l, `【${S.name[k]}】${(descOf && descOf[key]) || (S.desc[k] || {})[key] || ""}${extra || ""}`]);
+    const row = ADV_SPECIALS.find((x) => x.key === k) || {};
+    /* ★ 数値の目（v＋値）。値は%（耐性は点）。⚠️ runSpecial の NUM と揃える */
+    if (/^v-?\d+$/.test(key)) {
+      const p = Number(key.slice(1));
+      /* ⚠️ 柿の木の魔法 +5% は目に関係なく必ず付く（黄色＝レアの分として覚える） */
+      if (k === "kaki") {
+        ATTR_KEYS.filter((k2) => PHYS_KEYS.indexOf(k2) < 0).forEach((k2) => addAttr(k2, ADV_KAKI_MAGIC / 100));
+        addRare("magic", ADV_KAKI_MAGIC / 100);
+      }
+      if (p) {
+        if (row.allAttr) { ATTR_KEYS.forEach((k2) => addAttr(k2, p / 100)); addRare("attr", p / 100); }
+        else if (row.res) addRes(row.res, p);
+        else if (k === "armorer") { RUN_RES_KEYS.forEach((k2) => addRes(k2, p)); addRare("res", p); }
+        else if (row.attr) addAttr(row.attr, p / 100);
+        else if (row.suit) addCharge(row.suit, p / 100);
+        else if (row.heal) addHeal(p / 100);
+        else if (k === "fruit") addMaxHp(p / 100);
+        else if (k === "kaki") addMaxHp(p / 100);
+        else if ((k === "lake" || k === "fog") && su) addCharge(su, p / 100);
+      }
+      say();
+      return;
+    }
+    const low = alive.slice().sort((x, y) => (x.hi || x.star) - (y.hi || y.star));
+    const last = alive[alive.length - 1];
+    if (k === "merchant") {
+      if (key === "c1" && low[0]) { dropChests([low[0].id]); setCarryPot((v) => v + 2); say(); }
+      else if (key === "c2" && low[1]) { dropChests([low[0].id, low[1].id]); const ch = pushRunChest(laneStar + 2); say(`（${chestText(ch)}）`); }
+      else if (key === "sure") { addMaxHp(-0.10); modRun((m) => ({ ...m, bossSure: true })); say(); }
+      else say();
+    } else if (k === "challenge") {
+      if (key === "sure") modRun((m) => ({ ...m, bossSure: true, bossUp: (m.bossUp || 0) + 0.15 }));
+      say();
+    } else if (k === "tunnel") {
+      say();
+      if (key === "cave") addMaxHp(-0.10);
+      if (key === "boss") {
+        /*
+          大当たり：ボスのマスそのものへ（三択も飛ばす）。⚠️ ボスの道も含め、通らなかったマス全部の平均を受け取る。
+          ★ 着いたら主の戦い（inBattle）がそのまま始まる。
+        */
+        const B = map.find((n) => n.kind === "boss");
+        if (B) {
+          directBonus(true);
+          setAt(B.key);
+          setVisited((v) => (v.includes(B.key) ? v : [...v, B.key]));
+          setSteps((n) => n + 1);
+        }
+      }
+      if (key === "pass") {
+        /* ⚠️ 井戸と同じく、着いた先（主の道の入口）では何も起きない。ルーレットの回数は使わない */
+        const bl = (map.lanes || []).find((l2) => l2.boss);
+        if (bl && !visited.includes(bl.head)) {
+          setAt(bl.head);
+          setVisited((v) => (v.includes(bl.head) ? v : [...v, bl.head]));
+          setSteps((n) => n + 1);
+          directBonus();
+          enterLane(bl.head);
+        }
+      }
+    } else if (k === "clover") { if (key === "plus") modRun((m) => ({ ...m, spins: (m.spins || 0) + 1 })); say(); }
+    else if (k === "lost") { if (key === "minus") modRun((m) => ({ ...m, spins: (m.spins || 0) - 1 })); say(); }
+    else if (k === "cannon") {
+      const d = key === "hit8" ? 0.08 : key === "hit4" ? 0.04 : 0;
+      if (d) modRun((m) => ({ ...m, bossCut: Math.min(ADV_RUN_CAP.bossCut, (m.bossCut || 0) + d) }));
+      say();
+    } else if (k === "anvil" && last) {
+      if (key === "broke") { dropChests([last.id]); say(); }
+      else { const nc = bumpChest(last.id, key === "up2" ? 2 : 1); say(nc ? `（→★${nc.hi || nc.star}）` : ""); }
+    } else if (k === "hoard") {
+      if (key === "dbl") { const ids = cloneChests(alive.map((c) => c.id)); modRun((m) => ({ ...m, chests: [...(m.chests || []), ...ids] })); say(a.sp.boxN(ids.length)); }
+      else if (key === "lose") { dropChests(alive.map((c) => c.id)); say(a.sp.boxN(-alive.length)); }
+      else say();
+    } else if (k === "thief") {
+      if (key === "steal" && last) dropChests([last.id]);
+      if (key === "drop") { const ch = pushRunChest(laneStar); say(`（${chestText(ch)}）`); }
+      else say();
+    } else if (k === "statue") {
+      if (key === "maxhp") addMaxHp(-0.10);
+      else if (key === "charge" && su) addCharge(su, -0.25);
+      else if (key === "cards") modRun((m) => ({ ...m, cards: (m.cards || 0) - 1 }));
+      say();
+    } else if (k === "fog") { if (key === "charge" && su) addCharge(su, -0.20); say(); }
+    else if (k === "chain") {
+      const n = Number(String(key).slice(1)) || 0;
+      if (n > 0) {
+        const left = (laneOpen.sp.length ? laneOpen.sp : SP_SUITS).filter((x) => !(mapCurse.spSeal || []).includes(x)).slice();
+        const got = [];
+        while (left.length && got.length < n) got.push(left.splice(Math.floor(Math.random() * left.length), 1)[0]);
+        setMapCurse((c) => ({ ...c, spSeal: [...(c.spSeal || []), ...got] }));
+        say(`（${got.map((x) => suitLabel(x, lang)).join("・")}）`);
+      } else say();
+    }
+    else if (k === "fruit") { addMaxHp(key === "p10" ? 0.10 : key === "p5" ? 0.05 : -0.05); say(); }
+    else if (k === "lake") { if (key !== "none" && su) addCharge(su, key === "c20" ? 0.20 : 0.10); say(); }
+    else if (k === "healer") {
+      if (key === "heal5") modRun((m) => ({ ...m, potHeal: Math.min(ADV_RUN_CAP.potHeal, (m.potHeal || 0) + 0.05) }));
+      if (key === "pot1") setCarryPot((v) => v + 1);
+      say();
+    } else say();
+  };
+  const runSpecial = (nd) => {
+    const k = nd.kind;
+    const quietFood = () => setLog((l) => [...l, `【${a.sp.name[k]}】${a.sp.nothing}`]);
+    const m = runModRef.current;
+    const S = a.sp;
+    const alive = runChestsAlive(m.chests);
+    const row = ADV_SPECIALS.find((x) => x.key === k) || {};
+    /* ⚠️ 湖・霧・石像の「溜まり」はどの必殺に効くかを先に決め、文言に書く */
+    const su = (k === "lake" || k === "fog" || k === "statue") ? pickSuit() : null;
+    const suNm = su ? suitLabel(su, lang) : "";
+    const descOf = {};
+    if (su) {
+      if (k === "lake") { descOf.c20 = S.pct(S.chargeOf(suNm), 20); descOf.c10 = S.pct(S.chargeOf(suNm), 10); }
+      if (k === "fog") descOf.charge = S.pct(S.chargeOf(suNm), -20);
+      if (k === "statue") descOf.charge = S.curse + S.pct(S.chargeOf(suNm), -25);
+    }
+    /*
+      数値の目のマス（2026-10-04 Aki「ルーレットの数値をそれなりに細かく」）。
+      ★ 目は [値, 重み]。値は%（耐性は点）。0 は外れ。目の名前は v＋値（v-10 など）。
+      ⚠️ 期待値は前とほぼ同じ（属性 +10→+9、溜まり +11→+12.5、耐性 +10→+9.3、全属性 +4、全耐性 +4.4、果実 +5→+4.6、湖 +10→+12）。
+    */
+    /*
+      料理のマス（屋台・喫茶・料亭）。ルーレットの目は料理そのもの（★ごとに一品ずつ候補を立て、段の重みで回す）。
+      ⚠️ 料亭は★3だけなので回さずに渡す。
+    */
+    if (row.food) {
+      const GT = gourmetT(lang);
+      const TW = ADV_FOOD_TIER_W[k] || { 1: 1 };
+      const local = GOURMET.filter((d) => d.pref === pref && d.area === area);
+      const candOf = (tier) => {
+        const l2 = local.filter((d) => d.tier === tier);
+        const pool2 = l2.length ? l2 : GOURMET.filter((d) => d.tier === tier);
+        return pool2[Math.floor(Math.random() * pool2.length)] || null;
+      };
+      const opts2 = Object.keys(TW).map((tier) => ({ tier: Number(tier), w: TW[tier], d: candOf(Number(tier)) })).filter((o) => o.d);
+      if (!opts2.length) { quietFood(); return; }
+      const give = (d) => {
+        const r = addGourmet(d.id);
+        /* ⚠️ 熊が奪う対象（この冒険で手に入れた料理） */
+        modRun((m2) => ({ ...m2, gmRun: [...(m2.gmRun || []), d.id] }));
+        const nm = lang === "ja" ? d.name : d.en;
+        setLog((l) => [...l, `【${S.name[k]}】${GT.gotLog(nm)}`]);
+        const gid = Date.now();
+        setGmGot({ d, ...r, id: gid });
+        /* ⚠️ 道の途中なので短め（次のマスのルーレットに被らないように） */
+        timers.current.push(setTimeout(() => setGmGot((v) => (v && v.id === gid ? null : v)), 2500));
+      };
+      if (opts2.length === 1) { give(opts2[0].d); return; }
+      const optsF = opts2.map((o) => ({ key: o.d.id, w: o.w, label: "★".repeat(o.tier), desc: `${"★".repeat(o.tier)} ${lang === "ja" ? o.d.name : o.d.en}` }));
+      spinRoulette("sp", optsF, (o) => { const d = GOURMET.find((x) => x.id === o.key); if (d) give(d); }, k, S.name[k]);
+      return;
+    }
+    /*
+      床屋：いま付いている悪い効果を並べ、ルーレットで一つ切り落とす（0に戻す・封印を一つ解く）。
+      ⚠️ 何も無ければ回さない。
+    */
+    if (k === "bear") {
+      const hk = pref === "hokkaido";
+      const hurtP = hk ? 40 : 25;
+      const optsBr = Object.keys(ADV_BEAR_W).map((key) => ({ key, w: ADV_BEAR_W[key], label: S.bearOpt[key],
+        desc: key === "hurt" ? S.bearDesc.hurt(hurtP) : S.bearDesc[key] }));
+      const say2 = (txt) => setLog((l) => [...l, `【${S.name[k]}】${txt}`]);
+      spinRoulette("sp", optsBr, (o) => {
+        if (o.key === "calm") { say2(S.bearDesc.calm); return; }
+        if (o.key === "hurt") { setHp((v) => Math.max(1, Math.round(v * (1 - hurtP / 100)))); say2(S.bearDesc.hurt(hurtP)); return; }
+        if (o.key === "fight") {
+          const kd = hk ? "higuma" : "bear";
+          zakoKindRef.current = kd; setZakoKind(kd);
+          setLog((l) => [...l, a.zkMeet[kd]]);
+          setZako(nd.key);
+          return;
+        }
+        /* 食べ物：この冒険で手に入れた料理 → 持って行く料理の在庫 → ポーション の順に一つ */
+        const gl = (runModRef.current.gmRun || []).slice();
+        const nm = (d) => (lang === "ja" ? d.name : d.en);
+        if (gl.length) {
+          const id = gl.pop();
+          const h = loadGourmet(); if (h[id] > 0) { h[id] -= 1; saveGourmet(h); }
+          modRun((m2) => ({ ...m2, gmRun: gl }));
+          const d = GOURMET.find((x) => x.id === id);
+          say2(S.bearFood(d ? nm(d) : id));
+          return;
+        }
+        const pid = loadGourmetPack(), h2 = loadGourmet();
+        if (pid && h2[pid] > 0) {
+          h2[pid] -= 1; saveGourmet(h2); if (!h2[pid]) saveGourmetPack(null);
+          const d = GOURMET.find((x) => x.id === pid);
+          say2(S.bearFood(d ? nm(d) : pid));
+          return;
+        }
+        if (carryPot > 0) { setCarryPot((v) => Math.max(0, v - 1)); say2(S.bearPot); }
+        else say2(S.bearNoFood);
+      }, k, S.name[k]);
+      return;
+    }
+    if (k === "barber") {
+      const bad = [];
+      const pc2 = (p) => `${p > 0 ? "+" : "−"}${Math.abs(Math.round(p))}%`;
+      ATTR_KEYS.forEach((k2) => { const v = (m.attr || {})[k2] || 0; if (v < -0.0049) bad.push({ key: `a:${k2}`, label: `${a.attrShort[k2]}${pc2(v * 100)}`, fix: () => addAttr(k2, -v) }); });
+      SP_SUITS.forEach((k2) => { const v = (m.charge || {})[k2] || 0; if (v < -0.0049) bad.push({ key: `c:${k2}`, label: `${suitLabel(k2, lang)}${pc2(v * 100)}`, fix: () => addCharge(k2, -v) }); });
+      if ((m.heal || 0) < -0.0049) { const v = m.heal; bad.push({ key: "heal", label: a.runTag.heal(Math.round(v * 100)), fix: () => modRun((x) => ({ ...x, heal: 0 })) }); }
+      if ((m.maxHp || 0) < -0.0049) { const v = m.maxHp; bad.push({ key: "maxHp", label: a.runTag.maxHp(Math.round(v * 100)), fix: () => addMaxHp(-v) }); }
+      if ((m.cards || 0) < 0) bad.push({ key: "cards", label: a.runTag.cards(m.cards), fix: () => modRun((x) => ({ ...x, cards: 0 })) });
+      if ((m.spins || 0) < 0) bad.push({ key: "spins", label: S.barberSpins(m.spins), fix: () => modRun((x) => ({ ...x, spins: 0 })) });
+      if ((m.bossUp || 0) > 0) bad.push({ key: "bossUp", label: a.runTag.bossUp(Math.round(m.bossUp * 100)), fix: () => modRun((x) => ({ ...x, bossUp: 0 })) });
+      (mapCurse.spSeal || []).forEach((su2) => bad.push({ key: `s:${su2}`, label: a.curseTag.spSeal(suitLabel(su2, lang)), fix: () => setMapCurse((c) => ({ ...c, spSeal: (c.spSeal || []).filter((x) => x !== su2) })) }));
+      if (mapCurse.elem) bad.push({ key: "elem", label: a.curseTag.elem((a.familyName && a.familyName[mapCurse.elem]) || mapCurse.elem), fix: () => setMapCurse((c) => ({ ...c, elem: null })) });
+      if (mapCurse.noSp) bad.push({ key: "nosp", label: a.curseTag.nosp, fix: () => setMapCurse((c) => ({ ...c, noSp: false })) });
+      if (!bad.length) { setLog((l) => [...l, `【${S.name[k]}】${S.barberNone}`]); return; }
+      const optsB = bad.map((b) => ({ key: b.key, w: 1, label: b.label, desc: S.barberCut(b.label) }));
+      spinRoulette("sp", optsB, (o) => {
+        const b = bad.find((x) => x.key === o.key);
+        if (b) { b.fix(); setLog((l) => [...l, `【${S.name[k]}】${S.barberCut(b.label)}`]); }
+      }, k, S.name[k]);
+      return;
+    }
+    /* ⚠️ 砲台は今までどおりの目（下の O で作る）。数値の目は advNumOf から */
+    const NUM = k === "cannon" ? null : advNumOf(k, !!su);
+    if (NUM) {
+      const lab = row.allAttr ? S.allAttrLabel
+        : row.res ? `${S.resWhat[row.res]}${lang === "ja" ? "の耐性" : " resistance"}`
+        : k === "armorer" ? S.allResLabel
+        : row.attr ? S.attrOf(row.attr)
+        : row.suit ? S.chargeOf(suitLabel(row.suit, lang))
+        : row.heal ? S.healLabel
+        : (k === "fruit" || k === "kaki") ? S.maxHpLabel
+        : S.chargeOf(suNm);
+      NUM.forEach(([p]) => { descOf[`v${p}`] = (p ? S.pct(lab, p) : S.nothing) + (k === "kaki" ? S.kakiPlus(ADV_KAKI_MAGIC) : ""); });
+      const optsN = NUM.map(([p, w]) => ({ key: `v${p}`, w, label: p ? `${p > 0 ? "+" : "−"}${Math.abs(p)}` : (S.opt.none || "—"), desc: descOf[`v${p}`] }));
+      spinRoulette("sp", optsN, (o) => applySpecial(k, o.key, [], su, descOf), k, S.name[k]);
+      return;
+    }
+    const O = (key, w) => ({ key, w, label: S.opt[key] || key, desc: descOf[key] || (S.desc[k] || {})[key] || "" });
+    const quiet = (key) => setLog((l) => [...l, `【${S.name[k]}】${(S.desc[k] || {})[key] || ""}`]);
+    let opts = [];
+    if (k === "merchant") {
+      if (alive.length >= 1) opts.push(O("c1", 1));
+      if (alive.length >= 2) opts.push(O("c2", 1));
+      if (!m.bossSure) opts.push(O("sure", 1));
+      opts.push(O("none", 1));
+    } else if (k === "challenge") { if (m.bossSure) { quiet("already"); return; } opts = [O("sure", 1), O("none", 1)]; }
+    /* ⚠️ 2026-10-04 Aki「3%でボスマスそのものに飛ぶ」。重みは合計100（ボス3・抜ける49・行き止まり24・落盤24） */
+    else if (k === "tunnel") opts = [O("boss", 3), O("pass", 49), O("none", 24), O("cave", 24)];
+    else if (k === "clover") opts = [O("plus", 1), O("none", 1)];
+    else if (k === "lost") opts = [O("minus", 1), O("none", 1)];
+    else if (k === "cannon") {
+      if ((m.bossCut || 0) >= ADV_RUN_CAP.bossCut - 1e-9) { quiet("cap"); return; }
+      opts = [O("hit4", 2), O("hit8", 1), O("miss", 2)];
+    } else if (k === "anvil") { if (!alive.length) { quiet("empty"); return; } opts = [O("up1", 3), O("up2", 1), O("broke", 1)]; }
+    else if (k === "hoard") { if (!alive.length) { quiet("empty"); return; } opts = [O("dbl", 2), O("lose", 2), O("none", 1)]; }
+    else if (k === "thief") { if (alive.length) opts.push(O("steal", 2)); opts.push(O("escape", 2), O("drop", 1)); }
+    else if (k === "statue") {
+      opts = [O("maxhp", 1)];
+      /* ⚠️ 必殺ゲージが一本も開いていなければ「溜まり」の目は入れない */
+      if (su) opts.push(O("charge", 1));
+      /* ⚠️ 手札は3枚より減らさない。減らせない★では目に入れない */
+      if (!m.cards && ((BATTLE_SHAPE[laneStar] || {}).cards || 3) - 1 >= 3) opts.push(O("cards", 1));
+      opts.push(O("none", 1));
+    } else if (k === "fog") opts = [O("charge", 1), O("none", 1)];
+    else if (k === "chain") {
+      /* ⚠️ まだ封じられていない必殺が残っているときだけ封印の目を入れる */
+      const left = (laneOpen.sp.length ? laneOpen.sp : SP_SUITS).filter((x) => !(mapCurse.spSeal || []).includes(x));
+      const nMax = Math.min(4, left.length);
+      for (let n = 0; n <= nMax; n++) {
+        const all = n > 0 && n === nMax;
+        descOf[`n${n}`] = S.chainDesc(n, all);
+        opts.push({ key: `n${n}`, w: all ? ADV_CHAIN_W[4] : ADV_CHAIN_W[n], label: S.chainOpt(n, all), desc: descOf[`n${n}`] });
+      }
+    }
+    else if (k === "fruit") opts = [O("p10", 2), O("p5", 2), O("m5", 1)];
+    else if (k === "lake") opts = [O("c20", 1), O("c10", 2), O("none", 1)];
+    else if (k === "healer") {
+      if ((m.potHeal || 0) < ADV_RUN_CAP.potHeal - 1e-9) opts.push(O("heal5", 2));
+      opts.push(O("pot1", 1), O("none", 1));
+    }
+    if (!opts.length) return;
+    spinRoulette("sp", opts, (o) => applySpecial(k, o.key, alive, su, descOf), k, S.name[k]);
+  };
+  /* 黄金の道。⚠️ ルーレットの回数を使わない。終わったら同じ井戸で回し直す（gold が立つので二度は出ない） */
+  const startGold = () => {
+    const items = Array.from({ length: ADV_GOLD_N }, () => {
+      const up = Math.random() < 0.3 ? 2 : 1;
+      const hi = (laneStar >= 12 && Math.random() < CHEST_HIGH_RATE * 2) ? CHEST_HIGH_AT.boxSpot12 : 0;
+      return pushRunChest(laneStar + up, hi);
+    });
+    modRun((m) => ({ ...m, gold: true }));
+    const gap = ms(420);
+    setGoldRun({ id: Date.now(), gap, items: items.map((c) => ({ label: `★${c.hi || c.star}` })) });
+    setLog((l) => [...l, a.goldIn, ...items.map((c) => chestText(c))]);
+    timers.current.push(setTimeout(() => setGoldRun(null), gap * (ADV_GOLD_N + 1) + ms(900)));
+  };
   const toBossHere = nexts.some((n) => n.kind === "boss");
-  if (!over && !busy && !atBoss && phase === "idle" && !pool && nexts.length >= 2 && !toBossHere) {
+  /*
+    主の前のチケット（2026-10-05 Aki「オート中は、チケット使いますかを適切な時間待つと、オートが再開される」）。
+    ★ 使えるチケットがあれば、オートでも札を出す前に一度止めて聞く。AutoCount が数え終えたら使わずに進む。
+    ⚠️ チケットを回しているあいだ（tkRoll）も止める。
+  */
+  const tkAsk = !runMod.bossSure && TICKET_KINDS.some((k2) => tickets[k2] > 0 && !(runMod.tkUsed || []).includes(k2));
+  const tkHold = toBossHere && (!!tkRoll || (tkAsk && tkSkip !== `${walking}:${seed}:${at}`));
+  /* ⚠️ 歩いたあとの自動の送り（タイマーの中）からも見えるように写しておく */
+  tkHoldRef.current = tkHold;
+  /* その探索のあいだ効いている変化の札（盤の左上）。⚠️ 良いものは緑、悪いものは赤 */
+  /* 変化の札。⚠️ lab のあるものは一行まとめ（中の値ごとに＋は緑・−は赤） */
+  const runChipEl = (c, key) => (c.items
+    ? <span key={key} className="line"><b>{c.lab}</b>{c.items.map((x, j) => <i key={j} className={x.none ? "none" : x.rare ? "rare" : x.good ? "up" : "down"}>{x.t}</i>)}</span>
+    : <span key={key} className={c.rare ? "rare" : c.good ? "good" : ""}>{c.t}</span>);
+  const runChips = (() => {
+    const m = runMod, C = a.runTag, out = [];
+    if (m.maxHp) out.push({ t: C.maxHp(Math.round(m.maxHp * 100)), good: m.maxHp > 0 });
+    /*
+      属性・溜まり・耐性は、それぞれ一行にまとめる（2026-10-05 Aki「火n%と表示するけど同じ行にまとめる。
+        ほぼ確実に手に入る6属性だけで6行はやりすぎ。1行に収まらなければ下に改行」）。
+      ★ 値は合計（虹の丘・鎧職人の分も足した実際の値）を属性ごとに。0は出さない。
+    */
+    const pc = (p) => `${p > 0 ? "+" : "−"}${Math.abs(p)}%`;
+    /* ⚠️ slot … 盤の上の固定の三行（耐性・物理・魔法）。空でも行は出す（位置が動かないように） */
+    /* ⚠️ 2026-10-05 Aki「効果が大きいバフを左に（考えやすいように）」：値の大きい順（マイナスは右端） */
+    const line = (lab, items, slot) => { if (items.length || slot) out.push({ lab, items: items.slice().sort((x, y) => (y.v || 0) - (x.v || 0)), slot }); };
+    /*
+      ★ 2026-10-05 Aki「属性だとだめ。魔法と物理に分けて」「レアマスのレアバフは黄色（悪いのは赤、汎用は緑、レアは黄）」。
+      ⚠️ 虹の丘の分は「全」として黄色で先に出し、属性ごとの値からは引く（同じ分を二度見せない）。
+    */
+    /* ⚠️ 柿の木の分（rare.magic）は魔法の行だけの「全」に足す */
+    const rA0 = ((m.rare || {}).attr) || 0, rR = ((m.rare || {}).res) || 0;
+    const attrLine = (lab, keys, slot) => {
+      const rA = rA0 + (slot === "magic" ? (((m.rare || {}).magic) || 0) : 0);
+      const it = keys.filter((k2) => Math.abs(((m.attr || {})[k2] || 0) - rA) > 0.0049)
+        .map((k2) => { const v = Math.round(((m.attr || {})[k2] - rA) * 100); return { t: `${a.attrShort[k2]}${pc(v)}`, good: v > 0, v }; });
+      if (rA > 0.0049) it.unshift({ t: `${C.all}${pc(Math.round(rA * 100))}`, rare: true, v: Math.round(rA * 100) });
+      line(lab, it, slot);
+    };
+    attrLine(C.grpMagic, ATTR_KEYS.filter((k2) => PHYS_KEYS.indexOf(k2) < 0), "magic");
+    attrLine(C.grpPhys, PHYS_KEYS, "phys");
+    line(C.grpCharge, SP_SUITS.filter((k2) => Math.abs((m.charge || {})[k2] || 0) > 0.0049)
+      .map((k2) => { const v = Math.round(m.charge[k2] * 100); return { t: `${suitLabel(k2, lang)}${pc(v)}`, good: v > 0, v }; }), "charge");
+    if (m.heal) out.push({ t: C.heal(Math.round(m.heal * 100)), good: m.heal > 0 });
+    if (m.potHeal) out.push({ t: C.potHeal(Math.round(m.potHeal * 100)), good: true });
+    if (m.cards) out.push({ t: C.cards(m.cards), good: m.cards > 0 });
+    {
+      const it = RUN_RES_KEYS.filter((k2) => Math.abs(((m.res || {})[k2] || 0) - rR) > 0.04)
+        .map((k2) => ({ t: `${String(a.sp.opt[k2] || k2).replace(/耐性$| res$/, "")}+${Math.round((m.res[k2] - rR) * 10) / 10}%`, good: true, v: m.res[k2] - rR }));
+      if (rR > 0.04) it.unshift({ t: `${C.all}+${Math.round(rR * 10) / 10}%`, rare: true, v: rR });
+      line(C.grpRes, it, "res");
+    }
+    if (m.bossCut) out.push({ t: C.bossCut(Math.round(m.bossCut * 100)), good: true });
+    if (m.bossUp) out.push({ t: C.bossUp(Math.round(m.bossUp * 100)), good: false });
+    /* ⚠️ ボス確定は挑戦状・闇商人・チケットで付く珍しい効果。黄色 */
+    if (m.bossSure) out.push({ t: C.bossSure, good: true, rare: true });
+    return out;
+  })();
+  /*
+    ★ 入口（道の分かれ目）では、ルーレットで道を選ぶ（2026-09-30）。主の手前の三択だけは札で選ぶ。
+    ⚠️ 自動でも手動でも回る（押す操作は要らない）。回した回数を数える。
+  */
+  if (!over && !busy && !atBoss && !roul && phase === "idle" && !pool && nexts.length >= 2 && !toBossHere) {
     const mark = `fork:${walking}:${seed}:${at}`;
     if (kickRef.current !== mark) {
       kickRef.current = mark;
       timers.current.push(setTimeout(() => {
         if (goingRef.current || phaseRef.current !== "idle") return;
-        const deck = buildPool([...MAJOR_LIST, ...MINOR_LIST]);
-        setLog((l) => [...l, a.forkAuto]);
-        commit(deck.slice(0, need));
-      }, ms(820)));
+        const heads = nexts.map((n) => n.key).filter((k2) => !visited.includes(k2));
+        const opts = (heads.length ? heads : nexts.map((n) => n.key)).map((k2) => ({ key: k2, w: 1, label: laneLabelOf(map, k2) }));
+        spinRoulette("lane", opts, (o) => {
+          setSpinsUsed((v) => v + 1);
+          setLog((l) => [...l, a.laneRoll(o.label)]);
+          commit(null, o.key);
+        });
+      }, ms(700)));
     }
   }
-  if (!over && !busy && !atBoss && phase === "idle" && !pool && nexts.length === 1) {
+  /* 外れの井戸に着いたら、残りの道からルーレットで選び、その道の入口へ抜ける */
+  if (!busy && !roul && !goldRun && phase === "idle" && !pool && wellPending) {
+    const mark = `well:${walking}:${seed}:${at}:${runMod.gold ? 1 : 0}`;
+    if (kickRef.current !== mark) {
+      kickRef.current = mark;
+      timers.current.push(setTimeout(() => {
+        if (goingRef.current) return;
+        /*
+          ルーレットが尽きた。⚠️ 終わりにせず、ボスの道の入口へ抜ける（ルーレットは回さない）。
+          ★ 道を選ぶ遊びは回数のぶんだけ。尽きたら必ずボスの道 ―― 迷い続けて終わることは無い。
+        */
+        if (spinsUsed >= (map.spins || 0) + (runModRef.current.spins || 0)) {
+          const bl2 = (map.lanes || []).find((l2) => l2.boss);
+          if (bl2 && !visited.includes(bl2.head)) {
+            setUsedNodes((v) => [...v, node.key]);
+            setAt(bl2.head);
+            setVisited((v) => (v.includes(bl2.head) ? v : [...v, bl2.head]));
+            setSteps((n) => n + 1);
+            setLog((l) => [...l, a.wellToBoss]);
+            enterLane(bl2.head);
+            return;
+          }
+        }
+        const opts = unexplored.map((k2) => ({ key: k2, w: 1, label: laneLabelOf(map, k2) }));
+        /* ★ 黄金の道（まれ）。⚠️ 一つの探索で一度。★2から */
+        if (!runModRef.current.gold && laneStar >= 2) {
+          opts.push({ key: "__gold", w: opts.length * ADV_GOLD_RATE / (1 - ADV_GOLD_RATE), label: a.goldName });
+        }
+        spinRoulette("well", opts, (o) => {
+          if (o.key === "__gold") { startGold(); return; }
+          setSpinsUsed((v) => v + 1);
+          setUsedNodes((v) => [...v, node.key]);
+          setAt(o.key);
+          setVisited((v) => (v.includes(o.key) ? v : [...v, o.key]));
+          setSteps((n) => n + 1);
+          setLog((l) => [...l, a.wellOutTo(o.label)]);
+          enterLane(o.key);
+        });
+      }, ms(700)));
+    }
+  }
+  if (!over && !busy && !atBoss && !roul && phase === "idle" && !pool && nexts.length === 1) {
     const mark = `one:${walking}:${seed}:${at}`;
     if (kickRef.current !== mark) {
       kickRef.current = mark;
@@ -79266,7 +90205,7 @@ function AdventurePanel({ lang, items, onItem }) {
       }, ms(820)));
     }
   }
-  if (autoRef.current && !over && !busy && !atBoss && phase === "idle" && !pool && nexts.length >= 2 && toBossHere) {
+  if (autoRef.current && !over && !busy && !atBoss && phase === "idle" && !pool && nexts.length >= 2 && toBossHere && !tkHold) {
     const mark = `${walking}:${seed}:${at}`;
     if (kickRef.current !== mark) {
       kickRef.current = mark;
@@ -79392,7 +90331,12 @@ function AdventurePanel({ lang, items, onItem }) {
       */
       /* ⚠️ 実測の対応表から引く。累乗で近似すると狙いの倍になる */
       /* 【デバッグ】主へ必ず着く（先へ進む率1）。⚠️ DEBUG_CHEATS が false なら効かない */
-      const go = dbgFlag("reach") ? 1 : goForReach(diffOf(rank, mapNo).reach);
+      /*
+        ★ 2026-10-03：ボス確定（闇商人・挑戦状）なら主の前の三択は必ず主。
+        ★ 特別なマスで上がるぶんの到達率を、ここで差し引く（laneReachComp）。
+      */
+      const go = (dbgFlag("reach") || runModRef.current.bossSure) ? 1
+        : goForReach(diffOf(rank, mapNo).reach) * laneReachComp(laneStar);
       const to = forceTo || advanceOn(map, cur, next, go);
       /*
         ⚠️⚠️ 行き先が「いまの節の隣」であることを必ず確かめること。
@@ -79456,73 +90400,112 @@ function AdventurePanel({ lang, items, onItem }) {
           const hi0 = (st0 >= 12 && Math.random() < Math.min(1, CHEST_HIGH_RATE * 5)) ? CHEST_HIGH_AT.boxSpot12 : 0;
           const ch = pushChest(Math.min(12, st0 + 2), { pref, area }, Math.round(eqb0.box ? eqb0.box / 100 : 0), hi0);
           setLog((l) => [...l, a.rareChest + (ch.hi ? a.advChestHi(ch.hi) : a.advChest(tierStars(ch.tier))) + a.deadEnd]);
+          /* ★ ボスより宝を選んだご褒美に、チケットが出やすい */
+          grantTicket(TICKET_DROP.rarebox, st0);
+        } else if (nd && nd.kind === "well" && nd.wellIn && nd.warp && byKey[nd.warp] && !usedNodes.includes(nd.key)) {
+          /*
+            井戸（入る側）。⚠️ 一つの盤で一度。少し間を置いてから、出る井戸へ抜ける（何が起きたか目で追えるように）。
+            ⚠️ 移動中の印（goingRef）を立てて、そのあいだに札・一本道の送りが走らないようにする。
+          */
+          const out = nd.warp;
+          setUsedNodes((v) => [...v, nd.key, out]);
+          setLog((l) => [...l, a.wellIn]);
+          goingRef.current = { from: to, to: out, at: Date.now() };
+          timers.current.push(setTimeout(() => {
+            goingRef.current = null;
+            setAt(out);
+            setVisited((v) => (v.includes(out) ? v : [...v, out]));
+            setLog((l) => [...l, a.wellOut]);
+          }, ms(900)));
+        } else if (nd && nd.kind === "well" && nd.wellMiss) {
+          /* 外れの道の井戸。⚠️ ルーレットは描画の側（wellPending）で回す。ここでは着いたことだけ書く */
+          const left = (map.lanes || []).filter((l2) => !visited.includes(l2.head) && l2.head !== to).length;
+          setLog((l) => [...l, (spinsUsed < (map.spins || 0) + (runModRef.current.spins || 0) && left > 0) ? a.wellMissIn : a.wellDryIn]);
+        } else if (nd && nd.kind === "well" && nd.wellMouth) {
+          /* 道の入口の井戸（井戸の口）。⚠️ 何も起きない。道が始まることだけ書く */
+          setLog((l) => [...l, a.wellMouth]);
+          enterLane(nd.key);
+        } else if (nd && nd.kind === "well") {
+          /* 出る井戸に先に着いた／使い終えた井戸。⚠️ 何も起きないことも書く */
+          setLog((l) => [...l, a.wellQuiet]);
+        } else if (nd && nd.kind === "event" && !usedNodes.includes(nd.key)) {
+          /*
+            イベント（パルプンテ）。2026-09-30 Aki。⚠️⚠️ 中身は仮（詳細はあとで決める）。
+            ★ ルーレットで一つ。悪い：HP減・ポーション減・属性の封印・必殺の封印。良い：回復・ポーション。
+            ⚠️ 封印は主を倒すまで（この探索のあいだ）続く。雑魚戦にも主戦にも掛かる。
+          */
+          setUsedNodes((v) => [...v, nd.key]);
+          spinRoulette("event", EVENT_FX.map((e) => ({ key: e.key, w: e.w, label: a.evName[e.key] })), (o) => {
+            const mx = runMaxOf(runModRef.current);
+            if (o.key === "hp") { const d = Math.round(mx * 0.15); setHp((v) => Math.max(1, v - d)); setLog((l) => [...l, a.evLog.hp(d)]); }
+            else if (o.key === "pot") { setCarryPot((v) => Math.max(0, v - 1)); setLog((l) => [...l, a.evLog.pot]); }
+            else if (o.key === "elem") {
+              const own = (advProgress().elems || FAMILY_KEYS).filter(Boolean);
+              const el = own[Math.floor(Math.random() * own.length)] || "fire";
+              setMapCurse((c) => ({ ...c, elem: el }));
+              setLog((l) => [...l, a.evLog.elem((a.familyName && a.familyName[el]) || el)]);
+            } else if (o.key === "nosp") { setMapCurse((c) => ({ ...c, noSp: true })); setLog((l) => [...l, a.evLog.nosp]); }
+            else if (o.key === "heal") { const h = Math.round(mx * 0.2); setHp((v) => Math.min(mx, v + h)); setLog((l) => [...l, a.evLog.heal(h)]); }
+            else { setCarryPot((v) => v + 1); setLog((l) => [...l, a.evLog.potUp]); }
+          });
+        } else if (nd && isAdvSpecial(nd.kind) && !usedNodes.includes(nd.key)) {
+          /* 特別なマス（2026-10-03）。⚠️ 中身は runSpecial / applySpecial に一箇所でまとめてある */
+          setUsedNodes((v) => [...v, nd.key]);
+          runSpecial(nd);
         } else if (nd && nd.kind === "potion" && !usedNodes.includes(nd.key)) {
           /* ポーション。⚠️ 一つの盤で一度。拾った数は小MAPの中の戦いに持ち越す */
           setUsedNodes((v) => [...v, nd.key]);
           setCarryPot((v) => v + 1);
           setLog((l) => [...l, a.potionGot]);
-        } else if (nd && nd.kind === "box") {
+        } else if (nd && nd.kind === "box" && !usedNodes.includes(nd.key)) {
           /*
-            鳥居の社。
-            ⚠️⚠️ 三回に二回は宝箱。残りの一回で、五つのうちどれかが起きる。
+            宝箱のマス。2026-10-03：中身をルーレットで見せる（以前はマスのキーで隠れて決まっていた）。
+            ⚠️⚠️ 三回に二回は宝箱の重みを保つ（宝箱8：倍率×2 1：回復 1：HP半分 1：倍率½ 1）。
               全部を等確率にすると、宝箱が五分の一になって寄る理由が消える。
-            ★ 良いこと三つ（宝箱・倍率倍・回復）と悪いこと二つ（HP半分・倍率半分）。
-              良い側に寄せてあるが、踏むかどうかの判断は残る。
-            ⚠️ マスのキーで決める。入り直しで変えさせない。
+            ★ ミミック（★3から、道の途中の宝箱だけ）。倒せば★+2の宝箱。
+            ⚠️ 主の前の三択の宝箱（行き止まり）にはミミックを入れない。選んだ褒美が戦いになるのは筋が通らない。
           */
-          /*
-            ⚠️ 12で割ること。三回に二回（8/12）を宝箱にしたうえで、
-              残り4/12を四つに分けるため。6だと二つしか置けない。
-          */
-          const roll = hashName(String(nd.key) + ":" + seed) % 12;
-          if (roll < 8) {
-            /*
-              ⚠️⚠️ ランドマークカードを渡さないこと。宝箱は冒険の装備へ繋げた。
-                カードを残すと「集めたのに使い道が無い」ものが増える。
-            */
-            /*
-              装備。
-              ⚠️⚠️ 倉庫（owned）へ直接入れないこと。宝箱に溜めて、
-                残すものだけを選ばせる（捨てる作業を作らない）。
-              ★ 引く回数は土地の★ぶん。目利き（eye）を積んでいれば増える。
-              ⚠️ 拾った土地を渡すこと。名前がそこから決まる。
-            */
-            /*
-              ⚠️⚠️ 中身を決めないこと。未開封の箱を渡す。
-                拾った瞬間に装備が決まると、箱を取っておく意味が消える。
-              ★ 箱の段が、開けるときの「引く回数」になる。
-            */
-            const eqb0 = equipBonus(equippedGear());
-            const st0 = isWardStage(pref, area) ? 12 : starOfStage(rank, walking);
-            /* ⚠️ ★13は★12の土地でだけ。8%。ここを上げると特別でなくなる */
-            const hi0 = (st0 >= 12 && Math.random() < CHEST_HIGH_RATE)
-              ? CHEST_HIGH_AT.boxSpot12 : 0;
-            const ch = pushChest(st0, { pref, area },
-              Math.round(eqb0.box ? eqb0.box / 100 : 0), hi0);
-            setLog((l) => [...l, (ch.hi ? a.advChestHi(ch.hi) : a.advChest(tierStars(ch.tier)))
-              + a.deadEnd]);
-          } else if (roll === 8) {
-            /* ⚠️ 倍率は1が基準。超過分を倍にする（1.0のときは何も起きない） */
-            const before = carryMult;
-            const after = Math.max(1, 1 + (before - 1) * 2);
-            setCarryMult(after);
-            setLog((l) => [...l, a.shrineMult(before.toFixed(2), after.toFixed(2))]);
-          } else if (roll === 9) {
-            /* ⚠️ 回復は最大HPの割合。固定値だと段によって重みが変わる */
-            const mx = statsOf(rank).maxHP;
-            const h = Math.round(mx * 0.35);
-            setHp((v) => Math.min(mx, v + h));
-            setLog((l) => [...l, a.shrineHeal(h)]);
-          } else if (roll === 10) {
-            /* ⚠️ 半分にしても倒れないこと。切り上げで最低1を残す */
-            setHp((v) => Math.max(1, Math.ceil(v / 2)));
-            setLog((l) => [...l, a.shrineHurt]);
-          } else {
-            const before = carryMult;
-            const after = Math.max(1, 1 + (before - 1) * 0.5);
-            setCarryMult(after);
-            setLog((l) => [...l, a.shrineCut(before.toFixed(2), after.toFixed(2))]);
-          }
+          setUsedNodes((v) => [...v, nd.key]);
+          const termBox = !(nd.next || []).length;
+          const bo = [
+            { key: "chest", w: 8, label: a.boxOpt.chest }, { key: "multUp", w: 1, label: a.boxOpt.multUp },
+            { key: "heal", w: 1, label: a.boxOpt.heal }, { key: "hurt", w: 1, label: a.boxOpt.hurt },
+            { key: "multDown", w: 1, label: a.boxOpt.multDown },
+          ];
+          if (!termBox && laneStar >= 3) bo.push({ key: "mimic", w: 1, label: a.boxOpt.mimic });
+          spinRoulette("box", bo, (o) => {
+            const tail = termBox ? a.deadEnd : "";
+            if (o.key === "chest") {
+              /* ⚠️ 中身を決めないこと。未開封の箱を渡す（段が開けるときの引く回数になる） */
+              const hi0 = (laneStar >= 12 && Math.random() < CHEST_HIGH_RATE) ? CHEST_HIGH_AT.boxSpot12 : 0;
+              const ch = pushRunChest(laneStar, hi0);
+              setLog((l) => [...l, chestText(ch) + tail]);
+            } else if (o.key === "multUp") {
+              /* ⚠️ 倍率は1が基準。超過分を倍にする（1.0のときは何も起きない） */
+              const before = carryMult;
+              const after = Math.max(1, 1 + (before - 1) * 2);
+              setCarryMult(after);
+              setLog((l) => [...l, a.shrineMult(before.toFixed(2), after.toFixed(2)) + tail]);
+            } else if (o.key === "heal") {
+              const mx = runMaxOf(runModRef.current);
+              const h = Math.round(mx * 0.35);
+              setHp((v) => Math.min(mx, v + h));
+              setLog((l) => [...l, a.shrineHeal(h) + tail]);
+            } else if (o.key === "hurt") {
+              /* ⚠️ 半分にしても倒れないこと。切り上げで最低1を残す */
+              setHp((v) => Math.max(1, Math.ceil(v / 2)));
+              setLog((l) => [...l, a.shrineHurt + tail]);
+            } else if (o.key === "mimic") {
+              zakoKindRef.current = "mimic"; setZakoKind("mimic");
+              setLog((l) => [...l, a.zkMeet.mimic]);
+              setZako(nd.key);
+            } else {
+              const before = carryMult;
+              const after = Math.max(1, 1 + (before - 1) * 0.5);
+              setCarryMult(after);
+              setLog((l) => [...l, a.shrineCut(before.toFixed(2), after.toFixed(2)) + tail]);
+            }
+          });
         } else if (nd && !(nd.next || []).length && nd.kind !== "boss") {
           /* ⚠️ 行き止まりに着いたことを必ず書く。図だけだと止まった理由が分からない */
           setGain((g) => g || { card: null, kind: "dead" });
@@ -79548,8 +90531,25 @@ function AdventurePanel({ lang, items, onItem }) {
             ⚠️ HPは主まで持ち越す。ここで全快すると、道中に意味が無くなる。
             ⚠️ 負けても地図は終わらない。HPが0になった時点で終わる。
           */
-          setZako(nd.key);
+          /*
+            ★ 2026-09-30：敵マスもルーレット。当たれば戦闘を回避できる（ZAKO_DODGE の確率）。
+          */
           setLog((l) => [...l, where + a.metZako]);
+          /*
+            ★ 2026-10-03：金の敵（★2から）と精鋭（★3から）。どちらも倒せば★+2の宝箱。
+            ⚠️ 避ける率は今のまま。金の敵と精鋭は「戦う」の側から割く（道中で戦う回数は変えない）。
+          */
+          const zg = laneStar >= 2 ? ZAKO_GILD : 0, ze = laneStar >= 3 ? ZAKO_ELITE : 0;
+          const zo = [{ key: "fight", w: 1 - ZAKO_DODGE - zg - ze, label: a.rFight }, { key: "dodge", w: ZAKO_DODGE, label: a.rDodge }];
+          if (zg) zo.push({ key: "gild", w: zg, label: a.zkOpt.gild });
+          if (ze) zo.push({ key: "elite", w: ze, label: a.zkOpt.elite });
+          spinRoulette("zako", zo, (o) => {
+            if (o.key === "dodge") { setLog((l) => [...l, a.zakoDodge]); return; }
+            const kd = o.key === "fight" ? null : o.key;
+            zakoKindRef.current = kd; setZakoKind(kd);
+            if (kd) setLog((l) => [...l, a.zkMeet[kd]]);
+            setZako(nd.key);
+          });
         } else if (nd && nd.kind === "trap" && !usedNodes.includes(nd.key)) {
           setUsedNodes((v) => [...v, nd.key]);
           /*
@@ -79578,9 +90578,9 @@ function AdventurePanel({ lang, items, onItem }) {
             ⚠️ 割合で戻す。固定値だと、育つほど焼け石に水になる。
             ⚠️ 全快にしないこと。全快させると、削り合いそのものが無意味になる。
           */
-          const S = statsOf(rank);
-          const add = Math.round(S.maxHP * 0.35);
-          setHp((v) => Math.min(S.maxHP, v + add));
+          const mxH = runMaxOf(runModRef.current);
+          const add = Math.round(mxH * 0.35);
+          setHp((v) => Math.min(mxH, v + add));
           setLog((l) => [...l, where + a.healed(add)]);
         } else if (nd && nd.kind === "shop" && !usedNodes.includes(nd.key)) {
           /*
@@ -79614,7 +90614,8 @@ function AdventurePanel({ lang, items, onItem }) {
           if (autoRef.current && !fin) {
             timers.current.push(setTimeout(() => {
               /* ⚠️ 最新の deal を呼ぶ。古い描画のものだと引く枚数がずれる */
-              if (autoRef.current && dealRef.current) dealRef.current(true);
+              /* ⚠️ 主の前でチケットを聞いているあいだは送らない（数え終えたら上の起動が引き受ける） */
+              if (autoRef.current && dealRef.current && !tkHoldRef.current) dealRef.current(true);
             }, ms(520)));
           }
         }, ms(900)));
@@ -79631,7 +90632,7 @@ function AdventurePanel({ lang, items, onItem }) {
     setGain(null);
     setSeed(Math.floor(Math.random() * 100000) + 1);
     setAt(null); setVisited([]); setPool(null); setPicked([]);
-    goPhase("idle"); setLog([]); setSteps(0);
+    goPhase("idle"); setLog([]); setSteps(0); setZakoWins(0); setJnDone(false);
     /* ⚠️ 戦闘の跡も消す。残すと、次の回で主に着いた瞬間に結果が出る */
     setBossEnd(null); setZako(null);
     /* ⚠️ HPも戻す。持ち越すのは一回の探索のあいだだけ */
@@ -79643,6 +90644,8 @@ function AdventurePanel({ lang, items, onItem }) {
       ⚠️ 貨幣の累積も戻す。前の回の倍率を持ち込ませない。
     */
     setUsedNodes([]); setCarryMult(1); setCarrySp(null); setCarryPot(advProgress().potStart);
+    setRoul(null); setSpinsUsed(0); setMapCurse({});
+    setRunMod(eatPack(advRun0())); setZakoKind(null); zakoKindRef.current = null; setGoldRun(null);
   };
   return (
     <div className="adv-wrap">
@@ -79678,15 +90681,40 @@ function AdventurePanel({ lang, items, onItem }) {
         ⚠️ 指の操作は自分で受ける。なぞれば視点が動き、軽く叩けば全体になる。
         ⚠️ touch-action: none を当てること。当てないと端末がページ送りに使ってしまう。
       */}
+      {/*
+        地の利・天の利（2026-10-03 Aki）。⚠️ 敵の相性は伏せるが、こちらの倍率は見せる。
+        ★ 印と±%だけを一行ずつ。0のものは出さない。
+      */}
+      <div className="adv-attr">
+        {[["land", a.landTag, landAttr], ["sky", a.skyTag(a.weatherName[weather]), skyAttr]].map(([key, lab, obj]) => (
+          <div key={key} className={`adv-attr-row ${key}`}>
+            <b>{lab}</b>
+            {ATTR_KEYS.filter((k2) => obj[k2]).map((k2) => (
+              <span key={k2} className={obj[k2] > 0 ? "up" : "down"}>
+                <AttrGlyph k={k2} size={13} />{obj[k2] > 0 ? "+" : "−"}{Math.round(Math.abs(obj[k2]) * 100)}%
+              </span>
+            ))}
+          </div>
+        ))}
+      </div>
       <div className="adv-iso-wrap" ref={mapRef}>
-      <svg ref={svgRef}
-        viewBox={`0 0 ${VIEW_W} ${VIEW_H}`}
-        className="adv-iso" role="img" aria-label={walking}
+      {/*
+        ★ 2026-10-05 Aki「スマホを見た目を害さずに軽く」：
+          盤（MAP_W×MAP_H の svg）を窓（.adv-iso）の中に置き、HTML の transform で動かす。
+          ⚠️⚠️ 以前は svg の中の <g> を transform で動かしていた。svg の中の動きは合成（GPU）に回らず、
+            視点が滑る 620ms のあいだ毎フレーム盤ぜんたい（数千の部品）を描き直していた。
+            HTML の要素の transform なら、一度描いた絵を GPU がずらすだけで済む。
+          ⚠️ なぞっている間は React を通さず、盤の style を直に書き換える（指が動くたびに盤ぜんたいを組み直さない）。
+            離したときに一度だけ setView する。
+          ⚠️ 光と四隅の陰は窓に固定（.adv-iso-over）。盤と一緒に動かさない。
+      */}
+      <div ref={svgRef}
+        className={`adv-iso${mapOff ? " off" : ""}`} role="img" aria-label={walking}
         onPointerDown={(e) => {
           if (e.currentTarget.setPointerCapture) {
             try { e.currentTarget.setPointerCapture(e.pointerId); } catch (err) { /* 無視 */ }
           }
-          dragRef.current = { x: e.clientX, y: e.clientY, vx: view.x, vy: view.y, t: Date.now(), moved: 0 };
+          dragRef.current = { x: e.clientX, y: e.clientY, vx: view.x, vy: view.y, t: Date.now(), moved: 0, cur: null };
           setDragging(true);
         }}
         onPointerMove={(e) => {
@@ -79698,740 +90726,34 @@ function AdventurePanel({ lang, items, onItem }) {
           const k = VIEW_W / box.width;
           const dx = (e.clientX - d.x) * k, dy = (e.clientY - d.y) * k;
           d.moved = Math.max(d.moved, Math.hypot(e.clientX - d.x, e.clientY - d.y));
-          setView(clampView(d.vx - dx, d.vy - dy));
+          d.cur = clampView(d.vx - dx, d.vy - dy);
+          if (boardRef.current) boardRef.current.style.transform = advBoardXf(d.cur);
         }}
-        onPointerCancel={() => { dragRef.current = null; setDragging(false); }}
+        onPointerCancel={() => { const d = dragRef.current; dragRef.current = null; if (d && d.cur) setView(d.cur); setDragging(false); }}
         /* ⚠️ 叩いても全体は出さない。先が全部見えると、探して進む意味が消える */
-        onPointerUp={() => { dragRef.current = null; setDragging(false); }}>
-        <defs>
-          {/*
-            ⚠️ 空・地面・道・マスを別の層にする。
-              一枚の平面に置くと「盤」に見えて、土地を歩いている感じが出ない。
-          */}
-          <linearGradient id="advSky" x1="0" y1="0" x2="0.3" y2="1">
-            <stop offset="0%" stopColor={theme.sky[0]} />
-            <stop offset="55%" stopColor={theme.sky[1]} />
-            <stop offset="100%" stopColor={theme.sky[2]} />
-          </linearGradient>
-          <radialGradient id="advLand" cx="50%" cy="50%" r="50%">
-            <stop offset="0%" stopColor={theme.land} />
-            <stop offset="62%" stopColor="rgba(64,78,74,0.38)" />
-            <stop offset="100%" stopColor="rgba(40,44,64,0)" />
-          </radialGradient>
-          <radialGradient id="advMist" cx="50%" cy="50%" r="50%">
-            <stop offset="0%" stopColor="rgba(150,170,220,0.16)" />
-            <stop offset="100%" stopColor="rgba(150,170,220,0)" />
-          </radialGradient>
-          {/* 宝箱の材質。⚠️ 木と金を別に持つ。同じ色で塗ると板が金に見える */}
-          {/* 駒の装束。⚠️ 台と同系にしない。暗い紫で抜く */}
-          <linearGradient id="pawnCloak" x1="0.2" y1="0" x2="0.8" y2="1">
-            <stop offset="0%" stopColor="#4A3B7E" />
-            <stop offset="100%" stopColor="#241A44" />
-          </linearGradient>
-          <linearGradient id="chestWood" x1="0" y1="0" x2="0.2" y2="1">
-            <stop offset="0%" stopColor="#9C6634" />
-            <stop offset="100%" stopColor="#5E3A18" />
-          </linearGradient>
-          <linearGradient id="chestLid" x1="0" y1="0" x2="0.3" y2="1">
-            <stop offset="0%" stopColor="#B87C42" />
-            <stop offset="100%" stopColor="#7A4A1E" />
-          </linearGradient>
-          <linearGradient id="chestGold" x1="0" y1="0" x2="1" y2="1">
-            <stop offset="0%" stopColor="#F6DE96" />
-            <stop offset="50%" stopColor="#D9A94E" />
-            <stop offset="100%" stopColor="#A87C2C" />
-          </linearGradient>
-          {/* マスの天面。⚠️ 種類ごとに傾斜を持たせる。単色だと駒の台に見える */}
-          {[["tZako", "#B06060", "#7A3A3A"], ["tHeal", "#EFA0C8", "#B45C8C"],
-            ["tRoad", "#6B6494", "#4A4470"], ["tSeen", "#8C93B4", "#666E92"],
-            ["tGate", "#7E97C8", "#54689B"], ["tBox", "#E4C173", "#A8823A"],
-            ["tSpot", "#7FCB8B", "#4C8C5C"], ["tBoss", "#E2707F", "#8E3550"],
-            ["tHere", "#FFE9B8", "#D8B26A"]].map(([id, a, b]) => (
-            <linearGradient key={id} id={id} x1="0.2" y1="0" x2="0.8" y2="1">
-              <stop offset="0%" stopColor={a} />
-              <stop offset="100%" stopColor={b} />
-            </linearGradient>
-          ))}
-          <linearGradient id="isoSheen" x1="0" y1="0" x2="1" y2="0">
-            <stop offset="0%" stopColor="rgba(255,243,214,0)" />
-            <stop offset="50%" stopColor="rgba(255,243,214,0.16)" />
-            <stop offset="100%" stopColor="rgba(255,243,214,0)" />
-          </linearGradient>
-          <linearGradient id="isoBeam" x1="0" y1="0" x2="0" y2="1">
-            <stop offset="0%" stopColor="rgba(255,243,214,0)" />
-            <stop offset="100%" stopColor="rgba(255,243,214,0.30)" />
-          </linearGradient>
-          <radialGradient id="isoGlow" cx="50%" cy="50%" r="50%">
-            <stop offset="0%" stopColor="rgba(255,243,214,0.55)" />
-            <stop offset="100%" stopColor="rgba(255,243,214,0)" />
-          </radialGradient>
-        </defs>
-        {/*
-          盤ぜんたい。
-          ⚠️⚠️ 視点を viewBox で動かすと、途中の絵が作られないので瞬間移動になる。
-            CSS の transform で動かせば、間を補間して滑らかに流れる。
-          ⚠️ なぞっている間だけ補間を切ること。切らないと指から遅れる。
-        */}
-        <g style={{
-          transform: `translate(${-view.x}px, ${-view.y}px)`,
+        onPointerUp={() => { const d = dragRef.current; dragRef.current = null; if (d && d.cur) setView(d.cur); setDragging(false); }}>
+      <div ref={boardRef} className="adv-iso-board" aria-hidden="true"
+        style={{
+          width: `${(MAP_W / VIEW_W) * 100}%`, height: `${(MAP_H / VIEW_H) * 100}%`,
+          transform: advBoardXf((dragging && dragRef.current && dragRef.current.cur) || view),
+          /* ⚠️ なぞっている間だけ補間を切る。切らないと指から遅れる */
           transition: dragging ? "none" : "transform 620ms cubic-bezier(0.33, 0, 0.2, 1)",
         }}>
-        {/* 空 */}
-        <rect x="0" y="0" width={MAP_W} height={MAP_H} fill="url(#advSky)" />
-        {/* ⚠️ 星は等間隔に置かない。並ぶと壁紙に見える */}
-        {Array.from({ length: 46 }, (_, i) => {
-          const a = (i * 2.399) % (Math.PI * 2), d = 40 + ((i * 137) % 520);
-          const x = MAP_W / 2 + Math.cos(a) * d, y = MAP_H / 2 + Math.sin(a) * d * 0.86;
-          return <circle key={`st${i}`} cx={x} cy={y} r={0.8 + (i % 3) * 0.5}
-            fill="#DCD6FF" opacity={0.18 + (i % 4) * 0.08} />;
-        })}
-        {/*
-          遠景。⚠️⚠️ 地面より奥に置くこと。盤の上端の向こうに景色が見えて、はじめて
-            「土地を歩いている」になる。台だけでは盤に見えた。
-        */}
-        <g transform={`translate(0 ${Math.max(0, MAP_H / 2 - YSTEP * (MAP_RINGS + 0.6) - 150)})`}>
-          <Panorama kind={themeOf(walking)} w={MAP_W} h={230} uid="map" />
-          {/*
-            渡り鳥。⚠️ 生き物がいると景色が「場所」になる。台と小物だけだと模型に見えた。
-            ⚠️ 群れを二つ、違う速さで。同じ速さだと一枚の絵が滑っているように見える。
-            ⚠️ 羽ばたきは翼の形だけを動かす（位置決めの transform と分ける）。
-          */}
-          {[0, 1].map((g) => (
-            <g key={`bird${g}`} className={`mv-flock f${g}`}>
-              {[0, 1, 2, 3, 4].map((k) => (
-                <g key={k} transform={`translate(${k * 11 - (k % 2) * 3} ${Math.abs(k - 2) * 6 + g * 40})`}>
-                  <path className="mv-wing" d="M-5 0 Q-2.4 -3 0 0 Q2.4 -3 5 0"
-                    fill="none" stroke="rgba(30,24,40,0.75)" strokeWidth="1.4" strokeLinecap="round" />
-                </g>
-              ))}
-            </g>
-          ))}
-        </g>
-        {/* 地面。⚠️ マスの集まりの下に敷く。空の上に浮いていると旅に見えない */}
-        <ellipse cx={MAP_W / 2} cy={MAP_H / 2} rx={XSTEP * (MAP_RINGS + 0.6)}
-          ry={YSTEP * (MAP_RINGS + 0.6)} fill="url(#advLand)" />
-        <ellipse cx={MAP_W / 2 - 90} cy={MAP_H / 2 + 60} rx={230} ry={150} fill="url(#advMist)" />
-        <ellipse cx={MAP_W / 2 + 140} cy={MAP_H / 2 - 90} rx={200} ry={130} fill="url(#advMist)" />
-        {/*
-          空きマスの地形・川・電線。
-          ⚠️⚠️ 台より奥（先）に描くこと。台の上に景色が被ると道が読めなくなる。
-          ⚠️ 並びは奥から手前（terrainPlan で y の順に並べてある）。
-        */}
-        <TerrainLayer map={map} seed={seed} themeKey={themeOf(walking)} elems={mapElems}
-          pref={pref} area={area} heroOn={heroOn} heroKind={heroKind} box={mapBox} />
-        {/*
-          地面の景物。
-          ⚠️⚠️ 台と道だけだと盤に見える。木・岩・草を置いて、土地の上を歩かせる。
-          ⚠️ 種から置くこと。描くたびに散らすと、動くたびに木が飛び回る。
-          ⚠️ 台の近くには置かない。重なると道が読めなくなる。
-          ⚠️ 手前ほど大きく、暗く。奥ほど小さく、霞ませる。同じ大きさで撒くと壁紙になる。
-        */}
-        {(() => {
-          const items = [];
-          let s2 = (seed || 1) * 7919 + 13;
-          const rnd2 = () => (s2 = (s2 * 1103515245 + 12345) & 0x7fffffff) / 0x7fffffff;
-          /*
-            ⚠️⚠️ この層はもう撒かないこと。空きマスはすべて地形（TerrainCell）で埋めたので、
-              ここで家や田んぼを撒くと地形のマスと重なる（家と田んぼが重なっていた）。
-            ★ 数を0にして層ごと止めてある。戻すなら、地形のマスと当たらない所だけにすること。
-          */
-          for (let i = 0; i < 0; i++) {
-            const ang = rnd2() * Math.PI * 2;
-            const rad = Math.sqrt(rnd2()) * (MAP_RINGS + 0.5);
-            const x = MAP_W / 2 + Math.cos(ang) * rad * XSTEP;
-            const y = MAP_H / 2 + Math.sin(ang) * rad * YSTEP;
-            /* ⚠️ 台と道の上に立てない。近いものは捨てる */
-            if (map.some((n2) => {
-              const P2 = hexAt(n2);
-              return Math.abs(P2.x - x) < 46 && Math.abs(P2.y - y) < 40;
-            })) continue;
-            const depth = 0.55 + (y / MAP_H) * 0.75;   /* 手前ほど大きい */
-            /* ⚠️ 種類は土地柄の配合から引く。どの土地でも同じ木を撒かない */
-            const total = theme.mix.reduce((s3, m) => s3 + m[1], 0);
-            let pick = rnd2() * total, kind = theme.mix[0][0];
-            for (const [k2, w2] of theme.mix) { if (pick < w2) { kind = k2; break; } pick -= w2; }
-            items.push({ x, y, d: depth, kind, key: `sc${i}` });
-          }
-          /*
-            ⚠️⚠️ 奥（y の小さい順）から手前へ並べること。順がばらばらだと、
-              手前の木が奥の家に隠れて重なりが崩れる。
-            ⚠️⚠️ 薄くしすぎないこと（以前は0.35〜0.75で、景色に溶けて見えなかった）。
-              奥だけ少し霞ませ、手前ははっきり描く。
-          */
-          items.sort((p1, p2) => p1.y - p2.y);
-          return items.map((o) => (
-            <g key={o.key} transform={`translate(${o.x} ${o.y}) scale(${o.d.toFixed(2)})`}
-              opacity={Math.min(1, 0.72 + o.d * 0.24)}>
-              {o.kind === "tree" ? (
-                /* 木。⚠️ 三角を三段。一枚だと記号に見える */
-                <g>
-                  <ellipse cx="0" cy="1.5" rx="7" ry="2.4" fill="rgba(10,6,20,0.4)" />
-                  <rect x="-1.5" y="-5" width="3" height="7" rx="1" fill="#4A3524" />
-                  <path d="M0 -24 L8.5 -11 L-8.5 -11 Z" fill="#3E7A4A" />
-                  <path d="M0 -18 L10 -4 L-10 -4 Z" fill="#356B42" />
-                  <path d="M0 -24 L8.5 -11 L0 -11 Z" fill="#4E9159" />
-                  <path d="M0 -18 L10 -4 L0 -4 Z" fill="#3F7C4D" />
-                </g>
-              ) : o.kind === "rock" ? (
-                /* 岩。⚠️ 左上に明るい面、右下に影。台と同じ光の向きに揃える */
-                <g>
-                  <ellipse cx="0" cy="2.4" rx="9" ry="2.8" fill="rgba(10,6,20,0.4)" />
-                  <path d="M-9 2 L-5 -7 L2 -9 L8 -3 L9 2 Z" fill="#5E5878" />
-                  <path d="M-9 2 L-5 -7 L2 -9 L1 2 Z" fill="#78718F" />
-                  <path d="M-5 -7 L2 -9 L0 -6 Z" fill="#9890AE" opacity="0.7" />
-                </g>
-              ) : o.kind === "house" ? (
-                /* 家。⚠️ 屋根・壁・窓を分ける。四角一つだと箱に見える */
-                <g>
-                  <ellipse cx="0" cy="3" rx="10" ry="3" fill="rgba(10,6,20,0.4)" />
-                  <rect x="-7.5" y="-8" width="15" height="11" fill="#8C7F6E" />
-                  <rect x="-7.5" y="-8" width="7.5" height="11" fill="#A2947F" />
-                  <path d="M-9.5 -8 L0 -16 L9.5 -8 Z" fill="#7A4A3A" />
-                  <path d="M-9.5 -8 L0 -16 L0 -8 Z" fill="#8F5A46" />
-                  <rect x="-4.5" y="-5" width="3.4" height="3.4" fill="#F0D68C" />
-                  <rect x="1.2" y="-5" width="3.4" height="3.4" fill="#C9A24B" />
-                </g>
-              ) : o.kind === "block" ? (
-                /* ビル。⚠️ 高さと窓の数を変える。同じ形が並ぶと書き割りに見える */
-                <g>
-                  <ellipse cx="0" cy="3" rx="11" ry="3" fill="rgba(10,6,20,0.45)" />
-                  <rect x="-9" y="-22" width="9" height="25" fill="#4E4A6A" />
-                  <rect x="-9" y="-22" width="4.5" height="25" fill="#635E85" />
-                  <rect x="0.5" y="-32" width="8.5" height="35" fill="#453F5F" />
-                  <rect x="0.5" y="-32" width="4.2" height="35" fill="#575178" />
-                  {[0, 1, 2, 3].map((r3) => [0, 1].map((c3) => (
-                    <rect key={`${r3}${c3}`} x={-7.6 + c3 * 3.6} y={-19 + r3 * 5.6}
-                      width="2.4" height="3" fill={(r3 + c3) % 3 ? "#F0D68C" : "#3A3558"} opacity="0.9" />
-                  )))}
-                  {[0, 1, 2, 3, 4].map((r3) => (
-                    <rect key={`b${r3}`} x="2.4" y={-29 + r3 * 6.2} width="4.4" height="3.2"
-                      fill={r3 % 2 ? "#F0D68C" : "#3A3558"} opacity="0.85" />
-                  ))}
-                </g>
-              ) : o.kind === "torii" ? (
-                /* 鳥居。⚠️ 笠木は反らせる。真っ直ぐだと門に見える */
-                <g>
-                  <ellipse cx="0" cy="2.6" rx="9" ry="2.6" fill="rgba(10,6,20,0.4)" />
-                  <rect x="-6.4" y="-14" width="2.6" height="16" fill="#B4442F" />
-                  <rect x="3.8" y="-14" width="2.6" height="16" fill="#9A3626" />
-                  <rect x="-7.6" y="-10.4" width="15.2" height="2" fill="#A83B2A" />
-                  <path d="M-10 -15.6 Q0 -18.4 10 -15.6 L10 -13.2 Q0 -15.8 -10 -13.2 Z" fill="#C24C36" />
-                </g>
-              ) : o.kind === "wave" ? (
-                /* 波。⚠️ 三本を別の長さで重ねる。一本だと線に見える */
-                <g fill="none" strokeLinecap="round">
-                  <path d="M-11 0 Q-7 -3 -3 0 T5 0 T13 0" stroke="#7FB6D8" strokeWidth="1.8" opacity="0.85" />
-                  <path d="M-8 4 Q-4 1 0 4 T8 4" stroke="#A9D4EC" strokeWidth="1.5" opacity="0.7" />
-                  <path d="M-5 -5 Q-1 -8 3 -5" stroke="#6AA3C8" strokeWidth="1.3" opacity="0.6" />
-                </g>
-              ) : o.kind === "snowtree" ? (
-                /* 雪をかぶった木。⚠️ 幹を暗く、雪を上面だけに。全面白だと綿になる */
-                <g>
-                  <ellipse cx="0" cy="1.5" rx="7" ry="2.4" fill="rgba(10,6,20,0.35)" />
-                  <rect x="-1.5" y="-5" width="3" height="7" rx="1" fill="#3B2E24" />
-                  <path d="M0 -24 L8.5 -11 L-8.5 -11 Z" fill="#2E5A44" />
-                  <path d="M0 -18 L10 -4 L-10 -4 Z" fill="#27503E" />
-                  <path d="M0 -24 L6 -14.5 L-6 -14.5 Z" fill="#E8EEF8" />
-                  <path d="M0 -18 L7 -8.5 L-7 -8.5 Z" fill="#DCE4F2" opacity="0.9" />
-                </g>
-              ) : o.kind === "ice" ? (
-                /* 氷。⚠️ 面を三つに割る。一枚だと水たまりに見える */
-                <g>
-                  <path d="M-9 1 L-3 -6 L5 -5 L9 1 L2 4 Z" fill="#9FC4E4" opacity="0.85" />
-                  <path d="M-9 1 L-3 -6 L1 -2 Z" fill="#CBE2F4" opacity="0.9" />
-                  <path d="M5 -5 L9 1 L3 0 Z" fill="#7FA8CC" opacity="0.9" />
-                </g>
-              ) : o.kind === "steam" ? (
-                /* 湯けむり。⚠️ 岩と組にする。煙だけだと火事に見える */
-                <g>
-                  <ellipse cx="0" cy="2.5" rx="9" ry="2.8" fill="rgba(10,6,20,0.4)" />
-                  <path d="M-8 2 L-4 -4 L4 -4 L8 2 Z" fill="#6A5A66" />
-                  <ellipse cx="0" cy="-4" rx="6" ry="2" fill="#3E3448" />
-                  <g className="mv-float" style={{ animationDuration: "6s" }}>
-                    <ellipse cx="-2" cy="-11" rx="3.6" ry="4.4" fill="#EAE2F0" opacity="0.35" />
-                    <ellipse cx="2.4" cy="-17" rx="3" ry="3.6" fill="#EAE2F0" opacity="0.25" />
-                  </g>
-                </g>
-              ) : o.kind === "stone" ? (
-                /* 石碑。⚠️ 傾ける。真っ直ぐだと墓石に見える */
-                <g transform="rotate(-5)">
-                  <ellipse cx="0" cy="2.4" rx="7" ry="2.4" fill="rgba(10,6,20,0.4)" />
-                  <path d="M-4 2 L-4 -12 L0 -15 L4 -12 L4 2 Z" fill="#8A8478" />
-                  <path d="M-4 2 L-4 -12 L0 -15 L0 2 Z" fill="#A39C8C" />
-                  <path d="M-2.4 -9 L2.4 -9 M-2.4 -6 L2.4 -6 M-2.4 -3 L1.2 -3"
-                    stroke="#5E594E" strokeWidth="0.7" />
-                </g>
-              ) : o.kind === "rice" ? (
-                /* 田。⚠️ 畦で区切る。緑一色だと芝生に見える */
-                <g>
-                  <path d="M-12 3 L-6 -4 L12 -4 L6 3 Z" fill="#6F8A4A" />
-                  <path d="M-12 3 L-6 -4 L-1 -4 L-6 3 Z" fill="#7E9A55" />
-                  <path d="M0 -4 L-5 3 M6 -4 L1 3" stroke="#4E6234" strokeWidth="0.8" />
-                  <path d="M-9 0 L9 0" stroke="#4E6234" strokeWidth="0.7" opacity="0.7" />
-                </g>
-              ) : o.kind === "broadleaf" ? (
-                /* 広葉樹。⚠️ 針葉樹と混ぜる。同じ木ばかりだと植林地に見える */
-                <g>
-                  <ellipse cx="0" cy="1.5" rx="7" ry="2.4" fill="rgba(10,6,20,0.4)" />
-                  <rect x="-1.6" y="-7" width="3.2" height="9" rx="1" fill="#4A3524" />
-                  <circle cx="-4" cy="-12" r="6" fill="#3F7C4D" />
-                  <circle cx="4.5" cy="-11" r="5.4" fill="#356B42" />
-                  <circle cx="0" cy="-16" r="6.2" fill="#4E9159" />
-                </g>
-              ) : o.kind === "reed" ? (
-                /* 葦。⚠️ 穂を付ける。棒だけだと草と見分けが付かない */
-                <g>
-                  <path d="M-3 3 Q-4 -5 -2 -11" stroke="#6E8A55" strokeWidth="1.4" fill="none" strokeLinecap="round" />
-                  <path d="M2 3 Q3 -6 1 -13" stroke="#7C9A60" strokeWidth="1.4" fill="none" strokeLinecap="round" />
-                  <ellipse cx="-2" cy="-12" rx="1.2" ry="2.6" fill="#B49A63" />
-                  <ellipse cx="1" cy="-14" rx="1.2" ry="2.8" fill="#C7AC74" />
-                </g>
-              ) : o.kind === "sakura" ? (
-                /* 桜。⚠️ 花びらが一枚ずつ散る。丸だけだと綿に見える */
-                <g>
-                  <ellipse cx="1" cy="2" rx="9" ry="2.6" fill="rgba(10,6,20,0.4)" />
-                  <path d="M-1.4 2 L-1 -9 L1 -9 L1.4 2 Z" fill="#5A3A2A" />
-                  <g className="mv-sway">
-                    <circle cx="-5" cy="-12" r="6" fill="#F4B4C8" />
-                    <circle cx="4" cy="-13" r="6.6" fill="#F8C4D4" />
-                    <circle cx="0" cy="-18" r="5.6" fill="#FAD2DE" />
-                    <circle cx="-2" cy="-14" r="3" fill="#FFE4EC" opacity="0.8" />
-                  </g>
-                  <circle className="mv-petal" cx="6" cy="-6" r="1.1" fill="#F8C4D4" />
-                </g>
-              ) : o.kind === "cedar" ? (
-                /* 杉。⚠️ 細く高く。松（三角三段）と見分けが付くように */
-                <g>
-                  <ellipse cx="0" cy="2" rx="6" ry="2" fill="rgba(10,6,20,0.4)" />
-                  <rect x="-1" y="-6" width="2" height="8" fill="#4A3020" />
-                  <path d="M0 -34 L5 -6 L-5 -6 Z" fill="#2E5A3C" />
-                  <path d="M0 -34 L5 -6 L0 -6 Z" fill="#3E7050" />
-                </g>
-              ) : o.kind === "lantern" ? (
-                /* 石灯籠。⚠️ 火は揺らす（速く点滅させない） */
-                <g>
-                  <ellipse cx="0" cy="2" rx="5" ry="1.8" fill="rgba(10,6,20,0.4)" />
-                  <path d="M-4 2 h8 l-1 -2 h-6 Z M-1.6 0 h3.2 v-6 h-3.2 Z" fill="#8A847A" />
-                  <path d="M-3.4 -6 h6.8 v-5 h-6.8 Z" fill="#9C968A" />
-                  <path d="M-5 -11 h10 l-5 -4 Z" fill="#78726A" />
-                  <circle className="mv-flame" cx="0" cy="-8.4" r="1.5" fill="#FFD27A" />
-                  <circle className="mv-flame" cx="0" cy="-8.4" r="4" fill="rgba(255,200,110,0.25)" />
-                </g>
-              ) : o.kind === "paddy" ? (
-                /* 田んぼ。⚠️ 畦で四つに割り、稲の列を斜めに。平らな緑だけだと芝生 */
-                <g>
-                  <path d="M-12 0 L0 -6 L12 0 L0 6 Z" fill="#6A9A5A" />
-                  <path d="M-12 0 L0 -6 L12 0 L0 6 Z" fill="none" stroke="#8A7A50" strokeWidth="1" />
-                  <path d="M-6 -3 L6 3 M-6 3 L6 -3" stroke="#8A7A50" strokeWidth="0.8" />
-                  <path d="M-8 -1 l2 1 M-3 -3 l2 1 M2 1 l2 1 M4 -2 l2 1 M-2 2 l2 1" stroke="#9AD07A" strokeWidth="0.9" />
-                </g>
-              ) : o.kind === "boat" ? (
-                /* 小舟。⚠️ 水の上で上下に揺れる */
-                <g className="mv-bob">
-                  <path d="M-10 0 Q0 5 10 0 L8 -2 H-8 Z" fill="#7A5A3A" />
-                  <path d="M-8 -2 H8" stroke="#A07A50" strokeWidth="1" />
-                  <path d="M0 -2 V-14" stroke="#5A4030" strokeWidth="1" />
-                  <path d="M0 -13 L7 -5 H0 Z" fill="#EDE6D6" />
-                </g>
-              ) : o.kind === "flower" ? (
-                /* 花畑。⚠️ 色を三つ混ぜる。一色だと模様に見える */
-                <g>
-                  {[[-5, 0, "#F4D060"], [0, -2, "#F48AA8"], [4, 1, "#FFFFFF"], [-2, 2, "#F48AA8"], [6, -2, "#F4D060"]].map(([x, y, c], k) => (
-                    <g key={k}>
-                      <path d={`M${x} ${y + 2} v-3`} stroke="#4F7F52" strokeWidth="0.8" />
-                      <circle cx={x} cy={y - 1.4} r="1.3" fill={c} />
-                    </g>
-                  ))}
-                </g>
-              ) : o.kind === "sign" ? (
-                /* 道標。⚠️ 旅の目印。矢の向きを左右に振る */
-                <g>
-                  <ellipse cx="0" cy="2" rx="4" ry="1.4" fill="rgba(10,6,20,0.4)" />
-                  <rect x="-0.8" y="-14" width="1.6" height="16" fill="#6A4A30" />
-                  <path d="M-1 -13 h9 l2 2 l-2 2 h-9 Z" fill="#C8A878" />
-                  <path d="M1 -7 h-9 l-2 2 l2 2 h9 Z" fill="#B89868" />
-                </g>
-              ) : o.kind === "hut" ? (
-                /* 山小屋・茶屋。⚠️ 煙突の煙で「人がいる」ことを見せる */
-                <g>
-                  <ellipse cx="0" cy="2" rx="10" ry="2.6" fill="rgba(10,6,20,0.4)" />
-                  <rect x="-7" y="-7" width="14" height="9" fill="#8A6A4A" />
-                  <rect x="-7" y="-7" width="7" height="9" fill="#9C7A56" />
-                  <path d="M-9 -7 L0 -14 L9 -7 Z" fill="#5A4A3A" />
-                  <rect x="-2" y="-3" width="4" height="5" fill="#3A2A20" />
-                  <rect x="3" y="-13" width="2" height="4" fill="#4A3A30" />
-                  <circle className="mv-smoke" cx="4" cy="-15" r="2" fill="rgba(230,230,240,0.5)" />
-                </g>
-              ) : o.kind === "light" ? (
-                /* 街灯。⚠️ 足元に光の輪。灯だけだと浮いて見える */
-                <g>
-                  <ellipse cx="0" cy="2" rx="7" ry="2.2" fill="rgba(255,220,150,0.25)" className="mv-flame" />
-                  <rect x="-0.7" y="-18" width="1.4" height="20" fill="#5A5A6A" />
-                  <path d="M0 -18 h4 v1.4 h-4 Z" fill="#5A5A6A" />
-                  <circle cx="4" cy="-15.6" r="1.8" fill="#FFE6A8" />
-                  <circle cx="4" cy="-15.6" r="5" fill="rgba(255,230,170,0.22)" />
-                </g>
-              ) : (
-                /* 草。⚠️ 三本を別々の傾きで。揃えると刷毛に見える */
-                <g stroke="#4F7F52" strokeWidth="1.6" strokeLinecap="round" fill="none">
-                  <path d="M-4 2 Q-5 -3 -3 -6" />
-                  <path d="M0 2 Q0 -4 2 -8" />
-                  <path d="M4 2 Q6 -2 5 -5" />
-                </g>
-              )}
-            </g>
-          ));
-        })()}
-        <g>
-          {/* 道。⚠️ 台より先に描く。線が台の上を横切ると立体が崩れる */}
-          {map.map((n) => (n.next || []).map((k) => {
-            const to = byKey[k];
-            if (!to) return null;
-            const A = iso(n), B = iso(to);
-            const live = n.key === cur;
-            /* ⚠️ 二重に描く。外側の暗い縁がないと、道が背景に溶ける */
-            /*
-              ⚠️ 一本の線にしないこと。線だと「図」に見える。
-              ★ 飛び石を並べる。歩く場所に見えるし、進む向きも読み取れる。
-            */
-            /*
-              ⚠️⚠️ 台の足元（+HEX_H）に置かないこと。あそこは影の高さで、
-                上下に並ぶマスでは下のマスの胴体に隠れて、道が一切見えなくなる。
-                （実際、上下のつながりだけ描かれていないように見えていた）
-              ★ 台の面と同じ高さで結ぶ。マスの上を渡っていく絵になる。
-            */
-            const x1 = A.x, y1 = A.y, x2 = B.x, y2 = B.y;
-            const len = Math.hypot(x2 - x1, y2 - y1);
-            /*
-              ⚠️⚠️ 端から端へ等間隔に置かないこと。両端は台に隠れる。
-                実測：横は間隔67.2で見える幅28.2、縦は間隔52で見える幅17.4。
-                等間隔だと縦の道は石が1個しか見えず、繋がっていないように見える。
-                （実際「真下のマスにワープした」と見えていた）
-              ★ 台に隠れる幅を先に除き、見える帯の中だけに並べる。
-            */
-            const ang = Math.atan2(y2 - y1, x2 - x1);
-            /*
-              ⚠️⚠️ 外枠（hexPath(R * 1.1)）まで数に入れること。
-                面の六角だけで測ると、両端の石が枠の下に潜り、
-                上下のつながりは中央の1個しか見えなくなる（実際そう見えていた）。
-              ★ 1.15 は枠の1.1に少し余裕を足した値。
-            */
-            const rad = 1 / Math.hypot(Math.cos(ang) / (HEX_R * 1.15), Math.sin(ang) / (HEX_H * 1.15));
-            const t0 = Math.min(0.45, rad / len), t1 = 1 - t0;
-            const vis = len * (t1 - t0);
-            /*
-              ⚠️ 見える幅で数を決める。上下は12px程度しか空かないので、
-                石は小さめに詰めて置く。大きいままだと団子になる。
-            */
-            const n2 = Math.max(3, Math.round(vis / 4.5));
-            const dot = vis < 18 ? 1.5 : 2.1;
-            const reachEdge = live;
-            return (
-              <g key={`p${n.key}-${k}`}>
-                {/*
-                  道の帯。2026-09-27：飛び石の下に踏み固めた道を敷く（地面の上に道として見えるように）。
-                  ★ いまの台から行ける道は、金の光が先へ流れる（進める向きが一目で分かる）。
-                */}
-                <line x1={x1} y1={y1} x2={x2} y2={y2} stroke="rgba(20,14,30,0.45)" strokeWidth="9" strokeLinecap="round" />
-                <line x1={x1} y1={y1} x2={x2} y2={y2} stroke="rgba(190,176,140,0.22)" strokeWidth="6" strokeLinecap="round" />
-                {reachEdge && (
-                  <line className="mv-trail" x1={x1} y1={y1} x2={x2} y2={y2} stroke="#FFE08A" strokeWidth="2.4" strokeLinecap="round"
-                    strokeDasharray="6 10" style={{ filter: "drop-shadow(0 0 3px #FFD070)" }} />
-                )}
-                {Array.from({ length: n2 }, (_, s) => {
-                  const t = t0 + (t1 - t0) * (n2 === 1 ? 0.5 : s / (n2 - 1));
-                  const cx = x1 + (x2 - x1) * t, cy = y1 + (y2 - y1) * t;
-                  return (
-                    <g key={s}>
-                      {/* ⚠️ 石の大きさは見える幅に合わせる。上下の道では小さくしないと団子になる */}
-                      <ellipse cx={cx} cy={cy + dot * 0.7} rx={dot * (live ? 2.1 : 1.7)} ry={dot * (live ? 1.2 : 1.0)}
-                        fill="rgba(10,6,20,0.5)" />
-                      <ellipse cx={cx} cy={cy} rx={dot * (live ? 2 : 1.6)} ry={dot * (live ? 1.15 : 0.95)}
-                        fill={live ? "#E8C46A" : "rgba(158,150,196,0.62)"} />
-                    </g>
-                  );
-                })}
-              </g>
-            );
-          }))}
-          {/* 台。⚠️ 奥（row 昇順）から描く */}
-          {map.slice().sort((p, q) => (iso(p).y - iso(q).y) || (p.q - q.q)).map((n) => {
-            const P = iso(n);
-            const here = n.key === cur;
-            const reach = (byKey[cur]?.next || []).includes(n.key);
-            const seen = visited.includes(n.key);
-            const c = TILE_COLOR(n.kind, here, seen);
-            const R = HEX_R, H = HEX_H, D = n.kind === "boss" ? 8 : 5;
-            return (
-              <g key={n.key} transform={`translate(${P.x} ${P.y})`}>
-                {/* ⚠️ 光は台の下に敷く。上に載せると模様が消える */}
-                {(n.kind === "box" || n.kind === "spot" || n.kind === "boss" || n.kind === "gate"
-                  || n.kind === "shop" || n.kind === "rarebox") && (
-                  <ellipse cx="0" cy="0" rx={R * 1.7} ry={H * 1.7}
-                    fill={n.kind === "box" ? "rgba(232,196,106,0.30)"
-                      : n.kind === "rarebox" ? "rgba(200,150,255,0.45)"
-                      : n.kind === "spot" ? "rgba(126,216,130,0.26)"
-                      : n.kind === "shop" ? "rgba(240,140,110,0.30)"
-                      : n.kind === "gate" ? "rgba(159,180,216,0.26)" : "rgba(255,122,122,0.30)"}
-                    style={{ filter: "blur(6px)" }} />
-                )}
-                {/* 影。⚠️ 影がないと浮いて見える */}
-                <ellipse cx="0" cy={H + D + 1} rx={R * 0.8} ry={H * 0.35} fill="rgba(10,6,20,0.45)" />
-                {/*
-                  六角の厚み。⚠️ 三つの面の明るさは左上からの光ひとつで決める。
-                    左＝明るい、正面＝中、右＝暗い。面ごとに色を振ると紙に見える。
-                */}
-                <path d={`M${-R} 0 L${-R / 2} ${H} L${-R / 2} ${H + D} L${-R} ${D} Z`} fill={c.left} />
-                <path d={`M${-R / 2} ${H} L${R / 2} ${H} L${R / 2} ${H + D} L${-R / 2} ${H + D} Z`} fill={c.mid} />
-                <path d={`M${R / 2} ${H} L${R} 0 L${R} ${D} L${R / 2} ${H + D} Z`} fill={c.right} />
-                {/*
-                  天面。
-                  ⚠️⚠️ 一枚の面で塗らないこと。板に見える。
-                    枠 → 面 → 内枠 → 模様 → 艶 の順に重ねると「作られた台」に見える。
-                  ⚠️ 光の当たる側（左上）に艶、反対側に影。向きを揃えること。
-                */}
-                {/* 外枠。⚠️ 面より一回り大きく、暗い色で。これが台の縁になる */}
-                <path d={`M${hexPath(R * 1.1)} Z`} fill={c.frame} />
-                <path d={`M${HEX_TOP} Z`} fill={c.top} />
-                {/* 内枠。⚠️ 明るい線を一本内側に入れると、彫られたように見える */}
-                <path d={`M${hexPath(R * 0.82)} Z`} fill="none"
-                  stroke={c.rim} strokeWidth="0.9" opacity="0.45" />
-                {/* 模様。⚠️ 中心に寄せる。端に置くと縁とぶつかって汚れて見える */}
-                <path d={`M${hexPath(R * 0.42)} Z`} fill="none"
-                  stroke={c.rim} strokeWidth="0.7" opacity="0.28" />
-                {[0, 2, 4].map((i) => {
-                  const a = (i * 60 + 30) * Math.PI / 180;
-                  return <circle key={i} cx={Math.cos(a) * R * 0.62} cy={Math.sin(a) * R * 0.62}
-                    r="0.9" fill={c.rim} opacity="0.35" />;
-                })}
-                {/* 艶。⚠️ 左上だけ。全周に回すと濡れて見える */}
-                <path d={`M${-R * 0.86} ${-H * 0.18} L${-R * 0.42} ${-H * 0.86} L${R * 0.2} ${-H * 0.86}`}
-                  fill="none" stroke="#FFFFFF" strokeWidth="1.6" opacity="0.22" strokeLinecap="round" />
-                {/* 縁の光。⚠️ いる／行ける台だけ。全部に付けると強調にならない */}
-                {(here || reach) && (
-                  <path d={`M${hexPath(R * 1.02)} Z`} fill="none"
-                    stroke={here ? "#FFF3D6" : "#FFE9A8"} strokeWidth="1.5" opacity="0.9" />
-                )}
-                {/*
-                  回復。
-                  ⚠️⚠️ ピンクのハートで描くこと。色を変えただけでは何のマスか伝わらない。
-                  ⚠️ 上下に揺らす。止まっていると模様に見える。
-                */}
-                {n.kind === "heal" && (
-                  <g className="mv-bob" transform="scale(1.9)">
-                    <path d="M0 4.6 C-5.2 0.6 -6.2 -2.8 -4.2 -4.6 C-2.4 -6.2 -0.6 -5 0 -3.4
-                             C0.6 -5 2.4 -6.2 4.2 -4.6 C6.2 -2.8 5.2 0.6 0 4.6 Z"
-                      fill="#F27BA8" stroke="#FFD6E6" strokeWidth="0.7" />
-                    {/* ⚠️ 艶は左上に一点。全面を明るくすると平らに見える */}
-                    <ellipse cx="-1.8" cy="-2.6" rx="1.1" ry="0.8" fill="#FFEAF3" opacity="0.85" />
-                  </g>
-                )}
-                {/*
-                  罠。
-                  ⚠️⚠️ 踏むまでは道と同じ色にしてある（見えたら罠にならない）。
-                    ここで描くのは、踏んだあとに残る跡。
-                  ⚠️ 棘は上向きに三つ。丸や記号だと、他のマスの印と紛れる。
-                */}
-                {n.kind === "trap" && seen && (
-                  <g className="mv-bob" transform="scale(1.7)">
-                    <path d="M-4.5 3 L-3 -2.5 L-1.5 3 Z" fill="#8A6A6A" stroke="#D8A0A0" strokeWidth="0.5" />
-                    <path d="M-1 3 L0.5 -4 L2 3 Z" fill="#8A6A6A" stroke="#D8A0A0" strokeWidth="0.5" />
-                    <path d="M2.5 3 L4 -2 L5.5 3 Z" fill="#8A6A6A" stroke="#D8A0A0" strokeWidth="0.5" />
-                  </g>
-                )}
-                {/*
-                  雑魚。
-                  ⚠️ 何か居ることが分かる姿にする。無地のマスから敵が出ると理不尽になる。
-                  ⚠️ 主（六角の器）とは別の形にする。同じだと主と紛れる。
-                */}
-                {n.kind === "zako" && (
-                  <g className="mv-bob" transform="scale(1.8)">
-                    <path d="M-4 4 L-4 -1 Q0 -6 4 -1 L4 4 Z" fill="#8E3A3A" stroke="#E0A0A0" strokeWidth="0.7" />
-                    <circle cx="-1.6" cy="-0.6" r="0.9" fill="#FFD6D6" />
-                    <circle cx="1.6" cy="-0.6" r="0.9" fill="#FFD6D6" />
-                  </g>
-                )}
-                {/* 名所の目印。⚠️ 空白のマスには何も置かない。置くと全部が名所に見える */}
-                {/* ポーション。⚠️ 赤い薬の入ったフラスコ。回復（ハート）と形で分ける */}
-                {n.kind === "potion" && !usedNodes.includes(n.key) && (
-                  <g className="mv-bob" transform="scale(1.8)">
-                    <path d="M-1.6 -7 H1.6 V-4.6 L4.4 0.6 A3.4 3.4 0 0 1 1.4 5.4 H-1.4 A3.4 3.4 0 0 1 -4.4 0.6 L-1.6 -4.6 Z"
-                      fill="rgba(255,255,255,0.18)" stroke="#FFE0EC" strokeWidth="0.6" />
-                    <path d="M-3.6 1 H3.6 L4 2.2 A3 3 0 0 1 1.3 5 H-1.3 A3 3 0 0 1 -4 2.2 Z" fill="#FF4A7A" />
-                    <rect x="-2" y="-8.4" width="4" height="1.6" rx="0.5" fill="#C89060" />
-                    <ellipse cx="-1.8" cy="1.8" rx="0.8" ry="0.5" fill="#FFD0DE" opacity="0.8" />
-                  </g>
-                )}
-                {n.kind === "rarebox" && (
-                  /* レア宝箱。⚠️ 宝箱と同じ形に、虹の後光と紫の金具。いちばん目を引くこと */
-                  <g className="mv-bob" transform="scale(2.05)">
-                    <circle cx="0" cy="-2" r="8" fill="url(#isoGlow)" opacity="0.8" />
-                    <ellipse cx="0" cy="4.6" rx="6" ry="1.8" fill="rgba(10,6,20,0.5)" />
-                    <path d="M-5.6 -3.4 Q0 -9 5.6 -3.4 L5.6 -1.6 L-5.6 -1.6 Z" fill="#7A4AB8" stroke="#2A1250" strokeWidth="0.45" />
-                    <rect x="-5.6" y="-1.6" width="11.2" height="5.9" rx="0.7" fill="#5A2E90" stroke="#2A1250" strokeWidth="0.45" />
-                    <rect x="-5.9" y="-2.1" width="11.8" height="1.1" rx="0.4" fill="#F4E0FF" stroke="#B08AE8" strokeWidth="0.3" />
-                    <rect x="-4.4" y="-6.6" width="1.1" height="10.6" rx="0.4" fill="#FFD8F0" opacity="0.92" />
-                    <rect x="3.3" y="-6.6" width="1.1" height="10.6" rx="0.4" fill="#C8F0FF" opacity="0.92" />
-                    <rect x="-1.5" y="-2.6" width="3" height="3.4" rx="0.6" fill="#FFF4B0" stroke="#B08AE8" strokeWidth="0.3" />
-                    <path d="M4.8 -6.4 l0.5 1.3 1.3 0.5 -1.3 0.5 -0.5 1.3 -0.5 -1.3 -1.3 -0.5 1.3 -0.5 Z" fill="#FFFFFF" className="mv-twinkle" />
-                    <path d="M-5.6 -5 l0.4 1 1 0.4 -1 0.4 -0.4 1 -0.4 -1 -1 -0.4 1 -0.4 Z" fill="#FFFFFF" className="mv-twinkle2" />
-                  </g>
-                )}
-                {n.kind === "box" && (
-                  /*
-                    宝箱。
-                    ⚠️⚠️ 板・金具・錠・艶を分けること。ひとかたまりだと黄色い塊に見える。
-                    ⚠️ 木目は縦、金具は横。向きを揃えないと工作物に見えない。
-                    ⚠️ 光は左上から。艶と影の向きを台と揃えること。
-                  */
-                  <g className="mv-bob" transform="scale(1.85)">
-                    <ellipse cx="0" cy="4.6" rx="6" ry="1.8" fill="rgba(10,6,20,0.5)" />
-                    {/* 蓋 */}
-                    <path d="M-5.6 -3.4 Q0 -9 5.6 -3.4 L5.6 -1.6 L-5.6 -1.6 Z"
-                      fill="url(#chestLid)" stroke="#4B2E12" strokeWidth="0.45" />
-                    {/* 蓋の木目 */}
-                    <path d="M-2 -3.1 Q-1.9 -6.6 -0.1 -8.1" fill="none"
-                      stroke="rgba(60,34,12,0.5)" strokeWidth="0.35" />
-                    <path d="M2 -3.1 Q1.9 -6.6 0.1 -8.1" fill="none"
-                      stroke="rgba(60,34,12,0.5)" strokeWidth="0.35" />
-                    {/* 箱 */}
-                    <rect x="-5.6" y="-1.6" width="11.2" height="5.9" rx="0.7"
-                      fill="url(#chestWood)" stroke="#4B2E12" strokeWidth="0.45" />
-                    <path d="M-2.4 -1.4 L-2.4 4.1 M2.4 -1.4 L2.4 4.1" stroke="rgba(60,34,12,0.45)"
-                      strokeWidth="0.35" />
-                    {/* 金具。⚠️ 蓋と箱をまたぐ。またがないと帯に見えない */}
-                    <rect x="-5.9" y="-2.1" width="11.8" height="1.1" rx="0.4" fill="url(#chestGold)"
-                      stroke="#6B4A12" strokeWidth="0.3" />
-                    <rect x="-4.4" y="-6.6" width="1.1" height="10.6" rx="0.4" fill="url(#chestGold)"
-                      opacity="0.92" />
-                    <rect x="3.3" y="-6.6" width="1.1" height="10.6" rx="0.4" fill="url(#chestGold)"
-                      opacity="0.92" />
-                    {/* 錠 */}
-                    <rect x="-1.5" y="-2.6" width="3" height="3.4" rx="0.6" fill="url(#chestGold)"
-                      stroke="#6B4A12" strokeWidth="0.3" />
-                    <circle cx="0" cy="-1.2" r="0.6" fill="#3A2408" />
-                    <path d="M0 -0.9 L0 0.3" stroke="#3A2408" strokeWidth="0.5" strokeLinecap="round" />
-                    {/* 艶 */}
-                    <path d="M-4.6 -3.9 Q-3.4 -7 -0.6 -8.2" fill="none" stroke="#FFF6DF"
-                      strokeWidth="0.7" opacity="0.5" strokeLinecap="round" />
-                    {/* きらめき。⚠️ 二つまで。多いと安っぽくなる */}
-                    <path d="M4.8 -6.4 l0.5 1.3 1.3 0.5 -1.3 0.5 -0.5 1.3 -0.5 -1.3 -1.3 -0.5 1.3 -0.5 Z"
-                      fill="#FFF6DF" className="mv-twinkle" />
-                    <path d="M-5.4 1.4 l0.35 0.9 0.9 0.35 -0.9 0.35 -0.35 0.9 -0.35 -0.9 -0.9 -0.35 0.9 -0.35 Z"
-                      fill="#FFF6DF" className="mv-twinkle2" />
-                  </g>
-                )}
-                {n.kind === "spot" && (
-                  /* ⚠️ 旗は棒と布に分ける。三角だけだと記号に見える */
-                  <g className="mv-bob" transform="scale(1.85)">
-                    <rect x="-0.7" y="-10" width="1.4" height="10" rx="0.6" fill="#3A3358" />
-                    <path d="M0.7 -9.6 Q4.4 -8.2 6.6 -9.4 L6.6 -5.4 Q4.2 -4.2 0.7 -5.6 Z"
-                      fill="#7ED882" stroke="#2E6B3C" strokeWidth="0.4" />
-                    <ellipse cx="0" cy="0.6" rx="2.6" ry="1.1" fill="rgba(10,6,20,0.45)" />
-                  </g>
-                )}
-                {n.kind === "gate" && (
-                  <g transform="scale(1.85)">
-                    <rect x="-6" y="-9" width="1.8" height="9" fill="#9FB4D8" />
-                    <rect x="4.2" y="-9" width="1.8" height="9" fill="#9FB4D8" />
-                    <rect x="-7" y="-10.5" width="14" height="2" rx="0.6" fill="#B9CBE8" />
-                  </g>
-                )}
-                {n.kind === "boss" && (
-                  <g className="mv-throb" transform="scale(1.85)">
-                    <circle cx="0" cy="-7" r="8" fill="url(#isoGlow)" />
-                    <path d="M0 -12 L2.6 -7.4 L7.6 -6.8 L4 -3.4 L4.9 1.4 L0 -0.9 L-4.9 1.4 L-4 -3.4 L-7.6 -6.8 L-2.6 -7.4 Z"
-                      fill="#FF7A7A" stroke="#FFD9D9" strokeWidth="0.5" />
-                  </g>
-                )}
-              </g>
-            );
-          })}
-          {/*
-            自分と名前は、台を全部描いたあとに重ねる。
-            ⚠️⚠️ 台と同じ層に置くと、手前の台に埋もれて自分がどこに居るか分からなくなる。
-              実際そうなっていた。層を分けること。
-            ⚠️ 印は一つでは足りない。光の柱・輪・立つ姿・上の矢の四つを重ねる。
-              マスが25枚あるので、小さな印は埋もれる。
-          */}
-          <g style={{ pointerEvents: "none" }}>
-            {(() => {
-              const P = iso(node);
-              return (
-                /*
-                  ⚠️⚠️ 駒の位置を transform 属性で置かないこと。属性は補間されないので
-                    一マスぶん瞬間移動する。実際そうなっていた。CSS の transform にする。
-                  ⚠️ 視点と同じ長さ・同じ緩急で動かすこと。ずれると駒だけ滑って見える。
-                */
-                <g style={{
-                  transform: `translate(${P.x}px, ${P.y}px)`,
-                  transition: "transform 620ms cubic-bezier(0.33, 0, 0.2, 1)",
-                }}>
-                  {/* 光の柱。⚠️ 輪郭を出さない。ぼかさないと的に見える */}
-                  <ellipse cx="0" cy="0" rx={HEX_R * 1.15} ry={HEX_H * 1.15} fill="url(#isoGlow)" />
-                  <rect x="-8" y="-120" width="16" height="120" fill="url(#isoBeam)" />
-                  <circle cx="0" cy="0" r={HEX_R + 5} fill="none"
-                    stroke="#FFF3D6" strokeWidth="1" className="mv-pulse" />
-                  {/* 立つ姿。⚠️ マスに合わせて拡大する。小さいままだと点に見える */}
-                  <ellipse cx="0" cy="3" rx="11" ry="4.6" fill="rgba(10,6,20,0.55)" />
-                  {/*
-                    ⚠️⚠️ 駒を白系にしないこと。いま居る台も明るいので、
-                      白い駒だと台に溶けて自分が見えなくなる。実際そうなっていた。
-                    ★ 装束は暗い紫、縁と留め具だけ金。顔だけ明るくする。
-                      明るい台の上に暗い影が立っている形になり、一目で分かる。
-                  */}
-                  <g className="mv-bob" transform="scale(1.85)">
-                    <path d="M-5.6 0.4 Q-5.6 -7.2 0 -7.2 Q5.6 -7.2 5.6 0.4 Z"
-                      fill="url(#pawnCloak)" stroke="#150E2A" strokeWidth="0.6" />
-                    {/* 装束の合わせ目。⚠️ 一本入れると布に見える */}
-                    <path d="M0 -6.8 L0 0.2" stroke="rgba(10,6,20,0.55)" strokeWidth="0.5" />
-                    {/* 金の縁 */}
-                    <path d="M-5.6 0.4 Q-5.6 -7.2 0 -7.2 Q5.6 -7.2 5.6 0.4"
-                      fill="none" stroke="#C9A24B" strokeWidth="0.7" opacity="0.85" />
-                    {/* 頭巾と顔 */}
-                    <circle cx="0" cy="-9.8" r="3.6" fill="#2E2450" stroke="#150E2A" strokeWidth="0.5" />
-                    <ellipse cx="0" cy="-9.4" rx="2.2" ry="2.4" fill="#F3E3C0" />
-                    <path d="M-3.6 -11 Q0 -14.6 3.6 -11 Q0 -12.4 -3.6 -11 Z" fill="#C9A24B" />
-                    {/* 目。⚠️ 点二つで十分。描き込むと縮小時に潰れる */}
-                    <circle cx="-0.8" cy="-9.6" r="0.42" fill="#241A44" />
-                    <circle cx="0.8" cy="-9.6" r="0.42" fill="#241A44" />
-                  </g>
-                  {/* 上の矢。⚠️ 台より上に出す。ここだけ見れば居場所が分かる */}
-                  <g className="mv-drop">
-                    <path d="M0 -32 L9 -47 L-9 -47 Z" fill="#FFF3D6" stroke="#160E28" strokeWidth="1.4"
-                      strokeLinejoin="round" />
-                  </g>
-                </g>
-              );
-            })()}
-          </g>
-        </g>
-        {/* ⚠️ どの盤面でも止めない。艶を一定の向きに流す */}
-        {/*
-          漂う光。⚠️ 数を絞ること。多いと画面が騒がしくなって道が読めない。
-          ⚠️ 速さと位相をばらす。揃うと点滅に見える。
-        */}
-        {Array.from({ length: 14 }, (_, i) => {
-          const ang = i * 2.39996, rad = 0.4 + ((i * 37) % 100) / 100 * MAP_RINGS;
-          return (
-            <circle key={`fl${i}`} r={1.6 + (i % 3) * 0.7}
-              cx={MAP_W / 2 + Math.cos(ang) * rad * XSTEP}
-              cy={MAP_H / 2 + Math.sin(ang) * rad * YSTEP}
-              fill="#FFF3D6" className="mv-float"
-              style={{ animationDuration: `${5 + (i % 5)}s`, animationDelay: `${i * 0.42}s` }} />
-          );
-        })}
-        {/*
-          属性の空気。⚠️ 盤の最前面に置く（台や木の上を漂う）。判定は持たせない。
-        */}
-        {/* ⚠️ 北海道・東北は属性に関係なく雪を降らせる（雪国の空気） */}
-        <ElemAmbience elems={snowRegionOf(pref) && !mapElems.includes("ice") ? [...mapElems, "ice"] : mapElems}
-          w={MAP_W} h={MAP_H} />
-        </g>
+        <AdvBoard walking={walking} map={map} seed={seed} pref={pref} area={area} heroOn={heroOn} heroKind={heroKind}
+          mapBox={mapBox} cur={cur} visited={visited} usedNodes={usedNodes} />
+      </div>
+      <svg className="adv-iso-over" viewBox={`0 0 ${VIEW_W} ${VIEW_H}`} preserveAspectRatio="none" aria-hidden="true">
         {/* ⚠️ 艶は視点の外側に置く。盤と一緒に動かすと画面から出て見えなくなる */}
+        {/*
+          ⚠️ 2026-09-30：動く艶の代わりに、止まった光と周辺の陰を画面に固定で敷く（左上から光、四隅は暗く）。
+            盤が一枚の板でなく、光の当たる土地に見える。動かさないので重くならない。
+        */}
+        <rect x="0" y="0" width={VIEW_W} height={VIEW_H} fill="url(#isoLightFix)" style={{ pointerEvents: "none" }} />
+        <rect x="0" y="0" width={VIEW_W} height={VIEW_H} fill="url(#isoVignette)" style={{ pointerEvents: "none" }} />
         <rect x="-90" y="0" width="90" height={VIEW_H} fill="url(#isoSheen)" className="mv-sheen"
           style={{ pointerEvents: "none" }} />
       </svg>
+      </div>
       {/*
         天気。
         ⚠️⚠️ svg の中に入れないこと。盤は指でなぞると動くので、
@@ -80439,6 +90761,47 @@ function AdventurePanel({ lang, items, onItem }) {
         ⚠️ 器（.adv-iso-wrap）に overflow:hidden を掛けること。
           掛けないと画面全体に降る。
       */}
+      {/* ルーレット（2026-09-30）。⚠️ 盤の上に重ねる。回り終えて少し見せてから消える */}
+      {roul && <LaneRoulette key={roul.id} roul={roul} title={roul.title || (a.roulTitle && a.roulTitle[roul.kind]) || ""} />}
+      {goldRun && <GoldRoad key={goldRun.id} run={goldRun} title={a.goldName} />}
+      {/* 愚者の道。⚠️ 押さなくても消える（オート・放置の邪魔をしない） */}
+      {foolShow && (
+        <div className="adv-fool" key={foolShow.id} aria-live="polite">
+          <div className="adv-fool-in">
+            <svg viewBox="0 0 24 24" className="adv-fool-mark" aria-hidden="true">{FX_MARK_ART.fool}</svg>
+            <b className="adv-fool-t">{FOOL_LANE_NAME}</b>
+            <span className="adv-fool-glyphs" aria-hidden="true">
+              {[0, 1, 2, 3, 4].map((j) => {
+                const G = ADV_GLYPH[foolShow.k];
+                return <svg key={j} viewBox="-10 -12 20 20" style={{ animationDelay: `${j * 110}ms` }}>{G ? <G /> : null}</svg>;
+              })}
+            </span>
+            <span className="adv-fool-sub">{a.foolSub(foolShow.nm)}</span>
+          </div>
+        </div>
+      )}
+      {/* 封印の札。⚠️ 主を倒すまで続くので、盤の上に常に出しておく */}
+      {/* ⚠️ 残りのルーレット（井戸で選び直せる回数）を常に出す。尽きる前に分かるように */}
+      <div className="adv-spins">{a.spinsLeft(Math.max(0, (map.spins || 0) + (runMod.spins || 0) - spinsUsed))}</div>
+      {/*
+        2026-10-05 Aki「自キャラが隠れないように（上3行まで大丈夫）。増幅・耐性・魔法・物理の順で固定」。
+        ★ 上は四行（一行に収め、はみ出す分は右端で薄く切る）。行を詰めて、前の三行ぶんの高さに収める。
+        ★ ほかの変化・封印は下（ルーレット残りの上）へ。
+      */}
+      <div className="adv-curse">
+        {["charge", "res", "magic", "phys"].map((sl) => {
+          const c = runChips.find((x) => x.slot === sl);
+          return c ? runChipEl({ ...c, items: c.items.length ? c.items : [{ t: "—", none: true }] }, `fx${sl}`) : null;
+        })}
+      </div>
+      {(mapCurse.elem || mapCurse.noSp || (mapCurse.spSeal || []).length > 0 || runChips.some((x) => !x.slot)) && (
+        <div className="adv-curse2">
+          {mapCurse.elem && <span>{a.curseTag.elem((a.familyName && a.familyName[mapCurse.elem]) || mapCurse.elem)}</span>}
+          {mapCurse.noSp && <span>{a.curseTag.nosp}</span>}
+          {(mapCurse.spSeal || []).map((su2) => <span key={`ss${su2}`}>{a.curseTag.spSeal(suitLabel(su2, lang))}</span>)}
+          {runChips.filter((x) => !x.slot).map((c, i) => runChipEl(c, `r${i}`))}
+        </div>
+      )}
       <div className={`adv-weather w-${weather}`} aria-hidden="true">
         {weather === "fog" && <><span className="fog-band b1" /><span className="fog-band b2" /></>}
         {(weather === "rain" || weather === "snow") && Array.from({ length: weather === "rain" ? 34 : 26 }, (_, i) => (
@@ -80523,7 +90886,8 @@ function AdventurePanel({ lang, items, onItem }) {
         ⚠️ 自動の切り替えと同じ場所に出す。終わったら入れ替わる形にすれば、
           押す場所を覚え直さずに済む。
       */}
-      {over && (
+      {/* ⚠️ 制覇したときは出さない（三枚を読んでから下の「制覇する」で進む） */}
+      {over && !won && (
         <button type="button" className="adv-auto adv-auto-float adv-again-float"
           onClick={restart}>
           <Sparkles size={14} />{t.advAgain}
@@ -80552,7 +90916,60 @@ function AdventurePanel({ lang, items, onItem }) {
           ただの手間になる。実際そうなっていた。
         ★ 一本道は、そのまま進む。行き止まりは、着いた時点で終わる。
       */}
-      {!over && !busy && phase === "idle" && nexts.length >= 2 && (
+      {/* ⚠️ 2026-09-30：札で選ぶのは主の手前の三択だけ。道の分かれ目はルーレットが回る */}
+      {/*
+        ボスチケット（2026-10-04）。⚠️ 手で進めているときだけ（オートでは出さない）。ボス確定ならもう要らないので出さない。
+      */}
+      {!over && !busy && !roul && phase === "idle" && nexts.length >= 2 && toBossHere && tkAsk && (() => {
+        const TK = ticketT(lang);
+        const goNow = Math.min(1, goForReach(diffOf(rank, mapNo).reach) * laneReachComp(laneStar));
+        return (
+          <div className="adv-tk">
+            <p className="adv-tk-t">{TK.title}</p>
+            <p className="adv-tk-lead">{TK.lead(Math.round(goNow * 100))}</p>
+            <div className="adv-tk-row">
+              {TICKET_KINDS.filter((k2) => tickets[k2] > 0 || (runMod.tkUsed || []).includes(k2)).map((k2) => (
+                <button key={k2} type="button" className={`adv-tk-btn${(runMod.tkUsed || []).includes(k2) ? " used" : ""}`}
+                  disabled={!!tkRoll || (runMod.tkUsed || []).includes(k2) || !(tickets[k2] > 0)} onClick={() => spendTicket(k2)}>
+                  <TicketCard kind={k2} lang={lang} count={tickets[k2]} rate={TICKET_RATE[k2]} />
+                </button>
+              ))}
+            </div>
+            <p className="adv-tk-note">{TK.note}</p>
+            {auto && !tkRoll && tkSkip !== `${walking}:${seed}:${at}` && (
+              <p className="adv-tk-auto">{TK.autoWait}<AutoCount key={`${walking}:${seed}:${at}`} sec={6} onGo={() => setTkSkip(`${walking}:${seed}:${at}`)} /></p>
+            )}
+          </div>
+        );
+      })()}
+      {tkRoll && (
+        <div className={`tk-roll${tkRoll.ok ? " ok" : " ng"}`} key={tkRoll.id}>
+          <div className="tk-roll-in">
+            <span className="tk-roll-burst" aria-hidden="true" />
+            <span className="tk-roll-card"><TicketCard kind={tkRoll.k} lang={lang} big /></span>
+            <b className="tk-roll-res">{tkRoll.ok ? ticketT(lang).okBig : ticketT(lang).ngBig}</b>
+          </div>
+        </div>
+      )}
+      {gmGot && (
+        <div className="mei-pop" key={gmGot.id} onClick={() => setGmGot(null)}>
+          <div className="mei-pop-in" onClick={(e) => e.stopPropagation()}>
+            <span className="mei-pop-tag">{gmGot.fresh ? a.meiFirst : gourmetT(lang).got}</span>
+            <GourmetCard d={gmGot.d} lang={lang} big count={gmGot.count} seen />
+            <button type="button" className="adv-back win" onClick={() => setGmGot(null)}>{a.close}</button>
+          </div>
+        </div>
+      )}
+      {tkGot && (
+        <div className="mei-pop tk-got" key={tkGot.id} onClick={() => setTkGot(null)}>
+          <div className="mei-pop-in" onClick={(e) => e.stopPropagation()}>
+            <span className="mei-pop-tag">{ticketT(lang).got}</span>
+            <span className="tk-got-card"><TicketCard kind={tkGot.k} lang={lang} big /></span>
+            <button type="button" className="adv-back win" onClick={() => setTkGot(null)}>{a.close}{auto && <AutoCount sec={3} onGo={() => setTkGot(null)} />}</button>
+          </div>
+        </div>
+      )}
+      {!over && !busy && !roul && !tkRoll && phase === "idle" && nexts.length >= 2 && toBossHere && (
         <div className="adv-act">
           <p className="adv-need">{t.advNeed(need)}</p>
           <button className="draw-btn adv-go" onClick={() => deal(auto)}>
@@ -80630,13 +91047,24 @@ function AdventurePanel({ lang, items, onItem }) {
         <div ref={battleRef} style={{ scrollMarginTop: 8 }}>
         <BattlePanel
           key={`zako-${rank}-${zako}`}
-          lang={lang} zako startHP={hp} startMult={carryMult} startSp={carrySp} startPot={carryPot} seed={seed}
+          lang={lang} zako startHP={hp} startMult={carryMult} startSp={carrySp} startPot={carryPot} seed={seed} curse={mapCurse}
+          mods={battleMods} zkind={zakoKind} autoSp={auto}
           star={isWardStage(pref, area) ? 12 : starOfStage(rank, walking)}
           rank={rank}
           stageName={walking}
           theme={themeOf(walking)}
           onEnd={(win, leftHP, leftMult, leftSp, leftPot) => {
             setZako(null);
+            /* ★ 金の敵・精鋭・ミミックを倒したら★+2の宝箱（2026-10-03） */
+            const zk = zakoKindRef.current;
+            zakoKindRef.current = null; setZakoKind(null);
+            if (win) setZakoWins((v) => v + 1);
+            if (win && zk) {
+              /* ⚠️ ヒグマだけ★+3 */
+              const ch = pushRunChest(laneStar + (zk === "higuma" ? 3 : 2));
+              setLog((l) => [...l, a.zkWin[zk] + chestText(ch)]);
+              grantTicket(TICKET_DROP.special, laneStar);
+            }
             if (leftSp) setCarrySp(leftSp);
             if (leftPot != null) setCarryPot(leftPot);
             setHp(Math.max(0, leftHP));
@@ -80661,7 +91089,8 @@ function AdventurePanel({ lang, items, onItem }) {
               枚数も敵も前の段のまま残り、調整の役に立たない。
           */
           key={`boss-${rank}`}
-          lang={lang} startHP={hp} startMult={carryMult} startSp={carrySp} startPot={carryPot}
+          lang={lang} startHP={hp} startMult={carryMult} startSp={carrySp} startPot={carryPot} curse={mapCurse}
+          mods={battleMods} autoSp={auto}
           star={isWardStage(pref, area) ? 12 : starOfStage(rank, walking)}
           rank={rank}
           stageName={walking}
@@ -80691,6 +91120,20 @@ function AdventurePanel({ lang, items, onItem }) {
               ⚠️ 踏破を記録するのは勝ったときだけ。
                 着いただけで記録すると、負けても踏破になる。
             */
+            if (win) grantTicket(TICKET_DROP.boss, isWardStage(pref, area) ? 12 : starOfStage(rank, walking));
+            /* ★ ご当地グルメ。その区分の三品から一品（GOURMET_DROP） */
+            if (win) {
+              const gd = rollGourmet(pref, area);
+              if (gd) {
+                const r = addGourmet(gd.id);
+                const GT = gourmetT(lang);
+                setLog((l) => [...l, GT.gotLog(lang === "ja" ? gd.name : gd.en)]);
+                const gid = Date.now();
+                setGmGot({ d: gd, ...r, id: gid });
+                /* ⚠️ 押さなくても4秒で閉じる（オート・放置の邪魔をしない） */
+                timers.current.push(setTimeout(() => setGmGot((v) => (v && v.id === gid ? null : v)), 4000));
+              }
+            }
             if (win) {
               setCleared((v) => (v.includes(walking) ? v : (() => {
                 const n = [...v, walking]; saveAdvDone(n); return n;
@@ -80749,6 +91192,58 @@ function AdventurePanel({ lang, items, onItem }) {
             {won ? a.resultConquer : dead ? a.resultDead : a.resultLose}
           </p>
           <p className="adv-result-stage">{walking}</p>
+          {/*
+            制覇の記録（2026-10-03 Aki「小MAPクリア時のリザルトが欲しい」）。
+            ★ この探索で何をしたか・何を持ち帰ったか・どんな変化が付いていたかを一枚に。行は順に浮かび上がる。
+            ★ 2026-10-05 Aki「袋小路又は制覇後のリザルトに獲得宝箱を」：負け・行き止まりでも出す。拾った箱は一つずつ★で並べる。
+            ⚠️ 箱は拾った時点で倉庫に入っている（負けても消えない）。盗まれた・壊れた箱は並べない。
+          */}
+          {(() => {
+            const R = a.runRes;
+            const spInMap = visited.filter((k2) => byKey[k2] && isAdvSpecial(byKey[k2].kind)).length;
+            const gotCh = runChestsAlive(runMod.chests).map((c) => c.hi || c.star || lmcTierOf(c.tier).star).sort((x, y) => y - x);
+            const nChest = gotCh.length;
+            const mx = runMaxOf(runMod);
+            const rows = [
+              [R.foes, R.foesN(zakoWins + (won ? 1 : 0))],
+              [R.chests, R.chestsN(nChest)],
+              [R.special, R.specialN(spInMap)],
+              [R.spins, R.spinsN(spinsUsed, (map.spins || 0) + (runMod.spins || 0))],
+              [R.hp, `${Math.max(0, hp)} / ${mx}`],
+              [R.pot, R.potN(carryPot)],
+            ];
+            return (
+              <div className="adv-runres">
+                <p className="adv-runres-t">{R.title}</p>
+                <div className="adv-runres-grid">
+                  {rows.map(([k2, v], j) => (
+                    <span key={k2} className="adv-runres-row" style={{ "--d": `${j * 110}ms` }}>{k2}<b>{v}</b></span>
+                  ))}
+                </div>
+                {nChest > 0 && (
+                  <div className="adv-runres-box" style={{ "--d": `${rows.length * 110}ms` }}>
+                    <b className="adv-runres-sub">{R.chestList}</b>
+                    {gotCh.map((st, j) => (
+                      <span key={j} className={`box s${Math.min(15, st)}`} style={{ "--d2": `${rows.length * 110 + 200 + j * 90}ms` }}>
+                        <svg viewBox="0 0 20 16" width="20" height="16" aria-hidden="true">
+                          <rect x="2" y="7" width="16" height="8" rx="1.5" className="bx-b" />
+                          <path d="M2 7.5 Q2 2 10 2 Q18 2 18 7.5 Z" className="bx-l" />
+                          <rect x="8.5" y="6" width="3" height="4" rx="0.8" className="bx-k" />
+                        </svg>
+                        ★{st}
+                      </span>
+                    ))}
+                  </div>
+                )}
+                {runChips.some((c) => !c.items || c.items.length) && (
+                  <div className="adv-runres-chips" style={{ "--d": `${(rows.length + 1) * 110}ms` }}>
+                    <b className="adv-runres-sub">{R.mods}</b>
+                    {runChips.filter((c) => !c.items || c.items.length).map((c, j) => runChipEl(c, j))}
+                  </div>
+                )}
+              </div>
+            );
+          })()}
           <div className="adv-result-rows">
             <span className="adv-result-row">
               {a.resultSteps}<b>{steps}</b>
@@ -80770,9 +91265,11 @@ function AdventurePanel({ lang, items, onItem }) {
             ⚠️ 一度きりの区切りなので、通常の踏破では出さない。
               毎回出ると、ただの定型文になる。
           */}
-          {/* 旅の終わりの三枚。主戦が終わった回だけ（勝ち負けとも）。箱は勝ったときだけ */}
-          {bossEnd && (
-            <JourneyReading lang={lang} win={bossEnd === "win"}
+          {/*
+            旅の終わりの三枚。⚠️ 2026-10-03 Aki「小MAP非クリア時に報酬カード（占い）が引けるのはおかしい」→ 制覇したときだけ。
+          */}
+          {won && (
+            <JourneyReading lang={lang} win auto={auto} onDone={() => setJnDone(true)}
               onReward={(seek) => {
                 const st = isWardStage(pref, area) ? 12 : starOfStage(rank, walking);
                 const cb = pushChest(st, { pref, area }, seek);
@@ -80792,17 +91289,24 @@ function AdventurePanel({ lang, items, onItem }) {
             ⚠️ 負けたとき・行き止まりのときは、これまでどおり二つ出す。
           */}
           <div className="adv-result-acts">
-            {won ? (
+            {won && !jnDone ? (
+              <p className="adv-need">{a.jnFirst}</p>
+            ) : won ? (
               <button className="draw-btn adv-go"
-                onClick={() => { restart(); setStage(null); }}>
+                onClick={() => {
+                  /* ★ 2026-10-05 Aki「制覇を押したら獲得宝箱の一覧→開封→簡易なクリア演出」 */
+                  setConq({ ids: runChestsAlive(runMod.chests).map((c) => c.id), id: Date.now() });
+                }}>
                 <span className="adv-go-shine" />
                 <Sparkles size={18} />{a.toStages}
+                {auto && !conq && <AutoCount sec={3} onGo={() => setConq({ ids: runChestsAlive(runModRef.current.chests).map((c) => c.id), id: Date.now() })} />}
               </button>
             ) : (
               <>
                 <button className="draw-btn adv-go" onClick={restart}>
                   <span className="adv-go-shine" />
                   <Sparkles size={18} />{t.advAgain}
+                  {auto && <AutoCount sec={5} onGo={restart} />}
                 </button>
                 <button type="button" className="adv-back"
                   onClick={() => { setStage(null); setPool(null); setPicked([]); goPhase("idle"); }}>
@@ -80812,6 +91316,10 @@ function AdventurePanel({ lang, items, onItem }) {
             )}
           </div>
         </div>
+      )}
+      {conq && (
+        <ConquerShow key={conq.id} lang={lang} ids={conq.ids} auto={auto} stage={walking}
+          onDone={() => { setConq(null); restart(); setStage(null); }} />
       )}
       {/*
         【ログ】2026-09-29 Aki：「いま居るのは・行ける先・中心から何環め・移動履歴・何かが立ちふさがった、も全部ログとして下に分離」。
@@ -85712,7 +96220,7 @@ const T_RAW = {
     advGate: "関所に着きました。ここから先は二枚引きます。",
     advBox: (name) => `宝箱がありました。${name}を手に入れました。`,
     advOut: "袋小路でした。ここまでです。拾ったものは持ち帰れます。",
-    advBoss: "この区画の主のところに着きました。（戦いはまだ作っていません）",
+    advBoss: "この区画の主のもとに着いた。",
     advAgain: "もう一度、入口から",
     itemTab: "アイテム",
     itemTabNote: "占うと箱がもらえる",
@@ -97507,6 +108015,9 @@ export default function TarotDraw() {
         .grow-elem b { font-size: 12px; color: #F4E6C4; }
         .grow-elem.on { box-shadow: 0 0 0 2px var(--sc), 0 0 18px color-mix(in srgb, var(--sc) 60%, transparent); }
         .grow-elem.locked { color: rgba(220,210,240,0.35); border: 1px dashed rgba(220,210,240,0.25); justify-content: center; font-size: 18px; font-weight: 700; cursor: default; }
+        /* 最初の武器（2026-10-03）。四つを2列に、下に当て方を一行 */
+        .grow-weapons { grid-template-columns: repeat(2, 1fr); }
+        .grow-weapon-note { font-size: 10px; line-height: 13px; color: #CFC4E8; text-align: center; }
         .grow-acts { display: flex; gap: 10px; justify-content: center; align-items: center; }
         /* 育ち：知らせ */
         .grow-pop { position: fixed; inset: 0; z-index: 9200; display: flex; align-items: center; justify-content: center; padding: 16px;
@@ -97623,6 +108134,20 @@ export default function TarotDraw() {
         .jn-cards { display: flex; gap: 10px; justify-content: center; margin-top: 10px; }
         .jn-slot { display: flex; flex-direction: column; align-items: center; gap: 6px; width: 30%; max-width: 110px; }
         .jn-flip { width: 100% !important; height: auto !important; aspect-ratio: 130 / 194; }
+        /* 空の枠（2026-10-03）。⚠️ 呼吸くらいの速さで光って待つ。次に入る枠だけ少し強く */
+        .jn-empty { width: 100%; aspect-ratio: 130 / 194; border-radius: 9px; border: 1.5px dashed rgba(232,196,106,0.4);
+          background: radial-gradient(ellipse at 50% 40%, rgba(232,196,106,0.10), rgba(255,255,255,0.02) 70%); animation: jnWait 3s ease-in-out infinite; }
+        .jn-empty.next { border-color: rgba(255,224,138,0.8); animation-duration: 2.2s; }
+        @keyframes jnWait { 0%, 100% { box-shadow: 0 0 0 rgba(232,196,106,0); opacity: 0.75; } 50% { box-shadow: 0 0 16px rgba(232,196,106,0.35); opacity: 1; } }
+        /* 山から枠へ飛んで収まる。⚠️ 外側の箱だけを動かす（中の .tc-flip は返す回転を持っている） */
+        .jn-deal { animation: jnDeal 0.66s cubic-bezier(.2,.8,.3,1.12) both; }
+        @keyframes jnDeal { 0% { opacity: 0; transform: translateY(-150px) scale(0.5) rotate(-16deg); }
+          60% { opacity: 1; } 100% { opacity: 1; transform: none; } }
+        .jn-flip .tc-front { border-radius: 8px; box-shadow: inset 0 0 0 1.5px rgba(232,196,106,0.65), 0 4px 12px rgba(0,0,0,0.45); }
+        .jn-landfx { position: absolute; inset: -8%; border-radius: 12px; pointer-events: none; z-index: 2;
+          border: 2px solid rgba(255,224,138,0.9); opacity: 0; animation: jnLand 0.7s ease-out 0.5s both; }
+        @keyframes jnLand { 0% { opacity: 0; transform: scale(0.85); } 30% { opacity: 1; } 100% { opacity: 0; transform: scale(1.18); } }
+        @media (prefers-reduced-motion: reduce) { .jn-deal, .jn-landfx, .jn-empty { animation: none !important; } .jn-landfx { opacity: 0; } }
         .jn-kw { font-size: 10px; color: var(--muted); text-align: center; line-height: 1.5; }
         .jn-story { font-size: 12.5px; line-height: 1.8; color: #F4E6C4; text-align: center; margin: 12px 6px 4px; animation: riseIn .6s ease both; }
         .jn-grade { display: flex; flex-direction: column; align-items: center; gap: 4px; margin-top: 10px; animation: jnPop .7s cubic-bezier(.2,.9,.3,1.3) both; }
@@ -100308,23 +110833,117 @@ export default function TarotDraw() {
         */
         .adv-iso-wrap *, .adv-iso-wrap *::before, .adv-iso-wrap *::after { animation: none !important; }
         .adv-iso-wrap .adv-weather { display: none !important; }
+        .adv-roul { position: absolute; inset: 0; z-index: 6; display: flex; align-items: center; justify-content: center;
+          background: rgba(8,6,16,0.45); pointer-events: none; }
+        .adv-roul-in { display: flex; flex-direction: column; align-items: center; gap: 4px; padding: 8px 12px 10px;
+          border-radius: 14px; background: rgba(20,14,40,0.92); border: 1px solid rgba(232,196,106,0.5); box-shadow: 0 6px 18px rgba(0,0,0,0.55); }
+        .adv-roul-t { font-size: 12px; color: #FFE08A; letter-spacing: 0.08em; }
+        .adv-roul-svg { position: relative; width: 132px; aspect-ratio: 100 / 108; display: block; }
+        .adv-roul-svg > svg { position: absolute; inset: 0; width: 100%; height: 100%; display: block; overflow: visible; }
+        /* ⚠️ 回る中心＝viewBox の (50,50)。svg の箱で左から50%・上から(50+6)/108＝51.852% */
+        .adv-roul-wheel { transform-origin: 50% 51.852%; transition: transform 1.5s cubic-bezier(0.15, 0.8, 0.2, 1); will-change: transform; }
+        .adv-spins { position: absolute; left: 8px; bottom: 38px; z-index: 5; pointer-events: none; font-size: 10px; line-height: 16px;
+          padding: 0 8px; border-radius: 8px; color: #CFEAF4; background: rgba(20,40,56,0.85); border: 1px solid rgba(127,216,240,0.5); }
+        .adv-curse { position: absolute; left: 8px; top: 48px; z-index: 5; display: flex; flex-direction: column; gap: 3px; pointer-events: none; }
+        .adv-curse span { font-size: 10px; line-height: 15px; padding: 0 7px; border-radius: 8px; color: #FFE0E6;
+          background: rgba(120,30,50,0.88); border: 1px solid rgba(255,120,140,0.6); }
+        /* ★ 特別なマスで得た良い変化は緑（2026-10-03）。⚠️ 色だけに頼らず、文言にも＋／−を書いてある */
+        .adv-curse span.good { color: #E2FFE8; background: rgba(28,96,60,0.88); border-color: rgba(120,230,160,0.6); }
+        /* ★ 一行まとめ（属性・溜まり・耐性）。⚠️ 入りきらなければ下へ折り返す。地図を覆いすぎないよう幅を決める */
+        .adv-curse span.line, .adv-runres-chips span.line { display: inline-flex; flex-wrap: wrap; align-items: center; gap: 1px 6px;
+          color: #EDE4FF; background: rgba(30,24,52,0.9); border: 1px solid rgba(190,170,255,0.45); }
+        .adv-curse span.line { flex-wrap: nowrap; overflow: hidden; max-width: calc(100% - 4px); align-self: flex-start; font-size: 9.5px; line-height: 11px; padding: 0 6px;
+          -webkit-mask-image: linear-gradient(90deg, #000 88%, transparent); mask-image: linear-gradient(90deg, #000 88%, transparent); }
+        /* ⚠️ 四行で前の三行（15px＋枠＋間3px）の高さ以内。行の高さ 11＋枠2＋間1 = 14px */
+        .adv-curse { right: 64px; gap: 1px; }
+        span.line > i.none { color: rgba(237,228,255,0.45); }
+        /* 下の段（封印・回復・ボス確定など）。⚠️ 下から上へ積む。二段まで（自キャラに届かない） */
+        .adv-curse2 { position: absolute; left: 8px; right: 8px; bottom: 58px; z-index: 5; pointer-events: none;
+          display: flex; flex-wrap: wrap-reverse; gap: 3px; max-height: 36px; overflow: hidden; }
+        .adv-curse2 span { font-size: 10px; line-height: 15px; padding: 0 7px; border-radius: 8px; color: #FFE0E6;
+          background: rgba(120,30,50,0.88); border: 1px solid rgba(255,120,140,0.6); }
+        .adv-curse2 span.good { color: #E2FFE8; background: rgba(28,96,60,0.88); border-color: rgba(120,230,160,0.6); }
+        .adv-curse2 span.rare { color: #FFF4C8; background: rgba(110,84,14,0.9); border-color: rgba(255,214,90,0.8); }
+        .adv-curse2 span.line { display: inline-flex; align-items: center; gap: 1px 6px; color: #EDE4FF; background: rgba(30,24,52,0.9); border: 1px solid rgba(190,170,255,0.45); }
+        .adv-runres-chips span.line { max-width: 100%; justify-content: center; }
+        span.line > b { font-weight: 700; color: #FFE08A; margin-right: 1px; }
+        span.line > i { font-style: normal; color: #B8FFCC; white-space: nowrap; }
+        span.line > i.down { color: #FFB8C6; }
+        /* ★ レアなマスの効果は黄（悪いのは赤、ふつうは緑）。⚠️ 色だけに頼らず「全」「ボス確定」と書いてある */
+        span.line > i.rare { color: #FFE27A; font-weight: 700; }
+        .adv-curse span.rare, .adv-runres-chips span.rare { color: #FFF4C8; background: rgba(110,84,14,0.9); border-color: rgba(255,214,90,0.8); }
+        /* 地の利・天の利（盤の上）。⚠️ 印と±%だけ。0は出さない */
+        .adv-attr { display: flex; flex-direction: column; gap: 3px; margin: 2px 0 6px; }
+        .adv-attr-row { display: flex; flex-wrap: wrap; align-items: center; gap: 4px 5px; font-size: 11px; line-height: 17px; }
+        .adv-attr-row b { font-size: 11px; font-weight: 700; color: #FFE08A; margin-right: 2px; }
+        .adv-attr-row span { display: inline-flex; align-items: center; gap: 2px; padding: 0 6px; border-radius: 8px; color: #EDE4FF; }
+        .adv-attr-row span.up { color: #D6FFE0; background: rgba(28,96,60,0.7); }
+        .adv-attr-row span.down { color: #FFD6DE; background: rgba(120,30,50,0.7); }
+        /* この地の気配。⚠️ 良し悪しの色は付けない（出やすいだけで、上がるとは限らない） */
+        .adv-attr-row.feat span { background: rgba(120,100,200,0.28); border: 1px solid rgba(190,170,255,0.35); }
+        .adv-attr-row.feat span.main { font-weight: 700; color: #FFF3D6; background: rgba(150,120,230,0.45); border-color: rgba(220,200,255,0.75);
+          animation: featGlow 3s ease-in-out infinite; }
+        @keyframes featGlow { 0%, 100% { box-shadow: 0 0 0 rgba(200,180,255,0); } 50% { box-shadow: 0 0 10px rgba(200,180,255,0.55); } }
+        /* 特別なマスのルーレット：上にマスの絵、下に扇ごとの中身 */
+        .adv-roul-icon { width: 58px; height: auto; display: block; margin-bottom: -2px; }
+        .adv-roul-legend { list-style: none; margin: 2px 0 0; padding: 0; display: flex; flex-direction: column; gap: 2px; max-width: 220px; }
+        .adv-roul-legend li { font-size: 10px; line-height: 14px; color: #EDE4FF; display: flex; align-items: flex-start; gap: 5px; }
+        .adv-roul-legend i { flex: none; width: 9px; height: 9px; margin-top: 2.5px; border-radius: 2px; border: 1px solid rgba(255,243,214,0.5); }
+        /* 黄金の道。⚠️ 点滅させない。現れるのは一度きり */
+        /* 愚者の道（2026-10-04）。⚠️ 紫の幕に同じ絵が五つ、順に跳ねて並ぶ。2.8秒で消える */
+        .adv-fool { position: absolute; inset: 0; z-index: 6; display: flex; align-items: center; justify-content: center; pointer-events: none;
+          background: radial-gradient(ellipse at center, rgba(90,40,140,0.55), rgba(8,6,16,0.5)); animation: advFool 2.8s ease both; }
+        @keyframes advFool { 0% { opacity: 0; } 10% { opacity: 1; } 82% { opacity: 1; } 100% { opacity: 0; } }
+        .adv-fool-in { display: flex; flex-direction: column; align-items: center; gap: 5px; padding: 10px 14px 12px; border-radius: 14px;
+          background: rgba(30,14,48,0.92); border: 1px solid rgba(210,160,255,0.75); box-shadow: 0 0 18px rgba(190,120,255,0.4); }
+        .adv-fool-mark { width: 26px; height: 26px; color: #E8C8FF; }
+        .adv-fool-t { font-size: 16px; letter-spacing: 0.2em; color: #F2DCFF; }
+        .adv-fool-glyphs { display: flex; gap: 2px; }
+        .adv-fool-glyphs svg { width: 34px; height: 34px; animation: advFoolHop 0.5s cubic-bezier(.3,1.4,.5,1) both; }
+        @keyframes advFoolHop { 0% { opacity: 0; transform: translateY(10px) scale(0.6); } 100% { opacity: 1; transform: none; } }
+        .adv-fool-sub { font-size: 11px; color: #E2D0F6; }
+        @media (prefers-reduced-motion: reduce) { .adv-fool, .adv-fool-glyphs svg { animation: none !important; } }
+        .adv-gold { position: absolute; inset: 0; z-index: 6; display: flex; align-items: center; justify-content: center;
+          background: radial-gradient(ellipse at center, rgba(120,84,10,0.55), rgba(8,6,16,0.55)); pointer-events: none; }
+        .adv-gold-in { display: flex; flex-direction: column; align-items: center; gap: 6px; padding: 10px 12px 12px; border-radius: 14px;
+          background: rgba(40,28,8,0.92); border: 1px solid rgba(255,214,110,0.75); box-shadow: 0 0 18px rgba(255,200,80,0.35); }
+        .adv-gold-row { display: flex; gap: 4px; }
+        .adv-gold-tile { display: flex; flex-direction: column; align-items: center; width: 44px; opacity: 0.18; transform: translateY(6px);
+          transition: opacity 0.35s ease-out, transform 0.35s ease-out; }
+        .adv-gold-tile.on { opacity: 1; transform: none; }
+        .adv-gold-tile svg { width: 40px; height: 40px; display: block; }
+        .adv-gold-tile span { font-size: 10px; color: #FFE7A0; }
         @media (hover: none) and (pointer: coarse) {
           .adv-iso-wrap svg [class*="mv-"]:not(.mv-bob):not(.mv-throb):not(.mv-pulse):not(.mv-trail),
           .adv-iso-wrap svg [class*="pn-"],
           .adv-iso-wrap svg .amb-layer, .adv-iso-wrap svg .amb-layer * { animation: none !important; }
           .adv-iso-wrap svg .amb-layer { opacity: 0.6; }
           .bt-fig .zk-svg * { animation: none !important; }
-          .bt-fig { filter: drop-shadow(0 0 8px currentColor); will-change: transform; }
+          .bt-fig > svg { filter: drop-shadow(0 0 8px currentColor); }
+          .bt-fig.dying > svg, .bt-foe.born .bt-fig > svg { filter: none; }
           .bt-foe::after { animation: none; }
         }
         .adv-iso {
           display: block; width: 100%; height: auto; margin: 0 auto 10px;
           max-width: 460px; aspect-ratio: 19 / 16;
+          /* ★ 窓。中の盤（.adv-iso-board）を transform で滑らせる。⚠️ はみ出しを切る */
+          position: relative; overflow: hidden; box-sizing: content-box; -webkit-tap-highlight-color: transparent;
           touch-action: none; cursor: grab; user-select: none;
           /* ⚠️ 背景は svg の中で描く。ここで色を敷くと空の傾斜と二重になる */
           border-radius: 14px; border: 1px solid rgba(201,162,75,0.22);
         }
         .adv-iso:active { cursor: grabbing; }
+        /* ⚠️ 盤は GPU の層に乗せる（will-change）。視点の補間は合成だけで済む */
+        .adv-iso-board { position: absolute; left: 0; top: 0; display: block; max-width: none;
+          transform-origin: 0 0; will-change: transform; backface-visibility: hidden; }
+        /* ★ 盤は三枚の svg（下の層・駒・上の層）を重ねたもの。どれも盤と同じ大きさ */
+        .adv-iso-layer { position: absolute; left: 0; top: 0; width: 100%; height: 100%; display: block; overflow: visible; }
+        .adv-iso-layer.no-hit, .adv-iso-hero { pointer-events: none; }
+        .adv-iso-hero { will-change: transform; }
+        .adv-iso-over { position: absolute; inset: 0; width: 100%; height: 100%; display: block; pointer-events: none; }
+        /* ★ 画面の外にあるあいだは描かない。⚠️ 窓の大きさは aspect-ratio で決まるので、中身を飛ばしても高さは変わらない */
+        .adv-iso.off { content-visibility: hidden; }
+        .adv-iso.off .adv-iso-board { will-change: auto; }
         /*
           天気。
           ⚠️⚠️ 盤の上に重ねる。svg の中に入れると、指でなぞったとき
@@ -100468,9 +111087,13 @@ export default function TarotDraw() {
         .adv-go-shine {
           position: absolute; top: 0; left: -40%; width: 32%; height: 100%;
           background: linear-gradient(100deg, rgba(255,255,255,0), rgba(255,255,255,0.32), rgba(255,255,255,0));
-          animation: advShine 3.4s ease-in-out infinite; pointer-events: none;
+          animation: advShine 3.4s ease-in-out infinite; pointer-events: none; will-change: transform;
         }
-        @keyframes advShine { 0%, 62% { left: -40%; } 100% { left: 115%; } }
+        /*
+          ⚠️ 2026-10-05：left を動かすと毎フレーム配置の計算と描き直しになる（戦闘の画面が丸ごと重くなっていた）。
+            同じ道のりを transform で動かす（自分の幅＝ボタンの32% なので、ボタンの155% ＝ 自分の 484.375%）。
+        */
+        @keyframes advShine { 0%, 62% { transform: translateX(0); } 100% { transform: translateX(484.375%); } }
         /*
           結果の一枚。
           ⚠️ 見出し・成果・進み具合・次の一手を、この順で縦に置く。
@@ -100492,6 +111115,39 @@ export default function TarotDraw() {
         .bt-over.win .adv-result-title { color: #FFE9A8; text-shadow: 0 0 14px rgba(232,196,106,0.6); }
         .adv-result-stage { font-size: 12.5px; color: var(--parchment); margin: 0 0 12px; }
         .adv-result-rows { display: flex; flex-direction: column; gap: 5px; margin-bottom: 14px; }
+        /* 旅の記録（制覇したときだけ）。⚠️ 行は順に浮かび上がる（--d で遅らせる） */
+        .adv-runres { margin: 0 auto 12px; max-width: 420px; padding: 10px 10px 8px; border-radius: 12px;
+          background: linear-gradient(180deg, rgba(232,196,106,0.12), rgba(255,255,255,0.03)); border: 1px solid rgba(232,196,106,0.35); }
+        .adv-runres-t { margin: 0 0 7px; font-size: 13px; letter-spacing: 0.18em; color: #FFE08A; text-align: center; }
+        .adv-runres-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 5px; }
+        .adv-runres-row { display: flex; justify-content: space-between; align-items: baseline; gap: 6px; padding: 4px 8px; border-radius: 8px;
+          font-size: 11.5px; color: var(--parchment); background: rgba(16,10,32,0.55);
+          animation: advResIn 0.5s cubic-bezier(.2,.8,.3,1.1) var(--d, 0ms) both; }
+        .adv-runres-row b { color: var(--gold-soft); font-size: 13.5px; font-weight: 700; }
+        .adv-runres-chips { margin-top: 7px; display: flex; flex-wrap: wrap; gap: 4px; justify-content: center; animation: advResIn 0.5s ease var(--d, 0ms) both; }
+        .adv-runres-chips span { font-size: 10.5px; line-height: 17px; padding: 0 7px; border-radius: 8px; color: #FFE0E6;
+          background: rgba(120,30,50,0.85); border: 1px solid rgba(255,140,160,0.5); }
+        .adv-runres-chips span.good { color: #E2FFE8; background: rgba(28,96,60,0.88); border-color: rgba(120,230,160,0.6); }
+        /* 手に入れた宝箱（2026-10-05）。⚠️ 段で色を変える（低い段は銅、★7〜は金、★10〜は虹がかった紫）。★の数字も書く（色だけに頼らない） */
+        .adv-runres-box { margin-top: 7px; display: flex; flex-wrap: wrap; gap: 4px 6px; justify-content: center; animation: advResIn 0.5s ease var(--d, 0ms) both; }
+        .adv-runres-box span.box { display: inline-flex; align-items: center; gap: 2px; font-size: 11px; font-weight: 700; color: #F4E6C8;
+          padding: 1px 7px 1px 4px; border-radius: 8px; background: rgba(60,40,24,0.85); border: 1px solid rgba(216,154,106,0.55);
+          animation: advBoxPop 0.45s cubic-bezier(.3,1.6,.5,1) var(--d2, 0ms) both; }
+        .adv-runres-box .bx-b { fill: #8A5A34; stroke: #3A2414; stroke-width: 0.8; }
+        .adv-runres-box .bx-l { fill: #A86E40; stroke: #3A2414; stroke-width: 0.8; }
+        .adv-runres-box .bx-k { fill: #E8C878; }
+        .adv-runres-box span.s4, .adv-runres-box span.s5, .adv-runres-box span.s6 { border-color: rgba(200,210,230,0.7); background: rgba(40,46,64,0.9); }
+        .adv-runres-box span.s4 .bx-l, .adv-runres-box span.s5 .bx-l, .adv-runres-box span.s6 .bx-l { fill: #8A9AB8; }
+        .adv-runres-box span.s7, .adv-runres-box span.s8, .adv-runres-box span.s9 { color: #FFF0C0; border-color: rgba(255,214,110,0.8); background: rgba(70,54,18,0.9); }
+        .adv-runres-box span.s7 .bx-l, .adv-runres-box span.s8 .bx-l, .adv-runres-box span.s9 .bx-l { fill: #E0B040; }
+        .adv-runres-box span.s10, .adv-runres-box span.s11, .adv-runres-box span.s12, .adv-runres-box span.s13, .adv-runres-box span.s14, .adv-runres-box span.s15 {
+          color: #FFE8FF; border-color: rgba(230,170,255,0.85); background: rgba(64,30,80,0.9); }
+        .adv-runres-box span.s10 .bx-l, .adv-runres-box span.s11 .bx-l, .adv-runres-box span.s12 .bx-l,
+        .adv-runres-box span.s13 .bx-l, .adv-runres-box span.s14 .bx-l, .adv-runres-box span.s15 .bx-l { fill: #C890E8; }
+        @keyframes advBoxPop { from { opacity: 0; transform: translateY(6px) scale(0.6); } to { opacity: 1; transform: none; } }
+        .adv-runres-sub { width: 100%; text-align: center; font-size: 11px; color: #CFC4E8; font-weight: 600; }
+        @keyframes advResIn { 0% { opacity: 0; transform: translateY(10px) scale(0.96); } 100% { opacity: 1; transform: none; } }
+        @media (prefers-reduced-motion: reduce) { .adv-runres-row, .adv-runres-chips, .adv-runres-box, .adv-runres-box span.box { animation: none !important; } }
         .adv-result-row {
           display: flex; justify-content: space-between; align-items: baseline;
           font-size: 12px; color: var(--muted); padding: 7px 12px; border-radius: 9px;
@@ -100615,6 +111271,8 @@ export default function TarotDraw() {
         .bt-foe.tier-au { --metal: linear-gradient(135deg, #FFF6C8 0%, #E8B830 28%, #7E5808 52%, #FFE58A 74%, #B8861A 100%); --sheen: 0.8; --sheenT: 3.8s; }
         .bt-foe.tier-ag::after { filter: drop-shadow(0 0 3px rgba(220,230,245,0.55)); }
         .bt-foe.tier-au::after { filter: drop-shadow(0 0 5px rgba(255,210,90,0.75)); }
+        /* ★ 道中の金の敵（2026-10-03）。絵を金色に染める。⚠️ 静止（フィルタを動かさない） */
+        .bt-foe.zk-gild .zk-svg { filter: sepia(0.85) saturate(2.6) hue-rotate(-12deg) brightness(1.12); }
         /*
           遠景の動き。⚠️ 呼吸くらい（2〜4秒）。速い点滅は使わない。
           ⚠️ 山や建物そのものは動かさない。霧・波・火・窓明かりだけ。
@@ -100991,12 +111649,21 @@ export default function TarotDraw() {
         .bt-foe { position: relative; display: flex; flex-direction: column; align-items: center; gap: 3px; }
         /* 敵の姿 */
         /* ⚠️ 敵は大きく。小さいと「札が並んでいる」ようにしか見えない */
+        /*
+          ★ 2026-10-05「スマホを軽く」：光の縁（drop-shadow）は器（.bt-fig）ではなく中の svg に掛ける。
+          ⚠️⚠️ 揺れている器そのものに filter を掛けると、GPU が毎フレームぼかしを計算し直す
+            （計測で戦闘の GPU 側の仕事の約4割）。中の svg に掛ければ、ぼかしは一度描いた絵に焼き込まれ、
+            揺れは GPU がその絵をずらすだけになる。見た目は同じ。
+        */
         .bt-fig {
           width: var(--fig); color: #F0B4B4;
-          filter: drop-shadow(0 0 14px currentColor) drop-shadow(0 6px 10px rgba(0,0,0,0.6));
           animation: btIdle 3.4s ease-in-out infinite;
           transition: transform 260ms ease, opacity 260ms ease;
+          will-change: transform;
         }
+        .bt-fig > svg { filter: drop-shadow(0 0 14px currentColor) drop-shadow(0 6px 10px rgba(0,0,0,0.6)); }
+        /* ⚠️ 倒れる・現れるあいだは器の filter（明るさ）が光の縁に置き換わっていた。同じにする */
+        .bt-fig.dying > svg, .bt-foe.born .bt-fig > svg { filter: none; }
         /* ⚠️ 待機でも僅かに揺らす。止まっていると書き割りに見える */
         @keyframes btIdle {
           0%, 100% { transform: translateY(0) scale(1); }
@@ -102267,7 +112934,7 @@ export default function TarotDraw() {
           100% { transform: scale(2.6); opacity: 0; }
         }
                 /*
-          エレメンタルブラスト。
+          コスモフォース。
           ⚠️ 620msでは収まらない。四段を続けるので、ここだけ長く（1900ms）。
           ⚠️ 虹は文字と環だけに使う。全部に流すと目が痛い。
         */
@@ -102728,6 +113395,489 @@ export default function TarotDraw() {
         @keyframes spxZap { 0% { stroke-dashoffset: 60; opacity: 1; } 60% { stroke-dashoffset: 0; opacity: 1; } 100% { stroke-dashoffset: 0; opacity: 0; } }
         .fx-spell.spx-t3 svg { filter: drop-shadow(0 0 4px var(--sc)); }
         /* ---- 剣の必殺技（一閃）3〜10枚（SwordFlash）---- */
+        /* ==== PHYS_FLASH CSS BEGIN ==== */
+/* pf:thrust */
+.pft-svg{position:absolute;inset:0;width:100%;height:100%;overflow:hidden;pointer-events:none}
+.pft-svg [class*="pft-"]{transform-box:fill-box}
+.pft-void{animation:pftVoid 790ms ease-out both}
+@keyframes pftVoid{0%{opacity:0}14%{opacity:var(--vo,.6)}72%{opacity:var(--vo2,.5)}100%{opacity:0}}
+.pft-beam{transform-origin:0% 50%;animation:pftBeam 700ms linear 40ms both}
+@keyframes pftBeam{0%{transform:scale(0,1);opacity:1;animation-timing-function:cubic-bezier(.2,.55,.45,1)}27%{transform:scale(1,1);opacity:1;animation-timing-function:ease-out}52%{transform:scale(1,1);opacity:1}100%{transform:scale(1,.12);opacity:0}}
+.pft-head{animation:pftHead 700ms linear 40ms both}
+@keyframes pftHead{0%{transform:translateX(var(--d));opacity:1;animation-timing-function:cubic-bezier(.2,.55,.45,1)}27%{transform:translateX(0);opacity:1;animation-timing-function:ease-out}42%{transform:translateX(2px);opacity:1}100%{transform:translateX(4px);opacity:0}}
+.pft-beam.pft-f{animation-name:pftBeamF;animation-duration:560ms}
+.pft-head.pft-f{opacity:0;animation-name:pftHeadF;animation-duration:560ms;animation-fill-mode:forwards}
+@keyframes pftBeamF{0%{transform:scale(0,1);opacity:1;animation-timing-function:cubic-bezier(.5,0,.85,1)}17%{transform:scale(1,1);opacity:1;animation-timing-function:ease-out}48%{transform:scale(1,1);opacity:1}100%{transform:scale(1,.15);opacity:0}}
+@keyframes pftHeadF{0%{transform:translateX(var(--d));opacity:1;animation-timing-function:cubic-bezier(.5,0,.85,1)}17%{transform:translateX(0);opacity:1}32%{transform:translateX(3px);opacity:0}100%{transform:translateX(3px);opacity:0}}
+.pft-pop{opacity:0;transform-origin:50% 50%;animation:pftPop 440ms ease-out forwards;filter:drop-shadow(0 0 2px #F0B860)}
+@keyframes pftPop{0%{transform:scale(0) rotate(0deg);opacity:1}22%{transform:scale(1.15) rotate(8deg);opacity:1}100%{transform:scale(.5) rotate(28deg);opacity:0}}
+.pft-spark{opacity:0;animation:pftSpark 440ms cubic-bezier(.1,.8,.3,1) forwards}
+@keyframes pftSpark{0%{transform:translate(0,0);opacity:1}100%{transform:translate(var(--dx,0px),var(--dy,0px));opacity:0}}
+.pft-ring{opacity:0;transform-origin:50% 50%;animation:pftRing 520ms ease-out forwards}
+@keyframes pftRing{0%{transform:scale(.15);opacity:.95}100%{transform:scale(1.5);opacity:0}}
+.pft-flash{opacity:0;animation:pftFlash 260ms ease-out forwards}
+@keyframes pftFlash{0%{opacity:0}30%{opacity:var(--fo,.4)}100%{opacity:0}}
+.pft-frag{opacity:0;transform-origin:50% 50%;animation:pftFrag 540ms cubic-bezier(.15,.7,.4,1) forwards}
+@keyframes pftFrag{0%{transform:translate(0,0) rotate(0deg);opacity:1}70%{opacity:.9}100%{transform:translate(var(--dx),var(--dy)) rotate(var(--r,240deg));opacity:0}}
+.pft-boom{opacity:0;transform-origin:50% 50%;animation:pftBoom 520ms ease-out forwards}
+@keyframes pftBoom{0%{transform:scale(.2);opacity:1}30%{transform:scale(1);opacity:.95}100%{transform:scale(1.45);opacity:0}}
+.pft-ember{opacity:0;transform-origin:50% 50%;animation:pftEmber 460ms ease-out forwards}
+@keyframes pftEmber{0%{opacity:.95;transform:translate(0,0) scale(1)}100%{opacity:0;transform:translate(var(--dx,0px),var(--dy,6px)) scale(.3)}}
+.pft-bolt{stroke-dasharray:100 100;stroke-dashoffset:100;animation:pftBolt 700ms linear 40ms both}
+.pft-bolt.pft-glow{filter:drop-shadow(0 0 2px #FFD86A)}
+@keyframes pftBolt{0%{stroke-dashoffset:100;opacity:1;animation-timing-function:cubic-bezier(.2,.55,.45,1)}27%{stroke-dashoffset:0;opacity:1}55%{stroke-dashoffset:0;opacity:.9}100%{stroke-dashoffset:0;opacity:0}}
+.pft-fork{stroke-dasharray:100 100;stroke-dashoffset:100;opacity:0;animation:pftFork 400ms ease-out forwards}
+@keyframes pftFork{0%{stroke-dashoffset:100;opacity:1}35%{stroke-dashoffset:0;opacity:1}100%{stroke-dashoffset:0;opacity:0}}
+.pft-burst{opacity:0;transform-origin:50% 50%;animation:pftBurst 520ms cubic-bezier(.15,.8,.3,1) forwards}
+@keyframes pftBurst{0%{transform:scale(.1) rotate(0deg);opacity:1}30%{transform:scale(1) rotate(8deg);opacity:1}100%{transform:scale(1.35) rotate(16deg);opacity:0}}
+.pft-rock{transform-origin:50% 50%;animation:pftRock 780ms ease-out both}
+@keyframes pftRock{0%{opacity:0;transform:scale(.82)}16%{opacity:1;transform:scale(1)}29%{transform:scale(1)}33%{transform:translate(2px,.6px)}38%{transform:translate(-.6px,0)}72%{opacity:1;transform:translate(0,0)}100%{opacity:0;transform:translate(0,5px)}}
+.pft-hole{opacity:0;transform-origin:50% 50%;animation:pftHole 540ms cubic-bezier(.2,.9,.3,1) forwards}
+@keyframes pftHole{0%{opacity:1;transform:scale(0)}25%{transform:scale(1)}70%{opacity:1}100%{opacity:0;transform:scale(1.1)}}
+.pft-crack{stroke-dasharray:100 100;stroke-dashoffset:100;opacity:0;animation:pftCrack 520ms ease-out forwards}
+@keyframes pftCrack{0%{stroke-dashoffset:100;opacity:1}40%{stroke-dashoffset:0;opacity:1}75%{opacity:1}100%{stroke-dashoffset:0;opacity:0}}
+.pft-dust{opacity:0;transform-origin:50% 50%;animation:pftDust 560ms ease-out forwards}
+@keyframes pftDust{0%{opacity:.55;transform:translate(0,0) scale(.4)}100%{opacity:0;transform:translate(var(--dx),var(--dy)) scale(1.7)}}
+.pft-exit{opacity:0;transform-origin:0% 50%;animation:pftExit 500ms cubic-bezier(.1,.9,.2,1) forwards}
+@keyframes pftExit{0%{transform:scale(0,1);opacity:1}30%{transform:scale(1,1);opacity:1}100%{transform:scale(1.2,.2);opacity:0}}
+.pft-gate{transform-origin:50% 100%;animation:pftGate 770ms ease-out both}
+@keyframes pftGate{0%{opacity:0;transform:scale(.94)}15%{opacity:1;transform:scale(1)}30%{opacity:1;transform:scale(1)}36%{transform:scale(1.03,.97)}44%{transform:scale(1)}62%{opacity:.9}100%{opacity:0;transform:translateY(5px) scale(1,.94)}}
+.pft-door{animation:pftDoor 770ms both}
+@keyframes pftDoor{0%{opacity:0;transform:translate(0,0) rotate(0deg)}15%{opacity:1}29%{opacity:1;transform:translate(0,0) rotate(0deg);animation-timing-function:cubic-bezier(.1,.8,.3,1)}66%{opacity:1}100%{opacity:0;transform:translate(var(--dx),var(--dy)) rotate(var(--r))}}
+.pft-cone{opacity:0;transform-origin:0% 50%;animation:pftCone 540ms cubic-bezier(.1,.8,.3,1) forwards}
+@keyframes pftCone{0%{transform:scale(.1,.3);opacity:1}35%{opacity:.9}100%{transform:scale(1.2,1.25);opacity:0}}
+.pft-bow{opacity:0;transform-origin:0% 50%;animation:pftBow 520ms cubic-bezier(.1,.7,.3,1) forwards}
+@keyframes pftBow{0%{transform:translateX(0) scale(.3);opacity:1}100%{transform:translateX(var(--dx)) scale(1.3);opacity:0}}
+.pft-coil{stroke-dasharray:18 4;animation:pftCoil 700ms linear 40ms both}
+@keyframes pftCoil{0%{stroke-dashoffset:0}100%{stroke-dashoffset:-60}}
+.pft-whirl{opacity:0;transform-origin:50% 50%;animation:pftWhirl 560ms cubic-bezier(.15,.7,.35,1) forwards;filter:drop-shadow(0 0 2px #FF9A4A)}
+@keyframes pftWhirl{0%{transform:rotate(0deg) scale(.3);opacity:1}45%{opacity:1}100%{transform:rotate(150deg) scale(1.55);opacity:0}}
+.pft-cloud{animation:pftCloud 790ms both;filter:drop-shadow(0 0 3px rgba(255,236,190,.45))}
+@keyframes pftCloud{0%{opacity:0;transform:translateX(0)}14%{opacity:.95}24%{transform:translateX(0);animation-timing-function:cubic-bezier(.1,.8,.3,1)}70%{opacity:.85}100%{opacity:0;transform:translateX(var(--cx))}}
+.pft-col{transform-origin:50% 100%;animation:pftCol 740ms linear 50ms both}
+@keyframes pftCol{0%{transform:scale(1,0);opacity:1;animation-timing-function:cubic-bezier(.35,.1,.7,1)}28%{transform:scale(1,1);opacity:1;animation-timing-function:ease-out}55%{transform:scale(1.25,1);opacity:1}100%{transform:scale(1.7,1);opacity:0}}
+.pft-rise{animation:pftRise 740ms linear 50ms both}
+@keyframes pftRise{0%{transform:translateY(var(--d));opacity:1;animation-timing-function:cubic-bezier(.35,.1,.7,1)}28%{transform:translateY(0);opacity:1}40%{transform:translateY(0);opacity:0}100%{transform:translateY(0);opacity:0}}
+.pft-sky{opacity:0;animation:pftSky 540ms ease-out forwards}
+@keyframes pftSky{0%{opacity:0}30%{opacity:1}100%{opacity:0}}
+.pft-mote{opacity:0;animation:pftMote 460ms ease-out forwards}
+@keyframes pftMote{0%{opacity:0;transform:translateY(0)}25%{opacity:1}100%{opacity:0;transform:translateY(-22px)}}
+.pft-starf{opacity:0;animation:pftStarF 780ms ease-in-out both}
+@keyframes pftStarF{0%{opacity:0}25%{opacity:.9}80%{opacity:.7}100%{opacity:0}}
+.pft-open{opacity:0;transform-origin:50% 50%;animation:pftOpen 640ms cubic-bezier(.2,.9,.3,1) forwards}
+@keyframes pftOpen{0%{opacity:1;transform:scale(0) rotate(-12deg)}30%{transform:scale(1) rotate(0deg)}70%{opacity:1}100%{opacity:0;transform:scale(1.12) rotate(0deg)}}
+.pft-tring{opacity:0;transform-origin:50% 50%;animation:pftTring 520ms ease-out forwards}
+@keyframes pftTring{0%{opacity:0;transform:translateX(-6px) scale(.4)}25%{opacity:.95;transform:translateX(0) scale(1)}100%{opacity:0;transform:translateX(10px) scale(1.15)}}
+.pft-shake{animation:pftShake 400ms ease-in-out both}
+.pft-shake2{animation:pftShake2 480ms ease-in-out both}
+@keyframes pftShake{0%,100%{transform:translate(0,0)}20%{transform:translate(-2px,1px)}45%{transform:translate(2px,-1px)}70%{transform:translate(-1px,0)}}
+@keyframes pftShake2{0%,100%{transform:translate(0,0)}15%{transform:translate(-4px,2px)}35%{transform:translate(4px,-2px)}55%{transform:translate(-3px,1px)}75%{transform:translate(2px,-1px)}}
+/* pf:blunt */
+.pfb-svg { position: absolute; inset: 0; width: 100%; height: 100%; pointer-events: none; overflow: hidden; }
+.pfb-void { animation: pfbVoid 800ms ease-out both; }
+.pfb-void.pfb-deep { animation: pfbVoidDeep 860ms ease-out both; }
+@keyframes pfbVoid { 0% { opacity: 0; } 14% { opacity: 0.62; } 72% { opacity: 0.52; } 100% { opacity: 0; } }
+@keyframes pfbVoidDeep { 0% { opacity: 0; } 10% { opacity: 0.95; } 76% { opacity: 0.9; } 100% { opacity: 0; } }
+.pfb-swing { fill: none; stroke-linecap: round; stroke-dasharray: var(--d) 400px; stroke-dashoffset: var(--d); animation: pfbSwing 300ms linear 26ms both; }
+@keyframes pfbSwing {
+  0% { stroke-dashoffset: var(--d); opacity: 1; animation-timing-function: cubic-bezier(0.55, 0, 0.9, 0.6); }
+  68% { stroke-dashoffset: calc(var(--d) - 100px); opacity: 1; animation-timing-function: ease-out; }
+  100% { stroke-dashoffset: calc(var(--d) - 100px); opacity: 0; } }
+.pfb-head { opacity: 0; transform-box: view-box; animation: pfbHead 300ms linear 26ms both; }
+@keyframes pfbHead {
+  0% { transform: rotate(var(--a0)); opacity: 0; animation-timing-function: cubic-bezier(0.55, 0, 0.9, 0.6); }
+  8% { opacity: 1; }
+  68% { transform: rotate(0deg); opacity: 1; }
+  78% { opacity: 0; }
+  100% { transform: rotate(0deg); opacity: 0; } }
+.pfb-flash { opacity: 0; animation: pfbFlash 260ms ease-out 240ms both; }
+@keyframes pfbFlash { 0% { opacity: 0; } 25% { opacity: var(--fo, 0.4); } 100% { opacity: 0; } }
+.pfb-burst { opacity: 0; transform-box: fill-box; transform-origin: 50% 50%; animation: pfbBurst 320ms ease-out 232ms both; }
+@keyframes pfbBurst { 0% { transform: scale(0.25); opacity: 0; } 5% { opacity: 1; } 35% { transform: scale(1); opacity: 1; } 100% { transform: scale(1.25); opacity: 0; } }
+.pfb-ring { opacity: 0; transform-box: fill-box; transform-origin: 50% 50%; animation: pfbRing 480ms ease-out 244ms both; }
+.pfb-ring.pfb-sm { animation-duration: 320ms; }
+@keyframes pfbRing { 0% { transform: scale(0.3); opacity: 0; } 6% { opacity: 0.95; } 100% { transform: scale(var(--s, 5)); opacity: 0; } }
+.pfb-chip { opacity: 0; transform-box: fill-box; transform-origin: 50% 50%; animation: pfbChip 500ms linear 250ms both; }
+@keyframes pfbChip {
+  0% { transform: translate(0, 0) rotate(0deg); opacity: 0; animation-timing-function: cubic-bezier(0.15, 0.6, 0.4, 1); }
+  4% { opacity: 1; }
+  45% { transform: translate(calc(var(--dx) * 0.55), var(--dy)) rotate(150deg); opacity: 1; animation-timing-function: cubic-bezier(0.6, 0, 0.9, 0.6); }
+  100% { transform: translate(var(--dx), calc(var(--dy) * -0.35)) rotate(320deg); opacity: 0; } }
+.pfb-dust { opacity: 0; transform-box: fill-box; transform-origin: 50% 100%; animation: pfbDust 520ms ease-out 270ms both; }
+@keyframes pfbDust { 0% { transform: translate(0, 0) scale(0.35); opacity: 0; } 25% { opacity: var(--o, 0.4); } 100% { transform: translate(var(--dx), -5px) scale(1.7); opacity: 0; } }
+.pfb-crack { fill: none; stroke-linecap: round; stroke-linejoin: round; stroke-dasharray: 100 300; stroke-dashoffset: 100; animation: pfbCrack 520ms ease-out 244ms both; }
+@keyframes pfbCrack { 0% { stroke-dashoffset: 100; opacity: 1; } 32% { stroke-dashoffset: 0; opacity: 1; } 72% { opacity: 1; } 100% { stroke-dashoffset: 0; opacity: 0; } }
+.pfb-obj { animation: pfbObj 800ms ease-out both; }
+@keyframes pfbObj { 0% { opacity: 0; } 12% { opacity: 1; } 62% { opacity: 1; } 100% { opacity: 0; } }
+.pfb-show { animation: pfbShow 200ms ease-out both; }
+@keyframes pfbShow { 0% { opacity: 0; } 100% { opacity: 1; } }
+.pfb-jolt { transform-box: fill-box; transform-origin: 50% 100%; animation: pfbJolt 240ms ease-out 236ms both; }
+@keyframes pfbJolt { 0% { transform: translate(0, 0) scale(1, 1); } 30% { transform: translate(0, 1.5px) scale(1.04, 0.93); } 100% { transform: translate(0, 0) scale(1, 1); } }
+.pfb-halfL { transform-box: fill-box; transform-origin: 0% 100%; animation: pfbHalfL 540ms cubic-bezier(0.2, 0.7, 0.3, 1) 290ms both; }
+.pfb-halfR { transform-box: fill-box; transform-origin: 100% 100%; animation: pfbHalfR 540ms cubic-bezier(0.2, 0.7, 0.3, 1) 290ms both; }
+@keyframes pfbHalfL { 0% { transform: translate(0, 0) rotate(0deg); } 100% { transform: translate(-14px, 4px) rotate(-18deg); } }
+@keyframes pfbHalfR { 0% { transform: translate(0, 0) rotate(0deg); } 100% { transform: translate(14px, 4px) rotate(18deg); } }
+.pfb-ray { opacity: 0; transform-box: fill-box; transform-origin: 50% 50%; animation: pfbRay 460ms ease-out 290ms both; }
+@keyframes pfbRay { 0% { transform: scaleX(0.1); opacity: 0; } 25% { transform: scaleX(1); opacity: 0.95; } 100% { transform: scaleX(1.8); opacity: 0; } }
+.pfb-dent { opacity: 0; transform-box: fill-box; transform-origin: 50% 50%; animation: pfbDent 560ms ease-out 236ms both; }
+@keyframes pfbDent { 0% { transform: scale(0.2); opacity: 0; } 20% { transform: scale(1.08); opacity: 1; } 35% { transform: scale(1); } 100% { transform: scale(1); opacity: 1; } }
+.pfb-heat { opacity: 0; transform-box: fill-box; transform-origin: 50% 50%; animation: pfbHeat 520ms ease-out 240ms both; }
+@keyframes pfbHeat { 0% { transform: scale(0.4); opacity: 0; } 20% { opacity: 0.9; } 100% { transform: scale(1.3); opacity: 0; } }
+.pfb-spark { opacity: 0; animation: pfbSpark 400ms cubic-bezier(0.1, 0.7, 0.3, 1) 244ms both; }
+@keyframes pfbSpark { 0% { transform: translateX(3px); opacity: 0; } 5% { opacity: 1; } 70% { opacity: 1; } 100% { transform: translateX(var(--r)); opacity: 0; } }
+.pfb-slab { opacity: 0; transform-box: fill-box; transform-origin: 50% 100%; animation: pfbSlab 520ms ease-out 270ms both; }
+@keyframes pfbSlab { 0% { transform: scaleY(0); opacity: 0; } 5% { opacity: 1; } 28% { transform: scaleY(1.12); opacity: 1; } 42% { transform: scaleY(1); } 78% { transform: scaleY(1); opacity: 1; } 100% { transform: translateY(2px) scaleY(0.85); opacity: 0; } }
+.pfb-fall { transform-box: fill-box; transform-origin: 50% 50%; animation: pfbFall 440ms cubic-bezier(0.5, 0, 0.9, 0.5) 300ms both; }
+@keyframes pfbFall { 0% { transform: translate(0, 0) rotate(0deg); opacity: 1; } 65% { opacity: 1; } 100% { transform: translate(var(--dx), var(--dy)) rotate(var(--r)); opacity: 0; } }
+.pfb-glow { opacity: 0; transform-box: fill-box; transform-origin: 50% 50%; animation: pfbGlow 520ms ease-out 280ms both; }
+@keyframes pfbGlow { 0% { transform: scale(0.3); opacity: 0; } 30% { opacity: 0.9; } 100% { transform: scale(1.5); opacity: 0; } }
+.pfb-web { opacity: 0; animation: pfbWeb 500ms ease-out 290ms both; }
+@keyframes pfbWeb { 0% { opacity: 0; } 15% { opacity: 1; } 70% { opacity: 1; } 100% { opacity: 0; } }
+.pfb-shard { opacity: 0; transform-box: fill-box; transform-origin: 50% 50%; animation: pfbShard 440ms cubic-bezier(0.45, 0, 0.85, 0.6) 330ms both; }
+@keyframes pfbShard { 0% { transform: translate(0, 0) rotate(0deg); opacity: 0; } 8% { opacity: 1; } 55% { opacity: 1; } 100% { transform: translate(var(--dx), var(--dy)) rotate(var(--r)); opacity: 0; } }
+.pfb-twk { opacity: 0; transform-box: fill-box; transform-origin: 50% 50%; animation: pfbTwk 380ms ease-out 320ms both; }
+@keyframes pfbTwk { 0% { transform: scale(0) rotate(0deg); opacity: 0; } 35% { transform: scale(1) rotate(20deg); opacity: 1; } 100% { transform: scale(0.2) rotate(45deg); opacity: 0; } }
+.pfb-meteor { animation: pfbMeteor 300ms cubic-bezier(0.4, 0, 0.9, 0.6) both; }
+@keyframes pfbMeteor { 0% { transform: translate(96px, -136px); opacity: 0; } 12% { opacity: 1; } 100% { transform: translate(0, 0); opacity: 1; } }
+.pfb-meteorOut { animation: pfbMeteorOut 380ms linear both; }
+@keyframes pfbMeteorOut { 0%, 78% { opacity: 1; } 100% { opacity: 0; } }
+.pfb-pre { opacity: 0; transform-box: fill-box; transform-origin: 50% 50%; animation: pfbPre 480ms ease-in both; }
+@keyframes pfbPre { 0% { transform: scale(0.3); opacity: 0; } 62% { transform: scale(1); opacity: 0.85; } 100% { transform: scale(1.4); opacity: 0; } }
+.pfb-dome { opacity: 0; transform-box: fill-box; transform-origin: 50% 100%; animation: pfbDome 480ms cubic-bezier(0.1, 0.7, 0.3, 1) 300ms both; }
+@keyframes pfbDome { 0% { transform: scale(0.12); opacity: 0; } 6% { opacity: 1; } 55% { opacity: 0.85; } 100% { transform: scale(1.6); opacity: 0; } }
+.pfb-chasm { opacity: 0; transform-box: fill-box; transform-origin: 50% 50%; animation: pfbChasm 560ms ease-out 300ms both; }
+@keyframes pfbChasm { 0% { transform: scale(0.2, 0); opacity: 1; } 25% { transform: scale(1, 1); opacity: 1; } 70% { opacity: 1; } 100% { transform: scale(1, 0.8); opacity: 0; } }
+.pfb-ember { opacity: 0; transform-box: fill-box; transform-origin: 50% 50%; animation: pfbEmber 480ms ease-out 330ms both; }
+@keyframes pfbEmber { 0% { transform: translate(0, 0) scale(0.2); opacity: 0; } 25% { transform: translate(0, -8px) scale(1); opacity: 1; } 100% { transform: translate(var(--dx), -34px) scale(0.3); opacity: 0; } }
+.pfb-star { opacity: 0; animation: pfbStar 640ms ease-in-out both; }
+@keyframes pfbStar { 0% { opacity: 0; } 25% { opacity: 0.9; } 75% { opacity: 0.7; } 100% { opacity: 0; } }
+.pfb-shake { animation: pfbShake 400ms ease-out 236ms both; }
+.pfb-shake.pfb-big { animation: pfbShakeBig 460ms ease-out 296ms both; }
+@keyframes pfbShake { 0%, 100% { transform: translate(0, 0); } 15% { transform: translate(-3px, 2px); } 35% { transform: translate(3px, -1.5px); } 55% { transform: translate(-2px, 1px); } 75% { transform: translate(1px, -0.5px); } }
+@keyframes pfbShakeBig { 0%, 100% { transform: translate(0, 0); } 12% { transform: translate(-5px, 3px); } 30% { transform: translate(5px, -3px); } 48% { transform: translate(-4px, 2px); } 66% { transform: translate(2.5px, -1px); } 84% { transform: translate(-1px, 0.5px); } }
+/* pf:shoot */
+.pfs-svg{position:absolute;inset:0;width:100%;height:100%;pointer-events:none;overflow:hidden}
+.pfs-void{opacity:0;animation:pfsVoid 800ms ease-out both}
+@keyframes pfsVoid{0%{opacity:0}14%{opacity:var(--vo,.55)}72%{opacity:var(--vo,.55)}100%{opacity:0}}
+.pfs-flash{opacity:0;animation:pfsFlash 260ms ease-out both}
+@keyframes pfsFlash{0%{opacity:0}25%{opacity:var(--fo,.3)}100%{opacity:0}}
+.pfs-fly{transform-box:view-box;transform-origin:0 0;opacity:0;animation:pfsFly 520ms linear both}
+@keyframes pfsFly{0%{transform:translateX(var(--d,-120px));opacity:0;animation-timing-function:cubic-bezier(.35,0,.9,.75)}6%{opacity:1}42%{transform:translateX(0px);opacity:1;animation-timing-function:ease-out}47%{transform:translateX(1.6px)}78%{transform:translateX(1.6px);opacity:1}100%{transform:translateX(1.6px);opacity:0}}
+.pfs-arc{transform-box:view-box;transform-origin:0 0;opacity:0;animation:pfsArc 740ms linear 40ms both}
+@keyframes pfsArc{0%{transform:translate(-112px,16px) rotate(-68.12deg);opacity:0}3.29%{transform:translate(-106.87px,3.72px) rotate(-66.35deg);opacity:1}6.57%{transform:translate(-101.27px,-8.41px) rotate(-63.98deg)}9.86%{transform:translate(-95.2px,-20.06px) rotate(-60.85deg)}13.14%{transform:translate(-88.67px,-30.87px) rotate(-56.62deg)}16.43%{transform:translate(-81.2px,-41.04px) rotate(-50.28deg)}19.71%{transform:translate(-71.87px,-50.43px) rotate(-39.03deg)}23%{transform:translate(-60.67px,-56.87px) rotate(-18.74deg)}26.29%{transform:translate(-48.07px,-57.81px) rotate(10.82deg)}29.57%{transform:translate(-36.4px,-52.71px) rotate(34.3deg)}32.86%{transform:translate(-26.6px,-44.01px) rotate(47.59deg)}36.14%{transform:translate(-18.67px,-34px) rotate(55.01deg)}39.43%{transform:translate(-11.67px,-22.97px) rotate(59.87deg)}42.71%{transform:translate(-5.13px,-10.81px) rotate(63.41deg)}46%{transform:translate(0px,0px) rotate(65.6deg)}50%{transform:translate(0.66px,1.46px) rotate(65.6deg)}76%{transform:translate(0.66px,1.46px) rotate(65.6deg);opacity:1}100%{transform:translate(0.66px,1.46px) rotate(65.6deg);opacity:0}}
+.pfs-trace{stroke-dasharray:100 101;stroke-dashoffset:100;animation:pfsTrace 740ms linear 40ms both}
+@keyframes pfsTrace{0%{stroke-dashoffset:100;opacity:.95}46%{stroke-dashoffset:0;opacity:.95}100%{stroke-dashoffset:0;opacity:0}}
+.pfs-hit{transform-box:fill-box;transform-origin:50% 50%;opacity:0;animation:pfsHit 340ms ease-out both}
+@keyframes pfsHit{0%{transform:scale(.2) rotate(0deg);opacity:0}22%{transform:scale(1.15) rotate(8deg);opacity:1}100%{transform:scale(.6) rotate(30deg);opacity:0}}
+.pfs-ring{transform-box:fill-box;transform-origin:50% 50%;opacity:0;animation:pfsRing 340ms ease-out both}
+@keyframes pfsRing{0%{transform:scale(.2);opacity:0}10%{opacity:.95}100%{transform:scale(var(--rs,2));opacity:0}}
+.pfs-ember{transform-box:fill-box;transform-origin:50% 50%;opacity:0;animation:pfsEmber 360ms ease-out both}
+@keyframes pfsEmber{0%{transform:scale(.35);opacity:0}8%{opacity:1}45%{opacity:.8}80%{opacity:0}100%{transform:scale(var(--es,2.3));opacity:0}}
+.pfs-gust{stroke-dasharray:26 200;stroke-dashoffset:30;opacity:0;animation:pfsGust 520ms ease-in-out both}
+@keyframes pfsGust{0%{stroke-dashoffset:30;opacity:0}20%{opacity:.9}100%{stroke-dashoffset:-100;opacity:0}}
+.pfs-leaf{transform-box:fill-box;transform-origin:50% 50%;opacity:0;animation:pfsLeaf 600ms ease-out both}
+@keyframes pfsLeaf{0%{transform:translate(0px,0px) rotate(0deg);opacity:0}15%{opacity:1}75%{opacity:1}100%{transform:translate(var(--lx),var(--ly)) rotate(var(--lr));opacity:0}}
+.pfs-cloud{opacity:0;animation:pfsCloud 780ms ease-out both}
+@keyframes pfsCloud{0%{opacity:0;transform:translateY(-6px)}22%{opacity:var(--co,.9);transform:translateY(0px)}72%{opacity:var(--co,.9)}100%{opacity:0;transform:translateY(-3px)}}
+.pfs-zap{stroke-dasharray:100 101;stroke-dashoffset:100;opacity:0;animation:pfsZap 300ms ease-out both}
+.pfs-bolt{stroke-dasharray:100 101;stroke-dashoffset:100;opacity:0;animation:pfsZap 360ms ease-out 360ms both;filter:drop-shadow(0 0 3px #D8FF9A)}
+@keyframes pfsZap{0%{stroke-dashoffset:100;opacity:1}35%{stroke-dashoffset:0;opacity:1}100%{stroke-dashoffset:0;opacity:0}}
+.pfs-rain{opacity:0;animation:pfsRain 460ms linear both}
+@keyframes pfsRain{0%{transform:translate(0px,0px);opacity:0}15%{opacity:.75}85%{opacity:.6}100%{transform:translate(var(--rx),var(--ry));opacity:0}}
+.pfs-glow{transform-box:fill-box;transform-origin:50% 50%;opacity:0;animation:pfsGlow 760ms ease-out both}
+@keyframes pfsGlow{0%{opacity:0;transform:scale(.85)}28%{opacity:var(--go,1)}70%{opacity:var(--go,1)}100%{opacity:0;transform:scale(1.08)}}
+.pfs-vortex{transform-box:view-box;transform-origin:0 0;opacity:0;animation:pfsVortex 760ms cubic-bezier(.3,0,.6,1) both}
+@keyframes pfsVortex{0%{transform:rotate(0deg) scale(.55);opacity:0}18%{opacity:.85}70%{opacity:.8}100%{transform:rotate(var(--vr,320deg)) scale(1.1);opacity:0}}
+.pfs-orbit{transform-box:view-box;transform-origin:0 0;opacity:0;animation:pfsOrbit 560ms cubic-bezier(.35,0,.7,1) both}
+@keyframes pfsOrbit{0%{transform:rotate(0deg);opacity:0}12%{opacity:1}78%{opacity:1}100%{transform:rotate(var(--or,240deg));opacity:0}}
+.pfs-spiral{transform-box:view-box;transform-origin:0 0;animation:pfsSpiral 560ms cubic-bezier(.4,0,.8,1) both}
+@keyframes pfsSpiral{0%{transform:translateX(var(--r0,80px))}100%{transform:translateX(var(--r1,28px))}}
+.pfs-burst{transform-box:fill-box;transform-origin:50% 50%;opacity:0;animation:pfsBurst 340ms ease-out both}
+@keyframes pfsBurst{0%{transform:scale(.15) rotate(0deg);opacity:0}6%{opacity:1}28%{transform:scale(1) rotate(10deg);opacity:1}70%{opacity:0}100%{transform:scale(1.3) rotate(18deg);opacity:0}}
+.pfs-tw{opacity:0;animation:pfsTw 680ms ease-in-out both}
+@keyframes pfsTw{0%{opacity:0}30%{opacity:1}75%{opacity:.8}100%{opacity:0}}
+.pfs-dust{transform-box:fill-box;transform-origin:50% 100%;opacity:0;animation:pfsDust 520ms ease-out both}
+@keyframes pfsDust{0%{transform:scaleY(.2);opacity:0}30%{transform:scaleY(1);opacity:.32}100%{transform:scaleY(1.5);opacity:0}}
+.pfs-spk{opacity:0;animation:pfsSpk 360ms ease-out both}
+@keyframes pfsSpk{0%{opacity:0}20%{opacity:1}100%{opacity:0}}
+.pfs-glint{opacity:0;animation:pfsSpk 420ms ease-out both}
+.pfs-aurora{opacity:0;animation:pfsAurora 760ms ease-out both}
+@keyframes pfsAurora{0%{opacity:0;transform:translateX(-10px)}30%{opacity:.9}100%{opacity:0;transform:translateX(12px)}}
+.pfs-vault{transform-box:view-box;transform-origin:0 0;opacity:0;animation:pfsVault 620ms linear both}
+@keyframes pfsVault{0%{transform:translateX(var(--d,-100px));opacity:0}16%{transform:translateX(calc(var(--d,-100px) - 4px));opacity:1;animation-timing-function:cubic-bezier(.5,0,.95,.6)}50%{transform:translateX(0px);opacity:1;animation-timing-function:ease-out}54%{transform:translateX(1.6px)}80%{transform:translateX(1.6px);opacity:1}100%{transform:translateX(1.6px);opacity:0}}
+.pfs-k9{animation:pfsShake 340ms ease-out 300ms both}
+.pfs-k10{animation:pfsShake 400ms ease-out 420ms both}
+@keyframes pfsShake{0%,100%{transform:translate(0px,0px)}18%{transform:translate(-3px,2px)}36%{transform:translate(3px,-2px)}56%{transform:translate(-2px,-1px)}76%{transform:translate(1px,1px)}}
+/* pf:dance */
+.pfd-svg { position: absolute; inset: 0; width: 100%; height: 100%; pointer-events: none; }
+.pfd-svg * { transform-box: fill-box; }
+.pfd-svg [transform] { transform-box: view-box; transform-origin: 0 0; }
+.pfd-dim { animation: pfdDim 1880ms ease both; }
+@keyframes pfdDim { 0% { opacity: 0; } 7% { opacity: 0.88; } 84% { opacity: 0.82; } 100% { opacity: 0; } }
+.pfd-shake { animation: pfdShake 320ms ease-out 720ms both; }
+@keyframes pfdShake { 0%, 100% { transform: translate(0, 0); } 15% { transform: translate(0, 3px); } 35% { transform: translate(-2px, -2px); } 55% { transform: translate(2px, 1px); } 75% { transform: translate(-1px, 0); } }
+.pfd-orbit { transform-origin: 50% 50%; animation: pfdOrbit 1440ms ease-in-out both; filter: drop-shadow(0 0 2px rgba(255, 236, 190, 0.85)); }
+@keyframes pfdOrbit {
+  0% { transform: rotate(-240deg) scale(0.3); opacity: 0; }
+  7.6% { transform: rotate(0deg) scale(1); opacity: 1; }
+  20.8% { transform: rotate(14deg) scale(1); }
+  28.5% { transform: rotate(90deg) scale(1); }
+  38.9% { transform: rotate(104deg) scale(1); }
+  46.5% { transform: rotate(180deg) scale(1); }
+  57.6% { transform: rotate(194deg) scale(1); }
+  66% { transform: rotate(270deg) scale(1); opacity: 1; }
+  82% { transform: rotate(320deg) scale(1.05); opacity: 1; }
+  100% { transform: rotate(470deg) scale(1.8); opacity: 0; }
+}
+.pfd-wpn { transform-origin: 50% 50%; animation: pfdWpn 340ms ease-in-out both; }
+@keyframes pfdWpn { 0% { transform: rotate(62deg) scale(1); } 40% { transform: rotate(0deg) scale(1.3); } 100% { transform: rotate(62deg) scale(1); } }
+.pfd-slash { opacity: 0; transform-origin: 0% 50%; animation: pfdSlash 470ms cubic-bezier(0.1, 0.9, 0.2, 1) 90ms both; filter: drop-shadow(0 0 3px #BFD8FF); }
+.pfd-slash.pfd-slash2 { animation-delay: 150ms; }
+@keyframes pfdSlash { 0% { transform: scaleX(0); opacity: 0; } 25% { transform: scaleX(1); opacity: 1; } 60% { opacity: 0.85; } 100% { transform: scaleX(1); opacity: 0; } }
+.pfd-swfly { opacity: 0; animation: pfdSwFly 260ms cubic-bezier(0.3, 0.6, 0.4, 1) 70ms both; }
+@keyframes pfdSwFly { 0% { transform: translateX(-30px); opacity: 0; } 15% { opacity: 1; } 75% { opacity: 1; } 100% { transform: translateX(250px); opacity: 0; } }
+.pfd-trail { opacity: 0; transform-origin: 0% 50%; animation: pfdTrail 380ms ease-out 360ms both; filter: drop-shadow(0 0 3px #F0B860); }
+@keyframes pfdTrail { 0% { transform: scaleX(0); opacity: 0; } 26% { transform: scaleX(1); opacity: 1; } 50% { opacity: 0.8; } 100% { transform: scaleX(1); opacity: 0; } }
+.pfd-spear { opacity: 0; animation: pfdSpear 420ms cubic-bezier(0.2, 0.8, 0.3, 1) 360ms both; }
+@keyframes pfdSpear { 0% { transform: translateX(-130px); opacity: 0; } 8% { opacity: 1; } 24% { transform: translateX(0); } 40% { transform: translateX(6px); opacity: 1; } 100% { transform: translateX(8px); opacity: 0; } }
+.pfd-tip { opacity: 0; transform-origin: 50% 50%; animation: pfdPop 320ms ease-out 450ms both; }
+@keyframes pfdPop { 0% { transform: scale(0.2) rotate(0deg); opacity: 0; } 25% { transform: scale(1.15) rotate(10deg); opacity: 1; } 100% { transform: scale(0.9) rotate(30deg); opacity: 0; } }
+.pfd-cone { opacity: 0; transform-origin: 0% 50%; animation: pfdCone 340ms ease-out both; }
+@keyframes pfdCone { 0% { transform: scale(0.4); opacity: 0; } 25% { opacity: 1; } 100% { transform: scale(1.9); opacity: 0; } }
+.pfd-spark { opacity: 0; animation: pfdSpark 300ms ease-out both; }
+@keyframes pfdSpark { 0% { transform: translateX(0); opacity: 0; } 10% { opacity: 1; } 100% { transform: translateX(18px); opacity: 0; } }
+.pfd-axe { opacity: 0; transform-origin: 50% 50%; animation: pfdAxe 420ms cubic-bezier(0.5, 0, 0.9, 0.5) 600ms both; }
+@keyframes pfdAxe { 0% { transform: translate(-26px, -64px) rotate(-40deg); opacity: 0; } 15% { opacity: 1; } 29% { transform: translate(0, 0) rotate(0deg); opacity: 1; } 60% { transform: translate(0, 0) rotate(0deg); opacity: 0.9; } 100% { transform: translate(0, 0) rotate(0deg); opacity: 0; } }
+.pfd-qglow { opacity: 0; transform-origin: 50% 50%; animation: pfdQGlow 420ms ease-out 715ms both; }
+@keyframes pfdQGlow { 0% { transform: scale(0.3); opacity: 0; } 20% { opacity: 0.95; } 100% { transform: scale(1.7); opacity: 0; } }
+.pfd-qring { opacity: 0; transform-origin: 50% 50%; animation: pfdQRing 400ms ease-out both; }
+@keyframes pfdQRing { 0% { transform: scale(0.3); opacity: 0; } 8% { opacity: 0.9; } 100% { transform: scale(6.5); opacity: 0; } }
+.pfd-crack { stroke-dasharray: 260; stroke-dashoffset: 260; opacity: 0; animation: pfdCrack 420ms ease-out 720ms both; filter: drop-shadow(0 0 2px #D89A6A); }
+@keyframes pfdCrack { 0% { stroke-dashoffset: 260; opacity: 0; } 2% { opacity: 1; } 40% { stroke-dashoffset: 0; opacity: 1; } 100% { stroke-dashoffset: 0; opacity: 0; } }
+.pfd-chip { opacity: 0; transform-origin: 50% 50%; animation: pfdChip 460ms ease-out both; }
+@keyframes pfdChip { 0% { transform: translate(0, 0) rotate(0deg); opacity: 0; } 6% { opacity: 1; } 100% { transform: translate(var(--dx), var(--dy)) rotate(300deg); opacity: 0; } }
+.pfd-arrows { filter: drop-shadow(0 0 2px #9AD8A8); }
+.pfd-arrow { opacity: 0; animation: pfdArrow 380ms cubic-bezier(0.4, 0, 1, 1) both; }
+@keyframes pfdArrow { 0% { transform: translateX(-110px); opacity: 0; } 12% { opacity: 1; } 40% { transform: translateX(0); opacity: 1; } 72% { transform: translateX(0); opacity: 0.9; } 100% { transform: translateX(0); opacity: 0; } }
+.pfd-hit { opacity: 0; transform-origin: 50% 50%; animation: pfdPop 280ms ease-out both; }
+.pfd-bloom { opacity: 0; transform-origin: 50% 50%; animation: pfdBloom 520ms cubic-bezier(0.2, 0.7, 0.3, 1) 1280ms both; filter: drop-shadow(0 0 4px rgba(255, 236, 190, 0.9)); }
+@keyframes pfdBloom { 0% { transform: scale(0.15) rotate(-40deg); opacity: 0; } 22% { opacity: 1; } 50% { transform: scale(1) rotate(0deg); opacity: 1; } 100% { transform: scale(1.3) rotate(18deg); opacity: 0; } }
+.pfd-petal { opacity: 0; transform-origin: 50% 50%; animation: pfdPetal 460ms ease-out both; }
+@keyframes pfdPetal { 0% { transform: translate(0, 0) rotate(0deg) scale(0.6); opacity: 0; } 15% { opacity: 1; } 100% { transform: translate(var(--dx), var(--dy)) rotate(240deg) scale(1); opacity: 0; } }
+.pfd-glint { opacity: 0; transform-origin: 50% 50%; animation: pfdPop 300ms ease-out both; }
+.pfd-flash { opacity: 0; animation: pfdFlash 280ms ease-out 1290ms both; }
+@keyframes pfdFlash { 0% { opacity: 0; } 30% { opacity: 0.6; } 100% { opacity: 0; } }
+        /* PfSpearFlash */
+
+.pfsp-svg { position: absolute; inset: 0; width: 100%; height: 100%; pointer-events: none; }
+.pfsp-svg * { transform-box: fill-box; }
+.pfsp-svg [transform] { transform-box: view-box; transform-origin: 0 0; }
+.pfsp-dim { animation: pfspDim 1880ms ease both; }
+@keyframes pfspDim { 0% { opacity: 0; } 7% { opacity: 0.9; } 82% { opacity: 0.84; } 100% { opacity: 0; } }
+.pfsp-wound { opacity: 0; transform-origin: 50% 50%; animation: pfspWound 1200ms ease-out 100ms both; }
+@keyframes pfspWound { 0% { transform: scale(0.3); opacity: 0; } 12% { transform: scale(0.8); opacity: 0.75; } 85% { transform: scale(1.35); opacity: 0.95; } 100% { transform: scale(1.7); opacity: 0; } }
+.pfsp-open { transform-origin: 50% 50%; animation: pfspOpen 300ms cubic-bezier(0.2, 0.8, 0.3, 1.2) both; filter: drop-shadow(0 0 2.5px rgba(255, 214, 160, 0.9)); }
+@keyframes pfspOpen { 0% { transform: rotate(-70deg) scale(0.15); opacity: 0; } 30% { opacity: 1; } 100% { transform: rotate(0deg) scale(1); opacity: 1; } }
+.pfsp-bud { transform-origin: 50% 100%; animation: pfspBud 220ms ease-out both; }
+@keyframes pfspBud { 0% { transform: scaleY(0.1); } 100% { transform: scaleY(1); } }
+.pfsp-gone { animation: pfspGone 90ms ease-in both; }
+@keyframes pfspGone { 0% { opacity: 1; } 100% { opacity: 0; } }
+.pfsp-scatter { transform-origin: 50% 50%; animation: pfspScatter 260ms ease-out both; }
+@keyframes pfspScatter { 0% { transform: scale(1) rotate(0deg); opacity: 1; } 100% { transform: scale(1.45) rotate(28deg); opacity: 0; } }
+.pfsp-spears { filter: drop-shadow(0 0 2px #F0B860); }
+.pfsp-fly { opacity: 0; animation: pfspFly 140ms cubic-bezier(0.3, 0.5, 0.4, 1) both; }
+@keyframes pfspFly { 0% { transform: translateX(var(--d)); opacity: 0; } 10% { opacity: 1; } 72% { transform: translateX(0); opacity: 1; } 100% { transform: translateX(3px); opacity: 1; } }
+.pfsp-trail { opacity: 0; animation: pfspTrail 300ms cubic-bezier(0.3, 0.5, 0.4, 1) both; }
+@keyframes pfspTrail { 0% { transform: translateX(var(--d)); opacity: 0; } 4% { opacity: 1; } 34% { transform: translateX(0); opacity: 1; } 100% { transform: translateX(3px); opacity: 0; } }
+.pfsp-melt { animation: pfspMelt 240ms ease-in both; }
+@keyframes pfspMelt { 0% { opacity: 1; } 100% { opacity: 0; } }
+.pfsp-hit { opacity: 0; transform-origin: 50% 50%; animation: pfspPop 260ms ease-out both; }
+@keyframes pfspPop { 0% { transform: scale(0.2) rotate(0deg); opacity: 0; } 25% { transform: scale(1.15) rotate(12deg); opacity: 1; } 100% { transform: scale(0.85) rotate(32deg); opacity: 0; } }
+.pfsp-spark { opacity: 0; animation: pfspSpark 240ms ease-out both; }
+@keyframes pfspSpark { 0% { transform: translateX(0); opacity: 0; } 10% { opacity: 1; } 100% { transform: translateX(10px); opacity: 0; } }
+.pfsp-petal { opacity: 0; transform-origin: 50% 50%; animation: pfspPetal 290ms ease-out both; }
+@keyframes pfspPetal { 0% { transform: translate(0, 0) rotate(0deg) scale(0.6); opacity: 0; } 15% { opacity: 1; } 100% { transform: translate(var(--dx), var(--dy)) rotate(260deg) scale(1); opacity: 0; } }
+.pfsp-glint { opacity: 0; transform-origin: 50% 50%; animation: pfspPop 220ms ease-out both; }
+.pfsp-flash { opacity: 0; animation: pfspFlash 260ms ease-out both; }
+@keyframes pfspFlash { 0% { opacity: 0; } 30% { opacity: 0.55; } 100% { opacity: 0; } }
+
+        /* PfBowFlash */
+
+.pfbw-svg { position: absolute; inset: 0; width: 100%; height: 100%; pointer-events: none; }
+.pfbw-svg * { transform-box: fill-box; }
+.pfbw-svg [transform] { transform-box: view-box; transform-origin: 0 0; }
+.pfbw-dim { animation: pfbwDim 1880ms ease both; }
+@keyframes pfbwDim { 0% { opacity: 0; } 7% { opacity: 0.9; } 82% { opacity: 0.85; } 100% { opacity: 0; } }
+.pfbw-sky { opacity: 0; animation: pfbwSky 1500ms ease both; }
+@keyframes pfbwSky { 0% { opacity: 0; transform: translateY(-14px); } 14% { opacity: 1; transform: translateY(0); } 80% { opacity: 1; } 100% { opacity: 0; transform: translateY(-6px); } }
+.pfbw-rainl { filter: drop-shadow(0 0 1.5px #9AD8A8); }
+.pfbw-rain { opacity: 0; animation: pfbwRain 240ms linear both; }
+@keyframes pfbwRain { 0% { transform: translateX(-120px); opacity: 0; } 12% { opacity: 0.85; } 82% { transform: translateX(0); opacity: 0.75; } 100% { transform: translateX(4px); opacity: 0; } }
+.pfbw-bigl { filter: drop-shadow(0 0 2px #9AD8A8); }
+.pfbw-btrail { opacity: 0; animation: pfbwBTrail 280ms cubic-bezier(0.4, 0, 0.9, 0.6) both; }
+@keyframes pfbwBTrail { 0% { transform: translateX(-130px); opacity: 0; } 6% { opacity: 1; } 39% { transform: translateX(0); opacity: 1; } 100% { transform: translateX(0); opacity: 0; } }
+.pfbw-big { opacity: 0; animation: pfbwBig 130ms cubic-bezier(0.4, 0, 0.9, 0.6) both; }
+@keyframes pfbwBig { 0% { transform: translateX(-130px); opacity: 0; } 12% { opacity: 1; } 85% { transform: translateX(0); opacity: 1; } 100% { transform: translateX(4px); opacity: 1; } }
+.pfbw-melt { animation: pfbwMelt 220ms ease-in both; }
+@keyframes pfbwMelt { 0% { opacity: 1; } 100% { opacity: 0; } }
+.pfbw-ring { opacity: 0; transform-origin: 50% 50%; animation: pfbwRing 300ms ease-out both; }
+@keyframes pfbwRing { 0% { transform: scale(0.3); opacity: 0; } 15% { opacity: 1; } 100% { transform: scale(1.7); opacity: 0; } }
+.pfbw-ring2 { opacity: 0; transform-origin: 50% 50%; animation: pfbwRing2 300ms ease-out both; }
+@keyframes pfbwRing2 { 0% { transform: scale(0.4); opacity: 0; } 10% { opacity: 0.9; } 100% { transform: scale(3.2); opacity: 0; } }
+.pfbw-hit { opacity: 0; transform-origin: 50% 50%; animation: pfbwPop 240ms ease-out both; }
+@keyframes pfbwPop { 0% { transform: scale(0.2) rotate(0deg); opacity: 0; } 25% { transform: scale(1.1) rotate(12deg); opacity: 1; } 100% { transform: scale(0.85) rotate(30deg); opacity: 0; } }
+.pfbw-spark { opacity: 0; animation: pfbwSpark 230ms ease-out both; }
+@keyframes pfbwSpark { 0% { transform: translateX(0); opacity: 0; } 10% { opacity: 1; } 100% { transform: translateX(8px); opacity: 0; } }
+.pfbw-mote { opacity: 0; transform-origin: 50% 50%; animation: pfbwMote 280ms ease-out both; }
+@keyframes pfbwMote { 0% { transform: translateY(4px) scale(0.5); opacity: 0; } 20% { opacity: 1; } 100% { transform: translateY(var(--dy)) scale(1); opacity: 0; } }
+.pfbw-glint { opacity: 0; transform-origin: 50% 50%; animation: pfbwPop 220ms ease-out both; }
+.pfbw-flash { opacity: 0; animation: pfbwFlash 260ms ease-out both; }
+@keyframes pfbwFlash { 0% { opacity: 0; } 30% { opacity: 0.5; } 100% { opacity: 0; } }
+
+        /* PfAxeFlash */
+
+.pfax-svg { position: absolute; inset: 0; width: 100%; height: 100%; pointer-events: none; }
+.pfax-svg * { transform-box: fill-box; }
+.pfax-svg [transform] { transform-box: view-box; transform-origin: 0 0; }
+.pfax-dim { animation: pfaxDim 1880ms ease both; }
+@keyframes pfaxDim { 0% { opacity: 0; } 7% { opacity: 0.9; } 82% { opacity: 0.85; } 100% { opacity: 0; } }
+.pfax-shake { animation: pfaxShake 110ms ease-out both; }
+@keyframes pfaxShake { 0%, 100% { transform: translate(0, 0); } 20% { transform: translate(0, 1.6px); } 50% { transform: translate(-0.8px, -0.6px); } 75% { transform: translate(0.6px, 0.3px); } }
+.pfax-ground { opacity: 0; animation: pfaxGround 1880ms ease both; }
+@keyframes pfaxGround { 0% { opacity: 0; } 10% { opacity: 1; } 82% { opacity: 1; } 100% { opacity: 0; } }
+.pfax-crackl { animation: pfaxFade 300ms ease-in both; filter: drop-shadow(0 0 2px #D89A6A); }
+@keyframes pfaxFade { 0% { opacity: 1; } 100% { opacity: 0; } }
+.pfax-crack { stroke-dasharray: 420; stroke-dashoffset: 420; animation: pfaxCrack 880ms cubic-bezier(0.3, 0.6, 0.5, 1) both; }
+@keyframes pfaxCrack { 0% { stroke-dashoffset: 420; } 100% { stroke-dashoffset: 0; } }
+.pfax-shin { opacity: 0; transform-origin: 50% 50%; animation: pfaxShIn 220ms ease-out both; }
+@keyframes pfaxShIn { 0% { transform: scale(0.6); opacity: 0; } 100% { transform: scale(1); opacity: 1; } }
+.pfax-shield { transform-origin: 50% 50%; animation: pfaxShOut 120ms ease-in both; filter: drop-shadow(0 0 2px #BFD8FF); }
+@keyframes pfaxShOut { 0% { transform: scale(1); opacity: 1; } 100% { transform: scale(1.12); opacity: 0; } }
+.pfax-scrack { opacity: 0; stroke-dasharray: 24; stroke-dashoffset: 24; animation: pfaxSCrack 90ms ease-out both; }
+@keyframes pfaxSCrack { 0% { opacity: 1; stroke-dashoffset: 24; } 100% { opacity: 1; stroke-dashoffset: 0; } }
+.pfax-shard { opacity: 0; transform-origin: 50% 50%; animation: pfaxShard 300ms ease-out both; }
+@keyframes pfaxShard { 0% { transform: translate(0, 0) rotate(0deg); opacity: 0; } 8% { opacity: 1; } 100% { transform: translate(var(--dx), var(--dy)) rotate(200deg); opacity: 0; } }
+.pfax-wave { opacity: 0; transform-origin: 50% 50%; animation: pfaxWave 300ms ease-out both; }
+@keyframes pfaxWave { 0% { transform: scale(0.15, 0.6); opacity: 0; } 12% { opacity: 1; } 100% { transform: scale(2.3, 1.1); opacity: 0; } }
+.pfax-wring { opacity: 0; transform-origin: 50% 50%; animation: pfaxWRing 280ms ease-out both; }
+@keyframes pfaxWRing { 0% { transform: scale(0.3); opacity: 0; } 10% { opacity: 0.9; } 100% { transform: scale(4); opacity: 0; } }
+.pfax-chip { opacity: 0; transform-origin: 50% 50%; animation: pfaxChip 320ms ease-out both; }
+@keyframes pfaxChip { 0% { transform: translate(0, 0) rotate(0deg); opacity: 0; } 8% { opacity: 1; } 100% { transform: translate(var(--dx), var(--dy)) rotate(260deg); opacity: 0; } }
+.pfax-drop { opacity: 0; transform-origin: 50% 50%; animation: pfaxDrop 300ms cubic-bezier(0.5, 0, 0.9, 0.5) both; filter: drop-shadow(0 0 2px #F2C49A); }
+@keyframes pfaxDrop { 0% { transform: translate(-22px, -74px) rotate(-430deg); opacity: 0; } 10% { opacity: 1; } 37% { transform: translate(0, 0) rotate(0deg); opacity: 1; } 70% { transform: translate(0, 0) rotate(0deg); opacity: 0.9; } 100% { transform: translate(0, 0) rotate(0deg); opacity: 0; } }
+.pfax-hit { opacity: 0; transform-origin: 50% 50%; animation: pfaxPop 240ms ease-out both; }
+@keyframes pfaxPop { 0% { transform: scale(0.2) rotate(0deg); opacity: 0; } 25% { transform: scale(1.1) rotate(12deg); opacity: 1; } 100% { transform: scale(0.85) rotate(30deg); opacity: 0; } }
+.pfax-fly { transform-origin: 50% 50%; animation: pfaxFly 300ms ease-in both; }
+@keyframes pfaxFly { 0% { transform: scale(1); opacity: 1; } 100% { transform: scale(1.7); opacity: 0; } }
+.pfax-orbit { opacity: 0; transform-origin: 50% 50%; animation: pfaxOrbit 1880ms linear both; filter: drop-shadow(0 0 2px rgba(255, 224, 190, 0.85)); }
+@keyframes pfaxOrbit { 0% { transform: rotate(-120deg) scale(0.3); opacity: 0; } 12% { transform: rotate(0deg) scale(1); opacity: 1; } 100% { transform: rotate(300deg) scale(1); opacity: 1; } }
+.pfax-spin { transform-origin: 50% 50%; animation: pfaxSpin 1880ms linear both; }
+@keyframes pfaxSpin { 0% { transform: rotate(0deg); } 100% { transform: rotate(-1080deg); } }
+.pfax-glint { opacity: 0; transform-origin: 50% 50%; animation: pfaxPop 220ms ease-out both; }
+.pfax-flash { opacity: 0; animation: pfaxFlash 260ms ease-out both; }
+@keyframes pfaxFlash { 0% { opacity: 0; } 30% { opacity: 0.5; } 100% { opacity: 0; } }
+
+        /* PfAegisFlash */
+
+.pfag-svg { position: absolute; inset: 0; width: 100%; height: 100%; pointer-events: none; }
+.pfag-svg * { transform-box: fill-box; }
+.pfag-svg [transform] { transform-box: view-box; transform-origin: 0 0; }
+.pfag-dim { animation: pfagDim 1800ms ease both; }
+@keyframes pfagDim { 0% { opacity: 0; } 7% { opacity: 0.88; } 80% { opacity: 0.84; } 100% { opacity: 0; } }
+.pfag-shake { animation: pfagShake 300ms ease-out 470ms both; }
+@keyframes pfagShake { 0%, 100% { transform: translate(0, 0); } 15% { transform: translate(0, 3px); } 35% { transform: translate(-2px, -2px); } 55% { transform: translate(2px, 1px); } 75% { transform: translate(-1px, 0); } }
+.pfag-camp { opacity: 0; animation: pfagCamp 1300ms ease both; filter: drop-shadow(0 0 2px rgba(255, 236, 190, 0.85)); }
+@keyframes pfagCamp { 0% { opacity: 0; transform: translateY(-10px); } 9% { opacity: 1; transform: translateY(0); } 80% { opacity: 1; } 100% { opacity: 0; transform: translateY(-6px); } }
+.pfag-wpn { transform-origin: 50% 50%; animation: pfagWpn 300ms ease-in-out both; }
+@keyframes pfagWpn { 0% { transform: translateY(0) scale(1); } 40% { transform: translateY(5px) scale(1.35); } 100% { transform: translateY(0) scale(1); } }
+.pfag-cres { opacity: 0; transform-origin: 0% 0%; animation: pfagCres 460ms cubic-bezier(0.1, 0.9, 0.2, 1) 40ms both; filter: drop-shadow(0 0 3px #BFD8FF); }
+.pfag-cres.pfag-cres2 { animation-delay: 140ms; }
+@keyframes pfagCres { 0% { transform: scale(0.1); opacity: 0; } 26% { transform: scale(1); opacity: 1; } 60% { opacity: 0.85; } 100% { transform: scale(1.04); opacity: 0; } }
+.pfag-swfly { opacity: 0; animation: pfagSwFly 260ms cubic-bezier(0.3, 0.6, 0.4, 1) 30ms both; }
+@keyframes pfagSwFly { 0% { transform: translateX(-20px); opacity: 0; } 15% { opacity: 1; } 75% { opacity: 1; } 100% { transform: translateX(170px); opacity: 0; } }
+.pfag-strail { opacity: 0; transform-origin: 0% 50%; animation: pfagTrail 360ms ease-out 270ms both; filter: drop-shadow(0 0 3px #F0B860); }
+@keyframes pfagTrail { 0% { transform: scaleX(0); opacity: 0; } 28% { transform: scaleX(1); opacity: 1; } 50% { opacity: 0.8; } 100% { transform: scaleX(1); opacity: 0; } }
+.pfag-spear { opacity: 0; animation: pfagSpear 400ms cubic-bezier(0.2, 0.8, 0.3, 1) 270ms both; }
+@keyframes pfagSpear { 0% { transform: translateX(-120px); opacity: 0; } 8% { opacity: 1; } 25% { transform: translateX(0); } 45% { transform: translateX(5px); opacity: 1; } 100% { transform: translateX(7px); opacity: 0; } }
+.pfag-rring { opacity: 0; transform-origin: 50% 50%; animation: pfagRRing 420ms ease-out both; }
+@keyframes pfagRRing { 0% { transform: scale(0.3); opacity: 0; } 10% { opacity: 1; } 100% { transform: scale(4.2); opacity: 0; } }
+.pfag-tip { opacity: 0; transform-origin: 50% 50%; animation: pfagPop 320ms ease-out 360ms both; }
+@keyframes pfagPop { 0% { transform: scale(0.2) rotate(0deg); opacity: 0; } 25% { transform: scale(1.15) rotate(10deg); opacity: 1; } 100% { transform: scale(0.9) rotate(30deg); opacity: 0; } }
+.pfag-axe { opacity: 0; transform-origin: 50% 50%; animation: pfagAxe 440ms cubic-bezier(0.5, 0, 0.9, 0.5) 430ms both; }
+@keyframes pfagAxe { 0% { transform: translate(-34px, -40px) rotate(-420deg); opacity: 0; } 15% { opacity: 1; } 36% { transform: translate(0, 0) rotate(0deg); opacity: 1; } 62% { transform: translate(0, 0) rotate(0deg); opacity: 0.9; } 100% { transform: translate(0, 0) rotate(0deg); opacity: 0; } }
+.pfag-qglow { opacity: 0; transform-origin: 50% 50%; animation: pfagQGlow 420ms ease-out 585ms both; }
+@keyframes pfagQGlow { 0% { transform: scale(0.3); opacity: 0; } 20% { opacity: 0.95; } 100% { transform: scale(1.7); opacity: 0; } }
+.pfag-dome { opacity: 0; transform-origin: 50% 100%; animation: pfagDome 420ms ease-out both; animation-delay: 590ms; }
+@keyframes pfagDome { 0% { transform: scale(0.3); opacity: 0; } 10% { opacity: 0.95; } 100% { transform: scale(4.4, 3); opacity: 0; } }
+.pfag-chip { opacity: 0; transform-origin: 50% 50%; animation: pfagChip 460ms ease-out both; }
+@keyframes pfagChip { 0% { transform: translate(0, 0) rotate(0deg); opacity: 0; } 6% { opacity: 1; } 100% { transform: translate(var(--dx), var(--dy)) rotate(300deg); opacity: 0; } }
+.pfag-arrows { filter: drop-shadow(0 0 2px #9AD8A8); }
+.pfag-arrow { opacity: 0; animation: pfagArrow 300ms cubic-bezier(0.4, 0, 1, 1) both; }
+@keyframes pfagArrow { 0% { transform: translateX(-100px); opacity: 0; } 12% { opacity: 1; } 38% { transform: translateX(0); opacity: 1; } 70% { transform: translateX(0); opacity: 0.9; } 100% { transform: translateX(0); opacity: 0; } }
+.pfag-hit { opacity: 0; transform-origin: 50% 50%; animation: pfagPop 280ms ease-out both; }
+.pfag-shield { opacity: 0; animation: pfagShield 1700ms linear both; filter: drop-shadow(0 0 3px rgba(255, 226, 150, 0.8)); }
+@keyframes pfagShield { 0%, 52% { opacity: 0; } 53% { opacity: 1; } 84% { opacity: 1; } 100% { opacity: 0; } }
+.pfag-body { opacity: 0; animation: pfagBody 460ms ease-out 1100ms both; }
+@keyframes pfagBody { 0% { opacity: 0; } 40% { opacity: 1; } 100% { opacity: 0.8; } }
+.pfag-panel { opacity: 0; animation: pfagPanel 360ms cubic-bezier(0.2, 0.9, 0.3, 1.2) both; }
+@keyframes pfagPanel { 0% { transform: translateY(46px) scale(0.7); opacity: 0; } 30% { opacity: 1; } 100% { transform: translateY(0) scale(1); opacity: 0.95; } }
+.pfag-rim { stroke-dasharray: 300; stroke-dashoffset: 300; opacity: 0; animation: pfagRim 340ms ease-out 1110ms both; }
+.pfag-rim.pfag-rim2 { animation-delay: 1140ms; }
+@keyframes pfagRim { 0% { stroke-dashoffset: 300; opacity: 1; } 70% { stroke-dashoffset: 0; opacity: 1; } 100% { stroke-dashoffset: 0; opacity: 1; } }
+.pfag-sheen { opacity: 0; animation: pfagSheen 400ms ease-in-out 1250ms both; }
+@keyframes pfagSheen { 0% { transform: translateX(0); opacity: 0; } 20% { opacity: 1; } 80% { opacity: 1; } 100% { transform: translateX(110px); opacity: 0; } }
+.pfag-pip { opacity: 0; transform-origin: 50% 50%; animation: pfagPip 260ms ease-out both; }
+@keyframes pfagPip { 0% { transform: scale(0.2); opacity: 0; } 60% { transform: scale(1.3); opacity: 1; } 100% { transform: scale(1); opacity: 1; } }
+.pfag-glint { opacity: 0; transform-origin: 50% 50%; animation: pfagPop 300ms ease-out both; }
+.pfag-flash { opacity: 0; animation: pfagFlash 280ms ease-out 1150ms both; }
+@keyframes pfagFlash { 0% { opacity: 0; } 30% { opacity: 0.55; } 100% { opacity: 0; } }
+
+        /* PfEternalFlash */
+
+.pfet-svg { position: absolute; inset: 0; width: 100%; height: 100%; pointer-events: none; }
+.pfet-svg * { transform-box: fill-box; }
+.pfet-svg [transform] { transform-box: view-box; transform-origin: 0 0; }
+.pfet-dim { animation: pfetDim 2300ms ease both; }
+@keyframes pfetDim { 0% { opacity: 0; } 6% { opacity: 0.88; } 78% { opacity: 0.84; } 100% { opacity: 0; } }
+.pfet-shake { animation: pfetShake 300ms ease-out both; }
+@keyframes pfetShake { 0%, 100% { transform: translate(0, 0); } 15% { transform: translate(0, 2.5px); } 35% { transform: translate(-2px, -1.5px); } 55% { transform: translate(1.5px, 1px); } 75% { transform: translate(-1px, 0); } }
+.pfet-pool { opacity: 0; transform-origin: 50% 50%; animation: pfetPool 1400ms ease-out both; }
+@keyframes pfetPool { 0% { opacity: 0; transform: scale(0.4); } 15% { opacity: 0.8; transform: scale(1); } 80% { opacity: 0.7; } 100% { opacity: 0; transform: scale(1.3); } }
+.pfet-gather { opacity: 0; transform-origin: 50% 50%; animation: pfetGather 200ms ease-out both; }
+@keyframes pfetGather { 0% { opacity: 0; transform: scale(1.8) rotate(0deg); } 60% { opacity: 1; } 100% { opacity: 0; transform: scale(0.5) rotate(160deg); } }
+.pfet-orb { opacity: 0; animation: pfetOrb 340ms cubic-bezier(0.55, 0, 0.85, 0.6) both; filter: drop-shadow(0 0 2.5px rgba(255, 255, 255, 0.7)); }
+@keyframes pfetOrb { 0% { transform: translateX(var(--d0)) scale(0.3); opacity: 0; } 30% { transform: translateX(var(--d0)) scale(1); opacity: 1; } 99% { transform: translateX(0) scale(1); opacity: 1; } 100% { transform: translateX(0) scale(1); opacity: 0; } }
+.pfet-tail { opacity: 0; transform-origin: 100% 50%; animation: pfetTail 340ms linear both; }
+@keyframes pfetTail { 0%, 30% { opacity: 0; transform: scaleX(0.2); } 45% { opacity: 1; transform: scaleX(1); } 100% { opacity: 1; transform: scaleX(1); } }
+.pfet-impact { opacity: 0; transform-origin: 50% 50%; animation: pfetImpact 360ms ease-out both; }
+@keyframes pfetImpact { 0% { opacity: 0; transform: scale(0.3); } 15% { opacity: 1; transform: scale(1.1); } 100% { opacity: 0; transform: scale(2); } }
+.pfet-fly { opacity: 0; transform-origin: 50% 50%; animation: pfetFly 420ms ease-out both; }
+@keyframes pfetFly { 0% { transform: translate(0, 0) rotate(0deg); opacity: 0; } 8% { opacity: 1; } 100% { transform: translate(var(--dx), var(--dy)) rotate(260deg); opacity: 0; } }
+.pfet-flame { opacity: 0; transform-origin: 50% 100%; animation: pfetFlame 380ms ease-out both; }
+@keyframes pfetFlame { 0% { transform: scale(0.2, 0.1); opacity: 0; } 30% { transform: scale(1, 1); opacity: 1; } 100% { transform: scale(0.6, 1.3) translateY(-6px); opacity: 0; } }
+.pfet-ring { opacity: 0; transform-origin: 50% 50%; animation: pfetRing 420ms ease-out both; }
+@keyframes pfetRing { 0% { transform: scale(0.3); opacity: 0; } 10% { opacity: 1; } 100% { transform: scale(4); opacity: 0; } }
+.pfet-swirl { opacity: 0; transform-origin: 0% 50%; animation: pfetSwirl 420ms ease-out both; }
+@keyframes pfetSwirl { 0% { transform: rotate(0deg) scale(0.5); opacity: 0; } 20% { opacity: 1; } 100% { transform: rotate(220deg) scale(2.6); opacity: 0; } }
+.pfet-starb { opacity: 0; transform-origin: 50% 50%; animation: pfetStarB 380ms ease-out both; }
+@keyframes pfetStarB { 0% { transform: scale(0.2); opacity: 0; } 25% { transform: scale(1.1); opacity: 1; } 100% { transform: scale(1.4); opacity: 0; } }
+.pfet-implode { opacity: 0; transform-origin: 50% 50%; animation: pfetImplode 360ms ease-in both; }
+@keyframes pfetImplode { 0% { transform: scale(1.6); opacity: 0; } 25% { opacity: 1; } 100% { transform: scale(0.1); opacity: 0.2; } }
+.pfet-core { opacity: 0; transform-origin: 50% 50%; animation: pfetCore 360ms ease-out both; }
+@keyframes pfetCore { 0% { transform: scale(0.2); opacity: 0; } 30% { transform: scale(1.3); opacity: 1; } 100% { transform: scale(2.4); opacity: 0; } }
+.pfet-hit { opacity: 0; transform-origin: 50% 50%; animation: pfetPop 280ms ease-out both; }
+@keyframes pfetPop { 0% { transform: scale(0.2) rotate(0deg); opacity: 0; } 25% { transform: scale(1.15) rotate(10deg); opacity: 1; } 100% { transform: scale(0.9) rotate(30deg); opacity: 0; } }
+.pfet-wrap { opacity: 0; animation: pfetWrap 640ms ease-in-out both; }
+@keyframes pfetWrap { 0% { opacity: 0; } 25% { opacity: 1; } 65% { opacity: 1; } 100% { opacity: 0; } }
+.pfet-band { opacity: 0; transform-origin: 50% 50%; animation: pfetBandL 640ms ease-in-out both; }
+.pfet-band.pfet-bandR { animation-name: pfetBandR; }
+@keyframes pfetBandL { 0% { transform: translateX(-60px) scaleY(0.2); opacity: 0; } 35% { opacity: 1; transform: translateX(-30px) scaleY(1.3); } 100% { transform: translateX(0) scaleY(1.9); opacity: 0; } }
+@keyframes pfetBandR { 0% { transform: translateX(0) scaleY(0.2); opacity: 0; } 35% { opacity: 1; transform: translateX(-30px) scaleY(1.3); } 100% { transform: translateX(-60px) scaleY(1.9); opacity: 0; } }
+.pfet-glint { opacity: 0; transform-origin: 50% 50%; animation: pfetPop 320ms ease-out both; }
+.pfet-flash { opacity: 0; animation: pfetFlash 280ms ease-out both; }
+@keyframes pfetFlash { 0% { opacity: 0; } 30% { opacity: 0.5; } 100% { opacity: 0; } }
+
+        /* ==== PHYS_FLASH CSS END ==== */
         .sf-svg { position: absolute; inset: 0; width: 100%; height: 100%; }
         .sf-svg * { transform-box: fill-box; }
         .sf-void { animation: sfVoid 780ms ease-out both; }
@@ -105048,7 +116198,8 @@ export default function TarotDraw() {
         /* PCの型。⚠️ 画面が高いので戦場を固定（伸ばすと札の枠が画面の外へ押し出される） */
         .bt-wrap.lay-pc .bt-field { min-height: 230px; }
         .bt-layout { position: absolute; left: 8px; top: 8px; z-index: 3; width: 30px; height: 26px; border-radius: 8px; cursor: pointer;
-          background: rgba(14,10,32,0.6); border: 1px solid rgba(255,243,214,0.3); font-size: 14px; line-height: 1; padding: 0; }
+          background: rgba(14,10,32,0.6); border: 1px solid rgba(255,243,214,0.3); padding: 0;
+          font-size: 11px; font-weight: 700; letter-spacing: 0.04em; line-height: 1; color: #FFE9B8; font-family: inherit; }
         /* 制御盤＋ポーション */
         /* ⚠️ 札の枠の下の一行。左はハートの列（86px＋隙間8px）ぶん空けて、札の下に来るようにする */
         /*
@@ -105155,6 +116306,11 @@ export default function TarotDraw() {
         .bt-sp.armed .bt-sp-cap .go { color: #1A1030; background: #FFE08A; }
         .bt-sp.armed .bt-sp-cap .nm { color: #FFF3D6; }
         .bt-pot { --glow: #FF7A9A; }
+        /* 封印（小MAPのイベント）。⚠️ 鎖のような斜線で伏せる。押せない理由が見て分かるように */
+        .bt-sp.sealed .bt-sp-orb { opacity: 0.45; }
+        .bt-sp.sealed .bt-sp-orb::after { content: ""; position: absolute; inset: 0; border-radius: 50%;
+          background: repeating-linear-gradient(45deg, rgba(200,60,80,0.55) 0 2px, transparent 2px 7px); }
+        .bt-stance.sealed { opacity: 0.28; filter: grayscale(1); }
         .bt-pot-orb { background: radial-gradient(rgba(70,30,60,0.95), rgba(20,10,26,0.98)); box-shadow: inset 0 0 0 1.5px rgba(255,120,150,0.55), 0 3px 0 rgba(0,0,0,0.55); }
         .bt-pot-orb svg { position: absolute; left: 50%; top: 50%; width: 52%; height: 52%; transform: translate(-50%, -50%); }
         .bt-pot-orb .bt-ctrl-n { right: -2px; top: -2px; background: #8A2A4A; }
@@ -105298,6 +116454,43 @@ export default function TarotDraw() {
           font: 700 7.5px/11px sans-serif; text-align: center; color: #2A1A10; background: #FFF3D6;
         }
         .bt-stance-mode { display: block; width: 86px; text-align: center; font-size: 9.5px; color: #CFC4E8; opacity: 0.85; }
+        /*
+          2026-10-03 Aki：「手動必殺のボタンが小さくて押しにくい。ポーションと並べずに場所を確保。ポーションはHPゲージの近く。
+            物理選択と魔法選択を（オートという文字は要らない）」。
+          ★ 一段目：魔法6と物理4の構えを一列。二段目：必殺4本を幅いっぱいに大きく。ポーションはHPの行の右端。
+        */
+        .bt-ctrl-row { flex-direction: column; align-items: stretch; gap: 7px; }
+        .bt-stance-box { width: 100%; }
+        .bt-stance-grid { display: flex; flex-wrap: nowrap; align-items: center; justify-content: center; gap: 4px; width: 100%; }
+        .bt-stance-grid .bt-stance { width: 30px; height: 30px; flex: none; }
+        .bt-stance-sep { display: block; flex: none; width: 1px; height: 22px; margin: 0 4px; background: rgba(255,243,214,0.28); }
+        .bt-stance.phys { border-radius: 50%; }
+        .bt-ctrl { width: 100%; gap: 8px; padding: 0 4px 4px; }
+        .bt-ctrl .bt-sp-orb { max-width: 68px; }
+        .bt-ctrl .bt-sp-cap .go { font-size: 10px; line-height: 15px; }
+        @media (max-width: 360px) {
+          .bt-stance-grid { gap: 3px; }
+          .bt-stance-grid .bt-stance { width: 27px; height: 27px; }
+          .bt-stance-sep { margin: 0 2px; }
+        }
+        .bt-pot-hp { position: absolute; right: 10px; top: 28px; width: 40px; flex: none; z-index: 3; }
+        /* ⚠️ ポーションの下に強化・妨害の札が潜らないよう、右に場所を空ける */
+        .bt-me .bt-fx.rows { margin-right: 46px; }
+        .bt-pot-hp .bt-sp-orb { width: 40px; max-width: 40px; }
+        /* 決戦の前に（主戦の始まる前だけ） */
+        .bt-prep { position: relative; margin: 0 0 8px; z-index: 2; display: flex; flex-direction: column; gap: 4px;
+          padding: 8px 10px; border-radius: 12px; background: rgba(16,10,32,0.92); border: 1px solid rgba(232,196,106,0.55);
+          box-shadow: 0 6px 18px rgba(0,0,0,0.5); }
+        .bt-prep-t { color: #FFE08A; font-size: 13px; text-align: center; letter-spacing: 0.08em; }
+        .bt-prep-row { display: flex; flex-wrap: wrap; align-items: center; gap: 4px 5px; font-size: 11px; line-height: 17px; }
+        .bt-prep-row i { font-style: normal; color: #CFC4E8; min-width: 3.4em; }
+        .bt-prep-row span { display: inline-flex; align-items: center; gap: 2px; padding: 0 5px; border-radius: 7px;
+          color: #EDE4FF; background: rgba(255,255,255,0.07); }
+        .bt-prep-row span.up { color: #D6FFE0; background: rgba(28,96,60,0.75); }
+        .bt-prep-row span.down { color: #FFD6DE; background: rgba(120,30,50,0.75); }
+        .bt-prep-row span.cap { box-shadow: 0 0 0 1px rgba(255,224,138,0.8) inset; }
+        .bt-prep-cap { font-style: normal; font-size: 10px; color: #A89CC8; margin-left: 2px; }
+        .bt-prep-hint { margin: 2px 0 0; font-size: 10px; line-height: 14px; color: #CFC4E8; text-align: center; }
         .bt-me-stance {
           display: inline-flex; align-items: center; justify-content: center; width: 17px; height: 17px; border-radius: 50%;
           border: 1px solid var(--sc); background: color-mix(in srgb, var(--sc) 20%, rgba(20,12,26,0.9));
@@ -105378,8 +116571,10 @@ export default function TarotDraw() {
         .bt-slotx.act.sp + .bt-slotx-name { color: #D8B8FF; }
 
         /* ⚠️ 待っているときの心。静かに脈打つだけにする */
-        .bt-heart { width: 72px; height: 72px; overflow: visible; }
-        .bt-heart-body { transform-box: view-box; transform-origin: 24px 26px; animation: btHeartIdle 2.6s ease-in-out infinite; }
+        .bt-heart { position: relative; display: block; flex: none; width: 72px; height: 72px; overflow: visible; }
+        /* ⚠️ 輪と心は重ねた二枚の svg。中心（viewBox の 24,26）＝ 左から50%・上から53.57% */
+        .bt-heart > svg { position: absolute; inset: 0; width: 100%; height: 100%; display: block; overflow: visible; }
+        .bt-heart-body { transform-origin: 50% 53.571%; animation: btHeartIdle 2.6s ease-in-out infinite; will-change: transform, opacity; }
         .bt-heart-fill { fill: var(--hc, rgba(240,120,120,0.55)); stroke: rgba(255,230,230,0.5); stroke-width: 0.8; }
         .bt-heart.de .bt-heart-fill { stroke: rgba(255,255,255,0.7); }
         .bt-heart-crack { fill: none; stroke: #1A0A14; stroke-width: 1.4; stroke-linejoin: round; stroke-linecap: round; }
@@ -105392,7 +116587,7 @@ export default function TarotDraw() {
         .bt-heart-body.broken .half.l { transform: rotate(-9deg) translateX(-1.5px); }
         .bt-heart-body.broken .half.r { transform: rotate(9deg) translateX(1.5px); }
         @keyframes btHeartBroken { 0%, 100% { transform: scale(0.96); opacity: 0.75; } 40% { transform: scale(1.06); opacity: 1; } }
-        .bt-heart-rings { transform-box: view-box; transform-origin: 24px 26px; animation: btHeartRing 9s linear infinite; }
+        .bt-heart-rings { transform-origin: 50% 53.571%; animation: btHeartRing 9s linear infinite; will-change: transform; }
         @keyframes btHeartRing { to { transform: rotate(360deg); } }
         @keyframes btHeartIdle {
           0%, 100% { transform: scale(1); opacity: 0.6; }
@@ -105601,6 +116796,9 @@ export default function TarotDraw() {
         @keyframes dbEat { to { transform: scaleY(1.9); } }
         .db-bub { opacity: 0; animation: emPbub 420ms ease-out forwards; }
         .db-drip { opacity: 0; animation: emPdrip 420ms ease-in forwards; }
+        /* 虚脱：小瓶の中身が下へ抜ける（2026-10-03）。⚠️ fill-box・% の原点 */
+        .db-sapfill { transform-box: fill-box; transform-origin: 50% 100%; animation: dbSap 760ms cubic-bezier(.5,.1,.6,1) forwards; }
+        @keyframes dbSap { 0% { transform: scaleY(1); opacity: 1; } 100% { transform: scaleY(0.38); opacity: 0.85; } }
         .fa .db-swirl { transform-box: view-box; transform-origin: 24px 24px; animation: dbSwirl 800ms ease-in-out forwards; }
         @keyframes dbSwirl { 0% { transform: rotate(0deg) scale(0.3); opacity: 0; } 25% { opacity: 1; } 80% { opacity: 1; } 100% { transform: rotate(-300deg) scale(1.2); opacity: 0; } }
         .db-sealcard { opacity: 0; animation: dbCard 760ms ease-out 80ms forwards; }
@@ -106420,6 +117618,53 @@ export default function TarotDraw() {
         }
         /* 未開封の箱。⚠️ 段ごとにまとめる。30個を一列に並べても選べない */
         /* 一括開封の演出 */
+        /* オートのつなぎの残り（2026-10-05）。⚠️ 輪は一定の速さで減るだけ（点滅なし） */
+        .auto-cd { position: relative; display: inline-flex; align-items: center; justify-content: center; width: 20px; height: 20px;
+          margin-left: 8px; vertical-align: middle; flex: 0 0 auto; }
+        .auto-cd svg { position: absolute; inset: 0; width: 100%; height: 100%; transform: rotate(-90deg); }
+        .auto-cd-bg { fill: rgba(10,8,24,0.55); stroke: rgba(255,255,255,0.18); stroke-width: 2; }
+        .auto-cd-fg { fill: none; stroke: #7FD8F0; stroke-width: 2; stroke-dasharray: 53.4; stroke-dashoffset: 0; stroke-linecap: round;
+          animation: autoCd var(--sec, 3s) linear both; }
+        @keyframes autoCd { to { stroke-dashoffset: 53.4; } }
+        .auto-cd b { position: relative; font-size: 10.5px; font-weight: 700; color: #E8FAFF; line-height: 1; }
+        .adv-tk-auto { display: flex; align-items: center; justify-content: center; margin: 6px 0 0; font-size: 11.5px; color: #CFEAF4; }
+        /* 制覇の演出（2026-10-05）。⚠️ 光は一回きり、点滅なし。紙吹雪はゆっくり落ちる */
+        .cq-wrap { position: fixed; inset: 0; z-index: 70; display: flex; align-items: center; justify-content: center;
+          background: rgba(8,6,20,0.86); animation: cqFade 0.35s ease both; overflow: hidden; }
+        @keyframes cqFade { from { opacity: 0; } to { opacity: 1; } }
+        .cq-confetti { position: absolute; inset: 0; pointer-events: none; }
+        .cq-confetti i { position: absolute; top: -12px; left: var(--x); width: 7px; height: 11px; border-radius: 2px;
+          background: hsl(var(--h), 80%, 66%); opacity: 0; transform: rotate(var(--r));
+          animation: cqFall var(--s) linear var(--d) 2 both; }
+        @keyframes cqFall { 0% { opacity: 0; transform: translate(0, 0) rotate(var(--r)); } 8% { opacity: 0.95; }
+          100% { opacity: 0.2; transform: translate(26px, 105vh) rotate(calc(var(--r) + 540deg)); } }
+        .cq-in { position: relative; width: min(92vw, 440px); max-height: 90vh; overflow-y: auto; text-align: center; padding: 10px; }
+        .cq-head { position: relative; padding: 22px 0 14px; transition: transform 0.6s ease; }
+        .cq-in.ph-clear .cq-head { transform: translateY(18vh); }
+        .cq-band { position: absolute; left: -10%; right: -10%; top: 50%; height: 64px; margin-top: -26px;
+          background: linear-gradient(90deg, transparent, rgba(255,214,110,0.32) 20%, rgba(255,236,170,0.55) 50%, rgba(255,214,110,0.32) 80%, transparent);
+          transform: scaleX(0); animation: cqBand 0.6s cubic-bezier(.2,.9,.3,1) 0.15s both; }
+        @keyframes cqBand { to { transform: scaleX(1); } }
+        .cq-sub { position: relative; margin: 0; font-size: 12px; letter-spacing: 0.45em; color: #FFE08A; animation: cqUp 0.5s ease 0.35s both; }
+        .cq-big { position: relative; margin: 2px 0 0; font-size: 46px; font-weight: 800; letter-spacing: 0.12em; line-height: 1.15;
+          animation: cqPop 0.6s cubic-bezier(.3,1.7,.5,1) 0.45s both; }
+        .cq-big span { background: linear-gradient(100deg, #FFE9A8 0%, #F0B860 35%, #FFF8E0 50%, #F0B860 65%, #FFE9A8 100%);
+          background-size: 260% 100%; -webkit-background-clip: text; background-clip: text; color: transparent;
+          animation: cqShine 1.2s ease 1.0s 1 both; filter: drop-shadow(0 2px 8px rgba(255,190,80,0.45)); }
+        @keyframes cqPop { from { opacity: 0; transform: scale(0.4); } to { opacity: 1; transform: none; } }
+        @keyframes cqShine { from { background-position: 100% 0; } to { background-position: 0 0; } }
+        @keyframes cqUp { from { opacity: 0; transform: translateY(8px); } to { opacity: 1; transform: none; } }
+        .cq-stage { position: relative; margin: 4px 0 0; font-size: 12px; color: #CFC4E8; animation: cqUp 0.5s ease 0.8s both; }
+        .cq-body { animation: cqUp 0.45s ease both; }
+        .cq-boxes { margin: 6px 0 0; font-size: 13px; color: #FFE08A; letter-spacing: 0.12em; }
+        .cq-boxes b { font-size: 16px; color: #FFF3D6; }
+        .cq-none { margin: 14px 0; font-size: 12.5px; color: #CFC4E8; }
+        .cq-grid { margin-top: 10px; }
+        .cq-cell { flex-direction: column; height: 62px; animation: cqDrop 0.4s cubic-bezier(.3,1.6,.5,1) calc(var(--i) * 70ms) both; }
+        @keyframes cqDrop { from { opacity: 0; transform: translateY(-14px) scale(0.7); } to { opacity: 1; transform: none; } }
+        .cq-star { font-style: normal; font-size: 10px; font-weight: 700; color: #FFE08A; line-height: 12px; }
+        .cq-acts { display: flex; justify-content: center; margin-top: 8px; }
+        @media (prefers-reduced-motion: reduce) { .cq-wrap *, .cq-wrap { animation: none !important; transition: none !important; } .cq-confetti { display: none; } }
         .cb-bulk { position: fixed; inset: 0; z-index: 60; display: flex; align-items: center; justify-content: center;
           background: radial-gradient(circle at 50% 45%, rgba(60,40,100,0.98), rgba(8,6,18,0.99)); animation: cbBulkIn 240ms ease-out; }
         @keyframes cbBulkIn { from { opacity: 0; } to { opacity: 1; } }
@@ -106853,10 +118098,84 @@ export default function TarotDraw() {
         }
         /* 盤の上に出す大きな札。⚠️ 大きさはこの二つだけ。途中を作らない */
         .mei-card.big { width: 220px; padding: 14px 14px 16px; }
+        /* ご当地グルメ（2026-10-05）。⚠️ 名産品の札を土台に、★と効果を足す。隠れた逸品は金の縁 */
+        .gm-card.t2 { border-color: rgba(150,200,255,0.55); }
+        .gm-card.t3 { border-color: rgba(255,214,110,0.85); box-shadow: 0 0 10px rgba(255,214,110,0.35); }
+        .gm-card.none { border-color: rgba(255,243,214,0.18); box-shadow: none; }
+        .gm-card.packed { outline: 2px solid #7AE08E; outline-offset: 1px; }
+        .gm-tier { position: absolute; top: 4px; left: 6px; font-size: 9px; color: #FFD86A; letter-spacing: -0.05em; }
+        .gm-type { font-style: normal; font-size: 9.5px; opacity: 0.75; }
+        .gm-eff { font-style: normal; font-size: 10px; color: #BFF0C8; }
+        .gm-area { margin: 4px 0 8px; }
+        .gm-area-t { display: inline-block; font-size: 11px; color: #CFC4E8; margin: 0 0 4px 2px; }
+        .gm-pack, .gm-note { font-size: 11px; margin: 4px 2px 8px; color: var(--parchment); display: flex; align-items: center; gap: 6px; flex-wrap: wrap; }
+        .gm-note { opacity: 0.75; }
+        .gm-pack-btn { font-size: 10px; padding: 3px 8px; }
         .mei-card.big .mei-art { width: 112px; height: 112px; }
         .mei-card.big .mei-name { font-size: 18px; }
         .mei-card.big .mei-pref { font-size: 11px; }
         .mei-card.big .mei-line { font-size: 12px; }
+        /* ---- ボスチケット（2026-10-04） ---- */
+        .tk { position: relative; display: inline-flex; flex-direction: column; align-items: center; justify-content: center; gap: 1px;
+          width: 98px; height: 54px; padding: 4px 12px 4px 18px; box-sizing: border-box; border-radius: 7px; overflow: hidden; color: #2A1A08;
+          -webkit-mask: radial-gradient(circle 6px at 0 50%, transparent 95%, #000) left / 51% 100% no-repeat,
+            radial-gradient(circle 6px at 100% 50%, transparent 95%, #000) right / 51% 100% no-repeat;
+          mask: radial-gradient(circle 6px at 0 50%, transparent 95%, #000) left / 51% 100% no-repeat,
+            radial-gradient(circle 6px at 100% 50%, transparent 95%, #000) right / 51% 100% no-repeat;
+          box-shadow: inset 0 0 0 1.5px rgba(255,255,255,0.35); }
+        .tk.big { width: 196px; height: 108px; padding: 8px 24px 8px 36px; border-radius: 12px;
+          -webkit-mask-size: 51% 100%; mask-size: 51% 100%; }
+        .tk-bronze { background: linear-gradient(135deg, #6E3E1A, #D8955A 42%, #F2C08A 52%, #8A5226); }
+        .tk-silver { background: linear-gradient(135deg, #7A8498, #E6ECF6 44%, #FFFFFF 52%, #8A94A8); }
+        .tk-gold { background: linear-gradient(135deg, #9A6A12, #F6D068 42%, #FFF2B8 52%, #B07A1A); }
+        .tk-platinum { background: linear-gradient(135deg, #8AA6BC, #EAF6FF 42%, #FFFFFF 50%, #A8C8E0 60%, #7A98B0); color: #1A2A3A; }
+        .tk-holo { background: linear-gradient(115deg, #FF8AC8, #FFE08A, #8AFFC8, #8AC8FF, #D08AFF, #FF8AC8); background-size: 300% 100%;
+          animation: tkHolo 4s linear infinite; color: #2A1640; }
+        @keyframes tkHolo { 0% { background-position: 0% 50%; } 100% { background-position: 150% 50%; } }
+        .tk-stub { position: absolute; left: 12px; top: 6px; bottom: 6px; border-left: 1.5px dashed rgba(40,20,0,0.35); }
+        .tk.big .tk-stub { left: 24px; top: 10px; bottom: 10px; border-left-width: 2px; }
+        .tk-star { width: 14px; height: 14px; opacity: 0.85; }
+        .tk.big .tk-star { width: 26px; height: 26px; }
+        .tk-name { font-size: 9.5px; font-weight: 800; letter-spacing: 0.02em; white-space: nowrap; line-height: 1.15; }
+        .tk.big .tk-name { font-size: 16px; }
+        .tk-rate { font-style: normal; font-size: 9px; font-weight: 700; opacity: 0.85; }
+        .tk-n { position: absolute; right: 6px; top: 3px; font-style: normal; font-size: 10px; font-weight: 800; }
+        /* 艶。⚠️ 3.6秒に一度、斜めに一本（速く点滅させない） */
+        .tk-sheen { position: absolute; inset: -40% auto -40% -60%; width: 40%; transform: rotate(18deg);
+          background: linear-gradient(90deg, rgba(255,255,255,0), rgba(255,255,255,0.75), rgba(255,255,255,0));
+          animation: tkSheen 3.6s ease-in-out infinite; pointer-events: none; }
+        @keyframes tkSheen { 0%, 55% { left: -60%; } 100% { left: 130%; } }
+        .adv-tk { margin: 8px auto 4px; max-width: 460px; padding: 10px 10px 8px; border-radius: 12px; text-align: center;
+          background: linear-gradient(180deg, rgba(255,224,138,0.14), rgba(255,255,255,0.03)); border: 1px solid rgba(255,224,138,0.45);
+          animation: advResIn 0.45s ease both; }
+        .adv-tk-t { margin: 0 0 4px; font-size: 13.5px; font-weight: 700; color: #FFE08A; letter-spacing: 0.06em; }
+        .adv-tk-lead, .adv-tk-note { margin: 0; font-size: 11px; line-height: 1.6; color: var(--parchment); }
+        .adv-tk-note { color: var(--muted); margin-top: 6px; }
+        .adv-tk-row { display: flex; flex-wrap: wrap; justify-content: center; gap: 8px; margin-top: 8px; }
+        .adv-tk-btn { background: none; border: 0; padding: 0; cursor: pointer; transition: transform 0.18s; }
+        .adv-tk-btn:hover:not(:disabled), .adv-tk-btn:focus-visible { transform: translateY(-3px) scale(1.04); }
+        .adv-tk-btn:disabled { opacity: 0.5; cursor: default; }
+        .adv-tk-btn.used { opacity: 0.32; filter: grayscale(0.8); }
+        /* 使った演出：券が浮いて二回転 → 当たりは金の輪が開く／外れは灰色に褪せて小さく揺れる */
+        .tk-roll { position: fixed; inset: 0; z-index: 66; display: flex; align-items: center; justify-content: center;
+          background: rgba(7,4,16,0.6); pointer-events: none; animation: advResIn 0.25s ease both; }
+        .tk-roll-in { position: relative; display: flex; flex-direction: column; align-items: center; gap: 14px; }
+        .tk-roll-card { display: inline-block; animation: tkSpin 1.15s cubic-bezier(.3,.1,.3,1) both; }
+        @keyframes tkSpin { 0% { transform: translateY(40px) scale(0.6) rotateY(-540deg); opacity: 0; }
+          25% { opacity: 1; } 100% { transform: none; opacity: 1; } }
+        .tk-roll.ng .tk-roll-card { animation: tkSpin 1.15s cubic-bezier(.3,.1,.3,1) both, tkFade 0.9s ease 1.2s forwards; }
+        @keyframes tkFade { 0% { filter: none; transform: none; } 30% { transform: translateX(-5px) rotate(-2deg); }
+          60% { transform: translateX(4px) rotate(1.5deg); } 100% { filter: grayscale(1) brightness(0.55); transform: scale(0.94); opacity: 0.7; } }
+        .tk-roll-burst { position: absolute; left: 50%; top: 40%; width: 320px; height: 320px; margin: -160px 0 0 -160px; border-radius: 50%;
+          opacity: 0; pointer-events: none; }
+        .tk-roll.ok .tk-roll-burst { background: radial-gradient(circle, rgba(255,240,180,0.9), rgba(255,200,90,0.35) 40%, rgba(255,200,90,0) 70%);
+          animation: tkBurst 1.1s ease-out 1.15s both; }
+        @keyframes tkBurst { 0% { opacity: 0; transform: scale(0.3); } 25% { opacity: 1; } 100% { opacity: 0; transform: scale(1.5); } }
+        .tk-roll-res { font-size: 17px; letter-spacing: 0.08em; opacity: 0; animation: advResIn 0.45s ease 1.2s both; }
+        .tk-roll.ok .tk-roll-res { color: #FFE9A8; text-shadow: 0 0 14px rgba(255,210,120,0.8); }
+        .tk-roll.ng .tk-roll-res { color: #B8B0D0; }
+        .tk-got-card { display: inline-block; animation: tkSpin 0.9s cubic-bezier(.3,.1,.3,1.2) both; }
+        @media (prefers-reduced-motion: reduce) { .tk-holo, .tk-sheen, .tk-roll-card, .tk-roll-burst, .tk-got-card { animation: none !important; } }
         .mei-pop {
           position: fixed; top: 0; left: 0; right: 0;
           bottom: calc(56px + env(safe-area-inset-bottom, 0px));
@@ -108533,6 +119852,14 @@ export default function TarotDraw() {
         @keyframes advHoloSlide {
           0% { background-position: 0% 50%; }
           100% { background-position: 300% 50%; }
+        }
+        /*
+          ★ 2026-10-05「スマホを軽く」：指で触る端末では、虹の流れを1秒8コマにする。
+          ⚠️ 文字の虹（background-clip: text）は GPU に回せない。毎フレーム流すと、地図の画面ぜんたいが
+            毎フレーム描き直しになっていた（計測で盤の描き直しの約3割）。流れる向きと速さは同じ。
+        */
+        @media (hover: none) and (pointer: coarse) {
+          .adv-where b { animation-timing-function: steps(25); }
         }
         .adv-next { color: #9FB4D8; }
         /* 地図。⚠️ 横長にする。左から右へ進む形なので、縦長だと道が潰れる */
