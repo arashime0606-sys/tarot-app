@@ -10469,6 +10469,8 @@ const ADV_I18N = {
     /* ⚠️ 勝った手をここで完結させる。画面を移してから押させない */
     toConquer: "制覇する",
     walkingOn: "道は一本です。そのまま進みます。",
+    /* ★ 2026-10-05：手動のときは自分で進む（盤を指ではじく／ボタン） */
+    stepGo: "進む", stepSpin: "ルーレットを回す", stepHint: "盤を指ではじいても進めます",
     walkedOn: "道が一本だったので、そのまま進んだ。", forkAuto: "分かれ道。足の向くほうへ進んだ。",
     weatherName: { clear: "晴れ", cloud: "曇り", rain: "雨", snow: "雪", fog: "霧" },
     bossSuffix: "の主",
@@ -10857,6 +10859,7 @@ const ADV_I18N = {
     toResult: "See the result",
     toConquer: "Claim it",
     walkingOn: "There is only one way on. Walking on...",
+    stepGo: "Step", stepSpin: "Spin", stepHint: "Flick the board to step too",
     walkedOn: "The road was single. Walked on.", forkAuto: "A fork. You followed where your feet led.",
     weatherName: { clear: "Clear", cloud: "Cloudy", rain: "Rain", snow: "Snow", fog: "Fog" },
     bossSuffix: "の主",
@@ -45210,14 +45213,18 @@ function terrainPlan(map, seed, themeKey, iso, elems, pref, area, plaza) {
     毎回やり直していた。盤・種・土地柄が同じなら描き直さない。
   ★ 動かせる範囲（box）の外のマスは地面ごと描かない（見えないので）。
 */
-const TerrainLayer = memo(function TerrainLayer({ map, seed, themeKey, elems, pref, area, heroOn, heroKind, box }) {
-  const tp = terrainPlan(map, seed, themeKey, hexAt, elems, pref, area, heroOn);
+const TerrainLayer = memo(function TerrainLayer({ map, seed, themeKey, elems, pref, area, heroOn, heroKind, box, cx, cy }) {
+  /* ⚠️ 地形の割り付けは盤ごとに一度（描く範囲が動くたびに組み直さない） */
+  const elemsKey = String(elems);
+  const tp = useMemo(() => terrainPlan(map, seed, themeKey, hexAt, elems, pref, area, heroOn),
+    [map, seed, themeKey, elemsKey, pref, area, heroOn]); // eslint-disable-line react-hooks/exhaustive-deps
   const inBox = (c) => !box || (c.x > box.x0 - XSTEP && c.x < box.x1 + XSTEP && c.y > box.y0 - YSTEP && c.y < box.y1 + YSTEP * 1.6);
-  const cells = tp.cells.filter(inBox);
+  /* ★ 描く範囲（ADV_CULL）の外は描かない */
+  const cells = tp.cells.filter((c) => inBox(c) && advInCull(c.x, c.y, cx, cy));
   return (
     <g style={{ pointerEvents: "none" }}>
       {/* ⚠️ 大地を先に敷く（川・景物・台はその上） */}
-      <TerrainGround cells={cells} themeKey={themeKey} seed={seed} box={box} />
+      <TerrainGround cells={cells} themeKey={themeKey} seed={seed} box={box} cx={cx} cy={cy} />
       <g clipPath="url(#tgClip)">
         <TerrainRiver river={tp.river} />
         <TerrainRail rail={tp.rail} />
@@ -45231,7 +45238,8 @@ const TerrainLayer = memo(function TerrainLayer({ map, seed, themeKey, elems, pr
     </g>
   );
 }, (a, b) => a.map === b.map && a.seed === b.seed && a.themeKey === b.themeKey && a.pref === b.pref && a.area === b.area
-  && a.heroOn === b.heroOn && a.heroKind === b.heroKind && String(a.elems) === String(b.elems) && a.box === b.box);
+  && a.heroOn === b.heroOn && a.heroKind === b.heroKind && String(a.elems) === String(b.elems) && a.box === b.box
+  && a.cx === b.cx && a.cy === b.cy);
 
 /* 一マスぶんの地形。⚠️ マスの大きさ（横62×縦52）に収める。はみ出すと隣と潰し合う */
 function TerrainCell({ c }) {
@@ -46728,7 +46736,7 @@ const GROUND_PAL = {
 };
 const GROUND_OF_THEME = { mountain: "dark", coast: "grass", river: "grass", shrine: "moss", town: "grass", city: "pave",
   metro: "pave", snow: "snow", onsen: "earth", ruins: "earth", farm: "farm", forest: "dark" };
-function TerrainGround({ cells, themeKey, seed, box }) {
+function TerrainGround({ cells, themeKey, seed, box, cx, cy }) {
   const byQR = {};
   (cells || []).forEach((c) => { byQR[`${c.q},${c.r}`] = c.kind; });
   const base = GROUND_OF_THEME[themeKey] || "grass";
@@ -46741,6 +46749,8 @@ function TerrainGround({ cells, themeKey, seed, box }) {
       const P = hexAt({ q, r });
       /* ⚠️ 動かせる範囲の外は敷かない（見えない）。2026-09-29 */
       if (box && (P.x < box.x0 - XSTEP || P.x > box.x1 + XSTEP || P.y < box.y0 - YSTEP || P.y > box.y1 + YSTEP * 1.6)) continue;
+      /* ★ 描く範囲（ADV_CULL）の外は敷かない。⚠️ ぼかし（tgSoft）の計算の広さもこれで縮む */
+      if (!advInCull(P.x, P.y, cx, cy)) continue;
       const k = byQR[`${q},${r}`];
       const type = GROUND_WATER.has(k) ? "water" : GROUND_REEF.has(k) ? "reef" : GROUND_DEEP.has(k) ? "deep" : GROUND_SNOW.has(k) ? "snow" : GROUND_SAND.has(k) ? "sand"
         : GROUND_PAVE.has(k) ? "pave" : base;
@@ -76506,7 +76516,8 @@ function BattlePanel({ lang, star, stageName, onEnd, theme, rank, zako, startHP,
           */
           const base = Math.round(S2.power * CARD_COEF.swords * next.mult * mul);
           /* ★ 2026-10-03：物理の構えで当て方が変わる（physFlash）。⚠️ 物理反射の敵には通らない（中で見ている） */
-          tgtF = physFlash(next, pk, base, fr.run, nm, s.turn);
+          /* ★ 2026-10-05 Aki：剣がそろったときの必殺も全体攻撃に統一（手動の必殺と同じ allHit） */
+          tgtF = physFlash(next, pk, base, fr.run, nm, s.turn, 1, 0, true);
         } else if (fr.suit === "wands") {
           /* ★ 棒は単体攻撃。最もHPの高い敵へ ―― 全体攻撃では届かない相手を狙う */
           /*
@@ -76617,7 +76628,8 @@ function BattlePanel({ lang, star, stageName, onEnd, theme, rank, zako, startHP,
       let tgtM = null;
       if (su === "swords") {
         const base = Math.round(S5.power * CARD_COEF.swords * next.mult * mul);
-        if (four) PHYS_KEYS.forEach((pk2) => physFlash(next, pk2, base, run, nm, s.turn, PHYS_FOUR_K, PHYS_FOUR_AT[pk2]));
+        /* ★ 2026-10-05：四武の舞の各波（槍・弓も）も全体攻撃に統一 */
+        if (four) PHYS_KEYS.forEach((pk2) => physFlash(next, pk2, base, run, nm, s.turn, PHYS_FOUR_K, PHYS_FOUR_AT[pk2], true));
         else tgtM = physFlash(next, pk, base, run, nm, s.turn, 1, 0, true);
       } else if (su === "wands" && eternal) {
         /*
@@ -87396,7 +87408,17 @@ Object.assign(ADV_GLYPH_TILE, ADV_GLYPH2_TILE, ADV_GLYPH3_TILE, ADV_GLYPH4_TILE)
     毎回組み直していた（戦闘中も、画面の外の盤を組み直していた）。盤が変わるのは下の props が変わったときだけ。
   ⚠️ 盤の中で使う値を足したら、props にも足すこと（足さないと、古い絵のまま残る）。
 */
-const AdvBoard = memo(function AdvBoard({ walking, map, seed, pref, area, heroOn, heroKind, mapBox, cur, visited, usedNodes }) {
+/*
+  ★ 描く範囲（2026-10-05 Aki「iPhone の小MAPがかくかく」）。
+  ⚠️⚠️ 盤は数千の部品で、画面に見えるのはその一部（三マスぶん）。iPhone の Safari は svg を
+    描くたびに盤ぜんたいをなめるうえ、地面のぼかし（tgSoft）を盤ぜんたいの広さで計算していた。
+  ★ 視点のまわり（中心から画面1.4枚ぶん。見える半分＋丸めの半分＋一歩の移動＋台の大きさ）だけを描く。見える範囲は変わらない。
+  ⚠️ 中心は画面半分の刻みに丸める（少し動くたびに描き直さない）。なぞって端に近づいたら描き直す。
+*/
+const ADV_CULL_MX = VIEW_W * 1.4, ADV_CULL_MY = VIEW_H * 1.4;
+function advCullSnap(v, step) { const h = step / 2; return Math.round(v / h) * h; }
+function advInCull(x, y, cx, cy) { return cx == null || (Math.abs(x - cx) < ADV_CULL_MX && Math.abs(y - cy) < ADV_CULL_MY); }
+const AdvBoard = memo(function AdvBoard({ walking, map, seed, pref, area, heroOn, heroKind, mapBox, cur, visited, usedNodes, cx, cy }) {
   const iso = hexAt;
   /* 六角の頂点。⚠️ 平頂。尖頭にすると横に並べたとき隙間が空く */
   /* 六角の輪郭。⚠️ 大きさを変えて何重にも使うので、関数で持つ */
@@ -87582,7 +87604,7 @@ const AdvBoard = memo(function AdvBoard({ walking, map, seed, pref, area, heroOn
           ⚠️ 並びは奥から手前（terrainPlan で y の順に並べてある）。
         */}
         <TerrainLayer map={map} seed={seed} themeKey={themeOf(walking)} elems={mapElems}
-          pref={pref} area={area} heroOn={heroOn} heroKind={heroKind} box={mapBox} />
+          pref={pref} area={area} heroOn={heroOn} heroKind={heroKind} box={mapBox} cx={cx} cy={cy} />
         {/*
           地面の景物。
           ⚠️⚠️ 台と道だけだと盤に見える。木・岩・草を置いて、土地の上を歩かせる。
@@ -87852,6 +87874,8 @@ const AdvBoard = memo(function AdvBoard({ walking, map, seed, pref, area, heroOn
             const to = byKey[k];
             if (!to) return null;
             const A = iso(n), B = iso(to);
+            /* ★ 描く範囲の外の道は描かない（ADV_CULL） */
+            if (!advInCull(A.x, A.y, cx, cy) && !advInCull(B.x, B.y, cx, cy)) return null;
             const live = n.key === cur;
             /* ⚠️ 二重に描く。外側の暗い縁がないと、道が背景に溶ける */
             /*
@@ -87921,6 +87945,8 @@ const AdvBoard = memo(function AdvBoard({ walking, map, seed, pref, area, heroOn
           {/* 台。⚠️ 奥（row 昇順）から描く */}
           {map.slice().sort((p, q) => (iso(p).y - iso(q).y) || (p.q - q.q)).map((n) => {
             const P = iso(n);
+            /* ★ 描く範囲の外の台は描かない（ADV_CULL） */
+            if (!advInCull(P.x, P.y, cx, cy)) return null;
             const here = n.key === cur;
             const reach = (byKey[cur]?.next || []).includes(n.key);
             const seen = visited.includes(n.key);
@@ -88522,6 +88548,10 @@ function AdventurePanel({ lang, items, onItem }) {
   const walkRef = useRef(null);
   /* ⚠️ 走り出したステージを覚えておく。同じ場面で二重に走らせない */
   const kickRef = useRef("");
+  /* ★ 手動で一つ進める（advance）。盤のはじきから呼ぶので ref で持つ */
+  const advanceRef = useRef(null);
+  /* ★ 画面の型（SP／PC）。⚠️ 戦闘と同じ設定（LS_BT_LAYOUT）を共有する（2026-10-05 Aki） */
+  const [advLayout, setAdvLayout] = useState(() => loadLayout());
   const turnAuto = (v) => { autoRef.current = v; setAuto(v); };
   /*
     いま居る節。
@@ -88563,6 +88593,8 @@ function AdventurePanel({ lang, items, onItem }) {
   const [dragging, setDragging] = useState(false);
   /* ★ 盤（大きな svg）。視点はこの要素の transform で動かす（advBoardXf） */
   const boardRef = useRef(null);
+  /* ★ なぞっている最中の描く範囲の中心（null ＝ 視点のまま）。ADV_CULL */
+  const [cullAt, setCullAt] = useState(null);
   useEffect(() => () => timers.current.forEach(clearTimeout), []);
   /*
     戦闘の画面へ寄せる。
@@ -90138,11 +90170,15 @@ function AdventurePanel({ lang, items, onItem }) {
     ★ 入口（道の分かれ目）では、ルーレットで道を選ぶ（2026-09-30）。主の手前の三択だけは札で選ぶ。
     ⚠️ 自動でも手動でも回る（押す操作は要らない）。回した回数を数える。
   */
-  if (!over && !busy && !atBoss && !roul && phase === "idle" && !pool && nexts.length >= 2 && !toBossHere) {
-    const mark = `fork:${walking}:${seed}:${at}`;
-    if (kickRef.current !== mark) {
-      kickRef.current = mark;
-      timers.current.push(setTimeout(() => {
+  /*
+    ★ 2026-10-05 Aki「オートでもないのに勝手に動くのはなぜ。スマホの小MAP進行がゲームになってない」：
+      手動のときは、入口のルーレット・井戸のルーレット・一本道の一歩を、どれも自分で起こす
+      （盤を指ではじく／「進む」ボタン ＝ advance）。オートのときだけ、下の送りが勝手に進める。
+  */
+  const forkMark = `fork:${walking}:${seed}:${at}`;
+  const wellMark = `well:${walking}:${seed}:${at}:${runMod.gold ? 1 : 0}`;
+  const oneMark = `one:${walking}:${seed}:${at}`;
+  const runFork = () => {
         if (goingRef.current || phaseRef.current !== "idle") return;
         const heads = nexts.map((n) => n.key).filter((k2) => !visited.includes(k2));
         const opts = (heads.length ? heads : nexts.map((n) => n.key)).map((k2) => ({ key: k2, w: 1, label: laneLabelOf(map, k2) }));
@@ -90151,15 +90187,16 @@ function AdventurePanel({ lang, items, onItem }) {
           setLog((l) => [...l, a.laneRoll(o.label)]);
           commit(null, o.key);
         });
-      }, ms(700)));
+  };
+  const forkReady = !over && !busy && !atBoss && !roul && phase === "idle" && !pool && nexts.length >= 2 && !toBossHere;
+  if (autoRef.current && forkReady) {
+    if (kickRef.current !== forkMark) {
+      kickRef.current = forkMark;
+      timers.current.push(setTimeout(() => { if (autoRef.current) runFork(); }, ms(700)));
     }
   }
   /* 外れの井戸に着いたら、残りの道からルーレットで選び、その道の入口へ抜ける */
-  if (!busy && !roul && !goldRun && phase === "idle" && !pool && wellPending) {
-    const mark = `well:${walking}:${seed}:${at}:${runMod.gold ? 1 : 0}`;
-    if (kickRef.current !== mark) {
-      kickRef.current = mark;
-      timers.current.push(setTimeout(() => {
+  const runWell = () => {
         if (goingRef.current) return;
         /*
           ルーレットが尽きた。⚠️ 終わりにせず、ボスの道の入口へ抜ける（ルーレットは回さない）。
@@ -90192,16 +90229,22 @@ function AdventurePanel({ lang, items, onItem }) {
           setLog((l) => [...l, a.wellOutTo(o.label)]);
           enterLane(o.key);
         });
-      }, ms(700)));
+  };
+  const wellReady = !busy && !roul && !goldRun && phase === "idle" && !pool && wellPending;
+  if (autoRef.current && wellReady) {
+    if (kickRef.current !== wellMark) {
+      kickRef.current = wellMark;
+      timers.current.push(setTimeout(() => { if (autoRef.current) runWell(); }, ms(700)));
     }
   }
-  if (!over && !busy && !atBoss && !roul && phase === "idle" && !pool && nexts.length === 1) {
-    const mark = `one:${walking}:${seed}:${at}`;
+  const oneReady = !over && !busy && !atBoss && !roul && phase === "idle" && !pool && nexts.length === 1;
+  if (autoRef.current && oneReady) {
+    const mark = oneMark;
     if (kickRef.current !== mark) {
       kickRef.current = mark;
       /* ⚠️ 少し長めに待つ。短いと、着いたことに気づく前に次へ動く */
       timers.current.push(setTimeout(() => {
-        if (walkRef.current) walkRef.current();
+        if (autoRef.current && walkRef.current) walkRef.current();
       }, ms(820)));
     }
   }
@@ -90295,6 +90338,21 @@ function AdventurePanel({ lang, items, onItem }) {
       const は巻き上がらない。
   */
   walkRef.current = walkOn;
+  /*
+    ★ 手動で一つ進める（2026-10-05）。盤を指ではじく／「進む」ボタン。
+    ⚠️ 何をするかは場所で決まる：井戸 → 井戸のルーレット、入口 → 道のルーレット、主の手前 → 札、一本道 → 一歩。
+    ⚠️ 送りの印（kickRef）も立てる。あとでオートを入れたとき、同じ場面で二重に動かさない。
+  */
+  const stepKind = wellReady ? "well" : forkReady ? "fork" : oneReady ? "walk"
+    : (!over && !busy && !roul && !tkRoll && phase === "idle" && !pool && nexts.length >= 2 && toBossHere) ? "deal" : null;
+  const advance = () => {
+    if (goingRef.current || phaseRef.current !== "idle") return;
+    if (stepKind === "well") { kickRef.current = wellMark; runWell(); }
+    else if (stepKind === "fork") { kickRef.current = forkMark; runFork(); }
+    else if (stepKind === "walk") { kickRef.current = oneMark; walkOn(); }
+    else if (stepKind === "deal") deal(auto);
+  };
+  advanceRef.current = advance;
   const commit = (next, forceTo) => {
     /*
       ⚠️⚠️ 入口で必ず塞ぐこと。
@@ -90698,6 +90756,11 @@ function AdventurePanel({ lang, items, onItem }) {
         ))}
       </div>
       <div className="adv-iso-wrap" ref={mapRef}>
+      {/* ★ 画面の型（SP／PC）の切り替え。戦闘の左上と同じボタン・同じ設定（2026-10-05 Aki） */}
+      <button type="button" className="bt-layout adv-layout" title={a.layoutTip || ""}
+        onClick={() => { const v = advLayout === "sp" ? "pc" : "sp"; setAdvLayout(v); try { localStorage.setItem(LS_BT_LAYOUT, v); } catch (e) { /* */ } }}>
+        {advLayout === "sp" ? "SP" : "PC"}
+      </button>
       {/*
         ★ 2026-10-05 Aki「スマホを見た目を害さずに軽く」：
           盤（MAP_W×MAP_H の svg）を窓（.adv-iso）の中に置き、HTML の transform で動かす。
@@ -90714,7 +90777,7 @@ function AdventurePanel({ lang, items, onItem }) {
           if (e.currentTarget.setPointerCapture) {
             try { e.currentTarget.setPointerCapture(e.pointerId); } catch (err) { /* 無視 */ }
           }
-          dragRef.current = { x: e.clientX, y: e.clientY, vx: view.x, vy: view.y, t: Date.now(), moved: 0, cur: null };
+          dragRef.current = { x: e.clientX, y: e.clientY, vx: view.x, vy: view.y, t: Date.now(), moved: 0, cur: null, culled: { x: view.x, y: view.y } };
           setDragging(true);
         }}
         onPointerMove={(e) => {
@@ -90728,10 +90791,31 @@ function AdventurePanel({ lang, items, onItem }) {
           d.moved = Math.max(d.moved, Math.hypot(e.clientX - d.x, e.clientY - d.y));
           d.cur = clampView(d.vx - dx, d.vy - dy);
           if (boardRef.current) boardRef.current.style.transform = advBoardXf(d.cur);
+          /* ⚠️ 描いてある範囲（ADV_CULL）の端に近づいたら、範囲だけ描き直す */
+          if (Math.abs(d.cur.x - d.culled.x) > VIEW_W * 0.7 || Math.abs(d.cur.y - d.culled.y) > VIEW_H * 0.7) {
+            d.culled = d.cur; setCullAt(d.cur);
+          }
         }}
-        onPointerCancel={() => { const d = dragRef.current; dragRef.current = null; if (d && d.cur) setView(d.cur); setDragging(false); }}
+        onPointerCancel={() => { const d = dragRef.current; dragRef.current = null; if (d && d.cur) setView(d.cur); setCullAt(null); setDragging(false); }}
         /* ⚠️ 叩いても全体は出さない。先が全部見えると、探して進む意味が消える */
-        onPointerUp={() => { const d = dragRef.current; dragRef.current = null; if (d && d.cur) setView(d.cur); setDragging(false); }}>
+        onPointerUp={() => {
+          const d = dragRef.current; dragRef.current = null;
+          /*
+            ★ はじき（2026-10-05 Aki「指ではじいて一歩ずつ」）：短く速く払ったら、視点は戻して一つ進む。
+            ⚠️ ゆっくりなぞったときは今までどおり見回し。
+          */
+          const flick = d && d.moved > 26 && Date.now() - d.t < 300;
+          if (flick && !autoRef.current && advanceRef.current) {
+            if (boardRef.current) boardRef.current.style.transform = advBoardXf(view);
+            setCullAt(null);
+            setDragging(false);
+            advanceRef.current();
+            return;
+          }
+          if (d && d.cur) setView(d.cur);
+          setCullAt(null);
+          setDragging(false);
+        }}>
       <div ref={boardRef} className="adv-iso-board" aria-hidden="true"
         style={{
           width: `${(MAP_W / VIEW_W) * 100}%`, height: `${(MAP_H / VIEW_H) * 100}%`,
@@ -90740,7 +90824,8 @@ function AdventurePanel({ lang, items, onItem }) {
           transition: dragging ? "none" : "transform 620ms cubic-bezier(0.33, 0, 0.2, 1)",
         }}>
         <AdvBoard walking={walking} map={map} seed={seed} pref={pref} area={area} heroOn={heroOn} heroKind={heroKind}
-          mapBox={mapBox} cur={cur} visited={visited} usedNodes={usedNodes} />
+          mapBox={mapBox} cur={cur} visited={visited} usedNodes={usedNodes}
+          cx={advCullSnap((cullAt || view).x + VIEW_W / 2, VIEW_W)} cy={advCullSnap((cullAt || view).y + VIEW_H / 2, VIEW_H)} />
       </div>
       <svg className="adv-iso-over" viewBox={`0 0 ${VIEW_W} ${VIEW_H}`} preserveAspectRatio="none" aria-hidden="true">
         {/* ⚠️ 艶は視点の外側に置く。盤と一緒に動かすと画面から出て見えなくなる */}
@@ -90900,8 +90985,8 @@ function AdventurePanel({ lang, items, onItem }) {
             turnAuto(v);
             /* ⚠️ 切ったら走り出しの記録も消す。入れ直したとき動かなくなる */
             kickRef.current = "";
-            /* ⚠️ 一本道は勝手に進むので、ここで呼ぶのは分かれ道のときだけ */
-            if (v && phase === "idle" && nexts.length >= 2) deal(true);
+            /* ⚠️ 主の手前の分かれ道だけここで札を配る（入口・井戸・一本道は送りが受け持つ） */
+            if (v && phase === "idle" && nexts.length >= 2 && toBossHere) deal(true);
           }}>
           <span className="adv-auto-dot" />
           {auto ? a.autoOn : a.autoOff}
@@ -90982,8 +91067,20 @@ function AdventurePanel({ lang, items, onItem }) {
         ⚠️ 一本道にボタンを置かないこと。押す以外の選択肢が無いので、
           ただの確認になる。何もせず歩かせる（下の自動送りが受け持つ）。
       */}
-      {!over && !busy && phase === "idle" && nexts.length === 1 && (
+      {/*
+        ★ 2026-10-05 Aki：手動のときは自分で進む。⚠️ オートのときは今までどおり文だけ（勝手に歩く）。
+      */}
+      {auto && !over && !busy && phase === "idle" && nexts.length === 1 && (
         <p className="adv-need adv-walking">{a.walkingOn}</p>
+      )}
+      {!auto && !tkRoll && (stepKind === "walk" || stepKind === "fork" || stepKind === "well") && (
+        <div className="adv-act adv-step">
+          <button type="button" className="draw-btn adv-go" onClick={advance}>
+            <span className="adv-go-shine" />
+            {stepKind === "walk" ? a.stepGo : a.stepSpin}
+          </button>
+          <p className="adv-step-hint">{a.stepHint}</p>
+        </div>
       )}
       {/*
         札が出現。
@@ -110939,6 +111036,10 @@ export default function TarotDraw() {
         /* ★ 盤は三枚の svg（下の層・駒・上の層）を重ねたもの。どれも盤と同じ大きさ */
         .adv-iso-layer { position: absolute; left: 0; top: 0; width: 100%; height: 100%; display: block; overflow: visible; }
         .adv-iso-layer.no-hit, .adv-iso-hero { pointer-events: none; }
+        /* ★ 小MAPの SP／PC。⚠️ 盤の上の効果の行（top: 48px〜）と重ならない左上の角 */
+        .adv-layout { z-index: 5; }
+        .adv-step { margin-top: 2px; }
+        .adv-step-hint { margin: 6px 0 0; font-size: 11px; line-height: 1.4; text-align: center; color: rgba(237,228,255,0.6); }
         .adv-iso-hero { will-change: transform; }
         .adv-iso-over { position: absolute; inset: 0; width: 100%; height: 100%; display: block; pointer-events: none; }
         /* ★ 画面の外にあるあいだは描かない。⚠️ 窓の大きさは aspect-ratio で決まるので、中身を飛ばしても高さは変わらない */
