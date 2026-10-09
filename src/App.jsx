@@ -3123,6 +3123,18 @@ function getCardSub(card, lang) {
   ⚠️ 位置は :where(:has(> .major-art)) で相対にする（詳細度0なので、既に absolute の面はそのまま）。
 */
 const MAJOR_ART_BASE = "/arcana/";
+/*
+  ★ 2026-10-09 Aki「Claude 上で開くと絵が出ない」→ 二段構え。
+    まずサイトの中（/arcana/）を探し、読めなければ本番サイトの絵を取りに行く。それでも駄目なら隠す（文字の札に戻る）。
+  ⚠️ 本番の住所が変わったらここを直すこと。
+*/
+const MAJOR_ART_ABS = "https://tarot-app-jade-theta.vercel.app/arcana/";
+function majorArtRetry(img) {
+  if (!img || img.dataset.abs === "1") return false;
+  img.dataset.abs = "1";
+  img.src = String(img.getAttribute("src") || "").replace(/^.*\/arcana\//, MAJOR_ART_ABS);
+  return true;
+}
 function majorArtSrc(card) {
   const m = card && /^major-(\d+)$/.exec(String(card.id || ""));
   return m ? `${MAJOR_ART_BASE}${String(m[1]).padStart(2, "0")}.webp` : null;
@@ -3132,11 +3144,34 @@ function MajorArt({ card }) {
   if (!src) return null;
   return (
     <>
-      <img className="major-art" src={src} alt="" aria-hidden="true" loading="lazy" decoding="async" draggable={false}
-        onError={(e) => { const el = e.currentTarget; el.style.display = "none"; if (el.nextSibling) el.nextSibling.style.display = "none"; }} />
+      <img className="major-art" src={src} alt="" aria-hidden="true" decoding="async" draggable={false}
+        onError={(e) => { const el = e.currentTarget; if (majorArtRetry(el)) return; el.style.display = "none"; if (el.nextSibling) el.nextSibling.style.display = "none"; }} />
       <span className="major-art-shade" aria-hidden="true" />
     </>
   );
+}
+/*
+  先読み（2026-10-09 Aki「ワンオラクルだと大アルカナが出るまで一瞬遅れる」）。
+  ★ 起動して手が空いたら22枚を全部読み込んで、解いておく（約1.8MB）。めくった瞬間に絵が出る。
+  ⚠️ 参照を持っておくこと（捨てると読み込みが途中で止まることがある）。
+*/
+let MAJOR_ART_PRE = null;
+function preloadMajorArt() {
+  if (MAJOR_ART_PRE || typeof window === "undefined" || typeof Image === "undefined") return;
+  MAJOR_ART_PRE = [];
+  for (let i = 0; i < 22; i++) {
+    const im = new Image();
+    im.decoding = "async";
+    /* ⚠️ サイトの中に無ければ本番から先読み（MAJOR_ART_ABS） */
+    im.onerror = () => { if (im.dataset && im.dataset.abs !== "1") { im.dataset.abs = "1"; im.src = MAJOR_ART_ABS + String(i).padStart(2, "0") + ".webp"; } };
+    im.src = majorArtSrc({ id: `major-${i}` });
+    if (im.decode) im.decode().catch(() => {});
+    MAJOR_ART_PRE.push(im);
+  }
+}
+if (typeof window !== "undefined") {
+  const go = () => preloadMajorArt();
+  if (window.requestIdleCallback) window.requestIdleCallback(go, { timeout: 2500 }); else setTimeout(go, 1200);
 }
 function buildMajorList() {
   return MAJOR_NAME.map((name, i) => ({
@@ -35712,6 +35747,8 @@ function SeekerPanel({ lang, onBack }) {
 */
 /* ⚠️ コスモフォースだけ四段続くので長い。他は620msで消える */
 const FX_MS = 620, FX_MS_BLAST = 1900, FX_MS_BOSS = 1500;
+/* 戦闘で大アルカナを引いたとき、演出の前に札の絵を見せる時間（等倍・ms）。2026-10-09 */
+const BT_MAJOR_CARD_MS = 650;
 /* ⚠️⚠️ デバッグ用のチート（戦闘の「魔術師しか出ない」スイッチなど）。公開前に false にすること */
 const DEBUG_CHEATS = true;
 /* デバッグの旗（端末に残す）。⚠️ DEBUG_CHEATS が false なら常に false */
@@ -44112,6 +44149,22 @@ function ArcanaScene({ n, aw }) {
   }
 }
 
+/*
+  戦闘で大アルカナを引いた瞬間の札（2026-10-09）。⚠️ 次の演出（FxArcana）が来ると「all」の入れ替えで消える。
+  ★ 逆位置は絵ごと180度回す。絵が読めなければ何も出さない（そのまま演出へ）。
+*/
+function FxMajorCard({ n, rev }) {
+  const src = majorArtSrc({ id: `major-${n}` });
+  if (!src) return null;
+  return (
+    <span className="fx fx-majcard" aria-hidden="true">
+      <span className={`fx-majcard-in${rev ? " rev" : ""}`}>
+        <img src={src} alt="" draggable={false} onError={(e) => { if (majorArtRetry(e.currentTarget)) return; e.currentTarget.parentNode.style.display = "none"; }} />
+        <span className="fx-majcard-no">{MAJOR_ROMAN[n]}</span>
+      </span>
+    </span>
+  );
+}
 function FxArcana({ n, label, tone, aw }) {
   /* ⚠️ 色は CSS 変数で渡す。クラスを22種作ると見通しが悪い */
   const rb = tone === "rainbow";
@@ -75945,7 +75998,7 @@ function BattlePanel({ lang, star, stageName, onEnd, theme, rank, zako, startHP,
     const arc2 = kind === "major" && extra && ARC2_READY[extra.n];
     /* ⚠️ 2026-10-03：突撃・打撃・射撃の必殺は0.9秒の絵（FX_MS_ARC）。一閃などは今までどおり */
     const physLong = kind === "flash" && extra && extra.phys && extra.phys !== "slash";
-    const ms = Math.round((kind === "eternal" ? 2400 : (kind === "blast" || kind === "dance" || kind === "four") ? FX_MS_BLAST : kind === "bossSp" ? FX_MS_BOSS : (arc2 || physLong) ? FX_MS_ARC : FX_MS) / fxRateOf(kind, speedRef.current));
+    const ms = Math.round((kind === "eternal" ? 2400 : (kind === "blast" || kind === "dance" || kind === "four") ? FX_MS_BLAST : kind === "bossSp" ? FX_MS_BOSS : kind === "majorCard" ? BT_MAJOR_CARD_MS + 200 : (arc2 || physLong) ? FX_MS_ARC : FX_MS) / fxRateOf(kind, speedRef.current));
     timers.current.push(setTimeout(() => setFxs((v) => v.filter((x) => x.id !== id)), ms));
     mark(ms);
   };
@@ -76470,16 +76523,26 @@ function BattlePanel({ lang, star, stageName, onEnd, theme, rank, zako, startHP,
       if (out.major) {
         const fxOut = majorEffect(next, card, { cards: setup.cards, star: setup.star, drawn: next.drawn });
         if (fxOut) {
-          (fxOut.hits || []).forEach((h) => pop(`foe${h.i}`, `-${h.d}`, "dmg"));
-          if (fxOut.self) pop("me", `-${fxOut.self}`, "self");
           next.note = a.fxName[fxOut.key] || "";
-          /* ⚠️ 大アルカナだけは画面全体に出す。毎手ごとに全画面が光ると疲れる */
-          /* ⚠️ 札の番号を渡すこと。22枚それぞれに専用の絵がある */
           pushHist("fx", s.turn, (a.fxName && a.fxName[fxOut.key]) || fxOut.key);
-        fx("all", "major", { n: Number(String(card.id).split("-")[1]),
-            label: a.fxName[fxOut.key], tone: MAJOR_FX_COLOR[fxOut.key],
-            /* ⚠️ 覚醒していれば一段豪華な絵（ArcanaScene の aw） */
-            aw: majorAwakened().indexOf(Number(String(card.id).split("-")[1])) >= 0 });
+          /*
+            ★ 2026-10-09 Aki「戦闘中の大アルカナは、一瞬だけ札を戦闘画面に出してから演出を」。
+              まず札の絵（FxMajorCard）を BT_MAJOR_CARD_MS 見せ、そのあと今までの演出と数字。
+            ⚠️ 待ち時間も再生速度（fxRateOf）で縮める。倍速で札だけ長く残ると間延びする。
+          */
+          const mn = Number(String(card.id).split("-")[1]);
+          fx("all", "majorCard", { n: mn, rev: !!card.reversed });
+          const lead = Math.round(BT_MAJOR_CARD_MS / fxRateOf("major", speedRef.current));
+          timers.current.push(setTimeout(() => {
+            (fxOut.hits || []).forEach((h) => pop(`foe${h.i}`, `-${h.d}`, "dmg"));
+            if (fxOut.self) pop("me", `-${fxOut.self}`, "self");
+            /* ⚠️ 大アルカナだけは画面全体に出す。毎手ごとに全画面が光ると疲れる */
+            /* ⚠️ 札の番号を渡すこと。22枚それぞれに専用の絵がある */
+            fx("all", "major", { n: mn,
+              label: a.fxName[fxOut.key], tone: MAJOR_FX_COLOR[fxOut.key],
+              /* ⚠️ 覚醒していれば一段豪華な絵（ArcanaScene の aw） */
+              aw: majorAwakened().indexOf(mn) >= 0 });
+          }, lead));
         }
       }
     }
@@ -77986,6 +78049,7 @@ function BattlePanel({ lang, star, stageName, onEnd, theme, rank, zako, startHP,
           x.kind === "eternal" ? <FxSecret key={x.id} label={x.label} hits={x.hits} variant="eternal" /> :
           x.kind === "bossSp" ? <FxBossSp key={x.id} spKey={x.key} stage={x.stage} fam={x.fam} label={x.label} elem={x.elem} /> :
           x.kind === "block" ? <FxBlock key={x.id} /> :
+          x.kind === "majorCard" ? <FxMajorCard key={x.id} n={x.n} rev={x.rev} /> :
           x.kind === "flash"
             ? <FxFlash key={x.id} suit={x.suit} run={x.run} label={x.label} tone={x.tone} fam={x.fam} tgt={x.tgt} phys={x.phys} />
             : <FxArcana key={x.id} n={x.n} label={x.label} tone={x.tone} aw={x.aw} />
@@ -107590,6 +107654,22 @@ export default function TarotDraw() {
         .static-card.oracle .card-sub { font-size: 11px; }
         .card-face { width: 100%; height: 100%; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 9px; padding: 14px 8px; text-align: center; }
         .card-face.reversed { transform: rotate(180deg); }
+        /* 戦闘：大アルカナの札を一瞬見せる（FxMajorCard） */
+        .fx-majcard { position: absolute; inset: 0; display: flex; align-items: center; justify-content: center; pointer-events: none; z-index: 30; }
+        .fx-majcard-in { position: relative; width: min(36%, 150px); aspect-ratio: 2 / 3; border-radius: 10px; overflow: hidden;
+          border: 2px solid #E8C46A; box-shadow: 0 0 0 1px rgba(40,24,8,0.8), 0 0 26px rgba(255,214,130,0.65), 0 10px 30px rgba(0,0,0,0.6);
+          animation: fx-majcard-pop 0.32s cubic-bezier(.2,1.4,.4,1) both; }
+        .fx-majcard-in.rev { animation-name: fx-majcard-pop-rev; }
+        .fx-majcard-in img { display: block; width: 100%; height: 100%; object-fit: cover; }
+        .fx-majcard-no { position: absolute; top: 4%; left: 0; right: 0; text-align: center; font-size: 12px; font-weight: 700;
+          color: #FFE9B0; text-shadow: 0 1px 3px #000; letter-spacing: 0.08em; }
+        .fx-majcard-in.rev .fx-majcard-no { top: auto; bottom: 4%; transform: rotate(180deg); }
+        .fx-majcard-in::after { content: ""; position: absolute; inset: 0; pointer-events: none;
+          background: linear-gradient(115deg, transparent 35%, rgba(255,255,255,0.45) 48%, transparent 60%);
+          transform: translateX(-120%); animation: fx-majcard-sheen 0.6s 0.15s ease-out both; }
+        @keyframes fx-majcard-pop { from { transform: translateY(18px) scale(0.6); opacity: 0; } to { transform: none; opacity: 1; } }
+        @keyframes fx-majcard-pop-rev { from { transform: translateY(18px) scale(0.6) rotate(180deg); opacity: 0; } to { transform: rotate(180deg); opacity: 1; } }
+        @keyframes fx-majcard-sheen { to { transform: translateX(120%); } }
         /* 大アルカナの絵（MajorArt）。⚠️ :where で詳細度0（面に既にある position / overflow を上書きしない） */
         :where(:has(> .major-art)) { position: relative; overflow: hidden; isolation: isolate; }
         .major-art { position: absolute; inset: 0; width: 100%; height: 100%; object-fit: cover; border-radius: inherit;
