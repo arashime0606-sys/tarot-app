@@ -3115,6 +3115,29 @@ function getCardSub(card, lang) {
   const el = suitObj ? suitObj.element : "";
   return `${MINOR_ARCANA_PREFIX_I18N[lang] || MINOR_ARCANA_PREFIX_I18N.en || MINOR_ARCANA_PREFIX_I18N.ja}${suitLabel(suitKey, lang)}（${elementLabel(el, lang)}）`;
 }
+/*
+  大アルカナの絵（2026-10-09 Aki：Stable Diffusion で作った22枚に差し替え）。
+  ★ 絵は public/arcana/00.webp〜21.webp（600×900・2:3）。札の面の一番下に敷き、番号・名前はその上に重ねる。
+  ⚠️ 面の要素（card-face など）を回して逆位置を表す所では、絵も一緒に回る（正逆の絵ごと回す決まりどおり）。
+  ⚠️ 絵が読めなかったら消す（文字の面にそのまま戻る）。
+  ⚠️ 位置は :where(:has(> .major-art)) で相対にする（詳細度0なので、既に absolute の面はそのまま）。
+*/
+const MAJOR_ART_BASE = "/arcana/";
+function majorArtSrc(card) {
+  const m = card && /^major-(\d+)$/.exec(String(card.id || ""));
+  return m ? `${MAJOR_ART_BASE}${String(m[1]).padStart(2, "0")}.webp` : null;
+}
+function MajorArt({ card }) {
+  const src = majorArtSrc(card);
+  if (!src) return null;
+  return (
+    <>
+      <img className="major-art" src={src} alt="" aria-hidden="true" loading="lazy" decoding="async" draggable={false}
+        onError={(e) => { const el = e.currentTarget; el.style.display = "none"; if (el.nextSibling) el.nextSibling.style.display = "none"; }} />
+      <span className="major-art-shade" aria-hidden="true" />
+    </>
+  );
+}
 function buildMajorList() {
   return MAJOR_NAME.map((name, i) => ({
     id: `major-${i}`,
@@ -4610,7 +4633,7 @@ const AREA_LANDMARKS = {
     "秩父": ["三峯神社", "秩父神社", "長瀞岩畳", "羊山公園",
       "宝登山神社", "橋立鍾乳洞", "両神山", "美の山公園"],
   },
-  /* 千葉。東葛飾・千葉・印旛・香取・海匝・安房・君津 */
+  /* 千葉。東葛飾・千葉・印旛・成田空港・香取・海匝・安房・君津（2026-10-07 Aki：旧「印旛」の位置を成田空港に。印旛は東葛飾と成田空港の中間へ） */
   chiba: {
     /* ⚠️ 東京ディズニーランドは浦安市。東京ではなく千葉の東葛飾 */
     "東葛飾": ["本土寺", "戸定邸", "手賀沼", "東京ディズニーランド",
@@ -4618,8 +4641,10 @@ const AREA_LANDMARKS = {
     /* ⚠️ 幕張メッセは千葉市美浜区。東京湾岸の千葉側がまるごと抜けていた */
     "千葉": ["千葉城", "幕張メッセ", "千葉ポートタワー", "加曽利貝塚",
       "昭和の森", "千葉市動物公園", "検見川神社", "青葉の森公園"],
-    "印旛": ["成田山新勝寺", "宗吾霊堂", "佐倉城址公園", "国立歴史民俗博物館",
-      "印旛沼", "房総のむら", "吉高の大桜", "本佐倉城跡"],
+    "印旛": ["佐倉城下町", "佐倉城址公園", "国立歴史民俗博物館", "印旛沼",
+      "房総のむら", "吉高の大桜", "染井野高級住宅地", "オランダ風車リーフデ"],
+    "成田空港": ["成田国際空港", "成田山新勝寺", "宗吾霊堂", "航空科学博物館",
+      "さくらの山公園", "成田ゆめ牧場", "芝山古墳・はにわ博物館", "麻賀多神社"],
     "香取": ["香取神宮", "佐原の町並み", "伊能忠敬旧宅", "水郷佐原あやめパーク",
       "多古あじさい遊歩道", "東庄県民の森", "小見川城山公園", "神崎神社"],
     "海匝": ["犬吠埼灯台", "屛風ケ浦", "飯沼観音", "地球の丸く見える丘展望館",
@@ -9610,6 +9635,8 @@ const EVENT_FX = [
   /* ⚠️ 2026-10-05 Aki「全必殺封印が出すぎ」：必殺の封印（nosp）はここから外し、封じの鎖（一つの盤に一つ・0〜4本のルーレット）へ移した */
   { key: "hp", w: 1 }, { key: "pot", w: 1 }, { key: "elem", w: 1 },
   { key: "heal", w: 1 }, { key: "potUp", w: 1 },
+  /* ★ 2026-10-07 Aki「強制シャッフルは、何が起こるかわからないマスの目の一つに」。魔法か武器のどちらか一方を入れ替える（合計は増えない） */
+  { key: "shuffle", w: 1 },
 ];
 const LANE_NAMES = ["一の道", "二の道", "三の道", "四の道", "五の道", "六の道"];
 /*
@@ -9743,7 +9770,18 @@ const ADV_SPECIALS = [
     ★ 北海道はヒグマ：襲われると HP −40%、戦いは強く、勝てば★+3の宝箱。
   */
   { key: "bear",     w: ADV_SP_W_RARE, from: 3, cap: 1, bear: true },
+  /*
+    倍率のシャッフル（2026-10-07 Aki）。魔法（shufM）と物理＝武器（shufP）は別のマス。
+    ★ 踏むとルーレット（増える幅）を回し、いま付いている倍率をランダムに入れ替える。元の属性に戻ることもある。
+    ★ 終わったあとの合計は、回す前より必ず増える（入れ替えだけでは損も得もしないので、踏む価値を足す）。
+    ⚠️ 開いている属性が2つ未満のときは置かない（入れ替える先が無い）。レア（重み半分・1盤に1個）・★3から。
+    ⚠️ 2026-10-07 Aki：強制シャッフルは「何が起こるかわからない」マス（EVENT_FX）の目の一つ。そちらは合計が増えない。
+  */
+  { key: "shufM",    w: ADV_SP_W_RARE, from: 3, cap: 1, shuf: "m" },
+  { key: "shufP",    w: ADV_SP_W_RARE, from: 3, cap: 1, shuf: "p" },
 ];
+/* シャッフルの「増える幅」（合計に対する割合）。ルーレットの目 s1・s2・s3（重み 2・2・1）。⚠️ 平均は約 +19% */
+const ADV_SHUF_G = { s1: 0.10, s2: 0.20, s3: 0.35 };
 /*
   熊のいない土地（2026-10-05 Aki「千葉と九州にはなし。四国は徳島と高知だけ」）。
   ★ 千葉・九州七県・沖縄・香川・愛媛・東京の区部には熊のマスを置かない。
@@ -9759,6 +9797,129 @@ const ADV_BEAR_W = { calm: 30, food: 25, hurt: 25, fight: 20 };
 const ADV_FOOD_TIER_W = { stall: { 1: 60, 2: 30, 3: 10 }, kissa: { 2: 75, 3: 25 }, ryotei: { 3: 100 } };
 /* 柿の木の魔法の上がり幅（%） */
 const ADV_KAKI_MAGIC = 5;
+/*
+  【ピック】2026-10-05 Aki「ピックシステムを実装しよう」。
+  ★ 良いマス（下の ADV_PICK_NONPICK 以外）はすべて「選択の札」（kind "pick"）として置く。踏むと三つの候補が並ぶ。
+    候補は良いマスの種類をまたいで、レアも混ぜて重み w で引く（同じ種類は一つの三択に一つまで）。
+  ★ 数値のマスは段（小・中・大・特大）をルーレットで先に決めて見せ、選んだ値がそのまま付く（選んだあとに外れない）。
+    段の値は今までのルーレットの目から（ADV_PICK_VALS）。段の重みは ADV_PICK_TIER_W。
+  ★ 外れの目があるマス（砲台・名医・闇商人・挑戦状・四つ葉・鍛冶屋・床屋・料理）は「賭け」。選ぶと今までどおりルーレットを回す。
+  ★ 選んだマスはその絵に変わり、段の色の縁が残る（盤を見れば何を選んだか分かる）。
+  ⚠️ 悪いマス・良し悪しの混じるマス・抜け穴（外れの道だけ）は今までどおり見えるマスのまま。
+  ⚠️ 上限（cap）のあるマスは「選んだ回数」で数える。料理は一つの盤で一つまで（選んだら次から出ない）。
+  ⚠️ 平均は今より上がる（三つから選べる・外れが無い）。勝率は最後の実測でまとめて見る（Aki と決めた方針）。
+*/
+const ADV_PICK_NONPICK = ["tunnel", "fog", "lost", "statue", "thief", "hoard", "chain", "bear", "shufM", "shufP"];
+function advPickable(k) { return ADV_PICK_NONPICK.indexOf(k) < 0; }
+/* 段の重み（%）。小・中・大・特大 */
+const ADV_PICK_TIER_W = { 1: 45, 2: 30, 3: 18, 4: 7 };
+/* 段の色（縁・札の枠）。0 は賭け。⚠️ 色だけに頼らない（札には段の名前、盤の縁は太さも同じなので文で確かめられる） */
+/* ★ 2026-10-07 Aki「小中大特大より、コモン・レア・エピック・レジェンダリーに」。色もその並び（灰・青・紫・橙金）。賭けは桃 */
+const ADV_PICK_TIER_COL = { 0: "#FF8FB0", 1: "#B8C0CC", 2: "#5AA8FF", 3: "#B57CFF", 4: "#FFB547" };
+/* 数値のマスの段の値（%。耐性は点）。⚠️ 今までのルーレットの目から（advNumOf）。外れ・マイナスの目は除く */
+function advPickVals(k) {
+  const row = ADV_SPECIALS.find((x) => x.key === k) || {};
+  return row.allAttr ? [3, 4, 6, 8] : row.res ? [4, 8, 12, 20] : k === "armorer" ? [3, 4, 6, 8]
+    : row.suit ? [10, 20, 30, 40] : (row.attr || row.heal) ? [5, 10, 15, 25]
+    : k === "fruit" ? [2, 4, 6, 10] : k === "kaki" ? [5, 8, 12, 15] : k === "lake" ? [5, 10, 15, 25] : null;
+}
+function advPickTierEV(k) {
+  const v = advPickVals(k);
+  if (!v) return 0;
+  const tw = Object.values(ADV_PICK_TIER_W).reduce((x, y) => x + y, 0);
+  return [1, 2, 3, 4].reduce((x, t) => x + v[t - 1] * ADV_PICK_TIER_W[t], 0) / tw;
+}
+/*
+  ★ 2026-10-07 Aki「ピックした後のルーレットがなくなったから出して」：
+    札には段（レアリティ）と幅を見せ、選んだあとにその段の中でルーレットを回す（低い・真ん中・高い ＝ 1:2:1）。
+    幅は段の値の±2割（最低±1）。平均は段の値のまま。
+*/
+/*
+  ★ 代償（2026-10-07 Aki「戦略を出すには、＋だけでなく微量のマイナス（正味はプラス）もランダムで」）。
+  ★ 数値の札の ADV_PICK_COST_RATE に、別の能力の小さなマイナスが付く。代わりにプラスは ×ADV_PICK_COST_BOOST。
+    「きれいな小さい得」と「大きい得＋小さい損」を比べる選択になる。賭けの札には付けない。
+  ★ 代償の大きさは段（レアリティ）で上がる（ADV_PICK_COST_V）。種類は 別の属性・必殺の溜まり・回復・最大HP から。
+  ⚠️ 正味がプラスになるように、オートの点（advPickScore）で代償がプラスの5割を超える組は作り直す。
+  ⚠️ 代償は選んだ時点で確定（ルーレットはプラスの側だけ）。床屋で切り落とせる。
+*/
+const ADV_PICK_COST_RATE = 0.4, ADV_PICK_COST_BOOST = 1.3;
+const ADV_PICK_COST_V = { attr: [0, 2, 3, 5, 8], charge: [0, 5, 8, 12, 18], heal: [0, 2, 3, 4, 6], maxHp: [0, 1, 2, 3, 4], res: [0, 2, 3, 5, 8] };
+/*
+  ★ 2026-10-07 Aki「代償は同系統。耐性Aを上げたら耐性Bが少し下がる。火を上げたら水が下がる」。
+  ★ 魔法は向かい合う属性（火↔水・風↔地・光↔闇）、物理は対の武器（斬↔打・突↔射）。開いていなければ同じ系統の別のもの。
+  ★ 溜まり・湖 → 別の必殺の溜まり、耐性 → 別の耐性、回復の倍率 ↔ 最大HP（生き残りの系統）、柿の木 → 回復の倍率。
+  ⚠️ 全属性（虹の丘）・全耐性（鎧職人）は同じ系統に別のものが無いので代償を付けない。
+*/
+const ADV_PICK_OPP = { fire: "water", water: "fire", wind: "earth", earth: "wind", light: "dark", dark: "light",
+  slash: "blunt", blunt: "slash", thrust: "shoot", shoot: "thrust" };
+function advPickCostScore(c, m, open) {
+  if (!c) return 0;
+  if (c.type === "attr") {
+    const isPhys = PHYS_KEYS.indexOf(c.key) >= 0;
+    const n = Math.max(1, ((isPhys ? open && open.phys : open && open.elems) || []).length);
+    return c.v * (1 + 3 * Math.max(0, ((m && m.attr) || {})[c.key] || 0)) / Math.sqrt(n);
+  }
+  if (c.type === "charge") return c.v * 0.32;
+  if (c.type === "res") return c.v * 0.45;
+  if (c.type === "heal") return c.v * 0.3;
+  return c.v * 1.7;
+}
+function advPickBand(v) { const d = Math.max(1, Math.round(v * 0.2)); return [Math.max(1, v - d), v, v + d]; }
+function advPickRollTier(rnd = Math.random) {
+  const tw = Object.values(ADV_PICK_TIER_W).reduce((x, y) => x + y, 0);
+  let r = rnd() * tw;
+  for (const t of [1, 2, 3, 4]) { r -= ADV_PICK_TIER_W[t]; if (r < 0) return t; }
+  return 1;
+}
+/*
+  【オートの頭】隠し要素（2026-10-05 Aki「松は最適行動、竹は堅実行動、梅は普通行動のAIもガチャに。気づかないように、こっそり毎回色が少し変わる」）。
+  ★ 冒険ごと（盤の種と場所）に一つ引く。松 10% ／ 竹 30% ／ 梅 60%。オートのボタンの色がほんの少し変わるだけで、文字では出さない。
+  ★ 松：点数（advPickScore）がいちばん高い候補。竹：賭けを少し嫌い、一番を 75%・二番を 25%。梅：点数に比例してばらける。
+  ⚠️ 点数は手持ちの育ち方から見た目安（同じ属性を重ねるほど高い・最大HPは重い・耐性は★4から）。勝率の実測で詰める余地がある。
+*/
+const ADV_AI_GRADE_W = { matsu: 10, take: 30, ume: 60 };
+function advAiGradeOf(seed, place) {
+  let h = ((seed | 0) * 2654435761) >>> 0;
+  String(place || "").split("").forEach((ch) => { h = (Math.imul(h ^ ch.charCodeAt(0), 2246822519) >>> 0); });
+  const r = (h % 1000) / 10;
+  return r < ADV_AI_GRADE_W.matsu ? "matsu" : r < ADV_AI_GRADE_W.matsu + ADV_AI_GRADE_W.take ? "take" : "ume";
+}
+function advPickScore(o, m, open, star) {
+  const at = (m && m.attr) || {};
+  if (o.num) {
+    const k = o.kind, p = o.p, row = ADV_SPECIALS.find((x) => x.key === k) || {};
+    if (row.attr) {
+      const isPhys = PHYS_KEYS.indexOf(row.attr) >= 0;
+      const n = Math.max(1, ((isPhys ? open && open.phys : open && open.elems) || []).length);
+      return p * (1 + 3 * Math.max(0, at[row.attr] || 0)) / Math.sqrt(n);
+    }
+    if (row.allAttr) return p * 2.2;
+    if (row.suit) return p * 0.32 * (1 + 2 * Math.max(0, ((m && m.charge) || {})[row.suit] || 0));
+    if (row.heal) return p * 0.3;
+    if (row.res) return star >= 4 ? p * 0.45 : 0.5;
+    if (k === "armorer") return star >= 4 ? p * 2 : 1;
+    if (k === "fruit") return p * 1.7;
+    if (k === "kaki") return p * 1.7 + ADV_KAKI_MAGIC * 1.2;
+    if (k === "lake") return p * 0.3;
+    return p * 0.5;
+  }
+  const G = { cannon: 4.5, healer: 3, merchant: 4, challenge: 6, clover: 6, anvil: 3, barber: 5, stall: 2.5, kissa: 3.5, ryotei: 5 };
+  return G[o.kind] || 3;
+}
+function advPickChoose(opts, m, open, star, grade, rnd = Math.random) {
+  /* ⚠️ 代償の分は引く。竹（堅実）は代償を重く見る */
+  const sc = opts.map((o) => Math.max(0.1, advPickScore(o, m, open, star) * (grade === "take" && !o.num ? 0.7 : 1)
+    - advPickCostScore(o.cost, m, open) * (grade === "take" ? 1.5 : 1)));
+  if (grade === "ume") {
+    const tot = sc.reduce((x, y) => x + Math.max(0.1, y), 0);
+    let r = rnd() * tot;
+    for (let i = 0; i < sc.length; i++) { r -= Math.max(0.1, sc[i]); if (r < 0) return i; }
+    return sc.length - 1;
+  }
+  const ord = sc.map((v, i) => [v, i]).sort((x, y) => y[0] - x[0]);
+  if (grade === "take" && ord.length > 1 && rnd() >= 0.75) return ord[1][1];
+  return ord[0][1];
+}
 /*
   数値の目のマスの目（[値, 重み]）。値は%（耐性は点）。0 は外れ。⚠️ runSpecial と「ボス直行の平均加算」で同じものを使う。
   hasSu … 湖・霧は効く必殺を一本選べたときだけ目がある。
@@ -9787,7 +9948,8 @@ function advNumEV(k) {
 }
 /* 妨害の耐性の六つ（小MAPの耐性のマス・鎧職人・戦闘の判定で同じ並び） */
 const RUN_RES_KEYS = ["resRoar", "resRot", "resDread", "resMiasma", "resKill", "resSap"];
-const ADV_SPECIAL_KEYS = ADV_SPECIALS.map((x) => x.key);
+/* ⚠️ 選択の札（pick）も特別なマスとして数える（踏んだら一度だけ・直行の平均加算・結果の数） */
+const ADV_SPECIAL_KEYS = [...ADV_SPECIALS.map((x) => x.key), "pick"];
 const isAdvSpecial = (kind) => ADV_SPECIAL_KEYS.indexOf(kind) >= 0;
 function laneLabelOf(map, key) {
   const i = ((map && map.lanes) || []).findIndex((l) => l.head === key);
@@ -9902,19 +10064,23 @@ function buildLaneMap(pref, area, seed, mapNo, reach, star, open) {
           && !(open && x.attr && (open.elems || []).concat(open.phys || []).indexOf(x.attr) < 0)
           && !(open && x.suit && (open.sp || []).indexOf(x.suit) < 0)
           /* ⚠️ 湖・霧は必殺ゲージのどれかに効く。一本も開いていなければ置かない */
-          && !(open && x.anySp && !(open.sp || []).length));
+          && !(open && x.anySp && !(open.sp || []).length)
+          && !(open && x.shuf && ((x.shuf === "m" ? open.elems : open.phys) || []).length < 2));
         const wOf = (x) => x.w;
         /* ⚠️ 使えるマスが尽きたら、上限を無視して開いているマスから選ぶ（空のマスを残さない） */
         if (!pool.length) pool.push(...ADV_SPECIALS.filter((x) => x.from <= st && x.key !== "chain" && !x.bear && !x.food && !(x.miss && ln.boss)
           && !(open && x.attr && (open.elems || []).concat(open.phys || []).indexOf(x.attr) < 0)
           && !(open && x.suit && (open.sp || []).indexOf(x.suit) < 0)
-          && !(open && x.anySp && !(open.sp || []).length)));
+          && !(open && x.anySp && !(open.sp || []).length)
+          && !(open && x.shuf && ((x.shuf === "m" ? open.elems : open.phys) || []).length < 2)));
         const tot = pool.reduce((v, x) => v + wOf(x), 0);
         if (tot <= 0) return;
         let p = rnd() * tot;
         const pick = pool.find((x) => (p -= wOf(x)) < 0) || pool[pool.length - 1];
         n.kind = pick.key;
         used[pick.key] = (used[pick.key] || 0) + 1;
+        /* ★ 良いマスは選択の札にする（ADV_PICK_NONPICK の注）。⚠️ 置く数・重みは今までどおり（悪いマスとの割合を動かさない） */
+        if (advPickable(pick.key)) n.kind = "pick";
         if (pick.food) used.__food = 1;
       });
     });
@@ -9926,7 +10092,8 @@ function buildLaneMap(pref, area, seed, mapNo, reach, star, open) {
       const kinds = ADV_SPECIALS.filter((x) => x.from <= st && x.key !== "chain" && !x.bear && !x.food && !(x.miss && fl.boss)
         && !(open && x.attr && (open.elems || []).concat(open.phys || []).indexOf(x.attr) < 0)
         && !(open && x.suit && (open.sp || []).indexOf(x.suit) < 0)
-        && !(open && x.anySp && !(open.sp || []).length));
+        && !(open && x.anySp && !(open.sp || []).length)
+          && !(open && x.shuf && ((x.shuf === "m" ? open.elems : open.phys) || []).length < 2));
       if (kinds.length) {
         const fk = kinds[Math.floor(rnd() * kinds.length)].key;
         fl.tiles.slice(1, fl.tiles.length - 1).forEach((n) => { n.kind = fk; n.reserved = true; });
@@ -10220,32 +10387,38 @@ const ADV_I18N = {
     zakoDodge: "うまくすり抜けた！（戦闘を回避）",
     roulTitle: { lane: "どの道へ？", well: "井戸の底へ……", zako: "すり抜けられるか？", event: "何が起きる？", box: "宝箱を開ける……" },
     rFight: "戦う", rDodge: "回避", spinsLeft: (n) => `ルーレット 残り${n}`,
-    evName: { hp: "毒の霧", pot: "瓶が割れる", elem: "属性の封印", nosp: "必殺の封印", heal: "癒しの風", potUp: "落とし物" },
+    evName: { hp: "毒の霧", pot: "瓶が割れる", elem: "属性の封印", nosp: "必殺の封印", heal: "癒しの風", potUp: "落とし物", shuffle: "倍率の渦" },
     evLog: { hp: (n) => `毒の霧を吸った（HP −${n}）。`, pot: "ポーションの瓶が割れた（−1）。", elem: (n) => `属性が封じられた。主を倒すまで、構えは「${n}」だけ。`,
-      nosp: "必殺が封じられた。主を倒すまで、手動の必殺は撃てない。", heal: (n) => `癒しの風が吹いた（HP ＋${n}）。`, potUp: "ポーションを拾った（＋1）。" },
+      nosp: "必殺が封じられた。主を倒すまで、手動の必殺は撃てない。", heal: (n) => `癒しの風が吹いた（HP ＋${n}）。`, potUp: "ポーションを拾った（＋1）。",
+      shuffle: (t) => `渦に巻かれて、倍率が入れ替わった（${t}）。`, shuffleNone: "渦は何も動かさなかった。" },
     curseTag: { elem: (n) => `封印：${n}のみ`, nosp: "封印：必殺", spSeal: (n) => `封印：${n}の必殺` },
     /* ---- 特別なマス（2026-10-03）。⚠️ opt は扇に載る短い文字、desc は扇の下の一覧と記録の一行 ---- */
     sp: {
       chainOpt: (n, all) => (all ? "全部" : n ? `${n}つ` : "なし"), chainDesc: (n, all) => (all ? "鎖が絡みついた。必殺が全部封じられた" : n ? `鎖が絡みついた。必殺が${n}つ封じられた` : "鎖をすり抜けた"),
-      name: { merchant: "闇商人", challenge: "挑戦状", tunnel: "抜け穴", clover: "四つ葉", lost: "迷い道", cannon: "砲台",
+      pickTitle: "三つから一つ選ぶ", pickTier: ["", "コモン", "レア", "エピック", "レジェンダリー"], pickBet: "賭け", pickGamble: "ルーレットで決まる",
+      pickNone: "選べるものがなかった", pickCost: "代償",
+      name: { pick: "選択の札", merchant: "闇商人", challenge: "挑戦状", tunnel: "抜け穴", clover: "四つ葉", lost: "迷い道", cannon: "砲台",
         anvil: "鍛冶屋", hoard: "竜の巣", thief: "盗賊", statue: "呪いの石像", fog: "重い霧", fruit: "巨人の果実",
         lake: "静かな湖", armorer: "鎧職人", healer: "名医",
         volcano: "火山", waterfall: "滝", windmill: "風車", quarry: "石切り場", lighthouse: "灯台", shadow: "影の森",
         sword: "刃の岩", spear: "槍の陣", axe: "木こり小屋", bow: "射的場",
         arena: "闘技場", tower: "魔導塔", tavern: "酒場", market: "市場", garden: "薬草園",
         rainbow: "虹の丘", silence: "静寂の谷", saltpan: "塩田", stargaze: "星見台", bamboo: "竹林", dojo: "稽古場", onsen: "温泉", chain: "封じの鎖",
-        stall: "屋台", kissa: "喫茶", ryotei: "料亭", kaki: "柿の木", barber: "床屋", bear: "熊" },
+        stall: "屋台", kissa: "喫茶", ryotei: "料亭", kaki: "柿の木", barber: "床屋", bear: "熊", shufM: "巡る泉", shufP: "回る武器棚" },
       bearOpt: { calm: "去った", food: "奪われた", hurt: "襲われた", fight: "立ちはだかる" },
       bearDesc: { calm: "熊は静かに去っていった", food: "食べ物を奪われる", hurt: (n) => `襲われた（HP −${n}%）`, fight: "熊が立ちはだかる（勝てば宝箱）" },
       bearFood: (s2) => `「${s2}」を奪われた`, bearPot: "ポーションを1本奪われた", bearNoFood: "奪われる物は何もなかった",
       kakiPlus: (n) => `・魔法すべて +${n}%`, barberCut: (s2) => `「${s2}」を切り落とした`, barberNone: "切り落とす悪い効果がなかった",
       barberSpins: (n) => `ルーレット ${n}回`,
-      opt: { c1: "薬+2", c2: "★+2箱", sure: "ボス確定", none: "なし", boss: "ボスへ！", seal: "封印", pass: "抜ける", cave: "落盤", plus: "+1回", minus: "−1回",
+      opt: { s1: "+10%", s2: "+20%", s3: "+35%", c1: "薬+2", c2: "★+2箱", sure: "ボス確定", none: "なし", boss: "ボスへ！", seal: "封印", pass: "抜ける", cave: "落盤", plus: "+1回", minus: "−1回",
         hit4: "−4%", hit8: "−8%", miss: "外れ", up1: "★+1", up2: "★+2", broke: "壊れる", dbl: "倍", lose: "全部失う",
         steal: "盗まれる", escape: "逃げ切る", drop: "拾う", maxhp: "最大HP", charge: "溜まり", cards: "手札",
         p10: "+10%", p5: "+5%", m5: "−5%", c20: "+20%", c10: "+10%", heal5: "回復量", pot1: "薬+1",
         resRoar: "轟音耐性", resRot: "腐食耐性", resDread: "波動耐性", resMiasma: "瘴気耐性", resKill: "殺気耐性", resSap: "虚脱耐性" },
+      shufSame: "どれも元のまま",
       desc: {
+        shufM: { s1: "魔法の倍率が入れ替わった。合計 +10%", s2: "魔法の倍率が入れ替わった。合計 +20%", s3: "魔法の倍率が入れ替わった。合計 +35%" },
+        shufP: { s1: "武器の倍率が入れ替わった。合計 +10%", s2: "武器の倍率が入れ替わった。合計 +20%", s3: "武器の倍率が入れ替わった。合計 +35%" },
         merchant: { c1: "宝箱1個を渡して、ポーション+2", c2: "宝箱2個を渡して、★+2の宝箱", sure: "最大HP−10%を払って、ボス確定", none: "取引は成立しなかった" },
         challenge: { sure: "ボス確定。ただしボスのHP+15%", none: "何も起きなかった", already: "もうボスは確定している" },
         tunnel: { boss: "大当たり！ ボスの目の前へ抜けた（通らないマスの平均はすべて受け取れる）",
@@ -10622,31 +10795,36 @@ const ADV_I18N = {
     zakoDodge: "You slipped past! (battle avoided)",
     roulTitle: { lane: "Which road?", well: "Into the well…", zako: "Slip past?", event: "What happens?", box: "Opening the chest…" },
     rFight: "Fight", rDodge: "Dodge", spinsLeft: (n) => `Spins left: ${n}`,
-    evName: { hp: "Toxic mist", pot: "Broken flask", elem: "Element seal", nosp: "Finisher seal", heal: "Healing wind", potUp: "Lucky find" },
+    evName: { hp: "Toxic mist", pot: "Broken flask", elem: "Element seal", nosp: "Finisher seal", heal: "Healing wind", potUp: "Lucky find", shuffle: "Multiplier whirl" },
     evLog: { hp: (n) => `You breathed toxic mist (HP −${n}).`, pot: "A potion flask broke (−1).", elem: (n) => `Your elements are sealed: only ${n} until the master falls.`,
       nosp: "Your finishers are sealed until the master falls.", heal: (n) => `A healing wind (HP +${n}).`, potUp: "You found a potion (+1)." },
     curseTag: { elem: (n) => `Seal: ${n} only`, nosp: "Seal: finisher", spSeal: (n) => `Seal: ${n} finisher` },
     sp: {
       chainOpt: (n, all) => (all ? "All" : n ? `${n}` : "None"), chainDesc: (n, all) => (all ? "Chains wrapped around you: every finisher sealed" : n ? `Chains wrapped around you: ${n} finisher${n > 1 ? "s" : ""} sealed` : "You slipped past the chains"),
-      name: { merchant: "Shady Merchant", challenge: "Challenge Letter", tunnel: "Hidden Passage", clover: "Four-leaf Clover", lost: "Lost Path",
+      pickTitle: "Pick one of three", pickTier: ["", "Common", "Rare", "Epic", "Legendary"], pickBet: "Gamble", pickGamble: "Decided by roulette",
+      pickNone: "Nothing to pick", pickCost: "Cost",
+      name: { pick: "Pick", merchant: "Shady Merchant", challenge: "Challenge Letter", tunnel: "Hidden Passage", clover: "Four-leaf Clover", lost: "Lost Path",
         cannon: "Cannon", anvil: "Anvil", hoard: "Dragon's Hoard", thief: "Thief", statue: "Cursed Statue", fog: "Heavy Fog",
         fruit: "Giant's Fruit", lake: "Still Lake", armorer: "Armorer", healer: "Healer",
         volcano: "Volcano", waterfall: "Waterfall", windmill: "Windmill", quarry: "Quarry", lighthouse: "Lighthouse", shadow: "Shadow Grove",
         sword: "Blade Rock", spear: "Spear Camp", axe: "Lumber Camp", bow: "Archery Range",
         arena: "Arena", tower: "Mage Tower", tavern: "Tavern", market: "Market", garden: "Herb Garden",
         rainbow: "Rainbow Hill", silence: "Silent Vale", saltpan: "Salt Pans", stargaze: "Stargazer's Hill", bamboo: "Bamboo Grove", dojo: "Training Yard", onsen: "Hot Spring", chain: "Binding Chains",
-        stall: "Food Stall", kissa: "Café", ryotei: "Ryotei", kaki: "Persimmon Tree", barber: "Barber", bear: "Bear" },
+        stall: "Food Stall", kissa: "Café", ryotei: "Ryotei", kaki: "Persimmon Tree", barber: "Barber", bear: "Bear", shufM: "Swirling Spring", shufP: "Spinning Rack" },
       bearOpt: { calm: "Leaves", food: "Robbed", hurt: "Mauled", fight: "Fight" },
       bearDesc: { calm: "The bear wandered quietly away", food: "It steals your food", hurt: (n) => `Mauled (HP −${n}%)`, fight: "The bear blocks the way (a chest if you win)" },
       bearFood: (s2) => `"${s2}" was stolen`, bearPot: "A potion was stolen", bearNoFood: "There was nothing to steal",
       kakiPlus: (n) => ` · all magic +${n}%`, barberCut: (s2) => `Snipped away "${s2}"`, barberNone: "Nothing bad to snip away",
       barberSpins: (n) => `Roulette ${n}`,
-      opt: { c1: "Pot+2", c2: "★+2 box", sure: "Boss!", none: "None", boss: "To the boss!", seal: "Seal", pass: "Through", cave: "Cave-in", plus: "+1 spin", minus: "−1 spin",
+      opt: { s1: "+10%", s2: "+20%", s3: "+35%", c1: "Pot+2", c2: "★+2 box", sure: "Boss!", none: "None", boss: "To the boss!", seal: "Seal", pass: "Through", cave: "Cave-in", plus: "+1 spin", minus: "−1 spin",
         hit4: "−4%", hit8: "−8%", miss: "Miss", up1: "★+1", up2: "★+2", broke: "Broken", dbl: "Double", lose: "Lose all",
         steal: "Stolen", escape: "Escape", drop: "Loot", maxhp: "Max HP", charge: "Charge", cards: "Hand",
         p10: "+10%", p5: "+5%", m5: "−5%", c20: "+20%", c10: "+10%", heal5: "Heal+", pot1: "Pot+1",
         resRoar: "Roar res", resRot: "Rot res", resDread: "Dread res", resMiasma: "Miasma res", resKill: "Killing-intent res", resSap: "Sap res" },
+      shufSame: "Everything stayed as it was",
       desc: {
+        shufM: { s1: "Your magic multipliers were shuffled. Total +10%", s2: "Your magic multipliers were shuffled. Total +20%", s3: "Your magic multipliers were shuffled. Total +35%" },
+        shufP: { s1: "Your weapon multipliers were shuffled. Total +10%", s2: "Your weapon multipliers were shuffled. Total +20%", s3: "Your weapon multipliers were shuffled. Total +35%" },
         merchant: { c1: "Trade 1 chest for 2 potions", c2: "Trade 2 chests for a ★+2 chest", sure: "Pay 10% max HP: the boss is certain", none: "No deal" },
         challenge: { sure: "The boss is certain, but the boss has +15% HP", none: "Nothing happened", already: "The boss is already certain" },
         tunnel: { boss: "Jackpot! Straight to the boss (you get the average of every tile you skip)",
@@ -11237,7 +11415,7 @@ const AREA_POS = {
       房総の真ん中に千葉市があることになっていた。
     ★ 千葉市は県の北西部・東京湾岸。東葛飾（22.8）と君津（67.6）のあいだ。
   */
-  chiba: { "東葛飾": { x: 27.6, y: 22.8 }, "千葉": { x: 24.4, y: 40.0 }, "印旛": { x: 61.2, y: 22.8 }, "香取": { x: 72.4, y: 29.2 }, "海匝": { x: 64.4, y: 40.4 }, "安房": { x: 26, y: 83.6 }, "君津": { x: 32.4, y: 67.6 } },
+  chiba: { "東葛飾": { x: 27.6, y: 22.8 }, "千葉": { x: 24.4, y: 40.0 }, "印旛": { x: 44.4, y: 22.8 }, "成田空港": { x: 61.2, y: 22.8 }, "香取": { x: 72.4, y: 29.2 }, "海匝": { x: 64.4, y: 40.4 }, "安房": { x: 26, y: 83.6 }, "君津": { x: 32.4, y: 67.6 } },
   /*
     ⚠️⚠️ 区部は真ん中。47都道府県を制覇するまで「？？？」で伏せる。
       東京の制覇には数えない（区部が開くのは全国制覇のあとなので、
@@ -19655,6 +19833,7 @@ function BirthCardBox({ lang }) {
                   <div className="card-depth" aria-hidden="true" />
                   <div className="card-shine-layer" aria-hidden="true" />
                   <div className="card-face" style={{ "--accent": "var(--gold)" }}>
+                    <MajorArt card={card} />
                     <div className="card-corner">{card.corner}</div>
                     <div className="card-icon"><Sparkles size={i === 0 ? 26 : 18} /></div>
                     <div className="card-text-wrap">
@@ -19941,6 +20120,7 @@ function JourneyReading({ lang, win, onReward, onDone, auto }) {
                       <div className="card-depth" aria-hidden="true" />
                       <div className="card-shine-layer" aria-hidden="true" />
                       <div className={`card-face ${c.reversed ? "reversed" : ""}`} style={{ "--accent": "var(--gold)" }}>
+                        <MajorArt card={c} />
                         <div className="card-corner">{c.corner}</div>
                         <div className="card-icon"><Sparkles size={18} /></div>
                         <div className="card-text-wrap keep-readable">
@@ -28183,6 +28363,7 @@ function MultiPanel({ lang, onBack, spreadKey }) {
                   onClick={() => flip(c.key)}>
                   {open ? (
                     <>
+                      <MajorArt card={c} />
                       <span className="mem-no">{c.corner}</span>
                       <span className="mem-name">{getCardName(c, lang)}</span>
                     </>
@@ -28294,6 +28475,7 @@ function MultiPanel({ lang, onBack, spreadKey }) {
                       + (c.id === "major-13" && spreadKey === "reaper" ? " death" : "")
                       + (c.id === "major-21" && spreadKey === "worldGrab" ? " world" : "")}>
                     <span className="multi-face-sheen" aria-hidden="true" />
+                    <MajorArt card={c} />
                     <span className="card-corner">{c.corner}</span>
                     <span className="card-icon">
                       {c.Icon ? <c.Icon size={14} /> : <Sparkles size={14} />}
@@ -28505,6 +28687,7 @@ function AnalogFaceGrid({ lang, ids, used, onPick }) {
             <div className="analog-face-card" style={{ "--accent": c.accent || "var(--gold)" }}>
               {/* 艶。斜めに一本走らせるだけで、紙ではなく札に見える */}
               <span className="analog-face-sheen" aria-hidden="true" />
+              <MajorArt card={c} />
               <div className="card-corner">{c.corner}</div>
               <div className="card-icon">{c.Icon ? <c.Icon size={15} /> : <Sparkles size={15} />}</div>
               <div className="analog-face-name">{getCardName(c, lang)}</div>
@@ -28936,6 +29119,7 @@ function AnalogPanel({ lang, onBack, onSubmit, initialByFace }) {
                         return (
                           <span className={`analog-cell-face${c.reversed === true ? " rev" : ""}`}
                             style={{ "--accent": src2.accent || "var(--gold)" }}>
+                            <MajorArt card={src2} />
                             <span className="card-corner">{src2.corner}</span>
                             <span className="card-icon">
                               {src2.Icon ? <src2.Icon size={13} /> : <Sparkles size={13} />}
@@ -29062,6 +29246,7 @@ function AnalogPanel({ lang, onBack, onSubmit, initialByFace }) {
                       {src2 ? (
                         <span className={`analog-cell-face${c.reversed === true ? " rev" : ""}`}
                           style={{ "--accent": src2.accent || "var(--gold)" }}>
+                          <MajorArt card={src2} />
                           <span className="card-corner">{src2.corner}</span>
                           <span className="card-icon">
                             {src2.Icon ? <src2.Icon size={13} /> : <Sparkles size={13} />}
@@ -30389,6 +30574,7 @@ function YesNoPanel({ lang, onBack }) {
                 >
                   {open ? (
                     <span className={`yn-card-face ${c.reversed ? "reversed" : ""}`}>
+                      <MajorArt card={c} />
                       <span className="yn-card-corner">{c.corner}</span>
                       {/* 札の名前も出す。記号だけだと何を引いたか分からない */}
                       <span className="yn-card-name">{getCardName(c, lang)}</span>
@@ -33532,6 +33718,7 @@ function HexagramPanel({ lang, onBack, question, userName, canDraw, onConsume, o
                           {info.pos[i]}
                         </span>
                         <div className={`card-face ${d.reversed ? "reversed" : ""}`} style={{ "--accent": d.accent || "var(--gold)" }}>
+                          <MajorArt card={d} />
                           <div className="card-corner">{d.corner}</div>
                           <div className="card-icon">{d.Icon ? <d.Icon size={16} /> : <Sparkles size={16} />}</div>
                           <div className={`card-text-wrap${needsUprightText ? " keep-readable" : ""}`}>
@@ -78186,6 +78373,7 @@ function BattlePanel({ lang, star, stageName, onEnd, theme, rank, zako, startHP,
                   */
                   className={`bt-card${c.shield ? " shield" : ""}${st.fx.hiero > 0 ? " blessed" : ""}${(st.fx.hanged > 0 && c.reversed) ? " upside" : ""}${i < (st.shown % st.hand.length || (st.shown ? st.hand.length : 0)) ? " used" : ""}${i === st.shown % st.hand.length ? " now" : ""}${(c.reversed && st.fx.hiero <= 0) ? " rev" : ""}${c.rotten ? " rotten" : ""}`}
                   style={{ "--accent": c.accent || "var(--gold)" }}>
+                  <MajorArt card={c} />
                   <span className="bt-card-corner">{c.corner}</span>
                   {c.Icon ? <c.Icon size={13} /> : <Sparkles size={13} />}
                 </span>
@@ -78646,6 +78834,7 @@ function FortunePanel({ lang, onBack }) {
                 className={`card-face ${shown.reversed ? "reversed" : ""}`}
                 style={{ "--accent": shown.accent || "var(--gold)" }}
               >
+                <MajorArt card={shown} />
                 <div className="card-corner">{shown.corner}</div>
                 <div className="card-icon">{shown.Icon ? <shown.Icon size={24} /> : <Sparkles size={24} />}</div>
                 <div className={`card-text-wrap${needsUprightText ? " keep-readable" : ""}`}>
@@ -79243,6 +79432,7 @@ function OneOraclePanel({ lang, onBack, onHoloConsumed, deck = "major", onCollec
               className={`card-face ${card.reversed ? "reversed" : ""}`}
               style={{ "--accent": card.accent || "var(--gold)" }}
             >
+              <MajorArt card={card} />
               <div className="card-corner">{card.corner}</div>
               <div className="card-icon">{card.Icon ? <card.Icon size={24} /> : <Sparkles size={24} />}</div>
               <div className={`card-text-wrap${needsUprightText ? " keep-readable" : ""}`}>
@@ -81068,28 +81258,57 @@ const STANCE_ICON_COLOR = { earth: "#C8925E", fire: "#FF6A50", water: "#5AA8FF",
 function PhysGlyph({ k, size }) {
   const c = PHYS_COLOR[k] || "#FFF3D6";
   const z = size || 18;
+  /*
+    ★ 2026-10-07 Aki「戦闘画面の武器4種が武器に見えない（特に斧）」→ 描き直し。
+    剣＝刃・樋・鍔・柄頭、槍＝木の葉形の穂先・口金・房、斧＝柄の近くは細く刃先へ広がる刃・金具、弓＝両端の反った弓・弦・矢羽根。
+    ⚠️ 12〜17px で読めること。弓の矢は斜めにして弦と直交させない（十字に見せない）。矢羽根は弦から離す。
+  */
+  const dk = "rgba(10,6,20,0.45)";
   const body = k === "thrust" ? (
     <g>
-      <path d="M4.5 19.5 L16.2 7.8" stroke={c} strokeWidth="2" strokeLinecap="round" />
-      <path d="M15 5.2 L20.4 3.6 L18.8 9 L16.6 8.6 L15.4 7.4 Z" fill={c} />
+      {/* 柄 */}
+      <path d="M3.2 20.8 L14.6 9.4" stroke={c} strokeWidth="1.7" strokeLinecap="round" />
+      {/* 口金 */}
+      <path d="M13.2 9.2 L14.8 10.8" stroke={c} strokeWidth="2.6" strokeLinecap="round" />
+      {/* 穂先（木の葉形） */}
+      <path d="M14.4 9.6 C14.2 6.6 17 4.2 21.2 2.8 C19.8 7 17.4 9.8 14.4 9.6 Z" fill={c} />
+      <path d="M15.2 8.8 L20 4" stroke={dk} strokeWidth="0.7" strokeLinecap="round" />
+      {/* 房 */}
+      <path d="M12.4 10.8 L10.6 13.4 M12.9 11.4 L11.8 14.2" stroke={c} strokeWidth="0.9" strokeLinecap="round" opacity="0.75" />
     </g>
   ) : k === "blunt" ? (
-    <g>
-      <path d="M5 20 L15.2 8.6" stroke={c} strokeWidth="2.2" strokeLinecap="round" />
-      <path d="M12.4 4.2 Q20.6 4.4 20.4 12 L15.6 9.8 L13.2 7.6 Z" fill={c} />
+    <g transform="translate(12.4 13) scale(0.9) rotate(36) translate(-12 -12)">
+      {/* 柄 */}
+      <path d="M13 22.6 L13 2.4" stroke={c} strokeWidth="2" strokeLinecap="round" opacity="0.8" />
+      {/* 刃。⚠️ 柄の近くは細く、刃先へ向けて上下に広がる（斧に見える形） */}
+      <path d="M12.4 4.4 L7.6 3.2 Q5 2.4 3.4 0.9 Q1.4 7 3.4 13.1 Q5 11.6 7.6 10.8 L12.4 9.6 Z" fill={c} />
+      {/* 刃先の光 */}
+      <path d="M4.2 2.8 Q2.9 7 4.2 11.2" stroke="#FFFFFF" strokeWidth="0.9" fill="none" strokeLinecap="round" opacity="0.65" />
+      {/* 頭の留め（柄に巻いた金具） */}
+      <path d="M11.4 4 L14.6 4 L14.6 10 L11.4 10 Z" fill={c} />
+      <path d="M11.4 7 L14.6 7" stroke={dk} strokeWidth="0.7" />
     </g>
   ) : k === "shoot" ? (
-    <g fill="none" stroke={c} strokeLinecap="round">
-      <path d="M7.5 3 Q19.5 9 7.5 21" strokeWidth="2" />
-      <path d="M7.5 3.4 L7.5 20.6" strokeWidth="0.9" opacity="0.8" />
-      <path d="M4 19.5 L18.5 5" strokeWidth="1.6" />
-      <path d="M15.4 4.6 L19.4 4.1 L18.9 8.1" strokeWidth="1.6" strokeLinejoin="round" />
+    <g fill="none" strokeLinecap="round" strokeLinejoin="round">
+      {/* 弓（両端が反る） */}
+      <path d="M6.6 2.4 Q8.8 3 10.6 4.6 Q17.2 11.2 10.6 19.4 Q8.8 21 6.6 21.6" stroke={c} strokeWidth="2.2" />
+      {/* 弦 */}
+      <path d="M6.6 2.4 L6.6 21.6" stroke={c} strokeWidth="0.8" opacity="0.85" />
+      {/* 矢（斜め。弦と直交させない） */}
+      <path d="M2.6 19.8 L19.4 6.4" stroke={c} strokeWidth="1.3" />
+      <path d="M21.2 5 L17.4 6 L19.8 8.8 Z" fill={c} stroke={c} strokeWidth="0.6" />
+      <path d="M3.4 19.2 L2 17.2 M4.5 18.3 L3.1 16.3" stroke={c} strokeWidth="0.9" />
     </g>
   ) : (
     <g>
-      <path d="M5.6 18.4 L16.6 7.4 L19.6 4.4 L18.4 8.8 L7.4 19.8 Z" fill={c} />
-      <path d="M4.2 14.6 L9.4 19.8" stroke={c} strokeWidth="1.8" strokeLinecap="round" />
-      <path d="M3.4 20.6 L5.6 18.4" stroke={c} strokeWidth="2.2" strokeLinecap="round" />
+      {/* 刃（幅のある刃と切っ先） */}
+      <path d="M8.6 13.6 L18.8 3.4 L21.2 2.8 L20.6 5.2 L10.4 15.4 Z" fill={c} />
+      <path d="M9.8 14.2 L19.6 4.4" stroke={dk} strokeWidth="0.7" strokeLinecap="round" />
+      {/* 鍔 */}
+      <path d="M5.8 12.6 L11.4 18.2" stroke={c} strokeWidth="2.4" strokeLinecap="round" />
+      {/* 握り・柄頭 */}
+      <path d="M8.2 15.8 L4.4 19.6" stroke={c} strokeWidth="2.2" strokeLinecap="round" opacity="0.8" />
+      <circle cx="3.6" cy="20.4" r="1.6" fill={c} />
     </g>
   );
   return <svg viewBox="0 0 24 24" width={z} height={z} aria-hidden="true">{body}</svg>;
@@ -87400,6 +87619,66 @@ ADV_GLYPH4.bear = Glyph5Bear;
 ADV_GLYPH4_TILE.bear = [70, 104, 62];
 Object.assign(ADV_GLYPH, ADV_GLYPH2, ADV_GLYPH3, ADV_GLYPH4);
 Object.assign(ADV_GLYPH_TILE, ADV_GLYPH2_TILE, ADV_GLYPH3_TILE, ADV_GLYPH4_TILE);
+/*
+  選択の札（2026-10-05）。扇に開いた三枚の札。⚠️ イベント（紫の「？」）と見分けが付くこと。
+  ⚠️ マスの絵の決まり：原点がマスの中心・x ±7.5・y −9.5〜5.5・静止・defs や id を使わない。
+*/
+function Glyph6Pick() {
+  return (
+    <g>
+      <ellipse cx="0" cy="4.6" rx="6.4" ry="1.6" fill="rgba(10,6,20,0.45)" />
+      <g transform="rotate(-24 0 4)"><rect x="-2.6" y="-7.6" width="5.2" height="10" rx="0.8" fill="#3B2F72" stroke="#E8C46A" strokeWidth="0.55" /></g>
+      <g transform="rotate(24 0 4)"><rect x="-2.6" y="-7.6" width="5.2" height="10" rx="0.8" fill="#4A2D63" stroke="#E8C46A" strokeWidth="0.55" /></g>
+      <rect x="-2.8" y="-8.4" width="5.6" height="10.6" rx="0.9" fill="#2A1F52" stroke="#FFE08A" strokeWidth="0.6" />
+      <path d="M0 -6 L1.7 -3.2 L0 -0.4 L-1.7 -3.2 Z" fill="#FFE08A" />
+      <path d="M-1.6 0.9 H1.6" stroke="#E8C46A" strokeWidth="0.45" opacity="0.7" />
+    </g>
+  );
+}
+ADV_GLYPH.pick = Glyph6Pick;
+/*
+  倍率のシャッフル（2026-10-07）。三つの玉が輪になって入れ替わる。魔法は火・水・光の玉、武器は鉄・銅・鋼の玉。
+  ⚠️ 十字に見える交差は使わない（矢は輪に沿った弧）。静止・defs と id を使わない。
+*/
+function Glyph5Shuf({ cols }) {
+  const R = 4.4, cy = -2;
+  const pt = (d) => [R * Math.cos(d * Math.PI / 180), cy + R * Math.sin(d * Math.PI / 180)];
+  const f = (v) => Math.round(v * 100) / 100;
+  return (
+    <g>
+      <ellipse cx="0" cy="4.8" rx="7" ry="1.7" fill="rgba(10,6,20,0.45)" />
+      <ellipse cx="0" cy="3.4" rx="6.2" ry="1.9" fill="#5A4A6A" stroke="#241A30" strokeWidth="0.5" />
+      <ellipse cx="-1.2" cy="3.0" rx="3.2" ry="0.7" fill="#7E6C90" opacity="0.7" />
+      {[0, 1, 2].map((i) => {
+        const a0 = -90 + i * 120 + 28, a1 = a0 + 64;
+        const [x0, y0] = pt(a0), [x1, y1] = pt(a1);
+        const th = (a1 + 90) * Math.PI / 180, nx = -Math.sin(th), ny = Math.cos(th), tx = Math.cos(th), ty = Math.sin(th);
+        const tip = [x1 + tx * 1.2, y1 + ty * 1.2], b1 = [x1 + nx * 0.85, y1 + ny * 0.85], b2 = [x1 - nx * 0.85, y1 - ny * 0.85];
+        return (
+          <g key={i}>
+            <path d={`M${f(x0)} ${f(y0)} A${R} ${R} 0 0 1 ${f(x1)} ${f(y1)}`} fill="none" stroke="#2A1E3C" strokeWidth="1.1" strokeLinecap="round" />
+            <path d={`M${f(x0)} ${f(y0)} A${R} ${R} 0 0 1 ${f(x1)} ${f(y1)}`} fill="none" stroke="#F4E6FF" strokeWidth="0.55" strokeLinecap="round" />
+            <path d={`M${f(tip[0])} ${f(tip[1])} L${f(b1[0])} ${f(b1[1])} L${f(b2[0])} ${f(b2[1])} Z`} fill="#F4E6FF" stroke="#2A1E3C" strokeWidth="0.3" />
+          </g>
+        );
+      })}
+      {[0, 1, 2].map((i) => {
+        const [x, y] = pt(-90 + i * 120);
+        return (
+          <g key={i}>
+            <circle cx={f(x)} cy={f(y)} r="1.7" fill={cols[i]} stroke="#2A1E3C" strokeWidth="0.5" />
+            <circle cx={f(x - 0.5)} cy={f(y - 0.6)} r="0.55" fill="#FFFFFF" opacity="0.75" />
+          </g>
+        );
+      })}
+    </g>
+  );
+}
+const GlyphShufM = () => <Glyph5Shuf cols={["#FF6A4A", "#4AA8FF", "#FFE06A"]} />;
+const GlyphShufP = () => <Glyph5Shuf cols={["#C8D0DC", "#C08A4E", "#8A94A8"]} />;
+ADV_GLYPH.shufM = GlyphShufM; ADV_GLYPH.shufP = GlyphShufP;
+ADV_GLYPH_TILE.pick = [58, 112, 124];
+ADV_GLYPH_TILE.shufM = [196, 84, 160]; ADV_GLYPH_TILE.shufP = [120, 140, 172];
 /* ==== ADV_GLYPH END ==== */
 /*
   小MAPの盤（空・遠景・地形・道・マス・駒）。
@@ -87418,7 +87697,7 @@ Object.assign(ADV_GLYPH_TILE, ADV_GLYPH2_TILE, ADV_GLYPH3_TILE, ADV_GLYPH4_TILE)
 const ADV_CULL_MX = VIEW_W * 1.4, ADV_CULL_MY = VIEW_H * 1.4;
 function advCullSnap(v, step) { const h = step / 2; return Math.round(v / h) * h; }
 function advInCull(x, y, cx, cy) { return cx == null || (Math.abs(x - cx) < ADV_CULL_MX && Math.abs(y - cy) < ADV_CULL_MY); }
-const AdvBoard = memo(function AdvBoard({ walking, map, seed, pref, area, heroOn, heroKind, mapBox, cur, visited, usedNodes, cx, cy }) {
+const AdvBoard = memo(function AdvBoard({ walking, map, seed, pref, area, heroOn, heroKind, mapBox, cur, visited, usedNodes, picks, cx, cy }) {
   const iso = hexAt;
   /* 六角の頂点。⚠️ 平頂。尖頭にすると横に並べたとき隙間が空く */
   /* 六角の輪郭。⚠️ 大きさを変えて何重にも使うので、関数で持つ */
@@ -87950,7 +88229,10 @@ const AdvBoard = memo(function AdvBoard({ walking, map, seed, pref, area, heroOn
             const here = n.key === cur;
             const reach = (byKey[cur]?.next || []).includes(n.key);
             const seen = visited.includes(n.key);
-            const c = TILE_COLOR(n.kind, here, seen);
+            /* ★ 選んだ選択の札は、選んだマスの絵と色になる（段の色の縁を残す） */
+            const pd = picks && picks[n.key];
+            const nk = pd ? pd.kind : n.kind;
+            const c = TILE_COLOR(nk, here, seen);
             /* ⚠️ 2026-09-30 Aki：「前みたいに立体感」。台の厚みを 5→10（主は 8→14）。影も広く深く */
             const R = HEX_R, H = HEX_H, D = n.kind === "boss" ? 14 : 10;
             return (
@@ -88081,9 +88363,13 @@ const AdvBoard = memo(function AdvBoard({ walking, map, seed, pref, area, heroOn
                   </g>
                 )}
                 {/* 特別なマス（2026-10-03）。⚠️ 静止画。使ったら薄くする */}
-                {ADV_GLYPH[n.kind] && (() => {
-                  const Gl = ADV_GLYPH[n.kind];
-                  return <g transform="scale(1.85)" opacity={usedNodes.includes(n.key) ? 0.38 : 1}><Gl /></g>;
+                {pd && (
+                  <path d={`M${hexPath(R * 0.92)} Z`} fill="none" stroke={ADV_PICK_TIER_COL[pd.tier]} strokeWidth="1.8" opacity="0.95" />
+                )}
+                {ADV_GLYPH[nk] && (() => {
+                  const Gl = ADV_GLYPH[nk];
+                  /* ⚠️ 使ったマスは薄く。選んだ札は記録として少し濃く残す */
+                  return <g transform="scale(1.85)" opacity={usedNodes.includes(n.key) ? (pd ? 0.72 : 0.38) : 1}><Gl /></g>;
                 })()}
                 {n.kind === "potion" && !usedNodes.includes(n.key) && (
                   <g className="mv-bob" transform="scale(1.8)">
@@ -88411,6 +88697,10 @@ function AdventurePanel({ lang, items, onItem }) {
     ⚠️ 見えた瞬間に戻すので見た目は変わらない（hidden は描いた結果を捨てずに持っている）。
   */
   const [mapOff, setMapOff] = useState(false);
+  /* ★ ピックの三択（2026-10-05）。{ id, nodeKey, nd, opts, chosen, auto } */
+  const [pickOffer, setPickOffer] = useState(null);
+  const pickOfferRef = useRef(null);
+  const pickKickRef = useRef(null);
   useEffect(() => {
     if (typeof IntersectionObserver === "undefined") return undefined;
     let io = null, el = null;
@@ -88631,6 +88921,8 @@ function AdventurePanel({ lang, items, onItem }) {
 
   /* ⚠️ 区部そのものは歩けない。区を選んで初めて小MAPになる */
   const walking = stage;
+  /* ★ オートの頭（隠し要素 ADV_AI_GRADE_W）。冒険ごとに一つ */
+  const aiGrade = advAiGradeOf(seed, walking);
   /* ⚠️ 段はここから取ること。cleared.length を直に使わない（上書きが効かなくなる） */
   const rank = stepOver == null ? advStepIn(cleared, pref) : stepOver;
   /*
@@ -88894,6 +89186,7 @@ function AdventurePanel({ lang, items, onItem }) {
             <div className="card-depth" aria-hidden="true" />
             <div className="card-shine-layer" aria-hidden="true" />
             <div className="card-face" style={{ "--accent": "var(--gold)" }}>
+              <MajorArt card={trial.kind === "suit" ? null : { id: `major-${trialN}` }} />
               <div className="card-corner">{trial.kind === "suit" ? "✦" : MAJOR_ROMAN[trialN]}</div>
               <div className="card-icon"><Sparkles size={24} /></div>
               <div className="card-text-wrap keep-readable"><div className="card-name">{nm}</div></div>
@@ -89762,12 +90055,41 @@ function AdventurePanel({ lang, items, onItem }) {
   const addHeal = (d) => modRun((m) => ({ ...m, heal: Math.max(ADV_RUN_CAP.healLo, Math.min(ADV_RUN_CAP.healHi, (m.heal || 0) + d)) }));
   /* 妨害の耐性（点）。⚠️ 一つあたり ADV_RUN_CAP.res まで。戦闘の判定で全体の上限（DEBUFF_BLOCK_CAP）も通る */
   const addRes = (k2, d) => modRun((m) => ({ ...m, res: { ...(m.res || {}),
-    [k2]: Math.min(ADV_RUN_CAP.res, ((m.res || {})[k2] || 0) + d) } }));
+    /* ⚠️ 代償（2026-10-07）で下がることがある。下は −20 まで */
+    [k2]: Math.max(-20, Math.min(ADV_RUN_CAP.res, ((m.res || {})[k2] || 0) + d)) } }));
   /*
     レアなマス（虹の丘・鎧職人）で付いた分を別に覚える（2026-10-05 Aki「レアマスによるレアバフは黄色」）。
     ⚠️ 値そのものは attr / res に足してある。ここは表示で黄色に分けるためだけ
   */
   const addRare = (kind, d) => modRun((m) => ({ ...m, rare: { ...(m.rare || {}), [kind]: ((m.rare || {})[kind] || 0) + d } }));
+  /*
+    倍率のシャッフル（2026-10-07 Aki）。grp … "m" 魔法／"p" 物理（武器）。g … 合計に足す割合（0 ならただの入れ替え）。
+    ★ 開いている属性の倍率の値を、ランダムな並べ替えに入れ替える（元の属性に戻ることもある）。
+    ★ g>0 のときは、入れ替えたあとの正の倍率に比例して足す（正が無ければ一つに足す）。合計は必ず増える。
+    返り値 { text, changed } … 動かなかったら changed は 0。開いている属性が2つ未満なら null。
+  */
+  const shuffleRun = (grp, g) => {
+    const open = (grp === "m" ? laneOpen.elems : laneOpen.phys).filter((k2) => ATTR_KEYS.indexOf(k2) >= 0);
+    if (open.length < 2) return null;
+    const cur = runModRef.current.attr || {};
+    const vals = open.map((k2) => cur[k2] || 0);
+    const perm = vals.slice();
+    for (let i = perm.length - 1; i > 0; i--) { const j = Math.floor(Math.random() * (i + 1)); const t = perm[i]; perm[i] = perm[j]; perm[j] = t; }
+    if (g > 0) {
+      const pos = perm.reduce((x, v) => x + Math.max(0, v), 0);
+      const bonus = g * Math.max(0.1, pos);
+      const idx = perm.map((v, i) => (v > 0 ? i : -1)).filter((i) => i >= 0);
+      if (idx.length) idx.forEach((i) => { perm[i] += bonus * perm[i] / pos; });
+      else perm[Math.floor(Math.random() * perm.length)] += bonus;
+    }
+    const nv = {};
+    open.forEach((k2, i) => { nv[k2] = Math.round(perm[i] * 10000) / 10000; });
+    modRun((m) => ({ ...m, attr: { ...(m.attr || {}), ...nv } }));
+    const pc = (v) => `${v >= 0 ? "+" : "−"}${Math.abs(Math.round(v * 100))}%`;
+    const parts = open.map((k2, i) => ({ k2, b: vals[i], n: nv[k2] })).filter((x) => Math.abs(x.n - x.b) > 0.0049)
+      .map((x) => `${a.sp.attrOf(x.k2)} ${pc(x.b)}→${pc(x.n)}`);
+    return { text: parts.length ? parts.join(" / ") : a.sp.shufSame, changed: parts.length };
+  };
   /* ⚠️ 開いている必殺の中から一本（湖・霧・石像の「溜まり」は、ルーレットを回す前に決めておく） */
   const pickSuit = () => { const op = laneOpen.sp; return op.length ? op[Math.floor(Math.random() * op.length)] : null; };
   /*
@@ -89786,9 +90108,17 @@ function AdventurePanel({ lang, items, onItem }) {
     const opSu = laneOpen.sp.length ? laneOpen.sp : SP_SUITS;
     const add = { attr: {}, charge: {}, res: {}, heal: 0, maxHp: 0, bossCut: 0, rareAttr: 0, rareRes: 0, rareMagic: 0 };
     let cnt = 0;
+    /* ★ 選択の札は「開いている属性のどれか一つ」の段の平均（どれかは盤のマスの名前で決める） */
+    const pkAttr = ADV_SPECIALS.filter((x) => x.attr && laneOpen.elems.concat(laneOpen.phys).indexOf(x.attr) >= 0).map((x) => x.key);
     skip.forEach((n) => {
-      const k = n.kind, row = ADV_SPECIALS.find((x) => x.key === k) || {};
-      const ev = advNumEV(k);
+      let k = n.kind;
+      if (k === "pick") {
+        if (!pkAttr.length) return;
+        const h = String(n.key).split("").reduce((x, ch) => (x * 31 + ch.charCodeAt(0)) >>> 0, 7);
+        k = pkAttr[h % pkAttr.length];
+      }
+      const row = ADV_SPECIALS.find((x) => x.key === k) || {};
+      const ev = n.kind === "pick" ? advPickTierEV(k) : advNumEV(k);
       if (!ev) return;
       cnt++;
       if (row.allAttr) { ATTR_KEYS.forEach((k2) => { add.attr[k2] = (add.attr[k2] || 0) + ev / 100; }); add.rareAttr += ev / 100; }
@@ -89838,6 +90168,12 @@ function AdventurePanel({ lang, items, onItem }) {
         else if ((k === "lake" || k === "fog") && su) addCharge(su, p / 100);
       }
       say();
+      return;
+    }
+    /* ★ 倍率のシャッフル（魔法・武器）。目は増える幅（ADV_SHUF_G） */
+    if (k === "shufM" || k === "shufP") {
+      const r = shuffleRun(k === "shufM" ? "m" : "p", ADV_SHUF_G[key] || 0);
+      say(r ? `（${r.text}）` : "");
       return;
     }
     const low = alive.slice().sort((x, y) => (x.hi || x.star) - (y.hi || y.star));
@@ -89918,8 +90254,23 @@ function AdventurePanel({ lang, items, onItem }) {
       say();
     } else say();
   };
+  /* 数値のマスの「何が上がるか」の名前。⚠️ ルーレット（runSpecial）とピック（makePickOpts）で同じものを使う */
+  const numLab = (k, suNm) => {
+    const S = a.sp;
+    const row = ADV_SPECIALS.find((x) => x.key === k) || {};
+    return row.allAttr ? S.allAttrLabel
+      : row.res ? `${S.resWhat[row.res]}${lang === "ja" ? "の耐性" : " resistance"}`
+      : k === "armorer" ? S.allResLabel
+      : row.attr ? S.attrOf(row.attr)
+      : row.suit ? S.chargeOf(suitLabel(row.suit, lang))
+      : row.heal ? S.healLabel
+      : (k === "fruit" || k === "kaki") ? S.maxHpLabel
+      : S.chargeOf(suNm);
+  };
   const runSpecial = (nd) => {
     const k = nd.kind;
+    /* ★ 選択の札は三択を開く（openPick） */
+    if (k === "pick") { openPick(nd); return; }
     const quietFood = () => setLog((l) => [...l, `【${a.sp.name[k]}】${a.sp.nothing}`]);
     const m = runModRef.current;
     const S = a.sp;
@@ -90037,14 +90388,7 @@ function AdventurePanel({ lang, items, onItem }) {
     /* ⚠️ 砲台は今までどおりの目（下の O で作る）。数値の目は advNumOf から */
     const NUM = k === "cannon" ? null : advNumOf(k, !!su);
     if (NUM) {
-      const lab = row.allAttr ? S.allAttrLabel
-        : row.res ? `${S.resWhat[row.res]}${lang === "ja" ? "の耐性" : " resistance"}`
-        : k === "armorer" ? S.allResLabel
-        : row.attr ? S.attrOf(row.attr)
-        : row.suit ? S.chargeOf(suitLabel(row.suit, lang))
-        : row.heal ? S.healLabel
-        : (k === "fruit" || k === "kaki") ? S.maxHpLabel
-        : S.chargeOf(suNm);
+      const lab = numLab(k, suNm);
       NUM.forEach(([p]) => { descOf[`v${p}`] = (p ? S.pct(lab, p) : S.nothing) + (k === "kaki" ? S.kakiPlus(ADV_KAKI_MAGIC) : ""); });
       const optsN = NUM.map(([p, w]) => ({ key: `v${p}`, w, label: p ? `${p > 0 ? "+" : "−"}${Math.abs(p)}` : (S.opt.none || "—"), desc: descOf[`v${p}`] }));
       spinRoulette("sp", optsN, (o) => applySpecial(k, o.key, [], su, descOf), k, S.name[k]);
@@ -90089,12 +90433,139 @@ function AdventurePanel({ lang, items, onItem }) {
     }
     else if (k === "fruit") opts = [O("p10", 2), O("p5", 2), O("m5", 1)];
     else if (k === "lake") opts = [O("c20", 1), O("c10", 2), O("none", 1)];
+    else if (k === "shufM" || k === "shufP") opts = [O("s1", 2), O("s2", 2), O("s3", 1)];
     else if (k === "healer") {
       if ((m.potHeal || 0) < ADV_RUN_CAP.potHeal - 1e-9) opts.push(O("heal5", 2));
       opts.push(O("pot1", 1), O("none", 1));
     }
     if (!opts.length) return;
     spinRoulette("sp", opts, (o) => applySpecial(k, o.key, alive, su, descOf), k, S.name[k]);
+  };
+  /*
+    ★ ピックの三択を作る（ADV_PICK_NONPICK の注）。
+    ⚠️ 置けないマスの決まり（★・開いた属性・必殺・上限）は盤に置くときと同じ。その場で意味の無いもの
+      （上限に達した砲台・箱の無い鍛冶屋・ボス確定済みの挑戦状・悪い効果の無い床屋）は並べない。
+  */
+  const makePickOpts = () => {
+    const m = runModRef.current, S = a.sp;
+    const used = m.pkUsed || {};
+    const aliveC = runChestsAlive(m.chests);
+    const hasBad = ATTR_KEYS.some((k2) => ((m.attr || {})[k2] || 0) < -0.0049) || SP_SUITS.some((k2) => ((m.charge || {})[k2] || 0) < -0.0049)
+      || (m.heal || 0) < -0.0049 || (m.maxHp || 0) < -0.0049 || (m.cards || 0) < 0 || (m.spins || 0) < 0 || (m.bossUp || 0) > 0
+      || (mapCurse.spSeal || []).length > 0 || !!mapCurse.elem || !!mapCurse.noSp;
+    const op = laneOpen;
+    const pool = ADV_SPECIALS.filter((x) => advPickable(x.key) && x.from <= laneStar && (!x.cap || (used[x.key] || 0) < x.cap)
+      && !(x.food && m.pkFood)
+      && !(x.attr && op.elems.concat(op.phys).indexOf(x.attr) < 0)
+      && !(x.suit && op.sp.indexOf(x.suit) < 0)
+      && !(x.anySp && !op.sp.length)
+      && !(x.key === "cannon" && (m.bossCut || 0) >= ADV_RUN_CAP.bossCut - 1e-9)
+      && !(x.key === "anvil" && !aliveC.length)
+      && !(x.key === "challenge" && m.bossSure)
+      && !(x.key === "barber" && !hasBad));
+    const out = [];
+    const p2 = pool.slice();
+    while (out.length < 3 && p2.length) {
+      const tot = p2.reduce((x, y) => x + y.w, 0);
+      let r = Math.random() * tot;
+      let i = p2.findIndex((x) => (r -= x.w) < 0);
+      if (i < 0) i = p2.length - 1;
+      out.push(p2.splice(i, 1)[0]);
+    }
+    return out.map((x) => {
+      const vals = advPickVals(x.key);
+      if (vals) {
+        const tier = advPickRollTier();
+        const p = vals[tier - 1];
+        const su = x.key === "lake" ? pickSuit() : null;
+        const lab = numLab(x.key, su ? suitLabel(su, lang) : "");
+        /* ★ 代償（ADV_PICK_COST_RATE の注） */
+        let cost = null, pv = p;
+        if (Math.random() < ADV_PICK_COST_RATE) {
+          /* ★ 同じ系統から（ADV_PICK_OPP の注） */
+          const any = (l2) => (l2.length ? l2[Math.floor(Math.random() * l2.length)] : null);
+          let tp = null, key = null;
+          if (x.attr) {
+            const isPhys = PHYS_KEYS.indexOf(x.attr) >= 0;
+            const same = (isPhys ? op.phys : op.elems).filter((k2) => k2 !== x.attr);
+            const opp = ADV_PICK_OPP[x.attr];
+            key = same.indexOf(opp) >= 0 ? opp : any(same);
+            tp = key ? "attr" : null;
+          } else if (x.suit || x.key === "lake") {
+            key = any(op.sp.filter((k2) => k2 !== (x.suit || su)));
+            tp = key ? "charge" : null;
+          } else if (x.res) {
+            key = any(RUN_RES_KEYS.filter((k2) => k2 !== x.res && (k2 !== "resDread" || laneStar >= 7)));
+            tp = key ? "res" : null;
+          } else if (x.heal) { tp = "maxHp"; key = "maxHp"; }
+          else if (x.key === "fruit" || x.key === "kaki") { tp = "heal"; key = "heal"; }
+          if (tp) {
+            const v = ADV_PICK_COST_V[tp][tier];
+            const cLab = tp === "attr" ? S.attrOf(key) : tp === "charge" ? S.chargeOf(suitLabel(key, lang))
+              : tp === "res" ? `${S.resWhat[key]}${lang === "ja" ? "の耐性" : " resistance"}` : tp === "heal" ? S.healLabel : S.maxHpLabel;
+            const c = { type: tp, key, v, text: S.pct(cLab, -v) };
+            pv = Math.round(p * ADV_PICK_COST_BOOST);
+            /* ⚠️ 正味がプラスになるように。代償の点がプラスの5割を超えるなら代償を小さくする（1まで）。それでも超えるなら付けない */
+            const plusSc = advPickScore({ kind: x.key, num: true, p: pv }, m, op, laneStar);
+            while (c.v > 1 && advPickCostScore(c, m, op) > plusSc * 0.5) c.v -= 1;
+            c.text = S.pct(cLab, -c.v);
+            if (advPickCostScore(c, m, op) <= plusSc * 0.5) cost = c; else pv = p;
+          }
+        }
+        const band = advPickBand(pv);
+        const eff = `${lab} +${band[0]}${lang === "ja" ? "〜" : "–"}${band[2]}%` + (x.key === "kaki" ? S.kakiPlus(ADV_KAKI_MAGIC) : "");
+        return { kind: x.key, num: true, tier, p: pv, su, eff, band, lab, cost };
+      }
+      return { kind: x.key, num: false, tier: 0, eff: S.pickGamble };
+    });
+  };
+  const openPick = (nd) => {
+    const opts = makePickOpts();
+    if (!opts.length) { setLog((l) => [...l, `【${a.sp.name.pick}】${a.sp.pickNone}`]); return; }
+    const id = Date.now();
+    const of = { id, nodeKey: nd.key, nd, opts, chosen: null };
+    pickOfferRef.current = of;
+    setPickOffer(of);
+    /* ⚠️ 開いているあいだは進まない（ルーレットと同じ扱い。盤の上の印だけ立てる） */
+    setRoul({ id, pickPanel: true });
+  };
+  const choosePick = (i, byAuto) => {
+    const of = pickOfferRef.current;
+    if (!of || of.chosen != null) return;
+    const o = of.opts[i];
+    if (!o) return;
+    const nx = { ...of, chosen: i, auto: !!byAuto };
+    pickOfferRef.current = nx;
+    setPickOffer(nx);
+    timers.current.push(setTimeout(() => {
+      pickOfferRef.current = null;
+      setPickOffer(null);
+      setRoul(null);
+      const isFood = !!(ADV_SPECIALS.find((x) => x.key === o.kind) || {}).food;
+      modRun((m) => ({ ...m,
+        pkUsed: { ...(m.pkUsed || {}), [o.kind]: ((m.pkUsed || {})[o.kind] || 0) + 1 },
+        pkFood: !!m.pkFood || isFood,
+        pkMap: { ...(m.pkMap || {}), [of.nodeKey]: { kind: o.kind, tier: o.tier } } }));
+      if (o.num) {
+        /* ★ 選んだ段の中でルーレット（低い・真ん中・高い ＝ 1:2:1） */
+        const S = a.sp, descOf = {};
+        o.band.forEach((v) => { descOf[`v${v}`] = S.pct(o.lab, v) + (o.kind === "kaki" ? S.kakiPlus(ADV_KAKI_MAGIC) : ""); });
+        const optsP = o.band.map((v, j) => ({ key: `v${v}`, w: j === 1 ? 2 : 1, label: `+${v}`, desc: descOf[`v${v}`] }));
+        /* ★ 代償は選んだ時点で確定。ルーレットのあとに一行で残す */
+        const c = o.cost;
+        spinRoulette("sp", optsP, (r) => {
+          applySpecial(o.kind, r.key, [], o.su, descOf);
+          if (c) {
+            if (c.type === "attr") addAttr(c.key, -c.v / 100);
+            else if (c.type === "charge") addCharge(c.key, -c.v / 100);
+            else if (c.type === "res") addRes(c.key, -c.v);
+            else if (c.type === "heal") addHeal(-c.v / 100);
+            else addMaxHp(-c.v / 100);
+            setLog((l) => [...l, `【${S.name[o.kind] || o.kind}】${S.pickCost}：${c.text}`]);
+          }
+        }, o.kind, `${S.name[o.kind] || o.kind}（${S.pickTier[o.tier]}）`);
+      } else runSpecial({ ...of.nd, kind: o.kind });
+    }, ms(byAuto ? 520 : 380)));
   };
   /* 黄金の道。⚠️ ルーレットの回数を使わない。終わったら同じ井戸で回し直す（gold が立つので二度は出ない） */
   const startGold = () => {
@@ -90158,7 +90629,7 @@ function AdventurePanel({ lang, items, onItem }) {
     if (m.cards) out.push({ t: C.cards(m.cards), good: m.cards > 0 });
     {
       const it = RUN_RES_KEYS.filter((k2) => Math.abs(((m.res || {})[k2] || 0) - rR) > 0.04)
-        .map((k2) => ({ t: `${String(a.sp.opt[k2] || k2).replace(/耐性$| res$/, "")}+${Math.round((m.res[k2] - rR) * 10) / 10}%`, good: true, v: m.res[k2] - rR }));
+        .map((k2) => { const d = Math.round((m.res[k2] - rR) * 10) / 10; return { t: `${String(a.sp.opt[k2] || k2).replace(/耐性$| res$/, "")}${d > 0 ? "+" : "−"}${Math.abs(d)}%`, good: d > 0, v: d }; });
       if (rR > 0.04) it.unshift({ t: `${C.all}+${Math.round(rR * 10) / 10}%`, rare: true, v: rR });
       line(C.grpRes, it, "res");
     }
@@ -90177,6 +90648,16 @@ function AdventurePanel({ lang, items, onItem }) {
       手動のときは、入口のルーレット・井戸のルーレット・一本道の一歩を、どれも自分で起こす
       （盤を指ではじく／「進む」ボタン ＝ advance）。オートのときだけ、下の送りが勝手に進める。
   */
+  /* ★ オートのときはピックも自分で選ぶ（オートの頭 aiGrade） */
+  if (pickOffer && pickOffer.chosen == null && autoRef.current && pickKickRef.current !== pickOffer.id) {
+    pickKickRef.current = pickOffer.id;
+    const pid = pickOffer.id;
+    timers.current.push(setTimeout(() => {
+      const of = pickOfferRef.current;
+      if (!of || of.id !== pid || of.chosen != null || !autoRef.current) { pickKickRef.current = null; return; }
+      choosePick(advPickChoose(of.opts, runModRef.current, laneOpen, laneStar, aiGrade), true);
+    }, ms(1300)));
+  }
   const forkMark = `fork:${walking}:${seed}:${at}`;
   const wellMark = `well:${walking}:${seed}:${at}:${runMod.gold ? 1 : 0}`;
   const oneMark = `one:${walking}:${seed}:${at}`;
@@ -90505,6 +90986,13 @@ function AdventurePanel({ lang, items, onItem }) {
               setMapCurse((c) => ({ ...c, elem: el }));
               setLog((l) => [...l, a.evLog.elem((a.familyName && a.familyName[el]) || el)]);
             } else if (o.key === "nosp") { setMapCurse((c) => ({ ...c, noSp: true })); setLog((l) => [...l, a.evLog.nosp]); }
+            else if (o.key === "shuffle") {
+              /* ⚠️ 魔法か武器のどちらか一方（開いていて2つ以上あるほう）。合計は増えない */
+              const gs = Math.random() < 0.5 ? ["m", "p"] : ["p", "m"];
+              let r = null;
+              gs.some((g2) => { r = shuffleRun(g2, 0); return !!r; });
+              setLog((l) => [...l, r ? a.evLog.shuffle(r.text) : a.evLog.shuffleNone]);
+            }
             else if (o.key === "heal") { const h = Math.round(mx * 0.2); setHp((v) => Math.min(mx, v + h)); setLog((l) => [...l, a.evLog.heal(h)]); }
             else { setCarryPot((v) => v + 1); setLog((l) => [...l, a.evLog.potUp]); }
           });
@@ -90823,7 +91311,7 @@ function AdventurePanel({ lang, items, onItem }) {
           transition: dragging ? "none" : "transform 620ms cubic-bezier(0.33, 0, 0.2, 1)",
         }}>
         <AdvBoard walking={walking} map={map} seed={seed} pref={pref} area={area} heroOn={heroOn} heroKind={heroKind}
-          mapBox={mapBox} cur={cur} visited={visited} usedNodes={usedNodes}
+          mapBox={mapBox} cur={cur} visited={visited} usedNodes={usedNodes} picks={runMod.pkMap}
           cx={advCullSnap((cullAt || view).x + VIEW_W / 2, VIEW_W)} cy={advCullSnap((cullAt || view).y + VIEW_H / 2, VIEW_H)} />
       </div>
       <svg className="adv-iso-over" viewBox={`0 0 ${VIEW_W} ${VIEW_H}`} preserveAspectRatio="none" aria-hidden="true">
@@ -90846,7 +91334,32 @@ function AdventurePanel({ lang, items, onItem }) {
           掛けないと画面全体に降る。
       */}
       {/* ルーレット（2026-09-30）。⚠️ 盤の上に重ねる。回り終えて少し見せてから消える */}
-      {roul && <LaneRoulette key={roul.id} roul={roul} title={roul.title || (a.roulTitle && a.roulTitle[roul.kind]) || ""} />}
+      {/* ⚠️ roul.pick はルーレットの当たりの番号。三択の印は pickPanel（取り違えると当たりが1・2のルーレットが消える） */}
+      {roul && !roul.pickPanel && <LaneRoulette key={roul.id} roul={roul} title={roul.title || (a.roulTitle && a.roulTitle[roul.kind]) || ""} />}
+      {/* ★ ピックの三択（2026-10-05）。⚠️ 札は順に配る。選んだ札は持ち上げて光らせ、ほかは沈める */}
+      {pickOffer && (
+        <div className="adv-pick" aria-live="polite">
+          <div className="adv-pick-in">
+            <b className="adv-pick-t">{a.sp.pickTitle}</b>
+            <div className="adv-pick-row">
+              {pickOffer.opts.map((o, i) => {
+                const Gl = ADV_GLYPH[o.kind];
+                const ch = pickOffer.chosen;
+                return (
+                  <button key={i} type="button" className={`adv-pick-card t${o.tier}${ch === i ? " on" : ch != null ? " off" : ""}`}
+                    style={{ "--tc": ADV_PICK_TIER_COL[o.tier] }} onClick={() => choosePick(i, false)}>
+                    <svg viewBox="-10 -11 20 18" aria-hidden="true">{Gl && <Gl />}</svg>
+                    <span className="adv-pick-nm">{a.sp.name[o.kind] || o.kind}</span>
+                    <span className="adv-pick-eff">{o.eff}</span>
+                    {o.cost && <span className="adv-pick-cost">{a.sp.pickCost}：{o.cost.text}</span>}
+                    <span className="adv-pick-tier">{o.num ? a.sp.pickTier[o.tier] : a.sp.pickBet}</span>
+                  </button>
+                );
+              })}
+            </div>
+          </div>
+        </div>
+      )}
       {goldRun && <GoldRoad key={goldRun.id} run={goldRun} title={a.goldName} />}
       {/* 愚者の道。⚠️ 押さなくても消える（オート・放置の邪魔をしない） */}
       {foolShow && (
@@ -90978,12 +91491,13 @@ function AdventurePanel({ lang, items, onItem }) {
         </button>
       )}
       {!over && !busy && (
-        <button type="button" className={`adv-auto adv-auto-float${auto ? " on" : ""}`}
+        <button type="button" className={`adv-auto adv-auto-float aig-${aiGrade}${auto ? " on" : ""}`}
           onClick={() => {
             const v = !auto;
             turnAuto(v);
             /* ⚠️ 切ったら走り出しの記録も消す。入れ直したとき動かなくなる */
             kickRef.current = "";
+            pickKickRef.current = null;
             /* ⚠️ 主の手前の分かれ道だけここで札を配る（入口・井戸・一本道は送りが受け持つ） */
             if (v && phase === "idle" && nexts.length >= 2 && toBossHere) deal(true);
           }}>
@@ -91113,6 +91627,7 @@ function AdventurePanel({ lang, items, onItem }) {
             <span key={c.id} className={`adv-flip-card reveal${c.reversed ? " rev" : ""}`}
               style={{ animationDelay: `${i * 130}ms` }}>
               <span className="adv-flip-burst" style={{ animationDelay: `${i * 130}ms` }} />
+              <MajorArt card={c} />
               <span className="card-corner">{c.corner}</span>
               <span className="adv-flip-name" style={{ animationDelay: `${i * 130 + 260}ms` }}>
                 {getCardName(c, lang)}
@@ -91690,6 +92205,7 @@ function DexCardView({ card, reversed, tier, lang }) {
         className={`card-face ${reversed ? "reversed" : ""}`}
         style={{ "--accent": card.accent || "var(--gold)" }}
       >
+        <MajorArt card={card} />
         <div className="card-corner">{card.corner}</div>
         <div className="card-icon">{card.Icon ? <card.Icon size={24} /> : <Sparkles size={24} />}</div>
         <div className={`card-text-wrap${needsUprightText ? " keep-readable" : ""}`}>
@@ -92054,6 +92570,7 @@ function DexPanel({ lang, rareDex, holoDex, shards = {}, shardSpent = {} }) {
                   }}
                   aria-expanded={on}
                 >
+                  <MajorArt card={c} />
                   <span className="dex-cell-corner">{c.corner}</span>
                   <span className="dex-cell-name">{getCardName(c, lang)}</span>
                   {/*
@@ -107073,6 +107590,18 @@ export default function TarotDraw() {
         .static-card.oracle .card-sub { font-size: 11px; }
         .card-face { width: 100%; height: 100%; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 9px; padding: 14px 8px; text-align: center; }
         .card-face.reversed { transform: rotate(180deg); }
+        /* 大アルカナの絵（MajorArt）。⚠️ :where で詳細度0（面に既にある position / overflow を上書きしない） */
+        :where(:has(> .major-art)) { position: relative; overflow: hidden; isolation: isolate; }
+        .major-art { position: absolute; inset: 0; width: 100%; height: 100%; object-fit: cover; border-radius: inherit;
+          z-index: -1; pointer-events: none; user-select: none; }
+        .major-art-shade { position: absolute; inset: 0; border-radius: inherit; z-index: -1; pointer-events: none;
+          background: linear-gradient(to bottom, rgba(8,5,18,0.5) 0%, rgba(8,5,18,0) 20%, rgba(8,5,18,0) 60%, rgba(8,5,18,0.85) 100%); }
+        /* 絵がある面では、仮の飾り（きらめきの印）を消し、文字を絵の上で読めるようにする */
+        :has(> .major-art) > .card-icon, .bt-card:has(> .major-art) > svg { display: none; }
+        :has(> .major-art) { color: #FFF3D6; text-shadow: 0 1px 3px rgba(0,0,0,0.95), 0 0 6px rgba(0,0,0,0.6); }
+        /* ★ 絵の主役（中央）を名前で隠さない。名前は下の帯、番号は上へ */
+        .card-face:has(> .major-art) { justify-content: flex-end; gap: 2px; padding-bottom: 9%; }
+        .card-face:has(> .major-art) > .card-corner { position: absolute; top: 5%; left: 0; right: 0; text-align: center; }
         .card-face.reversed .card-text-wrap.keep-readable { transform: rotate(180deg); }
         .card-corner { font-family: 'Cinzel', serif; font-size: 13px; color: var(--accent, var(--gold)); letter-spacing: 0.1em; }
         .card-icon { color: var(--accent, var(--gold)); display: flex; }
@@ -119335,6 +119864,41 @@ export default function TarotDraw() {
           box-shadow: 0 2px 10px rgba(0,0,0,0.5);
         }
         .adv-auto-dot { width: 9px; height: 9px; border-radius: 50%; background: rgba(150,140,190,0.5); }
+        /*
+          ★ オートの頭（隠し要素・2026-10-05 Aki「気づかないように、こっそり毎回色が少し変わる」）。
+          ⚠️ 差はわずかに。松は緑みの金、竹は今までの金、梅は紅みの金。切っているときは点の色だけ少し違う。
+        */
+        .adv-auto.aig-matsu.on { background: linear-gradient(180deg, #EEE39A, #B9A848); }
+        .adv-auto.aig-ume.on { background: linear-gradient(180deg, #F8D9A2, #CF9E5A); }
+        .adv-auto.aig-matsu .adv-auto-dot { background: rgba(140,170,150,0.55); }
+        .adv-auto.aig-ume .adv-auto-dot { background: rgba(178,140,170,0.55); }
+        .adv-auto.aig-matsu.on .adv-auto-dot, .adv-auto.aig-ume.on .adv-auto-dot { background: #2A1020; }
+        /* ★ ピックの三択（2026-10-05） */
+        .adv-pick { position: absolute; inset: 0; z-index: 6; display: flex; align-items: center; justify-content: center;
+          background: rgba(8,6,16,0.55); }
+        .adv-pick-in { width: calc(100% - 16px); max-width: 420px; padding: 8px 8px 10px; border-radius: 14px;
+          background: rgba(20,14,40,0.95); border: 1px solid rgba(232,196,106,0.55); box-shadow: 0 6px 18px rgba(0,0,0,0.55); }
+        .adv-pick-t { display: block; text-align: center; font-size: 12px; color: #FFE08A; letter-spacing: 0.08em; margin-bottom: 6px; }
+        .adv-pick-row { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 6px; }
+        .adv-pick-card { display: flex; flex-direction: column; align-items: center; gap: 3px; padding: 6px 4px 7px; border-radius: 10px;
+          color: #EDE4FF; font: inherit; cursor: pointer; border: 1.5px solid var(--tc);
+          background: linear-gradient(160deg, rgba(58,44,104,0.96), rgba(20,14,40,0.96));
+          transition: transform 180ms ease, box-shadow 180ms ease, opacity 180ms ease;
+          animation: advPickIn 380ms cubic-bezier(0.2, 0.9, 0.3, 1.2) backwards; }
+        .adv-pick-card:nth-child(2) { animation-delay: 140ms; }
+        .adv-pick-card:nth-child(3) { animation-delay: 280ms; }
+        .adv-pick-card.on { transform: translateY(-5px) scale(1.04); box-shadow: 0 0 16px var(--tc); }
+        .adv-pick-card.off { opacity: 0.35; }
+        .adv-pick-card svg { width: 44px; height: 40px; display: block; }
+        .adv-pick-nm { font-size: 10.5px; font-weight: 700; color: #FFF3D6; text-align: center; line-height: 1.25; }
+        .adv-pick-eff { font-size: 10px; line-height: 1.3; text-align: center; min-height: 26px; color: #E2D8FF; }
+        /* ★ 代償。⚠️ 赤（悪いもの）。色だけに頼らず「代償：」と書く */
+        .adv-pick-cost { font-size: 9.5px; line-height: 1.3; text-align: center; color: #FFB0C0; padding: 1px 5px; border-radius: 6px;
+          background: rgba(120,30,50,0.55); border: 1px solid rgba(255,120,140,0.45); }
+        .adv-pick-tier { font-size: 10px; font-weight: 700; padding: 0 9px; border-radius: 8px; color: #1A1030; background: var(--tc); line-height: 16px; }
+        .adv-pick-card.t4 .adv-pick-tier { background: linear-gradient(90deg, #FFD36A, #FF9A3C, #FFD36A); }
+        @keyframes advPickIn { from { opacity: 0; transform: translateY(10px) scale(0.9); } }
+        @media (prefers-reduced-motion: reduce) { .adv-pick-card { animation: none; } }
         .adv-auto.on .adv-auto-dot { background: #2A1020; animation: advPulseDot 1.1s ease-in-out infinite; }
         @keyframes advPulseDot { 0%,100% { opacity: 1; } 50% { opacity: 0.25; } }
         .mv-bob { animation: mvBob 2.6s ease-in-out infinite; }
@@ -120821,6 +121385,7 @@ export default function TarotDraw() {
                         <div className="card-depth" aria-hidden="true" />
                         <div className="card-shine-layer" aria-hidden="true" />
                         <div className={`card-face ${d.reversed ? "reversed" : ""}`} style={{ "--accent": d.card.accent || "var(--gold)" }}>
+                          <MajorArt card={d.card} />
                           <div className="card-corner">{d.card.corner}</div>
                           <div className="card-icon">{d.card.Icon ? <d.card.Icon size={24} /> : <Sparkles size={24} />}</div>
                           <div className={`card-text-wrap${needsUprightText ? " keep-readable" : ""}`}>
@@ -121010,6 +121575,7 @@ export default function TarotDraw() {
                   <div className="card-depth" aria-hidden="true" />
                   <div className="card-shine-layer" aria-hidden="true" />
                   <div className={`card-face ${majorCard.reversed ? "reversed" : ""}`} style={{ "--accent": "var(--gold)" }}>
+                    <MajorArt card={majorCard.card} />
                     <div className="card-corner">{majorCard.card.corner}</div>
                     <div className="card-icon">
                       <Sparkles size={30} />
