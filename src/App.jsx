@@ -4633,14 +4633,16 @@ const AREA_LANDMARKS = {
     "県西": ["古河公方公園", "雨引観音", "真壁の町並み", "結城蔵美館",
       "砂沼広域公園", "一言主神社", "國王神社", "羽黒神社"],
   },
-  /* 栃木。県央・県南・県北 */
+  /* 栃木。県央・県南・県北・日光（2026-10-09 Aki：日光を県北から独立） */
   tochigi: {
     "県央": ["大谷資料館", "宇都宮二荒山神社", "益子陶芸美術館", "古峰神社",
       "井頭公園", "真岡木綿会館", "茂木町ふみの森", "上三川城址公園"],
     "県南": ["足利学校", "あしかがフラワーパーク", "佐野厄除大師", "蔵の街とちぎ",
       "唐沢山城跡", "太平山神社", "小山評定跡", "渡良瀬遊水地"],
-    "県北": ["日光東照宮", "華厳滝", "中禅寺湖", "那須高原",
-      "殺生石", "鬼怒川温泉", "塩原温泉", "雲巌寺"],
+    "県北": ["那須高原", "那須岳", "殺生石", "塩原温泉",
+      "もみじ谷大吊橋", "雲巌寺", "黒羽芭蕉の館", "那須疏水公園"],
+    "日光": ["日光東照宮", "華厳滝", "中禅寺湖", "戦場ヶ原",
+      "鬼怒川温泉", "龍王峡", "霧降の滝", "湯西川温泉"],
   },
   /* 群馬。中毛・西毛・東毛・北毛 */
   gunma: {
@@ -9850,7 +9852,7 @@ function advPickable(k) { return ADV_PICK_NONPICK.indexOf(k) < 0; }
 const ADV_PICK_TIER_W = { 1: 45, 2: 30, 3: 18, 4: 7 };
 /* 段の色（縁・札の枠）。0 は賭け。⚠️ 色だけに頼らない（札には段の名前、盤の縁は太さも同じなので文で確かめられる） */
 /* ★ 2026-10-07 Aki「小中大特大より、コモン・レア・エピック・レジェンダリーに」。色もその並び（灰・青・紫・橙金）。賭けは桃 */
-const ADV_PICK_TIER_COL = { 0: "#FF8FB0", 1: "#B8C0CC", 2: "#5AA8FF", 3: "#B57CFF", 4: "#FFB547" };
+const ADV_PICK_TIER_COL = { 0: "#B6E35A", 1: "#B8C0CC", 2: "#5AA8FF", 3: "#B57CFF", 4: "#FFB547" };
 /* 数値のマスの段の値（%。耐性は点）。⚠️ 今までのルーレットの目から（advNumOf）。外れ・マイナスの目は除く */
 function advPickVals(k) {
   const row = ADV_SPECIALS.find((x) => x.key === k) || {};
@@ -9900,10 +9902,13 @@ function advPickCostScore(c, m, open) {
   return c.v * 1.7;
 }
 function advPickBand(v) { const d = Math.max(1, Math.round(v * 0.2)); return [Math.max(1, v - d), v, v + d]; }
-function advPickRollTier(rnd = Math.random) {
-  const tw = Object.values(ADV_PICK_TIER_W).reduce((x, y) => x + y, 0);
+function advPickRollTier(rnd = Math.random, shift = 0) {
+  /* ★ 装備 pickTier：コモンの重みを shift 点削り、上の段へ 5:3.5:1.5 で配る */
+  const sh = Math.max(0, Math.min(ADV_PICK_TIER_W[1] - 5, shift || 0));
+  const W = { 1: ADV_PICK_TIER_W[1] - sh, 2: ADV_PICK_TIER_W[2] + sh * 0.5, 3: ADV_PICK_TIER_W[3] + sh * 0.35, 4: ADV_PICK_TIER_W[4] + sh * 0.15 };
+  const tw = W[1] + W[2] + W[3] + W[4];
   let r = rnd() * tw;
-  for (const t of [1, 2, 3, 4]) { r -= ADV_PICK_TIER_W[t]; if (r < 0) return t; }
+  for (const t of [1, 2, 3, 4]) { r -= W[t]; if (r < 0) return t; }
   return 1;
 }
 /*
@@ -9984,14 +9989,14 @@ function advNumEV(k) {
 /* 妨害の耐性の六つ（小MAPの耐性のマス・鎧職人・戦闘の判定で同じ並び） */
 const RUN_RES_KEYS = ["resRoar", "resRot", "resDread", "resMiasma", "resKill", "resSap"];
 /* ⚠️ 選択の札（pick）も特別なマスとして数える（踏んだら一度だけ・直行の平均加算・結果の数） */
-const ADV_SPECIAL_KEYS = [...ADV_SPECIALS.map((x) => x.key), "pick"];
+const ADV_SPECIAL_KEYS = [...ADV_SPECIALS.map((x) => x.key), "pick", "spider"];
 const isAdvSpecial = (kind) => ADV_SPECIAL_KEYS.indexOf(kind) >= 0;
 function laneLabelOf(map, key) {
   const i = ((map && map.lanes) || []).findIndex((l) => l.head === key);
   if (map && map.foolLane === i && i >= 0) return FOOL_LANE_NAME;
   return LANE_NAMES[Math.max(0, i)] || LANE_NAMES[0];
 }
-function buildLaneMap(pref, area, seed, mapNo, reach, star, open) {
+function buildLaneMap(pref, area, seed, mapNo, reach, star, open, safe) {
   let sd = ((seed || 1) * 2654435761) >>> 0;
   const rnd = () => ((sd = (sd * 1103515245 + 12345) >>> 0) / 4294967296);
   /*
@@ -10111,7 +10116,13 @@ function buildLaneMap(pref, area, seed, mapNo, reach, star, open) {
         const tot = pool.reduce((v, x) => v + wOf(x), 0);
         if (tot <= 0) return;
         let p = rnd() * tot;
-        const pick = pool.find((x) => (p -= wOf(x)) < 0) || pool[pool.length - 1];
+        let pick = pool.find((x) => (p -= wOf(x)) < 0) || pool[pool.length - 1];
+        /* ★ 装備 safePath：悪いマスを、その確率で良いマスに引き直す（ADV_BAD_TILES） */
+        if (safe > 0 && ADV_BAD_TILES.indexOf(pick.key) >= 0 && rnd() < safe) {
+          const good = pool.filter((x) => ADV_BAD_TILES.indexOf(x.key) < 0);
+          const tg = good.reduce((v, x) => v + wOf(x), 0);
+          if (tg > 0) { let q = rnd() * tg; pick = good.find((x) => (q -= wOf(x)) < 0) || good[good.length - 1]; }
+        }
         n.kind = pick.key;
         used[pick.key] = (used[pick.key] || 0) + 1;
         /* ★ 良いマスは選択の札にする（ADV_PICK_NONPICK の注）。⚠️ 置く数・重みは今までどおり（悪いマスとの割合を動かさない） */
@@ -10134,6 +10145,15 @@ function buildLaneMap(pref, area, seed, mapNo, reach, star, open) {
         fl.tiles.slice(1, fl.tiles.length - 1).forEach((n) => { n.kind = fk; n.reserved = true; });
         nodes.foolLane = fi; nodes.foolKind = fk;
       }
+    }
+    /* ★ 幸運の蜘蛛（ADV_SPIDER_RATE の注）。⚠️ 特別なマスの一つを置き換える（雑魚・泉・宝箱などの数は動かさない）。鎖と愚者の道は避ける */
+    if (st >= 2 && rnd() < ADV_SPIDER_RATE) {
+      const cand = [];
+      lanes.forEach((ln, li) => {
+        if (li === nodes.foolLane) return;
+        ln.tiles.slice(1, ln.tiles.length - 1).forEach((n) => { if (n.kind === "pick" || (isAdvSpecial(n.kind) && n.kind !== "chain")) cand.push(n); });
+      });
+      if (cand.length) cand[Math.floor(rnd() * cand.length)].kind = "spider";
     }
   }
   /* 外れの道の先は井戸。⚠️ 行き先は着いたときにルーレットで決める（ここでは決めない） */
@@ -10330,7 +10350,7 @@ const ADV_I18N = {
     boxTrashUpTo: (n) => `★${n}以下を破棄`, boxTrashAsk: (n, c) => `★${n}以下の${c}個を破棄しますか`,
     boxTrashedN: (n) => `${n}個破棄しました`,
     boxDraw: (i, n) => `${i} / ${n} 回`,
-    skillTitle: "スキルツリー", debugTitle: "デバッグ",
+    skillTitle: "スキル", debugTitle: "デバッグ",
     skPt: (l, all) => `このシートに ${l} 点（得た ${all}）`,
     skTrunk: { swords: "剣", wands: "棒", cups: "聖杯", pentacles: "貨幣",
       major: "大アルカナ", body: "身体", ward: "守り", luck: "運" },
@@ -10420,7 +10440,7 @@ const ADV_I18N = {
     wellMissIn: "道の果てに古い井戸がある。", wellDry: "井戸は枯れていた。道に迷い、旅はここまで。",
     wellDryIn: "道の果てに枯れた井戸がある。底に抜け道が見える……", wellToBoss: "枯れ井戸の抜け道は、ボスの道へ続いていた。",
     zakoDodge: "うまくすり抜けた！（戦闘を回避）",
-    roulTitle: { lane: "どの道へ？", well: "井戸の底へ……", zako: "すり抜けられるか？", event: "何が起きる？", box: "宝箱を開ける……" },
+    roulTitle: { lane: "どの道へ？", well: "井戸の底へ……", zako: "すり抜けられるか？", event: "何が起きる？", box: "宝箱を開ける……", boost: "ボス前の増幅" },
     rFight: "戦う", rDodge: "回避", spinsLeft: (n) => `ルーレット 残り${n}`,
     evName: { hp: "毒の霧", pot: "瓶が割れる", elem: "属性の封印", nosp: "必殺の封印", heal: "癒しの風", potUp: "落とし物", shuffle: "倍率の渦" },
     evLog: { hp: (n) => `毒の霧を吸った（HP −${n}）。`, pot: "ポーションの瓶が割れた（−1）。", elem: (n) => `属性が封じられた。主を倒すまで、構えは「${n}」だけ。`,
@@ -10430,22 +10450,40 @@ const ADV_I18N = {
     /* ---- 特別なマス（2026-10-03）。⚠️ opt は扇に載る短い文字、desc は扇の下の一覧と記録の一行 ---- */
     sp: {
       chainOpt: (n, all) => (all ? "全部" : n ? `${n}つ` : "なし"), chainDesc: (n, all) => (all ? "鎖が絡みついた。必殺が全部封じられた" : n ? `鎖が絡みついた。必殺が${n}つ封じられた` : "鎖をすり抜けた"),
-      pickTitle: "三つから一つ選ぶ", pickTier: ["", "コモン", "レア", "エピック", "レジェンダリー"], pickBet: "賭け", pickGamble: "ルーレットで決まる",
+      pickTitle: "三つから一つ選ぶ", pickTitleTwice: "二つ選べる！（一つ目）", pickTitle2: "もう一つ選ぶ", pickTier: ["", "コモン", "レア", "エピック", "レジェンダリー"], pickBet: "ユニーク", pickGamble: "ルーレットで決まる", pickFood: "ご当地の料理を一品", pickBarber: "いま付いている悪い効果を、ルーレットで一つ消す",
+      pl: {
+        size: ["", "小", "中", "大", "特大"],
+        resNm: { resRoar: "轟音", resRot: "腐食", resDread: "波動", resMiasma: "瘴気", resKill: "殺気", resSap: "虚脱" },
+        res: (n) => `${n}耐性`, allRes: "全状態異常耐性", allAttr: "全属性倍率",
+        magic: (n) => `${n}魔法倍率`, phys: (n) => `${n}倍率`, charge: (n) => `${n}必殺効率`,
+        heal: "回復量", maxHp: "最大HP", kaki: "最大HP・全魔法倍率",
+        gambleCost: { challenge: "ボスの最大HP上昇" },
+        gamble: { cannon: "ボスの最大HP減少効果", merchant: "宝箱・最大HPとの取引", challenge: "ボス確定",
+          clover: "効果ルーレットの引き直し", healer: "ポーション強化", anvil: "宝箱の強化", barber: "悪い効果の解除", food: "料理の入手" },
+      },
       pickNone: "選べるものがなかった", pickCost: "代償",
+      spiderGot: "【幸運の蜘蛛】蜘蛛が肩に乗った。悪い目を一度だけ払える（ボス前まで残せば、増幅の最低の目を引かない）。",
+      spiderTitle: (n) => `幸運の蜘蛛を「${n}」で使いますか？`, spiderLead: (b) => `使うと消える目：${b.join("／")}`,
+      spiderGo: "蜘蛛を使う", spiderKeep: "使わずに回す",
+      spiderUsed: (n) => `【幸運の蜘蛛】「${n}」の悪い目を糸で払った。`, spiderVoid: (n) => `【幸運の蜘蛛】「${n}」の悪い目を糸で払った。何も起きなかった。`,
+      spiderBoost: (k) => `【幸運の蜘蛛】ボス前の増幅で ×${k} を退けた。`,
+      rerollTitle: (n) => `四つ葉で引き直しますか？（残り${n}）`, rerollGot: (d) => `出た目：${d}`, rerollLow: "（平均より低い目です）",
+      rerollGo: "引き直す", rerollKeep: "このまま", rerollLog: (d) => `【四つ葉】「${d}」を引き直した。`,
+      boostTitle: "ボス前の増幅", boostDesc: (k) => `今あるマスのバフをすべて ×${k}`, boostLog: (k) => `【ボス前の増幅】マスのバフがすべて ×${k} になった。`,
       name: { pick: "選択の札", merchant: "闇商人", challenge: "挑戦状", tunnel: "抜け穴", clover: "四つ葉", lost: "迷い道", cannon: "砲台",
         anvil: "鍛冶屋", hoard: "竜の巣", thief: "盗賊", statue: "呪いの石像", fog: "重い霧", fruit: "巨人の果実",
         lake: "静かな湖", armorer: "鎧職人", healer: "名医",
         volcano: "火山", waterfall: "滝", windmill: "風車", quarry: "石切り場", lighthouse: "灯台", shadow: "影の森",
         sword: "刃の岩", spear: "槍の陣", axe: "木こり小屋", bow: "射的場",
-        arena: "闘技場", tower: "魔導塔", tavern: "酒場", market: "市場", garden: "薬草園",
+        arena: "道場", tower: "学校", tavern: "湧き水", market: "銀行", garden: "薬草園",
         rainbow: "虹の丘", silence: "静寂の谷", saltpan: "塩田", stargaze: "星見台", bamboo: "竹林", dojo: "稽古場", onsen: "温泉", chain: "封じの鎖",
-        stall: "屋台", kissa: "喫茶", ryotei: "料亭", kaki: "柿の木", barber: "床屋", bear: "熊", shufM: "巡る泉", shufP: "回る武器棚" },
+        stall: "屋台", kissa: "喫茶", ryotei: "料亭", kaki: "柿の木", barber: "床屋", bear: "熊", shufM: "巡る泉", shufP: "回る武器棚", spider: "幸運の蜘蛛", event: "何が起こるかわからない" },
       bearOpt: { calm: "去った", food: "奪われた", hurt: "襲われた", fight: "立ちはだかる" },
       bearDesc: { calm: "熊は静かに去っていった", food: "食べ物を奪われる", hurt: (n) => `襲われた（HP −${n}%）`, fight: "熊が立ちはだかる（勝てば宝箱）" },
       bearFood: (s2) => `「${s2}」を奪われた`, bearPot: "ポーションを1本奪われた", bearNoFood: "奪われる物は何もなかった",
-      kakiPlus: (n) => `・魔法すべて +${n}%`, barberCut: (s2) => `「${s2}」を切り落とした`, barberNone: "切り落とす悪い効果がなかった",
+      kakiPlus: (n) => `・全魔法倍率 +${n}%`, barberCut: (s2) => `「${s2}」を切り落とした`, barberNone: "切り落とす悪い効果がなかった",
       barberSpins: (n) => `ルーレット ${n}回`,
-      opt: { s1: "+10%", s2: "+20%", s3: "+35%", c1: "薬+2", c2: "★+2箱", sure: "ボス確定", none: "なし", boss: "ボスへ！", seal: "封印", pass: "抜ける", cave: "落盤", plus: "+1回", minus: "−1回",
+      opt: { s1: "+10%", s2: "+20%", s3: "+35%", c1: "薬+2", c2: "★+2箱", sure: "ボス確定", none: "なし", boss: "ボスへ！", seal: "封印", pass: "抜ける", cave: "落盤", plus: "引き直し+1", minus: "−1回",
         hit4: "−4%", hit8: "−8%", miss: "外れ", up1: "★+1", up2: "★+2", broke: "壊れる", dbl: "倍", lose: "全部失う",
         steal: "盗まれる", escape: "逃げ切る", drop: "拾う", maxhp: "最大HP", charge: "溜まり", cards: "手札",
         p10: "+10%", p5: "+5%", m5: "−5%", c20: "+20%", c10: "+10%", heal5: "回復量", pot1: "薬+1",
@@ -10458,20 +10496,20 @@ const ADV_I18N = {
         challenge: { sure: "ボス確定。ただしボスのHP+15%", none: "何も起きなかった", already: "もうボスは確定している" },
         tunnel: { boss: "大当たり！ ボスの目の前へ抜けた（通らないマスの平均はすべて受け取れる）",
           pass: "ボスの道の入口へ抜けた（ルーレットの回数は使わない。通らないマスの平均は受け取れる）", none: "行き止まりだった", cave: "落盤！ 最大HP−10%" },
-        clover: { plus: "道のルーレット+1回", none: "ただの三つ葉だった" },
+        clover: { plus: "四つ葉を摘んだ。効果のルーレットを一回引き直せる", none: "ただの三つ葉だった" },
         lost: { minus: "道に迷った。道のルーレット−1回", none: "迷わずに済んだ" },
         cannon: { hit4: "命中！ ボスのHP−4%", hit8: "会心！ ボスのHP−8%", miss: "外れた", cap: "砲台はもう撃ち尽くした（ボスのHP−12%が上限）" },
         anvil: { up1: "宝箱を鍛えた。★+1", up2: "宝箱を鍛えた。★+2", broke: "鍛えすぎて宝箱が壊れた", empty: "鍛える宝箱を持っていない" },
         hoard: { dbl: "竜の宝と取り替えた。宝箱が倍に", lose: "竜が目覚めた。宝箱を全部失った", none: "竜は眠っている", empty: "巣は空っぽだった" },
         thief: { steal: "宝箱を1個盗まれた", escape: "盗賊から逃げ切った", drop: "盗賊が落とした宝箱を拾った" },
-        statue: { maxhp: "呪い：最大HP−10%", charge: "呪い：ゲージの溜まり−25%", cards: "呪い：手札−1", none: "石像は黙っている" },
-        fog: { charge: "霧に呑まれた。ゲージの溜まり−20%", none: "霧を抜けた" },
+        statue: { maxhp: "呪い：最大HP−10%", charge: "呪い：必殺効率 −25%", cards: "呪い：手札−1", none: "石像は黙っている" },
+        fog: { charge: "霧に呑まれた。必殺効率 −20%", none: "霧を抜けた" },
         chain: { seal: "鎖が絡みついた。必殺が一つ封じられた", none: "鎖をすり抜けた", n0: "鎖をすり抜けた",
           n1: "鎖が絡みついた。必殺が1つ封じられた", n2: "鎖が絡みついた。必殺が2つ封じられた",
           n3: "鎖が絡みついた。必殺が3つ封じられた", n4: "鎖が絡みついた。必殺が4つ封じられた" },
         fruit: { p10: "最大HP+10%", p5: "最大HP+5%", m5: "腐っていた。最大HP−5%" },
-        lake: { c20: "心が澄んだ。ゲージの溜まり+20%", c10: "ゲージの溜まり+10%", none: "何も起きなかった" },
-        armorer: { resRoar: "轟音（倍率削り）の耐性+15%", resRot: "腐食（札が腐る）の耐性+15%", resDread: "波動（大アルカナ封じ）の耐性+15%",
+        lake: { c20: "心が澄んだ。必殺効率 +20%", c10: "必殺効率 +10%", none: "何も起きなかった" },
+        armorer: { resRoar: "轟音耐性 +15%", resRot: "腐食耐性 +15%", resDread: "波動耐性 +15%",
           resMiasma: "瘴気（回復封じ）の耐性+15%", resKill: "殺気（必殺封じ）の耐性+15%" },
         healer: { heal5: "ポーション1本の回復量が最大HPの+5%", pot1: "ポーション+1", none: "留守だった" },
       },
@@ -10479,17 +10517,17 @@ const ADV_I18N = {
       /* 第2弾：倍率のマスの文言（目の数字から作る） */
       attrOf: (k) => ({ earth: "地の魔法", fire: "火の魔法", water: "水の魔法", wind: "風の魔法", light: "光の魔法", dark: "闇の魔法",
         slash: "斬撃", thrust: "突撃", blunt: "打撃", shoot: "射撃" })[k] || k,
-      chargeOf: (su) => `${su}の必殺の溜まり`, healLabel: "受ける回復", curse: "呪い：",
+      chargeOf: (su) => `${su}必殺効率`, healLabel: "回復量", curse: "呪い：",
       directBonus: (n) => `近道のご褒美：通らなかった特別なマス${n}か所ぶんの平均を受け取った（ルーレット無しで確定）。`,
-      allAttrLabel: "魔法と物理の倍率すべて", allResLabel: "妨害の耐性すべて", nothing: "何も起きなかった", maxHpLabel: "最大HP",
-      resWhat: { resRoar: "轟音（倍率削り）", resRot: "腐食（札が腐る）", resDread: "波動（大アルカナ封じ）",
-        resMiasma: "瘴気（回復封じ）", resKill: "殺気（必殺封じ）", resSap: "虚脱（必殺ゲージ削り）" },
+      allAttrLabel: "全属性倍率", allResLabel: "全状態異常耐性", nothing: "何も起きなかった", maxHpLabel: "最大HP",
+      resWhat: { resRoar: "轟音（倍率が削られる）", resRot: "腐食（選んだカードが不発になる）", resDread: "波動（大アルカナが封じられる）",
+        resMiasma: "瘴気（回復が封じられる）", resKill: "殺気（必殺が封じられる）", resSap: "虚脱（必殺ゲージが削られる）" },
       pct: (lab, p) => `${lab} ${p > 0 ? "+" : "−"}${Math.abs(p)}%`,
     },
     physName: { slash: "斬撃", thrust: "突撃", blunt: "打撃", shoot: "射撃" },
     physTip: (n) => `物理の構え：${n}（押すと次のターンから。もう一度押すとオート）`,
     attrShort: { earth: "地", fire: "火", water: "水", wind: "風", light: "光", dark: "闇", slash: "斬", thrust: "突", blunt: "打", shoot: "射" },
-    landTag: "地の利", skyTag: () => "天の利" /* ⚠️ 2026-10-05 Aki「天気を書くのはやめて（文字が多くて気が散る）」 */, attrAll: "全属性", resAll: "全耐性",
+    landTag: "地の利", skyTag: () => "天の利" /* ⚠️ 2026-10-05 Aki「天気を書くのはやめて（文字が多くて気が散る）」 */, attrAll: "全属性", resAll: "全状態異常耐性",
     prep: { title: "決戦の前に", magic: "魔法", phys: "物理", charge: "溜まり", heal: "回復", maxHp: "最大HP", bossHp: "ボスHP",
       res: "耐性", resShort: { roar: "轟", rot: "腐", despair: "波", miasma: "瘴", dread: "殺", sap: "虚" }, resCap: "100%で完全耐性",
       hint: "倍率を見て、下の構え（魔法・物理）を選んでから「戦いを始める」" },
@@ -10498,6 +10536,7 @@ const ADV_I18N = {
       maxHp: (p) => `最大HP ${p > 0 ? "+" : "−"}${Math.abs(p)}%`, charge: (p) => `溜まり ${p > 0 ? "+" : "−"}${Math.abs(p)}%`,
       potHeal: (p) => `薬の回復 +${p}%`, cards: (n) => `手札 ${n > 0 ? "+" : "−"}${Math.abs(n)}`,
       res: (nm, n) => `${nm} +${n}%`, bossCut: (p) => `ボスHP −${p}%`, bossUp: (p) => `ボスHP +${p}%`, bossSure: "ボス確定",
+      reroll: (n) => `四つ葉 ×${n}`, spider: "幸運の蜘蛛",
       attr: (nm, p) => `${nm} ${p > 0 ? "+" : "−"}${Math.abs(p)}%`, chargeS: (nm, p) => `${nm}の溜まり ${p > 0 ? "+" : "−"}${Math.abs(p)}%`,
       heal: (p) => `回復 ${p > 0 ? "+" : "−"}${Math.abs(p)}%`,
       grpMagic: "魔法", grpPhys: "物理", grpCharge: "増幅", grpRes: "耐性", all: "全",
@@ -10554,7 +10593,7 @@ const ADV_I18N = {
       priestess: "聖杯だけを引きます。階位が3つ上がり、腐食を受けません。",
       empress: "貨幣だけを引きます。階位が3つ上がり、轟音も腐食も瘴気も受けません。",
       devil: "階位が半分になり、すべて逆位置に。必殺技も出せません。ただし貨幣の積みは6.66倍。",
-      strength: "小アルカナだけを4倍で引きます。防御を貫き、腐った札も動きます。",
+      strength: "小アルカナだけを4倍で引きます。防御を貫き、不発になったカードも動きます。",
       world: "引いた札で3回行動します。敵の手番は来ます。",
       fool: "1枚目と同じ札に全部揃います。",
       emperor: "敵が行動不能です。効いている継続は2ターン延びました。",
@@ -10609,7 +10648,7 @@ const ADV_I18N = {
       5: "3ターン、逆位置が出ない。大アルカナが必ず1枚来る",
       6: "3ターン、棒と剣が1.3倍。与えた分の4割をターンの終わりに回復",
       7: "次のターン、剣だけを引く。階位が3つ上がる。腐食を受けない",
-      8: "次のターン、小アルカナだけを4倍で引く。防御を貫き、腐った札も動く。その次は継続効果がすべて消える",
+      8: "次のターン、小アルカナだけを4倍で引く。防御を貫き、不発になったカードも動く。その次は継続効果がすべて消える",
       9: "3ターン、敵の妨害はすべて無駄行動になる（敵は何もできない）",
       10: "3ターン、引く札の階位がすべて10に。敵の攻撃もすべて10ダメージになる",
       11: "3ターン、聖杯の回復2倍。回復した分の2倍を敵へ（溢れた分は4倍）",
@@ -10744,7 +10783,7 @@ const ADV_I18N = {
     boxTrashUpTo: (n) => `Discard ★${n} and below`, boxTrashAsk: (n, c) => `Discard ${c} item(s) at ★${n} and below?`,
     boxTrashedN: (n) => `Discarded ${n}`,
     boxDraw: (i, n) => `${i} / ${n}`,
-    skillTitle: "Skill Tree", debugTitle: "Debug",
+    skillTitle: "Skills", debugTitle: "Debug",
     skPt: (l, all) => `${l} pts on this sheet (of ${all})`,
     skTrunk: { swords: "Swords", wands: "Wands", cups: "Cups", pentacles: "Pentacles",
       major: "Major", body: "Body", ward: "Ward", luck: "Luck" },
@@ -10828,7 +10867,7 @@ const ADV_I18N = {
     wellMissIn: "An old well at the end of the road.", wellDry: "The well was dry. You lost your way; the journey ends here.",
     wellDryIn: "A dry well at the end of the road. There is a passage at the bottom…", wellToBoss: "The dry well's passage led to the boss road.",
     zakoDodge: "You slipped past! (battle avoided)",
-    roulTitle: { lane: "Which road?", well: "Into the well…", zako: "Slip past?", event: "What happens?", box: "Opening the chest…" },
+    roulTitle: { lane: "Which road?", well: "Into the well…", zako: "Slip past?", event: "What happens?", box: "Opening the chest…", boost: "Pre-boss Boost" },
     rFight: "Fight", rDodge: "Dodge", spinsLeft: (n) => `Spins left: ${n}`,
     evName: { hp: "Toxic mist", pot: "Broken flask", elem: "Element seal", nosp: "Finisher seal", heal: "Healing wind", potUp: "Lucky find", shuffle: "Multiplier whirl" },
     evLog: { hp: (n) => `You breathed toxic mist (HP −${n}).`, pot: "A potion flask broke (−1).", elem: (n) => `Your elements are sealed: only ${n} until the master falls.`,
@@ -10836,22 +10875,40 @@ const ADV_I18N = {
     curseTag: { elem: (n) => `Seal: ${n} only`, nosp: "Seal: finisher", spSeal: (n) => `Seal: ${n} finisher` },
     sp: {
       chainOpt: (n, all) => (all ? "All" : n ? `${n}` : "None"), chainDesc: (n, all) => (all ? "Chains wrapped around you: every finisher sealed" : n ? `Chains wrapped around you: ${n} finisher${n > 1 ? "s" : ""} sealed` : "You slipped past the chains"),
-      pickTitle: "Pick one of three", pickTier: ["", "Common", "Rare", "Epic", "Legendary"], pickBet: "Gamble", pickGamble: "Decided by roulette",
+      pickTitle: "Pick one of three", pickTitleTwice: "Pick two! (first)", pickTitle2: "Pick one more", pickTier: ["", "Common", "Rare", "Epic", "Legendary"], pickBet: "Unique", pickGamble: "Decided by roulette", pickFood: "One local dish", pickBarber: "Removes one of your current bad effects (by roulette)",
+      pl: {
+        size: ["", "S", "M", "L", "XL"],
+        resNm: { resRoar: "Roar", resRot: "Rot", resDread: "Despair", resMiasma: "Miasma", resKill: "Bloodlust", resSap: "Drain" },
+        res: (n) => `${n} Res`, allRes: "All Status Res", allAttr: "All Element Mult.",
+        magic: (n) => `${n} Magic Mult.`, phys: (n) => `${n} Mult.`, charge: (n) => `${n} Finisher Rate`,
+        heal: "Healing", maxHp: "Max HP", kaki: "Max HP & All Magic",
+        gambleCost: { challenge: "Boss Max HP up" },
+        gamble: { cannon: "Boss Max HP Reduction", merchant: "Trade for chests / Max HP", challenge: "Boss Guaranteed",
+          clover: "Effect Roulette Re-spin", healer: "Potion Boost", anvil: "Chest Upgrade", barber: "Remove a Bad Effect", food: "Get a Dish" },
+      },
       pickNone: "Nothing to pick", pickCost: "Cost",
+      spiderGot: "[Lucky Spider] A spider climbed onto your shoulder. It can brush away bad results once (kept until the boss, it removes the lowest boost).",
+      spiderTitle: (n) => `Use the Lucky Spider on "${n}"?`, spiderLead: (b) => `Removed results: ${b.join(" / ")}`,
+      spiderGo: "Use the spider", spiderKeep: "Spin as is",
+      spiderUsed: (n) => `[Lucky Spider] Brushed away the bad results of "${n}".`, spiderVoid: (n) => `[Lucky Spider] Brushed away the bad results of "${n}". Nothing happened.`,
+      spiderBoost: (k) => `[Lucky Spider] Kept ×${k} out of the pre-boss boost.`,
+      rerollTitle: (n) => `Re-spin with the clover? (${n} left)`, rerollGot: (d) => `Result: ${d}`, rerollLow: " (below average)",
+      rerollGo: "Re-spin", rerollKeep: "Keep", rerollLog: (d) => `[Clover] Re-spun "${d}".`,
+      boostTitle: "Pre-boss Boost", boostDesc: (k) => `All tile buffs ×${k}`, boostLog: (k) => `[Pre-boss Boost] All tile buffs are now ×${k}.`,
       name: { pick: "Pick", merchant: "Shady Merchant", challenge: "Challenge Letter", tunnel: "Hidden Passage", clover: "Four-leaf Clover", lost: "Lost Path",
         cannon: "Cannon", anvil: "Anvil", hoard: "Dragon's Hoard", thief: "Thief", statue: "Cursed Statue", fog: "Heavy Fog",
         fruit: "Giant's Fruit", lake: "Still Lake", armorer: "Armorer", healer: "Healer",
         volcano: "Volcano", waterfall: "Waterfall", windmill: "Windmill", quarry: "Quarry", lighthouse: "Lighthouse", shadow: "Shadow Grove",
         sword: "Blade Rock", spear: "Spear Camp", axe: "Lumber Camp", bow: "Archery Range",
-        arena: "Arena", tower: "Mage Tower", tavern: "Tavern", market: "Market", garden: "Herb Garden",
+        arena: "Dojo", tower: "School", tavern: "Spring", market: "Bank", garden: "Herb Garden",
         rainbow: "Rainbow Hill", silence: "Silent Vale", saltpan: "Salt Pans", stargaze: "Stargazer's Hill", bamboo: "Bamboo Grove", dojo: "Training Yard", onsen: "Hot Spring", chain: "Binding Chains",
-        stall: "Food Stall", kissa: "Café", ryotei: "Ryotei", kaki: "Persimmon Tree", barber: "Barber", bear: "Bear", shufM: "Swirling Spring", shufP: "Spinning Rack" },
+        stall: "Food Stall", kissa: "Café", ryotei: "Ryotei", kaki: "Persimmon Tree", barber: "Barber", bear: "Bear", shufM: "Swirling Spring", shufP: "Spinning Rack", spider: "Lucky Spider", event: "Unknown Event" },
       bearOpt: { calm: "Leaves", food: "Robbed", hurt: "Mauled", fight: "Fight" },
       bearDesc: { calm: "The bear wandered quietly away", food: "It steals your food", hurt: (n) => `Mauled (HP −${n}%)`, fight: "The bear blocks the way (a chest if you win)" },
       bearFood: (s2) => `"${s2}" was stolen`, bearPot: "A potion was stolen", bearNoFood: "There was nothing to steal",
-      kakiPlus: (n) => ` · all magic +${n}%`, barberCut: (s2) => `Snipped away "${s2}"`, barberNone: "Nothing bad to snip away",
+      kakiPlus: (n) => ` · All Magic Mult. +${n}%`, barberCut: (s2) => `Snipped away "${s2}"`, barberNone: "Nothing bad to snip away",
       barberSpins: (n) => `Roulette ${n}`,
-      opt: { s1: "+10%", s2: "+20%", s3: "+35%", c1: "Pot+2", c2: "★+2 box", sure: "Boss!", none: "None", boss: "To the boss!", seal: "Seal", pass: "Through", cave: "Cave-in", plus: "+1 spin", minus: "−1 spin",
+      opt: { s1: "+10%", s2: "+20%", s3: "+35%", c1: "Pot+2", c2: "★+2 box", sure: "Boss!", none: "None", boss: "To the boss!", seal: "Seal", pass: "Through", cave: "Cave-in", plus: "Re-spin +1", minus: "−1 spin",
         hit4: "−4%", hit8: "−8%", miss: "Miss", up1: "★+1", up2: "★+2", broke: "Broken", dbl: "Double", lose: "Lose all",
         steal: "Stolen", escape: "Escape", drop: "Loot", maxhp: "Max HP", charge: "Charge", cards: "Hand",
         p10: "+10%", p5: "+5%", m5: "−5%", c20: "+20%", c10: "+10%", heal5: "Heal+", pot1: "Pot+1",
@@ -10864,7 +10921,7 @@ const ADV_I18N = {
         challenge: { sure: "The boss is certain, but the boss has +15% HP", none: "Nothing happened", already: "The boss is already certain" },
         tunnel: { boss: "Jackpot! Straight to the boss (you get the average of every tile you skip)",
           pass: "Out at the start of the boss road (no spin used; you still get the average of the tiles you skip)", none: "A dead end", cave: "Cave-in! Max HP −10%" },
-        clover: { plus: "Road roulette +1 spin", none: "Just a three-leaf clover" },
+        clover: { plus: "Picked a four-leaf clover. You can re-spin one effect roulette", none: "Just a three-leaf clover" },
         lost: { minus: "You lost your way: road roulette −1 spin", none: "You kept your way" },
         cannon: { hit4: "Hit! Boss HP −4%", hit8: "Critical! Boss HP −8%", miss: "Missed", cap: "The cannons are spent (boss HP −12% is the limit)" },
         anvil: { up1: "Your chest was forged: ★+1", up2: "Your chest was forged: ★+2", broke: "Forged too hard: the chest broke", empty: "You have no chest to forge" },
@@ -10886,15 +10943,15 @@ const ADV_I18N = {
         slash: "Slash", thrust: "Thrust", blunt: "Blunt", shoot: "Shot" })[k] || k,
       chargeOf: (su) => `${su} finisher charge`, healLabel: "Healing received", curse: "Curse: ",
       directBonus: (n) => `Shortcut reward: you received the average of the ${n} special tiles you skipped (guaranteed, no spin).`,
-      allAttrLabel: "All magic and physical multipliers", allResLabel: "All debuff resistances", nothing: "Nothing happened", maxHpLabel: "Max HP",
-      resWhat: { resRoar: "Roar (multiplier cut)", resRot: "Rot (cards fail)", resDread: "Despair (Major Arcana sealed)",
+      allAttrLabel: "All Element Mult.", allResLabel: "All Status Res", nothing: "Nothing happened", maxHpLabel: "Max HP",
+      resWhat: { resRoar: "Roar (multiplier cut)", resRot: "Rot (chosen cards misfire)", resDread: "Despair (Major Arcana sealed)",
         resMiasma: "Miasma (healing sealed)", resKill: "Killing intent (finishers sealed)", resSap: "Sap (finisher gauges drained)" },
       pct: (lab, p) => `${lab} ${p > 0 ? "+" : "−"}${Math.abs(p)}%`,
     },
     physName: { slash: "Slash", thrust: "Thrust", blunt: "Blunt", shoot: "Shot" },
     physTip: (n) => `Physical stance: ${n} (from next turn; tap again for auto)`,
     attrShort: { earth: "Earth", fire: "Fire", water: "Water", wind: "Wind", light: "Light", dark: "Dark", slash: "Slash", thrust: "Thrust", blunt: "Blunt", shoot: "Shot" },
-    landTag: "Terrain", skyTag: () => "Sky", attrAll: "All attrs", resAll: "All res",
+    landTag: "Terrain", skyTag: () => "Sky", attrAll: "All attrs", resAll: "All status res",
     prep: { title: "Before the battle", magic: "Magic", phys: "Physical", charge: "Charge", heal: "Healing", maxHp: "Max HP", bossHp: "Boss HP",
       res: "Resist", resShort: { roar: "Roar ", rot: "Rot ", despair: "Desp ", miasma: "Mias ", dread: "Dread ", sap: "Sap " }, resCap: "100% = immune",
       hint: "Check the multipliers, pick your magic and physical stances below, then start" },
@@ -10902,6 +10959,7 @@ const ADV_I18N = {
       maxHp: (p) => `Max HP ${p > 0 ? "+" : "−"}${Math.abs(p)}%`, charge: (p) => `Charge ${p > 0 ? "+" : "−"}${Math.abs(p)}%`,
       potHeal: (p) => `Potion +${p}%`, cards: (n) => `Hand ${n > 0 ? "+" : "−"}${Math.abs(n)}`,
       res: (nm, n) => `${nm} +${n}%`, bossCut: (p) => `Boss HP −${p}%`, bossUp: (p) => `Boss HP +${p}%`, bossSure: "Boss certain",
+      reroll: (n) => `Clover ×${n}`, spider: "Lucky Spider",
       attr: (nm, p) => `${nm} ${p > 0 ? "+" : "−"}${Math.abs(p)}%`, chargeS: (nm, p) => `${nm} charge ${p > 0 ? "+" : "−"}${Math.abs(p)}%`,
       heal: (p) => `Healing ${p > 0 ? "+" : "−"}${Math.abs(p)}%`,
       grpMagic: "Magic", grpPhys: "Physical", grpCharge: "Boost", grpRes: "Res", all: "All",
@@ -11442,7 +11500,7 @@ const AREA_POS = {
   yamagata: { "村山": { x: 51.6, y: 46.8 }, "最上": { x: 45.2, y: 11.6 }, "置賜": { x: 53.2, y: 88.4 }, "庄内": { x: 32.4, y: 37.2 } },
   fukushima: { "会津": { x: 13.2, y: 58 }, "中通り": { x: 58, y: 50 }, "浜通り": { x: 94.8, y: 42 } },
   ibaraki: { "県北": { x: 74, y: 13.2 }, "県央": { x: 53.2, y: 54.8 }, "鹿行": { x: 77.2, y: 82 }, "県南": { x: 50, y: 82 }, "県西": { x: 22.8, y: 62.8 } },
-  tochigi: { "県央": { x: 51.6, y: 46.8 }, "県南": { x: 43.6, y: 83.6 }, "県北": { x: 66, y: 14.8 } },
+  tochigi: { "県央": { x: 51.6, y: 46.8 }, "県南": { x: 43.6, y: 83.6 }, "県北": { x: 68, y: 13.6 }, "日光": { x: 36.4, y: 26 } },
   gunma: { "中毛": { x: 43.6, y: 50 }, "西毛": { x: 29.2, y: 83.6 }, "東毛": { x: 66, y: 66 }, "北毛": { x: 53.2, y: 14.8 } },
   saitama: { "さいたま": { x: 53.2, y: 51.6 }, "東部": { x: 88.4, y: 64.4 }, "南部": { x: 77.2, y: 66 }, "西部": { x: 11.6, y: 56.4 }, "北部": { x: 38.8, y: 32.4 }, "秩父": { x: 22.8, y: 58 } },
   /*
@@ -11804,6 +11862,22 @@ const EQUIP_MAINS = [
     ⚠️ 塔と審判に直結する。厚くすると、盾を封じたのと同じ穴がここに開く。
   */
   { key: "majorRate", unit: 0.25, pct: false, w: 6 },
+  /*
+    ㉓〜㉘ 小MAPに効く装備（2026-10-10 Aki）。⚠️ 戦闘の数値には直接乗らない。マスの作りと選択の札に効く。
+    ⚠️⚠️ ゲームの釣り合いに効くので控えめに。上限は equipBonus の末尾。数値は勝率の最終測定で合わせる。
+    safePath … 悪いマス（霧・迷い道・石像・盗賊・竜の巣・鎖・熊）が良いマスに置き換わる確率
+    noCost   … 選択の札の代償が消える確率（⚠️ 代償の代わりに付いている上乗せ ×1.3 は残る）
+    chestUp  … 道中で拾う宝箱が★+1になる確率
+    pickTwice… 選択の札で二つ選べる確率
+    pickTier … 選択の札の段の上振れ（コモンの重みを点で削り、上の段へ配る）
+    boostUp  … ボス前の増幅の各目の上乗せ分（倍率−1）を (1＋値%) 倍する（★12で最大 +60%：×1.5 → ×1.8）
+  */
+  { key: "safePath",  unit: 3.0,  pct: true,  w: 6 },
+  { key: "noCost",    unit: 6.0,  pct: true,  w: 6 },
+  { key: "chestUp",   unit: 6.0,  pct: true,  w: 6 },
+  { key: "pickTwice", unit: 1.5,  pct: true,  w: 6 },
+  { key: "pickTier",  unit: 1.0,  pct: false, w: 6 },
+  { key: "boostUp",   unit: 5.0,  pct: true,  w: 6 },
 ];
 const EQUIP_MAIN_TOTAL = EQUIP_MAINS.reduce((s, x) => s + x.w, 0);
 /*
@@ -11940,6 +12014,7 @@ const EQUIP_KINDS = {
   reach: "compass", reviveCut: "harae", foeInfo: "mirror", drain: "fang",
   nullify: "charm", soften: "cloak", cycle: "surigane", seek: "lantern",
   vsRevived: "hamaya", burstMul: "hyoshigi", majorRate: "card",
+  safePath: "map", noCost: "scale", chestUp: "key", pickTwice: "fan", pickTier: "dice", boostUp: "gong",
   selfCut: "tsuzumi", twice: "chanpon", regen: "koto",
   lastStand: "oniMask", fullPower: "crown", reflect: "armor", pierce: "shinobue",
   solo: "kokyu", crowd: "drum", upright: "shamisen",
@@ -11965,6 +12040,8 @@ const EQUIP_LABEL_I18N = {
     selfCut: "自傷を減らす", regen: "毎ターン回復", lastStand: "HP3割以下で与ダメ", fullPower: "HP9割以上で与ダメ",
     reflect: "ダメージを返す", pierce: "構えを無視", solo: "敵1体で与ダメ", crowd: "敵3体以上で与ダメ", upright: "逆位置が戻る",
     vsRevived: "起き上がった敵へ与ダメ", burstMul: "必殺技の威力", majorRate: "大アルカナの出やすさ",
+    safePath: "悪いマスの減少", noCost: "札の代償の消去", chestUp: "宝箱の★+1", pickTwice: "札を二つ選ぶ",
+    pickTier: "札の段の上振れ", boostUp: "ボス前の増幅の底上げ",
     atk: "攻撃", def: "防御", sword: "剣", wand: "棒", cup: "聖杯", coin: "貨幣",
     crit: "会心率", critMul: "会心ダメージ", first: "1〜3ターン目の与ダメ", body: "体力", burst: "必殺技の威力",
     box: "宝箱マスの出やすさ", eye: "宝箱の引く回数", resRoar: "轟音耐性", resRot: "腐食耐性",
@@ -11978,6 +12055,8 @@ const EQUIP_LABEL_I18N = {
     selfCut: "Self-harm down", regen: "Regen", lastStand: "Last stand", fullPower: "Full power",
     reflect: "Reflect", pierce: "Pierce", solo: "Solo", crowd: "Crowd", upright: "Upright",
     vsRevived: "Vs revived", burstMul: "Burst power", majorRate: "Major rate",
+    safePath: "Fewer bad tiles", noCost: "No pick cost", chestUp: "Chest ★+1", pickTwice: "Pick two",
+    pickTier: "Pick rarity up", boostUp: "Pre-boss boost up",
     atk: "Attack", def: "Defense", sword: "Swords", wand: "Wands", cup: "Cups", coin: "Pentacles",
     crit: "Crit", critMul: "Crit power", first: "First strike", body: "Max HP", burst: "Burst",
     box: "Chests", eye: "Chest depth", resRoar: "Roar res", resRot: "Rot res",
@@ -11993,6 +12072,7 @@ const EQUIP_KIND_I18N = {
     kokyu: "胡弓", drum: "太鼓", shamisen: "三味線",
     blade: "刀", staff: "杖", chalice: "盃", koban: "小判",
     effigy: "身代わり", bento: "弁当", medicine: "薬", whetstone: "砥石", chest: "宝箱",
+    map: "古地図", scale: "天秤", key: "鍵", fan: "扇子", dice: "賽", gong: "銅鑼",
   },
   en: {
     compass: "Compass", hyoshigi: "Hyoshigi", mirror: "Mirror", fang: "Fang", charm: "Charm",
@@ -12002,6 +12082,7 @@ const EQUIP_KIND_I18N = {
     kokyu: "Kokyu", drum: "Taiko", shamisen: "Shamisen",
     blade: "Blade", staff: "Staff", chalice: "Chalice", koban: "Koban",
     effigy: "Effigy", bento: "Bento", medicine: "Medicine", whetstone: "Whetstone", chest: "Chest",
+    map: "Old Map", scale: "Scales", key: "Key", fan: "Folding Fan", dice: "Dice", gong: "Gong",
   },
 };
 /*
@@ -12033,6 +12114,7 @@ const EQUIP_POCKET_OF = {
   selfCut: "def", soften: "def", cycle: "def", nullify: "def",
   regen: "def", reflect: "def", reviveCut: "def",
   reach: "aid", foeInfo: "aid", seek: "aid", majorRate: "aid", upright: "aid",
+  safePath: "aid", noCost: "aid", chestUp: "aid", pickTwice: "aid", pickTier: "aid", boostUp: "aid",
 };
 function equipPocketOf(it) {
   if (!it) return "use";
@@ -13062,6 +13144,7 @@ function equipBonus(list) {
     selfCut: 0, regen: 0,
     lastStand: 0, fullPower: 0, reflect: 0, pierce: 0, solo: 0, crowd: 0, upright: 0,
     vsRevived: 0, burstMul: 0, majorRate: 0,
+    safePath: 0, noCost: 0, chestUp: 0, pickTwice: 0, pickTier: 0, boostUp: 0,
     foeInfo: false, cardMuls: [], twice: {},
     atk: 0, def: 0, sword: 0, wand: 0, cup: 0, coin: 0, crit: 0, critMul: 0,
     first: 0, body: 0, burst: 0, box: 0, eye: 0,
@@ -13116,6 +13199,13 @@ function equipBonus(list) {
   b.burstMul = Math.min(30, b.burstMul);
   /* ⚠️⚠️ 大アルカナは 6pt まで。63% → 69% が上限。緩めると塔審判が主役になる */
   b.majorRate = Math.min(6, b.majorRate);
+  /* ⚠️ 小MAPの装備（㉓〜㉘）の上限。⚠️ 仮。勝率の最終測定で合わせる */
+  b.safePath = Math.min(50, b.safePath);
+  b.noCost = Math.min(100, b.noCost);
+  b.chestUp = Math.min(100, b.chestUp);
+  b.pickTwice = Math.min(30, b.pickTwice);
+  b.pickTier = Math.min(20, b.pickTier);
+  b.boostUp = Math.min(100, b.boostUp);
   return b;
 }
 /*
@@ -13440,7 +13530,7 @@ function gearCounts(eq) {
   return { hand: all.filter((x) => !x.stash).length, stash: all.filter((x) => !!x.stash).length };
 }
 const GEAR_CAP_I18N = {
-  ja: { hand: (n) => `手持がいっぱいです（${n}枠）。スキルツリーで枠を広げられます。`, stash: (n) => `倉庫がいっぱいです（${n}枠）。スキルツリーで枠を広げられます。` },
+  ja: { hand: (n) => `手持がいっぱいです（${n}枠）。スキルで枠を広げられます。`, stash: (n) => `倉庫がいっぱいです（${n}枠）。スキルで枠を広げられます。` },
   en: { hand: (n) => `Your hand is full (${n}). Expand it in the skill tree.`, stash: (n) => `Your storage is full (${n}). Expand it in the skill tree.` },
 };
 /* ⚠️ 入らなければ理由（"hand"/"stash"）を返す。入れば null */
@@ -19904,7 +19994,46 @@ function BirthCardBox({ lang }) {
 const JOURNEY_GRADES = ["ka", "ryo", "yu", "shu", "goku"];
 /* ⚠️ 実測（40万回、大アルカナ22枚から重複なし3枚・正逆各1/2）。狙いは 可40／良30／優17／秀9／極4（%）。実測：可39.9／良30.1／優17.0／秀9.2／極3.9 */
 const JOURNEY_CUTS = [1.0309, 1.6571, 1.8778, 2.3907];
-const JOURNEY_SEEK = { ka: -1, ryo: 1, yu: 2, shu: 4, goku: 7 };
+/* ★ 2026-10-10 Aki「マス敵を倒したら必ず宝箱」：普通の敵の箱の★の揺れ（土地の★に −1／±0／+1 の重み） */
+const ZAKO_BOX_W = [40, 45, 15];
+/*
+  ★ 2026-10-10 Aki：幸運の蜘蛛。一つの盤に ADV_SPIDER_RATE の確率で一マス（★2から）。
+  ★ 持っていると、悪い目のあるマスで一度だけ「使う／使わない」を選べる。使うと悪い目を消して回す（悪い目しか無ければ回さない）。
+  ★ ボス前まで使わずに残ったら、ボス前の増幅で最低の目を引かない（そこで消費）。
+  ⚠️ オートは致命的なマス（封じの鎖・手札の減る石像・宝箱の多い竜の巣、鎖の残っていない盤のイベント）でだけ使う。
+*/
+const ADV_SPIDER_RATE = 0.3;
+/* 悪いマス（装備 safePath の対象）。⚠️ 抜け穴は良い目が多いので入れない */
+const ADV_BAD_TILES = ["fog", "lost", "statue", "thief", "hoard", "chain", "bear"];
+/*
+  ★ 2026-10-10 Aki：四つ葉は「ルーレットの引き直し」。出た目を見てから、引き直すか選べる（一回ぶん）。
+  ★ オートは、出た目が期待値より低いときだけ引き直す。⚠️ 道・井戸のルーレットは対象外（効果の目だけ）。
+*/
+const ADV_REROLL_KINDS = ["sp", "event", "boost"];
+/* 目の良し悪し（オートの引き直し・蜘蛛の判定）。⚠️ 数値の目（v+値）とボス前（x+倍率）は key から読む。負が悪い目 */
+const ADV_OPT_VAL = {
+  c1: 1, c2: 2, sure: 3, none: 0, boss: 5, pass: 2, cave: -2, plus: 1, minus: -1,
+  hit4: 4, hit8: 8, miss: 0, up1: 1, up2: 2, broke: -2, dbl: 3, lose: -4, steal: -2, escape: 0, drop: 1,
+  maxhp: -2, charge: -2, cards: -3, p10: 10, p5: 5, m5: -5, c20: 20, c10: 10, s1: 10, s2: 20, s3: 35, heal5: 2, pot1: 2,
+  n0: 0, n1: -1, n2: -2, n3: -3, n4: -4,
+  hp: -1, pot: -1, elem: -3, heal: 1, potUp: 1, shuffle: 0,
+  calm: 0, food: -1, hurt: -2, fight: -1,
+};
+function advOptVal(kind, o) {
+  if (o.val != null) return o.val;
+  const m1 = /^v(-?\d+(?:\.\d+)?)$/.exec(o.key || "");
+  if (m1) return Number(m1[1]);
+  if (kind === "boost") return parseFloat(String(o.key).slice(1));
+  return ADV_OPT_VAL[o.key];
+}
+/*
+  ★ 2026-10-10 Aki：ボス前のマスで回す増幅のルーレット。その時点のマスのバフ（良い向きの値）すべてに掛ける。
+  ⚠️ 重みは仮。勝率の最終測定で合わせる。
+*/
+/* ★ 2026-10-10 Aki「×1.2／×1.3／×1.5／×2.0 に」。期待値 ×1.356 */
+const ADV_BOOST_OPTS = [{ k: 1.2, w: 40 }, { k: 1.3, w: 32 }, { k: 1.5, w: 20 }, { k: 2.0, w: 8 }];
+/* ★ 2026-10-10 Aki「制覇時は必ず宝箱（可で最低限）」：可は引き直し0回の箱 */
+const JOURNEY_SEEK = { ka: 0, ryo: 1, yu: 2, shu: 4, goku: 7 };
 const journeyScore = (cards) => cards.reduce((s, c) => s + cardPower(c) * (isGoodOrientation(c, c.reversed) ? 1 : 0.55), 0);
 const journeyGrade = (cards) => {
   const sc = journeyScore(cards);
@@ -79890,6 +80019,12 @@ const EQUIP_OPT_I18N = {
     vsRevived: ["起き上がった敵へのダメージ", "+", "%"],
     burstMul: ["必殺技の威力", "+", "%"],
     majorRate: ["大アルカナが出る確率", "+", "%"],
+    safePath: ["小MAPの悪いマスが良いマスに変わる確率", "+", "%"],
+    noCost: ["選択の札の代償が消える確率", "+", "%"],
+    chestUp: ["道中の宝箱が★+1になる確率", "+", "%"],
+    pickTwice: ["選択の札を二つ選べる確率", "+", "%"],
+    pickTier: ["選択の札の段の上振れ（コモンの重み）", "−", ""],
+    boostUp: ["ボス前の増幅の上乗せ分", "+", "%"],
     atk: ["攻撃力（剣・棒）", "+", "%"],
     def: ["受けるダメージ", "−", "%"],
     sword: ["剣の威力", "+", "%"],
@@ -79902,7 +80037,7 @@ const EQUIP_OPT_I18N = {
     burst: ["必殺技の威力", "+", "%"],
     body: ["最大HP", "+", "%"],
     resRoar: ["轟音（倍率削り）を防ぐ確率", "+", "%"],
-    resRot: ["腐食（札が腐る）を防ぐ確率", "+", "%"],
+    resRot: ["腐食（選んだカードが不発になる）を防ぐ確率", "+", "%"],
     resDread: ["波動（大アルカナ封じ）を防ぐ確率", "+", "%"],
     resMiasma: ["瘴気（回復封じ）を防ぐ確率", "+", "%"],
     resKill: ["殺気（必殺封じ）を防ぐ確率", "+", "%"],
@@ -79932,6 +80067,12 @@ const EQUIP_OPT_I18N = {
     vsRevived: ["Damage vs revived foes", "+", "%"],
     burstMul: ["Finisher power", "+", "%"],
     majorRate: ["Major Arcana chance", "+", "%"],
+    safePath: ["Chance a bad tile becomes a good one", "+", "%"],
+    noCost: ["Chance a pick's cost is removed", "+", "%"],
+    chestUp: ["Chance a chest on the road is ★+1", "+", "%"],
+    pickTwice: ["Chance to take two picks", "+", "%"],
+    pickTier: ["Pick rarity shift (Common weight)", "−", ""],
+    boostUp: ["Pre-boss boost bonus", "+", "%"],
     atk: ["Attack (Swords & Wands)", "+", "%"],
     def: ["Damage taken", "−", "%"],
     sword: ["Swords power", "+", "%"],
@@ -79966,6 +80107,7 @@ const EQUIP_OPT_SHORT = {
     fullPower: "高HP時攻撃", reflect: "反射", pierce: "構え貫通", solo: "単体戦攻撃",
     crowd: "多体戦攻撃", upright: "正位置化", vsRevived: "復活特攻", burstMul: "必殺",
     majorRate: "大アルカナ率",
+    safePath: "悪いマス減", noCost: "代償消去", chestUp: "宝箱★+1", pickTwice: "札二枚", pickTier: "札の段↑", boostUp: "増幅↑",
     atk: "攻撃", def: "防御", sword: "剣", wand: "棒", cup: "聖杯", coin: "貨幣",
     crit: "会心率", critMul: "会心ダメ", first: "先制", burst: "必殺", body: "HP",
     resRoar: "轟音耐性", resRot: "腐食耐性", resDread: "波動耐性", resMiasma: "瘴気耐性",
@@ -79978,6 +80120,7 @@ const EQUIP_OPT_SHORT = {
     fullPower: "High-HP atk", reflect: "Reflect", pierce: "Pierce", solo: "Solo atk",
     crowd: "Crowd atk", upright: "Upright", vsRevived: "Vs revived", burstMul: "Finisher",
     majorRate: "Major rate",
+    safePath: "Safe path", noCost: "No cost", chestUp: "Chest+", pickTwice: "Pick 2", pickTier: "Pick tier+", boostUp: "Boost+",
     atk: "ATK", def: "DEF", sword: "Swords", wand: "Wands", cup: "Cups", coin: "Pentacles",
     crit: "Crit rate", critMul: "Crit dmg", first: "Opener", burst: "Finisher", body: "HP",
     resRoar: "Roar res", resRot: "Rot res", resDread: "Despair res", resMiasma: "Miasma res",
@@ -82955,7 +83098,7 @@ function SkillPanel({ lang, onClose }) {
   【ご当地グルメ】2026-10-05 Aki「ご当地料理の絵を実装する。有名なものはレア度を低く、知名度は低いがすごく魅力があるものはレア度を高く、
     効果の高さと連動して興味を持ってもらう」「絶対に海外の人に受けない料理は除外（鮒ずしなど癖の強いものは無し）。
     銘菓などの甘味を中心に、保存が利くもの・通販で買えるもの。ラーメンなど食べに来てもらうものと、お土産の数のバランスを意識」。
-  ★ 区分ごとに3品（tier 1＝顔・有名 ／ 2＝地元の味 ／ 3＝隠れた逸品）。いまは試作の4道府県（北海道・京都・香川・茨城）20区分60品。
+  ★ 区分ごとに3品（tier 1＝顔・有名 ／ 2＝地元の味 ／ 3＝隠れた逸品）。いまは試作の4道府県（北海道・京都・香川・茨城）20区分60品＋東北6県25区分75品（2026-10-09）。
     type … visit＝現地で食べる（27品）／ gift＝お土産・お取り寄せ（33品）。
   ★ 手に入れ方 … その区分の名所でボスに勝つと一品（GOURMET_DROP の重み。tier1 60%・tier2 30%・tier3 10%）。
   ★ 使い方 … 収集帳で「持って行く」を一品選ぶと、次の探索の始めに食べて、その探索のあいだ効く（一つ減る）。
@@ -83024,17 +83167,681 @@ const GOURMET = [
   { id: "ib_nashi", pref: "ibaraki", area: "県西", tier: 1, type: "gift", name: "梨", en: "Japanese Pear", eff: "charge" },
   { id: "ib_hitachigyu", pref: "ibaraki", area: "県西", tier: 2, type: "visit", name: "常陸牛のステーキ", en: "Hitachi Beef Steak", eff: "phys" },
   { id: "ib_sashimacha", pref: "ibaraki", area: "県西", tier: 3, type: "gift", name: "さしま茶", en: "Sashima Tea", eff: "res" },
+  /* ---- 東北（2026-10-09 Aki「東北からちょっとづつ」。6県25区分75品） ---- */
+  { id: "ao_nokkedon", pref: "aomori", area: "東青", tier: 1, type: "visit", name: "のっけ丼", en: "Nokke-don (Pick-Your-Own Seafood Bowl)", eff: "maxHp" },
+  { id: "ao_shogaoden", pref: "aomori", area: "東青", tier: 2, type: "visit", name: "生姜味噌おでん", en: "Ginger Miso Oden", eff: "heal" },
+  { id: "ao_cassis", pref: "aomori", area: "東青", tier: 3, type: "gift", name: "カシスゼリー", en: "Blackcurrant Jelly", eff: "charge" },
+  { id: "ao_applepie", pref: "aomori", area: "中南", tier: 1, type: "gift", name: "アップルパイ", en: "Apple Pie", eff: "heal" },
+  { id: "ao_tsugarusoba", pref: "aomori", area: "中南", tier: 2, type: "visit", name: "津軽そば", en: "Tsugaru Soba", eff: "maxHp" },
+  { id: "ao_takekimi", pref: "aomori", area: "中南", tier: 3, type: "visit", name: "嶽きみの焼きとうもろこし", en: "Grilled Takekimi Corn", eff: "charge" },
+  { id: "ao_shijimi", pref: "aomori", area: "西北", tier: 1, type: "visit", name: "しじみラーメン", en: "Freshwater Clam Ramen", eff: "magic" },
+  { id: "ao_wakaoi", pref: "aomori", area: "西北", tier: 2, type: "visit", name: "若生おにぎり", en: "Kelp-Wrapped Rice Ball", eff: "res" },
+  { id: "ao_igamenchi", pref: "aomori", area: "西北", tier: 3, type: "visit", name: "いがメンチ", en: "Squid Menchi Patties", eff: "phys" },
+  { id: "ao_barayaki", pref: "aomori", area: "上北", tier: 1, type: "visit", name: "バラ焼き", en: "Barayaki (Grilled Beef & Onion)", eff: "phys" },
+  { id: "ao_nagaimo", pref: "aomori", area: "上北", tier: 2, type: "visit", name: "長いものバター焼き", en: "Butter-Grilled Nagaimo", eff: "maxHp" },
+  { id: "ao_himemasu", pref: "aomori", area: "上北", tier: 3, type: "visit", name: "ヒメマスの塩焼き", en: "Salt-Grilled Kokanee Salmon", eff: "magic" },
+  { id: "ao_senbeijiru", pref: "aomori", area: "三八", tier: 1, type: "visit", name: "せんべい汁", en: "Senbei-jiru (Cracker Hot Pot)", eff: "maxHp" },
+  { id: "ao_nanbusenbei", pref: "aomori", area: "三八", tier: 2, type: "gift", name: "南部せんべい", en: "Nanbu Rice Crackers", eff: "res" },
+  { id: "ao_ichigoni", pref: "aomori", area: "三八", tier: 3, type: "visit", name: "いちご煮", en: "Ichigo-ni (Sea Urchin & Abalone Soup)", eff: "magic" },
+  { id: "ao_maguro", pref: "aomori", area: "下北", tier: 1, type: "visit", name: "本まぐろ丼", en: "Bluefin Tuna Bowl", eff: "phys" },
+  { id: "ao_kaiyaki", pref: "aomori", area: "下北", tier: 2, type: "visit", name: "貝焼き味噌", en: "Kaiyaki Miso (Scallop-Shell Egg Miso)", eff: "heal" },
+  { id: "ao_bekomochi", pref: "aomori", area: "下北", tier: 3, type: "gift", name: "べこもち", en: "Bekomochi (Patterned Rice Cake)", eff: "charge" },
+  { id: "iw_wanko", pref: "iwate", area: "県央", tier: 1, type: "visit", name: "わんこそば", en: "Wanko Soba", eff: "maxHp" },
+  { id: "iw_reimen", pref: "iwate", area: "県央", tier: 2, type: "visit", name: "盛岡冷麺", en: "Morioka Cold Noodles", eff: "phys" },
+  { id: "iw_jajamen", pref: "iwate", area: "県央", tier: 3, type: "visit", name: "じゃじゃ麺", en: "Jajamen (Miso Udon)", eff: "maxHp" },
+  { id: "iw_mochizen", pref: "iwate", area: "県南", tier: 1, type: "visit", name: "もち膳", en: "Mochi Tasting Set", eff: "heal" },
+  { id: "iw_maesawa", pref: "iwate", area: "県南", tier: 2, type: "visit", name: "前沢の和牛ステーキ", en: "Maesawa Wagyu Steak", eff: "phys" },
+  { id: "iw_ganzuki", pref: "iwate", area: "県南", tier: 3, type: "gift", name: "がんづき", en: "Ganzuki (Steamed Brown Sugar Cake)", eff: "charge" },
+  { id: "iw_unidon", pref: "iwate", area: "沿岸", tier: 1, type: "visit", name: "生うに丼", en: "Fresh Sea Urchin Bowl", eff: "magic" },
+  { id: "iw_yakigaki", pref: "iwate", area: "沿岸", tier: 2, type: "visit", name: "焼きがき", en: "Grilled Oysters", eff: "maxHp" },
+  { id: "iw_aramaki", pref: "iwate", area: "沿岸", tier: 3, type: "gift", name: "新巻鮭", en: "Aramaki Salted Salmon", eff: "res" },
+  { id: "iw_tankaku", pref: "iwate", area: "県北", tier: 1, type: "visit", name: "短角牛の焼肉", en: "Tankaku Beef Yakiniku", eff: "phys" },
+  { id: "iw_mamebu", pref: "iwate", area: "県北", tier: 2, type: "visit", name: "まめぶ汁", en: "Mamebu Soup (Walnut Dumplings)", eff: "heal" },
+  { id: "iw_kakke", pref: "iwate", area: "県北", tier: 3, type: "visit", name: "そばかっけ", en: "Soba Kakke with Miso", eff: "res" },
+  { id: "mi_harakomeshi", pref: "miyagi", area: "仙南", tier: 1, type: "visit", name: "はらこ飯", en: "Harako-meshi (Salmon & Roe Rice)", eff: "magic" },
+  { id: "mi_umen", pref: "miyagi", area: "仙南", tier: 2, type: "visit", name: "白石うーめん", en: "Shiroishi Umen Noodles", eff: "maxHp" },
+  { id: "mi_pudding", pref: "miyagi", area: "仙南", tier: 3, type: "gift", name: "蔵王の牛乳プリン", en: "Zao Milk Pudding", eff: "heal" },
+  { id: "mi_gyutan", pref: "miyagi", area: "仙台", tier: 1, type: "visit", name: "牛たん焼き", en: "Grilled Beef Tongue", eff: "phys" },
+  { id: "mi_zunda", pref: "miyagi", area: "仙台", tier: 2, type: "gift", name: "ずんだ餅", en: "Zunda Mochi", eff: "heal" },
+  { id: "mi_sasakama", pref: "miyagi", area: "仙台", tier: 3, type: "gift", name: "笹かまぼこ", en: "Bamboo-Leaf Fish Cakes", eff: "res" },
+  { id: "mi_kuridango", pref: "miyagi", area: "大崎", tier: 1, type: "visit", name: "栗だんご", en: "Chestnut Dango", eff: "heal" },
+  { id: "mi_hatto", pref: "miyagi", area: "大崎", tier: 2, type: "visit", name: "はっと汁", en: "Hatto Soup (Flat Dumplings)", eff: "maxHp" },
+  { id: "mi_monaka", pref: "miyagi", area: "大崎", tier: 3, type: "gift", name: "こけし最中", en: "Kokeshi Monaka", eff: "charge" },
+  { id: "mi_ishiyakisoba", pref: "miyagi", area: "石巻", tier: 1, type: "visit", name: "石巻焼きそば", en: "Ishinomaki Yakisoba", eff: "maxHp" },
+  { id: "mi_saba", pref: "miyagi", area: "石巻", tier: 2, type: "visit", name: "金華さばの塩焼き", en: "Salt-Grilled Kinka Mackerel", eff: "phys" },
+  { id: "mi_hotate", pref: "miyagi", area: "石巻", tier: 3, type: "visit", name: "帆立の浜焼き", en: "Beach-Grilled Scallops", eff: "magic" },
+  { id: "mi_fukahire", pref: "miyagi", area: "気仙沼", tier: 1, type: "visit", name: "ふかひれスープ", en: "Shark Fin Soup", eff: "magic" },
+  { id: "mi_horumon", pref: "miyagi", area: "気仙沼", tier: 2, type: "visit", name: "気仙沼ホルモン", en: "Kesennuma Horumon", eff: "phys" },
+  { id: "mi_katsuo", pref: "miyagi", area: "気仙沼", tier: 3, type: "visit", name: "かつおの刺身", en: "Bonito Sashimi", eff: "res" },
+  { id: "ak_kiritanpo", pref: "akita", area: "県北", tier: 1, type: "visit", name: "きりたんぽ鍋", en: "Kiritanpo Hot Pot", eff: "maxHp" },
+  { id: "ak_oyakodon", pref: "akita", area: "県北", tier: 2, type: "visit", name: "比内地鶏の親子丼", en: "Hinai Chicken Oyakodon", eff: "phys" },
+  { id: "ak_buttermochi", pref: "akita", area: "県北", tier: 3, type: "gift", name: "バター餅", en: "Butter Mochi", eff: "heal" },
+  { id: "ak_babahera", pref: "akita", area: "県央", tier: 1, type: "visit", name: "ババヘラアイス", en: "Babahera Rose Ice Cream", eff: "charge" },
+  { id: "ak_iburigakko", pref: "akita", area: "県央", tier: 2, type: "gift", name: "いぶりがっこ", en: "Iburi-gakko (Smoked Pickled Radish)", eff: "res" },
+  { id: "ak_hatahata", pref: "akita", area: "県央", tier: 3, type: "visit", name: "ハタハタの塩焼き", en: "Salt-Grilled Sandfish", eff: "magic" },
+  { id: "ak_inaniwa", pref: "akita", area: "県南", tier: 1, type: "visit", name: "稲庭うどん", en: "Inaniwa Udon", eff: "maxHp" },
+  { id: "ak_yokote", pref: "akita", area: "県南", tier: 2, type: "visit", name: "横手やきそば", en: "Yokote Yakisoba", eff: "phys" },
+  { id: "ak_morokoshi", pref: "akita", area: "県南", tier: 3, type: "gift", name: "もろこし", en: "Morokoshi (Red Bean Wafers)", eff: "heal" },
+  { id: "ya_imoni", pref: "yamagata", area: "村山", tier: 1, type: "visit", name: "芋煮", en: "Imoni (Taro & Beef Stew)", eff: "maxHp" },
+  { id: "ya_sakuranbo", pref: "yamagata", area: "村山", tier: 2, type: "gift", name: "さくらんぼ", en: "Cherries", eff: "heal" },
+  { id: "ya_hiyashi", pref: "yamagata", area: "村山", tier: 3, type: "visit", name: "冷やしラーメン", en: "Chilled Ramen", eff: "charge" },
+  { id: "ya_torimotsu", pref: "yamagata", area: "最上", tier: 1, type: "visit", name: "鶏もつラーメン", en: "Chicken Giblet Ramen", eff: "maxHp" },
+  { id: "ya_itasoba", pref: "yamagata", area: "最上", tier: 2, type: "visit", name: "板そば", en: "Ita Soba (Board Soba)", eff: "res" },
+  { id: "ya_kurumimochi", pref: "yamagata", area: "最上", tier: 3, type: "gift", name: "くるみ餅", en: "Walnut Mochi", eff: "heal" },
+  { id: "ya_sukiyaki", pref: "yamagata", area: "置賜", tier: 1, type: "visit", name: "米沢牛のすき焼き", en: "Yonezawa Beef Sukiyaki", eff: "phys" },
+  { id: "ya_yonezawaramen", pref: "yamagata", area: "置賜", tier: 2, type: "visit", name: "米沢ラーメン", en: "Yonezawa Ramen", eff: "maxHp" },
+  { id: "ya_lafrance", pref: "yamagata", area: "置賜", tier: 3, type: "gift", name: "ラ・フランス", en: "La France Pear", eff: "charge" },
+  { id: "ya_dadacha", pref: "yamagata", area: "庄内", tier: 1, type: "visit", name: "だだちゃ豆", en: "Dadacha Edamame", eff: "heal" },
+  { id: "ya_moso", pref: "yamagata", area: "庄内", tier: 2, type: "visit", name: "孟宗汁", en: "Moso Bamboo Shoot Soup", eff: "maxHp" },
+  { id: "ya_mugikiri", pref: "yamagata", area: "庄内", tier: 3, type: "visit", name: "麦切り", en: "Mugikiri (Flat Wheat Noodles)", eff: "res" },
+  { id: "fu_kitakata", pref: "fukushima", area: "会津", tier: 1, type: "visit", name: "喜多方ラーメン", en: "Kitakata Ramen", eff: "maxHp" },
+  { id: "fu_sourcekatsu", pref: "fukushima", area: "会津", tier: 2, type: "visit", name: "ソースカツ丼", en: "Sauce Katsudon", eff: "phys" },
+  { id: "fu_kozuyu", pref: "fukushima", area: "会津", tier: 3, type: "visit", name: "こづゆ", en: "Kozuyu (Scallop Broth Soup)", eff: "heal" },
+  { id: "fu_momo", pref: "fukushima", area: "中通り", tier: 1, type: "gift", name: "桃", en: "Peaches", eff: "heal" },
+  { id: "fu_enban", pref: "fukushima", area: "中通り", tier: 2, type: "visit", name: "円盤餃子", en: "Disc Gyoza", eff: "phys" },
+  { id: "fu_ikaninjin", pref: "fukushima", area: "中通り", tier: 3, type: "gift", name: "いかにんじん", en: "Squid & Carrot Marinade", eff: "res" },
+  { id: "fu_mehikari", pref: "fukushima", area: "浜通り", tier: 1, type: "visit", name: "めひかりの唐揚げ", en: "Fried Greeneye Fish", eff: "magic" },
+  { id: "fu_namie", pref: "fukushima", area: "浜通り", tier: 2, type: "visit", name: "なみえ焼そば", en: "Namie Thick Yakisoba", eff: "maxHp" },
+  { id: "fu_hokkimeshi", pref: "fukushima", area: "浜通り", tier: 3, type: "visit", name: "ほっき飯", en: "Hokki-meshi (Surf Clam Rice)", eff: "charge" },
+  /* ---- 関東（2026-10-09。茨城を除く6都県・栃木は日光を独立して4区分。東京の区部はまとめて1区分） ---- */
+  { id: "tc_gyoza", pref: "tochigi", area: "県央", tier: 1, type: "visit", name: "宇都宮餃子", en: "Utsunomiya Gyoza", eff: "phys" },
+  { id: "tc_ichigo", pref: "tochigi", area: "県央", tier: 2, type: "gift", name: "栃木のいちご", en: "Tochigi Strawberries", eff: "heal" },
+  { id: "tc_kanpyo", pref: "tochigi", area: "県央", tier: 3, type: "visit", name: "かんぴょう巻き", en: "Kanpyo Gourd Sushi Rolls", eff: "res" },
+  { id: "tc_sanoramen", pref: "tochigi", area: "県南", tier: 1, type: "visit", name: "佐野ラーメン", en: "Sano Ramen", eff: "maxHp" },
+  { id: "tc_imofry", pref: "tochigi", area: "県南", tier: 2, type: "visit", name: "いもフライ", en: "Potato Fry Skewers", eff: "charge" },
+  { id: "tc_shumai", pref: "tochigi", area: "県南", tier: 3, type: "visit", name: "玉ねぎシュウマイ", en: "Onion Shumai", eff: "phys" },
+  { id: "tc_nasusoft", pref: "tochigi", area: "県北", tier: 1, type: "visit", name: "那須の牛乳ソフトクリーム", en: "Nasu Milk Soft Serve", eff: "heal" },
+  { id: "tc_cheesecake", pref: "tochigi", area: "県北", tier: 2, type: "gift", name: "那須のチーズケーキ", en: "Nasu Cheesecake", eff: "charge" },
+  { id: "tc_soupyakisoba", pref: "tochigi", area: "県北", tier: 3, type: "visit", name: "スープ入り焼きそば", en: "Soup Yakisoba", eff: "maxHp" },
+  { id: "tc_yuba", pref: "tochigi", area: "日光", tier: 1, type: "visit", name: "日光ゆば", en: "Nikko Yuba (Tofu Skin)", eff: "res" },
+  { id: "tc_mizuyokan", pref: "tochigi", area: "日光", tier: 2, type: "gift", name: "水ようかん", en: "Mizu Yokan (Soft Bean Jelly)", eff: "heal" },
+  { id: "tc_kakigori", pref: "tochigi", area: "日光", tier: 3, type: "visit", name: "天然氷のかき氷", en: "Natural Ice Shaved Ice", eff: "charge" },
+  { id: "gu_okkirikomi", pref: "gunma", area: "中毛", tier: 1, type: "visit", name: "おっきりこみ", en: "Okkirikomi (Flat Noodle Stew)", eff: "maxHp" },
+  { id: "gu_yakimanju", pref: "gunma", area: "中毛", tier: 2, type: "visit", name: "焼きまんじゅう", en: "Yaki Manju (Grilled Miso Buns)", eff: "charge" },
+  { id: "gu_sourcekatsu", pref: "gunma", area: "中毛", tier: 3, type: "visit", name: "ソースかつ丼", en: "Sauce Katsudon", eff: "phys" },
+  { id: "gu_dengaku", pref: "gunma", area: "西毛", tier: 1, type: "visit", name: "こんにゃく田楽", en: "Konnyaku Dengaku", eff: "res" },
+  { id: "gu_negi", pref: "gunma", area: "西毛", tier: 2, type: "visit", name: "下仁田ねぎの焼きねぎ", en: "Grilled Shimonita Leeks", eff: "heal" },
+  { id: "gu_pasta", pref: "gunma", area: "西毛", tier: 3, type: "visit", name: "高崎のパスタ", en: "Takasaki Pasta", eff: "maxHp" },
+  { id: "gu_himokawa", pref: "gunma", area: "東毛", tier: 1, type: "visit", name: "ひもかわうどん", en: "Himokawa (Extra-Wide Udon)", eff: "maxHp" },
+  { id: "gu_otayakisoba", pref: "gunma", area: "東毛", tier: 2, type: "visit", name: "太田焼きそば", en: "Ota Yakisoba", eff: "phys" },
+  { id: "gu_hanapan", pref: "gunma", area: "東毛", tier: 3, type: "gift", name: "花ぱん", en: "Hanapan (Flower Cookies)", eff: "heal" },
+  { id: "gu_maitake", pref: "gunma", area: "北毛", tier: 1, type: "visit", name: "舞茸の天ぷら", en: "Maitake Tempura", eff: "magic" },
+  { id: "gu_onsenmanju", pref: "gunma", area: "北毛", tier: 2, type: "gift", name: "温泉まんじゅう", en: "Onsen Manju", eff: "heal" },
+  { id: "gu_ringo", pref: "gunma", area: "北毛", tier: 3, type: "gift", name: "沼田のりんご", en: "Numata Apples", eff: "charge" },
+  { id: "sa_unagi", pref: "saitama", area: "さいたま", tier: 1, type: "visit", name: "うなぎの蒲焼", en: "Grilled Eel (Kabayaki)", eff: "magic" },
+  { id: "sa_gokabo", pref: "saitama", area: "さいたま", tier: 2, type: "gift", name: "五家宝", en: "Gokabo (Soybean Flour Sweets)", eff: "heal" },
+  { id: "sa_daruma", pref: "saitama", area: "さいたま", tier: 3, type: "gift", name: "だるま最中", en: "Daruma Monaka", eff: "charge" },
+  { id: "sa_sokasenbei", pref: "saitama", area: "東部", tier: 1, type: "gift", name: "草加せんべい", en: "Soka Rice Crackers", eff: "res" },
+  { id: "sa_kazoudon", pref: "saitama", area: "東部", tier: 2, type: "visit", name: "加須のうどん", en: "Kazo Udon", eff: "maxHp" },
+  { id: "sa_namazu", pref: "saitama", area: "東部", tier: 3, type: "visit", name: "なまずの天ぷら", en: "Catfish Tempura", eff: "magic" },
+  { id: "sa_nori", pref: "saitama", area: "南部", tier: 1, type: "visit", name: "白子のりのおにぎり", en: "Shirako Nori Rice Balls", eff: "res" },
+  { id: "sa_warabimochi", pref: "saitama", area: "南部", tier: 2, type: "gift", name: "わらび餅", en: "Warabi Mochi", eff: "heal" },
+  { id: "sa_motsuyaki", pref: "saitama", area: "南部", tier: 3, type: "visit", name: "もつ焼き", en: "Motsuyaki Skewers", eff: "phys" },
+  { id: "sa_kawagoeimo", pref: "saitama", area: "西部", tier: 1, type: "gift", name: "川越のさつまいも", en: "Kawagoe Sweet Potato", eff: "charge" },
+  { id: "sa_sayamacha", pref: "saitama", area: "西部", tier: 2, type: "gift", name: "狭山茶", en: "Sayama Green Tea", eff: "res" },
+  { id: "sa_yakitori", pref: "saitama", area: "西部", tier: 3, type: "visit", name: "みそだれやきとり", en: "Yakitori with Spicy Miso", eff: "phys" },
+  { id: "sa_jellyfry", pref: "saitama", area: "北部", tier: 1, type: "visit", name: "ゼリーフライ", en: "Jelly Fry (Okara Croquettes)", eff: "maxHp" },
+  { id: "sa_negima", pref: "saitama", area: "北部", tier: 2, type: "visit", name: "深谷ねぎのねぎま", en: "Fukaya Leek Negima", eff: "heal" },
+  { id: "sa_inari", pref: "saitama", area: "北部", tier: 3, type: "visit", name: "妻沼のいなり寿司", en: "Menuma Long Inari Sushi", eff: "res" },
+  { id: "sa_waraji", pref: "saitama", area: "秩父", tier: 1, type: "visit", name: "わらじカツ丼", en: "Waraji Katsudon", eff: "phys" },
+  { id: "sa_misopotato", pref: "saitama", area: "秩父", tier: 2, type: "visit", name: "みそポテト", en: "Miso Potato", eff: "maxHp" },
+  { id: "sa_kurumisoba", pref: "saitama", area: "秩父", tier: 3, type: "visit", name: "くるみそば", en: "Walnut-Dip Soba", eff: "magic" },
+  { id: "ch_nashi", pref: "chiba", area: "東葛飾", tier: 1, type: "gift", name: "千葉の梨", en: "Chiba Pears", eff: "heal" },
+  { id: "ch_yagiri", pref: "chiba", area: "東葛飾", tier: 2, type: "visit", name: "矢切ねぎの焼きねぎ", en: "Grilled Yagiri Leeks", eff: "maxHp" },
+  { id: "ch_shoyusoft", pref: "chiba", area: "東葛飾", tier: 3, type: "visit", name: "醤油ソフトクリーム", en: "Soy Sauce Soft Serve", eff: "charge" },
+  { id: "ch_misopi", pref: "chiba", area: "千葉", tier: 1, type: "gift", name: "みそピー", en: "Miso Peanuts", eff: "charge" },
+  { id: "ch_honbinos", pref: "chiba", area: "千葉", tier: 2, type: "visit", name: "ホンビノス貝の酒蒸し", en: "Sake-Steamed Quahog Clams", eff: "magic" },
+  { id: "ch_hamaguri", pref: "chiba", area: "千葉", tier: 3, type: "visit", name: "焼きはまぐり", en: "Grilled Hard Clams", eff: "maxHp" },
+  { id: "ch_rakkasei", pref: "chiba", area: "印旛", tier: 1, type: "gift", name: "八街の落花生", en: "Yachimata Peanuts", eff: "res" },
+  { id: "ch_suika", pref: "chiba", area: "印旛", tier: 2, type: "gift", name: "富里のスイカ", en: "Tomisato Watermelon", eff: "heal" },
+  { id: "ch_teyakisenbei", pref: "chiba", area: "印旛", tier: 3, type: "gift", name: "手焼きせんべい", en: "Hand-Grilled Rice Crackers", eff: "charge" },
+  { id: "ch_naritaunagi", pref: "chiba", area: "成田空港", tier: 1, type: "visit", name: "参道のうなぎ", en: "Temple-Road Eel Bowl", eff: "magic" },
+  { id: "ch_teppozuke", pref: "chiba", area: "成田空港", tier: 2, type: "gift", name: "鉄砲漬け", en: "Teppo-zuke (Stuffed Pickled Melon)", eff: "res" },
+  { id: "ch_yokan", pref: "chiba", area: "成田空港", tier: 3, type: "gift", name: "羊羹", en: "Yokan (Sweet Bean Jelly)", eff: "heal" },
+  { id: "ch_dango", pref: "chiba", area: "香取", tier: 1, type: "visit", name: "佐原の焼きだんご", en: "Sawara Grilled Dango", eff: "heal" },
+  { id: "ch_takomai", pref: "chiba", area: "香取", tier: 2, type: "visit", name: "多古米のおにぎり", en: "Tako Rice Balls", eff: "maxHp" },
+  { id: "ch_imosweets", pref: "chiba", area: "香取", tier: 3, type: "gift", name: "さつまいものスイーツ", en: "Sweet Potato Pastries", eff: "charge" },
+  { id: "ch_nuresenbei", pref: "chiba", area: "海匝", tier: 1, type: "gift", name: "ぬれせんべい", en: "Nure Senbei (Soft Soy Crackers)", eff: "res" },
+  { id: "ch_iwashi", pref: "chiba", area: "海匝", tier: 2, type: "gift", name: "いわしのごま漬け", en: "Sesame-Marinated Sardines", eff: "phys" },
+  { id: "ch_sabazuke", pref: "chiba", area: "海匝", tier: 3, type: "visit", name: "さばの漬け丼", en: "Marinated Mackerel Bowl", eff: "magic" },
+  { id: "ch_namerou", pref: "chiba", area: "安房", tier: 1, type: "visit", name: "なめろう", en: "Namerou (Chopped Fish Tartare)", eff: "magic" },
+  { id: "ch_biwa", pref: "chiba", area: "安房", tier: 2, type: "gift", name: "びわゼリー", en: "Loquat Jelly", eff: "heal" },
+  { id: "ch_iseebi", pref: "chiba", area: "安房", tier: 3, type: "visit", name: "伊勢海老の鬼殻焼き", en: "Grilled Spiny Lobster", eff: "phys" },
+  { id: "ch_takeoka", pref: "chiba", area: "君津", tier: 1, type: "visit", name: "竹岡式ラーメン", en: "Takeoka-Style Ramen", eff: "maxHp" },
+  { id: "ch_asari", pref: "chiba", area: "君津", tier: 2, type: "visit", name: "あさりの酒蒸し", en: "Sake-Steamed Asari Clams", eff: "magic" },
+  { id: "ch_gelato", pref: "chiba", area: "君津", tier: 3, type: "visit", name: "牧場のジェラート", en: "Farm Gelato", eff: "charge" },
+  { id: "tk_monja", pref: "tokyo", area: "区部", tier: 1, type: "visit", name: "もんじゃ焼き", en: "Monjayaki", eff: "maxHp" },
+  { id: "tk_ningyoyaki", pref: "tokyo", area: "区部", tier: 2, type: "gift", name: "人形焼", en: "Ningyo-yaki (Shaped Sponge Cakes)", eff: "heal" },
+  { id: "tk_fukagawa", pref: "tokyo", area: "区部", tier: 3, type: "visit", name: "深川めし", en: "Fukagawa-meshi (Clam Rice)", eff: "magic" },
+  { id: "tk_sushi", pref: "tokyo", area: "湾岸", tier: 1, type: "visit", name: "江戸前寿司", en: "Edomae Sushi", eff: "magic" },
+  { id: "tk_anago", pref: "tokyo", area: "湾岸", tier: 2, type: "visit", name: "穴子の天ぷら", en: "Conger Eel Tempura", eff: "phys" },
+  { id: "tk_tsukudani", pref: "tokyo", area: "湾岸", tier: 3, type: "gift", name: "佃煮", en: "Tsukudani (Simmered Preserves)", eff: "res" },
+  { id: "tk_jindaiji", pref: "tokyo", area: "多摩", tier: 1, type: "visit", name: "深大寺そば", en: "Jindaiji Soba", eff: "res" },
+  { id: "tk_hachioji", pref: "tokyo", area: "多摩", tier: 2, type: "visit", name: "八王子ラーメン", en: "Hachioji Ramen", eff: "maxHp" },
+  { id: "tk_yamame", pref: "tokyo", area: "多摩", tier: 3, type: "visit", name: "ヤマメの塩焼き", en: "Salt-Grilled Mountain Trout", eff: "magic" },
+  { id: "tk_shimazushi", pref: "tokyo", area: "島しょ", tier: 1, type: "visit", name: "島寿司", en: "Shima-zushi (Island Sushi)", eff: "magic" },
+  { id: "tk_ashitaba", pref: "tokyo", area: "島しょ", tier: 2, type: "visit", name: "明日葉の天ぷら", en: "Ashitaba Tempura", eff: "heal" },
+  { id: "tk_passion", pref: "tokyo", area: "島しょ", tier: 3, type: "gift", name: "パッションフルーツ", en: "Passion Fruit", eff: "charge" },
+  { id: "kn_shumai", pref: "kanagawa", area: "横浜", tier: 1, type: "visit", name: "横浜のシュウマイ", en: "Yokohama Shumai", eff: "phys" },
+  { id: "kn_iekei", pref: "kanagawa", area: "横浜", tier: 2, type: "visit", name: "家系ラーメン", en: "Iekei Ramen", eff: "maxHp" },
+  { id: "kn_sanmaa", pref: "kanagawa", area: "横浜", tier: 3, type: "visit", name: "サンマーメン", en: "Sanmaamen (Veggie Gravy Ramen)", eff: "heal" },
+  { id: "kn_tantanmen", pref: "kanagawa", area: "川崎", tier: 1, type: "visit", name: "川崎のタンタンメン", en: "Kawasaki Tantanmen", eff: "phys" },
+  { id: "kn_kuzumochi", pref: "kanagawa", area: "川崎", tier: 2, type: "gift", name: "くず餅", en: "Kuzu Mochi", eff: "heal" },
+  { id: "kn_ame", pref: "kanagawa", area: "川崎", tier: 3, type: "gift", name: "川崎大師の飴", en: "Kawasaki Daishi Candy", eff: "res" },
+  { id: "kn_curry", pref: "kanagawa", area: "横須賀三浦", tier: 1, type: "visit", name: "海軍カレー", en: "Navy Curry", eff: "maxHp" },
+  { id: "kn_misakimaguro", pref: "kanagawa", area: "横須賀三浦", tier: 2, type: "visit", name: "三崎のまぐろ丼", en: "Misaki Tuna Bowl", eff: "phys" },
+  { id: "kn_daikon", pref: "kanagawa", area: "横須賀三浦", tier: 3, type: "visit", name: "三浦大根のふろふき", en: "Simmered Miura Daikon", eff: "heal" },
+  { id: "kn_shirasu", pref: "kanagawa", area: "湘南", tier: 1, type: "visit", name: "しらす丼", en: "Shirasu (Whitebait) Bowl", eff: "magic" },
+  { id: "kn_takosenbei", pref: "kanagawa", area: "湘南", tier: 2, type: "visit", name: "たこせんべい", en: "Octopus Rice Cracker", eff: "charge" },
+  { id: "kn_yasai", pref: "kanagawa", area: "湘南", tier: 3, type: "visit", name: "鎌倉野菜", en: "Kamakura Vegetables", eff: "res" },
+  { id: "kn_shirokoro", pref: "kanagawa", area: "県央", tier: 1, type: "visit", name: "シロコロ・ホルモン", en: "Shirokoro Horumon", eff: "phys" },
+  { id: "kn_tofu", pref: "kanagawa", area: "県央", tier: 2, type: "visit", name: "大山のとうふ料理", en: "Oyama Tofu Cuisine", eff: "heal" },
+  { id: "kn_wakasagi", pref: "kanagawa", area: "県央", tier: 3, type: "visit", name: "わかさぎの天ぷら", en: "Smelt Tempura", eff: "magic" },
+  { id: "kn_kamaboko", pref: "kanagawa", area: "県西", tier: 1, type: "gift", name: "小田原のかまぼこ", en: "Odawara Kamaboko", eff: "res" },
+  { id: "kn_kurotamago", pref: "kanagawa", area: "県西", tier: 2, type: "visit", name: "黒たまご", en: "Black Eggs (Owakudani)", eff: "maxHp" },
+  { id: "kn_umeboshi", pref: "kanagawa", area: "県西", tier: 3, type: "gift", name: "小田原の梅干し", en: "Odawara Umeboshi", eff: "charge" },
+  /* ---- 中部（2026-10-10。9県37区分111品） ---- */
+  { id: "ni_tarekatsu", pref: "niigata", area: "下越", tier: 1, type: "visit", name: "タレカツ丼", en: "Tare-Katsu Bowl", eff: "phys" },
+  { id: "ni_sasadango", pref: "niigata", area: "下越", tier: 2, type: "gift", name: "笹団子", en: "Sasa Dango (Bamboo-Leaf Mochi)", eff: "heal" },
+  { id: "ni_noppe", pref: "niigata", area: "下越", tier: 3, type: "visit", name: "のっぺ汁", en: "Noppe Soup", eff: "maxHp" },
+  { id: "ni_hegisoba", pref: "niigata", area: "中越", tier: 1, type: "visit", name: "へぎそば", en: "Hegi Soba", eff: "maxHp" },
+  { id: "ni_kakinotane", pref: "niigata", area: "中越", tier: 2, type: "gift", name: "柿の種", en: "Kaki-no-Tane Rice Crackers", eff: "res" },
+  { id: "ni_shogaramen", pref: "niigata", area: "中越", tier: 3, type: "visit", name: "生姜醤油ラーメン", en: "Ginger Shoyu Ramen", eff: "magic" },
+  { id: "ni_sasazushi", pref: "niigata", area: "上越", tier: 1, type: "visit", name: "笹寿司", en: "Sasa-zushi (Leaf Sushi)", eff: "res" },
+  { id: "ni_itoigawa", pref: "niigata", area: "上越", tier: 2, type: "visit", name: "ブラック焼きそば", en: "Black Yakisoba (Squid Ink)", eff: "phys" },
+  { id: "ni_sakemanju", pref: "niigata", area: "上越", tier: 3, type: "gift", name: "酒まんじゅう", en: "Sake Manju", eff: "charge" },
+  { id: "ni_buri", pref: "niigata", area: "佐渡", tier: 1, type: "visit", name: "寒ブリ丼", en: "Winter Yellowtail Bowl", eff: "magic" },
+  { id: "ni_okesagaki", pref: "niigata", area: "佐渡", tier: 2, type: "gift", name: "おけさ柿", en: "Okesa Persimmons", eff: "heal" },
+  { id: "ni_igoneri", pref: "niigata", area: "佐渡", tier: 3, type: "gift", name: "いごねり", en: "Igoneri (Seaweed Jelly)", eff: "res" },
+  { id: "to_hotaruika", pref: "toyama", area: "新川", tier: 1, type: "visit", name: "ほたるいかの酢味噌", en: "Firefly Squid with Vinegar Miso", eff: "magic" },
+  { id: "to_suika", pref: "toyama", area: "新川", tier: 2, type: "gift", name: "入善のジャンボすいか", en: "Nyuzen Jumbo Watermelon", eff: "heal" },
+  { id: "to_baimeshi", pref: "toyama", area: "新川", tier: 3, type: "visit", name: "バイ飯", en: "Bai-meshi (Whelk Rice)", eff: "res" },
+  { id: "to_masuzushi", pref: "toyama", area: "富山", tier: 1, type: "gift", name: "ますのすし", en: "Masu-zushi (Trout Sushi)", eff: "heal" },
+  { id: "to_blackramen", pref: "toyama", area: "富山", tier: 2, type: "visit", name: "ブラックラーメン", en: "Black Ramen", eff: "phys" },
+  { id: "to_shiroebi", pref: "toyama", area: "富山", tier: 3, type: "visit", name: "白えび天丼", en: "White Shrimp Tempura Bowl", eff: "magic" },
+  { id: "to_buri", pref: "toyama", area: "高岡", tier: 1, type: "visit", name: "氷見の寒ぶり", en: "Himi Winter Yellowtail", eff: "magic" },
+  { id: "to_himiudon", pref: "toyama", area: "高岡", tier: 2, type: "visit", name: "氷見うどん", en: "Himi Udon", eff: "maxHp" },
+  { id: "to_konbujime", pref: "toyama", area: "高岡", tier: 3, type: "gift", name: "昆布締め", en: "Kobujime (Kelp-Cured Fish)", eff: "res" },
+  { id: "to_okadosomen", pref: "toyama", area: "砺波", tier: 1, type: "visit", name: "大門素麺", en: "Okado Somen", eff: "maxHp" },
+  { id: "to_gokayamatofu", pref: "toyama", area: "砺波", tier: 2, type: "visit", name: "五箇山豆腐", en: "Gokayama Firm Tofu", eff: "res" },
+  { id: "to_kaburazushi", pref: "toyama", area: "砺波", tier: 3, type: "gift", name: "かぶら寿司", en: "Kabura-zushi (Turnip & Yellowtail)", eff: "heal" },
+  { id: "is_boucha", pref: "ishikawa", area: "南加賀", tier: 1, type: "gift", name: "加賀棒茶", en: "Kaga Roasted Stem Tea", eff: "res" },
+  { id: "is_komatsuudon", pref: "ishikawa", area: "南加賀", tier: 2, type: "visit", name: "小松うどん", en: "Komatsu Udon", eff: "maxHp" },
+  { id: "is_maruimo", pref: "ishikawa", area: "南加賀", tier: 3, type: "gift", name: "加賀丸いも", en: "Kaga Round Yam", eff: "charge" },
+  { id: "is_kaisendon", pref: "ishikawa", area: "石川中央", tier: 1, type: "visit", name: "金沢の海鮮丼", en: "Kanazawa Seafood Bowl", eff: "magic" },
+  { id: "is_jibuni", pref: "ishikawa", area: "石川中央", tier: 2, type: "visit", name: "治部煮", en: "Jibuni (Duck Stew)", eff: "heal" },
+  { id: "is_kinpaku", pref: "ishikawa", area: "石川中央", tier: 3, type: "visit", name: "金箔ソフトクリーム", en: "Gold Leaf Soft Serve", eff: "charge" },
+  { id: "is_kaki", pref: "ishikawa", area: "能登中部", tier: 1, type: "visit", name: "七尾の牡蠣", en: "Nanao Oysters", eff: "maxHp" },
+  { id: "is_notodon", pref: "ishikawa", area: "能登中部", tier: 2, type: "visit", name: "能登丼", en: "Noto Seafood Bowl", eff: "magic" },
+  { id: "is_egara", pref: "ishikawa", area: "能登中部", tier: 3, type: "gift", name: "えがらまんじゅう", en: "Egara Manju", eff: "heal" },
+  { id: "is_himono", pref: "ishikawa", area: "能登北部", tier: 1, type: "gift", name: "輪島の干物", en: "Wajima Dried Fish", eff: "phys" },
+  { id: "is_shiomusubi", pref: "ishikawa", area: "能登北部", tier: 2, type: "visit", name: "揚げ浜塩の塩むすび", en: "Salt Rice Balls (Agehama Salt)", eff: "res" },
+  { id: "is_yubeshi", pref: "ishikawa", area: "能登北部", tier: 3, type: "gift", name: "柚餅子", en: "Yubeshi (Yuzu Confection)", eff: "charge" },
+  { id: "fk_kani", pref: "fukui", area: "福井坂井", tier: 1, type: "visit", name: "越前がに", en: "Echizen Snow Crab", eff: "magic" },
+  { id: "fk_sourcekatsu", pref: "fukui", area: "福井坂井", tier: 2, type: "visit", name: "ソースカツ丼", en: "Sauce Katsudon", eff: "phys" },
+  { id: "fk_mizuyokan", pref: "fukui", area: "福井坂井", tier: 3, type: "gift", name: "冬の水ようかん", en: "Winter Mizu Yokan", eff: "heal" },
+  { id: "fk_oroshisoba", pref: "fukui", area: "奥越", tier: 1, type: "visit", name: "越前おろしそば", en: "Echizen Grated Radish Soba", eff: "maxHp" },
+  { id: "fk_satoimo", pref: "fukui", area: "奥越", tier: 2, type: "visit", name: "里芋の煮っころがし", en: "Simmered Taro", eff: "heal" },
+  { id: "fk_dinoegg", pref: "fukui", area: "奥越", tier: 3, type: "gift", name: "恐竜のたまご饅頭", en: "Dinosaur Egg Buns", eff: "charge" },
+  { id: "fk_volga", pref: "fukui", area: "丹南", tier: 1, type: "visit", name: "ボルガライス", en: "Volga Rice", eff: "phys" },
+  { id: "fk_habutae", pref: "fukui", area: "丹南", tier: 2, type: "gift", name: "羽二重餅", en: "Habutae Mochi", eff: "heal" },
+  { id: "fk_tsurushigaki", pref: "fukui", area: "丹南", tier: 3, type: "gift", name: "つるし柿", en: "Hanging Dried Persimmons", eff: "charge" },
+  { id: "fk_yakisaba", pref: "fukui", area: "嶺南", tier: 1, type: "visit", name: "浜焼き鯖", en: "Beach-Grilled Mackerel", eff: "magic" },
+  { id: "fk_guji", pref: "fukui", area: "嶺南", tier: 2, type: "visit", name: "ぐじの若狭焼き", en: "Wakasa-Grilled Tilefish", eff: "res" },
+  { id: "fk_kuzumanju", pref: "fukui", area: "嶺南", tier: 3, type: "gift", name: "くずまんじゅう", en: "Kuzu Manju", eff: "heal" },
+  { id: "yn_hoto", pref: "yamanashi", area: "中北", tier: 1, type: "visit", name: "ほうとう", en: "Hoto Noodle Stew", eff: "maxHp" },
+  { id: "yn_kinakomochi", pref: "yamanashi", area: "中北", tier: 2, type: "gift", name: "黒蜜きなこ餅", en: "Kinako Mochi with Black Syrup", eff: "heal" },
+  { id: "yn_torimotsu", pref: "yamanashi", area: "中北", tier: 3, type: "visit", name: "鳥もつ煮", en: "Chicken Giblet Glaze", eff: "phys" },
+  { id: "yn_budou", pref: "yamanashi", area: "峡東", tier: 1, type: "gift", name: "ぶどう", en: "Grapes", eff: "charge" },
+  { id: "yn_grapejelly", pref: "yamanashi", area: "峡東", tier: 2, type: "gift", name: "ぶどうゼリー", en: "Grape Jelly", eff: "heal" },
+  { id: "yn_korogaki", pref: "yamanashi", area: "峡東", tier: 3, type: "gift", name: "ころ柿", en: "Korogaki (Dried Persimmons)", eff: "res" },
+  { id: "yn_akebono", pref: "yamanashi", area: "峡南", tier: 1, type: "visit", name: "あけぼの大豆", en: "Akebono Giant Soybeans", eff: "res" },
+  { id: "yn_ayu", pref: "yamanashi", area: "峡南", tier: 2, type: "visit", name: "鮎の塩焼き", en: "Salt-Grilled Sweetfish", eff: "magic" },
+  { id: "yn_minobumanju", pref: "yamanashi", area: "峡南", tier: 3, type: "gift", name: "身延まんじゅう", en: "Minobu Manju", eff: "heal" },
+  { id: "yn_yoshidaudon", pref: "yamanashi", area: "富士東部", tier: 1, type: "visit", name: "吉田うどん", en: "Yoshida Udon", eff: "maxHp" },
+  { id: "yn_nijimasu", pref: "yamanashi", area: "富士東部", tier: 2, type: "gift", name: "にじますの燻製", en: "Smoked Rainbow Trout", eff: "magic" },
+  { id: "yn_fujikashi", pref: "yamanashi", area: "富士東部", tier: 3, type: "gift", name: "富士山の焼き菓子", en: "Mt. Fuji Shaped Cakes", eff: "charge" },
+  { id: "na_oyaki", pref: "nagano", area: "北信", tier: 1, type: "visit", name: "おやき", en: "Oyaki (Stuffed Dumplings)", eff: "heal" },
+  { id: "na_kuriokowa", pref: "nagano", area: "北信", tier: 2, type: "visit", name: "栗おこわ", en: "Chestnut Sticky Rice", eff: "maxHp" },
+  { id: "na_nozawana", pref: "nagano", area: "北信", tier: 3, type: "gift", name: "野沢菜漬け", en: "Nozawana Pickles", eff: "res" },
+  { id: "na_soba", pref: "nagano", area: "東信", tier: 1, type: "visit", name: "信州そば", en: "Shinshu Soba", eff: "maxHp" },
+  { id: "na_ringo", pref: "nagano", area: "東信", tier: 2, type: "gift", name: "信州りんご", en: "Shinshu Apples", eff: "heal" },
+  { id: "na_koi", pref: "nagano", area: "東信", tier: 3, type: "visit", name: "鯉のうま煮", en: "Sweet Simmered Carp", eff: "magic" },
+  { id: "na_sanzoku", pref: "nagano", area: "中信", tier: 1, type: "visit", name: "山賊焼", en: "Sanzoku-yaki (Fried Chicken)", eff: "phys" },
+  { id: "na_wasabizuke", pref: "nagano", area: "中信", tier: 2, type: "gift", name: "わさび漬け", en: "Wasabi-zuke", eff: "res" },
+  { id: "na_milkpan", pref: "nagano", area: "中信", tier: 3, type: "gift", name: "牛乳パン", en: "Milk Cream Bread", eff: "charge" },
+  { id: "na_yakiniku", pref: "nagano", area: "南信", tier: 1, type: "visit", name: "飯田の焼肉", en: "Iida Yakiniku", eff: "phys" },
+  { id: "na_romen", pref: "nagano", area: "南信", tier: 2, type: "visit", name: "ローメン", en: "Romen (Mutton Noodles)", eff: "maxHp" },
+  { id: "na_unagi", pref: "nagano", area: "南信", tier: 3, type: "visit", name: "岡谷のうなぎ", en: "Okaya Eel", eff: "magic" },
+  { id: "gf_ayu", pref: "gifu", area: "岐阜", tier: 1, type: "visit", name: "長良川の鮎", en: "Nagara River Sweetfish", eff: "magic" },
+  { id: "gf_tanmen", pref: "gifu", area: "岐阜", tier: 2, type: "visit", name: "岐阜タンメン", en: "Gifu Tanmen", eff: "maxHp" },
+  { id: "gf_ayukashi", pref: "gifu", area: "岐阜", tier: 3, type: "gift", name: "鮎菓子", en: "Ayu-gashi (Sweetfish Cakes)", eff: "heal" },
+  { id: "gf_mizumanju", pref: "gifu", area: "西濃", tier: 1, type: "visit", name: "水まんじゅう", en: "Mizu Manju", eff: "heal" },
+  { id: "gf_kaki", pref: "gifu", area: "西濃", tier: 2, type: "gift", name: "富有柿", en: "Fuyu Persimmons", eff: "charge" },
+  { id: "gf_ibicha", pref: "gifu", area: "西濃", tier: 3, type: "gift", name: "揖斐茶", en: "Ibi Green Tea", eff: "res" },
+  { id: "gf_keichan", pref: "gifu", area: "中濃", tier: 1, type: "visit", name: "鶏ちゃん", en: "Keichan (Miso Grilled Chicken)", eff: "phys" },
+  { id: "gf_sekiunagi", pref: "gifu", area: "中濃", tier: 2, type: "visit", name: "関のうなぎ", en: "Seki Eel", eff: "magic" },
+  { id: "gf_ham", pref: "gifu", area: "中濃", tier: 3, type: "gift", name: "郡上のハム", en: "Gujo Ham", eff: "maxHp" },
+  { id: "gf_kurikinton", pref: "gifu", area: "東濃", tier: 1, type: "gift", name: "栗きんとん", en: "Kuri Kinton (Chestnut Sweets)", eff: "heal" },
+  { id: "gf_gohei", pref: "gifu", area: "東濃", tier: 2, type: "visit", name: "五平餅", en: "Gohei Mochi", eff: "maxHp" },
+  { id: "gf_karasumi", pref: "gifu", area: "東濃", tier: 3, type: "gift", name: "からすみ（ひな菓子）", en: "Karasumi Doll Festival Sweets", eff: "charge" },
+  { id: "gf_hobamiso", pref: "gifu", area: "飛騨", tier: 1, type: "visit", name: "朴葉味噌焼き", en: "Hoba Miso Grill", eff: "phys" },
+  { id: "gf_takayamaramen", pref: "gifu", area: "飛騨", tier: 2, type: "visit", name: "高山ラーメン", en: "Takayama Ramen", eff: "maxHp" },
+  { id: "gf_midarashi", pref: "gifu", area: "飛騨", tier: 3, type: "visit", name: "みだらしだんご", en: "Midarashi Dango", eff: "heal" },
+  { id: "sz_himono", pref: "shizuoka", area: "東部", tier: 1, type: "gift", name: "沼津の干物", en: "Numazu Dried Fish", eff: "magic" },
+  { id: "sz_fujinomiya", pref: "shizuoka", area: "東部", tier: 2, type: "visit", name: "富士宮やきそば", en: "Fujinomiya Yakisoba", eff: "phys" },
+  { id: "sz_mishimaunagi", pref: "shizuoka", area: "東部", tier: 3, type: "visit", name: "三島のうなぎ", en: "Mishima Eel", eff: "maxHp" },
+  { id: "sz_kinmedai", pref: "shizuoka", area: "伊豆", tier: 1, type: "visit", name: "金目鯛の煮付け", en: "Simmered Splendid Alfonsino", eff: "magic" },
+  { id: "sz_wasabidon", pref: "shizuoka", area: "伊豆", tier: 2, type: "visit", name: "わさび丼", en: "Wasabi Rice Bowl", eff: "res" },
+  { id: "sz_tokoroten", pref: "shizuoka", area: "伊豆", tier: 3, type: "visit", name: "ところてん", en: "Tokoroten (Agar Noodles)", eff: "charge" },
+  { id: "sz_cha", pref: "shizuoka", area: "中部", tier: 1, type: "gift", name: "静岡茶", en: "Shizuoka Green Tea", eff: "res" },
+  { id: "sz_oden", pref: "shizuoka", area: "中部", tier: 2, type: "visit", name: "静岡おでん", en: "Shizuoka Oden", eff: "maxHp" },
+  { id: "sz_sakuraebi", pref: "shizuoka", area: "中部", tier: 3, type: "visit", name: "桜えびのかき揚げ", en: "Sakura Shrimp Fritters", eff: "magic" },
+  { id: "sz_gyoza", pref: "shizuoka", area: "西部", tier: 1, type: "visit", name: "浜松餃子", en: "Hamamatsu Gyoza", eff: "phys" },
+  { id: "sz_hamanaunagi", pref: "shizuoka", area: "西部", tier: 2, type: "visit", name: "浜名湖のうなぎ", en: "Lake Hamana Eel", eff: "heal" },
+  { id: "sz_mikan", pref: "shizuoka", area: "西部", tier: 3, type: "gift", name: "三ヶ日みかん", en: "Mikkabi Mandarins", eff: "charge" },
+  { id: "ai_hitsumabushi", pref: "aichi", area: "名古屋", tier: 1, type: "visit", name: "ひつまぶし", en: "Hitsumabushi (Eel Rice)", eff: "magic" },
+  { id: "ai_misonikomi", pref: "aichi", area: "名古屋", tier: 2, type: "visit", name: "味噌煮込みうどん", en: "Miso Nikomi Udon", eff: "maxHp" },
+  { id: "ai_tebasaki", pref: "aichi", area: "名古屋", tier: 3, type: "visit", name: "手羽先", en: "Tebasaki (Chicken Wings)", eff: "phys" },
+  { id: "ai_morning", pref: "aichi", area: "尾張", tier: 1, type: "visit", name: "喫茶店のモーニング", en: "Café Morning Set", eff: "heal" },
+  { id: "ai_tenmusu", pref: "aichi", area: "尾張", tier: 2, type: "visit", name: "天むす", en: "Tenmusu (Tempura Rice Balls)", eff: "res" },
+  { id: "ai_inuyamadengaku", pref: "aichi", area: "尾張", tier: 3, type: "visit", name: "犬山の豆腐田楽", en: "Inuyama Tofu Dengaku", eff: "charge" },
+  { id: "ai_misokatsu", pref: "aichi", area: "西三河", tier: 1, type: "visit", name: "味噌かつ", en: "Miso Katsu", eff: "phys" },
+  { id: "ai_matcha", pref: "aichi", area: "西三河", tier: 2, type: "gift", name: "西尾の抹茶", en: "Nishio Matcha", eff: "res" },
+  { id: "ai_kishimen", pref: "aichi", area: "西三河", tier: 3, type: "visit", name: "きしめん", en: "Kishimen (Flat Udon)", eff: "maxHp" },
+  { id: "ai_curryudon", pref: "aichi", area: "東三河", tier: 1, type: "visit", name: "豊橋カレーうどん", en: "Toyohashi Curry Udon", eff: "maxHp" },
+  { id: "ai_chikuwa", pref: "aichi", area: "東三河", tier: 2, type: "gift", name: "豊橋ちくわ", en: "Toyohashi Chikuwa", eff: "res" },
+  { id: "ai_uzura", pref: "aichi", area: "東三河", tier: 3, type: "visit", name: "うずらの卵", en: "Quail Eggs", eff: "charge" },
+  /* ---- 近畿（2026-10-10。京都を除く6県35区分105品） ---- */
+  { id: "me_tonteki", pref: "mie", area: "北勢", tier: 1, type: "visit", name: "とんてき", en: "Tonteki (Garlic Pork Steak)", eff: "phys" },
+  { id: "me_hamaguri", pref: "mie", area: "北勢", tier: 2, type: "visit", name: "桑名のはまぐり", en: "Kuwana Hard Clams", eff: "magic" },
+  { id: "me_misoyakiudon", pref: "mie", area: "北勢", tier: 3, type: "visit", name: "みそ焼きうどん", en: "Miso Yaki Udon", eff: "maxHp" },
+  { id: "me_matsusaka", pref: "mie", area: "中南勢", tier: 1, type: "visit", name: "松阪牛のすき焼き", en: "Matsusaka Beef Sukiyaki", eff: "phys" },
+  { id: "me_tsugyoza", pref: "mie", area: "中南勢", tier: 2, type: "visit", name: "津ぎょうざ", en: "Tsu Giant Fried Gyoza", eff: "maxHp" },
+  { id: "me_toriyakiniku", pref: "mie", area: "中南勢", tier: 3, type: "visit", name: "鶏焼肉", en: "Grilled Chicken Yakiniku", eff: "heal" },
+  { id: "me_katayaki", pref: "mie", area: "伊賀", tier: 1, type: "gift", name: "かた焼き", en: "Katayaki (Ninja Hard Crackers)", eff: "res" },
+  { id: "me_igagyu", pref: "mie", area: "伊賀", tier: 2, type: "visit", name: "伊賀牛のステーキ", en: "Iga Beef Steak", eff: "phys" },
+  { id: "me_igadengaku", pref: "mie", area: "伊賀", tier: 3, type: "visit", name: "豆腐田楽", en: "Tofu Dengaku", eff: "charge" },
+  { id: "me_iseudon", pref: "mie", area: "伊勢志摩", tier: 1, type: "visit", name: "伊勢うどん", en: "Ise Udon", eff: "maxHp" },
+  { id: "me_ankoromochi", pref: "mie", area: "伊勢志摩", tier: 2, type: "gift", name: "あんころ餅", en: "Ankoro Mochi", eff: "heal" },
+  { id: "me_tekone", pref: "mie", area: "伊勢志摩", tier: 3, type: "visit", name: "手こね寿司", en: "Tekone-zushi (Marinated Bonito Sushi)", eff: "magic" },
+  { id: "me_meharizushi", pref: "mie", area: "東紀州", tier: 1, type: "visit", name: "めはり寿司", en: "Mehari-zushi (Mustard Leaf Rice Balls)", eff: "maxHp" },
+  { id: "me_sanmazushi", pref: "mie", area: "東紀州", tier: 2, type: "visit", name: "さんま寿司", en: "Saury Sushi", eff: "magic" },
+  { id: "me_shinhime", pref: "mie", area: "東紀州", tier: 3, type: "gift", name: "新姫のゼリー", en: "Shinhime Citrus Jelly", eff: "charge" },
+  { id: "sg_shijimijiru", pref: "shiga", area: "大津", tier: 1, type: "visit", name: "瀬田しじみの味噌汁", en: "Seta Clam Miso Soup", eff: "res" },
+  { id: "sg_chikaramochi", pref: "shiga", area: "大津", tier: 2, type: "gift", name: "力餅", en: "Chikara Mochi", eff: "heal" },
+  { id: "sg_koayu", pref: "shiga", area: "大津", tier: 3, type: "visit", name: "小鮎の天ぷら", en: "Baby Sweetfish Tempura", eff: "magic" },
+  { id: "sg_melon", pref: "shiga", area: "湖南", tier: 1, type: "gift", name: "守山のメロン", en: "Moriyama Melon", eff: "heal" },
+  { id: "sg_aobana", pref: "shiga", area: "湖南", tier: 2, type: "gift", name: "あおばな茶", en: "Aobana (Dayflower) Tea", eff: "res" },
+  { id: "sg_ichijiku", pref: "shiga", area: "湖南", tier: 3, type: "gift", name: "いちじく", en: "Figs", eff: "charge" },
+  { id: "sg_tsuchiyamacha", pref: "shiga", area: "甲賀", tier: 1, type: "gift", name: "土山茶", en: "Tsuchiyama Green Tea", eff: "res" },
+  { id: "sg_ninjamanju", pref: "shiga", area: "甲賀", tier: 2, type: "gift", name: "忍者まんじゅう", en: "Ninja Manju", eff: "charge" },
+  { id: "sg_chasoba", pref: "shiga", area: "甲賀", tier: 3, type: "visit", name: "茶そば", en: "Green Tea Soba", eff: "maxHp" },
+  { id: "sg_omigyu", pref: "shiga", area: "東近江", tier: 1, type: "visit", name: "近江牛のステーキ", en: "Omi Beef Steak", eff: "phys" },
+  { id: "sg_akakonnyaku", pref: "shiga", area: "東近江", tier: 2, type: "visit", name: "赤こんにゃく", en: "Red Konnyaku", eff: "res" },
+  { id: "sg_decchiyokan", pref: "shiga", area: "東近江", tier: 3, type: "gift", name: "丁稚羊羹", en: "Decchi Yokan", eff: "heal" },
+  { id: "sg_champon", pref: "shiga", area: "湖東", tier: 1, type: "visit", name: "近江ちゃんぽん", en: "Omi Champon", eff: "maxHp" },
+  { id: "sg_itokirimochi", pref: "shiga", area: "湖東", tier: 2, type: "gift", name: "糸切餅", en: "Itokiri Mochi", eff: "heal" },
+  { id: "sg_misozuke", pref: "shiga", area: "湖東", tier: 3, type: "gift", name: "近江牛の味噌漬け", en: "Miso-Cured Omi Beef", eff: "phys" },
+  { id: "sg_yakisabasomen", pref: "shiga", area: "湖北", tier: 1, type: "visit", name: "焼鯖そうめん", en: "Grilled Mackerel Somen", eff: "maxHp" },
+  { id: "sg_kamonabe", pref: "shiga", area: "湖北", tier: 2, type: "visit", name: "鴨鍋", en: "Duck Hot Pot", eff: "magic" },
+  { id: "sg_noppei", pref: "shiga", area: "湖北", tier: 3, type: "visit", name: "のっぺいうどん", en: "Noppei Udon (Thick Broth)", eff: "heal" },
+  { id: "sg_tonchan", pref: "shiga", area: "高島", tier: 1, type: "visit", name: "とんちゃん焼き", en: "Tonchan Grill", eff: "phys" },
+  { id: "sg_sabazushi", pref: "shiga", area: "高島", tier: 2, type: "visit", name: "鯖寿司", en: "Mackerel Sushi", eff: "magic" },
+  { id: "sg_tochimochi", pref: "shiga", area: "高島", tier: 3, type: "gift", name: "栃餅", en: "Horse Chestnut Mochi", eff: "heal" },
+  { id: "os_takoyaki", pref: "osaka", area: "大阪市", tier: 1, type: "visit", name: "たこ焼き", en: "Takoyaki", eff: "maxHp" },
+  { id: "os_okonomiyaki", pref: "osaka", area: "大阪市", tier: 2, type: "visit", name: "お好み焼き", en: "Okonomiyaki", eff: "phys" },
+  { id: "os_kushikatsu", pref: "osaka", area: "大阪市", tier: 3, type: "visit", name: "串カツ", en: "Kushikatsu", eff: "charge" },
+  { id: "os_momiji", pref: "osaka", area: "豊能", tier: 1, type: "gift", name: "もみじの天ぷら", en: "Maple Leaf Tempura", eff: "charge" },
+  { id: "os_kuri", pref: "osaka", area: "豊能", tier: 2, type: "gift", name: "能勢の栗", en: "Nose Chestnuts", eff: "heal" },
+  { id: "os_jidori", pref: "osaka", area: "豊能", tier: 3, type: "visit", name: "地鶏の炭火焼", en: "Charcoal-Grilled Local Chicken", eff: "phys" },
+  { id: "os_udonsuki", pref: "osaka", area: "三島", tier: 1, type: "visit", name: "うどんすき", en: "Udon-suki Hot Pot", eff: "maxHp" },
+  { id: "os_udo", pref: "osaka", area: "三島", tier: 2, type: "visit", name: "うどの天ぷら", en: "Udo Tempura", eff: "res" },
+  { id: "os_kanten", pref: "osaka", area: "三島", tier: 3, type: "gift", name: "寒天ゼリー", en: "Agar Jelly", eff: "heal" },
+  { id: "os_kurawanka", pref: "osaka", area: "北河内", tier: 1, type: "gift", name: "くらわんか餅", en: "Kurawanka Mochi", eff: "heal" },
+  { id: "os_kashiwa", pref: "osaka", area: "北河内", tier: 2, type: "visit", name: "かしわのすき焼き", en: "Chicken Sukiyaki", eff: "maxHp" },
+  { id: "os_narazuke", pref: "osaka", area: "北河内", tier: 3, type: "gift", name: "守口大根の粕漬け", en: "Moriguchi Radish Pickles", eff: "res" },
+  { id: "os_gobou", pref: "osaka", area: "中河内", tier: 1, type: "visit", name: "若ごぼう", en: "Young Burdock", eff: "res" },
+  { id: "os_edamame", pref: "osaka", area: "中河内", tier: 2, type: "visit", name: "八尾の枝豆", en: "Yao Edamame", eff: "heal" },
+  { id: "os_budou", pref: "osaka", area: "中河内", tier: 3, type: "gift", name: "柏原のぶどう", en: "Kashiwara Grapes", eff: "charge" },
+  { id: "os_kasuudon", pref: "osaka", area: "南河内", tier: 1, type: "visit", name: "かすうどん", en: "Kasu Udon", eff: "maxHp" },
+  { id: "os_grapejuice", pref: "osaka", area: "南河内", tier: 2, type: "gift", name: "河内のぶどうゼリー", en: "Kawachi Grape Jelly", eff: "heal" },
+  { id: "os_kamo", pref: "osaka", area: "南河内", tier: 3, type: "visit", name: "河内鴨のロース", en: "Kawachi Duck Loin", eff: "magic" },
+  { id: "os_kurumimochi", pref: "osaka", area: "泉北", tier: 1, type: "gift", name: "堺のくるみ餅", en: "Sakai Kurumi Mochi", eff: "heal" },
+  { id: "os_keshimochi", pref: "osaka", area: "泉北", tier: 2, type: "gift", name: "けし餅", en: "Poppy Seed Mochi", eff: "charge" },
+  { id: "os_matchazenzai", pref: "osaka", area: "泉北", tier: 3, type: "visit", name: "抹茶ぜんざい", en: "Matcha Zenzai", eff: "res" },
+  { id: "os_mizunasu", pref: "osaka", area: "泉南", tier: 1, type: "gift", name: "水なすの浅漬け", en: "Water Eggplant Pickles", eff: "heal" },
+  { id: "os_kashimin", pref: "osaka", area: "泉南", tier: 2, type: "visit", name: "かしみん焼き", en: "Kashimin-yaki", eff: "phys" },
+  { id: "os_tamanegi", pref: "osaka", area: "泉南", tier: 3, type: "visit", name: "玉ねぎのかき揚げ", en: "Onion Fritters", eff: "maxHp" },
+  { id: "hg_kobebeef", pref: "hyogo", area: "神戸", tier: 1, type: "visit", name: "神戸牛のステーキ", en: "Kobe Beef Steak", eff: "phys" },
+  { id: "hg_sobameshi", pref: "hyogo", area: "神戸", tier: 2, type: "visit", name: "そばめし", en: "Sobameshi (Noodle Fried Rice)", eff: "maxHp" },
+  { id: "hg_baum", pref: "hyogo", area: "神戸", tier: 3, type: "gift", name: "バウムクーヘン", en: "Baumkuchen", eff: "heal" },
+  { id: "hg_kugini", pref: "hyogo", area: "阪神", tier: 1, type: "gift", name: "いかなごのくぎ煮", en: "Simmered Sand Lance", eff: "res" },
+  { id: "hg_amazake", pref: "hyogo", area: "阪神", tier: 2, type: "visit", name: "酒蔵の甘酒", en: "Brewery Amazake", eff: "heal" },
+  { id: "hg_tansan", pref: "hyogo", area: "阪神", tier: 3, type: "gift", name: "炭酸せんべい", en: "Tansan Wafers", eff: "charge" },
+  { id: "hg_akashiyaki", pref: "hyogo", area: "東播磨", tier: 1, type: "visit", name: "明石焼き", en: "Akashiyaki (Egg Dumplings)", eff: "maxHp" },
+  { id: "hg_katsumeshi", pref: "hyogo", area: "東播磨", tier: 2, type: "visit", name: "かつめし", en: "Katsumeshi (Cutlet Rice)", eff: "phys" },
+  { id: "hg_tai", pref: "hyogo", area: "東播磨", tier: 3, type: "visit", name: "明石鯛の塩焼き", en: "Salt-Grilled Akashi Sea Bream", eff: "magic" },
+  { id: "hg_himejioden", pref: "hyogo", area: "中播磨", tier: 1, type: "visit", name: "姫路おでん", en: "Himeji Oden", eff: "maxHp" },
+  { id: "hg_ekisoba", pref: "hyogo", area: "中播磨", tier: 2, type: "visit", name: "えきそば", en: "Ekisoba (Station Noodles)", eff: "res" },
+  { id: "hg_almondtoast", pref: "hyogo", area: "中播磨", tier: 3, type: "visit", name: "アーモンドトースト", en: "Almond Toast", eff: "charge" },
+  { id: "hg_somen", pref: "hyogo", area: "西播磨", tier: 1, type: "visit", name: "播州そうめん", en: "Banshu Somen", eff: "maxHp" },
+  { id: "hg_shiomanju", pref: "hyogo", area: "西播磨", tier: 2, type: "gift", name: "塩味まんじゅう", en: "Salted Manju", eff: "heal" },
+  { id: "hg_kakioko", pref: "hyogo", area: "西播磨", tier: 3, type: "visit", name: "かきおこ", en: "Kakioko (Oyster Okonomiyaki)", eff: "magic" },
+  { id: "hg_matsubagani", pref: "hyogo", area: "但馬", tier: 1, type: "visit", name: "松葉がに", en: "Matsuba Snow Crab", eff: "magic" },
+  { id: "hg_izushisoba", pref: "hyogo", area: "但馬", tier: 2, type: "visit", name: "出石皿そば", en: "Izushi Sara Soba", eff: "maxHp" },
+  { id: "hg_tajimagyu", pref: "hyogo", area: "但馬", tier: 3, type: "visit", name: "但馬牛の焼肉", en: "Tajima Beef Yakiniku", eff: "phys" },
+  { id: "hg_kuromame", pref: "hyogo", area: "丹波", tier: 1, type: "gift", name: "丹波の黒豆", en: "Tamba Black Soybeans", eff: "res" },
+  { id: "hg_montblanc", pref: "hyogo", area: "丹波", tier: 2, type: "gift", name: "丹波栗のモンブラン", en: "Tamba Chestnut Mont Blanc", eff: "heal" },
+  { id: "hg_botannabe", pref: "hyogo", area: "丹波", tier: 3, type: "visit", name: "ぼたん鍋", en: "Botan Nabe (Boar Hot Pot)", eff: "phys" },
+  { id: "hg_tamanegi", pref: "hyogo", area: "淡路", tier: 1, type: "gift", name: "淡路島の玉ねぎ", en: "Awaji Onions", eff: "charge" },
+  { id: "hg_awajigyudon", pref: "hyogo", area: "淡路", tier: 2, type: "visit", name: "淡路島牛丼", en: "Awaji Beef Bowl", eff: "maxHp" },
+  { id: "hg_hamo", pref: "hyogo", area: "淡路", tier: 3, type: "visit", name: "鱧しゃぶ", en: "Pike Conger Shabu-shabu", eff: "magic" },
+  { id: "nr_kakinoha", pref: "nara", area: "北和", tier: 1, type: "gift", name: "柿の葉寿司", en: "Persimmon Leaf Sushi", eff: "heal" },
+  { id: "nr_narazuke", pref: "nara", area: "北和", tier: 2, type: "gift", name: "奈良漬", en: "Narazuke Pickles", eff: "res" },
+  { id: "nr_chagayu", pref: "nara", area: "北和", tier: 3, type: "visit", name: "茶粥", en: "Chagayu (Tea Rice Porridge)", eff: "maxHp" },
+  { id: "nr_miwasomen", pref: "nara", area: "中和", tier: 1, type: "visit", name: "三輪そうめん", en: "Miwa Somen", eff: "maxHp" },
+  { id: "nr_tenriramen", pref: "nara", area: "中和", tier: 2, type: "visit", name: "天理ラーメン", en: "Tenri Ramen", eff: "phys" },
+  { id: "nr_asukanabe", pref: "nara", area: "中和", tier: 3, type: "visit", name: "飛鳥鍋", en: "Asuka Nabe (Milk Hot Pot)", eff: "heal" },
+  { id: "nr_kuzukiri", pref: "nara", area: "東和", tier: 1, type: "visit", name: "吉野葛の葛きり", en: "Yoshino Kuzu Noodles", eff: "heal" },
+  { id: "nr_yamatocha", pref: "nara", area: "東和", tier: 2, type: "gift", name: "大和茶", en: "Yamato Green Tea", eff: "res" },
+  { id: "nr_oyakodon", pref: "nara", area: "東和", tier: 3, type: "visit", name: "大和肉鶏の親子丼", en: "Yamato Chicken Oyakodon", eff: "phys" },
+  { id: "nr_kaki", pref: "nara", area: "南和", tier: 1, type: "gift", name: "五條の柿", en: "Gojo Persimmons", eff: "charge" },
+  { id: "nr_tofu", pref: "nara", area: "南和", tier: 2, type: "visit", name: "名水豆腐", en: "Spring Water Tofu", eff: "res" },
+  { id: "nr_sakuramochi", pref: "nara", area: "南和", tier: 3, type: "gift", name: "吉野の桜葉もち", en: "Yoshino Cherry Leaf Mochi", eff: "heal" },
+  { id: "wk_ramen", pref: "wakayama", area: "紀北", tier: 1, type: "visit", name: "和歌山ラーメン", en: "Wakayama Ramen", eff: "maxHp" },
+  { id: "wk_hayazushi", pref: "wakayama", area: "紀北", tier: 2, type: "visit", name: "早すし", en: "Haya-zushi (Pressed Sushi)", eff: "magic" },
+  { id: "wk_momo", pref: "wakayama", area: "紀北", tier: 3, type: "gift", name: "あら川の桃", en: "Aragawa Peaches", eff: "heal" },
+  { id: "wk_mikan", pref: "wakayama", area: "紀中", tier: 1, type: "gift", name: "有田みかん", en: "Arida Mandarins", eff: "charge" },
+  { id: "wk_umeboshi", pref: "wakayama", area: "紀中", tier: 2, type: "gift", name: "紀州梅干し", en: "Kishu Umeboshi", eff: "res" },
+  { id: "wk_kinzanji", pref: "wakayama", area: "紀中", tier: 3, type: "gift", name: "金山寺味噌", en: "Kinzanji Miso", eff: "heal" },
+  { id: "wk_maguro", pref: "wakayama", area: "紀南", tier: 1, type: "visit", name: "勝浦の生まぐろ", en: "Katsuura Fresh Tuna", eff: "magic" },
+  { id: "wk_kuenabe", pref: "wakayama", area: "紀南", tier: 2, type: "visit", name: "クエ鍋", en: "Kue (Grouper) Hot Pot", eff: "maxHp" },
+  { id: "wk_jabara", pref: "wakayama", area: "紀南", tier: 3, type: "gift", name: "じゃばらゼリー", en: "Jabara Citrus Jelly", eff: "heal" },
+  /* ---- 中国・四国（2026-10-10。香川を除く8県31区分93品） ---- */
+  { id: "tt_nashi", pref: "tottori", area: "東部", tier: 1, type: "gift", name: "二十世紀梨", en: "Nijisseiki Pears", eff: "heal" },
+  { id: "tt_tofuchikuwa", pref: "tottori", area: "東部", tier: 2, type: "gift", name: "豆腐ちくわ", en: "Tofu Chikuwa", eff: "res" },
+  { id: "tt_rakkyo", pref: "tottori", area: "東部", tier: 3, type: "gift", name: "砂丘らっきょう", en: "Sand Dune Rakkyo Pickles", eff: "charge" },
+  { id: "tt_gyukotsu", pref: "tottori", area: "中部", tier: 1, type: "visit", name: "牛骨ラーメン", en: "Beef Bone Ramen", eff: "maxHp" },
+  { id: "tt_sanshokudango", pref: "tottori", area: "中部", tier: 2, type: "gift", name: "三色だんご", en: "Tricolor Dango", eff: "heal" },
+  { id: "tt_shijimi", pref: "tottori", area: "中部", tier: 3, type: "visit", name: "東郷池のしじみ", en: "Togo Lake Clams", eff: "res" },
+  { id: "tt_benizuwai", pref: "tottori", area: "西部", tier: 1, type: "visit", name: "紅ずわいがに丼", en: "Red Snow Crab Bowl", eff: "magic" },
+  { id: "tt_daisenokowa", pref: "tottori", area: "西部", tier: 2, type: "visit", name: "大山おこわ", en: "Daisen Okowa (Sticky Rice)", eff: "maxHp" },
+  { id: "tt_jelato", pref: "tottori", area: "西部", tier: 3, type: "gift", name: "大山のジェラート", en: "Daisen Gelato", eff: "charge" },
+  { id: "sm_warigo", pref: "shimane", area: "出雲", tier: 1, type: "visit", name: "割子そば", en: "Warigo Soba", eff: "maxHp" },
+  { id: "sm_shijimijiru", pref: "shimane", area: "出雲", tier: 2, type: "visit", name: "しじみ汁", en: "Clam Miso Soup", eff: "res" },
+  { id: "sm_zenzai", pref: "shimane", area: "出雲", tier: 3, type: "gift", name: "出雲ぜんざい", en: "Izumo Zenzai", eff: "heal" },
+  { id: "sm_nodoguro", pref: "shimane", area: "石見", tier: 1, type: "visit", name: "のどぐろの塩焼き", en: "Salt-Grilled Blackthroat Seaperch", eff: "magic" },
+  { id: "sm_agoyaki", pref: "shimane", area: "石見", tier: 2, type: "gift", name: "あご野焼", en: "Ago Noyaki (Flying Fish Cake)", eff: "res" },
+  { id: "sm_genjimaki", pref: "shimane", area: "石見", tier: 3, type: "gift", name: "源氏巻", en: "Genji-maki (Bean Paste Roll)", eff: "heal" },
+  { id: "sm_okigyu", pref: "shimane", area: "隠岐", tier: 1, type: "visit", name: "隠岐牛のステーキ", en: "Oki Beef Steak", eff: "phys" },
+  { id: "sm_sazaecurry", pref: "shimane", area: "隠岐", tier: 2, type: "visit", name: "さざえカレー", en: "Turban Shell Curry", eff: "maxHp" },
+  { id: "sm_iwagaki", pref: "shimane", area: "隠岐", tier: 3, type: "visit", name: "岩がき", en: "Rock Oysters", eff: "magic" },
+  { id: "oy_kibidango", pref: "okayama", area: "備前", tier: 1, type: "gift", name: "きびだんご", en: "Kibi Dango", eff: "heal" },
+  { id: "oy_barazushi", pref: "okayama", area: "備前", tier: 2, type: "visit", name: "ばら寿司", en: "Bara-zushi (Scattered Sushi)", eff: "magic" },
+  { id: "oy_demikatsu", pref: "okayama", area: "備前", tier: 3, type: "visit", name: "デミカツ丼", en: "Demi-glace Cutlet Bowl", eff: "phys" },
+  { id: "oy_hakuto", pref: "okayama", area: "備中", tier: 1, type: "gift", name: "白桃", en: "White Peaches", eff: "heal" },
+  { id: "oy_bukkake", pref: "okayama", area: "備中", tier: 2, type: "visit", name: "ぶっかけうどん", en: "Bukkake Udon", eff: "maxHp" },
+  { id: "oy_kasaoka", pref: "okayama", area: "備中", tier: 3, type: "visit", name: "笠岡ラーメン", en: "Kasaoka Chicken Ramen", eff: "charge" },
+  { id: "oy_horumonudon", pref: "okayama", area: "美作", tier: 1, type: "visit", name: "ホルモンうどん", en: "Offal Udon", eff: "phys" },
+  { id: "oy_hiruzen", pref: "okayama", area: "美作", tier: 2, type: "visit", name: "ひるぜん焼そば", en: "Hiruzen Yakisoba", eff: "maxHp" },
+  { id: "oy_jerseysoft", pref: "okayama", area: "美作", tier: 3, type: "gift", name: "ジャージー牛乳のソフトクリーム", en: "Jersey Milk Soft Serve", eff: "charge" },
+  { id: "hr_okonomi", pref: "hiroshima", area: "広島", tier: 1, type: "visit", name: "広島風お好み焼き", en: "Hiroshima-style Okonomiyaki", eff: "maxHp" },
+  { id: "hr_momijimanju", pref: "hiroshima", area: "広島", tier: 2, type: "gift", name: "もみじまんじゅう", en: "Maple Leaf Manju", eff: "heal" },
+  { id: "hr_tsukemen", pref: "hiroshima", area: "広島", tier: 3, type: "visit", name: "広島つけ麺", en: "Hiroshima Spicy Tsukemen", eff: "phys" },
+  { id: "hr_kurereimen", pref: "hiroshima", area: "呉", tier: 1, type: "visit", name: "呉冷麺", en: "Kure Cold Noodles", eff: "maxHp" },
+  { id: "hr_gansu", pref: "hiroshima", area: "呉", tier: 2, type: "gift", name: "がんす", en: "Gansu (Fried Fish Cake)", eff: "charge" },
+  { id: "hr_frycake", pref: "hiroshima", area: "呉", tier: 3, type: "gift", name: "フライケーキ", en: "Fried Bean Cakes", eff: "heal" },
+  { id: "hr_bishunabe", pref: "hiroshima", area: "東広島", tier: 1, type: "visit", name: "美酒鍋", en: "Bishu Nabe (Sake Hot Pot)", eff: "magic" },
+  { id: "hr_jagaimo", pref: "hiroshima", area: "東広島", tier: 2, type: "visit", name: "じゃがいものコロッケ", en: "Potato Croquettes", eff: "maxHp" },
+  { id: "hr_blueberry", pref: "hiroshima", area: "東広島", tier: 3, type: "gift", name: "ブルーベリージャム", en: "Blueberry Jam", eff: "res" },
+  { id: "hr_onomichi", pref: "hiroshima", area: "尾三", tier: 1, type: "visit", name: "尾道ラーメン", en: "Onomichi Ramen", eff: "maxHp" },
+  { id: "hr_takoten", pref: "hiroshima", area: "尾三", tier: 2, type: "visit", name: "たこ天", en: "Octopus Tempura", eff: "phys" },
+  { id: "hr_lemon", pref: "hiroshima", area: "尾三", tier: 3, type: "gift", name: "瀬戸田レモン", en: "Setoda Lemons", eff: "charge" },
+  { id: "hr_fuchuyaki", pref: "hiroshima", area: "福山府中", tier: 1, type: "visit", name: "府中焼き", en: "Fuchu-yaki", eff: "phys" },
+  { id: "hr_taimeshi", pref: "hiroshima", area: "福山府中", tier: 2, type: "visit", name: "鯛めし", en: "Sea Bream Rice", eff: "magic" },
+  { id: "hr_uzumi", pref: "hiroshima", area: "福山府中", tier: 3, type: "visit", name: "うずみ", en: "Uzumi (Hidden Rice Soup)", eff: "heal" },
+  { id: "hr_shobarayaki", pref: "hiroshima", area: "備北", tier: 1, type: "visit", name: "庄原焼き", en: "Shobara-yaki", eff: "maxHp" },
+  { id: "hr_karamen", pref: "hiroshima", area: "備北", tier: 2, type: "visit", name: "辛麺", en: "Spicy Noodles", eff: "phys" },
+  { id: "hr_wani", pref: "hiroshima", area: "備北", tier: 3, type: "visit", name: "わにの刺身", en: "Shark Sashimi", eff: "res" },
+  { id: "yg_iwakunizushi", pref: "yamaguchi", area: "岩国", tier: 1, type: "visit", name: "岩国寿司", en: "Iwakuni-zushi", eff: "magic" },
+  { id: "yg_renkon", pref: "yamaguchi", area: "岩国", tier: 2, type: "visit", name: "れんこんの天ぷら", en: "Lotus Root Tempura", eff: "res" },
+  { id: "yg_ohira", pref: "yamaguchi", area: "岩国", tier: 3, type: "visit", name: "大平", en: "Ohira (Simmered Vegetable Soup)", eff: "heal" },
+  { id: "yg_tokuyamaramen", pref: "yamaguchi", area: "周南", tier: 1, type: "visit", name: "徳山ラーメン", en: "Tokuyama Ramen", eff: "maxHp" },
+  { id: "yg_nashi", pref: "yamaguchi", area: "周南", tier: 2, type: "gift", name: "長十郎梨", en: "Chojuro Pears", eff: "heal" },
+  { id: "yg_shirasu", pref: "yamaguchi", area: "周南", tier: 3, type: "visit", name: "しらすのおにぎり", en: "Whitebait Rice Balls", eff: "charge" },
+  { id: "yg_uiro", pref: "yamaguchi", area: "山口", tier: 1, type: "gift", name: "外郎", en: "Uiro (Bracken Starch Cake)", eff: "heal" },
+  { id: "yg_barisoba", pref: "yamaguchi", area: "山口", tier: 2, type: "visit", name: "バリそば", en: "Bari Soba (Crispy Noodles)", eff: "phys" },
+  { id: "yg_onsentamago", pref: "yamaguchi", area: "山口", tier: 3, type: "visit", name: "温泉たまご", en: "Onsen Eggs", eff: "res" },
+  { id: "yg_uberamen", pref: "yamaguchi", area: "宇部", tier: 1, type: "visit", name: "宇部ラーメン", en: "Ube Ramen", eff: "maxHp" },
+  { id: "yg_onocha", pref: "yamaguchi", area: "宇部", tier: 2, type: "gift", name: "小野茶", en: "Ono Green Tea", eff: "res" },
+  { id: "yg_torikawa", pref: "yamaguchi", area: "宇部", tier: 3, type: "visit", name: "鶏皮の串焼き", en: "Grilled Chicken Skin Skewers", eff: "phys" },
+  { id: "yg_fugusashi", pref: "yamaguchi", area: "下関", tier: 1, type: "visit", name: "ふぐ刺し", en: "Pufferfish Sashimi", eff: "magic" },
+  { id: "yg_kawarasoba", pref: "yamaguchi", area: "下関", tier: 2, type: "visit", name: "瓦そば", en: "Kawara Soba (Tile Soba)", eff: "maxHp" },
+  { id: "yg_uni", pref: "yamaguchi", area: "下関", tier: 3, type: "gift", name: "瓶詰めうに", en: "Bottled Sea Urchin", eff: "charge" },
+  { id: "yg_nagatoyakitori", pref: "yamaguchi", area: "長門", tier: 1, type: "visit", name: "長門やきとり", en: "Nagato Yakitori", eff: "phys" },
+  { id: "yg_kamaboko", pref: "yamaguchi", area: "長門", tier: 2, type: "gift", name: "仙崎かまぼこ", en: "Senzaki Kamaboko", eff: "res" },
+  { id: "yg_yuzukichi", pref: "yamaguchi", area: "長門", tier: 3, type: "gift", name: "ゆずきちのジュース", en: "Yuzukichi Citrus Juice", eff: "heal" },
+  { id: "yg_mirangyu", pref: "yamaguchi", area: "萩", tier: 1, type: "visit", name: "見蘭牛のたたき", en: "Seared Miran Beef", eff: "phys" },
+  { id: "yg_natsumikan", pref: "yamaguchi", area: "萩", tier: 2, type: "gift", name: "夏みかんの砂糖漬け", en: "Candied Summer Orange Peel", eff: "charge" },
+  { id: "yg_kintaro", pref: "yamaguchi", area: "萩", tier: 3, type: "visit", name: "金太郎の唐揚げ", en: "Fried Kintaro Fish", eff: "magic" },
+  { id: "ts_ramen", pref: "tokushima", area: "東部", tier: 1, type: "visit", name: "徳島ラーメン", en: "Tokushima Ramen", eff: "maxHp" },
+  { id: "ts_sudachi", pref: "tokushima", area: "東部", tier: 2, type: "gift", name: "すだち", en: "Sudachi Citrus", eff: "res" },
+  { id: "ts_narutokintoki", pref: "tokushima", area: "東部", tier: 3, type: "gift", name: "鳴門金時の焼き芋", en: "Naruto Kintoki Baked Sweet Potato", eff: "heal" },
+  { id: "ts_awaodori", pref: "tokushima", area: "南部", tier: 1, type: "visit", name: "阿波尾鶏の炭火焼", en: "Charcoal-Grilled Awa Odori Chicken", eff: "phys" },
+  { id: "ts_yuzujam", pref: "tokushima", area: "南部", tier: 2, type: "gift", name: "木頭ゆずのジャム", en: "Kito Yuzu Jam", eff: "charge" },
+  { id: "ts_wakame", pref: "tokushima", area: "南部", tier: 3, type: "visit", name: "鳴門わかめの味噌汁", en: "Naruto Wakame Miso Soup", eff: "res" },
+  { id: "ts_iyasoba", pref: "tokushima", area: "西部", tier: 1, type: "visit", name: "祖谷そば", en: "Iya Soba", eff: "maxHp" },
+  { id: "ts_dekomawashi", pref: "tokushima", area: "西部", tier: 2, type: "visit", name: "でこまわし", en: "Dekomawashi (Miso Skewers)", eff: "heal" },
+  { id: "ts_handasomen", pref: "tokushima", area: "西部", tier: 3, type: "visit", name: "半田そうめん", en: "Handa Somen", eff: "magic" },
+  { id: "eh_yakitori", pref: "ehime", area: "東予", tier: 1, type: "visit", name: "今治焼き鳥", en: "Imabari Iron-Plate Yakitori", eff: "phys" },
+  { id: "eh_yakibuta", pref: "ehime", area: "東予", tier: 2, type: "visit", name: "焼豚玉子飯", en: "Roast Pork and Egg Rice", eff: "maxHp" },
+  { id: "eh_taikomanju", pref: "ehime", area: "東予", tier: 3, type: "gift", name: "太鼓まんじゅう", en: "Taiko Manju", eff: "heal" },
+  { id: "eh_mikan", pref: "ehime", area: "中予", tier: 1, type: "gift", name: "愛媛みかん", en: "Ehime Mandarins", eff: "charge" },
+  { id: "eh_matsuyamataimeshi", pref: "ehime", area: "中予", tier: 2, type: "visit", name: "松山鯛めし", en: "Matsuyama Sea Bream Rice", eff: "magic" },
+  { id: "eh_botchandango", pref: "ehime", area: "中予", tier: 3, type: "gift", name: "三色坊っちゃん団子", en: "Tricolor Skewered Dango", eff: "heal" },
+  { id: "eh_uwajimataimeshi", pref: "ehime", area: "南予", tier: 1, type: "visit", name: "宇和島鯛めし", en: "Uwajima Sea Bream Sashimi Rice", eff: "magic" },
+  { id: "eh_jakoten", pref: "ehime", area: "南予", tier: 2, type: "gift", name: "じゃこ天", en: "Jakoten (Fried Fish Cake)", eff: "res" },
+  { id: "eh_champon", pref: "ehime", area: "南予", tier: 3, type: "visit", name: "八幡浜ちゃんぽん", en: "Yawatahama Champon", eff: "maxHp" },
+  { id: "kc_kinmedon", pref: "kochi", area: "東部", tier: 1, type: "visit", name: "金目鯛の煮付け丼", en: "Simmered Alfonsino Bowl", eff: "magic" },
+  { id: "kc_chirimen", pref: "kochi", area: "東部", tier: 2, type: "visit", name: "ちりめん丼", en: "Chirimen Bowl (Baby Sardines)", eff: "res" },
+  { id: "kc_yuzudrink", pref: "kochi", area: "東部", tier: 3, type: "gift", name: "馬路村のゆずドリンク", en: "Umaji Yuzu Drink", eff: "heal" },
+  { id: "kc_tataki", pref: "kochi", area: "中央", tier: 1, type: "visit", name: "かつおのたたき", en: "Seared Bonito", eff: "phys" },
+  { id: "kc_nabeyakiramen", pref: "kochi", area: "中央", tier: 2, type: "visit", name: "鍋焼きラーメン", en: "Nabeyaki Ramen", eff: "maxHp" },
+  { id: "kc_imokenpi", pref: "kochi", area: "中央", tier: 3, type: "gift", name: "芋けんぴ", en: "Imo Kenpi (Candied Sweet Potato)", eff: "charge" },
+  { id: "kc_aonori", pref: "kochi", area: "西部", tier: 1, type: "visit", name: "青のりの天ぷら", en: "Green Laver Tempura", eff: "res" },
+  { id: "kc_buntan", pref: "kochi", area: "西部", tier: 2, type: "gift", name: "土佐文旦", en: "Tosa Buntan Pomelo", eff: "heal" },
+  { id: "kc_kawaebi", pref: "kochi", area: "西部", tier: 3, type: "visit", name: "川えびの唐揚げ", en: "Fried River Shrimp", eff: "phys" },
+  /* ---- 九州・沖縄（2026-10-10。8県43区分129品） ---- */
+  { id: "fo_tonkotsu", pref: "fukuoka", area: "福岡", tier: 1, type: "visit", name: "博多とんこつラーメン", en: "Hakata Tonkotsu Ramen", eff: "maxHp" },
+  { id: "fo_motsunabe", pref: "fukuoka", area: "福岡", tier: 2, type: "visit", name: "もつ鍋", en: "Motsunabe (Offal Hot Pot)", eff: "phys" },
+  { id: "fo_mentaiko", pref: "fukuoka", area: "福岡", tier: 3, type: "gift", name: "辛子明太子", en: "Spicy Cod Roe", eff: "charge" },
+  { id: "fo_yakiudon", pref: "fukuoka", area: "北九州", tier: 1, type: "visit", name: "焼きうどん", en: "Yaki Udon", eff: "maxHp" },
+  { id: "fo_nukadaki", pref: "fukuoka", area: "北九州", tier: 2, type: "visit", name: "ぬかだき", en: "Nukadaki (Rice-Bran Simmered Fish)", eff: "res" },
+  { id: "fo_yakicurry", pref: "fukuoka", area: "北九州", tier: 3, type: "visit", name: "焼きカレー", en: "Baked Curry", eff: "magic" },
+  { id: "fo_horumonnabe", pref: "fukuoka", area: "筑豊", tier: 1, type: "visit", name: "ホルモン鍋", en: "Offal Hot Pot", eff: "phys" },
+  { id: "fo_kashiwameshi", pref: "fukuoka", area: "筑豊", tier: 2, type: "visit", name: "かしわめし", en: "Kashiwameshi (Chicken Rice)", eff: "heal" },
+  { id: "fo_yokan", pref: "fukuoka", area: "筑豊", tier: 3, type: "gift", name: "炭鉱の町の羊羹", en: "Coal Town Yokan", eff: "charge" },
+  { id: "fo_kurumeramen", pref: "fukuoka", area: "筑後", tier: 1, type: "visit", name: "久留米ラーメン", en: "Kurume Ramen", eff: "maxHp" },
+  { id: "fo_unagiseiro", pref: "fukuoka", area: "筑後", tier: 2, type: "visit", name: "うなぎのせいろ蒸し", en: "Steamed Eel Rice Box", eff: "magic" },
+  { id: "fo_yamecha", pref: "fukuoka", area: "筑後", tier: 3, type: "gift", name: "八女茶", en: "Yame Green Tea", eff: "res" },
+  { id: "sr_sicilian", pref: "saga", area: "佐賀", tier: 1, type: "visit", name: "シシリアンライス", en: "Sicilian Rice", eff: "maxHp" },
+  { id: "sr_marubouro", pref: "saga", area: "佐賀", tier: 2, type: "gift", name: "丸ぼうろ", en: "Marubouro (Round Cookies)", eff: "heal" },
+  { id: "sr_sagagyu", pref: "saga", area: "佐賀", tier: 3, type: "visit", name: "佐賀牛のステーキ", en: "Saga Beef Steak", eff: "phys" },
+  { id: "sr_ikizukuri", pref: "saga", area: "唐津", tier: 1, type: "visit", name: "呼子のいかの活き造り", en: "Yobuko Live Squid Sashimi", eff: "magic" },
+  { id: "sr_ikashumai", pref: "saga", area: "唐津", tier: 2, type: "visit", name: "いかしゅうまい", en: "Squid Shumai", eff: "maxHp" },
+  { id: "sr_shoromanju", pref: "saga", area: "唐津", tier: 3, type: "gift", name: "松露饅頭", en: "Shoro Manju", eff: "heal" },
+  { id: "sr_kashiwaudon", pref: "saga", area: "鳥栖", tier: 1, type: "visit", name: "かしわうどん", en: "Chicken Udon", eff: "maxHp" },
+  { id: "sr_tosuyakiniku", pref: "saga", area: "鳥栖", tier: 2, type: "visit", name: "鳥栖の焼肉", en: "Tosu Yakiniku", eff: "phys" },
+  { id: "sr_kanzakisomen", pref: "saga", area: "鳥栖", tier: 3, type: "visit", name: "神埼そうめん", en: "Kanzaki Somen", eff: "res" },
+  { id: "sr_imarihamburg", pref: "saga", area: "伊万里有田", tier: 1, type: "visit", name: "伊万里牛のハンバーグ", en: "Imari Beef Hamburg Steak", eff: "phys" },
+  { id: "sr_aritacurry", pref: "saga", area: "伊万里有田", tier: 2, type: "visit", name: "有田焼の器のカレー", en: "Curry in an Arita Porcelain Bowl", eff: "magic" },
+  { id: "sr_imarinashi", pref: "saga", area: "伊万里有田", tier: 3, type: "gift", name: "伊万里梨", en: "Imari Pears", eff: "heal" },
+  { id: "sr_yudofu", pref: "saga", area: "杵藤", tier: 1, type: "visit", name: "嬉野温泉の湯豆腐", en: "Ureshino Hot Spring Tofu", eff: "res" },
+  { id: "sr_ureshinocha", pref: "saga", area: "杵藤", tier: 2, type: "gift", name: "嬉野茶", en: "Ureshino Green Tea", eff: "charge" },
+  { id: "sr_renkon", pref: "saga", area: "杵藤", tier: 3, type: "visit", name: "白石れんこん", en: "Shiroishi Lotus Root", eff: "heal" },
+  { id: "ng_champon", pref: "nagasaki", area: "長崎", tier: 1, type: "visit", name: "長崎ちゃんぽん", en: "Nagasaki Champon", eff: "maxHp" },
+  { id: "ng_saraudon", pref: "nagasaki", area: "長崎", tier: 2, type: "visit", name: "皿うどん", en: "Sara Udon (Crispy Noodles)", eff: "phys" },
+  { id: "ng_castella", pref: "nagasaki", area: "長崎", tier: 3, type: "gift", name: "カステラ", en: "Castella Sponge Cake", eff: "heal" },
+  { id: "ng_isahayaunagi", pref: "nagasaki", area: "県央", tier: 1, type: "visit", name: "諫早のうなぎ", en: "Isahaya Grilled Eel", eff: "magic" },
+  { id: "ng_omurazushi", pref: "nagasaki", area: "県央", tier: 2, type: "visit", name: "大村寿司", en: "Omura-zushi (Pressed Sushi)", eff: "res" },
+  { id: "ng_kakunimanju", pref: "nagasaki", area: "県央", tier: 3, type: "gift", name: "角煮まんじゅう", en: "Braised Pork Buns", eff: "charge" },
+  { id: "ng_hamburger", pref: "nagasaki", area: "県北", tier: 1, type: "visit", name: "佐世保のハンバーガー", en: "Sasebo Hamburger", eff: "phys" },
+  { id: "ng_lemonsteak", pref: "nagasaki", area: "県北", tier: 2, type: "visit", name: "レモンステーキ", en: "Lemon Steak", eff: "maxHp" },
+  { id: "ng_kaki", pref: "nagasaki", area: "県北", tier: 3, type: "visit", name: "九十九島のかき", en: "Kujukushima Oysters", eff: "magic" },
+  { id: "ng_guzoni", pref: "nagasaki", area: "島原", tier: 1, type: "visit", name: "具雑煮", en: "Guzoni (Hearty Mochi Soup)", eff: "maxHp" },
+  { id: "ng_kanzarashi", pref: "nagasaki", area: "島原", tier: 2, type: "gift", name: "かんざらし", en: "Kanzarashi (Rice Dumplings in Syrup)", eff: "heal" },
+  { id: "ng_rokube", pref: "nagasaki", area: "島原", tier: 3, type: "visit", name: "ろくべえ", en: "Rokube (Sweet Potato Noodles)", eff: "res" },
+  { id: "ng_gotoudon", pref: "nagasaki", area: "五島", tier: 1, type: "visit", name: "五島うどんの地獄炊き", en: "Goto Udon Jigokudaki", eff: "maxHp" },
+  { id: "ng_kankoromochi", pref: "nagasaki", area: "五島", tier: 2, type: "gift", name: "かんころ餅", en: "Kankoro Mochi", eff: "heal" },
+  { id: "ng_agodashi", pref: "nagasaki", area: "五島", tier: 3, type: "gift", name: "あごだし", en: "Flying Fish Broth", eff: "res" },
+  { id: "ng_tonchan", pref: "nagasaki", area: "壱岐対馬", tier: 1, type: "visit", name: "とんちゃん", en: "Tonchan (Marinated Pork Grill)", eff: "phys" },
+  { id: "ng_ikiuni", pref: "nagasaki", area: "壱岐対馬", tier: 2, type: "visit", name: "壱岐のうに丼", en: "Iki Sea Urchin Bowl", eff: "magic" },
+  { id: "ng_anago", pref: "nagasaki", area: "壱岐対馬", tier: 3, type: "visit", name: "対馬の穴子", en: "Tsushima Conger Eel", eff: "charge" },
+  { id: "km_taipien", pref: "kumamoto", area: "熊本", tier: 1, type: "visit", name: "太平燕", en: "Taipien (Glass Noodle Soup)", eff: "maxHp" },
+  { id: "km_ikinaridango", pref: "kumamoto", area: "熊本", tier: 2, type: "gift", name: "いきなり団子", en: "Ikinari Dango", eff: "heal" },
+  { id: "km_basashi", pref: "kumamoto", area: "熊本", tier: 3, type: "visit", name: "馬刺し", en: "Horse Sashimi", eff: "phys" },
+  { id: "km_tamanaramen", pref: "kumamoto", area: "県北", tier: 1, type: "visit", name: "玉名ラーメン", en: "Tamana Ramen", eff: "maxHp" },
+  { id: "km_kuri", pref: "kumamoto", area: "県北", tier: 2, type: "gift", name: "山鹿の栗", en: "Yamaga Chestnuts", eff: "charge" },
+  { id: "km_nankansomen", pref: "kumamoto", area: "県北", tier: 3, type: "gift", name: "南関そうめん", en: "Nankan Somen", eff: "res" },
+  { id: "km_akaushidon", pref: "kumamoto", area: "阿蘇", tier: 1, type: "visit", name: "あか牛丼", en: "Red Beef Bowl", eff: "phys" },
+  { id: "km_dagojiru", pref: "kumamoto", area: "阿蘇", tier: 2, type: "visit", name: "だご汁", en: "Dagojiru (Dumpling Soup)", eff: "heal" },
+  { id: "km_takanameshi", pref: "kumamoto", area: "阿蘇", tier: 3, type: "visit", name: "高菜めし", en: "Takana Fried Rice", eff: "maxHp" },
+  { id: "km_shiranui", pref: "kumamoto", area: "宇城", tier: 1, type: "gift", name: "不知火", en: "Shiranui Citrus", eff: "heal" },
+  { id: "km_tachiuo", pref: "kumamoto", area: "宇城", tier: 2, type: "visit", name: "太刀魚の塩焼き", en: "Salt-Grilled Cutlassfish", eff: "magic" },
+  { id: "km_mikanjelly", pref: "kumamoto", area: "宇城", tier: 3, type: "gift", name: "みかんゼリー", en: "Mandarin Jelly", eff: "charge" },
+  { id: "km_tomato", pref: "kumamoto", area: "県南", tier: 1, type: "gift", name: "八代のトマト", en: "Yatsushiro Tomatoes", eff: "heal" },
+  { id: "km_hitomoji", pref: "kumamoto", area: "県南", tier: 2, type: "visit", name: "ひともじのぐるぐる", en: "Hitomoji Guruguru (Rolled Scallions)", eff: "res" },
+  { id: "km_ayu", pref: "kumamoto", area: "県南", tier: 3, type: "visit", name: "人吉の鮎の塩焼き", en: "Hitoyoshi Salt-Grilled Sweetfish", eff: "magic" },
+  { id: "km_daio", pref: "kumamoto", area: "天草", tier: 1, type: "visit", name: "天草大王の炭火焼", en: "Charcoal-Grilled Amakusa Daio Chicken", eff: "phys" },
+  { id: "km_kurumaebi", pref: "kumamoto", area: "天草", tier: 2, type: "visit", name: "車えびの塩焼き", en: "Salt-Grilled Tiger Prawns", eff: "magic" },
+  { id: "km_sugiyokan", pref: "kumamoto", area: "天草", tier: 3, type: "gift", name: "杉ようかん", en: "Sugi Yokan", eff: "heal" },
+  { id: "ot_toriten", pref: "oita", area: "中部", tier: 1, type: "visit", name: "とり天", en: "Toriten (Chicken Tempura)", eff: "phys" },
+  { id: "ot_ryukyu", pref: "oita", area: "中部", tier: 2, type: "visit", name: "りゅうきゅう", en: "Ryukyu (Marinated Fish Bowl)", eff: "magic" },
+  { id: "ot_yasemuma", pref: "oita", area: "中部", tier: 3, type: "gift", name: "やせうま", en: "Yasemuma (Flat Noodles with Kinako)", eff: "heal" },
+  { id: "ot_karaage", pref: "oita", area: "北部", tier: 1, type: "visit", name: "中津からあげ", en: "Nakatsu Karaage", eff: "maxHp" },
+  { id: "ot_hamo", pref: "oita", area: "北部", tier: 2, type: "visit", name: "はも料理", en: "Pike Conger Dishes", eff: "magic" },
+  { id: "ot_budou", pref: "oita", area: "北部", tier: 3, type: "gift", name: "安心院のぶどう", en: "Ajimu Grapes", eff: "heal" },
+  { id: "ot_jigokumushi", pref: "oita", area: "東部", tier: 1, type: "visit", name: "地獄蒸し", en: "Jigoku-mushi (Hot Spring Steamed Food)", eff: "res" },
+  { id: "ot_reimen", pref: "oita", area: "東部", tier: 2, type: "visit", name: "別府冷麺", en: "Beppu Cold Noodles", eff: "maxHp" },
+  { id: "ot_shirokarei", pref: "oita", area: "東部", tier: 3, type: "visit", name: "城下かれい", en: "Shiroshita Flounder", eff: "magic" },
+  { id: "ot_gomadashi", pref: "oita", area: "南部", tier: 1, type: "visit", name: "ごまだしうどん", en: "Gomadashi Udon", eff: "maxHp" },
+  { id: "ot_saikisushi", pref: "oita", area: "南部", tier: 2, type: "visit", name: "佐伯寿司", en: "Saiki Sushi", eff: "magic" },
+  { id: "ot_hiogi", pref: "oita", area: "南部", tier: 3, type: "visit", name: "ひおうぎ貝", en: "Hiogi Scallops", eff: "res" },
+  { id: "ot_kabosu", pref: "oita", area: "豊肥", tier: 1, type: "gift", name: "かぼす", en: "Kabosu Citrus", eff: "charge" },
+  { id: "ot_shiitake", pref: "oita", area: "豊肥", tier: 2, type: "gift", name: "原木しいたけ", en: "Log-Grown Shiitake", eff: "res" },
+  { id: "ot_dangojiru", pref: "oita", area: "豊肥", tier: 3, type: "visit", name: "だんご汁", en: "Dango-jiru (Noodle Soup)", eff: "heal" },
+  { id: "ot_hitayakisoba", pref: "oita", area: "西部", tier: 1, type: "visit", name: "日田焼きそば", en: "Hita Yakisoba", eff: "maxHp" },
+  { id: "ot_nashi", pref: "oita", area: "西部", tier: 2, type: "gift", name: "日田梨", en: "Hita Pears", eff: "heal" },
+  { id: "ot_bungogyu", pref: "oita", area: "西部", tier: 3, type: "visit", name: "豊後牛のステーキ", en: "Bungo Beef Steak", eff: "phys" },
+  { id: "mz_nanban", pref: "miyazaki", area: "県北", tier: 1, type: "visit", name: "チキン南蛮", en: "Chicken Nanban", eff: "phys" },
+  { id: "mz_ayuyana", pref: "miyazaki", area: "県北", tier: 2, type: "visit", name: "鮎のやな焼き", en: "Weir-Grilled Sweetfish", eff: "magic" },
+  { id: "mz_kuri", pref: "miyazaki", area: "県北", tier: 3, type: "gift", name: "栗きんとん", en: "Chestnut Kinton", eff: "heal" },
+  { id: "mz_hiyajiru", pref: "miyazaki", area: "県央", tier: 1, type: "visit", name: "冷や汁", en: "Hiyajiru (Cold Miso Soup Rice)", eff: "res" },
+  { id: "mz_mango", pref: "miyazaki", area: "県央", tier: 2, type: "gift", name: "完熟マンゴー", en: "Tree-Ripened Mango", eff: "heal" },
+  { id: "mz_jidori", pref: "miyazaki", area: "県央", tier: 3, type: "visit", name: "地鶏の炭火焼", en: "Charcoal-Grilled Local Chicken", eff: "phys" },
+  { id: "mz_miyazakigyu", pref: "miyazaki", area: "県西", tier: 1, type: "visit", name: "宮崎牛のステーキ", en: "Miyazaki Beef Steak", eff: "phys" },
+  { id: "mz_kurobuta", pref: "miyazaki", area: "県西", tier: 2, type: "visit", name: "黒豚しゃぶ", en: "Black Pork Shabu-shabu", eff: "maxHp" },
+  { id: "mz_tocha", pref: "miyazaki", area: "県西", tier: 3, type: "gift", name: "都城茶", en: "Miyakonojo Green Tea", eff: "res" },
+  { id: "mz_obiten", pref: "miyazaki", area: "県南", tier: 1, type: "visit", name: "飫肥天", en: "Obi-ten (Sweet Fish Cake)", eff: "maxHp" },
+  { id: "mz_sakanaudon", pref: "miyazaki", area: "県南", tier: 2, type: "visit", name: "魚うどん", en: "Fish Noodles", eff: "heal" },
+  { id: "mz_kinkan", pref: "miyazaki", area: "県南", tier: 3, type: "gift", name: "完熟きんかん", en: "Ripe Kumquats", eff: "charge" },
+  { id: "kh_tonkotsu", pref: "kagoshima", area: "鹿児島", tier: 1, type: "visit", name: "豚骨の味噌煮", en: "Miso-Braised Pork Ribs", eff: "phys" },
+  { id: "kh_shirokuma", pref: "kagoshima", area: "鹿児島", tier: 2, type: "visit", name: "白熊かき氷", en: "Shirokuma Shaved Ice", eff: "heal" },
+  { id: "kh_karukan", pref: "kagoshima", area: "鹿児島", tier: 3, type: "gift", name: "かるかん", en: "Karukan (Yam Cake)", eff: "res" },
+  { id: "kh_katsuo", pref: "kagoshima", area: "南薩", tier: 1, type: "visit", name: "枕崎のかつお", en: "Makurazaki Bonito", eff: "magic" },
+  { id: "kh_somennagashi", pref: "kagoshima", area: "南薩", tier: 2, type: "visit", name: "回転そうめん流し", en: "Spinning Somen", eff: "maxHp" },
+  { id: "kh_chirancha", pref: "kagoshima", area: "南薩", tier: 3, type: "gift", name: "知覧茶", en: "Chiran Green Tea", eff: "charge" },
+  { id: "kh_satsumaage", pref: "kagoshima", area: "北薩", tier: 1, type: "gift", name: "さつま揚げ", en: "Satsuma-age (Fried Fish Cake)", eff: "res" },
+  { id: "kh_kibinago", pref: "kagoshima", area: "北薩", tier: 2, type: "visit", name: "甑島のきびなご刺身", en: "Koshiki Silver-Stripe Herring Sashimi", eff: "magic" },
+  { id: "kh_ponkan", pref: "kagoshima", area: "北薩", tier: 3, type: "gift", name: "ぽんかん", en: "Ponkan Mandarins", eff: "heal" },
+  { id: "kh_jambomochi", pref: "kagoshima", area: "姶良伊佐", tier: 1, type: "gift", name: "ぢゃんぼ餅", en: "Jambo Mochi", eff: "heal" },
+  { id: "kh_isaonigiri", pref: "kagoshima", area: "姶良伊佐", tier: 2, type: "visit", name: "伊佐米のおにぎり", en: "Isa Rice Onigiri", eff: "maxHp" },
+  { id: "kh_torisashi", pref: "kagoshima", area: "姶良伊佐", tier: 3, type: "visit", name: "鶏刺し", en: "Seared Chicken Sashimi", eff: "phys" },
+  { id: "kh_kuroushi", pref: "kagoshima", area: "大隅", tier: 1, type: "visit", name: "黒毛和牛の焼肉", en: "Black Wagyu Yakiniku", eff: "phys" },
+  { id: "kh_kanpachi", pref: "kagoshima", area: "大隅", tier: 2, type: "visit", name: "かんぱちの刺身", en: "Amberjack Sashimi", eff: "magic" },
+  { id: "kh_unagi", pref: "kagoshima", area: "大隅", tier: 3, type: "visit", name: "大隅のうなぎ", en: "Osumi Grilled Eel", eff: "maxHp" },
+  { id: "kh_anno", pref: "kagoshima", area: "熊毛", tier: 1, type: "gift", name: "安納芋の焼き芋", en: "Baked Anno Sweet Potato", eff: "heal" },
+  { id: "kh_tobiuo", pref: "kagoshima", area: "熊毛", tier: 2, type: "visit", name: "飛魚の唐揚げ", en: "Fried Flying Fish", eff: "phys" },
+  { id: "kh_tankan", pref: "kagoshima", area: "熊毛", tier: 3, type: "gift", name: "屋久島のたんかん", en: "Yakushima Tankan Oranges", eff: "charge" },
+  { id: "kh_keihan", pref: "kagoshima", area: "大島", tier: 1, type: "visit", name: "鶏飯", en: "Keihan (Chicken Rice with Broth)", eff: "heal" },
+  { id: "kh_kokuto", pref: "kagoshima", area: "大島", tier: 2, type: "gift", name: "黒糖", en: "Brown Sugar Chunks", eff: "res" },
+  { id: "kh_passion", pref: "kagoshima", area: "大島", tier: 3, type: "gift", name: "パッションフルーツ", en: "Passion Fruit", eff: "charge" },
+  { id: "ok_soba", pref: "okinawa", area: "南部", tier: 1, type: "visit", name: "沖縄そば", en: "Okinawa Soba", eff: "maxHp" },
+  { id: "ok_rafute", pref: "okinawa", area: "南部", tier: 2, type: "visit", name: "ラフテー", en: "Rafute (Braised Pork Belly)", eff: "phys" },
+  { id: "ok_andagi", pref: "okinawa", area: "南部", tier: 3, type: "gift", name: "サーターアンダギー", en: "Sata Andagi (Fried Doughnuts)", eff: "heal" },
+  { id: "ok_tacorice", pref: "okinawa", area: "中部", tier: 1, type: "visit", name: "タコライス", en: "Taco Rice", eff: "maxHp" },
+  { id: "ok_champuru", pref: "okinawa", area: "中部", tier: 2, type: "visit", name: "ゴーヤーチャンプルー", en: "Goya Champuru (Bitter Melon Stir-fry)", eff: "res" },
+  { id: "ok_jushi", pref: "okinawa", area: "中部", tier: 3, type: "visit", name: "ジューシー", en: "Jushi (Seasoned Rice)", eff: "heal" },
+  { id: "ok_agu", pref: "okinawa", area: "北部", tier: 1, type: "visit", name: "あぐー豚のしゃぶしゃぶ", en: "Agu Pork Shabu-shabu", eff: "phys" },
+  { id: "ok_pine", pref: "okinawa", area: "北部", tier: 2, type: "gift", name: "パイナップル", en: "Pineapple", eff: "charge" },
+  { id: "ok_shikuwasa", pref: "okinawa", area: "北部", tier: 3, type: "gift", name: "シークヮーサーのジュース", en: "Shikuwasa Citrus Juice", eff: "res" },
+  { id: "ok_miyakosoba", pref: "okinawa", area: "宮古", tier: 1, type: "visit", name: "宮古そば", en: "Miyako Soba", eff: "maxHp" },
+  { id: "ok_mango", pref: "okinawa", area: "宮古", tier: 2, type: "gift", name: "宮古のマンゴー", en: "Miyako Mangoes", eff: "heal" },
+  { id: "ok_umibudo", pref: "okinawa", area: "宮古", tier: 3, type: "visit", name: "海ぶどう", en: "Sea Grapes", eff: "magic" },
+  { id: "ok_yaeyamasoba", pref: "okinawa", area: "八重山", tier: 1, type: "visit", name: "八重山そば", en: "Yaeyama Soba", eff: "maxHp" },
+  { id: "ok_ishigakigyu", pref: "okinawa", area: "八重山", tier: 2, type: "visit", name: "石垣牛の焼肉", en: "Ishigaki Beef Yakiniku", eff: "phys" },
+  { id: "ok_mozuku", pref: "okinawa", area: "八重山", tier: 3, type: "visit", name: "もずくの天ぷら", en: "Mozuku Seaweed Tempura", eff: "res" },
 ];
 const GOURMET_DROP = { 1: 60, 2: 30, 3: 10 };
 const GOURMET_EFF_V = { 1: 5, 2: 10, 3: 15 };
 const LS_GOURMET = "oo_gourmet", LS_GOURMET_SEEN = "oo_gourmet_seen", LS_GOURMET_PACK = "oo_gourmet_pack";
 function loadGourmet(key) { try { return JSON.parse(localStorage.getItem(key || LS_GOURMET) || "{}") || {}; } catch (e) { return {}; } }
 function saveGourmet(v, key) { try { localStorage.setItem(key || LS_GOURMET, JSON.stringify(v)); } catch (e) { /* 残せなくても遊べる */ } }
-function loadGourmetPack() { try { return localStorage.getItem(LS_GOURMET_PACK) || null; } catch (e) { return null; } }
-function saveGourmetPack(id) { try { if (id) localStorage.setItem(LS_GOURMET_PACK, id); else localStorage.removeItem(LS_GOURMET_PACK); } catch (e) { /* */ } }
+/*
+  持って行く料理（2026-10-10 Aki「食べ物は持ち込んだら消費され、持っていける数もスロットにして調整」）。
+  ★ 並びは料理の id の配列（同じ料理を在庫の数まで重ねてよい）。探索の始めに全部食べ、一つずつ減る。
+  ★ 並びは次の探索にも残す（在庫が尽きたものだけ外れる）。⚠️ 今後の放置モードは gourmetAutoPack で自動で詰める。
+  ⚠️ 古い記録（id の文字列ひとつ）は一枠として読む。
+*/
+function loadGourmetPack() {
+  try {
+    const raw = localStorage.getItem(LS_GOURMET_PACK);
+    if (!raw) return [];
+    if (raw[0] !== "[") return [raw];
+    const v = JSON.parse(raw);
+    return Array.isArray(v) ? v.filter((x) => typeof x === "string") : [];
+  } catch (e) { return []; }
+}
+function saveGourmetPack(list) {
+  try { if (list && list.length) localStorage.setItem(LS_GOURMET_PACK, JSON.stringify(list)); else localStorage.removeItem(LS_GOURMET_PACK); } catch (e) { /* */ }
+}
+/*
+  持って行ける数（枠）。⚠️ 都道府県の制覇の数で増える（GOURMET_SLOT_AT の数に届くたび +1）。
+  ★ 最初は1枠、最大 1 + GOURMET_SLOT_AT.length 枠。
+*/
+const GOURMET_SLOT_AT = [10, 25];
+function gourmetSlots() {
+  const pg = advProgress();
+  if (!pg.on) return 1 + GOURMET_SLOT_AT.length;
+  return 1 + GOURMET_SLOT_AT.filter((n) => (pg.conquered || 0) >= n).length;
+}
+/* 在庫に合わせて並びを整える（枠を超えた分・在庫の無い分を外す） */
+function gourmetPackFit(list, have, slots) {
+  const used = {}, out = [];
+  (list || []).forEach((id) => {
+    if (out.length >= slots) return;
+    if ((used[id] || 0) + 1 > (have[id] || 0)) return;
+    used[id] = (used[id] || 0) + 1; out.push(id);
+  });
+  return out;
+}
+/* 放置モード用：空いた枠を、効きの大きい料理（段の高い順）で埋める */
+function gourmetAutoPack(list, have, slots) {
+  const out = gourmetPackFit(list, have, slots);
+  const used = {}; out.forEach((id) => { used[id] = (used[id] || 0) + 1; });
+  const cand = GOURMET.filter((d) => (have[d.id] || 0) > 0).sort((x, y) => y.tier - x.tier);
+  for (const d of cand) {
+    while (out.length < slots && (used[d.id] || 0) < (have[d.id] || 0)) { out.push(d.id); used[d.id] = (used[d.id] || 0) + 1; }
+    if (out.length >= slots) break;
+  }
+  return out;
+}
 /* その区分で一品引く。⚠️ 区分に料理が無ければ null */
+/* ⚠️ 東京の区（TOKYO_WARDS）では、料理は「区部」のものを使う（区ごとには持たない。2026-10-09） */
+function gourmetArea(pref, area) { return (pref === "tokyo" && typeof TOKYO_WARDS !== "undefined" && TOKYO_WARDS[area]) ? WARDS_AREA : area; }
 function rollGourmet(pref, area) {
-  const list = GOURMET.filter((d) => d.pref === pref && d.area === area);
+  const list = GOURMET.filter((d) => d.pref === pref && d.area === gourmetArea(pref, area));
   if (!list.length) return null;
   const tot = list.reduce((x, d) => x + GOURMET_DROP[d.tier], 0);
   let p = Math.random() * tot;
@@ -83058,18 +83865,20 @@ function gourmetRunMod(d, m0) {
   return m;
 }
 const GOURMET_I18N = {
-  ja: { title: "ご当地グルメ", have: (a2, b) => `${a2} / ${b} 品`, none: "まだ何も味わっていない",
+  ja: { title: "料理", have: (a2, b) => `${a2} / ${b} 品`, none: "まだ何も味わっていない",
     tier: { 1: "定番", 2: "地元の味", 3: "隠れた逸品" }, type: { visit: "食べに行こう", gift: "お取り寄せ・お土産" },
     eff: (k, v) => ({ maxHp: `最大HP +${v}%`, heal: `受ける回復 +${v}%`, res: `妨害の耐性すべて +${v}`, charge: `必殺の溜まり（4本） +${v}%`,
       magic: `魔法の倍率 +${v}%`, phys: `物理の倍率 +${v}%` })[k],
-    pack: "持って行く", packed: "持って行く料理", unpack: "やめる", packNote: "次の探索の始めに食べて、その探索のあいだ効きます（一つ減ります）。",
-    got: "ご当地グルメを味わった", gotLog: (n) => `ご当地グルメ「${n}」を手に入れた。`, ate: (n) => `「${n}」を食べてから出発した。`,
+    pack: "持って行く", packed: "持って行く料理", unpack: "外す", packNote: "探索の始めに全部食べ、その探索のあいだ効きます（一品につき一つ減ります。並びは次の探索にも残ります）。",
+    slotN: (a2, b) => `${a2} / ${b} 枠`, slotEmpty: "空き", slotMore: (n) => `　${n}県を制覇すると枠が一つ増えます。`,
+    got: "ご当地の料理を味わった", gotLog: (n) => `料理「${n}」を手に入れた。`, ate: (n) => `「${n}」を食べてから出発した。`,
     odd: (p) => `${p}%` },
-  en: { title: "Local Food", have: (a2, b) => `${a2} / ${b}`, none: "Nothing tasted yet",
+  en: { title: "Food", have: (a2, b) => `${a2} / ${b}`, none: "Nothing tasted yet",
     tier: { 1: "Classic", 2: "Local favorite", 3: "Hidden gem" }, type: { visit: "Go eat it there", gift: "Order online / souvenir" },
     eff: (k, v) => ({ maxHp: `Max HP +${v}%`, heal: `Healing +${v}%`, res: `All debuff res +${v}`, charge: `Finisher charge (all 4) +${v}%`,
       magic: `Magic multiplier +${v}%`, phys: `Physical multiplier +${v}%` })[k],
-    pack: "Take along", packed: "Taking along", unpack: "Cancel", packNote: "Eaten at the start of your next journey; lasts for that journey (uses one).",
+    pack: "Take along", packed: "Taking along", unpack: "Remove", packNote: "All are eaten at the start of a journey and last for that journey (each uses one; the lineup stays for the next journey).",
+    slotN: (a2, b) => `${a2} / ${b}`, slotEmpty: "Empty", slotMore: (n) => ` Conquer ${n} prefectures for one more slot.`,
     got: "You tasted a local dish", gotLog: (n) => `You got the local dish "${n}".`, ate: (n) => `You ate "${n}" before setting out.`,
     odd: (p) => `${p}%` },
 };
@@ -85623,7 +86432,8437 @@ const FOOD_ART_3 = {
   ib_hitachigyu: FoodIbHitachigyu,
   ib_sashimacha: FoodIbSashimacha,
 };
-const FOOD_ART = { ...FOOD_ART_1, ...FOOD_ART_2, ...FOOD_ART_3 };
+/* ==== 東北のご当地グルメの絵（2026-10-09）。⚠️ viewBox 0 0 48 48・静止・defs と id を使わない ==== */
+function Food4Plate({ cx = 24, cy = 31, rx = 19, ry = 6.5, c = "#f2ede4", rim = "#b8ae9e" }) {
+  return (
+    <g>
+      <ellipse cx={cx} cy={cy + 1.6} rx={rx} ry={ry} fill="#000" opacity="0.3" />
+      <ellipse cx={cx} cy={cy} rx={rx} ry={ry} fill={c} stroke={rim} strokeWidth="0.6" />
+      <ellipse cx={cx} cy={cy - 0.3} rx={rx * 0.74} ry={ry * 0.66} fill="#fff" opacity="0.3" />
+    </g>
+  );
+}
+/* 鍋。中身は cx24 cy21 rx16 ry5 の内側に描く */
+function Food4Pot({ body = "#3a3a42", light = "#5a5a66", rim = "#141418" }) {
+  return (
+    <g>
+      <Food1Shadow cy={41.5} rx={19} />
+      <path d="M5.5,21 L7.5,35 Q8.5,39.5 14,39.8 L34,39.8 Q39.5,39.5 40.5,35 L42.5,21 Z" fill={body} stroke={rim} strokeWidth="0.6" />
+      <path d="M7.4,23 L9,34 Q9.8,37.4 13,38 Q10.6,33 10.4,23 Z" fill={light} opacity="0.8" />
+      <rect x="1.4" y="22" width="5" height="2.4" rx="1.2" fill={body} stroke={rim} strokeWidth="0.5" />
+      <rect x="41.6" y="22" width="5" height="2.4" rx="1.2" fill={body} stroke={rim} strokeWidth="0.5" />
+      <ellipse cx="24" cy="21" rx="18.6" ry="6" fill={body} stroke={rim} strokeWidth="0.6" />
+      <ellipse cx="24" cy="21.3" rx="17" ry="5.2" fill="#1c1c20" />
+    </g>
+  );
+}
+/* 汁物の椀（漆）。中身は cx24 cy22 rx13.5 ry4 */
+function Food4Wan({ body = "#5a1810", light = "#8a2a1c", rim = "#200604", inner = "#2a0a06" }) {
+  return (
+    <g>
+      <Food1Shadow cy={41.6} rx={13} />
+      <path d="M17,38 L31,38 L30,41 L18,41 Z" fill={body} stroke={rim} strokeWidth="0.5" />
+      <path d="M8.5,22 C9,31 15,38 24,38 C33,38 39,31 39.5,22 Z" fill={body} stroke={rim} strokeWidth="0.6" />
+      <path d="M10.4,24 C11.4,30 15,35 20,36.6 C16,33 13.6,29 13.4,24 Z" fill={light} opacity="0.8" />
+      <ellipse cx="24" cy="22" rx="15.5" ry="4.8" fill={body} stroke={rim} strokeWidth="0.6" />
+      <ellipse cx="24" cy="22.2" rx="14.2" ry="4.2" fill={inner} />
+    </g>
+  );
+}
+/* ざる・板（木） */
+function Food4Board({ x = 4, y = 26, w = 40, h = 12, c = "#b8864a", d = "#7a5228" }) {
+  return (
+    <g>
+      <rect x={x} y={y + 2} width={w} height={h} rx="1.6" fill="#000" opacity="0.3" />
+      <rect x={x} y={y} width={w} height={h} rx="1.6" fill={c} stroke={d} strokeWidth="0.6" />
+      {[0.3, 0.6].map((k) => <path key={k} d={`M${x + 1} ${y + h * k} H${x + w - 1}`} stroke={d} strokeWidth="0.35" opacity="0.6" />)}
+    </g>
+  );
+}
+function Food4Zaru({ cx = 24, cy = 30, rx = 19, ry = 8 }) {
+  return (
+    <g>
+      <ellipse cx={cx} cy={cy + 2} rx={rx} ry={ry} fill="#000" opacity="0.3" />
+      <ellipse cx={cx} cy={cy} rx={rx} ry={ry} fill="#c89a58" stroke="#6a4a20" strokeWidth="0.7" />
+      <ellipse cx={cx} cy={cy - 0.4} rx={rx - 2} ry={ry - 1.6} fill="#e0b870" />
+      {[-12, -6, 0, 6, 12].map((d) => <path key={d} d={`M${cx + d - 3} ${cy - ry + 2.2} L${cx + d + 3} ${cy + ry - 2.2}`} stroke="#a87a3a" strokeWidth="0.35" opacity="0.7" />)}
+    </g>
+  );
+}
+/* 波打つ麺（楕円の範囲に線を敷く） */
+function Food4Noodles({ cx = 24, cy = 22.4, rx = 15, ry = 4.4, c = "#f2d070", w = 0.85, n = 6, wave = 1 }) {
+  const rows = [];
+  for (let i = 0; i < n; i++) {
+    const t = (i + 0.5) / n * 2 - 1;
+    const y = cy + t * ry * 0.85;
+    const half = rx * Math.sqrt(Math.max(0, 1 - t * t)) * 0.92;
+    let d = `M${(cx - half).toFixed(2)},${y.toFixed(2)}`;
+    const seg = 2;
+    for (let x = cx - half; x < cx + half - seg; x += seg) d += ` q${seg / 2},${-wave} ${seg},0`;
+    rows.push(<path key={i} d={d} fill="none" stroke={c} strokeWidth={w} strokeLinecap="round" />);
+  }
+  return <g>{rows}</g>;
+}
+/* 刺身の一切れ */
+function Food4Slice({ x, y, rot = 0, w = 6, h = 3, c = "#c8283a", l = "#ea6a70" }) {
+  return (
+    <g transform={`translate(${x},${y}) rotate(${rot})`}>
+      <rect x={-w / 2} y={-h / 2} width={w} height={h} rx={h * 0.45} fill={c} stroke="#4a0a10" strokeWidth="0.3" />
+      <path d={`M${-w / 2 + 0.8} ${-h / 2 + 0.7} H${w / 2 - 1}`} stroke={l} strokeWidth="0.5" opacity="0.9" />
+    </g>
+  );
+}
+/* 帆立などの貝殻（扇） */
+function Food4Shell({ x, y, r = 6, c = "#e8c8a0", d = "#9a6a3a", rot = 0 }) {
+  const ribs = [-50, -30, -10, 10, 30, 50];
+  return (
+    <g transform={`translate(${x},${y}) rotate(${rot})`}>
+      <path d={`M0 ${r * 0.4} L${-r} ${-r * 0.35} Q0 ${-r * 1.15} ${r} ${-r * 0.35} Z`} fill={c} stroke={d} strokeWidth="0.45" />
+      {ribs.map((a) => <path key={a} d={`M0 ${r * 0.4} L${(r * 0.95 * Math.sin(a * Math.PI / 180)).toFixed(2)} ${(-r * 0.7 * Math.cos(a * Math.PI / 180)).toFixed(2)}`} stroke={d} strokeWidth="0.3" opacity="0.7" />)}
+      <path d={`M${-r * 0.3} ${r * 0.4} L${r * 0.3} ${r * 0.4} L0 ${r * 0.62} Z`} fill={d} />
+    </g>
+  );
+}
+/* 横向きの魚 */
+function Food4Fish({ x, y, len = 18, c = "#9aa6b4", belly = "#e8e4dc", rot = 0, grill }) {
+  const h = len * 0.32;
+  return (
+    <g transform={`translate(${x},${y}) rotate(${rot})`}>
+      <path d={`M${-len / 2} 0 Q${-len / 4} ${-h} ${len * 0.3} ${-h * 0.35} L${len / 2} ${-h * 0.75} L${len / 2} ${h * 0.75} L${len * 0.3} ${h * 0.35} Q${-len / 4} ${h} ${-len / 2} 0 Z`} fill={c} stroke="#2a2a30" strokeWidth="0.45" />
+      <path d={`M${-len / 2 + 1} ${h * 0.15} Q${-len / 5} ${h * 0.85} ${len * 0.28} ${h * 0.3}`} fill={belly} opacity="0.8" />
+      <circle cx={-len / 2 + len * 0.13} cy={-h * 0.15} r={len * 0.04} fill="#111" />
+      {grill && [0.0, 0.18, 0.36].map((k) => <path key={k} d={`M${-len * 0.2 + k * len} ${-h * 0.55} l${-len * 0.06} ${h * 1.0}`} stroke="#3a1a08" strokeWidth="0.7" opacity="0.7" />)}
+    </g>
+  );
+}
+/* 丸い餅・団子 */
+function Food4Ball({ x, y, r = 3.4, c = "#f4efe4", d = "#b8ac98" }) {
+  return (
+    <g>
+      <circle cx={x} cy={y} r={r} fill={c} stroke={d} strokeWidth="0.45" />
+      <ellipse cx={x - r * 0.35} cy={y - r * 0.4} rx={r * 0.35} ry={r * 0.22} fill="#fff" opacity="0.55" />
+    </g>
+  );
+}
+/* ガラスの器 */
+function Food4Glass({ fill = "#5a1a5a", top = "#7a2a7a", level = 18 }) {
+  return (
+    <g>
+      <Food1Shadow cy={42} rx={11} />
+      <path d="M12,10 L36,10 L33,40 Q24,42 15,40 Z" fill="#dfe8f0" opacity="0.35" stroke="#a8b8c8" strokeWidth="0.6" />
+      <path d={`M${12 + (level - 10) * 0.1},${level} L${36 - (level - 10) * 0.1},${level} L33,40 Q24,42 15,40 Z`} fill={fill} />
+      <ellipse cx="24" cy={level} rx={11.8 - (level - 10) * 0.1} ry="1.8" fill={top} />
+      <ellipse cx="24" cy="10" rx="12" ry="2" fill="none" stroke="#c8d8e8" strokeWidth="0.6" />
+      <path d="M14.4,13 L16.4,37" stroke="#fff" strokeWidth="0.9" opacity="0.45" strokeLinecap="round" />
+    </g>
+  );
+}
+/* 網（焼き台） */
+function Food4Grill() {
+  return (
+    <g>
+      <Food1Shadow cy={41.5} rx={19} />
+      <path d="M6,30 L42,30 L40,39 L8,39 Z" fill="#4a2a1a" stroke="#1a0c06" strokeWidth="0.6" />
+      <path d="M8,36 L40,36" stroke="#ff7a2a" strokeWidth="1.4" opacity="0.6" />
+      <ellipse cx="24" cy="29" rx="19" ry="5.6" fill="#2a2a2e" stroke="#0c0c0e" strokeWidth="0.6" />
+      {[-12, -6, 0, 6, 12].map((d) => <path key={d} d={`M${24 + d} 23.8 L${24 + d} 34.2`} stroke="#8a8a90" strokeWidth="0.45" />)}
+      {[-3, 0, 3].map((d) => <path key={d} d={`M6 ${29 + d} H42`} stroke="#8a8a90" strokeWidth="0.45" opacity="0.8" />)}
+    </g>
+  );
+}
+/* 鉄板 */
+function Food4Iron() {
+  return (
+    <g>
+      <Food1Shadow cy={41.6} rx={20} />
+      <ellipse cx="24" cy="31" rx="20" ry="7.6" fill="#1c1c20" stroke="#0a0a0c" strokeWidth="0.6" />
+      <ellipse cx="24" cy="30.4" rx="18.4" ry="6.6" fill="#2c2c32" />
+      <path d="M7,29 Q10,25 18,24" stroke="#7a7a84" strokeWidth="0.6" fill="none" />
+    </g>
+  );
+}
+function Food4Rice({ cx = 24, cy = 22.4, rx = 16, ry = 5 }) {
+  const g = [];
+  for (let i = 0; i < 16; i++) {
+    const a = i * 2.39, rr = Math.sqrt((i + 0.5) / 16);
+    g.push(<ellipse key={i} cx={(cx + Math.cos(a) * rr * rx * 0.85).toFixed(2)} cy={(cy + Math.sin(a) * rr * ry * 0.8).toFixed(2)} rx="0.9" ry="0.5" fill="#fff" opacity="0.8" />);
+  }
+  return <g><ellipse cx={cx} cy={cy} rx={rx} ry={ry} fill="#f4f0e6" />{g}</g>;
+}
+function Food4Ikura({ pts }) {
+  return <g>{pts.map(([x, y], i) => <g key={i}><circle cx={x} cy={y} r="1.05" fill="#f05a1a" stroke="#a02a06" strokeWidth="0.25" /><circle cx={x - 0.35} cy={y - 0.35} r="0.3" fill="#fff" opacity="0.8" /></g>)}</g>;
+}
+
+/* ---- 青森 ---- */
+function FoodAoNokkedon() {
+  return (
+    <g>
+      <Food1Shadow />
+      <Food1Bowl body="#2a3a6a" light="#3e5694" dark="#141e3c" rim="#0a1024" />
+      <Food4Rice />
+      <Food4Slice x={14} y={21} rot={-20} c="#c8283a" />
+      <Food4Slice x={20} y={19} rot={-8} c="#f08a4a" l="#ffc89a" />
+      <Food4Slice x={28} y={19.4} rot={10} c="#f4ece0" l="#fff" />
+      <Food4Slice x={34} y={22} rot={22} c="#e85a8a" l="#ffa0c0" />
+      <Food4Slice x={23} y={24.6} rot={0} c="#c8283a" />
+      <Food4Ikura pts={[[16, 25], [17.4, 25.8], [30, 25], [31.4, 24.2], [29, 23.6]]} />
+      <path d="M36,18 q2,-3 4,-1" stroke="#4a9a3a" strokeWidth="1.2" fill="none" strokeLinecap="round" />
+    </g>
+  );
+}
+function FoodAoShogaoden() {
+  return (
+    <g>
+      <Food4Plate cy={33} />
+      <path d="M9 37 L39 9" stroke="#d8b878" strokeWidth="1" strokeLinecap="round" />
+      <path d="M11,33 L19,33 L15,25 Z" fill="#7a7480" stroke="#2a2a30" strokeWidth="0.5" transform="rotate(-42 15 30)" />
+      {[[12.6, 30.6], [14.4, 29.6], [13.4, 31.6]].map(([x, y], i) => <circle key={i} cx={x} cy={y} r="0.35" fill="#3a3a40" />)}
+      <ellipse cx="22" cy="24.6" rx="5" ry="4.2" fill="#f4e8c8" stroke="#a89060" strokeWidth="0.5" transform="rotate(-42 22 24.6)" />
+      <ellipse cx="22" cy="24.2" rx="3.6" ry="2.6" fill="#e0c890" transform="rotate(-42 22 24.2)" />
+      <ellipse cx="29.4" cy="17.6" rx="3.6" ry="4.4" fill="#f8f4ea" stroke="#b8a888" strokeWidth="0.5" transform="rotate(-42 29.4 17.6)" />
+      <circle cx="29.6" cy="17.4" r="2" fill="#f4c43a" />
+      <path d="M13 28 q5 1 9 -2 q4 -4 9 -9" stroke="#8a4a1a" strokeWidth="2" fill="none" strokeLinecap="round" opacity="0.8" />
+      <g fill="#f4e078" stroke="#b89a3a" strokeWidth="0.25">
+        <rect x="31" y="30" width="2.6" height="1.3" rx="0.4" /><rect x="34" y="31.2" width="2.6" height="1.3" rx="0.4" /><rect x="32.4" y="32.8" width="2.6" height="1.3" rx="0.4" />
+      </g>
+    </g>
+  );
+}
+function FoodAoCassis() {
+  return (
+    <g>
+      <Food4Glass fill="#4a0e3a" top="#6e1a56" level={17} />
+      <path d="M15,26 Q24,29 33,26" stroke="#8a2a6a" strokeWidth="0.6" fill="none" opacity="0.6" />
+      {[[20, 15.4], [23, 14.6], [26, 15.6], [24.6, 13.2]].map(([x, y], i) => (
+        <g key={i}><circle cx={x} cy={y} r="1.5" fill="#1a0a2a" stroke="#000" strokeWidth="0.3" /><circle cx={x - 0.5} cy={y - 0.5} r="0.4" fill="#fff" opacity="0.7" /></g>
+      ))}
+      <path d="M27.4,13.4 q2.4,-2.6 4.6,-1.2 q-2,0.4 -4.6,1.2 Z" fill="#4a9a3a" />
+    </g>
+  );
+}
+function FoodAoApplepie() {
+  return (
+    <g>
+      <Food4Plate cy={33} />
+      <path d="M8,30 L36,22 L40,30 Q24,38 8,30 Z" fill="#c88a3a" stroke="#6a3a10" strokeWidth="0.5" />
+      <path d="M8,30 L36,22 L38,26 L10,33 Z" fill="#f4dc8a" />
+      {[12, 18, 24, 30].map((x, i) => <path key={i} d={`M${x} ${30.5 - i * 1.6} l2 4`} stroke="#e8b060" strokeWidth="1.3" strokeLinecap="round" />)}
+      <path d="M10,26 L36,18.6 L36,22 L8,30 Z" fill="#d8a050" stroke="#6a3a10" strokeWidth="0.45" />
+      {[[14, 25], [20, 23.3], [26, 21.6], [32, 19.9]].map(([x, y], i) => <path key={i} d={`M${x} ${y} l3 1.4`} stroke="#a86020" strokeWidth="0.5" />)}
+      <circle cx="38" cy="16" r="4.2" fill="#d42a2a" stroke="#6a0a0a" strokeWidth="0.45" />
+      <path d="M38 12 q0.4 -2 1.8 -2.6" stroke="#5a3a1a" strokeWidth="0.6" fill="none" />
+      <path d="M39.6 10.6 q2.4 -1 3 0.6 q-1.6 0.6 -3 -0.6 Z" fill="#4a9a3a" />
+      <ellipse cx="36.6" cy="14.6" rx="1" ry="0.6" fill="#fff" opacity="0.6" />
+    </g>
+  );
+}
+function FoodAoTsugarusoba() {
+  return (
+    <g>
+      <Food1Shadow />
+      <Food1Bowl body="#1a1a1e" light="#3a3a42" dark="#0a0a0c" rim="#000" band="#8a1a14" />
+      <ellipse cx="24" cy="22.6" rx="16.5" ry="5.2" fill="#a86a2a" />
+      <Food4Noodles c="#c8b088" n={5} />
+      <ellipse cx="18" cy="21" rx="3" ry="1.6" fill="#f8f2e4" stroke="#c8b8a0" strokeWidth="0.3" />
+      <path d="M16.4 21 q1.6 -1 3.2 0" stroke="#e85a8a" strokeWidth="0.5" fill="none" />
+      <Food1Negi x={28} y={21} /><Food1Negi x={30} y={22.4} /><Food1Negi x={26.4} y={23.2} />
+      <path d="M31 19 l5 1 l-0.6 1.8 l-5 -1 Z" fill="#2a3a1a" />
+      <Food1Steam x={24} y={12} />
+    </g>
+  );
+}
+function FoodAoTakekimi() {
+  return (
+    <g>
+      <Food1Shadow rx={13} />
+      <path d="M24 42 L24 34" stroke="#c8a060" strokeWidth="1.4" />
+      <path d="M17,34 Q15,22 20,10 Q24,4 28,10 Q33,22 31,34 Q24,37 17,34 Z" fill="#f4c42a" stroke="#9a6a0a" strokeWidth="0.55" />
+      {[0, 1, 2, 3, 4, 5, 6, 7].map((r) => [0, 1, 2, 3].map((c) => (
+        <ellipse key={`${r}-${c}`} cx={19.6 + c * 2.9} cy={11 + r * 2.9} rx="1.25" ry="1.1" fill={(r + c) % 3 === 0 ? "#c8780a" : "#fad050"} stroke="#b8860b" strokeWidth="0.2" />
+      )))}
+      <path d="M17,34 Q12,26 14,18 Q18,28 21,35 Z" fill="#9ac050" stroke="#5a7a2a" strokeWidth="0.4" />
+      <path d="M31,34 Q36,26 34,18 Q30,28 27,35 Z" fill="#8ab040" stroke="#5a7a2a" strokeWidth="0.4" />
+      <path d="M19,14 Q20,24 19.5,32" stroke="#fff" strokeWidth="0.8" opacity="0.4" fill="none" />
+    </g>
+  );
+}
+function FoodAoShijimi() {
+  return (
+    <g>
+      <Food1Shadow />
+      <Food1Bowl body="#f2ece0" light="#fff" dark="#b8ae9a" rim="#7a7060" band="#2a4a8a" />
+      <ellipse cx="24" cy="22.6" rx="16.5" ry="5.2" fill="#e8d8a8" />
+      <Food4Noodles c="#f4e090" n={4} cy={23} ry={3.4} />
+      {[[13, 20.6], [17, 19.6], [21, 21.6], [27, 19.6], [31, 21], [35, 22.4], [19, 24.6], [29, 24.6]].map(([x, y], i) => (
+        <g key={i} transform={`translate(${x},${y}) rotate(${i * 37})`}>
+          <ellipse rx="1.9" ry="1.3" fill="#2a2620" stroke="#000" strokeWidth="0.25" />
+          <path d="M-1.4 0 q1.4 -0.9 2.8 0" stroke="#7a6a50" strokeWidth="0.3" fill="none" />
+        </g>
+      ))}
+      <Food1Negi x={24} y={22} /><Food1Negi x={25.6} y={23} />
+      <Food1Steam x={24} y={12} />
+    </g>
+  );
+}
+function FoodAoWakaoi() {
+  return (
+    <g>
+      <Food4Plate cy={34} c="#e8e0cc" />
+      {[[16, 0], [32, 1]].map(([x, k]) => (
+        <g key={k}>
+          <path d={`M${x - 8},31 Q${x - 7},15 ${x},12 Q${x + 7},15 ${x + 8},31 Q${x},34 ${x - 8},31 Z`} fill="#f8f4ea" stroke="#b8ac98" strokeWidth="0.45" />
+          <path d={`M${x - 8.6},31.4 Q${x - 7.6},18 ${x},15 Q${x + 7.6},18 ${x + 8.6},31.4 Q${x},34.6 ${x - 8.6},31.4 Z`} fill="#2a3a1e" opacity="0.92" />
+          <path d={`M${x - 5},29 Q${x - 4},20 ${x},17.6`} stroke="#5a6a3a" strokeWidth="0.6" fill="none" opacity="0.8" />
+          <path d={`M${x - 3},16.4 Q${x},13 ${x + 3},16.4`} fill="#f8f4ea" />
+        </g>
+      ))}
+    </g>
+  );
+}
+function FoodAoIgamenchi() {
+  return (
+    <g>
+      <Food4Plate cy={32} />
+      <path d="M8,30 q4,-6 10,-4 q-4,4 -10,4 Z" fill="#c8e0a0" stroke="#7a9a4a" strokeWidth="0.4" />
+      <path d="M9,31 q5,-3 9,-1" stroke="#9ac060" strokeWidth="0.7" fill="none" />
+      {[[22, 24], [32, 26], [26, 31]].map(([x, y], i) => (
+        <g key={i}>
+          <ellipse cx={x} cy={y + 0.8} rx="7" ry="4.4" fill="#7a3a0a" />
+          <ellipse cx={x} cy={y} rx="7" ry="4.2" fill="#c8782a" stroke="#6a3008" strokeWidth="0.45" />
+          {[0, 1, 2, 3, 4, 5].map((k) => <circle key={k} cx={x - 4.6 + k * 1.9} cy={y - 1 + (k % 2) * 1.6} r="0.55" fill="#f0b060" />)}
+          <path d={`M${x - 3.6} ${y - 2} q1 -1 2.6 -0.6`} stroke="#ffd890" strokeWidth="0.5" fill="none" />
+        </g>
+      ))}
+      <path d="M38,30 l3,-2 l1.4,1.6 Z" fill="#f4e050" stroke="#b8a020" strokeWidth="0.3" />
+    </g>
+  );
+}
+function FoodAoBarayaki() {
+  return (
+    <g>
+      <Food4Iron />
+      {[[13, 29], [19, 27], [26, 28.6], [32, 27.4], [17, 32], [28, 32.4], [35, 31]].map(([x, y], i) => (
+        <path key={i} d={`M${x - 4} ${y} q2 -2.4 4 -1.2 q2 1.4 4 0 q-1 3 -4 2.6 q-3 0.6 -4 -1.4 Z`} fill={i % 2 ? "#7a2a14" : "#9a3a1a"} stroke="#3a0e04" strokeWidth="0.35" />
+      ))}
+      {[[16, 30], [24, 30.6], [31, 29.6], [21, 33.4]].map(([x, y], i) => (
+        <path key={i} d={`M${x - 3} ${y} q3 -2 6 0`} stroke="#f2d8a8" strokeWidth="1.1" fill="none" strokeLinecap="round" />
+      ))}
+      <Food1Steam x={24} y={20} s={0.9} />
+    </g>
+  );
+}
+function FoodAoNagaimo() {
+  return (
+    <g>
+      <Food4Plate cy={32} c="#2a2a30" rim="#0a0a0c" />
+      {[[12, 30], [19, 27.6], [26, 29.6], [33, 27.4], [22, 34]].map(([x, y], i) => (
+        <g key={i}>
+          <ellipse cx={x} cy={y + 1.2} rx="4.4" ry="2.6" fill="#a8783a" />
+          <ellipse cx={x} cy={y} rx="4.4" ry="2.6" fill="#f0dca8" stroke="#a87a3a" strokeWidth="0.4" />
+          <ellipse cx={x} cy={y} rx="3.2" ry="1.8" fill="#d8a858" opacity="0.7" />
+        </g>
+      ))}
+      <path d="M17,22 l5,0.6 l-0.4,2.6 l-5,-0.6 Z" fill="#fbe58a" stroke="#c9a640" strokeWidth="0.35" />
+      <path d="M29,35 q2,-2 4,-0.4" stroke="#4a9a3a" strokeWidth="1" fill="none" />
+    </g>
+  );
+}
+function FoodAoHimemasu() {
+  return (
+    <g>
+      <Food4Board x={5} y={28} w={38} h={9} c="#c8a070" d="#7a5a30" />
+      <Food4Fish x={24} y={27} len={30} c="#c8a8a0" belly="#f4e8e0" grill />
+      <path d="M10 27 L40 27" stroke="#d8c090" strokeWidth="0.6" opacity="0" />
+      {[[14, 24], [20, 23.4], [27, 24], [33, 25]].map(([x, y], i) => <circle key={i} cx={x} cy={y} r="0.5" fill="#fff" />)}
+      <path d="M37,34 l4,-1.4 l0.8,1.8 l-4,1.4 Z" fill="#f4e050" />
+    </g>
+  );
+}
+function FoodAoSenbeijiru() {
+  return (
+    <g>
+      <Food4Pot body="#5a2a1a" light="#8a4a2a" rim="#2a0c04" />
+      <ellipse cx="24" cy="21.4" rx="16" ry="4.8" fill="#9a5a2a" />
+      {[[14, 20], [23, 19], [31, 21.4], [19, 23.4]].map(([x, y], i) => (
+        <path key={i} d={`M${x - 4} ${y} L${x + 3} ${y - 1.6} L${x + 4} ${y + 1.2} L${x - 3} ${y + 2.2} Z`} fill="#e8c890" stroke="#9a7040" strokeWidth="0.35" />
+      ))}
+      <path d="M27 23 q3 -1.6 6 0" stroke="#f0f0e4" strokeWidth="1.4" fill="none" />
+      <ellipse cx="34.6" cy="19.6" rx="2" ry="1.2" fill="#8a5a3a" />
+      <Food1Negi x={18} y={20} /><Food1Negi x={28} y={19.4} /><Food1Negi x={25} y={23.4} />
+      <ellipse cx="11.6" cy="22.4" rx="1.6" ry="1" fill="#f08a2a" />
+      <Food1Steam x={24} y={12} />
+    </g>
+  );
+}
+function FoodAoNanbusenbei() {
+  return (
+    <g>
+      <Food1Shadow />
+      {[[24, 36, 0], [24, 33, 1], [24, 30, 2]].map(([x, y, k]) => (
+        <g key={k}>
+          <ellipse cx={x} cy={y + 1} rx="15" ry="5" fill="#9a6a2a" />
+          <ellipse cx={x} cy={y} rx="15" ry="5" fill="#e8c27a" stroke="#8a5a1a" strokeWidth="0.45" />
+        </g>
+      ))}
+      <ellipse cx="24" cy="30" rx="12.4" ry="4" fill="#f0d090" />
+      {[[18, 29], [22, 30.6], [27, 29.2], [30, 31], [24, 28.4], [20, 31.6], [28, 32]].map(([x, y], i) => <ellipse key={i} cx={x} cy={y} rx="0.6" ry="0.3" fill="#2a2018" />)}
+      <ellipse cx="24" cy="30" rx="15" ry="5" fill="none" stroke="#c8963a" strokeWidth="1.2" opacity="0.7" />
+      <ellipse cx="34" cy="16" rx="8" ry="2.8" fill="#e8c27a" stroke="#8a5a1a" strokeWidth="0.45" transform="rotate(-20 34 16)" />
+    </g>
+  );
+}
+function FoodAoIchigoni() {
+  return (
+    <g>
+      <Food4Wan />
+      <ellipse cx="24" cy="22.2" rx="13.6" ry="4" fill="#e8dcb8" opacity="0.85" />
+      {[[18, 21.4], [21.4, 23], [25, 21], [28.6, 23], [31, 21.6]].map(([x, y], i) => (
+        <ellipse key={i} cx={x} cy={y} rx="2" ry="1.2" fill="#f4962a" stroke="#b85a0a" strokeWidth="0.25" />
+      ))}
+      <ellipse cx="15" cy="23" rx="2.6" ry="1.2" fill="#d8c8a0" stroke="#8a7a50" strokeWidth="0.3" />
+      <path d="M30,19.4 q3,-1.6 5,0.4" stroke="#3a8a3a" strokeWidth="0.9" fill="none" />
+      <Food1Steam x={24} y={13} s={0.8} />
+    </g>
+  );
+}
+function FoodAoMaguro() {
+  return (
+    <g>
+      <Food1Shadow />
+      <Food1Bowl body="#1a1a1e" light="#3a3a42" dark="#0a0a0c" rim="#000" band="#c8a040" />
+      <Food4Rice />
+      {[[12, 22, -30], [16, 20.4, -18], [21, 19.4, -6], [26.6, 19.4, 6], [31.6, 20.4, 18], [35.6, 22, 30]].map(([x, y, r], i) => (
+        <Food4Slice key={i} x={x} y={y} rot={r} w={7} h={3.6} c={i % 2 ? "#e86a7a" : "#b81a2a"} l={i % 2 ? "#ffc0c8" : "#e85a60"} />
+      ))}
+      <Food4Slice x={24} y={24} w={7} h={3.6} c="#b81a2a" l="#e85a60" />
+      <path d="M17,25 q2,-2 4,-0.4" stroke="#7ac04a" strokeWidth="1.2" fill="none" />
+      <circle cx="30" cy="24.6" r="1.2" fill="#9ac050" />
+    </g>
+  );
+}
+function FoodAoKaiyaki() {
+  return (
+    <g>
+      <Food4Grill />
+      <ellipse cx="24" cy="27" rx="16" ry="7.4" fill="#c8a070" stroke="#7a5228" strokeWidth="0.5" />
+      {[-60, -36, -12, 12, 36, 60].map((a) => <path key={a} d={`M24 33.4 L${(24 + 15 * Math.sin(a * Math.PI / 180)).toFixed(2)} ${(27 - 6.6 * Math.cos(a * Math.PI / 180)).toFixed(2)}`} stroke="#8a6034" strokeWidth="0.35" opacity="0.6" />)}
+      <ellipse cx="24" cy="26" rx="12.6" ry="5.2" fill="#e8b84a" stroke="#a8781a" strokeWidth="0.4" />
+      <path d="M13,26 q5,-3 11,-1 q6,2 11,-1" stroke="#c8902a" strokeWidth="0.9" fill="none" />
+      <ellipse cx="19" cy="25" rx="2.6" ry="1.5" fill="#f4ecd8" />
+      <ellipse cx="29" cy="27" rx="2.6" ry="1.5" fill="#f4ecd8" />
+      <Food1Negi x={24} y={24.6} /><Food1Negi x={26} y={27.4} /><Food1Negi x={21.6} y={27.6} />
+      <Food1Steam x={24} y={17} s={0.8} />
+    </g>
+  );
+}
+function FoodAoBekomochi() {
+  return (
+    <g>
+      <Food4Plate cy={33} c="#e8dcc8" />
+      {[[16, 28], [30, 26]].map(([x, y], k) => (
+        <g key={k} transform={`translate(${x},${y})`}>
+          <rect x="-7" y="-1" width="14" height="5" rx="0.8" fill="#c8b098" />
+          <rect x="-7" y="-6" width="14" height="6" rx="1" fill="#f8f2ea" stroke="#a89888" strokeWidth="0.45" />
+          {[0, 72, 144, 216, 288].map((a) => <ellipse key={a} cx={Math.cos(a * Math.PI / 180) * 2.2} cy={-3 + Math.sin(a * Math.PI / 180) * 1.4} rx="1.3" ry="0.8" fill={k ? "#f07a9a" : "#e85a8a"} />)}
+          <circle cx="0" cy="-3" r="0.8" fill="#f4d04a" />
+          <path d="M-5.6 -1 q1.2 -1.4 2.4 0 M3.2 -1 q1.2 -1.4 2.4 0" stroke="#5aa04a" strokeWidth="0.6" fill="none" />
+        </g>
+      ))}
+    </g>
+  );
+}
+
+/* ---- 岩手 ---- */
+function FoodIwWanko() {
+  const bowls = [[11, 36], [11, 33], [11, 30], [11, 27], [37, 36], [37, 33]];
+  return (
+    <g>
+      <Food1Shadow rx={20} />
+      {bowls.map(([x, y], i) => (
+        <g key={i}>
+          <path d={`M${x - 6},${y} Q${x},${y + 5} ${x + 6},${y} Z`} fill="#8a1a14" stroke="#2a0604" strokeWidth="0.4" />
+          <ellipse cx={x} cy={y} rx="6" ry="1.4" fill="#1a0604" />
+        </g>
+      ))}
+      <path d="M17,30 Q24,41 31,30 Z" fill="#8a1a14" stroke="#2a0604" strokeWidth="0.5" />
+      <ellipse cx="24" cy="30" rx="7" ry="2" fill="#3a1a0a" />
+      <Food4Noodles cx={24} cy={30} rx={6} ry={1.6} c="#c8b088" n={3} w={0.7} />
+      <path d="M30,14 Q28,22 25,29" stroke="#c8b088" strokeWidth="0.8" fill="none" />
+      <path d="M31,14 Q29.5,22 26.6,29" stroke="#c8b088" strokeWidth="0.8" fill="none" />
+      <path d="M26,10 L38,16" stroke="#e8d0a0" strokeWidth="1" /><path d="M27,8.6 L39,14.6" stroke="#e8d0a0" strokeWidth="1" />
+    </g>
+  );
+}
+function FoodIwReimen() {
+  return (
+    <g>
+      <Food1Shadow />
+      <Food1Bowl body="#b8c0c8" light="#e8eef4" dark="#6a727a" rim="#3a4048" />
+      <ellipse cx="24" cy="22.6" rx="16.5" ry="5.2" fill="#c89a5a" opacity="0.85" />
+      <Food4Noodles c="#ece4d0" n={5} w={0.9} />
+      <path d="M12,21 q3,-2 6,0 q-3,2 -6,0 Z" fill="#d83a1a" />
+      <path d="M13,22 l4,-1" stroke="#f08a5a" strokeWidth="0.6" />
+      <ellipse cx="23" cy="19.8" rx="2.6" ry="2" fill="#fff" stroke="#c8c0b0" strokeWidth="0.3" />
+      <circle cx="23" cy="19.8" r="1.2" fill="#f4c42a" />
+      <path d="M28,18.6 L35,18.6 L33,22.6 Z" fill="#e84a4a" stroke="#8a1a1a" strokeWidth="0.3" />
+      <path d="M28,18.6 L35,18.6 L34.6,19.4 L28.4,19.4 Z" fill="#3a8a3a" />
+      <Food1Chashu x={18} y={24} r={3} />
+      <Food1Negi x={30} y={24} />
+    </g>
+  );
+}
+function FoodIwJajamen() {
+  return (
+    <g>
+      <Food4Plate cy={31} c="#f4f0e8" />
+      <Food4Noodles cx={24} cy={29.4} rx={14} ry={4.6} c="#f4e0b0" n={5} w={1.4} />
+      <path d="M17,27 q4,-5 9,-4 q5,1 6,4 q-7,2 -15,0 Z" fill="#4a2a14" stroke="#1a0a04" strokeWidth="0.4" />
+      <path d="M20,25 q3,-2 6,-1" stroke="#7a4a24" strokeWidth="0.6" fill="none" />
+      {[0, 1, 2, 3].map((k) => <rect key={k} x={30 + k * 1.2} y={22 + k * 0.4} width="0.9" height="6" rx="0.3" fill="#7ac04a" transform={`rotate(25 ${30 + k} 24)`} />)}
+      <ellipse cx="14" cy="26" rx="2" ry="1.2" fill="#f0c890" />
+      <path d="M9,20 l3,8" stroke="#e8d0a0" strokeWidth="0.9" /><path d="M10.6,19.6 l3,8" stroke="#e8d0a0" strokeWidth="0.9" />
+    </g>
+  );
+}
+function FoodIwMochizen() {
+  const cups = [[13, 26, "#7ac04a"], [24, 23, "#c8a878"], [35, 26, "#4a1e1a"], [18.4, 33, "#f4f0e6"], [29.6, 33, "#e8c070"]];
+  return (
+    <g>
+      <Food4Board x={3} y={22} w={42} h={18} c="#5a1a14" d="#2a0804" />
+      {cups.map(([x, y, c], i) => (
+        <g key={i}>
+          <path d={`M${x - 5},${y} Q${x},${y + 5.6} ${x + 5},${y} Z`} fill="#8a1e18" stroke="#2a0604" strokeWidth="0.4" />
+          <ellipse cx={x} cy={y} rx="5" ry="1.6" fill={c} stroke="#0004" strokeWidth="0.3" />
+          <ellipse cx={x - 0.6} cy={y - 0.8} rx="2.4" ry="1.2" fill="#fff8ec" stroke="#c8b8a0" strokeWidth="0.25" />
+          <ellipse cx={x} cy={y - 0.2} rx="4.2" ry="1.1" fill={c} opacity="0.8" />
+        </g>
+      ))}
+    </g>
+  );
+}
+function FoodIwMaesawa() {
+  return (
+    <g>
+      <Food4Iron />
+      <path d="M10,30 Q10,23 17,22 Q27,21 32,24 L32.6,33 Q22,35 14,34 Q10,33 10,30 Z" fill="#6a2e14" stroke="#2a0c04" strokeWidth="0.55" />
+      <path d="M11,27 Q14,23 22,22.8 Q29,23 31.6,24.6 Q24,27 16,27.4 Z" fill="#8a4420" />
+      {[0, 1, 2, 3].map((k) => <path key={k} d={`M${13 + k * 4.4} 27.6 L${17 + k * 4.4} 23.4`} stroke="#2a0c04" strokeWidth="0.7" opacity="0.7" />)}
+      <path d="M33,24 L38,24 L38.6,33 L33.6,33 Z" fill="#d6606a" stroke="#4a1c0c" strokeWidth="0.4" />
+      <path d="M33.8,25 L37.4,25 L37.8,32 L34.2,32 Z" fill="#ea8a8e" />
+      <path d="M12,32 q5,1 10,0" stroke="#f0d8c8" strokeWidth="0.4" fill="none" />
+      <Food1Steam x={22} y={19} s={0.8} />
+    </g>
+  );
+}
+function FoodIwGanzuki() {
+  return (
+    <g>
+      <Food4Plate cy={34} c="#e8e0cc" />
+      <path d="M8,30 L24,22 L40,30 L24,36 Z" fill="#7a4a24" stroke="#3a1a08" strokeWidth="0.5" />
+      <path d="M8,30 L24,36 L24,40 L8,34 Z" fill="#5a3418" stroke="#3a1a08" strokeWidth="0.45" />
+      <path d="M24,36 L40,30 L40,34 L24,40 Z" fill="#6a3e1c" stroke="#3a1a08" strokeWidth="0.45" />
+      {[[16, 28], [24, 26], [30, 29], [20, 31], [27, 32.6], [33, 30.4]].map(([x, y], i) => <ellipse key={i} cx={x} cy={y} rx="0.8" ry="0.45" fill="#f4e8d0" />)}
+      {[[22, 29], [29, 27]].map(([x, y], i) => <path key={i} d={`M${x - 1.4} ${y} q1.4 -1.6 2.8 0 q-1.4 1.4 -2.8 0 Z`} fill="#c89a5a" stroke="#6a4a20" strokeWidth="0.3" />)}
+      {[[12, 32.6], [16, 34.2], [30, 35], [35, 33]].map(([x, y], i) => <circle key={i} cx={x} cy={y} r="0.5" fill="#3a2010" />)}
+    </g>
+  );
+}
+function FoodIwUnidon() {
+  return (
+    <g>
+      <Food1Shadow />
+      <Food1Bowl body="#1a1a1e" light="#3a3a42" dark="#0a0a0c" rim="#000" band="#8a1a14" />
+      <Food4Rice />
+      {[[11, 22], [15, 20], [19, 19], [24, 18.6], [29, 19], [33, 20], [37, 22], [13, 24.4], [18, 23], [23, 22.4], [28, 22.6], [33, 23.6], [21, 25.6], [27, 25.6]].map(([x, y], i) => (
+        <ellipse key={i} cx={x} cy={y} rx="2.6" ry="1.4" fill={i % 3 ? "#f4962a" : "#f8b04a"} stroke="#b85a0a" strokeWidth="0.25" transform={`rotate(${(i * 23) % 40 - 20} ${x} ${y})`} />
+      ))}
+      <path d="M35,17 q2,-3 4,-1" stroke="#4a9a3a" strokeWidth="1.2" fill="none" />
+    </g>
+  );
+}
+function FoodIwYakigaki() {
+  return (
+    <g>
+      <Food4Grill />
+      {[[14, 27, -14], [26, 25, 8], [34, 30, 20], [20, 32, -6]].map(([x, y, r], i) => (
+        <g key={i} transform={`translate(${x},${y}) rotate(${r})`}>
+          <path d="M-7,0 Q-6,-5 0,-5 Q7,-5 7,0 Q6,4 0,4 Q-6,4 -7,0 Z" fill="#7a7468" stroke="#2a2620" strokeWidth="0.45" />
+          <path d="M-5.6,0 Q-5,-3.4 0,-3.6 Q5.6,-3.4 5.6,0 Q5,2.6 0,2.6 Q-5,2.6 -5.6,0 Z" fill="#e8e0c8" />
+          <path d="M-3.6,-0.4 Q0,-2.6 3.6,-0.4 Q0,1.6 -3.6,-0.4 Z" fill="#c8b8a0" stroke="#7a6a50" strokeWidth="0.3" />
+          <path d="M-5,0 q2,1 4,0 q2,-1 4,0" stroke="#4a4038" strokeWidth="0.35" fill="none" />
+        </g>
+      ))}
+      <Food1Steam x={24} y={16} s={0.8} />
+    </g>
+  );
+}
+function FoodIwAramaki() {
+  return (
+    <g>
+      <Food4Board x={3} y={28} w={42} h={10} c="#c8a070" d="#7a5a30" />
+      <Food4Fish x={17.6} y={26} len={26} c="#7a7e86" belly="#d8d0c4" />
+      <path d="M35,20.6 L35,31.4 L41,31.4 L41,20.6 Z" fill="#f07a50" stroke="#8a2010" strokeWidth="0.45" />
+      {[22.6, 25, 27.4, 29.8].map((y) => <path key={y} d={`M35.4 ${y} q2.8 -1 5.2 0`} stroke="#fff2e0" strokeWidth="0.45" fill="none" />)}
+      <path d="M34.6,20.6 L34.6,31.4" stroke="#c8c0b0" strokeWidth="0.9" />
+      {[[12, 23], [17, 22.4], [22, 22.6], [27, 23.4]].map(([x, y], i) => <path key={i} d={`M${x} ${y} l1.4 1`} stroke="#4a4e56" strokeWidth="0.5" />)}
+      <g fill="#fff" opacity="0.85">{[[10, 27], [16, 28], [24, 27.6]].map(([x, y], i) => <circle key={i} cx={x} cy={y} r="0.45" />)}</g>
+    </g>
+  );
+}
+function FoodIwTankaku() {
+  return (
+    <g>
+      <Food4Grill />
+      {[[14, 27, -10], [24, 25.4, 6], [33, 28, 14], [19, 32, -4], [29, 32.4, 8]].map(([x, y, r], i) => (
+        <g key={i} transform={`translate(${x},${y}) rotate(${r})`}>
+          <rect x="-5" y="-2.2" width="10" height="4.4" rx="1.4" fill="#8a2a1a" stroke="#3a0c04" strokeWidth="0.4" />
+          <path d="M-4 -0.6 q4 1.4 8 0" stroke="#e8b0a0" strokeWidth="0.5" fill="none" />
+          <path d="M-3 -2 l1 4.2 M1 -2 l1 4.2" stroke="#2a0804" strokeWidth="0.6" opacity="0.8" />
+        </g>
+      ))}
+      <Food1Steam x={24} y={17} s={0.8} />
+    </g>
+  );
+}
+function FoodIwMamebu() {
+  return (
+    <g>
+      <Food4Wan body="#3a2a1a" light="#5a4a32" rim="#140c04" inner="#1c140a" />
+      <ellipse cx="24" cy="22.2" rx="13.6" ry="4" fill="#b8884a" />
+      {[[18, 21.6], [23, 20.8], [28, 22], [21, 23.6], [31, 21]].map(([x, y], i) => <Food4Ball key={i} x={x} y={y} r={1.9} c="#e8dcc0" d="#a89878" />)}
+      <path d="M13,22 l3.4,-0.6 l0.4,1.4 l-3.4,0.6 Z" fill="#f08a2a" />
+      <ellipse cx="34" cy="23" rx="2" ry="1.1" fill="#7a5a2a" />
+      <Food1Negi x={26} y={23.8} />
+      <Food1Steam x={24} y={13} s={0.8} />
+    </g>
+  );
+}
+function FoodIwKakke() {
+  return (
+    <g>
+      <Food4Pot body="#3a3a40" />
+      <ellipse cx="24" cy="21.4" rx="16" ry="4.8" fill="#d8ccb0" opacity="0.6" />
+      {[[15, 20, -10], [24, 19, 12], [31, 21.6, -4], [20, 23, 20]].map(([x, y, r], i) => (
+        <path key={i} d="M-4 2 L0 -3 L4 2 Z" transform={`translate(${x},${y}) rotate(${r})`} fill="#a89070" stroke="#5a4a30" strokeWidth="0.35" />
+      ))}
+      <ellipse cx="40" cy="36" rx="4.6" ry="2.2" fill="#e8e0d0" stroke="#8a8070" strokeWidth="0.4" />
+      <ellipse cx="40" cy="35.6" rx="3.4" ry="1.4" fill="#8a5a2a" />
+      <Food1Steam x={24} y={13} />
+    </g>
+  );
+}
+
+/* ---- 宮城 ---- */
+function FoodMiHarakomeshi() {
+  return (
+    <g>
+      <Food1Shadow />
+      <Food1Bowl body="#5a1810" light="#8a2a1c" dark="#2a0806" rim="#140402" />
+      <ellipse cx="24" cy="22.4" rx="16" ry="5" fill="#d8b070" />
+      {[[13, 21], [19, 19.6], [26, 19.4], [33, 21], [16, 24], [29, 24.2]].map(([x, y], i) => (
+        <path key={i} d={`M${x - 3} ${y} q3 -2 6 0 q-3 2 -6 0 Z`} fill="#f08a5a" stroke="#a84a2a" strokeWidth="0.3" />
+      ))}
+      <Food4Ikura pts={[[20, 22.4], [22, 23.4], [24, 22], [26, 23.6], [23, 24.6], [25.6, 25], [21, 25]]} />
+      <path d="M34,18 q2,-3 4,-1" stroke="#4a9a3a" strokeWidth="1.1" fill="none" />
+    </g>
+  );
+}
+function FoodMiUmen() {
+  return (
+    <g>
+      <Food1Shadow />
+      <Food1Bowl body="#f2ece0" light="#fff" dark="#b8ae9a" rim="#7a7060" band="#4a6a2a" />
+      <ellipse cx="24" cy="22.6" rx="16.5" ry="5.2" fill="#e8d4a0" />
+      {Array.from({ length: 9 }, (_, i) => <path key={i} d={`M${12 + i * 2.8} ${20 + (i % 3)} l3 ${i % 2 ? 2 : -1}`} stroke="#fffaf0" strokeWidth="1.1" strokeLinecap="round" />)}
+      <ellipse cx="18" cy="21" rx="2.6" ry="1.2" fill="#c8a060" />
+      <path d="M26,19.4 l5,-0.6" stroke="#3a8a3a" strokeWidth="1.2" />
+      <Food1Negi x={30} y={23} />
+      <Food1Steam x={24} y={12} />
+    </g>
+  );
+}
+function FoodMiPudding() {
+  return (
+    <g>
+      <Food1Shadow rx={11} />
+      <path d="M14,14 L34,14 L33,39 Q24,41 15,39 Z" fill="#dfe8f0" opacity="0.4" stroke="#a8b8c8" strokeWidth="0.6" />
+      <path d="M14.4,20 L33.6,20 L33,39 Q24,41 15,39 Z" fill="#f8e8b0" />
+      <path d="M14.8,33 L33.2,33 L33,39 Q24,41 15,39 Z" fill="#a8641a" />
+      <ellipse cx="24" cy="20" rx="9.6" ry="1.6" fill="#fff2c8" />
+      <rect x="13" y="9.6" width="22" height="4.6" rx="1" fill="#f4f4f0" stroke="#a8a8a0" strokeWidth="0.5" />
+      <rect x="13" y="11" width="22" height="1.4" fill="#4a7ab8" />
+      <path d="M16,22 L17,37" stroke="#fff" strokeWidth="0.9" opacity="0.5" />
+    </g>
+  );
+}
+function FoodMiGyutan() {
+  return (
+    <g>
+      <Food4Plate cy={31} c="#f4f0e8" />
+      {[[12, 28, -12], [19, 26.4, -4], [26, 26.4, 4], [33, 28, 12]].map(([x, y, r], i) => (
+        <g key={i} transform={`translate(${x},${y}) rotate(${r})`}>
+          <ellipse rx="5" ry="3" fill="#a8604a" stroke="#4a2010" strokeWidth="0.4" />
+          <ellipse rx="3.6" ry="2" fill="#e8b8a0" />
+          <path d="M-3 -1.4 l1.6 2.8 M0 -1.6 l1.6 2.8 M3 -1.4 l-0.6 1.6" stroke="#5a2a14" strokeWidth="0.55" />
+        </g>
+      ))}
+      <ellipse cx="21" cy="34" rx="4.6" ry="1.8" fill="#e8f0a0" stroke="#9aa04a" strokeWidth="0.3" />
+      <path d="M30,34 q2,-1.6 4,0 q-2,1.2 -4,0 Z" fill="#c8e090" />
+      <path d="M34,33.4 l2,-1" stroke="#d83a1a" strokeWidth="0.8" />
+    </g>
+  );
+}
+function FoodMiZunda() {
+  return (
+    <g>
+      <Food4Plate cy={33} c="#2a2a30" rim="#0a0a0c" />
+      {[[15, 28], [24, 25.6], [33, 28], [24, 31.6]].map(([x, y], i) => (
+        <g key={i}>
+          <ellipse cx={x} cy={y + 0.8} rx="5.6" ry="3.4" fill="#4a7a2a" />
+          <ellipse cx={x} cy={y} rx="5.6" ry="3.4" fill="#8ac050" stroke="#4a7a2a" strokeWidth="0.45" />
+          {[0, 1, 2].map((k) => <ellipse key={k} cx={x - 2 + k * 2} cy={y - 0.6 + (k % 2)} rx="0.9" ry="0.6" fill="#b8e080" />)}
+        </g>
+      ))}
+      <path d="M38,22 l4,-6" stroke="#c89a5a" strokeWidth="0.9" />
+    </g>
+  );
+}
+function FoodMiSasakama() {
+  return (
+    <g>
+      <Food4Plate cy={33} c="#e8e0cc" />
+      {[[16, 27, -24], [28, 26, 14], [22, 32, -4]].map(([x, y, r], i) => (
+        <g key={i} transform={`translate(${x},${y}) rotate(${r})`}>
+          <path d="M-9,0 Q-4,-4.6 4,-3.6 Q9,-2 10,0 Q9,2 4,3.6 Q-4,4.6 -9,0 Z" fill="#f4ecd8" stroke="#a89878" strokeWidth="0.45" />
+          <path d="M-9,0 Q-4,-3 4,-2.6 Q8,-1.6 10,0" fill="none" stroke="#e8c890" strokeWidth="1.4" opacity="0.8" />
+          <path d="M-6,0 H8" stroke="#c8b088" strokeWidth="0.3" />
+          {[-3, 0, 3, 6].map((d) => <path key={d} d={`M${d} 0 l-1.4 -2 M${d} 0 l-1.4 2`} stroke="#c8b088" strokeWidth="0.25" />)}
+        </g>
+      ))}
+    </g>
+  );
+}
+function FoodMiKuridango() {
+  return (
+    <g>
+      <Food4Plate cy={34} c="#2a2a30" rim="#0a0a0c" />
+      {[[15, 0], [30, 1]].map(([x, k]) => (
+        <g key={k}>
+          <path d={`M${x - 8},26 Q${x},34 ${x + 8},26 Z`} fill="#1a1a1e" stroke="#000" strokeWidth="0.4" />
+          <ellipse cx={x} cy="26" rx="8" ry="2.6" fill="#a8641a" />
+          <Food4Ball x={x - 2} y={24} r={3.6} c="#f0e4c8" d="#a89060" />
+          <path d={`M${x + 1},20 Q${x + 5},19 ${x + 5.6},23 Q${x + 4},26 ${x + 1},25.4 Q${x - 1},23 ${x + 1},20 Z`} fill="#e8b040" stroke="#9a6a10" strokeWidth="0.4" />
+          <path d={`M${x - 7},26 q7,2 14,0`} stroke="#d8902a" strokeWidth="0.8" fill="none" opacity="0.8" />
+        </g>
+      ))}
+    </g>
+  );
+}
+function FoodMiHatto() {
+  return (
+    <g>
+      <Food4Wan body="#2a1a10" light="#4a3420" rim="#0c0604" inner="#140a04" />
+      <ellipse cx="24" cy="22.2" rx="13.6" ry="4" fill="#c8a06a" />
+      {[[17, 21, -10], [24, 20.6, 8], [30, 22, -4], [21, 23.6, 14]].map(([x, y, r], i) => (
+        <ellipse key={i} cx={x} cy={y} rx="3.6" ry="1.3" fill="#f2ead8" stroke="#b8a888" strokeWidth="0.3" transform={`rotate(${r} ${x} ${y})`} />
+      ))}
+      <path d="M12.6,22 l3,-0.6" stroke="#f08a2a" strokeWidth="1.1" />
+      <ellipse cx="33.4" cy="21" rx="1.8" ry="1" fill="#7a5a3a" />
+      <Food1Negi x={27} y={24} />
+      <Food1Steam x={24} y={13} s={0.8} />
+    </g>
+  );
+}
+function FoodMiMonaka() {
+  return (
+    <g>
+      <Food4Plate cy={34} c="#e8dcc8" />
+      {[[15, 0], [27, 1], [37, 2]].map(([x, k]) => (
+        <g key={k}>
+          <ellipse cx={x} cy={30.6} rx="4.6" ry="3.4" fill="#d8a858" stroke="#8a5a1a" strokeWidth="0.45" />
+          <circle cx={x} cy={23.4} r="3.4" fill="#e8b868" stroke="#8a5a1a" strokeWidth="0.45" />
+          <path d={`M${x - 3.4},22.6 Q${x},18.4 ${x + 3.4},22.6`} fill="#4a2a14" />
+          <path d={`M${x - 1.4} 24 h0.8 M${x + 0.6} 24 h0.8`} stroke="#4a2a14" strokeWidth="0.45" />
+          <path d={`M${x - 3.6} 30 q3.6 2 7.2 0 M${x - 3} 32.4 q3 1.4 6 0`} stroke={k === 1 ? "#d83a3a" : "#c8402a"} strokeWidth="0.6" fill="none" />
+        </g>
+      ))}
+    </g>
+  );
+}
+function FoodMiIshiyakisoba() {
+  return (
+    <g>
+      <Food4Plate cy={31} c="#f4f0e8" />
+      <Food4Noodles cx={24} cy={29.6} rx={15} ry={4.8} c="#a8783a" n={5} w={1.2} />
+      <ellipse cx="22" cy="26.6" rx="6" ry="3.2" fill="#fff" stroke="#d8d0c0" strokeWidth="0.35" />
+      <circle cx="21" cy="26.4" r="2" fill="#f4b42a" />
+      <path d="M31,27 q2,-1 4,0" stroke="#7ac04a" strokeWidth="1" fill="none" />
+      <path d="M13,30 q2,-1 4,0" stroke="#e8e0c8" strokeWidth="0.8" fill="none" />
+      <ellipse cx="33" cy="31" rx="2" ry="1" fill="#e85a6a" />
+    </g>
+  );
+}
+function FoodMiSaba() {
+  return (
+    <g>
+      <Food4Plate cy={31} rx={20} c="#f4f0e8" />
+      <Food4Fish x={23} y={28} len={30} c="#4a6a8a" belly="#d8dce0" grill />
+      {[[12, 26], [16, 25.4], [20, 25.6]].map(([x, y], i) => <path key={i} d={`M${x} ${y} q1.4 -1 2.6 0`} stroke="#1a2a3a" strokeWidth="0.6" fill="none" />)}
+      <path d="M36,33 l5,-2 l1,2 l-5,2 Z" fill="#f4e050" stroke="#b8a020" strokeWidth="0.3" />
+      <ellipse cx="13" cy="34" rx="3" ry="1.4" fill="#f4f4f0" stroke="#c8c8c0" strokeWidth="0.3" />
+    </g>
+  );
+}
+function FoodMiHotate() {
+  return (
+    <g>
+      <Food4Grill />
+      {[[14, 28, -10], [34, 28, 10], [24, 25, 0]].map(([x, y, r], i) => (
+        <g key={i}>
+          <Food4Shell x={x} y={y} r={8.6} rot={r} />
+          <ellipse cx={x} cy={y - 2.4} rx="3" ry="2" fill="#f8f0e0" stroke="#c8b8a0" strokeWidth="0.3" />
+          <path d={`M${x - 3.6} ${y - 1} q3.6 1.6 7.2 0`} stroke="#f08a5a" strokeWidth="0.9" fill="none" />
+        </g>
+      ))}
+      <Food1Steam x={24} y={14} s={0.8} />
+    </g>
+  );
+}
+function FoodMiFukahire() {
+  return (
+    <g>
+      <Food1Shadow />
+      <Food1Bowl body="#f4f0e8" light="#fff" dark="#b8b0a0" rim="#7a7060" band="#2a6a8a" />
+      <ellipse cx="24" cy="22.6" rx="16.5" ry="5.2" fill="#c8862a" />
+      <ellipse cx="22" cy="22" rx="12" ry="3.6" fill="#e0a040" opacity="0.8" />
+      <path d="M14,23 Q20,15 33,19 Q30,22 34,24 Q24,26 14,23 Z" fill="#f0d8a0" stroke="#a8803a" strokeWidth="0.45" />
+      {Array.from({ length: 8 }, (_, i) => <path key={i} d={`M${16 + i * 2.2} ${22.6 - i * 0.3} L${18 + i * 2.2} ${18.6 + i * 0.1}`} stroke="#c8a060" strokeWidth="0.4" />)}
+      <Food1Negi x={34} y={21.6} />
+      <Food1Steam x={24} y={12} />
+    </g>
+  );
+}
+function FoodMiHorumon() {
+  return (
+    <g>
+      <Food4Iron />
+      {[[13, 29], [20, 27.6], [27, 28.6], [34, 29.6], [17, 32.4], [25, 32.6], [31, 33]].map(([x, y], i) => (
+        <path key={i} d={`M${x - 3} ${y} q1 -2.4 3 -1.6 q2.6 -0.6 3 1.6 q-1 2 -3 1.4 q-2 0.8 -3 -1.4 Z`} fill={i % 2 ? "#c87a5a" : "#a85a3a"} stroke="#4a1a0a" strokeWidth="0.35" />
+      ))}
+      <path d="M8,27 q5,-4 10,-3 q-3,3 -10,3 Z" fill="#d8eab0" stroke="#8aa050" strokeWidth="0.35" />
+      <path d="M12,30 q6,3 12,1 q6,-2 12,1" stroke="#3a1a0a" strokeWidth="1" fill="none" opacity="0.6" />
+      <Food1Steam x={24} y={20} s={0.8} />
+    </g>
+  );
+}
+function FoodMiKatsuo() {
+  return (
+    <g>
+      <Food4Plate cy={32} rx={20} c="#1e3a5a" rim="#0a1a2a" />
+      {[[12, 29], [17, 28], [22, 27.4], [27, 27.4], [32, 28]].map(([x, y], i) => (
+        <g key={i} transform={`translate(${x},${y}) rotate(-8)`}>
+          <rect x="-2.4" y="-4" width="4.8" height="8" rx="0.8" fill="#a81a2a" stroke="#4a0610" strokeWidth="0.35" />
+          <rect x="-2.4" y="-4" width="4.8" height="1.6" rx="0.6" fill="#5a4a4a" />
+          <path d="M-1.4 -1 v4" stroke="#e05060" strokeWidth="0.5" />
+        </g>
+      ))}
+      <ellipse cx="36" cy="32" rx="2.4" ry="1.4" fill="#f4e0a0" />
+      <g fill="#f4f0e4" stroke="#c8c0a8" strokeWidth="0.25">
+        <ellipse cx="14" cy="35" rx="1.2" ry="0.8" /><ellipse cx="16.4" cy="35.4" rx="1.2" ry="0.8" />
+      </g>
+      <path d="M38,35 q2,-2 3,0" stroke="#4a9a3a" strokeWidth="1.1" fill="none" />
+    </g>
+  );
+}
+
+/* ---- 秋田 ---- */
+function FoodAkKiritanpo() {
+  return (
+    <g>
+      <Food4Pot body="#2a2a2e" />
+      <ellipse cx="24" cy="21.4" rx="16" ry="4.8" fill="#b8884a" />
+      {[[12, 22, -20], [18, 19.6, -8], [24, 20, 6], [30, 19.6, 14], [34, 22.4, 24]].map(([x, y, r], i) => (
+        <g key={i} transform={`translate(${x},${y}) rotate(${r})`}>
+          <rect x="-1.8" y="-5" width="3.6" height="9" rx="1.6" fill="#f2e2b8" stroke="#a8884a" strokeWidth="0.35" />
+          <path d="M-1.6 -2 h3.2 M-1.6 1 h3.2" stroke="#c89a50" strokeWidth="0.5" />
+        </g>
+      ))}
+      <path d="M16,23.6 l4,-0.6" stroke="#3a8a3a" strokeWidth="1.2" />
+      <ellipse cx="27" cy="23.6" rx="2" ry="1" fill="#7a5a3a" />
+      <ellipse cx="21" cy="24" rx="1.6" ry="0.9" fill="#f0e8d8" />
+      <Food1Steam x={24} y={11} />
+    </g>
+  );
+}
+function FoodAkOyakodon() {
+  return (
+    <g>
+      <Food1Shadow />
+      <Food1Bowl body="#1a1a1e" light="#3a3a42" dark="#0a0a0c" rim="#000" band="#c8a040" />
+      <ellipse cx="24" cy="22.4" rx="16" ry="5" fill="#f2c84a" />
+      <path d="M10,22 q5,-3 9,0 q5,3 10,0 q5,-3 9,0" stroke="#fae890" strokeWidth="1.4" fill="none" />
+      {[[15, 21], [22, 20], [29, 21.4], [19, 24], [27, 24.2]].map(([x, y], i) => (
+        <ellipse key={i} cx={x} cy={y} rx="2.6" ry="1.6" fill="#c8884a" stroke="#7a4a1a" strokeWidth="0.3" />
+      ))}
+      <path d="M31,19.6 q2,-1 4,0.4" stroke="#3a8a3a" strokeWidth="1.2" fill="none" />
+      <circle cx="24" cy="22.4" r="1.6" fill="#f4a42a" />
+      <Food1Steam x={24} y={12} s={0.8} />
+    </g>
+  );
+}
+function FoodAkButtermochi() {
+  return (
+    <g>
+      <Food4Plate cy={34} c="#e8dcc8" />
+      {[[13, 29], [24, 27], [35, 29], [19, 33], [30, 33]].map(([x, y], i) => (
+        <g key={i}>
+          <rect x={x - 4.6} y={y - 1.6} width="9.2" height="4.2" rx="0.8" fill="#d8b050" />
+          <rect x={x - 4.6} y={y - 3.6} width="9.2" height="3.4" rx="0.8" fill="#f8e488" stroke="#b8902a" strokeWidth="0.4" />
+          <ellipse cx={x - 1.6} cy={y - 2.6} rx="1.6" ry="0.4" fill="#fff" opacity="0.6" />
+        </g>
+      ))}
+    </g>
+  );
+}
+function FoodAkBabahera() {
+  return (
+    <g>
+      <Food1Shadow rx={8} />
+      <path d="M17,22 L24,42 L31,22 Z" fill="#d89a4a" stroke="#8a5a1a" strokeWidth="0.5" />
+      {[0, 1, 2, 3].map((k) => <path key={k} d={`M${18 + k * 2.4} 22 L${24 + k * 0.4} 38`} stroke="#a8702a" strokeWidth="0.35" opacity="0.7" />)}
+      {[[20, 18, "#f8d84a"], [28, 18, "#f07a9a"], [24, 14, "#f07a9a"], [21, 11, "#f8d84a"], [27, 10.4, "#f07a9a"], [24, 7.6, "#f8d84a"]].map(([x, y, c], i) => (
+        <g key={i}>
+          <circle cx={x} cy={y} r="4.4" fill={c} stroke="#0002" strokeWidth="0.4" />
+          <path d={`M${x - 2.6} ${y} q2.6 -2.6 5.2 0 q-2.6 2.6 -5.2 0`} stroke="#fff" strokeWidth="0.5" fill="none" opacity="0.7" />
+        </g>
+      ))}
+      <path d="M33,11 q3,-1 4,1 q-2,1 -4,-1 Z" fill="#4a9a3a" />
+    </g>
+  );
+}
+function FoodAkIburigakko() {
+  return (
+    <g>
+      <Food4Board x={4} y={28} w={40} h={10} c="#c8a070" d="#7a5a30" />
+      {[[11, 28], [17, 27.4], [23, 27], [29, 27.4], [35, 28]].map(([x, y], i) => (
+        <g key={i}>
+          <ellipse cx={x} cy={y} rx="3.4" ry="2.4" fill="#e8d098" stroke="#8a6a2a" strokeWidth="0.45" />
+          <ellipse cx={x} cy={y} rx="2.4" ry="1.6" fill="#f2e0b0" />
+          <ellipse cx={x} cy={y} rx="3.4" ry="2.4" fill="none" stroke="#6a4a1a" strokeWidth="0.9" opacity="0.8" />
+        </g>
+      ))}
+      <path d="M8,22 L40,16 L41,20 L9,26 Z" fill="#7a5420" stroke="#3a2408" strokeWidth="0.5" />
+      <path d="M10,23 L39,17.6" stroke="#a8782a" strokeWidth="0.6" />
+      <path d="M14,14 c-1,-2 1,-3 0,-5 M20,13 c-1,-2 1,-3 0,-5" stroke="#d8d0c0" strokeWidth="0.7" fill="none" opacity="0.5" />
+    </g>
+  );
+}
+function FoodAkHatahata() {
+  return (
+    <g>
+      <Food4Plate cy={32} rx={20} c="#f4f0e8" />
+      {[[22, 25, -6], [25, 30, 4], [21, 35, -2]].map(([x, y, r], i) => (
+        <Food4Fish key={i} x={x} y={y} len={22} c="#c8b4a0" belly="#f4ece0" rot={r} grill />
+      ))}
+      <path d="M36,28 l5,-2 l1,2 l-5,2 Z" fill="#f4e050" stroke="#b8a020" strokeWidth="0.3" />
+    </g>
+  );
+}
+function FoodAkInaniwa() {
+  const strands = [];
+  for (let i = 0; i < 9; i++) {
+    const y = 24 + i * 1.3, half = 13 - Math.abs(i - 4) * 1.4;
+    strands.push(<path key={i} d={`M${24 - half} ${y} Q24 ${y - 2.4} ${24 + half} ${y}`} stroke="#8a7a5a" strokeWidth={1.5} fill="none" strokeLinecap="round" />);
+    strands.push(<path key={`h${i}`} d={`M${24 - half} ${y} Q24 ${y - 2.4} ${24 + half} ${y}`} stroke="#fffaf0" strokeWidth={0.9} fill="none" strokeLinecap="round" />);
+  }
+  return (
+    <g>
+      <ellipse cx="24" cy="33" rx="20" ry="7.6" fill="#000" opacity="0.3" />
+      <ellipse cx="24" cy="31" rx="20" ry="7.6" fill="#7a5226" stroke="#3a2408" strokeWidth="0.7" />
+      <ellipse cx="24" cy="30.6" rx="18" ry="6.2" fill="#a8783a" />
+      {[-12, -6, 0, 6, 12].map((d) => <path key={d} d={`M${24 + d - 3} 25 L${24 + d + 3} 36.4`} stroke="#6a4a1e" strokeWidth="0.4" opacity="0.7" />)}
+      {strands}
+      <ellipse cx="41" cy="16" rx="5" ry="2.4" fill="#f4f0e8" stroke="#8a8070" strokeWidth="0.4" />
+      <ellipse cx="41" cy="15.6" rx="3.8" ry="1.6" fill="#7a4a1a" />
+      <path d="M5,18 l8,-1" stroke="#7ac04a" strokeWidth="1.1" strokeLinecap="round" />
+    </g>
+  );
+}
+function FoodAkYokote() {
+  return (
+    <g>
+      <Food4Plate cy={31} c="#f4f0e8" />
+      <Food4Noodles cx={24} cy={29.6} rx={15} ry={4.8} c="#8a5a24" n={5} w={1.3} />
+      <ellipse cx="24" cy="26.4" rx="6" ry="3.2" fill="#fff" stroke="#d8d0c0" strokeWidth="0.35" />
+      <circle cx="24" cy="26" r="2.1" fill="#f8b42a" />
+      <ellipse cx="23.4" cy="25.4" rx="0.7" ry="0.4" fill="#fff" opacity="0.7" />
+      {[[14, 30], [16, 31.4]].map(([x, y], i) => <rect key={i} x={x} y={y} width="3" height="0.9" fill="#e83a4a" transform={`rotate(-20 ${x} ${y})`} />)}
+      <path d="M30,31 q3,-1 5,0" stroke="#7ac04a" strokeWidth="1" fill="none" />
+    </g>
+  );
+}
+function FoodAkMorokoshi() {
+  return (
+    <g>
+      <Food4Plate cy={34} c="#2a2a30" rim="#0a0a0c" />
+      {[[13, 28], [24, 26], [35, 28], [18.6, 32], [29.4, 32]].map(([x, y], i) => (
+        <g key={i}>
+          <rect x={x - 4.4} y={y - 0.6} width="8.8" height="2.4" fill="#a87a5a" />
+          <rect x={x - 4.4} y={y - 4} width="8.8" height="3.6" rx="0.4" fill="#d8b8a0" stroke="#7a5a40" strokeWidth="0.4" />
+          <circle cx={x} cy={y - 2.2} r="1.2" fill="none" stroke="#8a5a3a" strokeWidth="0.4" />
+          <path d={`M${x - 1.2} ${y - 2.2} h2.4 M${x} ${y - 3.4} v2.4`} stroke="#8a5a3a" strokeWidth="0.3" opacity="0" />
+        </g>
+      ))}
+    </g>
+  );
+}
+
+/* ---- 山形 ---- */
+function FoodYaImoni() {
+  return (
+    <g>
+      <Food4Pot body="#3a3a42" />
+      <ellipse cx="24" cy="21.4" rx="16" ry="4.8" fill="#9a5a2a" />
+      {[[15, 20], [23, 19.4], [30, 21], [19, 23.4]].map(([x, y], i) => <Food4Ball key={i} x={x} y={y} r={2.4} c="#f0e8d8" d="#a89878" />)}
+      {[[26, 23], [33, 19.6], [12, 22.6]].map(([x, y], i) => (
+        <path key={i} d={`M${x - 3} ${y} q1.4 -1.4 3 -0.6 q1.6 0.6 3 -0.2 q-1 1.6 -3 1.4 q-2 0.6 -3 -0.6 Z`} fill="#8a3a1a" stroke="#3a0c04" strokeWidth="0.3" />
+      ))}
+      <path d="M28,19 l5,-0.6" stroke="#4a9a3a" strokeWidth="1.2" />
+      <ellipse cx="35.4" cy="22.6" rx="1.8" ry="0.9" fill="#f0f0e4" />
+      <Food1Steam x={24} y={11} />
+    </g>
+  );
+}
+function FoodYaSakuranbo() {
+  const ch = [[14, 30], [20, 33], [27, 32], [33, 29], [24, 27], [17, 25.4], [30, 25]];
+  return (
+    <g>
+      <Food1Shadow rx={18} />
+      {ch.map(([x, y], i) => <path key={`s${i}`} d={`M${x} ${y - 3.6} Q${x + 2} ${y - 12} 24 ${11}`} stroke="#6a8a2a" strokeWidth="0.6" fill="none" />)}
+      {ch.map(([x, y], i) => (
+        <g key={i}>
+          <circle cx={x} cy={y} r="4" fill="#d81a2a" stroke="#6a0610" strokeWidth="0.4" />
+          <circle cx={x + 1} cy={y + 0.6} r="2.4" fill="#a80a1a" opacity="0.6" />
+          <ellipse cx={x - 1.4} cy={y - 1.6} rx="1.2" ry="0.7" fill="#fff" opacity="0.75" />
+        </g>
+      ))}
+      <path d="M24,11 q4,-4 9,-2 q-4,2 -9,2 Z" fill="#4a9a3a" />
+    </g>
+  );
+}
+function FoodYaHiyashi() {
+  return (
+    <g>
+      <Food1Shadow />
+      <Food1Bowl body="#e8f0f4" light="#fff" dark="#a8b8c4" rim="#5a6a7a" band="#4a8ab8" />
+      <ellipse cx="24" cy="22.6" rx="16.5" ry="5.2" fill="#d8b878" opacity="0.85" />
+      <Food4Noodles c="#f4e090" n={5} />
+      {[[14, 20.6], [33, 20.4], [28, 24]].map(([x, y], i) => (
+        <path key={i} d={`M${x - 2} ${y - 1.6} l4 -0.6 l0.6 3.2 l-4 0.6 Z`} fill="#e8f4ff" stroke="#a8c8e0" strokeWidth="0.35" opacity="0.9" />
+      ))}
+      <Food1Chashu x={21} y={20.4} r={3.2} />
+      <path d="M25,19.6 l4.6,0" stroke="#8ab84a" strokeWidth="1.2" />
+      <Food1Negi x={18} y={24} />
+    </g>
+  );
+}
+function FoodYaTorimotsu() {
+  return (
+    <g>
+      <Food1Shadow />
+      <Food1Bowl body="#8a2418" light="#b5412e" dark="#4e110a" rim="#2a0604" />
+      <ellipse cx="24" cy="22.6" rx="16.5" ry="5.2" fill="#a86a2a" />
+      <Food4Noodles c="#e8c870" n={4} />
+      {[[16, 20.6], [21, 19.8], [27, 20.2], [32, 21.4], [24, 23.6]].map(([x, y], i) => (
+        <ellipse key={i} cx={x} cy={y} rx="2.2" ry="1.5" fill={i % 2 ? "#8a3a1a" : "#c8783a"} stroke="#4a1a08" strokeWidth="0.3" />
+      ))}
+      <circle cx="18" cy="23.6" r="1.4" fill="#f4c42a" stroke="#b88a0a" strokeWidth="0.25" />
+      <Food1Negi x={30} y={24} /><Food1Negi x={13} y={22.6} />
+      <Food1Steam x={24} y={12} />
+    </g>
+  );
+}
+function FoodYaItasoba() {
+  return (
+    <g>
+      <Food4Board x={2} y={24} w={44} h={14} c="#b88a4a" d="#6a4a1a" />
+      {Array.from({ length: 12 }, (_, i) => (
+        <path key={i} d={`M${5 + i * 0.3} ${27 + (i % 6) * 1.6} Q24 ${25 + (i % 6) * 1.6} ${43 - i * 0.3} ${27 + (i % 6) * 1.6}`} stroke={i % 2 ? "#8a7a5a" : "#a8987a"} strokeWidth="1" fill="none" />
+      ))}
+      <ellipse cx="40" cy="18" rx="4.6" ry="2.2" fill="#f4f0e8" stroke="#8a8070" strokeWidth="0.4" />
+      <ellipse cx="40" cy="17.6" rx="3.4" ry="1.4" fill="#5a3a1a" />
+      <path d="M8,18 l8,-1" stroke="#7ac04a" strokeWidth="1" />
+    </g>
+  );
+}
+function FoodYaKurumimochi() {
+  return (
+    <g>
+      <Food4Plate cy={33} c="#2a2a30" rim="#0a0a0c" />
+      {[[16, 28], [26, 26], [33, 30], [22, 31.6]].map(([x, y], i) => (
+        <g key={i}>
+          <ellipse cx={x} cy={y + 0.6} rx="5" ry="3.2" fill="#f4efe4" stroke="#b8ac98" strokeWidth="0.4" />
+          <path d={`M${x - 4.6} ${y} Q${x} ${y - 4} ${x + 4.6} ${y} Q${x} ${y + 2} ${x - 4.6} ${y} Z`} fill="#c8a070" stroke="#8a6a3a" strokeWidth="0.35" />
+          <path d={`M${x - 1.6} ${y - 1} q1.6 -1.4 3.2 0 q-1.6 1.2 -3.2 0 Z`} fill="#8a5a2a" />
+        </g>
+      ))}
+    </g>
+  );
+}
+function FoodYaSukiyaki() {
+  return (
+    <g>
+      <Food4Pot body="#1a1a1e" light="#3a3a42" />
+      <ellipse cx="24" cy="21.4" rx="16" ry="4.8" fill="#6a3a14" />
+      {[[14, 20.6], [22, 19.4], [30, 20.6]].map(([x, y], i) => (
+        <path key={i} d={`M${x - 4} ${y} q2 -2 4 -1 q2 1 4 -0.4 q-1 2.6 -4 2.4 q-3 0.6 -4 -1 Z`} fill="#9a4a2a" stroke="#3a0c04" strokeWidth="0.35" />
+      ))}
+      <rect x="25" y="21.4" width="6" height="3.4" rx="0.4" fill="#f4ecd8" stroke="#b8a888" strokeWidth="0.3" />
+      <path d="M12,23 l6,0.4" stroke="#f4f0e4" strokeWidth="2" strokeLinecap="round" /><path d="M12,23 l2,0.2" stroke="#7ac04a" strokeWidth="2" strokeLinecap="round" />
+      <ellipse cx="34.6" cy="23.4" rx="2.4" ry="1.2" fill="#c8a050" />
+      <g transform="translate(41,35)"><ellipse rx="5" ry="2.4" fill="#f4f0e8" stroke="#8a8070" strokeWidth="0.4" /><ellipse cy="-0.4" rx="3.6" ry="1.6" fill="#f4c42a" /></g>
+      <Food1Steam x={22} y={11} />
+    </g>
+  );
+}
+function FoodYaYonezawaramen() {
+  return (
+    <g>
+      <Food1Shadow />
+      <Food1Bowl body="#f2ece0" light="#fff" dark="#b8ae9a" rim="#7a7060" band="#8a1a14" />
+      <ellipse cx="24" cy="22.6" rx="16.5" ry="5.2" fill="#a8641e" />
+      <Food4Noodles c="#f2d070" n={6} wave={1.6} w={0.7} />
+      <Food1Chashu x={15} y={21} r={3.6} rot={-10} />
+      <Food1Chashu x={20} y={19.6} r={3.4} rot={6} />
+      <path d="M28,19 l6,-0.4 l-0.4,2 l-6,0.4 Z" fill="#c8a050" stroke="#7a5a20" strokeWidth="0.3" />
+      <path d="M30,23 l5,-1" stroke="#2a3a1e" strokeWidth="1.6" />
+      <Food1Negi x={25} y={24} />
+      <Food1Steam x={24} y={12} />
+    </g>
+  );
+}
+function FoodYaLafrance() {
+  return (
+    <g>
+      <Food4Plate cy={36} c="#e8e0cc" />
+      <path d="M24,8 Q20,10 20,15 Q14,22 15,30 Q17,37 24,37 Q31,37 33,30 Q34,22 28,15 Q28,10 24,8 Z" fill="#c8d860" stroke="#7a8a2a" strokeWidth="0.55" />
+      <path d="M24,8 Q21.4,10 21.6,15 Q16.4,22 17.4,30 Q19,35 24,35.6 Q18,30 19.6,22 Q23,16 24,8 Z" fill="#e8f0a0" opacity="0.8" />
+      <path d="M29,22 Q32,28 30,33" stroke="#9aa84a" strokeWidth="0.8" fill="none" opacity="0.6" />
+      {[[22, 24], [27, 28], [21, 31], [26, 19]].map(([x, y], i) => <circle key={i} cx={x} cy={y} r="0.35" fill="#8a7a2a" />)}
+      <path d="M24,8 q0.6,-3 2,-4" stroke="#5a3a1a" strokeWidth="0.8" fill="none" />
+      <path d="M25.4,5.4 q3,-1.6 4.6,0.6 q-2.4,0.6 -4.6,-0.6 Z" fill="#4a9a3a" />
+    </g>
+  );
+}
+function FoodYaDadacha() {
+  return (
+    <g>
+      <Food4Zaru cx={24} cy={31} />
+      {[[13, 28, -20], [19, 26, 10], [26, 27, -6], [33, 28, 18], [16, 32, 6], [24, 32, -14], [31, 32.6, 2]].map(([x, y, r], i) => (
+        <g key={i} transform={`translate(${x},${y}) rotate(${r})`}>
+          <path d="M-5,0 Q-5,-2.4 -2,-2.2 Q0,-2.8 2,-2.2 Q5,-2.4 5,0 Q5,2.2 2,2 Q0,2.6 -2,2 Q-5,2.2 -5,0 Z" fill="#7aa83a" stroke="#3a5a1a" strokeWidth="0.4" />
+          {[-2.6, 0, 2.6].map((d) => <ellipse key={d} cx={d} cy="-0.2" rx="1.2" ry="1.3" fill="#9ac850" />)}
+        </g>
+      ))}
+      <g fill="#fff" opacity="0.9">{[[16, 29], [27, 29.6], [22, 33.4]].map(([x, y], i) => <rect key={i} x={x} y={y} width="0.6" height="0.6" />)}</g>
+    </g>
+  );
+}
+function FoodYaMoso() {
+  return (
+    <g>
+      <Food4Wan body="#3a2a1a" light="#5a4a32" rim="#140c04" inner="#1c140a" />
+      <ellipse cx="24" cy="22.2" rx="13.6" ry="4" fill="#c8a870" />
+      {[[17, 21, -20], [24, 20.4, 10], [30, 22, -6]].map(([x, y, r], i) => (
+        <g key={i} transform={`translate(${x},${y}) rotate(${r})`}>
+          <path d="M-3,2 L0,-3 L3,2 Z" fill="#f2e0a0" stroke="#a8884a" strokeWidth="0.4" />
+          <path d="M-1.6 1 L0 -1.6 L1.6 1" stroke="#c8a860" strokeWidth="0.35" fill="none" />
+        </g>
+      ))}
+      <ellipse cx="21" cy="23.6" rx="2" ry="1" fill="#8a3a1a" />
+      <path d="M27,23.6 l4,-0.4" stroke="#3a8a3a" strokeWidth="1" />
+      <Food1Steam x={24} y={13} s={0.8} />
+    </g>
+  );
+}
+function FoodYaMugikiri() {
+  const strands = [];
+  for (let i = 0; i < 9; i++) {
+    const y = 24 + i * 1.3, half = 13 - Math.abs(i - 4) * 1.4;
+    strands.push(<path key={i} d={`M${24 - half} ${y} Q24 ${y - 2.4} ${24 + half} ${y}`} stroke="#8a7a5a" strokeWidth={2.4} fill="none" strokeLinecap="round" />);
+    strands.push(<path key={`h${i}`} d={`M${24 - half} ${y} Q24 ${y - 2.4} ${24 + half} ${y}`} stroke="#f0e2c0" strokeWidth={1.7} fill="none" strokeLinecap="round" />);
+  }
+  return (
+    <g>
+      <ellipse cx="24" cy="33" rx="20" ry="7.6" fill="#000" opacity="0.3" />
+      <ellipse cx="24" cy="31" rx="20" ry="7.6" fill="#7a5226" stroke="#3a2408" strokeWidth="0.7" />
+      <ellipse cx="24" cy="30.6" rx="18" ry="6.2" fill="#a8783a" />
+      {[-12, -6, 0, 6, 12].map((d) => <path key={d} d={`M${24 + d - 3} 25 L${24 + d + 3} 36.4`} stroke="#6a4a1e" strokeWidth="0.4" opacity="0.7" />)}
+      {strands}
+      <ellipse cx="41" cy="16" rx="5" ry="2.4" fill="#f4f0e8" stroke="#8a8070" strokeWidth="0.4" />
+      <ellipse cx="41" cy="15.6" rx="3.8" ry="1.6" fill="#5a3410" />
+      <path d="M5,18 l8,-1" stroke="#7ac04a" strokeWidth="1.1" strokeLinecap="round" />
+    </g>
+  );
+}
+
+/* ---- 福島 ---- */
+function FoodFuKitakata() {
+  return (
+    <g>
+      <Food1Shadow />
+      <Food1Bowl body="#f2ece0" light="#fff" dark="#b8ae9a" rim="#7a7060" band="#2a4a8a" />
+      <ellipse cx="24" cy="22.6" rx="16.5" ry="5.2" fill="#b8742a" />
+      <Food4Noodles c="#f4dc80" n={5} w={1.2} wave={1.4} />
+      {[[13, 21, -14], [18.6, 19.4, -4], [24.6, 19, 4], [30.4, 19.6, 10], [35, 21.6, 18]].map(([x, y, r], i) => <Food1Chashu key={i} x={x} y={y} r={3.4} rot={r} />)}
+      <Food1Negi x={22} y={24} /><Food1Negi x={26} y={24.4} />
+      <Food1Steam x={24} y={11} />
+    </g>
+  );
+}
+function FoodFuSourcekatsu() {
+  return (
+    <g>
+      <Food1Shadow />
+      <Food1Bowl body="#1a1a1e" light="#3a3a42" dark="#0a0a0c" rim="#000" band="#8a1a14" />
+      <ellipse cx="24" cy="22.4" rx="16" ry="5" fill="#d8eab0" />
+      {[0, 1, 2, 3].map((k) => (
+        <g key={k} transform={`translate(${14 + k * 6.4},${19.6 + (k % 2) * 0.8}) rotate(${-8 + k * 5})`}>
+          <rect x="-3.4" y="-2.6" width="6.8" height="5.2" rx="1" fill="#c8782a" stroke="#6a3008" strokeWidth="0.4" />
+          <rect x="-3.4" y="-2.6" width="6.8" height="2.4" rx="1" fill="#4a1a08" />
+          <path d="M-2.6 1 h5.2" stroke="#f4e8d0" strokeWidth="0.6" />
+        </g>
+      ))}
+      <Food1Steam x={24} y={11} s={0.8} />
+    </g>
+  );
+}
+function FoodFuKozuyu() {
+  return (
+    <g>
+      <Food4Wan body="#7a1a14" light="#a83a2a" rim="#2a0604" inner="#3a0a06" />
+      <ellipse cx="24" cy="22.2" rx="13.6" ry="4" fill="#e8d4a0" opacity="0.9" />
+      <Food4Shell x={20} y={22.4} r={3} c="#f4e8d0" />
+      <rect x="25" y="20" width="3" height="1.6" rx="0.4" fill="#f08a2a" />
+      <circle cx="30" cy="22.6" r="1.4" fill="#e8dcc0" stroke="#a89878" strokeWidth="0.25" />
+      <ellipse cx="15" cy="22" rx="1.6" ry="1" fill="#4a7a2a" />
+      <path d="M26 23.4 l3 0" stroke="#8a5a3a" strokeWidth="1.2" />
+      {[[22, 20], [33, 21], [17.6, 23.6]].map(([x, y], i) => <circle key={i} cx={x} cy={y} r="0.8" fill="#fff" stroke="#d8c8b0" strokeWidth="0.2" />)}
+      <Food1Steam x={24} y={13} s={0.8} />
+    </g>
+  );
+}
+function FoodFuMomo() {
+  return (
+    <g>
+      <Food1Shadow rx={18} />
+      {[[15, 30], [33, 30], [24, 24]].map(([x, y], i) => (
+        <g key={i}>
+          <path d={`M${x},${y - 8} Q${x + 9},${y - 8} ${x + 8},${y + 1} Q${x + 6},${y + 8} ${x},${y + 8} Q${x - 6},${y + 8} ${x - 8},${y + 1} Q${x - 9},${y - 8} ${x},${y - 8} Z`} fill="#f8b0a0" stroke="#b85a5a" strokeWidth="0.5" />
+          <path d={`M${x},${y - 8} Q${x + 7},${y - 6} ${x + 7},${y + 2} Q${x + 4},${y + 7} ${x},${y + 7}`} fill="#f06a7a" opacity="0.55" />
+          <path d={`M${x},${y - 7} Q${x - 1.4},${y} ${x},${y + 7}`} stroke="#c8605a" strokeWidth="0.5" fill="none" />
+          <ellipse cx={x - 4} cy={y - 3} rx="1.6" ry="1" fill="#fff" opacity="0.6" />
+        </g>
+      ))}
+      <path d="M24,16 q4,-5 9,-4 q-4,4 -9,4 Z" fill="#5aa04a" />
+    </g>
+  );
+}
+function FoodFuEnban() {
+  const n = 12;
+  return (
+    <g>
+      <Food4Iron />
+      {Array.from({ length: n }, (_, i) => {
+        const a = (i / n) * Math.PI * 2;
+        const x = 24 + Math.cos(a) * 13, y = 31 + Math.sin(a) * 4.6;
+        return (
+          <g key={i} transform={`translate(${x.toFixed(2)},${y.toFixed(2)}) rotate(${(a * 180 / Math.PI + 90).toFixed(1)}) scale(1,0.5)`}>
+            <path d="M-2.4,3 Q-2.4,-3 0,-4 Q2.4,-3 2.4,3 Z" fill="#e8b860" stroke="#8a5a1a" strokeWidth="0.5" />
+          </g>
+        );
+      })}
+      {[[20, 30.4], [24, 31.4], [28, 30.6], [24, 29.4]].map(([x, y], i) => <ellipse key={i} cx={x} cy={y} rx="2.6" ry="1.2" fill="#f0c870" stroke="#8a5a1a" strokeWidth="0.35" />)}
+      <path d="M21,31 q3,-1.4 6,0" stroke="#7ac04a" strokeWidth="1" fill="none" />
+      <Food1Steam x={24} y={20} s={0.8} />
+    </g>
+  );
+}
+function FoodFuIkaninjin() {
+  return (
+    <g>
+      <Food4Wan body="#1a2a3a" light="#3a4a5a" rim="#0a0e14" inner="#0e1620" />
+      <ellipse cx="24" cy="22.2" rx="13.6" ry="4" fill="#8a5a2a" />
+      {Array.from({ length: 12 }, (_, i) => (
+        <rect key={i} x={13 + (i * 1.8) % 20} y={19.4 + (i * 1.3) % 4.4} width="5" height="0.8" rx="0.3"
+          fill={i % 2 ? "#f08a2a" : "#f4ecd8"} transform={`rotate(${(i * 29) % 50 - 25} ${15 + (i * 1.8) % 20} ${20 + (i * 1.3) % 4.4})`} />
+      ))}
+    </g>
+  );
+}
+function FoodFuMehikari() {
+  return (
+    <g>
+      <Food4Plate cy={32} c="#f4f0e8" />
+      <path d="M6,30 q6,-6 13,-5 q-4,4 -13,5 Z" fill="#c8e0a0" stroke="#7a9a4a" strokeWidth="0.35" />
+      {[[22, 25, -14], [29, 27, 10], [21, 30, 4], [30, 31.6, -8], [25, 34, 2]].map(([x, y, r], i) => (
+        <g key={i} transform={`translate(${x},${y}) rotate(${r})`}>
+          <path d="M-6,0 Q-3,-2.4 4,-1.4 L6,-2.6 L6,2.6 L4,1.4 Q-3,2.4 -6,0 Z" fill="#d8902a" stroke="#7a4a0a" strokeWidth="0.4" />
+          <circle cx="-4.4" cy="-0.4" r="0.9" fill="#3a5a6a" stroke="#0a1a20" strokeWidth="0.2" />
+          {[-2, 0, 2].map((d) => <circle key={d} cx={d} cy="-0.4" r="0.35" fill="#f4c86a" />)}
+        </g>
+      ))}
+      <path d="M36,25 l5,-2 l1,2 l-5,2 Z" fill="#f4e050" stroke="#b8a020" strokeWidth="0.3" />
+    </g>
+  );
+}
+function FoodFuNamie() {
+  return (
+    <g>
+      <Food4Plate cy={31} c="#f4f0e8" />
+      <Food4Noodles cx={24} cy={29.6} rx={15} ry={4.8} c="#a8742a" n={4} w={2} />
+      {[[16, 28], [26, 27], [31, 31]].map(([x, y], i) => (
+        <path key={i} d={`M${x - 3} ${y} q1.4 -1.4 3 -0.6 q1.6 0.6 3 -0.2 q-1 1.6 -3 1.4 q-2 0.6 -3 -0.6 Z`} fill="#c87a5a" stroke="#5a2a14" strokeWidth="0.3" />
+      ))}
+      {[[19, 31], [22, 30], [28, 32.4], [33, 28]].map(([x, y], i) => <path key={i} d={`M${x} ${y} q2 -1.4 4 -0.4`} stroke="#f4f0dc" strokeWidth="0.9" fill="none" strokeLinecap="round" />)}
+      <rect x="21" y="26" width="3" height="0.9" fill="#e83a4a" transform="rotate(-20 21 26)" />
+      <Food1Steam x={24} y={19} s={0.8} />
+    </g>
+  );
+}
+function FoodFuHokkimeshi() {
+  return (
+    <g>
+      <Food1Shadow />
+      <Food1Bowl body="#3a2a1a" light="#5a4a32" dark="#1a0e04" rim="#0c0602" />
+      <ellipse cx="24" cy="22.4" rx="16" ry="5" fill="#d8b070" />
+      {[[14, 21, -16], [20, 19.6, -4], [27, 19.6, 6], [33, 21.4, 16], [23, 23.6, 0]].map(([x, y, r], i) => (
+        <g key={i} transform={`translate(${x},${y}) rotate(${r})`}>
+          <path d="M-3.6,0.6 Q-3.6,-2.4 0,-2.4 Q3.6,-2.4 3.6,0.6 Z" fill="#f4dcd0" stroke="#a87a6a" strokeWidth="0.35" />
+          <path d="M-3.6,0.6 Q-3,-1.4 0,-1.4 Q3,-1.4 3.6,0.6" fill="#e86a5a" />
+        </g>
+      ))}
+      <path d="M30,24 q2,-2 4,-0.4" stroke="#4a9a3a" strokeWidth="1.1" fill="none" />
+      <Food1Steam x={24} y={12} s={0.8} />
+    </g>
+  );
+}
+
+const FOOD_ART_4 = {
+  ao_nokkedon: FoodAoNokkedon, ao_shogaoden: FoodAoShogaoden, ao_cassis: FoodAoCassis,
+  ao_applepie: FoodAoApplepie, ao_tsugarusoba: FoodAoTsugarusoba, ao_takekimi: FoodAoTakekimi,
+  ao_shijimi: FoodAoShijimi, ao_wakaoi: FoodAoWakaoi, ao_igamenchi: FoodAoIgamenchi,
+  ao_barayaki: FoodAoBarayaki, ao_nagaimo: FoodAoNagaimo, ao_himemasu: FoodAoHimemasu,
+  ao_senbeijiru: FoodAoSenbeijiru, ao_nanbusenbei: FoodAoNanbusenbei, ao_ichigoni: FoodAoIchigoni,
+  ao_maguro: FoodAoMaguro, ao_kaiyaki: FoodAoKaiyaki, ao_bekomochi: FoodAoBekomochi,
+  iw_wanko: FoodIwWanko, iw_reimen: FoodIwReimen, iw_jajamen: FoodIwJajamen,
+  iw_mochizen: FoodIwMochizen, iw_maesawa: FoodIwMaesawa, iw_ganzuki: FoodIwGanzuki,
+  iw_unidon: FoodIwUnidon, iw_yakigaki: FoodIwYakigaki, iw_aramaki: FoodIwAramaki,
+  iw_tankaku: FoodIwTankaku, iw_mamebu: FoodIwMamebu, iw_kakke: FoodIwKakke,
+  mi_harakomeshi: FoodMiHarakomeshi, mi_umen: FoodMiUmen, mi_pudding: FoodMiPudding,
+  mi_gyutan: FoodMiGyutan, mi_zunda: FoodMiZunda, mi_sasakama: FoodMiSasakama,
+  mi_kuridango: FoodMiKuridango, mi_hatto: FoodMiHatto, mi_monaka: FoodMiMonaka,
+  mi_ishiyakisoba: FoodMiIshiyakisoba, mi_saba: FoodMiSaba, mi_hotate: FoodMiHotate,
+  mi_fukahire: FoodMiFukahire, mi_horumon: FoodMiHorumon, mi_katsuo: FoodMiKatsuo,
+  ak_kiritanpo: FoodAkKiritanpo, ak_oyakodon: FoodAkOyakodon, ak_buttermochi: FoodAkButtermochi,
+  ak_babahera: FoodAkBabahera, ak_iburigakko: FoodAkIburigakko, ak_hatahata: FoodAkHatahata,
+  ak_inaniwa: FoodAkInaniwa, ak_yokote: FoodAkYokote, ak_morokoshi: FoodAkMorokoshi,
+  ya_imoni: FoodYaImoni, ya_sakuranbo: FoodYaSakuranbo, ya_hiyashi: FoodYaHiyashi,
+  ya_torimotsu: FoodYaTorimotsu, ya_itasoba: FoodYaItasoba, ya_kurumimochi: FoodYaKurumimochi,
+  ya_sukiyaki: FoodYaSukiyaki, ya_yonezawaramen: FoodYaYonezawaramen, ya_lafrance: FoodYaLafrance,
+  ya_dadacha: FoodYaDadacha, ya_moso: FoodYaMoso, ya_mugikiri: FoodYaMugikiri,
+  fu_kitakata: FoodFuKitakata, fu_sourcekatsu: FoodFuSourcekatsu, fu_kozuyu: FoodFuKozuyu,
+  fu_momo: FoodFuMomo, fu_enban: FoodFuEnban, fu_ikaninjin: FoodFuIkaninjin,
+  fu_mehikari: FoodFuMehikari, fu_namie: FoodFuNamie, fu_hokkimeshi: FoodFuHokkimeshi,
+};
+
+/* ==== 関東のご当地グルメの絵（2026-10-09）。⚠️ viewBox 0 0 48 48・静止・defs と id を使わない ==== */
+/* 麺の丼。bowl … Food1Bowl の色、broth … 汁、noodle … 麺 */
+function Food5Ramen({ bowl = {}, broth = "#b8742a", noodle = "#f2d070", wave = 1, w = 0.9, n = 5, steam = true, children }) {
+  return (
+    <g>
+      <Food1Shadow />
+      <Food1Bowl {...bowl} />
+      <ellipse cx="24" cy="22.6" rx="16.5" ry="5.2" fill={broth} />
+      {noodle && <Food4Noodles c={noodle} n={n} wave={wave} w={w} />}
+      {children}
+      {steam && <Food1Steam x={24} y={12} />}
+    </g>
+  );
+}
+/* ご飯の丼。中身は children */
+function Food5Don({ bowl = { body: "#1a1a1e", light: "#3a3a42", dark: "#0a0a0c", rim: "#000", band: "#c8a040" }, rice = true, base, steam, children }) {
+  return (
+    <g>
+      <Food1Shadow />
+      <Food1Bowl {...bowl} />
+      {rice ? <Food4Rice /> : <ellipse cx="24" cy="22.4" rx="16" ry="5" fill={base || "#f4f0e6"} />}
+      {children}
+      {steam && <Food1Steam x={24} y={12} s={0.8} />}
+    </g>
+  );
+}
+/* 天ぷら（衣の塊） */
+function Food5Tempura({ x, y, w = 9, h = 4.4, rot = 0, c = "#e8c070" }) {
+  return (
+    <g transform={`translate(${x},${y}) rotate(${rot})`}>
+      <path d={`M${-w / 2},0 Q${-w / 2},${-h} ${-w / 6},${-h * 0.8} Q${w / 6},${-h * 1.1} ${w / 2},${-h * 0.4} Q${w / 2 + 0.6},${h * 0.5} ${w / 4},${h * 0.6} Q${-w / 4},${h} ${-w / 2},0 Z`} fill={c} stroke="#9a6a1a" strokeWidth="0.45" />
+      {[-0.3, 0, 0.25].map((k, i) => <circle key={i} cx={k * w} cy={-h * 0.3 + i * 0.6} r="0.6" fill="#fae0a0" />)}
+    </g>
+  );
+}
+/* 串 */
+function Food5Skewer({ x1, y1, x2, y2 }) {
+  return <path d={`M${x1} ${y1} L${x2} ${y2}`} stroke="#d8b878" strokeWidth="0.9" strokeLinecap="round" />;
+}
+/* 和菓子の箱（ふた開き） */
+function Food5Box({ c = "#e8dcc8", d = "#8a7050" }) {
+  return (
+    <g>
+      <Food1Shadow cy={42} rx={19} />
+      <path d="M6,26 L42,26 L40,40 L8,40 Z" fill={c} stroke={d} strokeWidth="0.55" />
+      <path d="M6,26 L42,26 L41.4,29 L6.6,29 Z" fill="#fff" opacity="0.35" />
+    </g>
+  );
+}
+
+/* ---- 栃木 ---- */
+function FoodTcGyoza() {
+  return (
+    <g>
+      <Food4Plate cy={31} />
+      {[0, 1, 2, 3, 4].map((k) => (
+        <g key={k} transform={`translate(${12 + k * 6},${29 - (k % 2) * 0.6}) rotate(-8)`}>
+          <path d="M-3.2,3 Q-3.6,-3 0,-4.4 Q3.6,-3 3.2,3 Z" fill="#f0dcae" stroke="#a8803a" strokeWidth="0.45" />
+          <path d="M-3.2,3 Q0,1.6 3.2,3 L3,4.2 Q0,3 -3,4.2 Z" fill="#c8782a" />
+          {[-1.6, 0, 1.6].map((d) => <path key={d} d={`M${d} -3.6 l0.4 1.6`} stroke="#c8a870" strokeWidth="0.35" />)}
+        </g>
+      ))}
+      <ellipse cx="38" cy="36" rx="4" ry="1.8" fill="#f4f0e8" stroke="#8a8070" strokeWidth="0.35" />
+      <ellipse cx="38" cy="35.8" rx="3" ry="1.2" fill="#6a3a14" />
+      <Food1Steam x={24} y={20} s={0.8} />
+    </g>
+  );
+}
+function FoodTcIchigo() {
+  const B = [[14, 30], [24, 33], [34, 30], [19, 23], [29, 23], [24, 15]];
+  return (
+    <g>
+      <Food4Plate cy={36} c="#f4f0e8" />
+      {B.map(([x, y], i) => (
+        <g key={i}>
+          <path d={`M${x - 5},${y - 3} Q${x},${y - 5} ${x + 5},${y - 3} Q${x + 4},${y + 5} ${x},${y + 7} Q${x - 4},${y + 5} ${x - 5},${y - 3} Z`} fill="#e8202a" stroke="#7a0a10" strokeWidth="0.45" />
+          {[[-2, 0], [1.6, 0.4], [-0.4, 3], [2, 3.4], [-2.4, 3.6], [0.4, -1.4]].map(([dx, dy], k) => <ellipse key={k} cx={x + dx} cy={y + dy} rx="0.35" ry="0.5" fill="#f8e070" />)}
+          <path d={`M${x - 4},${y - 3} l2,-2 l2,1.4 l2,-1.6 l2,1.4 l0,1 Z`} fill="#4a9a3a" />
+          <ellipse cx={x - 2.4} cy={y - 1} rx="1" ry="0.6" fill="#fff" opacity="0.55" />
+        </g>
+      ))}
+    </g>
+  );
+}
+function FoodTcKanpyo() {
+  return (
+    <g>
+      <Food4Board x={4} y={28} w={40} h={10} c="#d8b080" d="#8a6a3a" />
+      {[10, 18, 26, 34].map((x, i) => (
+        <g key={i}>
+          <ellipse cx={x + 2} cy={28} rx="4.2" ry="3.4" fill="#1e2a1a" stroke="#000" strokeWidth="0.4" />
+          <ellipse cx={x + 2} cy={27.6} rx="3.2" ry="2.6" fill="#f8f4ea" />
+          <ellipse cx={x + 2} cy={27.6} rx="1.4" ry="1.1" fill="#a86a2a" />
+        </g>
+      ))}
+      <path d="M8,20 q6,-4 12,0 q6,4 12,0 q6,-4 10,0" stroke="#e8c890" strokeWidth="1.6" fill="none" strokeLinecap="round" />
+      <path d="M38,34 l4,-1" stroke="#f4a0a0" strokeWidth="1.4" />
+    </g>
+  );
+}
+function FoodTcSanoramen() {
+  return (
+    <Food5Ramen bowl={{ body: "#f2ece0", light: "#fff", dark: "#b8ae9a", rim: "#7a7060", band: "#c82a1a" }} broth="#c89a4a" noodle="#f6e6a8" wave={1.6} w={1.2}>
+      <Food1Chashu x={15} y={20.6} r={3.6} rot={-10} />
+      <path d="M26,19 l6,-0.4 l-0.4,2 l-6,0.4 Z" fill="#c8a050" stroke="#7a5a20" strokeWidth="0.3" />
+      <path d="M30,23 l5,-1" stroke="#2a3a1e" strokeWidth="1.6" />
+      <ellipse cx="22" cy="23.6" rx="2.2" ry="1.2" fill="#f8f2e4" stroke="#c8b8a0" strokeWidth="0.3" />
+      <Food1Negi x={20} y={20.4} /><Food1Negi x={25} y={24} />
+    </Food5Ramen>
+  );
+}
+function FoodTcImofry() {
+  return (
+    <g>
+      <Food4Plate cy={34} />
+      <Food5Skewer x1={10} y1={38} x2={38} y2={8} />
+      {[[16, 31], [22, 24.4], [28, 17.8]].map(([x, y], i) => (
+        <g key={i} transform={`translate(${x},${y}) rotate(-48)`}>
+          <ellipse rx="5" ry="3.6" fill="#c8862a" stroke="#6a3a08" strokeWidth="0.5" />
+          {[[-2, -1], [1, -1.6], [2.4, 0.6], [-0.6, 1.4], [-3, 0.8]].map(([dx, dy], k) => <circle key={k} cx={dx} cy={dy} r="0.6" fill="#f0b860" />)}
+        </g>
+      ))}
+      <path d="M14,36 q6,-2 12,0" stroke="#4a1a08" strokeWidth="1.6" fill="none" opacity="0.8" />
+    </g>
+  );
+}
+function FoodTcShumai() {
+  return (
+    <g>
+      <Food4Plate cy={33} c="#2a2a30" rim="#0a0a0c" />
+      {[[14, 28], [24, 26], [34, 28], [19, 32], [29, 32]].map(([x, y], i) => (
+        <g key={i}>
+          <path d={`M${x - 4},${y + 1} L${x - 3.4},${y - 3} Q${x},${y - 4.6} ${x + 3.4},${y - 3} L${x + 4},${y + 1} Q${x},${y + 2.4} ${x - 4},${y + 1} Z`} fill="#f4ecd8" stroke="#a89878" strokeWidth="0.4" />
+          <ellipse cx={x} cy={y - 3.2} rx="3" ry="1.2" fill="#f0e4c0" stroke="#c8b088" strokeWidth="0.3" />
+          {[-1.4, 0, 1.4].map((d) => <path key={d} d={`M${x + d} ${y - 3.4} q0.3 -0.6 0.6 0`} stroke="#d8c8a0" strokeWidth="0.4" fill="none" />)}
+        </g>
+      ))}
+      <Food1Steam x={24} y={18} s={0.8} />
+    </g>
+  );
+}
+function FoodTcNasusoft() {
+  return (
+    <g>
+      <Food1Shadow rx={8} />
+      <path d="M17.6,24 L24,42 L30.4,24 Z" fill="#d89a4a" stroke="#8a5a1a" strokeWidth="0.5" />
+      {[0, 1, 2].map((k) => <path key={k} d={`M${18 + k * 4} 24 L${24 + (k - 1) * 0.6} 39`} stroke="#a8702a" strokeWidth="0.35" opacity="0.7" />)}
+      <path d="M16,24 Q15,20 19,19 Q17,15 22,14 Q21,10 24,7 Q27,10 26,14 Q31,15 29,19 Q33,20 32,24 Z" fill="#fbf8f0" stroke="#c8c0b0" strokeWidth="0.5" />
+      <path d="M18,20.6 Q24,22 30,20.6 M19.6,15.6 Q24,17 28.4,15.6" stroke="#e0d8c8" strokeWidth="0.5" fill="none" />
+      <ellipse cx="21" cy="16" rx="1" ry="2" fill="#fff" opacity="0.8" />
+    </g>
+  );
+}
+function FoodTcCheesecake() {
+  return (
+    <g>
+      <Food4Plate cy={34} c="#e8e0cc" />
+      <path d="M8,29 L28,20 L40,26 L20,35 Z" fill="#f8e8b0" stroke="#a8884a" strokeWidth="0.5" />
+      <path d="M8,29 L20,35 L20,40 L8,34 Z" fill="#f2d890" stroke="#a8884a" strokeWidth="0.45" />
+      <path d="M20,35 L40,26 L40,31 L20,40 Z" fill="#e8c878" stroke="#a8884a" strokeWidth="0.45" />
+      <path d="M8,33 L20,39 L40,30" stroke="#a87a3a" strokeWidth="1.2" fill="none" />
+      <path d="M8,29 L28,20 L40,26 L20,35 Z" fill="#c8862a" opacity="0.25" />
+      <path d="M14,28.6 Q24,25 32,26" stroke="#fff4d0" strokeWidth="0.8" fill="none" opacity="0.7" />
+    </g>
+  );
+}
+function FoodTcSoupyakisoba() {
+  return (
+    <Food5Ramen bowl={{ body: "#5a1810", light: "#8a2a1c", dark: "#2a0806", rim: "#140402" }} broth="#9a5a1a" noodle="#a86a24" w={1.3}>
+      <path d="M14,21 q4,-2 8,0" stroke="#d8eab0" strokeWidth="1.6" fill="none" />
+      <path d="M24,20 q3,-2.4 6,-0.4 q-3,1.6 -6,0.4 Z" fill="#c87a5a" stroke="#5a2a14" strokeWidth="0.3" />
+      <rect x="31" y="21.4" width="3" height="0.9" fill="#e83a4a" transform="rotate(-20 31 21.4)" />
+    </Food5Ramen>
+  );
+}
+function FoodTcYuba() {
+  return (
+    <g>
+      <Food4Wan body="#7a1a14" light="#a83a2a" rim="#2a0604" inner="#3a0a06" />
+      <ellipse cx="24" cy="22.2" rx="13.6" ry="4" fill="#e8d4a0" opacity="0.9" />
+      {[[18, 21.4], [26, 20.6], [22, 23.4]].map(([x, y], i) => (
+        <g key={i}>
+          <ellipse cx={x} cy={y} rx="4.4" ry="2" fill="#f8e8b8" stroke="#c8a860" strokeWidth="0.4" />
+          <path d={`M${x - 3.6} ${y} q1.8 -1.2 3.6 0 q1.8 1.2 3.6 0`} stroke="#d8b870" strokeWidth="0.45" fill="none" />
+        </g>
+      ))}
+      <path d="M30,22.6 l4,-0.6" stroke="#3a8a3a" strokeWidth="1.1" />
+      <Food1Steam x={24} y={13} s={0.8} />
+    </g>
+  );
+}
+function FoodTcMizuyokan() {
+  return (
+    <g>
+      <Food4Plate cy={35} c="#e8f0f0" rim="#9ab0b0" />
+      <path d="M12,26 L28,21 L36,25 L20,30 Z" fill="#5a1e14" stroke="#2a0804" strokeWidth="0.5" />
+      <path d="M12,26 L20,30 L20,36 L12,32 Z" fill="#3a1008" stroke="#2a0804" strokeWidth="0.45" />
+      <path d="M20,30 L36,25 L36,31 L20,36 Z" fill="#4a160c" stroke="#2a0804" strokeWidth="0.45" />
+      <path d="M15,26 L27,22.4" stroke="#a85a4a" strokeWidth="0.8" opacity="0.7" />
+      <path d="M34,18 q4,-3 7,-1 q-3,2 -7,1 Z" fill="#5aa04a" />
+      {[[30, 34], [14, 35], [38, 33]].map(([x, y], i) => <circle key={i} cx={x} cy={y} r="0.6" fill="#fff" opacity="0.7" />)}
+    </g>
+  );
+}
+function FoodTcKakigori() {
+  return (
+    <g>
+      <Food1Shadow rx={13} />
+      <path d="M12,28 L36,28 L32,38 Q24,40 16,38 Z" fill="#dfe8f0" opacity="0.5" stroke="#a8b8c8" strokeWidth="0.6" />
+      <path d="M16,38 L32,38 L31,41 L17,41 Z" fill="#c8d8e8" stroke="#8aa0b8" strokeWidth="0.4" />
+      <path d="M11,28 Q12,16 24,8 Q36,16 37,28 Z" fill="#fbfbff" stroke="#c8d0e0" strokeWidth="0.5" />
+      <path d="M14,24 Q20,14 30,16 Q34,20 34,26 Q24,22 14,24 Z" fill="#e8202a" opacity="0.75" />
+      <path d="M18,13 Q24,11 28,14 Q24,16 18,13 Z" fill="#f8b0b8" opacity="0.8" />
+      {[[16, 26], [22, 20], [30, 22], [26, 12]].map(([x, y], i) => <circle key={i} cx={x} cy={y} r="0.6" fill="#fff" />)}
+    </g>
+  );
+}
+
+/* ---- 群馬 ---- */
+function FoodGuOkkirikomi() {
+  return (
+    <g>
+      <Food4Pot body="#3a3a42" />
+      <ellipse cx="24" cy="21.4" rx="16" ry="4.8" fill="#9a6a2a" />
+      {[[13, 20.6, -8], [20, 19.6, 6], [27, 20.6, -4], [17, 23, 12], [25, 23.4, -10]].map(([x, y, r], i) => (
+        <rect key={i} x={x - 4} y={y - 0.9} width="8" height="1.8" rx="0.6" fill="#f4e8cc" stroke="#b8a070" strokeWidth="0.3" transform={`rotate(${r} ${x} ${y})`} />
+      ))}
+      <ellipse cx="33" cy="20.6" rx="2.6" ry="1.4" fill="#f08a2a" />
+      <ellipse cx="31" cy="23" rx="2" ry="1.1" fill="#e8dcc0" />
+      <Food1Negi x={22} y={22} />
+      <Food1Steam x={24} y={11} />
+    </g>
+  );
+}
+function FoodGuYakimanju() {
+  return (
+    <g>
+      <Food4Plate cy={34} c="#e8dcc8" />
+      <Food5Skewer x1={8} y1={30} x2={40} y2={30} />
+      <Food5Skewer x1={8} y1={33} x2={40} y2={33} />
+      {[13, 20, 27, 34].map((x, i) => (
+        <g key={i}>
+          <ellipse cx={x} cy={30.4} rx="3.6" ry="3.4" fill="#f4e8cc" stroke="#a88a5a" strokeWidth="0.45" />
+          <path d={`M${x - 3.4} ${30} Q${x} ${26} ${x + 3.4} ${30} Q${x} ${32} ${x - 3.4} ${30} Z`} fill="#a84a1a" />
+          <ellipse cx={x - 1} cy={28.6} rx="1" ry="0.5" fill="#e88a4a" opacity="0.8" />
+        </g>
+      ))}
+      <path d="M10,24 q2,-3 4,-6 M22,22 q2,-3 4,-6" stroke="#d8d0c0" strokeWidth="0.7" fill="none" opacity="0.5" />
+    </g>
+  );
+}
+function FoodGuSourcekatsu() {
+  return (
+    <Food5Don steam>
+      {[[14, 20.6, -10], [21, 19.6, -2], [28, 19.6, 6], [34, 21, 14]].map(([x, y, r], i) => (
+        <g key={i} transform={`translate(${x},${y}) rotate(${r})`}>
+          <ellipse rx="4.2" ry="2.8" fill="#4a1a08" stroke="#1a0804" strokeWidth="0.4" />
+          <ellipse cy="0.6" rx="3.6" ry="1.6" fill="#a8582a" opacity="0.7" />
+        </g>
+      ))}
+    </Food5Don>
+  );
+}
+function FoodGuDengaku() {
+  return (
+    <g>
+      <Food4Plate cy={34} />
+      {[[14, 0], [24, 1], [34, 2]].map(([x, k]) => (
+        <g key={k}>
+          <Food5Skewer x1={x} y1={38} x2={x} y2={12} />
+          <path d={`M${x - 4},${30} L${x + 4},${30} L${x},${18} Z`} fill="#6a6a72" stroke="#2a2a30" strokeWidth="0.45" />
+          <path d={`M${x - 3},${27} Q${x},${21} ${x + 3},${27}`} fill="#8a4a1a" />
+          {[[x - 1, 27], [x + 1.4, 25.6], [x, 29]].map(([px, py], i) => <circle key={i} cx={px} cy={py} r="0.3" fill="#2a2a30" />)}
+        </g>
+      ))}
+    </g>
+  );
+}
+function FoodGuNegi() {
+  return (
+    <g>
+      <Food4Plate cy={33} rx={20} c="#2a2a30" rim="#0a0a0c" />
+      {[[24, 27, -8], [24, 32, -3]].map(([x, y, r], i) => (
+        <g key={i} transform={`translate(${x},${y}) rotate(${r})`}>
+          <rect x="-16" y="-2.6" width="26" height="5.2" rx="2.6" fill="#f4f0e0" stroke="#a8a088" strokeWidth="0.45" />
+          <rect x="-16" y="-2.6" width="26" height="2" rx="1" fill="#c8a060" opacity="0.6" />
+          {[-12, -6, 0, 6].map((d) => <path key={d} d={`M${d} -2.4 l1.6 4.8`} stroke="#5a3a14" strokeWidth="0.7" opacity="0.7" />)}
+          <path d="M10,-2 q4,-1 6,0 q-2,1 -2,2 q2,1 2,2 q-2,1 -6,0 Z" fill="#5aa04a" stroke="#2a6a20" strokeWidth="0.4" />
+        </g>
+      ))}
+    </g>
+  );
+}
+function FoodGuPasta() {
+  return (
+    <g>
+      <Food4Plate cy={31} c="#f4f0e8" />
+      <Food4Noodles cx={24} cy={29.4} rx={14} ry={4.6} c="#f4d890" n={5} w={1.1} wave={1.6} />
+      <path d="M14,28 q5,-5 10,-3 q6,0 10,3 q-10,4 -20,0 Z" fill="#d83a1a" opacity="0.85" />
+      {[[18, 26.6], [24, 25.4], [29, 27]].map(([x, y], i) => <circle key={i} cx={x} cy={y} r="1.4" fill="#a82a10" stroke="#5a0a04" strokeWidth="0.25" />)}
+      <path d="M26,23 q2,-2 4,-0.6 q-1,1.6 -4,0.6 Z" fill="#4a9a3a" />
+      <path d="M22,23.6 q1.6,-1.6 3,-0.4" stroke="#4a9a3a" strokeWidth="0.8" fill="none" />
+    </g>
+  );
+}
+function FoodGuHimokawa() {
+  const R = [[0, -1.4], [1, 0.6], [2, 2.4], [3, 4.2]];
+  return (
+    <g>
+      <Food4Zaru />
+      {R.map(([k, dy]) => (
+        <g key={k} transform={`translate(0,${dy})`}>
+          <path d={`M${9 + k} ${26.4} Q24 ${20.6} ${39 - k} ${26.4} L${39 - k} ${29.2} Q24 ${23.4} ${9 + k} ${29.2} Z`} fill="#fbf6e8" stroke="#a8987a" strokeWidth="0.5" />
+          <path d={`M${11 + k} ${27.2} Q24 ${22.2} ${37 - k} ${27.2}`} stroke="#fff" strokeWidth="0.6" fill="none" opacity="0.8" />
+          <path d={`M${9 + k} ${29.2} Q24 ${23.4} ${39 - k} ${29.2}`} stroke="#d8ccb0" strokeWidth="0.7" fill="none" />
+        </g>
+      ))}
+      <ellipse cx="41" cy="16" rx="5" ry="2.4" fill="#f4f0e8" stroke="#8a8070" strokeWidth="0.4" />
+      <ellipse cx="41" cy="15.6" rx="3.8" ry="1.6" fill="#6a3a14" />
+    </g>
+  );
+}
+function FoodGuOtayakisoba() {
+  return (
+    <g>
+      <Food4Plate cy={31} c="#f4f0e8" />
+      <Food4Noodles cx={24} cy={29.6} rx={15} ry={4.8} c="#7a4a1a" n={6} w={1.1} />
+      {[[16, 28], [26, 27], [31, 31]].map(([x, y], i) => (
+        <path key={i} d={`M${x - 2.6} ${y} q2.6 -1.6 5.2 0`} stroke="#d8eab0" strokeWidth="1.6" fill="none" />
+      ))}
+      <path d="M21,27 q3,-2 6,-0.4 q-3,1.6 -6,0.4 Z" fill="#c87a5a" stroke="#5a2a14" strokeWidth="0.3" />
+      <rect x="30" y="27" width="3" height="0.9" fill="#e83a4a" transform="rotate(-20 30 27)" />
+      <g fill="#2a4a1a">{[[18, 31], [23, 31.6], [28, 30.4]].map(([x, y], i) => <circle key={i} cx={x} cy={y} r="0.4" />)}</g>
+    </g>
+  );
+}
+function FoodGuHanapan() {
+  return (
+    <g>
+      <Food4Plate cy={34} c="#e8dcc8" />
+      {[[16, 28], [32, 28], [24, 33]].map(([x, y], i) => (
+        <g key={i}>
+          {[0, 72, 144, 216, 288].map((a) => <circle key={a} cx={x + Math.cos((a - 90) * Math.PI / 180) * 3.6} cy={y + Math.sin((a - 90) * Math.PI / 180) * 2.6} r="2.8" fill="#d8984a" stroke="#8a5a1a" strokeWidth="0.4" />)}
+          <ellipse cx={x} cy={y} rx="3.6" ry="2.6" fill="#e8b060" />
+          <ellipse cx={x} cy={y} rx="2.6" ry="1.8" fill="#fbf4e4" opacity="0.85" />
+        </g>
+      ))}
+    </g>
+  );
+}
+function FoodGuMaitake() {
+  return (
+    <g>
+      <Food4Plate cy={32} c="#f4f0e8" />
+      <path d="M8,28 q10,-6 18,-4 l-2,3 q-8,-1 -16,1 Z" fill="#fff" stroke="#c8c0b0" strokeWidth="0.3" />
+      {[[16, 29, -10], [26, 27, 8], [33, 30.6, -4], [22, 33, 4]].map(([x, y, r], i) => (
+        <g key={i} transform={`translate(${x},${y}) rotate(${r})`}>
+          {[[-3, 0], [0, -2], [3, 0], [-1.4, 1.6], [1.6, 1.8]].map(([dx, dy], k) => (
+            <path key={k} d={`M${dx - 2.6},${dy} Q${dx},${dy - 3} ${dx + 2.6},${dy} Q${dx},${dy + 1.4} ${dx - 2.6},${dy} Z`} fill="#e8c070" stroke="#9a6a1a" strokeWidth="0.35" />
+          ))}
+          <path d="M-2,0 q2,-1.6 4,0" stroke="#7a5a3a" strokeWidth="0.6" fill="none" opacity="0.6" />
+        </g>
+      ))}
+      <path d="M37,24 l4,-1.6 l1,1.6 l-4,1.6 Z" fill="#f4e050" />
+      <ellipse cx="11" cy="34" rx="2.6" ry="1.2" fill="#f0e0b0" stroke="#a8884a" strokeWidth="0.3" />
+    </g>
+  );
+}
+function FoodGuOnsenmanju() {
+  return (
+    <g>
+      <Food5Box c="#d8c8a8" d="#7a6040" />
+      {[[13, 31], [24, 31], [35, 31], [18.6, 35.6], [29.6, 35.6]].map(([x, y], i) => (
+        <g key={i}>
+          <ellipse cx={x} cy={y + 0.6} rx="5" ry="3.2" fill="#7a4a1a" />
+          <ellipse cx={x} cy={y} rx="5" ry="3.2" fill="#a8642a" stroke="#4a2408" strokeWidth="0.45" />
+          <ellipse cx={x - 1.4} cy={y - 1.2} rx="2" ry="0.8" fill="#d89a5a" opacity="0.7" />
+          <path d={`M${x - 1} ${y - 0.4} q1 -0.8 2 0`} stroke="#4a2408" strokeWidth="0.5" fill="none" />
+        </g>
+      ))}
+      <Food1Steam x={24} y={20} s={0.8} />
+    </g>
+  );
+}
+function FoodGuRingo() {
+  return (
+    <g>
+      <Food1Shadow rx={18} />
+      {[[15, 30], [33, 30], [24, 22]].map(([x, y], i) => (
+        <g key={i}>
+          <path d={`M${x},${y - 6} Q${x + 8},${y - 9} ${x + 8},${y + 1} Q${x + 6},${y + 8} ${x},${y + 7} Q${x - 6},${y + 8} ${x - 8},${y + 1} Q${x - 8},${y - 9} ${x},${y - 6} Z`} fill={i === 2 ? "#e83a2a" : "#c81a1a"} stroke="#5a0606" strokeWidth="0.5" />
+          <path d={`M${x + 2},${y - 5} Q${x + 7},${y - 6} ${x + 7},${y + 1} Q${x + 5},${y + 6} ${x + 1},${y + 6}`} fill="#f8c040" opacity="0.35" />
+          <path d={`M${x},${y - 6} q0.4,-2.4 1.6,-3`} stroke="#5a3a1a" strokeWidth="0.7" fill="none" />
+          <ellipse cx={x - 4} cy={y - 2} rx="1.6" ry="1" fill="#fff" opacity="0.6" />
+        </g>
+      ))}
+      <path d="M25.6,13 q3,-2 5,0 q-3,1.4 -5,0 Z" fill="#4a9a3a" />
+    </g>
+  );
+}
+
+/* ---- 埼玉 ---- */
+function FoodSaUnagi() {
+  return (
+    <g>
+      <Food1Shadow rx={19} />
+      <rect x="5" y="16" width="38" height="24" rx="2" fill="#2a0e0a" stroke="#0a0302" strokeWidth="0.6" />
+      <rect x="6.6" y="17.6" width="34.8" height="20.8" rx="1.4" fill="#f4f0e6" />
+      {[0, 1].map((k) => (
+        <g key={k} transform={`translate(24,${23 + k * 8})`}>
+          <rect x="-15" y="-3.4" width="30" height="6.8" rx="1.6" fill="#8a4a14" stroke="#3a1404" strokeWidth="0.45" />
+          {[-11, -6, -1, 4, 9].map((d) => <path key={d} d={`M${d} -3 l2 6`} stroke="#4a1e06" strokeWidth="0.8" opacity="0.7" />)}
+          <path d="M-14 -2 H14" stroke="#c8782a" strokeWidth="0.6" opacity="0.6" />
+        </g>
+      ))}
+      <path d="M38,20 q2,-2 3,0" stroke="#5aa04a" strokeWidth="1" fill="none" />
+    </g>
+  );
+}
+function FoodSaGokabo() {
+  return (
+    <g>
+      <Food4Plate cy={34} c="#2a2a30" rim="#0a0a0c" />
+      {[[16, 27, -14], [26, 26, 8], [21, 32, -4], [31, 31.4, 12]].map(([x, y, r], i) => (
+        <g key={i} transform={`translate(${x},${y}) rotate(${r})`}>
+          <rect x="-6" y="-2" width="12" height="4" rx="2" fill="#c8b04a" stroke="#7a6a1a" strokeWidth="0.45" />
+          <rect x="-6" y="-2" width="12" height="1.6" rx="0.8" fill="#e0cc70" />
+          {[-4, -1.4, 1.2, 3.8].map((d) => <circle key={d} cx={d} cy="0.4" r="0.3" fill="#8a7a2a" />)}
+        </g>
+      ))}
+    </g>
+  );
+}
+function FoodSaDaruma() {
+  return (
+    <g>
+      <Food4Plate cy={36} c="#e8dcc8" />
+      {[[16, 0], [32, 1]].map(([x, k]) => (
+        <g key={k}>
+          <path d={`M${x},${16} Q${x + 7},${17} ${x + 7},${26} Q${x + 7},${34} ${x},${34} Q${x - 7},${34} ${x - 7},${26} Q${x - 7},${17} ${x},${16} Z`} fill="#c8782a" stroke="#6a3a08" strokeWidth="0.5" />
+          <path d={`M${x},${17} Q${x + 6},${18} ${x + 6},${26} Q${x + 6},${33} ${x},${33} Q${x - 6},${33} ${x - 6},${26} Q${x - 6},${18} ${x},${17} Z`} fill="#d8302a" opacity="0.85" />
+          <ellipse cx={x} cy={23} rx="4" ry="3.6" fill="#f8e8d0" />
+          <circle cx={x - 1.6} cy={22.6} r="0.9" fill="#fff" stroke="#000" strokeWidth="0.3" />
+          <circle cx={x + 1.6} cy={22.6} r="0.9" fill="#fff" stroke="#000" strokeWidth="0.3" />
+          {k === 0 && <circle cx={x - 1.6} cy={22.6} r="0.5" fill="#000" />}
+          <path d={`M${x - 3} ${29} q3 1.6 6 0`} stroke="#f4d04a" strokeWidth="0.8" fill="none" />
+        </g>
+      ))}
+    </g>
+  );
+}
+function FoodSaSokasenbei() {
+  return (
+    <g>
+      <Food1Shadow />
+      {[[24, 36], [24, 33], [24, 30]].map(([x, y], k) => (
+        <g key={k}>
+          <ellipse cx={x} cy={y + 1} rx="15" ry="5" fill="#4a2a10" />
+          <ellipse cx={x} cy={y} rx="15" ry="5" fill="#8a5420" stroke="#3a1a04" strokeWidth="0.45" />
+        </g>
+      ))}
+      <ellipse cx="24" cy="30" rx="13" ry="4.2" fill="#a8682a" />
+      {[[18, 29], [24, 30.6], [29, 29.4], [21, 31.4]].map(([x, y], i) => <ellipse key={i} cx={x} cy={y} rx="1.6" ry="0.7" fill="#c8883a" opacity="0.8" />)}
+      <path d="M12,30 Q24,25 36,30" stroke="#d8a060" strokeWidth="0.6" fill="none" opacity="0.6" />
+      <rect x="26" y="9" width="16" height="10" rx="1" fill="#1e2a1a" stroke="#000" strokeWidth="0.4" transform="rotate(14 34 14)" />
+    </g>
+  );
+}
+function FoodSaKazoudon() {
+  return (
+    <Food5Ramen bowl={{ body: "#2a1a10", light: "#4a3420", dark: "#0c0604", rim: "#000" }} broth="#a8682a" noodle="#fbf6e8" w={1.8} n={5} wave={0.6}>
+      <Food5Tempura x={18} y={21} w={9} h={3.4} rot={-10} />
+      <Food1Negi x={28} y={21} /><Food1Negi x={30} y={22.6} /><Food1Negi x={27} y={24} />
+      <path d="M31,19.4 l4,-0.4" stroke="#3a8a3a" strokeWidth="1.1" />
+    </Food5Ramen>
+  );
+}
+function FoodSaNamazu() {
+  return (
+    <g>
+      <Food4Plate cy={32} c="#f4f0e8" />
+      <path d="M7,30 q8,-6 15,-4 l-2,3 q-6,-1 -13,1 Z" fill="#fff" stroke="#c8c0b0" strokeWidth="0.3" />
+      <Food5Tempura x={18} y={28} w={14} h={5} rot={-14} />
+      <Food5Tempura x={30} y={27} w={13} h={5} rot={10} />
+      <Food5Tempura x={25} y={33} w={12} h={4.4} rot={-2} />
+      <ellipse cx="38" cy="34.6" rx="3" ry="1.4" fill="#f0e0b0" stroke="#a8884a" strokeWidth="0.3" />
+      <path d="M33,22 q2,-2 4,-1" stroke="#3a8a3a" strokeWidth="1" fill="none" />
+    </g>
+  );
+}
+function FoodSaNori() {
+  return (
+    <g>
+      <Food4Plate cy={34} c="#e8e0cc" />
+      {[[15, 0], [33, 1]].map(([x, k]) => (
+        <g key={k}>
+          <path d={`M${x - 8},31 Q${x - 7},15 ${x},12 Q${x + 7},15 ${x + 8},31 Q${x},34 ${x - 8},31 Z`} fill="#f8f4ea" stroke="#b8ac98" strokeWidth="0.45" />
+          <path d={`M${x - 6},33 L${x - 6},24 L${x + 6},24 L${x + 6},33 Q${x},34.4 ${x - 6},33 Z`} fill="#1a2418" stroke="#000" strokeWidth="0.4" />
+          <path d={`M${x - 4} 26 h8`} stroke="#3a4a30" strokeWidth="0.4" />
+        </g>
+      ))}
+      <ellipse cx="24" cy="36" rx="2.4" ry="1.2" fill="#f4c43a" />
+    </g>
+  );
+}
+function FoodSaWarabimochi() {
+  return (
+    <g>
+      <Food4Plate cy={34} c="#2a3a2a" rim="#0a140a" />
+      {[[14, 29], [21, 26.6], [28, 27], [34, 30], [19, 32], [27, 32.6]].map(([x, y], i) => (
+        <g key={i}>
+          <path d={`M${x - 3.4},${y + 1.4} L${x - 2.6},${y - 2.4} L${x + 3},${y - 2.6} L${x + 3.6},${y + 1.4} Z`} fill="#c8a870" stroke="#7a5a2a" strokeWidth="0.35" />
+          <path d={`M${x - 2.6},${y - 2.4} L${x + 3},${y - 2.6} L${x + 2.4},${y - 1} L${x - 2},${y - 0.8} Z`} fill="#e0c890" />
+        </g>
+      ))}
+      <path d="M10,24 q14,-5 28,0" stroke="#3a1a08" strokeWidth="1.6" fill="none" opacity="0.6" />
+    </g>
+  );
+}
+function FoodSaMotsuyaki() {
+  return (
+    <g>
+      <Food4Plate cy={33} />
+      {[[12, 0], [20, 1], [28, 2]].map(([x, k]) => (
+        <g key={k}>
+          <Food5Skewer x1={x - 2} y1={36} x2={x + 10} y2={14} />
+          {[0, 1, 2].map((j) => (
+            <ellipse key={j} cx={x + 1.6 + j * 3.4} cy={29.4 - j * 6.2} rx="2.6" ry="2.2" fill={j % 2 ? "#a85a3a" : "#8a3a1a"} stroke="#3a0e04" strokeWidth="0.35" />
+          ))}
+        </g>
+      ))}
+      <ellipse cx="38" cy="35" rx="3.6" ry="1.6" fill="#f4f0e8" stroke="#8a8070" strokeWidth="0.3" />
+      <ellipse cx="38" cy="34.8" rx="2.6" ry="1" fill="#e8a020" />
+    </g>
+  );
+}
+function FoodSaKawagoeimo() {
+  return (
+    <g>
+      <Food4Plate cy={34} c="#e8dcc8" />
+      {[[16, 28, -20], [30, 28, 16]].map(([x, y, r], i) => (
+        <g key={i} transform={`translate(${x},${y}) rotate(${r})`}>
+          <path d="M-9,0 Q-7,-5 0,-5 Q7,-5 9,0 Q7,5 0,5 Q-7,5 -9,0 Z" fill="#8a2a5a" stroke="#4a0a2a" strokeWidth="0.5" />
+          <path d="M-7,-1 Q0,-4 7,-1" stroke="#b84a7a" strokeWidth="0.6" fill="none" />
+        </g>
+      ))}
+      <g transform="translate(23,33)">
+        <ellipse rx="6" ry="3.4" fill="#8a2a5a" stroke="#4a0a2a" strokeWidth="0.45" />
+        <ellipse rx="5" ry="2.6" fill="#f8c040" />
+        <ellipse cx="-1" cy="-0.6" rx="2" ry="0.8" fill="#fae088" />
+      </g>
+      <Food1Steam x={23} y={20} s={0.7} />
+    </g>
+  );
+}
+function FoodSaSayamacha() {
+  return (
+    <g>
+      <Food1Shadow rx={16} />
+      <path d="M8,30 Q8,40 18,40 Q28,40 28,30 Z" fill="#f2ece0" stroke="#8a8070" strokeWidth="0.5" />
+      <ellipse cx="18" cy="30" rx="10" ry="2.6" fill="#f8f4ea" stroke="#8a8070" strokeWidth="0.45" />
+      <ellipse cx="18" cy="30.2" rx="8.6" ry="2" fill="#7aa83a" />
+      <ellipse cx="16" cy="29.8" rx="3" ry="0.6" fill="#a8d060" opacity="0.7" />
+      <path d="M28,22 Q40,20 42,28 Q40,36 32,36 L30,24 Z" fill="#3a5a2a" stroke="#1a2a10" strokeWidth="0.5" />
+      <path d="M30,24 Q36,23 40,26" stroke="#5a7a3a" strokeWidth="0.6" fill="none" />
+      <path d="M41,28 q4,-1 4,-5" stroke="#3a5a2a" strokeWidth="1.4" fill="none" strokeLinecap="round" />
+      {[[33, 16, 20], [37, 13, -10], [30, 12, 40]].map(([x, y, r], i) => <path key={i} d="M-2.6 0 Q0 -1.8 2.6 0 Q0 1.8 -2.6 0 Z" transform={`translate(${x},${y}) rotate(${r})`} fill="#4a9a3a" />)}
+      <Food1Steam x={18} y={25} s={0.6} />
+    </g>
+  );
+}
+function FoodSaYakitori() {
+  return (
+    <g>
+      <Food4Plate cy={33} />
+      {[[10, 0], [18, 1], [26, 2]].map(([x, k]) => (
+        <g key={k}>
+          <Food5Skewer x1={x - 2} y1={36} x2={x + 12} y2={12} />
+          {[0, 1, 2].map((j) => (
+            <rect key={j} x={x - 1 + j * 3.8} y={26.6 - j * 6.6} width="5" height="4.4" rx="1.2" fill="#c8884a" stroke="#5a2a0a" strokeWidth="0.35" transform={`rotate(-30 ${x + 1.4 + j * 3.8} ${28.8 - j * 6.6})`} />
+          ))}
+        </g>
+      ))}
+      <path d="M12,30 q8,-12 16,-22" stroke="#8a2a10" strokeWidth="1.4" fill="none" opacity="0.6" />
+      <ellipse cx="39" cy="34" rx="3.6" ry="1.6" fill="#f4f0e8" stroke="#8a8070" strokeWidth="0.3" />
+      <ellipse cx="39" cy="33.8" rx="2.6" ry="1" fill="#c8402a" />
+    </g>
+  );
+}
+function FoodSaJellyfry() {
+  return (
+    <g>
+      <Food4Plate cy={32} c="#f4f0e8" />
+      {[[15, 28], [25, 26], [33, 30], [21, 33]].map(([x, y], i) => (
+        <g key={i}>
+          <ellipse cx={x} cy={y + 0.8} rx="5.4" ry="3.6" fill="#6a3a0a" />
+          <ellipse cx={x} cy={y} rx="5.4" ry="3.6" fill="#b8782a" stroke="#5a3008" strokeWidth="0.45" />
+          <ellipse cx={x - 1.4} cy={y - 1.2} rx="2" ry="1" fill="#d8a050" />
+        </g>
+      ))}
+      <path d="M10,26 q10,-4 26,2" stroke="#3a1a08" strokeWidth="1.4" fill="none" opacity="0.7" />
+    </g>
+  );
+}
+function FoodSaInari() {
+  return (
+    <g>
+      <Food4Board x={3} y={26} w={42} h={12} c="#c8a070" d="#7a5a30" />
+      {[0, 1, 2].map((k) => (
+        <g key={k} transform={`translate(24,${24 + k * 0.4}) rotate(${-4 + k * 4})`}>
+          <rect x={-18 + k * 0} y={-2.4 + k * 4} width="36" height="5" rx="2.4" fill="#b87a2a" stroke="#5a3408" strokeWidth="0.45" />
+          <path d={`M-16 ${-1 + k * 4} H16`} stroke="#d89a4a" strokeWidth="0.6" />
+        </g>
+      ))}
+      <path d="M38,20 l4,-1" stroke="#f4a0a0" strokeWidth="1.4" />
+    </g>
+  );
+}
+function FoodSaWaraji() {
+  return (
+    <Food5Don steam>
+      {[[17, 21, -12], [30, 21, 12]].map(([x, y, r], i) => (
+        <g key={i} transform={`translate(${x},${y}) rotate(${r})`}>
+          <ellipse rx="9" ry="4.4" fill="#5a2408" stroke="#1a0804" strokeWidth="0.5" />
+          <ellipse cy="0.6" rx="8" ry="3.4" fill="#a8582a" opacity="0.65" />
+          {[-5, -2, 1, 4].map((d) => <circle key={d} cx={d} cy="-1" r="0.4" fill="#d8904a" />)}
+        </g>
+      ))}
+    </Food5Don>
+  );
+}
+function FoodSaMisopotato() {
+  return (
+    <g>
+      <Food4Plate cy={34} />
+      <Food5Skewer x1={10} y1={38} x2={38} y2={8} />
+      {[[16, 31], [22, 24.4], [28, 17.8]].map(([x, y], i) => (
+        <g key={i} transform={`translate(${x},${y}) rotate(-48)`}>
+          <ellipse rx="4.6" ry="3.6" fill="#f0d070" stroke="#9a7a2a" strokeWidth="0.45" />
+          <path d="M-4.6,-0.6 Q0,-4 4.6,-0.6 Q0,1.6 -4.6,-0.6 Z" fill="#7a3a10" />
+        </g>
+      ))}
+    </g>
+  );
+}
+function FoodSaKurumisoba() {
+  return (
+    <g>
+      <Food4Zaru />
+      <Food4Noodles cx={22} cy={29} rx={14} ry={4.4} c="#9a8a6a" n={6} w={1} />
+      <ellipse cx="40" cy="38" rx="5.4" ry="2.6" fill="#f4f0e8" stroke="#8a8070" strokeWidth="0.4" />
+      <ellipse cx="40" cy="37.6" rx="4.2" ry="1.8" fill="#c8a070" />
+      <path d="M38,37 q1.4,-1 2.8,0 q-1.4,1 -2.8,0 Z" fill="#8a5a2a" />
+      <path d="M36,16 q1.6,-2 3.2,0 q1.6,-2 3.2,0 q-1.6,2 -3.2,0 q-1.6,2 -3.2,0 Z" fill="#a8783a" stroke="#5a3a10" strokeWidth="0.4" />
+    </g>
+  );
+}
+
+/* ---- 千葉 ---- */
+function FoodChNashi() {
+  return (
+    <g>
+      <Food1Shadow rx={18} />
+      {[[15, 30], [33, 30], [24, 22]].map(([x, y], i) => (
+        <g key={i}>
+          <ellipse cx={x} cy={y} rx="8" ry="7.4" fill="#d8b058" stroke="#8a6a1a" strokeWidth="0.5" />
+          <ellipse cx={x + 2} cy={y + 1.6} rx="5" ry="4.4" fill="#c09040" opacity="0.5" />
+          {[[-3, -2], [2, -3], [3, 2], [-2, 3], [0, 0], [-4, 1]].map(([dx, dy], k) => <circle key={k} cx={x + dx} cy={y + dy} r="0.35" fill="#f4e0a0" />)}
+          <ellipse cx={x - 3} cy={y - 3} rx="1.6" ry="1" fill="#fff" opacity="0.5" />
+          <path d={`M${x},${y - 7.4} q0.4,-2 1.4,-2.6`} stroke="#5a3a1a" strokeWidth="0.7" fill="none" />
+        </g>
+      ))}
+    </g>
+  );
+}
+function FoodChYagiri() {
+  return (
+    <g>
+      <Food4Grill />
+      {[[24, 26, -6], [24, 31.4, 4]].map(([x, y, r], i) => (
+        <g key={i} transform={`translate(${x},${y}) rotate(${r})`}>
+          <rect x="-15" y="-2.4" width="22" height="4.8" rx="2.4" fill="#f4f0e0" stroke="#a8a088" strokeWidth="0.45" />
+          {[-11, -5, 1].map((d) => <path key={d} d={`M${d} -2.2 l1.6 4.4`} stroke="#4a2a10" strokeWidth="0.8" opacity="0.8" />)}
+          <path d="M7,-2 q6,-2 9,0 q-3,1 -3,2 q3,1 3,2 q-3,2 -9,0 Z" fill="#5aa04a" stroke="#2a6a20" strokeWidth="0.4" />
+        </g>
+      ))}
+      <Food1Steam x={20} y={17} s={0.8} />
+    </g>
+  );
+}
+function FoodChShoyusoft() {
+  return (
+    <g>
+      <Food1Shadow rx={8} />
+      <path d="M17.6,24 L24,42 L30.4,24 Z" fill="#d89a4a" stroke="#8a5a1a" strokeWidth="0.5" />
+      <path d="M16,24 Q15,20 19,19 Q17,15 22,14 Q21,10 24,7 Q27,10 26,14 Q31,15 29,19 Q33,20 32,24 Z" fill="#d8b480" stroke="#8a6a3a" strokeWidth="0.5" />
+      <path d="M18,20.6 Q24,22 30,20.6 M19.6,15.6 Q24,17 28.4,15.6" stroke="#b88a50" strokeWidth="0.5" fill="none" />
+      <path d="M24,7 Q26,14 22,18 Q28,20 25,24" stroke="#7a3a10" strokeWidth="1.1" fill="none" opacity="0.7" />
+      <ellipse cx="21" cy="16" rx="1" ry="2" fill="#fff" opacity="0.6" />
+    </g>
+  );
+}
+function FoodChMisopi() {
+  return (
+    <g>
+      <Food4Plate cy={34} c="#e8e0cc" />
+      {Array.from({ length: 14 }, (_, i) => {
+        const x = 11 + (i * 7) % 26, y = 26 + ((i * 5) % 10);
+        return (
+          <g key={i} transform={`translate(${x},${y}) rotate(${(i * 47) % 180})`}>
+            <path d="M-2.6,0 Q-2.6,-1.6 -1,-1.4 Q0,-1 1,-1.4 Q2.6,-1.6 2.6,0 Q2.6,1.6 1,1.4 Q0,1 -1,1.4 Q-2.6,1.6 -2.6,0 Z" fill="#a85a1a" stroke="#4a2008" strokeWidth="0.3" />
+          </g>
+        );
+      })}
+    </g>
+  );
+}
+function FoodChHonbinos() {
+  return (
+    <g>
+      <Food4Plate cy={32} rx={20} c="#f4f0e8" />
+      {[[14, 28, -10], [24, 26, 6], [33, 29, 16], [19, 33, -4], [29, 33.4, 10]].map(([x, y, r], i) => (
+        <g key={i} transform={`translate(${x},${y}) rotate(${r})`}>
+          <path d="M-5.4,0 Q-5,-4.4 0,-4.6 Q5,-4.4 5.4,0 Q5,2.4 0,2.6 Q-5,2.4 -5.4,0 Z" fill="#c8b8a0" stroke="#5a4a3a" strokeWidth="0.45" />
+          <path d="M-4,0 Q0,-2.8 4,0 Q0,1.6 -4,0 Z" fill="#f0d8a8" />
+          <path d="M-4 -1.4 q4 -2 8 0" stroke="#8a7a60" strokeWidth="0.3" fill="none" />
+        </g>
+      ))}
+      <path d="M8,30 q3,-1 5,0" stroke="#4a9a3a" strokeWidth="1" fill="none" />
+      <Food1Steam x={24} y={16} s={0.8} />
+    </g>
+  );
+}
+function FoodChHamaguri() {
+  return (
+    <g>
+      <Food4Grill />
+      {[[14, 27, -10], [26, 25, 8], [34, 30, 18], [21, 31.6, -4]].map(([x, y, r], i) => (
+        <g key={i} transform={`translate(${x},${y}) rotate(${r})`}>
+          <path d="M-6,0 Q-5,-5.4 0,-5.6 Q5,-5.4 6,0 Q5,2 0,2.2 Q-5,2 -6,0 Z" fill="#e8d8b8" stroke="#6a5a40" strokeWidth="0.45" />
+          <path d="M-4.6,-1 Q0,-4.4 4.6,-1" stroke="#a8906a" strokeWidth="0.5" fill="none" />
+          <path d="M-3.6,0.6 Q0,-1.6 3.6,0.6" fill="#f0c890" stroke="#a8784a" strokeWidth="0.3" />
+        </g>
+      ))}
+      <Food1Steam x={24} y={15} s={0.8} />
+    </g>
+  );
+}
+function FoodChRakkasei() {
+  return (
+    <g>
+      <Food4Plate cy={34} c="#e8e0cc" />
+      {Array.from({ length: 9 }, (_, i) => {
+        const x = 12 + (i % 3) * 9 + (i > 5 ? 3 : 0), y = 25 + Math.floor(i / 3) * 4.4;
+        return (
+          <g key={i} transform={`translate(${x},${y}) rotate(${(i * 37) % 60 - 30})`}>
+            <path d="M-4.6,0 Q-4.6,-2.2 -2.4,-2 Q0,-1.2 2.4,-2 Q4.6,-2.2 4.6,0 Q4.6,2.2 2.4,2 Q0,1.2 -2.4,2 Q-4.6,2.2 -4.6,0 Z" fill="#d8b47a" stroke="#8a6a3a" strokeWidth="0.4" />
+            {[-3, -1, 1, 3].map((d) => <path key={d} d={`M${d} -1.4 v2.8`} stroke="#b8905a" strokeWidth="0.3" />)}
+          </g>
+        );
+      })}
+    </g>
+  );
+}
+function FoodChSuika() {
+  return (
+    <g>
+      <Food4Plate cy={36} c="#f4f0e8" />
+      {[[16, 0], [32, 1]].map(([x, k]) => (
+        <g key={k} transform={`translate(${x},31) rotate(${k ? 10 : -10})`}>
+          <path d="M-9,0 L9,0 L0,-13 Z" fill="#e8303a" stroke="#7a0a10" strokeWidth="0.45" />
+          <path d="M-9.6,0 L9.6,0 L9,2 L-9,2 Z" fill="#2a7a2a" stroke="#0a3a0a" strokeWidth="0.45" />
+          <path d="M-9,0 L9,0" stroke="#f4f0d0" strokeWidth="1.2" />
+          {[[-3, -3], [2, -4], [0, -7], [-1, -2], [3, -1.6]].map(([dx, dy], i) => <ellipse key={i} cx={dx} cy={dy} rx="0.5" ry="0.8" fill="#1a1010" />)}
+        </g>
+      ))}
+    </g>
+  );
+}
+function FoodChTeyakisenbei() {
+  return (
+    <g>
+      <Food4Grill />
+      {[[14, 28], [24, 26], [34, 28], [19, 32.4], [29, 32.4]].map(([x, y], i) => (
+        <g key={i}>
+          <ellipse cx={x} cy={y} rx="5.4" ry="2.6" fill="#b87a3a" stroke="#5a3010" strokeWidth="0.45" />
+          <ellipse cx={x} cy={y - 0.3} rx="4" ry="1.7" fill="#d89a50" />
+          <ellipse cx={x - 1} cy={y - 0.6} rx="1.6" ry="0.5" fill="#7a3a10" opacity="0.6" />
+        </g>
+      ))}
+      <path d="M18,16 l4,8 M30,16 l-4,8" stroke="#c8a060" strokeWidth="0.9" />
+    </g>
+  );
+}
+function FoodChNaritaunagi() {
+  return (
+    <Food5Don bowl={{ body: "#1a1a1e", light: "#3a3a42", dark: "#0a0a0c", rim: "#000", band: "#c82a1a" }} steam>
+      <rect x="10" y="17.4" width="28" height="6.4" rx="1.6" fill="#8a4a14" stroke="#3a1404" strokeWidth="0.45" />
+      {[13, 18, 23, 28, 33].map((d) => <path key={d} d={`M${d} 17.8 l2 5.6`} stroke="#4a1e06" strokeWidth="0.8" opacity="0.7" />)}
+      <path d="M11 19 H37" stroke="#c8782a" strokeWidth="0.6" opacity="0.6" />
+      <path d="M33,24 q2,-2 4,-0.6" stroke="#5aa04a" strokeWidth="1" fill="none" />
+    </Food5Don>
+  );
+}
+function FoodChTeppozuke() {
+  return (
+    <g>
+      <Food4Plate cy={33} c="#2a2a30" rim="#0a0a0c" />
+      {[[14, 28], [22, 27], [30, 27], [37, 28.6]].map(([x, y], i) => (
+        <g key={i}>
+          <ellipse cx={x} cy={y} rx="3.8" ry="3" fill="#a8a040" stroke="#4a4a10" strokeWidth="0.45" />
+          <ellipse cx={x} cy={y} rx="2.8" ry="2.1" fill="#d8d080" />
+          <ellipse cx={x} cy={y} rx="1.6" ry="1.2" fill="#6a1a3a" />
+        </g>
+      ))}
+      <path d="M8,32 L22,22" stroke="#7a7a30" strokeWidth="4" strokeLinecap="round" opacity="0" />
+    </g>
+  );
+}
+function FoodChYokan() {
+  return (
+    <g>
+      <Food4Board x={4} y={28} w={40} h={10} c="#c8a070" d="#7a5a30" />
+      <path d="M8,26 L32,18 L40,22 L16,30 Z" fill="#4a1408" stroke="#1a0402" strokeWidth="0.5" />
+      <path d="M8,26 L16,30 L16,35 L8,31 Z" fill="#2a0804" />
+      <path d="M16,30 L40,22 L40,27 L16,35 Z" fill="#3a0c06" stroke="#1a0402" strokeWidth="0.45" />
+      {[[22, 25], [28, 23]].map(([x, y], i) => <path key={i} d={`M${x} ${y} l0 9`} stroke="#6a2a1a" strokeWidth="0.6" />)}
+      <path d="M11,26 L30,19.6" stroke="#8a3a2a" strokeWidth="0.7" opacity="0.7" />
+    </g>
+  );
+}
+function FoodChDango() {
+  return (
+    <g>
+      <Food4Plate cy={34} />
+      {[[16, 0], [30, 1]].map(([x, k]) => (
+        <g key={k}>
+          <Food5Skewer x1={x - 6} y1={38} x2={x + 6} y2={12} />
+          {[0, 1, 2].map((j) => (
+            <g key={j}>
+              <Food4Ball x={x - 2.4 + j * 3.6} y={31 - j * 7.4} r={3.4} c={k ? "#f4ece0" : "#e0b880"} d="#9a7a4a" />
+              {k === 0 && <path d={`M${x - 5.4 + j * 3.6} ${31 - j * 7.4} q3 -2 6 0`} stroke="#8a3a10" strokeWidth="1" fill="none" opacity="0.8" />}
+            </g>
+          ))}
+        </g>
+      ))}
+    </g>
+  );
+}
+function FoodChTakomai() {
+  return (
+    <g>
+      <Food4Plate cy={34} c="#e8e0cc" />
+      {[[16, 0], [32, 1]].map(([x, k]) => (
+        <g key={k}>
+          <path d={`M${x - 8},31 Q${x - 7},15 ${x},12 Q${x + 7},15 ${x + 8},31 Q${x},34 ${x - 8},31 Z`} fill="#fbf8f0" stroke="#b8ac98" strokeWidth="0.45" />
+          {Array.from({ length: 8 }, (_, i) => <ellipse key={i} cx={x - 4 + (i % 4) * 2.6} cy={18 + Math.floor(i / 4) * 6 + (i % 2)} rx="0.9" ry="0.5" fill="#fff" stroke="#e8e0d0" strokeWidth="0.2" />)}
+          <ellipse cx={x} cy={26} rx="2" ry="1.4" fill={k ? "#e85a6a" : "#f0a030"} />
+        </g>
+      ))}
+    </g>
+  );
+}
+function FoodChImosweets() {
+  return (
+    <g>
+      <Food4Plate cy={34} c="#2a2a30" rim="#0a0a0c" />
+      {[[15, 28], [24, 26], [33, 28], [19.6, 32], [28.4, 32]].map(([x, y], i) => (
+        <g key={i}>
+          <path d={`M${x - 4.4},${y + 1} Q${x - 4.4},${y - 3.6} ${x},${y - 3.6} Q${x + 4.4},${y - 3.6} ${x + 4.4},${y + 1} Z`} fill="#f2b84a" stroke="#9a6010" strokeWidth="0.45" />
+          <path d={`M${x - 3},${y - 2} Q${x},${y - 3.6} ${x + 3},${y - 2}`} stroke="#a8501a" strokeWidth="1.2" fill="none" />
+          <circle cx={x + 1.6} cy={y - 0.6} r="0.5" fill="#2a1a10" />
+        </g>
+      ))}
+    </g>
+  );
+}
+function FoodChNuresenbei() {
+  return (
+    <g>
+      <Food1Shadow />
+      {[[16, 30, -8], [30, 28, 6], [23, 35, 0]].map(([x, y, r], i) => (
+        <g key={i} transform={`translate(${x},${y}) rotate(${r})`}>
+          <ellipse rx="9" ry="4.4" fill="#3a1a08" stroke="#140602" strokeWidth="0.45" />
+          <ellipse cy="-0.4" rx="8" ry="3.6" fill="#5a2a10" />
+          <ellipse cx="-2" cy="-1.2" rx="3.6" ry="1.2" fill="#8a4a1a" opacity="0.8" />
+          <path d="M-6 0 q3 1 6 0 q3 -1 6 0" stroke="#2a0e04" strokeWidth="0.5" fill="none" />
+        </g>
+      ))}
+    </g>
+  );
+}
+function FoodChIwashi() {
+  return (
+    <g>
+      <Food4Wan body="#1a2a3a" light="#3a4a5a" rim="#0a0e14" inner="#0e1620" />
+      {[[16, 21, -6], [24, 20.6, 4], [32, 21.6, -2], [20, 23.4, 8], [28, 23.6, -8]].map(([x, y, r], i) => (
+        <g key={i} transform={`translate(${x},${y}) rotate(${r})`}>
+          <path d="M-4,0 Q-2,-1.6 3,-0.8 L4,-1.6 L4,1.6 L3,0.8 Q-2,1.6 -4,0 Z" fill="#b8c0c8" stroke="#3a4048" strokeWidth="0.3" />
+          <path d="M-3,0 H2.6" stroke="#5a6a7a" strokeWidth="0.35" />
+        </g>
+      ))}
+      {[[18, 22], [22, 21], [26, 22.6], [30, 21], [24, 24]].map(([x, y], i) => <ellipse key={i} cx={x} cy={y} rx="0.5" ry="0.3" fill="#f4ecd8" />)}
+      <rect x="21" y="19" width="4" height="0.8" fill="#f08a2a" transform="rotate(-10 21 19)" />
+    </g>
+  );
+}
+function FoodChNamerou() {
+  return (
+    <g>
+      <Food4Plate cy={33} c="#1e3a5a" rim="#0a1a2a" />
+      <path d="M12,30 Q12,24 20,23 Q30,22 34,26 Q36,31 28,32 Q18,33 12,30 Z" fill="#c88a7a" stroke="#6a3a2a" strokeWidth="0.45" />
+      {[[16, 27], [20, 25], [25, 26], [29, 25.6], [22, 29], [28, 29.4], [18, 30]].map(([x, y], i) => <circle key={i} cx={x} cy={y} r="0.7" fill={i % 2 ? "#e8b0a0" : "#a86050"} />)}
+      {[[19, 27.6], [26, 27.4]].map(([x, y], i) => <path key={i} d={`M${x} ${y} q1.6 -1 3 0`} stroke="#5aa04a" strokeWidth="0.8" fill="none" />)}
+      <path d="M34,22 q4,-3 7,-1 q-3,3 -7,1 Z" fill="#5aa04a" />
+      <ellipse cx="36" cy="32" rx="2" ry="1.2" fill="#f4e0a0" />
+    </g>
+  );
+}
+function FoodChBiwa() {
+  return (
+    <g>
+      <Food4Glass fill="#f0a030" top="#f8c060" level={18} />
+      {[[19, 15.6], [24, 14.6], [29, 15.8]].map(([x, y], i) => (
+        <g key={i}><ellipse cx={x} cy={y} rx="2.6" ry="2.2" fill="#f4a020" stroke="#9a5a08" strokeWidth="0.35" /><ellipse cx={x - 0.8} cy={y - 0.8} rx="0.8" ry="0.5" fill="#fff" opacity="0.6" /></g>
+      ))}
+      <path d="M30,13 q3,-3 6,-1 q-3,2 -6,1 Z" fill="#4a9a3a" />
+    </g>
+  );
+}
+function FoodChIseebi() {
+  return (
+    <g>
+      <Food4Grill />
+      <path d="M9,28 Q14,20 24,21 Q34,22 37,27 Q32,33 24,33 Q14,33 9,28 Z" fill="#d83a1a" stroke="#6a0a04" strokeWidth="0.55" />
+      {[14, 19, 24, 29, 33].map((x) => <path key={x} d={`M${x} 22 Q${x + 1} 27 ${x} 32.6`} stroke="#8a1a08" strokeWidth="0.6" fill="none" />)}
+      <path d="M12,26 Q24,23 34,26 Q24,29 12,26 Z" fill="#f8e8d0" stroke="#c8a888" strokeWidth="0.3" />
+      <path d="M37,27 Q43,22 46,14 M36,25 Q41,18 42,10" stroke="#a82a10" strokeWidth="0.8" fill="none" />
+      <path d="M9,28 l-4,-3 l1,6 Z" fill="#c82a10" />
+      <Food1Steam x={22} y={14} s={0.8} />
+    </g>
+  );
+}
+function FoodChTakeoka() {
+  return (
+    <Food5Ramen bowl={{ body: "#f2ece0", light: "#fff", dark: "#b8ae9a", rim: "#7a7060", band: "#2a4a8a" }} broth="#3a1e0e" noodle="#e8d4a0" n={5}>
+      <Food1Chashu x={16} y={20.6} r={3.6} rot={-10} />
+      <Food1Chashu x={22} y={19.4} r={3.4} rot={4} />
+      {[[27, 21], [29, 22.4], [31, 21.4], [28, 23.6], [30.6, 24]].map(([x, y], i) => <rect key={i} x={x} y={y} width="1.6" height="1" fill="#f4f0e4" stroke="#c8c0a8" strokeWidth="0.2" />)}
+      <path d="M33,19 l5,1 l-0.6,1.8 l-5,-1 Z" fill="#1a2418" />
+    </Food5Ramen>
+  );
+}
+function FoodChAsari() {
+  return (
+    <g>
+      <Food4Wan body="#e8e4dc" light="#fff" rim="#8a8478" inner="#c8c0b0" />
+      <ellipse cx="24" cy="22.2" rx="13.6" ry="4" fill="#e8dcc0" />
+      {[[15, 21.6], [19.4, 20.4], [24, 21.6], [28.4, 20.4], [33, 21.6], [18, 23.6], [22.4, 23.8], [27, 23.8], [31, 23.4]].map(([x, y], i) => (
+        <g key={i} transform={`translate(${x},${y}) rotate(${(i * 31) % 50 - 25})`}>
+          <ellipse rx="2.2" ry="1.4" fill={i % 2 ? "#8a7a6a" : "#a8988a"} stroke="#3a3028" strokeWidth="0.25" />
+          <path d="M-1.6 0 q1.6 -1 3.2 0" stroke="#e8dcc8" strokeWidth="0.3" fill="none" />
+        </g>
+      ))}
+      <path d="M24,19.6 l3,-0.6" stroke="#3a8a3a" strokeWidth="1" />
+      <Food1Steam x={24} y={13} s={0.8} />
+    </g>
+  );
+}
+function FoodChGelato() {
+  return (
+    <g>
+      <Food1Shadow rx={12} />
+      <path d="M12,26 L36,26 L33,38 Q24,41 15,38 Z" fill="#f4f0e8" stroke="#a8a090" strokeWidth="0.5" />
+      <path d="M12,26 L36,26" stroke="#4a8ab8" strokeWidth="1.4" />
+      <Food4Ball x={18} y={23} r={6} c="#fbf8f0" d="#c8c0b0" />
+      <Food4Ball x={29} y={23} r={6} c="#f8d8e0" d="#c89aa8" />
+      <Food4Ball x={23.6} y={16.6} r={5.6} c="#f8f0c8" d="#c8b880" />
+      <path d="M32,10 l3,-4" stroke="#c8a060" strokeWidth="1.2" />
+    </g>
+  );
+}
+
+/* ---- 東京 ---- */
+function FoodTkMonja() {
+  return (
+    <g>
+      <Food4Iron />
+      <path d="M10,30 Q14,24 24,24.6 Q34,25 38,30 Q34,35 24,35 Q14,35 10,30 Z" fill="#c89a5a" stroke="#6a4a1a" strokeWidth="0.45" />
+      <path d="M13,30 Q18,27 24,27.6 Q31,28 35,30 Q30,33 24,33 Q17,33 13,30 Z" fill="#a8783a" opacity="0.8" />
+      {[[16, 29], [22, 28], [28, 29.4], [31, 31], [19, 31.4], [25, 32]].map(([x, y], i) => <rect key={i} x={x} y={y} width="2.4" height="1.2" rx="0.4" fill={i % 2 ? "#d8eab0" : "#f08a6a"} />)}
+      <path d="M30,20 L38,12 L40,13.4 L32,21.4 Z" fill="#c8c8d0" stroke="#5a5a64" strokeWidth="0.4" />
+      <Food1Steam x={22} y={20} s={0.8} />
+    </g>
+  );
+}
+function FoodTkNingyoyaki() {
+  return (
+    <g>
+      <Food5Box c="#d8c8a8" d="#7a6040" />
+      {[[13, 32], [24, 31], [35, 32]].map(([x, y], i) => (
+        <g key={i}>
+          <ellipse cx={x} cy={y} rx="5" ry="4.6" fill="#c8862a" stroke="#6a3a08" strokeWidth="0.45" />
+          {i === 0 && <path d={`M${x - 3} ${y + 2} Q${x} ${y - 5} ${x + 3} ${y + 2}`} stroke="#8a4a10" strokeWidth="0.6" fill="none" />}
+          {i === 1 && <g><circle cx={x - 1.4} cy={y - 0.6} r="0.6" fill="#6a3a08" /><circle cx={x + 1.4} cy={y - 0.6} r="0.6" fill="#6a3a08" /><path d={`M${x - 2} ${y - 2.6} L${x} ${y - 4.2} L${x + 2} ${y - 2.6}`} stroke="#6a3a08" strokeWidth="0.5" fill="none" /></g>}
+          {i === 2 && <path d={`M${x - 3} ${y} L${x} ${y - 3} L${x + 3} ${y} L${x} ${y + 3} Z`} stroke="#8a4a10" strokeWidth="0.6" fill="none" />}
+          <ellipse cx={x - 1.6} cy={y - 2} rx="1.6" ry="0.7" fill="#e8b060" opacity="0.7" />
+        </g>
+      ))}
+    </g>
+  );
+}
+function FoodTkFukagawa() {
+  return (
+    <Food5Don bowl={{ body: "#5a1810", light: "#8a2a1c", dark: "#2a0806", rim: "#140402" }} rice={false} base="#c8a070" steam>
+      {[[15, 21], [20, 19.6], [26, 19.6], [31, 21], [18, 23.6], [24, 24], [29, 23.4]].map(([x, y], i) => (
+        <ellipse key={i} cx={x} cy={y} rx="2" ry="1.3" fill="#f0c890" stroke="#a8784a" strokeWidth="0.3" />
+      ))}
+      <Food1Negi x={22} y={21} /><Food1Negi x={27} y={22} /><Food1Negi x={20} y={23} />
+    </Food5Don>
+  );
+}
+function FoodTkSushi() {
+  return (
+    <g>
+      <Food4Board x={3} y={26} w={42} h={12} c="#c8a070" d="#7a5a30" />
+      {[[10, "#c8283a", "#ea6a70"], [18, "#f08a4a", "#ffc89a"], [26, "#f4ece0", "#fff"], [34, "#e85a8a", "#ffa0c0"]].map(([x, c, l], i) => (
+        <g key={i}>
+          <ellipse cx={x + 2} cy={29} rx="3.6" ry="2.4" fill="#fbf8f0" stroke="#c8c0b0" strokeWidth="0.35" />
+          <path d={`M${x - 2},${27.6} Q${x + 2},${23.6} ${x + 6},${27.6} L${x + 5.4},${29} Q${x + 2},${26.6} ${x - 1.4},${29} Z`} fill={c} stroke="#0003" strokeWidth="0.3" />
+          <path d={`M${x},${26.6} Q${x + 2},${25.2} ${x + 4},${26.6}`} stroke={l} strokeWidth="0.5" fill="none" />
+        </g>
+      ))}
+      <path d="M40,32 q2,-2 3,0" stroke="#5aa04a" strokeWidth="1.2" fill="none" />
+      <ellipse cx="9" cy="35" rx="2.4" ry="1" fill="#f4c0a0" />
+    </g>
+  );
+}
+function FoodTkAnago() {
+  return (
+    <g>
+      <Food4Plate cy={32} c="#f4f0e8" />
+      <path d="M7,30 q8,-6 15,-4 l-2,3 q-6,-1 -13,1 Z" fill="#fff" stroke="#c8c0b0" strokeWidth="0.3" />
+      <Food5Tempura x={24} y={28} w={28} h={5} rot={-8} />
+      <Food5Tempura x={26} y={33} w={20} h={4} rot={4} c="#e0b060" />
+      <ellipse cx="38" cy="36" rx="3.2" ry="1.4" fill="#f4f0e8" stroke="#8a8070" strokeWidth="0.3" />
+      <ellipse cx="38" cy="35.8" rx="2.4" ry="0.9" fill="#c8a060" />
+    </g>
+  );
+}
+function FoodTkTsukudani() {
+  return (
+    <g>
+      <Food5Box c="#e8dcc8" d="#7a6040" />
+      <path d="M24,26 L24,40" stroke="#7a6040" strokeWidth="0.5" />
+      {Array.from({ length: 10 }, (_, i) => <ellipse key={i} cx={10 + (i % 5) * 2.6} cy={31 + Math.floor(i / 5) * 3.6} rx="1.6" ry="0.9" fill="#3a1a08" stroke="#140602" strokeWidth="0.2" transform={`rotate(${i * 30} ${10 + (i % 5) * 2.6} ${31 + Math.floor(i / 5) * 3.6})`} />)}
+      {Array.from({ length: 8 }, (_, i) => <path key={i} d={`M${27 + (i % 4) * 3} ${30 + Math.floor(i / 4) * 4} q1.4 -1.4 2.8 0`} stroke="#4a2a10" strokeWidth="1.2" fill="none" />)}
+      <path d="M8,22 L24,18 L40,22" stroke="#c8a888" strokeWidth="0.8" fill="none" opacity="0" />
+    </g>
+  );
+}
+function FoodTkJindaiji() {
+  return (
+    <g>
+      <Food4Zaru />
+      <Food4Noodles cx={22} cy={29} rx={14} ry={4.4} c="#a89a7a" n={6} w={0.9} />
+      <path d="M14,24 l18,0" stroke="#1a2418" strokeWidth="1.4" opacity="0.6" />
+      <ellipse cx="40" cy="38" rx="5" ry="2.4" fill="#f4f0e8" stroke="#8a8070" strokeWidth="0.4" />
+      <ellipse cx="40" cy="37.6" rx="3.8" ry="1.6" fill="#5a3410" />
+      <path d="M36,15 l5,-1" stroke="#7ac04a" strokeWidth="1.1" />
+      <circle cx="40" cy="20" r="1.4" fill="#9ac050" />
+    </g>
+  );
+}
+function FoodTkHachioji() {
+  return (
+    <Food5Ramen bowl={{ body: "#8a2418", light: "#b5412e", dark: "#4e110a", rim: "#2a0604" }} broth="#7a4018" noodle="#f2d070">
+      {[[14, 20.6], [16, 21.6], [18, 20.4], [15.6, 23], [19, 22.6], [17, 19.6]].map(([x, y], i) => <rect key={i} x={x} y={y} width="1.6" height="1" fill="#f4f0e4" stroke="#c8c0a8" strokeWidth="0.2" />)}
+      <Food1Chashu x={27} y={20} r={3.6} rot={6} />
+      <path d="M31,23.4 l5,-1" stroke="#c8a050" strokeWidth="1.6" />
+      <path d="M21,24 l4,-0.4 l-0.4,1.4 l-4,0.4 Z" fill="#1a2418" />
+    </Food5Ramen>
+  );
+}
+function FoodTkYamame() {
+  return (
+    <g>
+      <Food1Shadow rx={18} />
+      <ellipse cx="24" cy="38" rx="18" ry="3" fill="#d8c8a0" stroke="#8a7a50" strokeWidth="0.4" />
+      {[[16, 0], [30, 1]].map(([x, k]) => (
+        <g key={k}>
+          <Food5Skewer x1={x} y1={39} x2={x} y2={6} />
+          <g transform={`translate(${x},${21}) rotate(${-82 + k * -16})`}>
+            <Food4Fish x={0} y={0} len={22} c="#8a9a7a" belly="#e8e4d4" grill />
+            {[-4, 0, 4].map((d) => <ellipse key={d} cx={d} cy="-1.2" rx="1.2" ry="0.7" fill="#4a5a3a" opacity="0.6" />)}
+          </g>
+        </g>
+      ))}
+    </g>
+  );
+}
+function FoodTkShimazushi() {
+  return (
+    <g>
+      <Food4Board x={3} y={26} w={42} h={12} c="#2a1a10" d="#0a0604" />
+      {[9, 17, 25, 33].map((x, i) => (
+        <g key={i}>
+          <ellipse cx={x + 2} cy={29} rx="3.6" ry="2.4" fill="#fbf8f0" stroke="#c8c0b0" strokeWidth="0.35" />
+          <path d={`M${x - 2},${27.6} Q${x + 2},${23.6} ${x + 6},${27.6} L${x + 5.4},${29} Q${x + 2},${26.6} ${x - 1.4},${29} Z`} fill="#c8a898" stroke="#6a4a3a" strokeWidth="0.3" />
+          <path d={`M${x},${26.6} Q${x + 2},${25.2} ${x + 4},${26.6}`} stroke="#f4d8c8" strokeWidth="0.5" fill="none" />
+          <circle cx={x + 2} cy={25.6} r="0.6" fill="#e8d040" />
+        </g>
+      ))}
+      <path d="M40,32 q2,-2 3,0" stroke="#5aa04a" strokeWidth="1.2" fill="none" />
+    </g>
+  );
+}
+function FoodTkAshitaba() {
+  return (
+    <g>
+      <Food4Plate cy={32} c="#f4f0e8" />
+      <path d="M7,30 q8,-6 15,-4 l-2,3 q-6,-1 -13,1 Z" fill="#fff" stroke="#c8c0b0" strokeWidth="0.3" />
+      {[[18, 27, -14], [29, 26, 12], [24, 32, -2]].map(([x, y, r], i) => (
+        <g key={i} transform={`translate(${x},${y}) rotate(${r})`}>
+          <path d="M-7,0 Q-5,-4.6 0,-4 Q5,-4.6 7,0 Q5,3 0,2.6 Q-5,3 -7,0 Z" fill="#e8d090" stroke="#9a7a2a" strokeWidth="0.4" />
+          <path d="M-5,-0.6 Q0,-3.4 5,-0.6 M0,-3.4 L0,1.6" stroke="#4a8a2a" strokeWidth="0.9" fill="none" opacity="0.8" />
+        </g>
+      ))}
+      <ellipse cx="38" cy="35" rx="3" ry="1.4" fill="#f0e0b0" stroke="#a8884a" strokeWidth="0.3" />
+    </g>
+  );
+}
+function FoodTkPassion() {
+  return (
+    <g>
+      <Food4Plate cy={36} c="#f4f0e8" />
+      <circle cx="16" cy="27" r="8" fill="#5a1a4a" stroke="#2a0620" strokeWidth="0.5" />
+      <ellipse cx="13.6" cy="24" rx="2.4" ry="1.4" fill="#fff" opacity="0.35" />
+      <g transform="translate(31,30)">
+        <ellipse rx="8.4" ry="7.4" fill="#5a1a4a" stroke="#2a0620" strokeWidth="0.5" />
+        <ellipse rx="7" ry="6" fill="#f4e8c0" />
+        <ellipse rx="6.2" ry="5.2" fill="#f8b818" />
+        {Array.from({ length: 9 }, (_, i) => <ellipse key={i} cx={Math.cos(i * 0.7) * (1 + (i % 3) * 1.4)} cy={Math.sin(i * 0.7) * (1 + (i % 3) * 1.2)} rx="0.7" ry="0.5" fill="#2a1a10" />)}
+      </g>
+    </g>
+  );
+}
+
+/* ---- 神奈川 ---- */
+function FoodKnShumai() {
+  return (
+    <g>
+      <Food1Shadow rx={19} />
+      <ellipse cx="24" cy="34" rx="18" ry="6.6" fill="#c8a060" stroke="#6a4a1a" strokeWidth="0.6" />
+      <ellipse cx="24" cy="32.4" rx="16" ry="5.4" fill="#e0b870" />
+      {[[14, 30], [24, 28.4], [34, 30], [19, 33.4], [29, 33.4]].map(([x, y], i) => (
+        <g key={i}>
+          <path d={`M${x - 4},${y + 1} L${x - 3.4},${y - 3} Q${x},${y - 4.6} ${x + 3.4},${y - 3} L${x + 4},${y + 1} Q${x},${y + 2.4} ${x - 4},${y + 1} Z`} fill="#f4ecd8" stroke="#a89878" strokeWidth="0.4" />
+          <ellipse cx={x} cy={y - 3.2} rx="3" ry="1.2" fill="#e8b4a0" stroke="#c88a7a" strokeWidth="0.3" />
+          <circle cx={x} cy={y - 3.6} r="0.7" fill="#5aa04a" />
+        </g>
+      ))}
+      <Food1Steam x={24} y={20} />
+    </g>
+  );
+}
+function FoodKnIekei() {
+  return (
+    <Food5Ramen bowl={{ body: "#f2ece0", light: "#fff", dark: "#b8ae9a", rim: "#7a7060", band: "#8a1a14" }} broth="#c8862a" noodle="#f4d880" w={1.4} n={4}>
+      <ellipse cx="24" cy="21.6" rx="12" ry="3" fill="#e8b860" opacity="0.6" />
+      {[[30, 15.6, 18], [33.6, 17, 28], [36.4, 19.4, 38]].map(([x, y, r], i) => <rect key={i} x={x - 2.6} y={y - 3.6} width="5.2" height="7.2" rx="0.6" fill="#1a2418" stroke="#000" strokeWidth="0.3" transform={`rotate(${r} ${x} ${y})`} />)}
+      <Food1Chashu x={16} y={21} r={3.6} rot={-10} />
+      <path d="M20,23 q4,-3 8,0 q-4,2 -8,0 Z" fill="#3a8a2a" />
+      <ellipse cx="24" cy="19.6" rx="2.4" ry="1.6" fill="#a86a2a" />
+    </Food5Ramen>
+  );
+}
+function FoodKnSanmaa() {
+  return (
+    <Food5Ramen bowl={{ body: "#8a2418", light: "#b5412e", dark: "#4e110a", rim: "#2a0604" }} broth="#c89a4a" noodle="#f2d070" n={4}>
+      <path d="M11,21 Q18,16 26,18 Q34,17 37,22 Q30,25 24,24 Q16,25 11,21 Z" fill="#c8a060" opacity="0.85" stroke="#8a6a2a" strokeWidth="0.35" />
+      {[[15, 20.6], [20, 19.4], [25, 19.6], [30, 20], [34, 21.4], [18, 22.4], [28, 22.6]].map(([x, y], i) => <path key={i} d={`M${x - 2} ${y} q2 -1.6 4 0`} stroke={i % 2 ? "#f4f0dc" : "#7ac04a"} strokeWidth="0.9" fill="none" />)}
+      <ellipse cx="22" cy="21" rx="2" ry="1" fill="#c87a5a" />
+    </Food5Ramen>
+  );
+}
+function FoodKnTantanmen() {
+  return (
+    <Food5Ramen bowl={{ body: "#1a1a1e", light: "#3a3a42", dark: "#0a0a0c", rim: "#000" }} broth="#d83a1a" noodle={null}>
+      <path d="M11,22 Q16,18 24,19.6 Q32,18 37,22 Q30,26 24,25 Q16,26 11,22 Z" fill="#f4d870" stroke="#c8a030" strokeWidth="0.3" />
+      {[[14, 21], [20, 20], [26, 21], [32, 21.6], [18, 23.4], [28, 23.6]].map(([x, y], i) => <ellipse key={i} cx={x} cy={y} rx="1.6" ry="0.9" fill="#a82a10" />)}
+      {[[16, 22], [23, 22.6], [30, 20.4]].map(([x, y], i) => <circle key={i} cx={x} cy={y} r="0.6" fill="#f8f4e8" />)}
+    </Food5Ramen>
+  );
+}
+function FoodKnKuzumochi() {
+  return (
+    <g>
+      <Food4Plate cy={34} c="#2a2a30" rim="#0a0a0c" />
+      {[[14, 28], [22, 26.6], [30, 27], [36, 30], [19, 32], [28, 32.4]].map(([x, y], i) => (
+        <g key={i}>
+          <path d={`M${x - 3.4},${y + 1.4} L${x - 2.8},${y - 2.4} L${x + 3},${y - 2.6} L${x + 3.6},${y + 1.4} Z`} fill="#e8e4dc" stroke="#a8a090" strokeWidth="0.35" opacity="0.92" />
+          <path d={`M${x - 2.8},${y - 2.4} L${x + 3},${y - 2.6} L${x + 2.4},${y - 1} L${x - 2},${y - 0.8} Z`} fill="#fff" opacity="0.6" />
+        </g>
+      ))}
+      <path d="M10,26 q14,-6 28,0" stroke="#2a0e04" strokeWidth="1.8" fill="none" opacity="0.7" />
+      <path d="M12,28 q12,-4 24,2" stroke="#c8a870" strokeWidth="2" fill="none" opacity="0.6" />
+    </g>
+  );
+}
+function FoodKnAme() {
+  return (
+    <g>
+      <Food1Shadow rx={16} />
+      <path d="M10,24 L38,24 L36,40 L12,40 Z" fill="#f4ecd8" stroke="#8a7a5a" strokeWidth="0.5" />
+      <path d="M10,24 L38,24 L37.6,27 L10.4,27 Z" fill="#c82a1a" />
+      {Array.from({ length: 9 }, (_, i) => (
+        <g key={i}>
+          <circle cx={14 + (i % 4) * 6.4 + (i > 3 ? 3 : 0)} cy={31 + Math.floor(i / 4) * 4} r="2.4" fill="#fbf8f0" stroke="#c8c0b0" strokeWidth="0.3" />
+          <path d={`M${12.4 + (i % 4) * 6.4 + (i > 3 ? 3 : 0)} ${31 + Math.floor(i / 4) * 4} h3.2`} stroke={i % 2 ? "#e85a6a" : "#5a8ac8"} strokeWidth="0.7" />
+        </g>
+      ))}
+      <path d="M16,24 L20,14 L28,14 L32,24" stroke="#c8a888" strokeWidth="0.6" fill="none" />
+    </g>
+  );
+}
+function FoodKnCurry() {
+  return (
+    <g>
+      <Food4Plate cy={31} c="#f4f0e8" />
+      <path d="M8,30 Q10,24 20,24 Q26,24 26,30 Q20,35 8,30 Z" fill="#fbf8f0" stroke="#d8d0c0" strokeWidth="0.35" />
+      <path d="M22,26 Q28,22 36,24 Q42,28 38,33 Q30,36 22,32 Q20,29 22,26 Z" fill="#a8641a" stroke="#5a3008" strokeWidth="0.4" />
+      {[[27, 27], [32, 26], [34, 30], [28, 31]].map(([x, y], i) => <rect key={i} x={x} y={y} width="2.6" height="2.2" rx="0.5" fill={i % 2 ? "#f08a2a" : "#f0e0b0"} stroke="#0003" strokeWidth="0.2" />)}
+      <ellipse cx="16" cy="36" rx="5" ry="1.8" fill="#e8f4ff" stroke="#a8c0d8" strokeWidth="0.35" opacity="0.8" />
+      <path d="M12,22 l4,-4 l3,1" stroke="#1a3a6a" strokeWidth="0.9" fill="none" />
+    </g>
+  );
+}
+function FoodKnMisakimaguro() {
+  return (
+    <Food5Don bowl={{ body: "#1e3a5a", light: "#3a5a7a", dark: "#0a1a2a", rim: "#000" }}>
+      {[[13, 21.6, -26], [18.4, 19.8, -12], [24, 19.2, 0], [29.6, 19.8, 12], [35, 21.6, 26]].map(([x, y, r], i) => (
+        <Food4Slice key={i} x={x} y={y} rot={r} w={6.4} h={3.4} c="#b81a2a" l="#e85a60" />
+      ))}
+      {[[17, 24.4], [23, 24.8], [29, 24.4]].map(([x, y], i) => <Food4Slice key={i} x={x} y={y} w={5.6} h={3} c="#e86a7a" l="#ffc0c8" />)}
+      <path d="M33,25 q2,-2 4,-0.6" stroke="#5aa04a" strokeWidth="1" fill="none" />
+    </Food5Don>
+  );
+}
+function FoodKnDaikon() {
+  return (
+    <g>
+      <Food4Wan body="#3a2a1a" light="#5a4a32" rim="#140c04" inner="#1c140a" />
+      <ellipse cx="24" cy="22.2" rx="13.6" ry="4" fill="#c8a060" />
+      <g>
+        <ellipse cx="24" cy="21.6" rx="8" ry="3.4" fill="#f8f2dc" stroke="#c8b888" strokeWidth="0.45" />
+        <path d="M16,21.6 L16,18.6 Q24,15.4 32,18.6 L32,21.6" fill="#f2e8c8" stroke="#c8b888" strokeWidth="0.4" />
+        <ellipse cx="24" cy="18.6" rx="8" ry="3.2" fill="#fbf6e4" stroke="#c8b888" strokeWidth="0.45" />
+        <path d="M20,18.4 q4,-2 8,0 q-4,2 -8,0 Z" fill="#a8641a" />
+      </g>
+      <path d="M28,17 l3,-1" stroke="#f08a2a" strokeWidth="0.9" />
+      <Food1Steam x={24} y={11} s={0.8} />
+    </g>
+  );
+}
+function FoodKnShirasu() {
+  return (
+    <Food5Don bowl={{ body: "#e8f0f4", light: "#fff", dark: "#a8b8c4", rim: "#5a6a7a", band: "#4a8ab8" }}>
+      <ellipse cx="24" cy="22" rx="14" ry="4.4" fill="#f4ecd8" />
+      {Array.from({ length: 34 }, (_, i) => {
+        const a = i * 2.4, rr = Math.sqrt((i + 0.5) / 34);
+        const x = 24 + Math.cos(a) * rr * 13, y = 22 + Math.sin(a) * rr * 3.8;
+        return <path key={i} d={`M${x.toFixed(1)} ${y.toFixed(1)} q1 -0.6 2 0`} stroke="#fbf8f0" strokeWidth="0.7" fill="none" strokeLinecap="round" />;
+      })}
+      <ellipse cx="24" cy="21.4" rx="1.8" ry="1.3" fill="#f4b42a" stroke="#b88a0a" strokeWidth="0.3" />
+      <path d="M28,20 q2,-2 4,-0.4" stroke="#5aa04a" strokeWidth="1" fill="none" />
+    </Food5Don>
+  );
+}
+function FoodKnTakosenbei() {
+  return (
+    <g>
+      <Food1Shadow rx={20} />
+      <ellipse cx="24" cy="28" rx="20" ry="12" fill="#e8d8b8" stroke="#a8906a" strokeWidth="0.55" />
+      <ellipse cx="24" cy="27.6" rx="18" ry="10.4" fill="#f2e6c8" />
+      {[[16, 25, 0], [30, 24, 30], [22, 32, -20], [32, 31, 10]].map(([x, y, r], i) => (
+        <g key={i} transform={`translate(${x},${y}) rotate(${r})`}>
+          <ellipse rx="3" ry="2" fill="#c84a3a" opacity="0.8" />
+          {[-2, 0, 2].map((d) => <path key={d} d={`M${d} 1 q0.6 2 -0.4 3`} stroke="#c84a3a" strokeWidth="0.7" fill="none" opacity="0.8" />)}
+        </g>
+      ))}
+      <path d="M8,22 Q24,14 40,22" stroke="#fff" strokeWidth="0.8" fill="none" opacity="0.5" />
+    </g>
+  );
+}
+function FoodKnYasai() {
+  return (
+    <g>
+      <Food4Plate cy={31} c="#f4f0e8" />
+      {[[13, 28, "#5aa04a"], [18, 25, "#7ac04a"], [30, 25, "#4a8a3a"], [35, 29, "#8ac050"]].map(([x, y, c], i) => (
+        <path key={i} d={`M${x - 4},${y} Q${x},${y - 6} ${x + 4},${y} Q${x},${y + 3} ${x - 4},${y} Z`} fill={c} stroke="#2a5a1a" strokeWidth="0.35" />
+      ))}
+      <circle cx="21" cy="29" r="2.6" fill="#e8303a" stroke="#7a0a10" strokeWidth="0.35" />
+      <circle cx="27" cy="30" r="2.2" fill="#f4c42a" stroke="#9a7a0a" strokeWidth="0.35" />
+      <path d="M23,25 l6,-2 l-1,2 Z" fill="#f08a2a" />
+      <ellipse cx="25" cy="26" rx="2.6" ry="1.4" fill="#a84a8a" />
+      <ellipse cx="17" cy="32" rx="2" ry="1.2" fill="#f4e0e8" stroke="#c8a0b0" strokeWidth="0.3" />
+    </g>
+  );
+}
+function FoodKnShirokoro() {
+  return (
+    <g>
+      <Food4Grill />
+      {[[14, 27], [22, 25.4], [30, 27], [36, 30], [18, 31.6], [27, 32]].map(([x, y], i) => (
+        <g key={i}>
+          <path d={`M${x - 3.6},${y} Q${x - 3.6},${y - 3.4} ${x},${y - 3.4} Q${x + 3.6},${y - 3.4} ${x + 3.6},${y} Q${x + 3.6},${y + 2.4} ${x},${y + 2.4} Q${x - 3.6},${y + 2.4} ${x - 3.6},${y} Z`} fill="#f0dcc8" stroke="#8a6a50" strokeWidth="0.4" />
+          <path d={`M${x - 2.6},${y - 1} q2.6 -2 5.2 0`} stroke="#c8a080" strokeWidth="0.5" fill="none" />
+          <path d={`M${x - 1.6},${y + 1} l3,0`} stroke="#6a3a1a" strokeWidth="0.6" opacity="0.6" />
+        </g>
+      ))}
+      <Food1Steam x={24} y={16} s={0.8} />
+    </g>
+  );
+}
+function FoodKnTofu() {
+  return (
+    <g>
+      <Food4Wan body="#2a1a10" light="#4a3420" rim="#0c0604" inner="#140a04" />
+      <ellipse cx="24" cy="22.2" rx="13.6" ry="4" fill="#e8ecf0" opacity="0.6" />
+      {[[19, 21], [27, 21], [23, 23.6]].map(([x, y], i) => (
+        <g key={i}>
+          <path d={`M${x - 3.4},${y} L${x - 2.4},${y - 2.6} L${x + 3.4},${y - 2.6} L${x + 3.4},${y + 0.4} L${x - 2.4},${y + 0.6} Z`} fill="#fbfaf4" stroke="#c8c4b8" strokeWidth="0.35" />
+          <path d={`M${x - 2.4},${y - 2.6} L${x + 3.4},${y - 2.6} L${x + 2.6},${y - 1.6} L${x - 2},${y - 1.6} Z`} fill="#fff" />
+        </g>
+      ))}
+      <path d="M30,23.6 l4,-0.6" stroke="#3a8a3a" strokeWidth="1" />
+      <ellipse cx="15" cy="22" rx="1.6" ry="0.8" fill="#f4e0a0" />
+      <Food1Steam x={24} y={13} s={0.8} />
+    </g>
+  );
+}
+function FoodKnWakasagi() {
+  return (
+    <g>
+      <Food4Plate cy={32} c="#f4f0e8" />
+      <path d="M7,30 q8,-6 15,-4 l-2,3 q-6,-1 -13,1 Z" fill="#fff" stroke="#c8c0b0" strokeWidth="0.3" />
+      {[[20, 26, -16], [28, 26.6, 10], [24, 30, -4], [32, 31, 18], [18, 33, 6]].map(([x, y, r], i) => (
+        <g key={i} transform={`translate(${x},${y}) rotate(${r})`}>
+          <path d="M-5,0 Q-2,-2 3,-1 L5,-2.2 L5,2.2 L3,1 Q-2,2 -5,0 Z" fill="#e8c070" stroke="#9a6a1a" strokeWidth="0.4" />
+          <circle cx="-3.6" cy="-0.3" r="0.5" fill="#3a2a1a" />
+        </g>
+      ))}
+      <path d="M37,25 l4,-1.6 l1,1.6 l-4,1.6 Z" fill="#f4e050" />
+    </g>
+  );
+}
+function FoodKnKamaboko() {
+  return (
+    <g>
+      <Food4Board x={4} y={30} w={40} h={8} c="#d8b080" d="#8a6a3a" />
+      {[[14, 0], [22, 1], [30, 2]].map(([x, k]) => (
+        <g key={k}>
+          <path d={`M${x - 5},31 L${x - 5},${25 - k * 0.4} Q${x},${19 - k * 0.4} ${x + 5},${25 - k * 0.4} L${x + 5},31 Z`} fill="#fbf8f0" stroke="#c8c0b0" strokeWidth="0.45" />
+          <path d={`M${x - 5},${25 - k * 0.4} Q${x},${19 - k * 0.4} ${x + 5},${25 - k * 0.4} L${x + 5},${26.6 - k * 0.4} Q${x},${21 - k * 0.4} ${x - 5},${26.6 - k * 0.4} Z`} fill={k === 1 ? "#fbf8f0" : "#e85a6a"} />
+        </g>
+      ))}
+      <path d="M36,31 L36,26 Q40,22 44,26 L44,31 Z" fill="#e85a6a" stroke="#a82a3a" strokeWidth="0.45" />
+    </g>
+  );
+}
+function FoodKnKurotamago() {
+  return (
+    <g>
+      <Food1Shadow rx={16} />
+      <path d="M8,30 Q8,40 24,40 Q40,40 40,30 Z" fill="#c8b088" stroke="#6a5030" strokeWidth="0.5" />
+      {[[16, 27], [24, 25], [32, 27], [20, 31], [28, 31]].map(([x, y], i) => (
+        <g key={i}>
+          <ellipse cx={x} cy={y} rx="4" ry="5" fill="#1a1a1e" stroke="#000" strokeWidth="0.4" />
+          <ellipse cx={x - 1.4} cy={y - 2} rx="1.2" ry="1.6" fill="#5a5a64" opacity="0.7" />
+        </g>
+      ))}
+      <path d="M14,18 c-1.4,-2 1.4,-3.4 0,-5.4 M24,16 c-1.4,-2 1.4,-3.4 0,-5.4 M34,18 c-1.4,-2 1.4,-3.4 0,-5.4" stroke="#e8e8f0" strokeWidth="0.9" fill="none" opacity="0.5" />
+    </g>
+  );
+}
+function FoodKnUmeboshi() {
+  return (
+    <g>
+      <Food1Shadow rx={14} />
+      <path d="M10,22 L38,22 L36,40 Q24,42 12,40 Z" fill="#f4ecd8" stroke="#8a7a5a" strokeWidth="0.5" />
+      <ellipse cx="24" cy="22" rx="14" ry="3.4" fill="#e8dcc0" stroke="#8a7a5a" strokeWidth="0.45" />
+      {[[17, 21.6], [22, 20.4], [27, 21], [31, 22], [20, 23.4], [26, 23.6]].map(([x, y], i) => (
+        <g key={i}>
+          <circle cx={x} cy={y} r="2.6" fill="#c8202a" stroke="#6a0610" strokeWidth="0.35" />
+          <path d={`M${x - 1.6} ${y - 0.4} q1.6 -1 3.2 0`} stroke="#8a0a1a" strokeWidth="0.4" fill="none" />
+          <ellipse cx={x - 1} cy={y - 1} rx="0.7" ry="0.4" fill="#fff" opacity="0.6" />
+        </g>
+      ))}
+      <path d="M12,30 h24" stroke="#c82a1a" strokeWidth="1.2" opacity="0.6" />
+    </g>
+  );
+}
+
+function FoodSaNegima() {
+  return (
+    <g>
+      <Food4Plate cy={33} />
+      {[[10, 0], [20, 1]].map(([x, k]) => (
+        <g key={k}>
+          <Food5Skewer x1={x - 2} y1={37} x2={x + 14} y2={10} />
+          {[0, 1, 2, 3].map((j) => (j % 2
+            ? <rect key={j} x={x - 1 + j * 3.2} y={28 - j * 5.4} width="4.4" height="4" rx="1.4" fill="#f4f0e0" stroke="#8a8a6a" strokeWidth="0.35" transform={`rotate(-30 ${x + 1.2 + j * 3.2} ${30 - j * 5.4})`} />
+            : <rect key={j} x={x - 1 + j * 3.2} y={28 - j * 5.4} width="4.6" height="4.2" rx="1.2" fill="#c8884a" stroke="#5a2a0a" strokeWidth="0.35" transform={`rotate(-30 ${x + 1.2 + j * 3.2} ${30 - j * 5.4})`} />))}
+        </g>
+      ))}
+      <path d="M36,30 q2,-3 5,-2" stroke="#5aa04a" strokeWidth="1.4" fill="none" strokeLinecap="round" />
+    </g>
+  );
+}
+function FoodChSabazuke() {
+  return (
+    <Food5Don bowl={{ body: "#1e3a5a", light: "#3a5a7a", dark: "#0a1a2a", rim: "#000" }}>
+      {[[13, 21.6, -26], [18.4, 19.8, -12], [24, 19.2, 0], [29.6, 19.8, 12], [35, 21.6, 26], [20, 24.4, -4], [28, 24.4, 6]].map(([x, y, r], i) => (
+        <g key={i} transform={`translate(${x},${y}) rotate(${r})`}>
+          <rect x="-3.2" y="-1.6" width="6.4" height="3.2" rx="1.2" fill="#c8a090" stroke="#4a3a40" strokeWidth="0.3" />
+          <rect x="-3.2" y="-1.6" width="6.4" height="1.2" rx="0.6" fill="#5a6a8a" />
+        </g>
+      ))}
+      <path d="M32,25 q2,-2 4,-0.6" stroke="#5aa04a" strokeWidth="1" fill="none" />
+      <g fill="#f4ecd8">{[[16, 23], [25, 22.6], [31, 23]].map(([x, y], i) => <circle key={i} cx={x} cy={y} r="0.35" />)}</g>
+    </Food5Don>
+  );
+}
+
+const FOOD_ART_5 = {
+  tc_gyoza: FoodTcGyoza, tc_ichigo: FoodTcIchigo, tc_kanpyo: FoodTcKanpyo,
+  tc_sanoramen: FoodTcSanoramen, tc_imofry: FoodTcImofry, tc_shumai: FoodTcShumai,
+  tc_nasusoft: FoodTcNasusoft, tc_cheesecake: FoodTcCheesecake, tc_soupyakisoba: FoodTcSoupyakisoba,
+  tc_yuba: FoodTcYuba, tc_mizuyokan: FoodTcMizuyokan, tc_kakigori: FoodTcKakigori,
+  gu_okkirikomi: FoodGuOkkirikomi, gu_yakimanju: FoodGuYakimanju, gu_sourcekatsu: FoodGuSourcekatsu,
+  gu_dengaku: FoodGuDengaku, gu_negi: FoodGuNegi, gu_pasta: FoodGuPasta,
+  gu_himokawa: FoodGuHimokawa, gu_otayakisoba: FoodGuOtayakisoba, gu_hanapan: FoodGuHanapan,
+  gu_maitake: FoodGuMaitake, gu_onsenmanju: FoodGuOnsenmanju, gu_ringo: FoodGuRingo,
+  sa_unagi: FoodSaUnagi, sa_gokabo: FoodSaGokabo, sa_daruma: FoodSaDaruma,
+  sa_sokasenbei: FoodSaSokasenbei, sa_kazoudon: FoodSaKazoudon, sa_namazu: FoodSaNamazu,
+  sa_nori: FoodSaNori, sa_warabimochi: FoodSaWarabimochi, sa_motsuyaki: FoodSaMotsuyaki,
+  sa_kawagoeimo: FoodSaKawagoeimo, sa_sayamacha: FoodSaSayamacha, sa_yakitori: FoodSaYakitori,
+  sa_jellyfry: FoodSaJellyfry, sa_inari: FoodSaInari, sa_waraji: FoodSaWaraji,
+  sa_misopotato: FoodSaMisopotato, sa_kurumisoba: FoodSaKurumisoba, sa_negima: FoodSaNegima,
+  ch_nashi: FoodChNashi, ch_yagiri: FoodChYagiri, ch_shoyusoft: FoodChShoyusoft,
+  ch_misopi: FoodChMisopi, ch_honbinos: FoodChHonbinos, ch_hamaguri: FoodChHamaguri,
+  ch_rakkasei: FoodChRakkasei, ch_suika: FoodChSuika, ch_teyakisenbei: FoodChTeyakisenbei,
+  ch_naritaunagi: FoodChNaritaunagi, ch_teppozuke: FoodChTeppozuke, ch_yokan: FoodChYokan,
+  ch_dango: FoodChDango, ch_takomai: FoodChTakomai, ch_imosweets: FoodChImosweets,
+  ch_nuresenbei: FoodChNuresenbei, ch_iwashi: FoodChIwashi, ch_sabazuke: FoodChSabazuke,
+  ch_namerou: FoodChNamerou, ch_biwa: FoodChBiwa, ch_iseebi: FoodChIseebi,
+  ch_takeoka: FoodChTakeoka, ch_asari: FoodChAsari, ch_gelato: FoodChGelato,
+  tk_monja: FoodTkMonja, tk_ningyoyaki: FoodTkNingyoyaki, tk_fukagawa: FoodTkFukagawa,
+  tk_sushi: FoodTkSushi, tk_anago: FoodTkAnago, tk_tsukudani: FoodTkTsukudani,
+  tk_jindaiji: FoodTkJindaiji, tk_hachioji: FoodTkHachioji, tk_yamame: FoodTkYamame,
+  tk_shimazushi: FoodTkShimazushi, tk_ashitaba: FoodTkAshitaba, tk_passion: FoodTkPassion,
+  kn_shumai: FoodKnShumai, kn_iekei: FoodKnIekei, kn_sanmaa: FoodKnSanmaa,
+  kn_tantanmen: FoodKnTantanmen, kn_kuzumochi: FoodKnKuzumochi, kn_ame: FoodKnAme,
+  kn_curry: FoodKnCurry, kn_misakimaguro: FoodKnMisakimaguro, kn_daikon: FoodKnDaikon,
+  kn_shirasu: FoodKnShirasu, kn_takosenbei: FoodKnTakosenbei, kn_yasai: FoodKnYasai,
+  kn_shirokoro: FoodKnShirokoro, kn_tofu: FoodKnTofu, kn_wakasagi: FoodKnWakasagi,
+  kn_kamaboko: FoodKnKamaboko, kn_kurotamago: FoodKnKurotamago, kn_umeboshi: FoodKnUmeboshi,
+};
+
+/* ==== 中部のご当地グルメの絵（2026-10-10）。⚠️ viewBox 0 0 48 48・静止・defs と id を使わない ==== */
+/* ざるの麺（太さ・色・つゆ） */
+function Food6Zaru({ c = "#a89a7a", w = 0.9, n = 9, dip = "#5a3410", tray = "zaru", top }) {
+  const strands = [];
+  for (let i = 0; i < n; i++) {
+    const y = 24 + i * (11 / n), half = 13 - Math.abs(i - n / 2) * (8 / n);
+    const d = `M${(24 - half).toFixed(2)} ${y.toFixed(2)} Q24 ${(y - 2.4).toFixed(2)} ${(24 + half).toFixed(2)} ${y.toFixed(2)}`;
+    strands.push(<path key={i} d={d} stroke="#00000055" strokeWidth={w + 0.6} fill="none" strokeLinecap="round" />);
+    strands.push(<path key={`h${i}`} d={d} stroke={c} strokeWidth={w} fill="none" strokeLinecap="round" />);
+  }
+  return (
+    <g>
+      {tray === "zaru" ? <Food4Zaru cx={24} cy={30} /> : <Food4Board x={3} y={22} w={42} h={16} c="#b88a4a" d="#6a4a1a" />}
+      {strands}
+      {top}
+      <ellipse cx="41" cy="15" rx="5" ry="2.4" fill="#f4f0e8" stroke="#8a8070" strokeWidth="0.4" />
+      <ellipse cx="41" cy="14.6" rx="3.8" ry="1.6" fill={dip} />
+    </g>
+  );
+}
+/* 皿に並べた菓子（四角） */
+function Food6Blocks({ c = "#f4e8cc", top = "#fff8e8", d = "#a8906a", plate = "#e8dcc8", rim, pts = [[14, 28], [24, 26], [34, 28], [19, 32.6], [29, 32.6]], w = 8, h = 3.4, deco }) {
+  return (
+    <g>
+      <Food4Plate cy={34} c={plate} rim={rim} />
+      {pts.map(([x, y], i) => (
+        <g key={i}>
+          <rect x={x - w / 2} y={y - 0.4} width={w} height={h * 0.7} rx="0.6" fill={d} opacity="0.85" />
+          <rect x={x - w / 2} y={y - h} width={w} height={h} rx="0.8" fill={c} stroke={d} strokeWidth="0.4" />
+          <rect x={x - w / 2 + 0.6} y={y - h + 0.4} width={w - 1.2} height={h * 0.35} rx="0.4" fill={top} opacity="0.8" />
+          {deco && deco(x, y - h / 2, i)}
+        </g>
+      ))}
+    </g>
+  );
+}
+/* 皿に並べた丸い菓子 */
+function Food6Rounds({ c = "#f4efe4", d = "#b8ac98", plate = "#e8dcc8", rim, pts = [[15, 29], [24, 27], [33, 29], [19.6, 33], [28.4, 33]], r = 4, deco }) {
+  return (
+    <g>
+      <Food4Plate cy={34} c={plate} rim={rim} />
+      {pts.map(([x, y], i) => (
+        <g key={i}>
+          <ellipse cx={x} cy={y + 0.6} rx={r} ry={r * 0.72} fill={d} />
+          <ellipse cx={x} cy={y} rx={r} ry={r * 0.72} fill={c} stroke={d} strokeWidth="0.4" />
+          <ellipse cx={x - r * 0.35} cy={y - r * 0.32} rx={r * 0.35} ry={r * 0.16} fill="#fff" opacity="0.5" />
+          {deco && deco(x, y, i)}
+        </g>
+      ))}
+    </g>
+  );
+}
+/* 焼き魚一尾（皿） */
+function Food6GrilledFish({ c = "#8a9aa8", belly = "#e8e4dc", plate = "#f4f0e8", len = 30, side = "lemon" }) {
+  return (
+    <g>
+      <Food4Plate cy={31} rx={20} c={plate} />
+      <Food4Fish x={23} y={28} len={len} c={c} belly={belly} grill />
+      {side === "lemon" && <path d="M36,33 l5,-2 l1,2 l-5,2 Z" fill="#f4e050" stroke="#b8a020" strokeWidth="0.3" />}
+      {side === "daikon" && <ellipse cx="13" cy="34" rx="3" ry="1.4" fill="#f4f4f0" stroke="#c8c8c0" strokeWidth="0.3" />}
+      <path d="M36,25 l2,-3" stroke="#d8c890" strokeWidth="0.6" opacity="0" />
+    </g>
+  );
+}
+/* 果物の盛り（丸） */
+function Food6Fruit({ c = "#f08a2a", d = "#9a4a0a", hi = "#fff", leaf = "#4a9a3a", pts = [[15, 30], [33, 30], [24, 22]], r = 7.4, stem = true }) {
+  return (
+    <g>
+      <Food1Shadow rx={18} />
+      {pts.map(([x, y], i) => (
+        <g key={i}>
+          <circle cx={x} cy={y} r={r} fill={c} stroke={d} strokeWidth="0.5" />
+          <circle cx={x + r * 0.25} cy={y + r * 0.25} r={r * 0.65} fill={d} opacity="0.18" />
+          <ellipse cx={x - r * 0.4} cy={y - r * 0.4} rx={r * 0.22} ry={r * 0.13} fill={hi} opacity="0.6" />
+          {stem && <path d={`M${x},${y - r} q0.4,-1.6 1.4,-2.2`} stroke="#5a3a1a" strokeWidth="0.7" fill="none" />}
+        </g>
+      ))}
+      <path d={`M${pts[pts.length - 1][0] + 1.4},${pts[pts.length - 1][1] - r - 1.6} q3,-2.4 5.6,-0.6 q-2.8,1.6 -5.6,0.6 Z`} fill={leaf} />
+    </g>
+  );
+}
+/* 汁椀＋具 */
+function Food6Soup({ wan = {}, broth = "#c8a06a", children }) {
+  return (
+    <g>
+      <Food4Wan {...wan} />
+      <ellipse cx="24" cy="22.2" rx="13.6" ry="4" fill={broth} />
+      {children}
+      <Food1Steam x={24} y={13} s={0.8} />
+    </g>
+  );
+}
+/* 串の団子・餅 */
+function Food6Kushi({ sticks = [[16, 0], [30, 1]], r = 3.4, c = "#e0b880", d = "#9a7a4a", glaze }) {
+  return (
+    <g>
+      <Food4Plate cy={34} />
+      {sticks.map(([x, k]) => (
+        <g key={k}>
+          <Food5Skewer x1={x - 6} y1={38} x2={x + 6} y2={12} />
+          {[0, 1, 2].map((j) => (
+            <g key={j}>
+              <Food4Ball x={x - 2.4 + j * 3.6} y={31 - j * 7.4} r={r} c={c} d={d} />
+              {glaze && <path d={`M${x - 5.4 + j * 3.6} ${31 - j * 7.4} q3 -2.4 6 0`} stroke={glaze} strokeWidth="1.2" fill="none" opacity="0.85" />}
+            </g>
+          ))}
+        </g>
+      ))}
+    </g>
+  );
+}
+
+/* ---- 新潟 ---- */
+function FoodNiTarekatsu() {
+  return (
+    <Food5Don bowl={{ body: "#1a1a1e", light: "#3a3a42", dark: "#0a0a0c", rim: "#000", band: "#c82a1a" }} steam>
+      {[[13, 21, -14], [19, 19.4, -4], [25, 19, 4], [31, 19.6, 10], [35.4, 21.6, 20]].map(([x, y, r], i) => (
+        <g key={i} transform={`translate(${x},${y}) rotate(${r})`}>
+          <ellipse rx="3.6" ry="2.4" fill="#6a2a08" stroke="#2a0c04" strokeWidth="0.35" />
+          <ellipse cy="-0.4" rx="2.8" ry="1.4" fill="#a8521a" />
+          {[-1.4, 0.4, 1.8].map((d) => <circle key={d} cx={d} cy="-0.6" r="0.35" fill="#d8904a" />)}
+        </g>
+      ))}
+    </Food5Don>
+  );
+}
+function FoodNiSasadango() {
+  return (
+    <g>
+      <Food4Plate cy={34} c="#e8dcc8" />
+      {[[16, 28, -20], [30, 28, 16], [23, 33, -4]].map(([x, y, r], i) => (
+        <g key={i} transform={`translate(${x},${y}) rotate(${r})`}>
+          <path d="M-8,0 Q-4,-5.6 3,-4 Q8,-2 9,0 Q8,2 3,4 Q-4,5.6 -8,0 Z" fill="#3a7a2a" stroke="#1a3a10" strokeWidth="0.45" />
+          <path d="M-6,0 H7" stroke="#6aa04a" strokeWidth="0.4" />
+          <path d="M-4,-3 L-3,3 M2,-3.6 L3,3.6" stroke="#e8dcc0" strokeWidth="0.9" />
+          <path d="M9,0 l3,-1" stroke="#7a5a2a" strokeWidth="0.6" />
+        </g>
+      ))}
+    </g>
+  );
+}
+function FoodNiNoppe() {
+  return (
+    <Food6Soup wan={{ body: "#7a1a14", light: "#a83a2a", rim: "#2a0604", inner: "#3a0a06" }} broth="#c8a878">
+      {[[17, 21.6], [21, 20.4], [27, 20.6], [31, 22], [23, 23.4]].map(([x, y], i) => (
+        <rect key={i} x={x - 1.4} y={y - 0.9} width="2.8" height="1.8" rx="0.4" fill={["#f08a2a", "#e8dcc0", "#8a5a3a", "#f4f0e0", "#c8a060"][i]} stroke="#0003" strokeWidth="0.2" />
+      ))}
+      <ellipse cx="14.6" cy="22.4" rx="1.6" ry="0.9" fill="#4a7a2a" />
+      <Food4Ikura pts={[[26, 23.6], [27.4, 23.8]]} />
+    </Food6Soup>
+  );
+}
+function FoodNiHegisoba() {
+  return (
+    <g>
+      <Food4Board x={4} y={22} w={40} h={16} c="#c8a070" d="#7a5a30" />
+      {[0, 1, 2].map((r) => [0, 1, 2, 3].map((c) => (
+        <g key={`${r}${c}`} transform={`translate(${11 + c * 8.6},${26 + r * 4.6})`}>
+          <ellipse rx="4" ry="2.1" fill="#4a5a3a" />
+          <path d="M-3.4,0 q1.2,-1.2 2.4,0 t2.4,0 t2.2,0 M-3,0.9 q1.2,-1 2.4,0 t2.4,0" stroke="#8a9a6a" strokeWidth="0.5" fill="none" />
+        </g>
+      )))}
+      <ellipse cx="41" cy="15" rx="5" ry="2.4" fill="#f4f0e8" stroke="#8a8070" strokeWidth="0.4" />
+      <ellipse cx="41" cy="14.6" rx="3.8" ry="1.6" fill="#5a3410" />
+    </g>
+  );
+}
+function FoodNiKakinotane() {
+  return (
+    <g>
+      <Food4Plate cy={34} c="#e8e0cc" />
+      {Array.from({ length: 16 }, (_, i) => {
+        const x = 11 + (i * 7.3) % 26, y = 25 + ((i * 3.7) % 10);
+        const pea = i % 4 === 3;
+        return pea
+          ? <ellipse key={i} cx={x} cy={y} rx="1.6" ry="1.1" fill="#f0dca8" stroke="#a8884a" strokeWidth="0.3" />
+          : <path key={i} d="M-2.6,0.6 Q-1,-1.4 2.6,-0.8 Q0,1.4 -2.6,0.6 Z" transform={`translate(${x},${y}) rotate(${(i * 41) % 90 - 45})`} fill="#c8541a" stroke="#6a2008" strokeWidth="0.3" />;
+      })}
+    </g>
+  );
+}
+function FoodNiShogaramen() {
+  return (
+    <Food5Ramen bowl={{ body: "#f2ece0", light: "#fff", dark: "#b8ae9a", rim: "#7a7060", band: "#c82a1a" }} broth="#5a2a10" noodle="#f2d070">
+      <Food1Chashu x={15} y={20.6} r={3.6} rot={-10} />
+      <path d="M26,19 l6,-0.4 l-0.4,2 l-6,0.4 Z" fill="#c8a050" stroke="#7a5a20" strokeWidth="0.3" />
+      <path d="M30,23 l5,-1" stroke="#2a3a1e" strokeWidth="1.6" />
+      {[[22, 22], [23.4, 23], [21, 23.4]].map(([x, y], i) => <rect key={i} x={x} y={y} width="1.4" height="0.6" fill="#f4d870" />)}
+    </Food5Ramen>
+  );
+}
+function FoodNiSasazushi() {
+  return (
+    <g>
+      <Food4Board x={3} y={26} w={42} h={12} c="#c8a070" d="#7a5a30" />
+      {[10, 20, 30, 38].map((x, i) => (
+        <g key={i} transform={`translate(${x},${30})`}>
+          <path d="M-5,2 Q-6,-4 0,-6 Q6,-4 5,2 Q0,4 -5,2 Z" fill="#3a7a2a" stroke="#1a3a10" strokeWidth="0.4" />
+          <ellipse cy="-1" rx="3.6" ry="2.6" fill="#fbf8f0" />
+          <circle cx="-1" cy="-1.6" r="0.9" fill={["#f08a5a", "#e8c040", "#7a5a3a", "#e85a6a"][i]} />
+          <circle cx="1.2" cy="-0.6" r="0.7" fill="#4a9a3a" />
+        </g>
+      ))}
+    </g>
+  );
+}
+function FoodNiItoigawa() {
+  return (
+    <g>
+      <Food4Plate cy={31} c="#f4f0e8" />
+      <Food4Noodles cx={24} cy={29.6} rx={15} ry={4.8} c="#1e1a1a" n={6} w={1.2} />
+      <path d="M14,28 q4,-2 8,0" stroke="#d8eab0" strokeWidth="1.4" fill="none" />
+      <path d="M26,27 q3,-2.4 6,-0.4 q-3,1.6 -6,0.4 Z" fill="#e8e0d0" stroke="#5a5048" strokeWidth="0.3" />
+      <ellipse cx="22" cy="27" rx="3" ry="1.8" fill="#fff" stroke="#d8d0c0" strokeWidth="0.3" />
+      <circle cx="22" cy="26.8" r="1" fill="#f4b42a" />
+    </g>
+  );
+}
+function FoodNiSakemanju() {
+  return (
+    <Food6Rounds c="#f8f2e4" d="#b8a888" deco={(x, y) => <circle cx={x} cy={y - 0.4} r="0.6" fill="#c82a2a" />} />
+  );
+}
+function FoodNiBuri() {
+  return (
+    <Food5Don bowl={{ body: "#1e3a5a", light: "#3a5a7a", dark: "#0a1a2a", rim: "#000" }}>
+      {[[13, 21.6, -26], [18.4, 19.8, -12], [24, 19.2, 0], [29.6, 19.8, 12], [35, 21.6, 26], [20, 24.4, -4], [28, 24.4, 6]].map(([x, y, r], i) => (
+        <Food4Slice key={i} x={x} y={y} rot={r} w={6.4} h={3.4} c="#f0c8b8" l="#a8303a" />
+      ))}
+      <path d="M33,25 q2,-2 4,-0.6" stroke="#5aa04a" strokeWidth="1" fill="none" />
+    </Food5Don>
+  );
+}
+function FoodNiOkesagaki() {
+  return <Food6Fruit c="#f08a1a" d="#8a3a04" pts={[[15, 31], [33, 31], [24, 23]]} r={7.6} leaf="#6a8a2a" />;
+}
+function FoodNiIgoneri() {
+  return (
+    <Food6Blocks c="#5a4a2a" top="#8a7a4a" d="#2a2010" plate="#e8e0cc" w={9} h={3.6}
+      deco={(x, y) => <path d={`M${x - 3} ${y} q1.5 -1 3 0 q1.5 1 3 0`} stroke="#a89a6a" strokeWidth="0.4" fill="none" />} />
+  );
+}
+
+/* ---- 富山 ---- */
+function FoodToHotaruika() {
+  return (
+    <g>
+      <Food4Plate cy={32} c="#1e3a5a" rim="#0a1a2a" />
+      {[[15, 28, -10], [22, 26.6, 6], [29, 28, -6], [34, 31, 14], [19, 32, 4], [27, 32.4, -10]].map(([x, y, r], i) => (
+        <g key={i} transform={`translate(${x},${y}) rotate(${r})`}>
+          <ellipse cx="-1" rx="3" ry="1.6" fill="#a85a5a" stroke="#4a1a1a" strokeWidth="0.3" />
+          {[-0.8, 0, 0.8].map((d) => <path key={d} d={`M2 ${d} l2.4 ${d * 0.8}`} stroke="#a85a5a" strokeWidth="0.5" />)}
+          <circle cx="-2.2" cy="-0.4" r="0.45" fill="#1a1a2a" />
+        </g>
+      ))}
+      <path d="M10,26 q14,-6 28,0" stroke="#f0d870" strokeWidth="1.6" fill="none" opacity="0.7" />
+    </g>
+  );
+}
+function FoodToSuika() {
+  return (
+    <g>
+      <Food1Shadow rx={19} />
+      <ellipse cx="24" cy="27" rx="17" ry="13" fill="#2a7a2a" stroke="#0a3a0a" strokeWidth="0.6" />
+      {[-10, -4, 2, 8].map((d) => <path key={d} d={`M${24 + d} 14.4 Q${24 + d * 1.4} 27 ${24 + d} 39.6`} stroke="#0a3a0a" strokeWidth="1.6" fill="none" />)}
+      <ellipse cx="17" cy="20" rx="4" ry="2" fill="#fff" opacity="0.25" />
+      <path d="M24,14 q1,-3 3,-3.6" stroke="#5a3a1a" strokeWidth="0.9" fill="none" />
+    </g>
+  );
+}
+function FoodToBaimeshi() {
+  return (
+    <Food5Don bowl={{ body: "#3a2a1a", light: "#5a4a32", dark: "#1a0e04", rim: "#0c0602" }} rice={false} base="#d8b070" steam>
+      {[[15, 21], [21, 19.6], [27, 20.4], [32, 22], [19, 23.6], [26, 23.8]].map(([x, y], i) => (
+        <g key={i}><ellipse cx={x} cy={y} rx="2.2" ry="1.4" fill="#8a6a4a" stroke="#3a2a1a" strokeWidth="0.3" /><path d={`M${x - 1.2} ${y} q1.2 -1 2.4 0`} stroke="#c8a888" strokeWidth="0.4" fill="none" /></g>
+      ))}
+      <path d="M30,24 q2,-2 4,-0.4" stroke="#4a9a3a" strokeWidth="1.1" fill="none" />
+    </Food5Don>
+  );
+}
+function FoodToMasuzushi() {
+  return (
+    <g>
+      <Food1Shadow rx={20} />
+      <ellipse cx="24" cy="31" rx="20" ry="8" fill="#c8a060" stroke="#6a4a1a" strokeWidth="0.6" />
+      <ellipse cx="24" cy="30" rx="18" ry="6.6" fill="#3a7a2a" />
+      <path d="M24,23.6 L24,36.4 M10,30 L38,30" stroke="#1a3a10" strokeWidth="0.5" opacity="0" />
+      <path d="M14,30 L24,24 L34,30 L24,36 Z" fill="#f07a5a" stroke="#a83a1a" strokeWidth="0.45" />
+      <path d="M24,24 L24,36 M16,29 L32,31" stroke="#fbf8f0" strokeWidth="0.6" />
+      {[-4, 0, 4].map((d) => <path key={d} d={`M${20 + d} 27 q2 1 4 0`} stroke="#ffb090" strokeWidth="0.5" fill="none" />)}
+    </g>
+  );
+}
+function FoodToBlackramen() {
+  return (
+    <Food5Ramen bowl={{ body: "#1a1a1e", light: "#3a3a42", dark: "#0a0a0c", rim: "#000" }} broth="#1a0a04" noodle="#e8c870" w={1.1}>
+      <Food1Chashu x={15} y={20.6} r={3.6} rot={-10} />
+      <Food1Chashu x={21} y={19.4} r={3.2} rot={4} />
+      <path d="M26,19 l6,-0.4 l-0.4,2 l-6,0.4 Z" fill="#c8a050" stroke="#7a5a20" strokeWidth="0.3" />
+      {[[28, 22.6], [30, 23.4], [26, 23.6], [32, 22]].map(([x, y], i) => <Food1Negi key={i} x={x} y={y} />)}
+      {[[18, 23.6], [20, 24]].map(([x, y], i) => <circle key={i} cx={x} cy={y} r="0.5" fill="#000" />)}
+    </Food5Ramen>
+  );
+}
+function FoodToShiroebi() {
+  return (
+    <Food5Don steam>
+      {[[15, 20.6, -14], [24, 19, 2], [32, 20.6, 14]].map(([x, y, r], i) => (
+        <g key={i} transform={`translate(${x},${y}) rotate(${r})`}>
+          <ellipse rx="6" ry="3.4" fill="#f0d090" stroke="#a87a2a" strokeWidth="0.4" />
+          {[-3, -1, 1, 3].map((d) => <path key={d} d={`M${d} -1.6 q0.8 1.4 0 2.6`} stroke="#f8b0a0" strokeWidth="0.6" fill="none" />)}
+        </g>
+      ))}
+      <path d="M12,24 q12,3 24,0" stroke="#5a2a10" strokeWidth="1.2" fill="none" opacity="0.6" />
+    </Food5Don>
+  );
+}
+function FoodToBuri() {
+  return (
+    <g>
+      <Food4Plate cy={32} c="#f4f0e8" />
+      {[[12, 28], [17, 27], [22, 26.6], [27, 26.6], [32, 27]].map(([x, y], i) => (
+        <g key={i} transform={`translate(${x},${y}) rotate(-8)`}>
+          <rect x="-2.6" y="-4" width="5.2" height="8" rx="0.8" fill="#f2c8b8" stroke="#8a4a3a" strokeWidth="0.35" />
+          <rect x="-2.6" y="-4" width="1.6" height="8" rx="0.6" fill="#b83a3a" />
+          <path d="M-0.4 -3 v6" stroke="#fff" strokeWidth="0.4" opacity="0.6" />
+        </g>
+      ))}
+      <path d="M33,32 q4,-1 6,-3" stroke="#f4f4f0" strokeWidth="2" strokeLinecap="round" />
+      <path d="M36,25 q3,-3 5,-1" stroke="#4a9a3a" strokeWidth="1.2" fill="none" />
+    </g>
+  );
+}
+function FoodToHimiudon() {
+  return <Food6Zaru c="#fbf6ea" w={1.1} n={10} dip="#7a4a1a" />;
+}
+function FoodToKonbujime() {
+  return (
+    <g>
+      <Food4Plate cy={33} c="#e8e0cc" />
+      <rect x="8" y="23" width="32" height="12" rx="1" fill="#3a3a1e" stroke="#1a1a08" strokeWidth="0.5" />
+      {[12, 18, 24, 30].map((x, i) => (
+        <g key={i} transform={`translate(${x + 2},29) rotate(-6)`}>
+          <path d="M-3,-4 L3,-4 L3,4 L-3,4 Z" fill="#f4e4dc" stroke="#a88a7a" strokeWidth="0.35" />
+          <path d="M-2,-3 q2,3 0,6 M1,-3 q2,3 0,6" stroke="#e8c8b8" strokeWidth="0.4" fill="none" />
+        </g>
+      ))}
+      <path d="M9,24 q15,-2 30,0" stroke="#6a6a3a" strokeWidth="0.6" opacity="0.7" fill="none" />
+    </g>
+  );
+}
+function FoodToOkadosomen() {
+  return (
+    <g>
+      <Food1Shadow />
+      <Food1Bowl body="#e8f0f4" light="#fff" dark="#a8b8c4" rim="#5a6a7a" band="#4a8ab8" />
+      <ellipse cx="24" cy="22.6" rx="16.5" ry="5.2" fill="#d8e8f0" />
+      {Array.from({ length: 4 }, (_, k) => (
+        <ellipse key={k} cx={24} cy={22.4} rx={13 - k * 3} ry={4 - k * 0.9} fill="none" stroke="#fbf8f0" strokeWidth="1" />
+      ))}
+      <path d="M30,19 l5,-0.4" stroke="#7ac04a" strokeWidth="1.2" />
+      <path d="M13,20 l3,-1 l0.6,1.6 l-3,1 Z" fill="#e8f4ff" stroke="#a8c8e0" strokeWidth="0.3" />
+    </g>
+  );
+}
+function FoodToGokayamatofu() {
+  return (
+    <g>
+      <Food4Board x={6} y={28} w={36} h={10} c="#5a3a1a" d="#2a1a08" />
+      <path d="M10,28 L18,22 L38,22 L38,30 L30,36 L10,36 Z" fill="#f4f0e4" stroke="#a8a090" strokeWidth="0.5" />
+      <path d="M10,28 L18,22 L38,22 L30,28 Z" fill="#fbfaf4" />
+      <path d="M30,28 L38,22 L38,30 L30,36 Z" fill="#e0dcd0" />
+      <path d="M16,27 h10 M14,31 h12" stroke="#d8d0c0" strokeWidth="0.5" />
+      <path d="M22,16 L22,22" stroke="#b8a888" strokeWidth="0.7" />
+    </g>
+  );
+}
+function FoodToKaburazushi() {
+  return (
+    <g>
+      <Food4Plate cy={33} c="#2a2a30" rim="#0a0a0c" />
+      {[[16, 28], [30, 27], [23, 32]].map(([x, y], i) => (
+        <g key={i}>
+          <ellipse cx={x} cy={y + 1} rx="6" ry="3" fill="#e8e4d8" stroke="#a8a090" strokeWidth="0.4" />
+          <ellipse cx={x} cy={y} rx="6" ry="3" fill="#fbfaf2" stroke="#a8a090" strokeWidth="0.4" />
+          <path d={`M${x - 4},${y - 0.4} Q${x},${y - 2.6} ${x + 4},${y - 0.4} Q${x},${y + 1.2} ${x - 4},${y - 0.4} Z`} fill="#f0b8a8" stroke="#a86a5a" strokeWidth="0.3" />
+          <path d={`M${x - 2} ${y + 1.4} l4 0`} stroke="#f08a2a" strokeWidth="0.7" />
+        </g>
+      ))}
+    </g>
+  );
+}
+
+/* ---- 石川 ---- */
+function FoodIsBoucha() {
+  return (
+    <g>
+      <Food1Shadow rx={16} />
+      <path d="M10,26 Q10,40 22,40 Q34,40 34,26 Z" fill="#f2ece0" stroke="#8a8070" strokeWidth="0.5" />
+      <ellipse cx="22" cy="26" rx="12" ry="3" fill="#f8f4ea" stroke="#8a8070" strokeWidth="0.45" />
+      <ellipse cx="22" cy="26.2" rx="10.6" ry="2.4" fill="#a8641a" />
+      <ellipse cx="19" cy="25.8" rx="3.4" ry="0.6" fill="#d89a4a" opacity="0.7" />
+      {Array.from({ length: 7 }, (_, i) => <path key={i} d={`M${34 + (i % 3) * 3} ${30 + i * 1.2} l2.6 -0.8`} stroke="#8a5a2a" strokeWidth="0.9" strokeLinecap="round" />)}
+      <Food1Steam x={22} y={20} s={0.6} />
+    </g>
+  );
+}
+function FoodIsKomatsuudon() {
+  return (
+    <Food5Ramen bowl={{ body: "#2a1a10", light: "#4a3420", dark: "#0c0604", rim: "#000" }} broth="#d8b878" noodle="#fbf6e8" w={1.1} n={6} wave={0.5}>
+      <path d="M14,20 l5,0 l-0.6,2 l-5,0 Z" fill="#c8a050" stroke="#7a5a20" strokeWidth="0.3" />
+      <ellipse cx="26" cy="20.6" rx="3.4" ry="1.6" fill="#f8f2e4" stroke="#c8b8a0" strokeWidth="0.3" />
+      <path d="M24,20.6 q2,-1 4,0" stroke="#e85a8a" strokeWidth="0.5" fill="none" />
+      <Food1Negi x={31} y={22} /><Food1Negi x={20} y={23.6} />
+    </Food5Ramen>
+  );
+}
+function FoodIsMaruimo() {
+  return (
+    <g>
+      <Food4Plate cy={34} c="#e8e0cc" />
+      {[[17, 28], [31, 28]].map(([x, y], i) => (
+        <g key={i}>
+          <ellipse cx={x} cy={y} rx="7" ry="6" fill="#8a6a4a" stroke="#3a2a1a" strokeWidth="0.5" />
+          {[[-3, -2], [2, -3], [3, 2], [-2, 3], [0, 0]].map(([dx, dy], k) => <path key={k} d={`M${x + dx - 1} ${y + dy} q1 -0.6 2 0`} stroke="#5a4028" strokeWidth="0.4" fill="none" />)}
+        </g>
+      ))}
+      <g transform="translate(24,34)">
+        <ellipse rx="7" ry="3" fill="#8a6a4a" stroke="#3a2a1a" strokeWidth="0.4" />
+        <ellipse rx="6" ry="2.4" fill="#fbf8ec" />
+      </g>
+    </g>
+  );
+}
+function FoodIsKaisendon() {
+  return (
+    <Food5Don bowl={{ body: "#1a1a1e", light: "#3a3a42", dark: "#0a0a0c", rim: "#000", band: "#d8b040" }}>
+      <Food4Slice x={14} y={21} rot={-20} c="#c8283a" />
+      <Food4Slice x={20} y={19} rot={-8} c="#f08a4a" l="#ffc89a" />
+      <ellipse cx="27" cy="19.6" rx="3" ry="2" fill="#f4962a" stroke="#b85a0a" strokeWidth="0.3" />
+      <Food4Slice x={33} y={21.4} rot={20} c="#f4ece0" l="#fff" />
+      <g transform="translate(22,24)"><path d="M-3,0 q3,-3 6,0 q-3,1.6 -6,0 Z" fill="#f08a6a" stroke="#a83a1a" strokeWidth="0.3" /></g>
+      <Food4Ikura pts={[[28, 24], [29.4, 24.6], [30.6, 23.8], [16, 24.6]]} />
+      <rect x="31" y="15.4" width="1.6" height="1.6" fill="#f4d040" transform="rotate(45 31.8 16.2)" />
+    </Food5Don>
+  );
+}
+function FoodIsJibuni() {
+  return (
+    <Food6Soup wan={{ body: "#7a1a14", light: "#a83a2a", rim: "#2a0604", inner: "#3a0a06" }} broth="#8a5a2a">
+      {[[18, 21.4], [24, 20.6], [30, 21.6]].map(([x, y], i) => <ellipse key={i} cx={x} cy={y} rx="3" ry="1.6" fill="#a8603a" stroke="#4a2008" strokeWidth="0.3" />)}
+      <path d="M20,23.4 q2,-1.4 4,0 q-2,1.4 -4,0 Z" fill="#7a4a2a" />
+      <path d="M27,23.4 l4,-0.4" stroke="#3a8a3a" strokeWidth="1.1" />
+      <rect x="14.6" y="22" width="3" height="1.4" rx="0.3" fill="#e8dcc0" />
+      <circle cx="33" cy="23" r="0.8" fill="#4ab03a" />
+    </Food6Soup>
+  );
+}
+function FoodIsKinpaku() {
+  return (
+    <g>
+      <Food1Shadow rx={8} />
+      <path d="M17.6,24 L24,42 L30.4,24 Z" fill="#d89a4a" stroke="#8a5a1a" strokeWidth="0.5" />
+      <path d="M16,24 Q15,20 19,19 Q17,15 22,14 Q21,10 24,7 Q27,10 26,14 Q31,15 29,19 Q33,20 32,24 Z" fill="#f4c83a" stroke="#9a7a0a" strokeWidth="0.5" />
+      <path d="M17,22 Q19,17 24,16 Q29,17 31,22 Q26,20 24,23 Q21,19 17,22 Z" fill="#fae878" opacity="0.8" />
+      <path d="M20,12 L24,8 L27,12 L23,15 Z" fill="#fff4b0" opacity="0.8" />
+      {[[19, 19], [28, 18], [24, 21]].map(([x, y], i) => <path key={i} d={`M${x} ${y} l1.4 -1 l0.6 1.4 Z`} fill="#fff" opacity="0.7" />)}
+    </g>
+  );
+}
+function FoodIsKaki() {
+  return (
+    <g>
+      <Food4Grill />
+      {[[14, 27, -14], [26, 25, 8], [34, 30, 20], [20, 32, -6]].map(([x, y, r], i) => (
+        <g key={i} transform={`translate(${x},${y}) rotate(${r})`}>
+          <path d="M-7,0 Q-6,-5 0,-5 Q7,-5 7,0 Q6,4 0,4 Q-6,4 -7,0 Z" fill="#7a7468" stroke="#2a2620" strokeWidth="0.45" />
+          <path d="M-5.6,0 Q-5,-3.4 0,-3.6 Q5.6,-3.4 5.6,0 Q5,2.6 0,2.6 Q-5,2.6 -5.6,0 Z" fill="#e8e0c8" />
+          <path d="M-3.6,-0.4 Q0,-2.6 3.6,-0.4 Q0,1.6 -3.6,-0.4 Z" fill="#c8b8a0" stroke="#7a6a50" strokeWidth="0.3" />
+        </g>
+      ))}
+      <path d="M31,20 l4,-1.4 l1,1.6 l-4,1.4 Z" fill="#f4e050" />
+      <Food1Steam x={22} y={16} s={0.8} />
+    </g>
+  );
+}
+function FoodIsNotodon() {
+  return (
+    <Food5Don bowl={{ body: "#5a1810", light: "#8a2a1c", dark: "#2a0806", rim: "#140402", band: "#d8b040" }} steam>
+      {[[13, 21, -20], [19, 19.4, -6], [26, 19.4, 8], [33, 21.4, 22]].map(([x, y, r], i) => (
+        <Food4Slice key={i} x={x} y={y} rot={r} w={6.4} h={3.4} c={i % 2 ? "#e85a6a" : "#f0d0c0"} l={i % 2 ? "#ffb0c0" : "#d83a3a"} />
+      ))}
+      <ellipse cx="22" cy="23.6" rx="3" ry="1.6" fill="#f4b42a" stroke="#b88a0a" strokeWidth="0.3" />
+      <path d="M26,24 q3,-2 6,-0.4" stroke="#4a9a3a" strokeWidth="1.1" fill="none" />
+    </Food5Don>
+  );
+}
+function FoodIsEgara() {
+  return (
+    <Food6Rounds c="#f4e8cc" d="#b8a070" deco={(x, y) => (
+      <g>{[-2, -1, 0, 1, 2].map((d) => <circle key={d} cx={x + d * 0.9} cy={y - 0.4 + (d % 2) * 0.6} r="0.6" fill="#f4c43a" stroke="#b88a0a" strokeWidth="0.15" />)}</g>
+    )} />
+  );
+}
+function FoodIsHimono() {
+  return (
+    <g>
+      <Food4Board x={4} y={28} w={40} h={10} c="#c8a070" d="#7a5a30" />
+      {[[14, 26, -4], [26, 25, 6], [36, 27, -2]].map(([x, y, r], i) => (
+        <g key={i} transform={`translate(${x},${y}) rotate(${r})`}>
+          <path d="M0,-9 Q5,-6 5,0 Q4,6 1,8 L2,10 L-2,10 L-1,8 Q-4,6 -5,0 Q-5,-6 0,-9 Z" fill="#d8a878" stroke="#6a4a2a" strokeWidth="0.45" />
+          <path d="M0,-8 L0,8" stroke="#8a6a4a" strokeWidth="0.6" />
+          {[-5, -2, 1, 4].map((d) => <path key={d} d={`M0 ${d} l-3.4 1.4 M0 ${d} l3.4 1.4`} stroke="#b8885a" strokeWidth="0.3" />)}
+        </g>
+      ))}
+    </g>
+  );
+}
+function FoodIsShiomusubi() {
+  return (
+    <g>
+      <Food4Plate cy={34} c="#e8e0cc" />
+      {[[15, 0], [33, 1]].map(([x, k]) => (
+        <g key={k}>
+          <path d={`M${x - 8},31 Q${x - 7},15 ${x},12 Q${x + 7},15 ${x + 8},31 Q${x},34 ${x - 8},31 Z`} fill="#fbf8f0" stroke="#b8ac98" strokeWidth="0.45" />
+          {Array.from({ length: 10 }, (_, i) => <circle key={i} cx={x - 5 + (i * 2.3) % 10} cy={17 + (i * 3.1) % 12} r="0.35" fill="#fff" stroke="#c8d0d8" strokeWidth="0.2" />)}
+        </g>
+      ))}
+      <path d="M22,36 L26,36 L25,39 L23,39 Z" fill="#e8ecf0" stroke="#a8b0b8" strokeWidth="0.3" />
+    </g>
+  );
+}
+function FoodIsYubeshi() {
+  return (
+    <g>
+      <Food4Plate cy={35} c="#e8e0cc" />
+      <circle cx="24" cy="25" r="10" fill="#4a2a10" stroke="#1a0a04" strokeWidth="0.5" />
+      <path d="M14,25 Q24,17 34,25" fill="#6a3a18" opacity="0.6" />
+      <path d="M24,15 q-1.6,-3 0,-5" stroke="#5a3a1a" strokeWidth="0.9" fill="none" />
+      {[[20, 22], [27, 21], [23, 28], [29, 27]].map(([x, y], i) => <ellipse key={i} cx={x} cy={y} rx="1" ry="0.5" fill="#f4d870" opacity="0.7" />)}
+      <path d="M14,32 L34,32" stroke="#c8a888" strokeWidth="0.6" opacity="0" />
+    </g>
+  );
+}
+
+/* ---- 福井 ---- */
+function FoodFkKani() {
+  return (
+    <g>
+      <Food4Plate cy={33} rx={20} c="#1e3a5a" rim="#0a1a2a" />
+      <ellipse cx="24" cy="27" rx="9" ry="6" fill="#d83a1a" stroke="#6a0a04" strokeWidth="0.55" />
+      <ellipse cx="22" cy="25.6" rx="4" ry="2" fill="#f07a5a" opacity="0.8" />
+      {[-1, 1].map((s) => [0, 1, 2, 3].map((k) => (
+        <path key={`${s}${k}`} d={`M${24 + s * 8} ${26 + k * 1.6} Q${24 + s * 14} ${23 + k * 3} ${24 + s * 18} ${28 + k * 2.4}`} stroke="#c82a10" strokeWidth="1.6" fill="none" strokeLinecap="round" />
+      )))}
+      {[-1, 1].map((s) => <path key={s} d={`M${24 + s * 6} 23 Q${24 + s * 10} 15 ${24 + s * 13} 17 L${24 + s * 11} 20`} stroke="#c82a10" strokeWidth="2" fill="none" strokeLinecap="round" />)}
+      <circle cx="22" cy="22.6" r="0.6" fill="#1a1a1a" /><circle cx="26" cy="22.6" r="0.6" fill="#1a1a1a" />
+    </g>
+  );
+}
+function FoodFkSourcekatsu() {
+  return (
+    <Food5Don bowl={{ body: "#1a1a1e", light: "#3a3a42", dark: "#0a0a0c", rim: "#000", band: "#c82a1a" }} steam>
+      {[[15, 21, -12], [24, 19.6, 0], [33, 21, 12]].map(([x, y, r], i) => (
+        <g key={i} transform={`translate(${x},${y}) rotate(${r})`}>
+          <ellipse rx="4.8" ry="3" fill="#4a1a08" stroke="#1a0804" strokeWidth="0.4" />
+          <ellipse cy="0.6" rx="4" ry="1.8" fill="#a8582a" opacity="0.7" />
+        </g>
+      ))}
+    </Food5Don>
+  );
+}
+function FoodFkMizuyokan() {
+  return (
+    <g>
+      <Food1Shadow rx={18} />
+      <rect x="6" y="18" width="36" height="22" rx="1.4" fill="#e8dcc0" stroke="#8a7a5a" strokeWidth="0.5" />
+      <rect x="8" y="20" width="32" height="18" rx="1" fill="#5a1e14" />
+      <path d="M8,20 H40 V22 H8 Z" fill="#8a3a28" opacity="0.6" />
+      {[16, 24, 32].map((x) => <path key={x} d={`M${x} 20 V38`} stroke="#3a0c06" strokeWidth="0.5" />)}
+      <path d="M30,15 L44,26" stroke="#d8c8a0" strokeWidth="1.2" strokeLinecap="round" />
+    </g>
+  );
+}
+function FoodFkOroshisoba() {
+  return (
+    <Food5Ramen bowl={{ body: "#2a1a10", light: "#4a3420", dark: "#0c0604", rim: "#000" }} broth="#6a3a14" noodle="#9a8a6a" w={0.9} steam={false}>
+      <ellipse cx="20" cy="20" rx="5" ry="2.4" fill="#fbf8f0" stroke="#d8d0c0" strokeWidth="0.3" />
+      {[[18, 19.6], [20.6, 20], [19.4, 21]].map(([x, y], i) => <circle key={i} cx={x} cy={y} r="0.4" fill="#e8e4d8" />)}
+      <path d="M26,19.4 q4,-1 8,0" stroke="#e8c080" strokeWidth="1.6" fill="none" />
+      <Food1Negi x={30} y={22.6} /><Food1Negi x={28} y={23.4} />
+    </Food5Ramen>
+  );
+}
+function FoodFkSatoimo() {
+  return (
+    <g>
+      <Food4Wan body="#5a1810" light="#8a2a1c" rim="#2a0604" inner="#2a0a06" />
+      {[[18, 21], [24, 20], [30, 21.4], [21, 23.6], [27, 23.6]].map(([x, y], i) => (
+        <g key={i}>
+          <ellipse cx={x} cy={y} rx="3" ry="2.2" fill="#c8a070" stroke="#6a4a1a" strokeWidth="0.35" />
+          <ellipse cx={x - 0.8} cy={y - 0.8} rx="1" ry="0.5" fill="#f0d8a0" opacity="0.8" />
+        </g>
+      ))}
+      <path d="M31,18.6 l3,-1" stroke="#3a8a3a" strokeWidth="1.1" />
+    </g>
+  );
+}
+function FoodFkDinoegg() {
+  return (
+    <g>
+      <Food5Box c="#d8c8a8" d="#7a6040" />
+      {[[14, 31], [24, 30], [34, 31]].map(([x, y], i) => (
+        <g key={i}>
+          <ellipse cx={x} cy={y} rx="4.4" ry="5.4" fill="#e8dcc0" stroke="#8a7a5a" strokeWidth="0.45" />
+          {[[-1.6, -2], [1.4, -0.6], [-0.6, 1.6], [1.8, 2.4]].map(([dx, dy], k) => <circle key={k} cx={x + dx} cy={y + dy} r="0.7" fill="#8a6a3a" opacity="0.7" />)}
+          <ellipse cx={x - 1.4} cy={y - 2.4} rx="1.2" ry="0.7" fill="#fff" opacity="0.5" />
+        </g>
+      ))}
+    </g>
+  );
+}
+function FoodFkVolga() {
+  return (
+    <g>
+      <Food4Plate cy={32} rx={20} c="#f4f0e8" />
+      <path d="M8,30 Q10,22 24,22 Q38,22 40,30 Q24,36 8,30 Z" fill="#f4d060" stroke="#b8902a" strokeWidth="0.5" />
+      <path d="M14,26 Q24,22 34,26" stroke="#fae890" strokeWidth="1" fill="none" />
+      <ellipse cx="24" cy="25" rx="9" ry="3.6" fill="#a8582a" stroke="#4a1a08" strokeWidth="0.45" />
+      {[-5, -2, 1, 4].map((d) => <circle key={d} cx={24 + d} cy="24.4" r="0.4" fill="#d8904a" />)}
+      <path d="M14,29 q10,4 20,0" stroke="#5a2a10" strokeWidth="1.6" fill="none" opacity="0.8" />
+    </g>
+  );
+}
+function FoodFkHabutae() {
+  return <Food6Blocks c="#fbfaf2" top="#ffffff" d="#c8c0a8" plate="#2a2a30" rim="#0a0a0c" w={9} h={3.2} />;
+}
+function FoodFkTsurushigaki() {
+  return (
+    <g>
+      <Food1Shadow rx={16} />
+      <path d="M6,8 H42" stroke="#8a6a3a" strokeWidth="1.2" />
+      {[12, 20, 28, 36].map((x, i) => (
+        <g key={i}>
+          <path d={`M${x} 8 V${12 + (i % 2) * 2}`} stroke="#c8a870" strokeWidth="0.5" />
+          {[0, 1, 2].map((j) => (
+            <g key={j}>
+              <ellipse cx={x} cy={16 + (i % 2) * 2 + j * 8} rx="3.4" ry="3.8" fill="#a8501a" stroke="#4a1a04" strokeWidth="0.4" />
+              <ellipse cx={x - 1} cy={15 + (i % 2) * 2 + j * 8} rx="1" ry="1.4" fill="#d8803a" opacity="0.7" />
+            </g>
+          ))}
+        </g>
+      ))}
+    </g>
+  );
+}
+function FoodFkYakisaba() {
+  return (
+    <g>
+      <Food4Plate cy={33} rx={20} c="#f4f0e8" />
+      <Food5Skewer x1={6} y1={28} x2={42} y2={28} />
+      <Food4Fish x={24} y={28} len={32} c="#5a6a7a" belly="#e8d8b8" grill />
+      {[[14, 26], [20, 25.4], [26, 25.4], [32, 26]].map(([x, y], i) => <path key={i} d={`M${x} ${y} q1.4 -1 2.6 0`} stroke="#1a2a3a" strokeWidth="0.6" fill="none" />)}
+    </g>
+  );
+}
+function FoodFkGuji() {
+  return <Food6GrilledFish c="#e8a8a0" belly="#f8ece4" side="daikon" />;
+}
+function FoodFkKuzumanju() {
+  return (
+    <Food6Rounds c="#e8eef0" d="#a8b8c0" plate="#2a3a3a" rim="#0a1414" deco={(x, y) => <ellipse cx={x} cy={y + 0.4} rx="2" ry="1.4" fill="#5a1e14" opacity="0.8" />} />
+  );
+}
+
+/* ---- 山梨 ---- */
+function FoodYnHoto() {
+  return (
+    <g>
+      <Food4Pot body="#2a2a2e" />
+      <ellipse cx="24" cy="21.4" rx="16" ry="4.8" fill="#a86a2a" />
+      {[[13, 20.6, -8], [20, 19.6, 6], [27, 20.6, -4], [17, 23, 12]].map(([x, y, r], i) => (
+        <rect key={i} x={x - 4} y={y - 1} width="8" height="2" rx="0.6" fill="#f4e0b0" stroke="#b8a070" strokeWidth="0.3" transform={`rotate(${r} ${x} ${y})`} />
+      ))}
+      <path d="M26,23 q2,-2 6,-1.4 q-2,2.6 -6,1.4 Z" fill="#f08a1a" stroke="#9a4a04" strokeWidth="0.3" />
+      <ellipse cx="33" cy="20" rx="2.4" ry="1.4" fill="#e8dcc0" />
+      <Food1Negi x={22} y={22.4} />
+      <Food1Steam x={24} y={11} />
+    </g>
+  );
+}
+function FoodYnKinakomochi() {
+  return (
+    <g>
+      <Food4Plate cy={34} c="#2a2a30" rim="#0a0a0c" />
+      {[[16, 28], [24, 26.4], [32, 28], [20, 32], [28, 32]].map(([x, y], i) => (
+        <g key={i}>
+          <ellipse cx={x} cy={y} rx="3.6" ry="2.6" fill="#e8c878" stroke="#9a7a2a" strokeWidth="0.4" />
+          {[[-1, -0.4], [1, 0.4], [0, -1]].map(([dx, dy], k) => <circle key={k} cx={x + dx} cy={y + dy} r="0.35" fill="#f8e8b0" />)}
+        </g>
+      ))}
+      <path d="M12,30 q12,-8 24,0" stroke="#2a0e04" strokeWidth="1.6" fill="none" opacity="0.8" />
+    </g>
+  );
+}
+function FoodYnTorimotsu() {
+  return (
+    <g>
+      <Food4Plate cy={32} c="#f4f0e8" />
+      {[[14, 28], [20, 26.4], [26, 27], [32, 28.4], [17, 31.6], [24, 31.6], [30, 32]].map(([x, y], i) => (
+        <ellipse key={i} cx={x} cy={y} rx={i % 3 === 0 ? 2.2 : 3} ry={i % 3 === 0 ? 2.2 : 2} fill={i % 3 === 0 ? "#f0a030" : "#8a3a14"} stroke="#3a1004" strokeWidth="0.35" />
+      ))}
+      <path d="M12,28 q12,-4 24,1" stroke="#5a1a08" strokeWidth="1.4" fill="none" opacity="0.6" />
+      <path d="M35,25 q2,-2 4,-0.6" stroke="#4a9a3a" strokeWidth="1" fill="none" />
+    </g>
+  );
+}
+function FoodYnBudou() {
+  const g = [];
+  for (let r = 0; r < 5; r++) for (let c = 0; c <= 4 - r; c++) g.push([24 - (4 - r) * 2.4 + c * 4.8, 16 + r * 4.4]);
+  return (
+    <g>
+      <Food1Shadow rx={12} />
+      <path d="M24,12 q0,-4 2,-6" stroke="#5a3a1a" strokeWidth="1" fill="none" />
+      <path d="M26,8 q5,-4 9,-1 q-4,4 -9,1 Z" fill="#4a9a3a" />
+      {g.map(([x, y], i) => (
+        <g key={i}>
+          <circle cx={x} cy={y} r="2.6" fill="#5a2a6a" stroke="#2a0a3a" strokeWidth="0.35" />
+          <ellipse cx={x - 0.8} cy={y - 0.9} rx="0.7" ry="0.45" fill="#fff" opacity="0.55" />
+        </g>
+      ))}
+    </g>
+  );
+}
+function FoodYnGrapejelly() {
+  return (
+    <g>
+      <Food4Glass fill="#6a2a7a" top="#8a4a9a" level={17} />
+      {[[19, 15], [23, 14], [27, 15], [21, 13], [25, 12.6]].map(([x, y], i) => (
+        <g key={i}><circle cx={x} cy={y} r="1.7" fill="#7ac040" stroke="#3a6a1a" strokeWidth="0.3" /><circle cx={x - 0.5} cy={y - 0.5} r="0.45" fill="#fff" opacity="0.7" /></g>
+      ))}
+    </g>
+  );
+}
+function FoodYnKorogaki() {
+  return (
+    <Food6Rounds c="#c8641a" d="#6a2a04" plate="#e8dcc8" r={4.4} deco={(x, y) => (
+      <g><path d={`M${x - 2.4} ${y - 1} q2.4 -1 4.8 0`} stroke="#f8e8d8" strokeWidth="0.8" fill="none" opacity="0.7" /><path d={`M${x} ${y - 3} l0 -1.2`} stroke="#3a2a10" strokeWidth="0.7" /></g>
+    )} />
+  );
+}
+function FoodYnAkebono() {
+  return (
+    <g>
+      <Food4Wan body="#3a2a1a" light="#5a4a32" rim="#140c04" inner="#1c140a" />
+      {[[16, 21.4], [20.6, 20.6], [25, 20.4], [29.4, 20.8], [33, 22], [18, 23.4], [22.6, 23.6], [27.2, 23.6], [31, 23.4]].map(([x, y], i) => (
+        <g key={i}><ellipse cx={x} cy={y} rx="2.4" ry="1.7" fill="#e8d8a8" stroke="#9a8050" strokeWidth="0.3" /><ellipse cx={x - 0.6} cy={y - 0.6} rx="0.6" ry="0.3" fill="#fff" opacity="0.6" /></g>
+      ))}
+    </g>
+  );
+}
+function FoodYnAyu() {
+  return <Food6GrilledFish c="#9aa890" belly="#f0ece0" side="lemon" />;
+}
+function FoodYnMinobumanju() {
+  return <Food6Rounds c="#c8862a" d="#6a3a08" deco={(x, y) => <path d={`M${x - 1.6} ${y - 0.4} h3.2`} stroke="#6a3a08" strokeWidth="0.6" />} />;
+}
+function FoodYnYoshidaudon() {
+  return (
+    <Food5Ramen bowl={{ body: "#2a1a10", light: "#4a3420", dark: "#0c0604", rim: "#000" }} broth="#8a5a2a" noodle="#f0e4c0" w={1.8} n={5} wave={0.4}>
+      <path d="M12,20 q6,-3 12,0" stroke="#d8eab0" strokeWidth="2" fill="none" />
+      <path d="M24,20 q3,-2.4 7,-0.4 q-3,1.6 -7,0.4 Z" fill="#9a4a2a" stroke="#3a0c04" strokeWidth="0.3" />
+      <path d="M30,23 q2,-1 4,0" stroke="#e8302a" strokeWidth="1.2" fill="none" />
+    </Food5Ramen>
+  );
+}
+function FoodYnNijimasu() {
+  return (
+    <g>
+      <Food4Board x={4} y={28} w={40} h={10} c="#c8a070" d="#7a5a30" />
+      <Food4Fish x={24} y={26} len={30} c="#a8784a" belly="#f0c8a0" />
+      <path d="M14,27 Q24,30 34,27" stroke="#e86a6a" strokeWidth="1.2" fill="none" opacity="0.6" />
+      {[[15, 22.6], [21, 22], [27, 22.4]].map(([x, y], i) => <circle key={i} cx={x} cy={y} r="0.5" fill="#3a2010" />)}
+    </g>
+  );
+}
+function FoodYnFujikashi() {
+  return (
+    <g>
+      <Food4Plate cy={35} c="#e8e0cc" />
+      {[[16, 30], [32, 30]].map(([x, y], i) => (
+        <g key={i}>
+          <path d={`M${x - 9},${y + 2} L${x - 3},${y - 8} Q${x},${y - 10} ${x + 3},${y - 8} L${x + 9},${y + 2} Q${x},${y + 4} ${x - 9},${y + 2} Z`} fill="#4a7ab8" stroke="#1a3a6a" strokeWidth="0.5" />
+          <path d={`M${x - 3.6},${y - 7} Q${x},${y - 10} ${x + 3.6},${y - 7} L${x + 2},${y - 4} L${x},${y - 5.6} L${x - 2},${y - 4} Z`} fill="#fbfbff" />
+          <path d={`M${x - 8} ${y + 1.6} Q${x} ${y + 3.6} ${x + 8} ${y + 1.6}`} stroke="#e8c070" strokeWidth="1" fill="none" />
+        </g>
+      ))}
+    </g>
+  );
+}
+
+/* ---- 長野 ---- */
+function FoodNaOyaki() {
+  return (
+    <Food6Rounds c="#e8d4a8" d="#9a7a4a" r={5} pts={[[15, 29], [33, 29], [24, 32.6]]} deco={(x, y) => (
+      <g><ellipse cx={x + 1} cy={y - 1} rx="2.2" ry="1" fill="#a87a3a" opacity="0.6" /><path d={`M${x - 3} ${y + 1} q1 -1 2 0`} stroke="#5a8a3a" strokeWidth="0.6" fill="none" /></g>
+    )} />
+  );
+}
+function FoodNaKuriokowa() {
+  return (
+    <Food5Don bowl={{ body: "#5a1810", light: "#8a2a1c", dark: "#2a0806", rim: "#140402" }} rice={false} base="#e8c8a8" steam>
+      {Array.from({ length: 14 }, (_, i) => <ellipse key={i} cx={11 + (i * 7) % 26} cy={20 + (i * 3) % 5} rx="0.8" ry="0.5" fill="#a83a3a" />)}
+      {[[15, 21], [23, 19.6], [30, 21.4], [20, 24], [27, 24]].map(([x, y], i) => (
+        <path key={i} d={`M${x - 2.6},${y + 1} Q${x - 2},${y - 2.6} ${x},${y - 2.6} Q${x + 2},${y - 2.6} ${x + 2.6},${y + 1} Z`} fill="#f0c040" stroke="#9a7010" strokeWidth="0.35" />
+      ))}
+    </Food5Don>
+  );
+}
+function FoodNaNozawana() {
+  return (
+    <g>
+      <Food4Plate cy={33} c="#e8e0cc" />
+      {Array.from({ length: 9 }, (_, i) => (
+        <path key={i} d={`M${12 + i * 2.6} ${33 - (i % 2)} Q${14 + i * 2.6} ${24 - (i % 3) * 2} ${18 + i * 2.6} ${22 - (i % 2)}`} stroke={i % 2 ? "#4a8a2a" : "#6aa83a"} strokeWidth="2.2" fill="none" strokeLinecap="round" />
+      ))}
+      <path d="M12,32 h24" stroke="#c8d090" strokeWidth="1.4" opacity="0.8" />
+    </g>
+  );
+}
+function FoodNaSoba() {
+  return <Food6Zaru c="#a89a7a" w={0.9} n={10} dip="#5a3410" top={<path d="M14,22 l18,0" stroke="#1a2418" strokeWidth="1.2" opacity="0.6" />} />;
+}
+function FoodNaRingo() {
+  return <Food6Fruit c="#d8202a" d="#5a0606" pts={[[15, 30], [33, 30], [24, 22]]} r={7.4} />;
+}
+function FoodNaKoi() {
+  return (
+    <g>
+      <Food4Wan body="#1a1a1e" light="#3a3a42" rim="#000" inner="#0a0a0c" />
+      <ellipse cx="24" cy="22.2" rx="13.6" ry="4" fill="#6a3010" />
+      <g transform="translate(24,21)">
+        <ellipse rx="8" ry="3.4" fill="#8a4a1a" stroke="#3a1404" strokeWidth="0.4" />
+        {[-5, -2.4, 0.2, 2.8].map((d) => <path key={d} d={`M${d} -2.6 q1.2 2.6 0 5.2`} stroke="#5a2408" strokeWidth="0.5" fill="none" />)}
+        <path d="M-6 -1 q6 -2 12 0" stroke="#c8782a" strokeWidth="0.6" fill="none" />
+      </g>
+      <path d="M28,24.4 l4,-0.6" stroke="#3a8a3a" strokeWidth="1" />
+    </g>
+  );
+}
+function FoodNaSanzoku() {
+  return (
+    <g>
+      <Food4Plate cy={32} rx={20} c="#f4f0e8" />
+      <path d="M8,28 q8,-7 16,-4 l-2,3 q-6,-1 -14,1 Z" fill="#d8eab0" stroke="#8aa050" strokeWidth="0.35" />
+      <g transform="translate(26,28) rotate(-6)">
+        <path d="M-12,0 Q-12,-7 -2,-7 Q10,-7 12,-2 Q12,4 2,5 Q-10,5 -12,0 Z" fill="#a8581a" stroke="#4a1a04" strokeWidth="0.55" />
+        <path d="M-10,-3 Q0,-7 10,-3" stroke="#d8903a" strokeWidth="0.9" fill="none" />
+        {[-7, -3, 1, 5].map((d) => <circle key={d} cx={d} cy="-1.6" r="0.6" fill="#e8a050" />)}
+      </g>
+      <path d="M36,35 l5,-2 l1,2 l-5,2 Z" fill="#f4e050" stroke="#b8a020" strokeWidth="0.3" />
+    </g>
+  );
+}
+function FoodNaWasabizuke() {
+  return (
+    <g>
+      <Food1Shadow rx={14} />
+      <path d="M12,24 L36,24 L34,40 Q24,42 14,40 Z" fill="#f4ecd8" stroke="#8a7a5a" strokeWidth="0.5" />
+      <ellipse cx="24" cy="24" rx="12" ry="3" fill="#f8f2e0" stroke="#8a7a5a" strokeWidth="0.45" />
+      <ellipse cx="24" cy="24.2" rx="10.6" ry="2.4" fill="#e8e0b8" />
+      {[[20, 24], [24, 23.6], [28, 24.4]].map(([x, y], i) => <ellipse key={i} cx={x} cy={y} rx="1.6" ry="0.6" fill="#9ab850" />)}
+      <path d="M36,14 Q38,22 33,26" stroke="#5a8a3a" strokeWidth="2.6" fill="none" strokeLinecap="round" />
+      <path d="M34,10 q4,-4 8,-1 q-4,3 -8,1 Z M33,12 q-4,-4 -7,-1 q3,3 7,1 Z" fill="#4a9a3a" />
+    </g>
+  );
+}
+function FoodNaMilkpan() {
+  return (
+    <g>
+      <Food4Plate cy={35} c="#e8e0cc" />
+      <path d="M8,32 L8,20 Q8,14 14,14 L34,14 Q40,14 40,20 L40,32 Z" fill="#d8984a" stroke="#7a4a10" strokeWidth="0.5" />
+      <path d="M10,32 L10,20 Q10,16 14,16 L34,16 Q38,16 38,20 L38,32 Z" fill="#f4e8cc" />
+      <path d="M10,24 H38" stroke="#fbfaf2" strokeWidth="3" />
+      <path d="M10,24 H38" stroke="#e8dcc0" strokeWidth="0.4" />
+      <path d="M8,32 H40" stroke="#a8682a" strokeWidth="0.8" />
+    </g>
+  );
+}
+function FoodNaYakiniku() {
+  return (
+    <g>
+      <Food4Grill />
+      {[[14, 27, -10], [24, 25.4, 6], [33, 28, 14], [19, 32, -4], [29, 32.4, 8]].map(([x, y, r], i) => (
+        <g key={i} transform={`translate(${x},${y}) rotate(${r})`}>
+          <rect x="-5" y="-2.2" width="10" height="4.4" rx="1.4" fill={i % 2 ? "#c84a3a" : "#a8301a"} stroke="#3a0c04" strokeWidth="0.4" />
+          <path d="M-4 -0.6 q4 1.4 8 0" stroke="#f4c0b0" strokeWidth="0.5" fill="none" />
+        </g>
+      ))}
+      <Food1Steam x={24} y={17} s={0.8} />
+    </g>
+  );
+}
+function FoodNaRomen() {
+  return (
+    <g>
+      <Food4Plate cy={31} c="#f4f0e8" />
+      <Food4Noodles cx={24} cy={29.6} rx={15} ry={4.8} c="#c8a070" n={5} w={1.6} />
+      {[[16, 28], [26, 27]].map(([x, y], i) => <path key={i} d={`M${x - 3} ${y} q1.4 -1.4 3 -0.6 q1.6 0.6 3 -0.2 q-1 1.6 -3 1.4 q-2 0.6 -3 -0.6 Z`} fill="#c87a5a" stroke="#5a2a14" strokeWidth="0.3" />)}
+      <path d="M22,31 q4,-2 8,0" stroke="#d8eab0" strokeWidth="1.6" fill="none" />
+      <path d="M31,29 l4,-1" stroke="#f4f0e4" strokeWidth="1.2" />
+    </g>
+  );
+}
+function FoodNaUnagi() {
+  return (
+    <Food5Don bowl={{ body: "#2a0e0a", light: "#4a1e14", dark: "#140604", rim: "#000", band: "#c8a040" }} steam>
+      <rect x="10" y="17.4" width="28" height="6.4" rx="1.6" fill="#8a4a14" stroke="#3a1404" strokeWidth="0.45" />
+      {[13, 18, 23, 28, 33].map((d) => <path key={d} d={`M${d} 17.8 l2 5.6`} stroke="#4a1e06" strokeWidth="0.8" opacity="0.7" />)}
+      <path d="M11 19 H37" stroke="#c8782a" strokeWidth="0.6" opacity="0.6" />
+    </Food5Don>
+  );
+}
+
+/* ---- 岐阜 ---- */
+function FoodGfAyu() {
+  return (
+    <g>
+      <Food1Shadow rx={18} />
+      <ellipse cx="24" cy="38" rx="18" ry="3" fill="#d8c8a0" stroke="#8a7a50" strokeWidth="0.4" />
+      {[[13, 0], [24, 1], [35, 2]].map(([x, k]) => (
+        <g key={k}>
+          <Food5Skewer x1={x} y1={39} x2={x} y2={6} />
+          <g transform={`translate(${x},${21}) rotate(${-86 + k * 4})`}>
+            <Food4Fish x={0} y={0} len={22} c="#a8a888" belly="#f0ece0" grill />
+          </g>
+        </g>
+      ))}
+    </g>
+  );
+}
+function FoodGfTanmen() {
+  return (
+    <Food5Ramen bowl={{ body: "#f2ece0", light: "#fff", dark: "#b8ae9a", rim: "#7a7060", band: "#c82a1a" }} broth="#e8d4a0" noodle={null}>
+      <path d="M11,22 Q16,16 24,18 Q32,16 37,22 Q30,26 24,25 Q16,26 11,22 Z" fill="#d8eab0" stroke="#8aa050" strokeWidth="0.35" />
+      {[[15, 20.6], [21, 19.4], [27, 19.6], [32, 21], [18, 23], [28, 23]].map(([x, y], i) => <path key={i} d={`M${x - 2} ${y} q2 -1.6 4 0`} stroke={i % 2 ? "#f4f0dc" : "#7ac04a"} strokeWidth="0.9" fill="none" />)}
+      {[[22, 21.6], [25, 22.4]].map(([x, y], i) => <ellipse key={i} cx={x} cy={y} rx="1.6" ry="0.9" fill="#c87a5a" />)}
+      <path d="M30,22 q1,-2 3,-1" stroke="#d83a1a" strokeWidth="0.9" fill="none" />
+    </Food5Ramen>
+  );
+}
+function FoodGfAyukashi() {
+  return (
+    <g>
+      <Food4Plate cy={34} c="#e8dcc8" />
+      {[[18, 27, -8], [30, 30, 6]].map(([x, y, r], i) => (
+        <g key={i} transform={`translate(${x},${y}) rotate(${r})`}>
+          <path d="M-10,0 Q-6,-5 4,-4 L10,-6 L9,0 L10,6 L4,4 Q-6,5 -10,0 Z" fill="#d89a4a" stroke="#7a4a10" strokeWidth="0.5" />
+          <circle cx="-7" cy="-1" r="0.8" fill="#3a2010" />
+          <path d="M-4,-1 Q0,-3 4,-1" stroke="#7a4a10" strokeWidth="0.6" fill="none" />
+          <path d="M-5,1.4 Q0,3 5,1.4" stroke="#f4e8d0" strokeWidth="0.6" fill="none" />
+        </g>
+      ))}
+    </g>
+  );
+}
+function FoodGfMizumanju() {
+  return (
+    <g>
+      <Food1Shadow rx={18} />
+      <ellipse cx="24" cy="32" rx="18" ry="7" fill="#8ab8d8" stroke="#3a6a8a" strokeWidth="0.5" opacity="0.8" />
+      <ellipse cx="24" cy="31" rx="16" ry="5.6" fill="#c8e4f4" opacity="0.8" />
+      {[[16, 30], [24, 28.4], [32, 30], [20, 33], [28, 33]].map(([x, y], i) => (
+        <g key={i}>
+          <ellipse cx={x} cy={y} rx="3.4" ry="2.6" fill="#f4f8fa" opacity="0.8" stroke="#a8c0d0" strokeWidth="0.3" />
+          <ellipse cx={x} cy={y + 0.2} rx="1.8" ry="1.3" fill={i % 2 ? "#5a1e14" : "#8ab040"} />
+          <ellipse cx={x - 1.2} cy={y - 1} rx="0.8" ry="0.4" fill="#fff" />
+        </g>
+      ))}
+    </g>
+  );
+}
+function FoodGfKaki() {
+  return <Food6Fruit c="#f08a1a" d="#8a3a04" pts={[[15, 31], [33, 31], [24, 23]]} r={7.4} leaf="#6a8a2a" />;
+}
+function FoodGfIbicha() {
+  return (
+    <g>
+      <Food1Shadow rx={16} />
+      <path d="M12,26 Q12,40 24,40 Q36,40 36,26 Z" fill="#f2ece0" stroke="#8a8070" strokeWidth="0.5" />
+      <ellipse cx="24" cy="26" rx="12" ry="3" fill="#f8f4ea" stroke="#8a8070" strokeWidth="0.45" />
+      <ellipse cx="24" cy="26.2" rx="10.6" ry="2.4" fill="#9ac050" />
+      <ellipse cx="21" cy="25.8" rx="3.4" ry="0.6" fill="#c8e080" opacity="0.7" />
+      {[[34, 16, 20], [38, 13, -10], [31, 12, 40], [40, 18, 60]].map(([x, y, r], i) => <path key={i} d="M-2.6 0 Q0 -1.8 2.6 0 Q0 1.8 -2.6 0 Z" transform={`translate(${x},${y}) rotate(${r})`} fill="#4a9a3a" />)}
+      <Food1Steam x={24} y={20} s={0.6} />
+    </g>
+  );
+}
+function FoodGfKeichan() {
+  return (
+    <g>
+      <Food4Iron />
+      {[[14, 29], [21, 27], [28, 28.6], [34, 30.6], [18, 32.4], [26, 32.6]].map(([x, y], i) => (
+        <ellipse key={i} cx={x} cy={y} rx="3" ry="2" fill="#b8642a" stroke="#4a1a08" strokeWidth="0.35" />
+      ))}
+      {[[12, 31], [24, 30.4], [31, 32.4]].map(([x, y], i) => <path key={i} d={`M${x - 3} ${y} q3 -2 6 0`} stroke="#d8eab0" strokeWidth="1.6" fill="none" />)}
+      <path d="M10,30 q6,-3 12,-1" stroke="#7ac04a" strokeWidth="1" fill="none" />
+      <Food1Steam x={24} y={20} s={0.8} />
+    </g>
+  );
+}
+function FoodGfSekiunagi() {
+  return (
+    <g>
+      <Food4Plate cy={32} rx={20} c="#2a0e0a" rim="#0a0302" />
+      {[0, 1].map((k) => (
+        <g key={k} transform={`translate(24,${27 + k * 5})`}>
+          <rect x="-15" y="-2.6" width="30" height="5.2" rx="1.4" fill="#a8641a" stroke="#4a1e06" strokeWidth="0.45" />
+          {[-11, -6, -1, 4, 9].map((d) => <path key={d} d={`M${d} -2.4 l2 4.8`} stroke="#5a2a08" strokeWidth="0.8" opacity="0.7" />)}
+          <path d="M-14 -1.6 H14" stroke="#e0a050" strokeWidth="0.7" opacity="0.7" />
+        </g>
+      ))}
+      <path d="M36,24 q2,-2 4,-0.6" stroke="#5aa04a" strokeWidth="1" fill="none" />
+    </g>
+  );
+}
+function FoodGfHam() {
+  return (
+    <g>
+      <Food4Board x={4} y={28} w={40} h={10} c="#c8a070" d="#7a5a30" />
+      <path d="M8,30 L8,22 Q8,18 14,18 L26,18 Q30,18 30,22 L30,30 Z" fill="#c86a6a" stroke="#6a2a2a" strokeWidth="0.5" />
+      <ellipse cx="34" cy="26" rx="6" ry="6.4" fill="#f4b0a8" stroke="#a85a5a" strokeWidth="0.5" />
+      <ellipse cx="34" cy="26" rx="4.6" ry="5" fill="#f8c8c0" />
+      {[0, 1, 2].map((k) => <ellipse key={k} cx={26 + k * 4} cy={35} rx="4" ry="1.4" fill="#f4b0a8" stroke="#a85a5a" strokeWidth="0.3" />)}
+      <path d="M10,20 L28,20" stroke="#e89a9a" strokeWidth="0.7" />
+    </g>
+  );
+}
+function FoodGfKurikinton() {
+  return (
+    <Food6Rounds c="#e8c060" d="#9a7a20" r={4.2} plate="#2a2a30" rim="#0a0a0c" deco={(x, y) => (
+      <g><path d={`M${x} ${y - 3} q-0.6 1.4 0 2.6 q0.6 -1.4 0 -2.6`} fill="#8a5a1a" /><path d={`M${x - 2} ${y + 0.6} q2 0.8 4 0`} stroke="#c89a3a" strokeWidth="0.4" fill="none" /></g>
+    )} />
+  );
+}
+function FoodGfGohei() {
+  return (
+    <g>
+      <Food4Plate cy={34} />
+      {[[15, 0], [27, 1]].map(([x, k]) => (
+        <g key={k}>
+          <path d={`M${x + 2} 40 L${x + 8} 10`} stroke="#d8b878" strokeWidth="1.2" strokeLinecap="round" />
+          <g transform={`translate(${x + 5},${24}) rotate(11)`}>
+            <path d="M-4.6,-9 Q0,-11 4.6,-9 L4,9 Q0,10.4 -4,9 Z" fill="#f2e2b8" stroke="#a8884a" strokeWidth="0.45" />
+            <path d="M-4.4,-8 Q0,-10 4.4,-8 L4,5 Q0,6.4 -4,5 Z" fill="#9a4a1a" opacity="0.85" />
+            {[-5, -1, 3].map((d) => <circle key={d} cx="0" cy={d} r="0.5" fill="#e8c890" />)}
+          </g>
+        </g>
+      ))}
+    </g>
+  );
+}
+function FoodGfKarasumi() {
+  return (
+    <Food6Blocks c="#f4e0e8" top="#fff" d="#c890a8" plate="#e8dcc8" w={9} h={3.6}
+      deco={(x, y, i) => <path d={`M${x - 3.4} ${y} q1.7 -1.2 3.4 0 q1.7 1.2 3.4 0`} stroke={["#e85a8a", "#8ab040", "#f4b830", "#e85a8a", "#8ab040"][i]} strokeWidth="0.6" fill="none" />} />
+  );
+}
+function FoodGfHobamiso() {
+  return (
+    <g>
+      <Food1Shadow rx={18} />
+      <path d="M6,32 L42,32 L40,38 L8,38 Z" fill="#4a2a1a" stroke="#1a0c06" strokeWidth="0.5" />
+      <path d="M8,36 L40,36" stroke="#ff7a2a" strokeWidth="1.2" opacity="0.6" />
+      <path d="M5,29 Q12,20 24,20 Q36,20 43,29 Q34,35 24,35 Q12,35 5,29 Z" fill="#8a7a3a" stroke="#3a3010" strokeWidth="0.55" />
+      <path d="M24,21 L24,34 M14,24 L24,28 M34,24 L24,28" stroke="#5a5020" strokeWidth="0.5" />
+      <path d="M12,28 Q18,24 24,25 Q30,24 36,28 Q30,31 24,31 Q18,31 12,28 Z" fill="#7a3a10" opacity="0.9" />
+      {[[17, 27], [23, 26], [29, 27], [26, 29.4]].map(([x, y], i) => <rect key={i} x={x - 2} y={y - 1.2} width="4" height="2.4" rx="0.8" fill="#a8301a" stroke="#4a0c04" strokeWidth="0.3" />)}
+      <Food1Negi x={20} y={29} /><Food1Negi x={31} y={28.6} />
+      <Food1Steam x={24} y={15} s={0.8} />
+    </g>
+  );
+}
+function FoodGfTakayamaramen() {
+  return (
+    <Food5Ramen bowl={{ body: "#1a1a1e", light: "#3a3a42", dark: "#0a0a0c", rim: "#000", band: "#c82a1a" }} broth="#5a2a10" noodle="#f2d070" wave={1.8} w={0.7} n={6}>
+      <Food1Chashu x={16} y={20.6} r={3.4} rot={-10} />
+      <path d="M26,19 l6,-0.4 l-0.4,2 l-6,0.4 Z" fill="#c8a050" stroke="#7a5a20" strokeWidth="0.3" />
+      <Food1Negi x={28} y={23} /><Food1Negi x={30} y={22} /><Food1Negi x={22} y={23.6} />
+    </Food5Ramen>
+  );
+}
+function FoodGfMidarashi() {
+  return <Food6Kushi sticks={[[14, 0], [24, 1], [34, 2]]} r={3} c="#c8803a" d="#6a3a08" glaze="#5a2a08" />;
+}
+
+/* ---- 静岡 ---- */
+function FoodSzHimono() {
+  return (
+    <g>
+      <Food4Plate cy={32} rx={20} c="#f4f0e8" />
+      <g transform="translate(24,28)">
+        <path d="M-14,0 Q-10,-7 4,-7 L14,-4 L14,4 L4,7 Q-10,7 -14,0 Z" fill="#e0b080" stroke="#7a4a20" strokeWidth="0.5" />
+        <path d="M-12,0 H12" stroke="#a8784a" strokeWidth="0.7" />
+        {[-8, -4, 0, 4, 8].map((d) => <path key={d} d={`M${d} 0 l-2 -5 M${d} 0 l-2 5`} stroke="#c89a6a" strokeWidth="0.35" />)}
+        <circle cx="-11" cy="-1.6" r="0.7" fill="#3a2010" />
+      </g>
+      <ellipse cx="38" cy="35" rx="3" ry="1.4" fill="#f4f4f0" stroke="#c8c8c0" strokeWidth="0.3" />
+    </g>
+  );
+}
+function FoodSzFujinomiya() {
+  return (
+    <g>
+      <Food4Iron />
+      <Food4Noodles cx={24} cy={30.4} rx={15} ry={4.6} c="#a8743a" n={5} w={1.4} />
+      {[[16, 29], [24, 28.4], [31, 30]].map(([x, y], i) => <path key={i} d={`M${x - 3} ${y} q3 -2 6 0`} stroke="#d8eab0" strokeWidth="1.6" fill="none" />)}
+      {[[19, 31.6], [28, 32]].map(([x, y], i) => <rect key={i} x={x} y={y} width="3" height="1.4" rx="0.4" fill="#f4ecd8" stroke="#c8b898" strokeWidth="0.25" />)}
+      {Array.from({ length: 8 }, (_, i) => <path key={i} d={`M${14 + i * 2.6} ${27.4 + (i % 2)} l0.8 -0.6`} stroke="#c8a888" strokeWidth="0.6" />)}
+      <Food1Steam x={24} y={20} s={0.8} />
+    </g>
+  );
+}
+function FoodSzMishimaunagi() {
+  return (
+    <g>
+      <Food1Shadow rx={19} />
+      <rect x="5" y="16" width="38" height="24" rx="2" fill="#2a0e0a" stroke="#0a0302" strokeWidth="0.6" />
+      <rect x="6.6" y="17.6" width="34.8" height="20.8" rx="1.4" fill="#f4f0e6" />
+      <rect x="9" y="20" width="30" height="16" rx="1.6" fill="#8a4a14" stroke="#3a1404" strokeWidth="0.45" />
+      {[12, 17, 22, 27, 32].map((d) => <path key={d} d={`M${d} 20.6 l2 14.8`} stroke="#4a1e06" strokeWidth="0.8" opacity="0.7" />)}
+      <path d="M10,22 H38" stroke="#c8782a" strokeWidth="0.6" opacity="0.6" />
+    </g>
+  );
+}
+function FoodSzKinmedai() {
+  return (
+    <g>
+      <Food4Plate cy={32} rx={20} c="#2a2a30" rim="#0a0a0c" />
+      <Food4Fish x={23} y={28} len={30} c="#d83a2a" belly="#f0a090" />
+      <circle cx="11.6" cy="27" r="1.6" fill="#f4d040" stroke="#5a3a00" strokeWidth="0.3" />
+      <circle cx="11.6" cy="27" r="0.7" fill="#000" />
+      <path d="M8,32 q16,4 32,0" stroke="#5a2a10" strokeWidth="1.8" fill="none" opacity="0.7" />
+      <path d="M34,22 l5,-2" stroke="#d8eab0" strokeWidth="1.4" />
+    </g>
+  );
+}
+function FoodSzWasabidon() {
+  return (
+    <Food5Don bowl={{ body: "#2a1a10", light: "#4a3420", dark: "#0c0604", rim: "#000" }}>
+      {Array.from({ length: 20 }, (_, i) => <path key={i} d={`M${14 + (i * 7.3) % 20} ${19.6 + (i * 2.3) % 5} l1.6 -0.4`} stroke="#c8a870" strokeWidth="0.8" />)}
+      <path d="M22,21 Q24,17 27,19 Q29,21 26,23 Q22,24 22,21 Z" fill="#9ac860" stroke="#5a8a2a" strokeWidth="0.35" />
+      {[[24, 20], [25.6, 21], [24.4, 22]].map(([x, y], i) => <circle key={i} cx={x} cy={y} r="0.4" fill="#c8e890" />)}
+      <path d="M32,15 Q35,22 31,25" stroke="#5a8a3a" strokeWidth="2.2" fill="none" strokeLinecap="round" />
+    </Food5Don>
+  );
+}
+function FoodSzTokoroten() {
+  return (
+    <g>
+      <Food1Shadow rx={14} />
+      <path d="M10,24 Q10,38 24,38 Q38,38 38,24 Z" fill="#e8f0f4" opacity="0.6" stroke="#a8b8c4" strokeWidth="0.5" />
+      <ellipse cx="24" cy="24" rx="14" ry="3.4" fill="#f4f8fa" stroke="#a8b8c4" strokeWidth="0.45" />
+      {Array.from({ length: 9 }, (_, i) => <path key={i} d={`M${13 + i * 2.4} ${23 + (i % 2)} Q${16 + i * 2.4} ${30} ${15 + i * 2} ${35}`} stroke="#d8e8e0" strokeWidth="1.2" fill="none" opacity="0.9" />)}
+      <ellipse cx="24" cy="24.2" rx="12" ry="2.4" fill="#6a4a2a" opacity="0.5" />
+      <circle cx="31" cy="23.6" r="1" fill="#e8c040" />
+    </g>
+  );
+}
+function FoodSzCha() {
+  return (
+    <g>
+      <Food1Shadow rx={16} />
+      <path d="M8,30 Q8,40 18,40 Q28,40 28,30 Z" fill="#2a4a3a" stroke="#0a1a10" strokeWidth="0.5" />
+      <ellipse cx="18" cy="30" rx="10" ry="2.6" fill="#3a5a4a" stroke="#0a1a10" strokeWidth="0.45" />
+      <ellipse cx="18" cy="30.2" rx="8.6" ry="2" fill="#8ac040" />
+      <path d="M30,30 Q30,16 40,14 Q44,16 44,22 Q42,32 36,34 Z" fill="#c8a870" stroke="#6a4a1a" strokeWidth="0.5" opacity="0" />
+      {[[32, 16, 20], [36, 13, -10], [40, 18, 60], [34, 21, -40], [38, 24, 10]].map(([x, y, r], i) => <path key={i} d="M-3.4 0 Q0 -2.2 3.4 0 Q0 2.2 -3.4 0 Z" transform={`translate(${x},${y}) rotate(${r})`} fill={i % 2 ? "#3a8a2a" : "#5aa83a"} stroke="#1a4a10" strokeWidth="0.3" />)}
+      <Food1Steam x={18} y={25} s={0.6} />
+    </g>
+  );
+}
+function FoodSzOden() {
+  return (
+    <g>
+      <Food4Pot body="#1a1a1e" />
+      <ellipse cx="24" cy="21.4" rx="16" ry="4.8" fill="#2a1408" />
+      {[[13, 0], [20, 1], [27, 2], [34, 3]].map(([x, k]) => (
+        <g key={k}>
+          <path d={`M${x} 26 L${x + 3} 6`} stroke="#d8b878" strokeWidth="0.8" />
+          {k === 0 && <path d={`M${x - 1.4},16 L${x + 4},16 L${x + 1.6},10 Z`} fill="#3a2a20" />}
+          {k === 1 && <ellipse cx={x + 1.6} cy={14} rx="2.4" ry="3" fill="#6a3a1a" stroke="#2a1404" strokeWidth="0.3" />}
+          {k === 2 && <rect x={x - 0.6} y={11} width="4.4" height="5" rx="0.8" fill="#4a2a14" stroke="#1a0a04" strokeWidth="0.3" />}
+          {k === 3 && <ellipse cx={x + 1.6} cy={14} rx="2.2" ry="2.8" fill="#8a5a2a" stroke="#3a1a08" strokeWidth="0.3" />}
+        </g>
+      ))}
+      {Array.from({ length: 12 }, (_, i) => <circle key={i} cx={12 + i * 2.2} cy={10 + (i % 3) * 3} r="0.4" fill="#e8d8a0" opacity="0.8" />)}
+      <Food1Steam x={24} y={20} s={0.7} />
+    </g>
+  );
+}
+function FoodSzSakuraebi() {
+  return (
+    <g>
+      <Food4Plate cy={32} c="#f4f0e8" />
+      {[[17, 28], [30, 27], [24, 33]].map(([x, y], i) => (
+        <g key={i}>
+          <ellipse cx={x} cy={y} rx="7" ry="4" fill="#e8c080" stroke="#9a6a1a" strokeWidth="0.45" />
+          {Array.from({ length: 8 }, (_, k) => <path key={k} d={`M${x - 5 + k * 1.4} ${y - 2 + (k % 2) * 2} q0.8 -1 1.6 0`} stroke="#f07a8a" strokeWidth="0.8" fill="none" />)}
+        </g>
+      ))}
+      <path d="M36,23 l4,-1.6 l1,1.6 l-4,1.6 Z" fill="#f4e050" />
+    </g>
+  );
+}
+function FoodSzGyoza() {
+  const n = 10;
+  return (
+    <g>
+      <Food4Plate cy={31} />
+      {Array.from({ length: n }, (_, i) => {
+        const a = (i / n) * Math.PI * 2;
+        return (
+          <g key={i} transform={`translate(${(24 + Math.cos(a) * 11).toFixed(2)},${(30 + Math.sin(a) * 3.8).toFixed(2)}) rotate(${(a * 180 / Math.PI + 90).toFixed(1)}) scale(1,0.55)`}>
+            <path d="M-2.4,3 Q-2.4,-3 0,-4 Q2.4,-3 2.4,3 Z" fill="#e8b860" stroke="#8a5a1a" strokeWidth="0.5" />
+          </g>
+        );
+      })}
+      <path d="M21,30 q3,-2 6,0 q-3,2 -6,0 Z" fill="#f4f4f0" />
+      <path d="M22,29.6 q2,-0.8 4,0" stroke="#c8e0c8" strokeWidth="0.6" fill="none" />
+      <Food1Steam x={24} y={20} s={0.8} />
+    </g>
+  );
+}
+function FoodSzHamanaunagi() {
+  return (
+    <Food5Don bowl={{ body: "#1a1a1e", light: "#3a3a42", dark: "#0a0a0c", rim: "#000", band: "#4a8ab8" }} steam>
+      <rect x="10" y="17.4" width="28" height="6.4" rx="1.6" fill="#8a4a14" stroke="#3a1404" strokeWidth="0.45" />
+      {[13, 18, 23, 28, 33].map((d) => <path key={d} d={`M${d} 17.8 l2 5.6`} stroke="#4a1e06" strokeWidth="0.8" opacity="0.7" />)}
+      <path d="M11 19 H37" stroke="#c8782a" strokeWidth="0.6" opacity="0.6" />
+      <circle cx="35" cy="24.4" r="1.2" fill="#f4d040" />
+    </Food5Don>
+  );
+}
+function FoodSzMikan() {
+  return <Food6Fruit c="#f8901a" d="#9a4a04" pts={[[14, 31], [24, 33], [34, 31], [19, 24], [29, 24], [24, 17]]} r={5.4} leaf="#3a8a2a" />;
+}
+
+/* ---- 愛知 ---- */
+function FoodAiHitsumabushi() {
+  return (
+    <g>
+      <Food1Shadow rx={20} />
+      <ellipse cx="24" cy="31" rx="19" ry="8" fill="#2a0e0a" stroke="#0a0302" strokeWidth="0.6" />
+      <ellipse cx="24" cy="29.6" rx="17" ry="6.6" fill="#f4f0e6" />
+      {[[12, 28], [18, 26.6], [24, 26.2], [30, 26.6], [36, 28], [15, 31.4], [21, 31], [27, 31], [33, 31.4]].map(([x, y], i) => (
+        <g key={i}>
+          <rect x={x - 3} y={y - 1.6} width="6" height="3.2" rx="0.8" fill="#8a4a14" stroke="#3a1404" strokeWidth="0.35" />
+          <path d={`M${x - 1} ${y - 1.4} l1.4 2.8`} stroke="#4a1e06" strokeWidth="0.6" opacity="0.7" />
+        </g>
+      ))}
+      <path d="M24,23 L24,29.6 M10,29 L38,29" stroke="#c8a888" strokeWidth="0.5" opacity="0.8" />
+      <circle cx="40" cy="16" r="2.6" fill="#7ac04a" />
+      <Food1Steam x={24} y={18} s={0.8} />
+    </g>
+  );
+}
+function FoodAiMisonikomi() {
+  return (
+    <g>
+      <Food4Pot body="#6a4a2a" light="#8a6a3a" rim="#2a1a08" />
+      <ellipse cx="24" cy="21.4" rx="16" ry="4.8" fill="#6a2a0a" />
+      <Food4Noodles cy={21.4} rx={14} ry={3.6} c="#f0d8a0" n={4} w={1.4} wave={0.6} />
+      <ellipse cx="22" cy="20" rx="3.4" ry="2.6" fill="#fff" stroke="#d8d0c0" strokeWidth="0.3" />
+      <circle cx="22" cy="20" r="1.4" fill="#f4b42a" />
+      <path d="M28,19 q3,-1.4 6,0" stroke="#d8eab0" strokeWidth="1.6" fill="none" />
+      <ellipse cx="14" cy="22.4" rx="2.4" ry="1.2" fill="#c8a060" />
+      <Food1Steam x={24} y={11} />
+    </g>
+  );
+}
+function FoodAiTebasaki() {
+  return (
+    <g>
+      <Food4Plate cy={32} c="#f4f0e8" />
+      {[[15, 28, -24], [24, 26, 6], [32, 29, 28], [20, 32.6, -6], [29, 33, 14]].map(([x, y, r], i) => (
+        <g key={i} transform={`translate(${x},${y}) rotate(${r})`}>
+          <path d="M-5,-1 Q-5,-3.6 -1,-3 L4,-2 Q6,0 4,2 L-1,3 Q-5,3.6 -5,1 Z" fill="#8a4a14" stroke="#3a1404" strokeWidth="0.4" />
+          <path d="M-3,-1.4 L3,-0.6" stroke="#c8782a" strokeWidth="0.6" />
+          {[-2, 0, 2].map((d) => <circle key={d} cx={d} cy="1" r="0.3" fill="#f4ecd8" />)}
+        </g>
+      ))}
+    </g>
+  );
+}
+function FoodAiMorning() {
+  return (
+    <g>
+      <Food1Shadow rx={20} />
+      <rect x="4" y="22" width="40" height="18" rx="1.4" fill="#8a5a2a" stroke="#3a2008" strokeWidth="0.5" />
+      <path d="M8,34 L8,26 Q8,24 10,24 L20,24 Q22,24 22,26 L22,34 Z" fill="#d89a4a" stroke="#7a4a10" strokeWidth="0.45" />
+      <path d="M9.6,33 L9.6,26.6 L20.4,26.6 L20.4,33 Z" fill="#f4d890" />
+      <path d="M12,28 h6" stroke="#fbe58a" strokeWidth="1.4" />
+      <ellipse cx="15" cy="31" rx="3.4" ry="1.4" fill="#5a1e14" />
+      <ellipse cx="32" cy="33" rx="7" ry="2.4" fill="#f4f0e8" stroke="#8a8070" strokeWidth="0.4" />
+      <path d="M27,24 Q27,33 32,33 Q37,33 37,24 Z" fill="#f4f0e8" stroke="#8a8070" strokeWidth="0.45" />
+      <ellipse cx="32" cy="24" rx="5" ry="1.4" fill="#4a2a10" />
+      <ellipse cx="40" cy="28" rx="2.4" ry="3" fill="#f8f4ea" stroke="#c8b898" strokeWidth="0.3" />
+      <Food1Steam x={32} y={18} s={0.6} />
+    </g>
+  );
+}
+function FoodAiTenmusu() {
+  return (
+    <g>
+      <Food4Plate cy={34} c="#e8e0cc" />
+      {[[13, 0], [24, 1], [35, 2]].map(([x, k]) => (
+        <g key={k}>
+          <path d={`M${x - 5},31 Q${x - 4.6},20 ${x},18 Q${x + 4.6},20 ${x + 5},31 Q${x},33 ${x - 5},31 Z`} fill="#fbf8f0" stroke="#b8ac98" strokeWidth="0.4" />
+          <path d={`M${x - 4.2},32 L${x - 4.2},26 L${x + 4.2},26 L${x + 4.2},32 Q${x},33.4 ${x - 4.2},32 Z`} fill="#1a2418" />
+          <path d={`M${x - 2.4},21 Q${x},15 ${x + 2.4},21`} fill="#e8b860" stroke="#9a6a1a" strokeWidth="0.35" />
+          <path d={`M${x},18 L${x + 0.6},13`} stroke="#e85a3a" strokeWidth="0.9" />
+        </g>
+      ))}
+    </g>
+  );
+}
+function FoodAiInuyamadengaku() {
+  return (
+    <g>
+      <Food4Plate cy={34} />
+      {[[14, 0], [24, 1], [34, 2]].map(([x, k]) => (
+        <g key={k}>
+          <Food5Skewer x1={x} y1={38} x2={x} y2={12} />
+          <rect x={x - 3} y={18} width="6" height="12" rx="0.6" fill="#f4f0e4" stroke="#b8ae98" strokeWidth="0.4" />
+          <rect x={x - 3} y={18} width="6" height="7" rx="0.6" fill="#5a1e0a" />
+          <circle cx={x} cy={20} r="0.4" fill="#e8c890" />
+        </g>
+      ))}
+    </g>
+  );
+}
+function FoodAiMisokatsu() {
+  return (
+    <g>
+      <Food4Plate cy={31} rx={20} c="#f4f0e8" />
+      <path d="M6,28 q8,-6 15,-4 l-2,3 q-6,-1 -13,1 Z" fill="#d8eab0" stroke="#8aa050" strokeWidth="0.35" />
+      {[0, 1, 2, 3, 4].map((k) => (
+        <g key={k} transform={`translate(${16 + k * 5},${27 - k * 0.4}) rotate(-10)`}>
+          <rect x="-2.4" y="-4" width="4.8" height="8" rx="0.8" fill="#c8782a" stroke="#6a3008" strokeWidth="0.4" />
+          <rect x="-1.8" y="-1" width="3.6" height="4" fill="#f4e8d0" />
+        </g>
+      ))}
+      <path d="M14,24 Q24,18 38,24 Q30,27 24,26 Q18,27 14,24 Z" fill="#3a1408" opacity="0.9" />
+      <circle cx="22" cy="23" r="0.4" fill="#f4ecd8" /><circle cx="28" cy="22.6" r="0.4" fill="#f4ecd8" />
+    </g>
+  );
+}
+function FoodAiMatcha() {
+  return (
+    <g>
+      <Food1Shadow rx={14} />
+      <path d="M10,24 Q10,38 24,38 Q38,38 38,24 Z" fill="#3a2a1a" stroke="#140c04" strokeWidth="0.5" />
+      <ellipse cx="24" cy="24" rx="14" ry="3.6" fill="#5a4a32" stroke="#140c04" strokeWidth="0.45" />
+      <ellipse cx="24" cy="24.2" rx="12.6" ry="2.8" fill="#7ab040" />
+      {Array.from({ length: 12 }, (_, i) => <circle key={i} cx={14 + (i * 7.1) % 20} cy={23.4 + (i % 3) * 0.6} r="0.5" fill="#c8e890" opacity="0.8" />)}
+      <path d="M36,16 L44,8" stroke="#c8a870" strokeWidth="1" />
+      {[0, 1, 2, 3, 4].map((k) => <path key={k} d={`M${36 + k * 0.6} 16 l-1 6`} stroke="#c8a870" strokeWidth="0.5" />)}
+    </g>
+  );
+}
+function FoodAiKishimen() {
+  return (
+    <Food5Ramen bowl={{ body: "#2a1a10", light: "#4a3420", dark: "#0c0604", rim: "#000" }} broth="#8a5a2a" noodle="#f8f0dc" w={2.2} n={4} wave={0.5}>
+      <path d="M13,19 Q20,15 26,18 Q20,21 13,19 Z" fill="#c8a870" opacity="0.9" />
+      {Array.from({ length: 10 }, (_, i) => <path key={i} d={`M${14 + i * 1.2} ${18.6 - (i % 2) * 0.6} l0.6 -0.8`} stroke="#8a6a3a" strokeWidth="0.4" />)}
+      <path d="M28,20 l5,-0.4" stroke="#3a8a3a" strokeWidth="1.2" />
+      <path d="M30,22.6 l4,-0.4 l-0.4,1.6 l-4,0.4 Z" fill="#f8f2e4" stroke="#c8b8a0" strokeWidth="0.3" />
+    </Food5Ramen>
+  );
+}
+function FoodAiCurryudon() {
+  return (
+    <Food5Ramen bowl={{ body: "#1a1a1e", light: "#3a3a42", dark: "#0a0a0c", rim: "#000", band: "#c8a040" }} broth="#c8862a" noodle={null}>
+      <ellipse cx="24" cy="22" rx="14" ry="4" fill="#b8762a" />
+      <path d="M14,21 q4,-2 8,0 q4,2 8,0" stroke="#d8a050" strokeWidth="1" fill="none" />
+      <ellipse cx="24" cy="20.4" rx="3.6" ry="1.8" fill="#fff" stroke="#d8d0c0" strokeWidth="0.3" />
+      <circle cx="24" cy="20.4" r="1.2" fill="#f4b42a" />
+      <Food1Negi x={30} y={22} /><Food1Negi x={18} y={22.6} />
+    </Food5Ramen>
+  );
+}
+function FoodAiChikuwa() {
+  return (
+    <g>
+      <Food4Board x={4} y={28} w={40} h={10} c="#d8b080" d="#8a6a3a" />
+      {[0, 1, 2].map((k) => (
+        <g key={k} transform={`translate(24,${24 + k * 4.4}) rotate(${-4 + k * 3})`}>
+          <rect x="-16" y="-2.2" width="30" height="4.4" rx="2.2" fill="#f0e0b8" stroke="#a8884a" strokeWidth="0.4" />
+          <rect x="-12" y="-2.2" width="22" height="2.8" rx="1.4" fill="#c88a3a" />
+          <ellipse cx="14" cy="0" rx="1.4" ry="2.2" fill="#f8f0d8" stroke="#a8884a" strokeWidth="0.35" />
+          <ellipse cx="14" cy="0" rx="0.6" ry="1" fill="#6a4a20" />
+        </g>
+      ))}
+    </g>
+  );
+}
+function FoodAiUzura() {
+  return (
+    <g>
+      <Food4Plate cy={33} c="#2a2a30" rim="#0a0a0c" />
+      {[[14, 29], [21, 27], [28, 27.4], [35, 29.6], [18, 32.6], [26, 32.4], [32, 33]].map(([x, y], i) => (
+        <g key={i}>
+          <ellipse cx={x} cy={y} rx="2.8" ry="3.2" fill={i % 2 ? "#e8dcc0" : "#fbf8f0"} stroke="#a89878" strokeWidth="0.35" />
+          {i % 2 === 1 && [[-1, -1], [1, 0.4], [-0.4, 1.4], [1, -1.6]].map(([dx, dy], k) => <circle key={k} cx={x + dx} cy={y + dy} r="0.5" fill="#5a4a3a" />)}
+          {i % 2 === 0 && <circle cx={x} cy={y + 0.4} r="1.2" fill="#f4c42a" />}
+        </g>
+      ))}
+    </g>
+  );
+}
+
+const FOOD_ART_6 = {
+  ni_tarekatsu: FoodNiTarekatsu, ni_sasadango: FoodNiSasadango, ni_noppe: FoodNiNoppe,
+  ni_hegisoba: FoodNiHegisoba, ni_kakinotane: FoodNiKakinotane, ni_shogaramen: FoodNiShogaramen,
+  ni_sasazushi: FoodNiSasazushi, ni_itoigawa: FoodNiItoigawa, ni_sakemanju: FoodNiSakemanju,
+  ni_buri: FoodNiBuri, ni_okesagaki: FoodNiOkesagaki, ni_igoneri: FoodNiIgoneri,
+  to_hotaruika: FoodToHotaruika, to_suika: FoodToSuika, to_baimeshi: FoodToBaimeshi,
+  to_masuzushi: FoodToMasuzushi, to_blackramen: FoodToBlackramen, to_shiroebi: FoodToShiroebi,
+  to_buri: FoodToBuri, to_himiudon: FoodToHimiudon, to_konbujime: FoodToKonbujime,
+  to_okadosomen: FoodToOkadosomen, to_gokayamatofu: FoodToGokayamatofu, to_kaburazushi: FoodToKaburazushi,
+  is_boucha: FoodIsBoucha, is_komatsuudon: FoodIsKomatsuudon, is_maruimo: FoodIsMaruimo,
+  is_kaisendon: FoodIsKaisendon, is_jibuni: FoodIsJibuni, is_kinpaku: FoodIsKinpaku,
+  is_kaki: FoodIsKaki, is_notodon: FoodIsNotodon, is_egara: FoodIsEgara,
+  is_himono: FoodIsHimono, is_shiomusubi: FoodIsShiomusubi, is_yubeshi: FoodIsYubeshi,
+  fk_kani: FoodFkKani, fk_sourcekatsu: FoodFkSourcekatsu, fk_mizuyokan: FoodFkMizuyokan,
+  fk_oroshisoba: FoodFkOroshisoba, fk_satoimo: FoodFkSatoimo, fk_dinoegg: FoodFkDinoegg,
+  fk_volga: FoodFkVolga, fk_habutae: FoodFkHabutae, fk_tsurushigaki: FoodFkTsurushigaki,
+  fk_yakisaba: FoodFkYakisaba, fk_guji: FoodFkGuji, fk_kuzumanju: FoodFkKuzumanju,
+  yn_hoto: FoodYnHoto, yn_kinakomochi: FoodYnKinakomochi, yn_torimotsu: FoodYnTorimotsu,
+  yn_budou: FoodYnBudou, yn_grapejelly: FoodYnGrapejelly, yn_korogaki: FoodYnKorogaki,
+  yn_akebono: FoodYnAkebono, yn_ayu: FoodYnAyu, yn_minobumanju: FoodYnMinobumanju,
+  yn_yoshidaudon: FoodYnYoshidaudon, yn_nijimasu: FoodYnNijimasu, yn_fujikashi: FoodYnFujikashi,
+  na_oyaki: FoodNaOyaki, na_kuriokowa: FoodNaKuriokowa, na_nozawana: FoodNaNozawana,
+  na_soba: FoodNaSoba, na_ringo: FoodNaRingo, na_koi: FoodNaKoi,
+  na_sanzoku: FoodNaSanzoku, na_wasabizuke: FoodNaWasabizuke, na_milkpan: FoodNaMilkpan,
+  na_yakiniku: FoodNaYakiniku, na_romen: FoodNaRomen, na_unagi: FoodNaUnagi,
+  gf_ayu: FoodGfAyu, gf_tanmen: FoodGfTanmen, gf_ayukashi: FoodGfAyukashi,
+  gf_mizumanju: FoodGfMizumanju, gf_kaki: FoodGfKaki, gf_ibicha: FoodGfIbicha,
+  gf_keichan: FoodGfKeichan, gf_sekiunagi: FoodGfSekiunagi, gf_ham: FoodGfHam,
+  gf_kurikinton: FoodGfKurikinton, gf_gohei: FoodGfGohei, gf_karasumi: FoodGfKarasumi,
+  gf_hobamiso: FoodGfHobamiso, gf_takayamaramen: FoodGfTakayamaramen, gf_midarashi: FoodGfMidarashi,
+  sz_himono: FoodSzHimono, sz_fujinomiya: FoodSzFujinomiya, sz_mishimaunagi: FoodSzMishimaunagi,
+  sz_kinmedai: FoodSzKinmedai, sz_wasabidon: FoodSzWasabidon, sz_tokoroten: FoodSzTokoroten,
+  sz_cha: FoodSzCha, sz_oden: FoodSzOden, sz_sakuraebi: FoodSzSakuraebi,
+  sz_gyoza: FoodSzGyoza, sz_hamanaunagi: FoodSzHamanaunagi, sz_mikan: FoodSzMikan,
+  ai_hitsumabushi: FoodAiHitsumabushi, ai_misonikomi: FoodAiMisonikomi, ai_tebasaki: FoodAiTebasaki,
+  ai_morning: FoodAiMorning, ai_tenmusu: FoodAiTenmusu, ai_inuyamadengaku: FoodAiInuyamadengaku,
+  ai_misokatsu: FoodAiMisokatsu, ai_matcha: FoodAiMatcha, ai_kishimen: FoodAiKishimen,
+  ai_curryudon: FoodAiCurryudon, ai_chikuwa: FoodAiChikuwa, ai_uzura: FoodAiUzura,
+};
+
+/* ==== 近畿のご当地グルメの絵（2026-10-10）。⚠️ viewBox 0 0 48 48・静止・defs と id を使わない ==== */
+/* 鍋もの（中身は具の配列） */
+function Food7Nabe({ body = "#3a3a42", broth = "#b8884a", items = [], steam = true }) {
+  return (
+    <g>
+      <Food4Pot body={body} />
+      <ellipse cx="24" cy="21.4" rx="16" ry="4.8" fill={broth} />
+      {items.map(([x, y, kind, c], i) => kind === "ball" ? <Food4Ball key={i} x={x} y={y} r={2.2} c={c} d="#0004" />
+        : kind === "leaf" ? <path key={i} d={`M${x - 3} ${y} q3 -2 6 0 q-3 1.6 -6 0 Z`} fill={c} />
+        : kind === "slice" ? <path key={i} d={`M${x - 3.4} ${y} q1.6 -1.6 3.4 -0.8 q1.8 0.6 3.4 -0.2 q-1 1.8 -3.4 1.6 q-2.2 0.6 -3.4 -0.6 Z`} fill={c} stroke="#0004" strokeWidth="0.3" />
+        : <rect key={i} x={x - 2} y={y - 1.2} width="4" height="2.4" rx="0.6" fill={c} stroke="#0003" strokeWidth="0.25" />)}
+      {steam && <Food1Steam x={24} y={11} />}
+    </g>
+  );
+}
+/* 鉄板の粉もの（丸く焼いたもの） */
+function Food7Teppan({ c = "#c8862a", sauce = "#4a1a08", top }) {
+  return (
+    <g>
+      <Food4Iron />
+      <ellipse cx="24" cy="29.4" rx="14" ry="5.4" fill={c} stroke="#6a3a08" strokeWidth="0.5" />
+      <ellipse cx="24" cy="28.6" rx="12" ry="4.4" fill={sauce} />
+      <path d="M14,28 q3,-1.6 6,0 t6,0 t6,0" stroke="#f8f2e0" strokeWidth="0.9" fill="none" />
+      {top}
+      <Food1Steam x={24} y={18} s={0.8} />
+    </g>
+  );
+}
+
+/* ---- 三重 ---- */
+function FoodMeTonteki() {
+  return (
+    <g>
+      <Food4Plate cy={31} rx={20} c="#f4f0e8" />
+      <path d="M6,28 q8,-6 15,-4 l-2,3 q-6,-1 -13,1 Z" fill="#d8eab0" stroke="#8aa050" strokeWidth="0.35" />
+      <g transform="translate(26,28) rotate(-4)">
+        <path d="M-11,0 Q-11,-6 -2,-6 Q9,-6 11,-1 Q11,4 2,5 Q-9,5 -11,0 Z" fill="#3a1408" stroke="#140602" strokeWidth="0.5" />
+        {[-6, -1, 4].map((d) => <path key={d} d={`M${d} -5.4 l0 10`} stroke="#c8a888" strokeWidth="0.8" />)}
+        <path d="M-9,-2 Q0,-6 9,-2" stroke="#8a3a14" strokeWidth="0.9" fill="none" />
+      </g>
+      {[[20, 22.4], [24, 22], [29, 22.4]].map(([x, y], i) => <ellipse key={i} cx={x} cy={y} rx="0.9" ry="0.6" fill="#f4e8c0" />)}
+    </g>
+  );
+}
+function FoodMeHamaguri() {
+  return (
+    <g>
+      <Food4Grill />
+      {[[15, 27, -10], [27, 25, 8], [34, 30, 18], [21, 32, -4]].map(([x, y, r], i) => (
+        <g key={i} transform={`translate(${x},${y}) rotate(${r})`}>
+          <path d="M-6.4,0 Q-5.4,-5.8 0,-6 Q5.4,-5.8 6.4,0 Q5.4,2.2 0,2.4 Q-5.4,2.2 -6.4,0 Z" fill="#c8b098" stroke="#5a4a3a" strokeWidth="0.45" />
+          {[-3, 0, 3].map((d) => <path key={d} d={`M${d - 1} -4.4 q1 -0.6 2 0`} stroke="#8a6a50" strokeWidth="0.35" fill="none" />)}
+          <path d="M-4,0.6 Q0,-1.6 4,0.6" fill="#f0c890" stroke="#a8784a" strokeWidth="0.3" />
+        </g>
+      ))}
+      <Food1Steam x={24} y={15} s={0.8} />
+    </g>
+  );
+}
+function FoodMeMisoyakiudon() {
+  return (
+    <g>
+      <Food4Iron />
+      <Food4Noodles cx={24} cy={30.4} rx={15} ry={4.6} c="#a8582a" n={4} w={2} />
+      {[[16, 29], [26, 28.4], [31, 31]].map(([x, y], i) => <path key={i} d={`M${x - 3} ${y} q3 -2 6 0`} stroke="#d8eab0" strokeWidth="1.6" fill="none" />)}
+      <path d="M20,30 q3,-2 6,-0.4 q-3,1.6 -6,0.4 Z" fill="#c87a5a" stroke="#5a2a14" strokeWidth="0.3" />
+      <Food1Steam x={24} y={20} s={0.8} />
+    </g>
+  );
+}
+function FoodMeMatsusaka() {
+  return (
+    <Food7Nabe body="#1a1a1e" broth="#6a3a14" items={[[14, 20.6, "slice", "#d86a6a"], [22, 19.4, "slice", "#e88080"], [30, 20.6, "slice", "#d86a6a"], [26, 23, "rect", "#f4ecd8"], [17, 23.4, "rect", "#f4f0e4"], [33, 23, "leaf", "#5aa04a"]]} />
+  );
+}
+function FoodMeTsugyoza() {
+  return (
+    <g>
+      <Food4Plate cy={31} />
+      {[[17, 28, -10], [30, 28, 10]].map(([x, y, r], i) => (
+        <g key={i} transform={`translate(${x},${y}) rotate(${r})`}>
+          <path d="M-8,4 Q-8,-6 0,-7 Q8,-6 8,4 Z" fill="#d8984a" stroke="#7a4a10" strokeWidth="0.5" />
+          <path d="M-7,3 Q-7,-4 0,-5.4 Q7,-4 7,3 Z" fill="#e8b860" />
+          {[-4, -1.4, 1.4, 4].map((d) => <path key={d} d={`M${d} -5 l0.4 2`} stroke="#a86a2a" strokeWidth="0.45" />)}
+        </g>
+      ))}
+      <Food1Steam x={24} y={18} s={0.8} />
+    </g>
+  );
+}
+function FoodMeToriyakiniku() {
+  return (
+    <g>
+      <Food4Grill />
+      {[[14, 27], [22, 25.4], [30, 27], [35, 30.4], [18, 32], [27, 32]].map(([x, y], i) => (
+        <path key={i} d={`M${x - 3.6} ${y} q1.6 -2.6 3.6 -2 q2.4 -0.4 3.6 2 q-1 2.4 -3.6 2 q-2.6 0.4 -3.6 -2 Z`} fill="#d8a060" stroke="#6a3a10" strokeWidth="0.4" />
+      ))}
+      <path d="M12,24 q12,-4 24,2" stroke="#7a2a08" strokeWidth="1.4" fill="none" opacity="0.5" />
+      <Food1Steam x={24} y={16} s={0.8} />
+    </g>
+  );
+}
+function FoodMeKatayaki() {
+  return (
+    <g>
+      <Food4Plate cy={34} c="#e8e0cc" />
+      {[[16, 27, -8], [30, 27, 8], [23, 32, 0]].map(([x, y, r], i) => (
+        <g key={i} transform={`translate(${x},${y}) rotate(${r})`}>
+          <rect x="-7" y="-4.4" width="14" height="8.8" rx="1" fill="#c8964a" stroke="#6a4010" strokeWidth="0.5" />
+          <rect x="-6" y="-3.6" width="12" height="7.2" rx="0.8" fill="#d8a858" />
+          {[-3, 0, 3].map((d) => <circle key={d} cx={d} cy="0" r="0.6" fill="#2a2018" />)}
+          <path d="M-5,-2.4 l2,1 M3,1.4 l2,1" stroke="#8a5a20" strokeWidth="0.4" />
+        </g>
+      ))}
+    </g>
+  );
+}
+function FoodMeIgagyu() {
+  return (
+    <g>
+      <Food4Iron />
+      <path d="M10,30 Q10,23 17,22 Q27,21 32,24 L32.6,33 Q22,35 14,34 Q10,33 10,30 Z" fill="#6a2e14" stroke="#2a0c04" strokeWidth="0.55" />
+      {[0, 1, 2, 3].map((k) => <path key={k} d={`M${13 + k * 4.4} 27.6 L${17 + k * 4.4} 23.4`} stroke="#2a0c04" strokeWidth="0.7" opacity="0.7" />)}
+      <path d="M33,24 L38,24 L38.6,33 L33.6,33 Z" fill="#d6606a" stroke="#4a1c0c" strokeWidth="0.4" />
+      <ellipse cx="14" cy="35.6" rx="2" ry="1" fill="#f0c890" />
+      <Food1Steam x={22} y={19} s={0.8} />
+    </g>
+  );
+}
+function FoodMeIgadengaku() {
+  return (
+    <g>
+      <Food4Plate cy={34} />
+      {[[14, 0], [24, 1], [34, 2]].map(([x, k]) => (
+        <g key={k}>
+          <Food5Skewer x1={x} y1={38} x2={x} y2={12} />
+          <rect x={x - 3} y={18} width="6" height="12" rx="0.6" fill="#f4f0e4" stroke="#b8ae98" strokeWidth="0.4" />
+          <rect x={x - 3} y={18} width="6" height="6" rx="0.6" fill="#c8862a" />
+        </g>
+      ))}
+    </g>
+  );
+}
+function FoodMeIseudon() {
+  return (
+    <Food5Ramen bowl={{ body: "#1a1a1e", light: "#3a3a42", dark: "#0a0a0c", rim: "#000", band: "#c82a1a" }} broth="#2a0e04" noodle="#fbf6e8" w={2.4} n={4} wave={0.4}>
+      <path d="M13,20 q3,-2 6,0" stroke="#3a1004" strokeWidth="1.6" fill="none" />
+      <Food1Negi x={28} y={21} /><Food1Negi x={30} y={22.4} /><Food1Negi x={26} y={22.6} /><Food1Negi x={32} y={21} />
+    </Food5Ramen>
+  );
+}
+function FoodMeAnkoromochi() {
+  return (
+    <Food6Rounds c="#5a1e14" d="#2a0804" plate="#f4f0e8" r={4.2} deco={(x, y) => (
+      <g>{[-2, 0, 2].map((d) => <path key={d} d={`M${x - 3 + d * 0.4} ${y - 1 + d * 0.4} q3 -1 6 0`} stroke="#7a3a2a" strokeWidth="0.5" fill="none" />)}</g>
+    )} />
+  );
+}
+function FoodMeTekone() {
+  return (
+    <Food5Don bowl={{ body: "#7a1a14", light: "#a83a2a", dark: "#3a0a06", rim: "#140402" }}>
+      {[[14, 21, -20], [19.6, 19.4, -8], [25.4, 19.2, 6], [31, 20.4, 16], [35.4, 22.4, 26], [18, 23.6, -4], [28, 23.8, 8]].map(([x, y, r], i) => (
+        <Food4Slice key={i} x={x} y={y} rot={r} w={5.6} h={3} c="#8a1a2a" l="#c84a5a" />
+      ))}
+      {[[22, 22], [26, 21.6], [31, 23.6]].map(([x, y], i) => <rect key={i} x={x} y={y} width="2.4" height="0.6" fill="#2a3a1a" />)}
+      <path d="M33,17 q2,-3 4,-1" stroke="#5aa04a" strokeWidth="1.1" fill="none" />
+    </Food5Don>
+  );
+}
+function FoodMeMeharizushi() {
+  return (
+    <g>
+      <Food4Plate cy={34} c="#e8e0cc" />
+      {[[15, 0], [33, 1]].map(([x, k]) => (
+        <g key={k}>
+          <ellipse cx={x} cy={26} rx="8" ry="9" fill="#2a4a1e" stroke="#0a2008" strokeWidth="0.5" />
+          {[-4, -1, 2, 5].map((d) => <path key={d} d={`M${x - 6} ${26 + d} q6 -1.6 12 0`} stroke="#4a6a2a" strokeWidth="0.5" fill="none" />)}
+          <ellipse cx={x} cy={25} rx="4" ry="3" fill="#fbf8f0" opacity="0" />
+        </g>
+      ))}
+      <g transform="translate(24,34)"><ellipse rx="6" ry="3.4" fill="#fbf8f0" stroke="#c8c0b0" strokeWidth="0.35" /><path d="M-6,-0.4 Q0,-4 6,-0.4" fill="#2a4a1e" /></g>
+    </g>
+  );
+}
+function FoodMeSanmazushi() {
+  return (
+    <g>
+      <Food4Board x={3} y={27} w={42} h={11} c="#c8a070" d="#7a5a30" />
+      {[8, 16, 24, 32, 40].map((x, i) => (
+        <g key={i} transform={`translate(${x},${30})`}>
+          <rect x="-3.6" y="-1" width="7.2" height="3.8" rx="0.8" fill="#fbf8f0" stroke="#c8c0b0" strokeWidth="0.3" />
+          <path d="M-3.8,-1 Q0,-4.4 3.8,-1 L3.6,0.6 Q0,-2.2 -3.6,0.6 Z" fill="#9aa8b8" stroke="#3a4a5a" strokeWidth="0.35" />
+          <path d="M-2.6,-1.4 Q0,-3 2.6,-1.4" stroke="#e8ecf0" strokeWidth="0.5" fill="none" />
+        </g>
+      ))}
+      <path d="M40,22 l3,-2 l0.6,2 Z" fill="#f4e050" />
+    </g>
+  );
+}
+function FoodMeShinhime() {
+  return (
+    <g>
+      <Food4Glass fill="#f8d040" top="#fae880" level={17} />
+      {[[19, 15], [24, 14.2], [29, 15.2]].map(([x, y], i) => (
+        <g key={i}><circle cx={x} cy={y} r="2.4" fill="#c8e040" stroke="#6a8a10" strokeWidth="0.35" /><circle cx={x - 0.7} cy={y - 0.7} r="0.6" fill="#fff" opacity="0.6" /></g>
+      ))}
+      <path d="M30,12 q3,-3 6,-1 q-3,2 -6,1 Z" fill="#4a9a3a" />
+    </g>
+  );
+}
+
+/* ---- 滋賀 ---- */
+function FoodSgShijimijiru() {
+  return (
+    <Food6Soup wan={{ body: "#7a1a14", light: "#a83a2a", rim: "#2a0604", inner: "#3a0a06" }} broth="#8a5a2a">
+      {[[15, 21.6], [19.4, 20.6], [24, 21.6], [28.6, 20.6], [33, 21.6], [17.6, 23.4], [22, 23.6], [26.4, 23.6], [30.6, 23.2]].map(([x, y], i) => (
+        <g key={i} transform={`translate(${x},${y}) rotate(${(i * 37) % 50 - 25})`}><ellipse rx="1.9" ry="1.3" fill="#2a2620" stroke="#000" strokeWidth="0.25" /><path d="M-1.4 0 q1.4 -0.9 2.8 0" stroke="#7a6a50" strokeWidth="0.3" fill="none" /></g>
+      ))}
+      <Food1Negi x={24} y={22} />
+    </Food6Soup>
+  );
+}
+function FoodSgChikaramochi() {
+  return <Food6Kushi sticks={[[16, 0], [30, 1]]} r={3.2} c="#f4ecd8" d="#a8987a" glaze="#c8a060" />;
+}
+function FoodSgKoayu() {
+  return (
+    <g>
+      <Food4Plate cy={32} c="#f4f0e8" />
+      <path d="M7,30 q8,-6 15,-4 l-2,3 q-6,-1 -13,1 Z" fill="#fff" stroke="#c8c0b0" strokeWidth="0.3" />
+      {[[20, 26, -14], [28, 26.6, 10], [24, 30, -4], [32, 31, 18], [18, 33, 6], [26, 34, -8]].map(([x, y, r], i) => (
+        <g key={i} transform={`translate(${x},${y}) rotate(${r})`}>
+          <path d="M-5,0 Q-2,-1.8 3,-1 L5,-2 L5,2 L3,1 Q-2,1.8 -5,0 Z" fill="#e8c070" stroke="#9a6a1a" strokeWidth="0.4" />
+          <circle cx="-3.6" cy="-0.3" r="0.45" fill="#3a2a1a" />
+        </g>
+      ))}
+      <ellipse cx="38" cy="35" rx="3" ry="1.4" fill="#f0e0b0" stroke="#a8884a" strokeWidth="0.3" />
+    </g>
+  );
+}
+function FoodSgMelon() {
+  return (
+    <g>
+      <Food4Plate cy={36} c="#f4f0e8" />
+      <circle cx="18" cy="25" r="10" fill="#b8c890" stroke="#5a6a3a" strokeWidth="0.5" />
+      {[-6, -2, 2, 6].map((d) => <path key={d} d={`M${18 + d} 15.4 Q${18 + d * 1.4} 25 ${18 + d} 34.6`} stroke="#eef0d8" strokeWidth="0.5" fill="none" />)}
+      {[-6, -2, 2, 6].map((d) => <path key={`h${d}`} d={`M8.4 ${25 + d} Q18 ${25 + d * 1.4} 27.6 ${25 + d}`} stroke="#eef0d8" strokeWidth="0.5" fill="none" />)}
+      <g transform="translate(33,31) rotate(14)">
+        <path d="M-9,0 Q0,-9 9,0 Z" fill="#a8d870" stroke="#4a7a2a" strokeWidth="0.45" />
+        <path d="M-7,-0.4 Q0,-7 7,-0.4 Z" fill="#d8f0a0" />
+        <path d="M-9,0 L9,0" stroke="#4a7a2a" strokeWidth="1.2" />
+      </g>
+    </g>
+  );
+}
+function FoodSgAobana() {
+  return (
+    <g>
+      <Food1Shadow rx={14} />
+      <path d="M12,24 L36,24 L33,40 Q24,42 15,40 Z" fill="#dfe8f0" opacity="0.4" stroke="#a8b8c8" strokeWidth="0.6" />
+      <path d="M12.6,26 L35.4,26 L33,40 Q24,42 15,40 Z" fill="#4a6ad8" opacity="0.85" />
+      <ellipse cx="24" cy="26" rx="11.4" ry="1.6" fill="#7a9af0" />
+      {[[34, 14], [38, 18], [31, 18]].map(([x, y], i) => (
+        <g key={i}>{[0, 120, 240].map((a) => <ellipse key={a} cx={x + Math.cos(a * Math.PI / 180) * 1.6} cy={y + Math.sin(a * Math.PI / 180) * 1.6} rx="1.4" ry="1" fill="#3a5ae0" />)}<circle cx={x} cy={y} r="0.6" fill="#f4e040" /></g>
+      ))}
+    </g>
+  );
+}
+function FoodSgIchijiku() {
+  return (
+    <g>
+      <Food4Plate cy={35} c="#e8e0cc" />
+      {[[15, 28], [33, 28]].map(([x, y], i) => (
+        <path key={i} d={`M${x},${y - 9} Q${x + 2},${y - 6} ${x + 6},${y} Q${x + 6},${y + 6} ${x},${y + 6} Q${x - 6},${y + 6} ${x - 6},${y} Q${x - 2},${y - 6} ${x},${y - 9} Z`} fill="#7a3a5a" stroke="#3a1028" strokeWidth="0.5" />
+      ))}
+      <g transform="translate(24,32)">
+        <path d="M0,-8 Q2,-5 6,1 Q6,6 0,6 Q-6,6 -6,1 Q-2,-5 0,-8 Z" fill="#7a3a5a" stroke="#3a1028" strokeWidth="0.45" />
+        <path d="M0,-6 Q1.6,-4 4.6,1 Q4.6,4.6 0,4.6 Q-4.6,4.6 -4.6,1 Q-1.6,-4 0,-6 Z" fill="#f4d8c8" />
+        <path d="M0,-4 Q2,0 3.4,2.6 Q0,4 -3.4,2.6 Q-2,0 0,-4 Z" fill="#e85a6a" />
+      </g>
+    </g>
+  );
+}
+function FoodSgTsuchiyamacha() {
+  return (
+    <g>
+      <Food1Shadow rx={18} />
+      <path d="M9,24 Q9,38 18,38 Q27,38 27,24 Z" fill="#c8a870" stroke="#6a4a1a" strokeWidth="0.5" />
+      <ellipse cx="18" cy="24" rx="9" ry="2.4" fill="#d8b880" stroke="#6a4a1a" strokeWidth="0.45" />
+      <ellipse cx="18" cy="24.2" rx="7.6" ry="1.8" fill="#a8c050" />
+      <path d="M26,22 L42,22 L42,38 L26,38 Z" fill="#3a6a2a" stroke="#1a3a10" strokeWidth="0.5" />
+      <path d="M26,22 L34,17 L42,22" fill="#4a8a3a" stroke="#1a3a10" strokeWidth="0.45" />
+      <circle cx="34" cy="30" r="3.4" fill="#f4ecd8" /><path d="M32.4 30 h3.2 M34 28.4 v3.2" stroke="#3a6a2a" strokeWidth="0.5" opacity="0" />
+      <Food1Steam x={18} y={19} s={0.6} />
+    </g>
+  );
+}
+function FoodSgNinjamanju() {
+  return (
+    <Food6Rounds c="#2a2a30" d="#0a0a0c" plate="#e8dcc8" r={4.4} deco={(x, y) => (
+      <g><rect x={x - 3} y={y - 1} width="6" height="1.6" rx="0.6" fill="#f4e0c0" /><circle cx={x - 1.2} cy={y - 0.2} r="0.45" fill="#2a2018" /><circle cx={x + 1.2} cy={y - 0.2} r="0.45" fill="#2a2018" /></g>
+    )} />
+  );
+}
+function FoodSgChasoba() {
+  return <Food6Zaru c="#7a9a5a" w={0.9} n={10} dip="#5a3410" />;
+}
+function FoodSgOmigyu() {
+  return (
+    <g>
+      <Food4Board x={3} y={26} w={42} h={12} c="#c8a070" d="#7a5a30" />
+      {[10, 16, 22, 28, 34].map((x, i) => (
+        <g key={i} transform={`translate(${x + 2},${30}) rotate(-6)`}>
+          <rect x="-2.6" y="-4.4" width="5.2" height="8.8" rx="0.8" fill="#b84a4a" stroke="#4a1010" strokeWidth="0.35" />
+          <rect x="-1.8" y="-3.4" width="3.6" height="6.8" rx="0.6" fill="#e88a8a" />
+          <path d="M-1.6 -2 q1.6 1 3.2 0 M-1.6 1 q1.6 1 3.2 0" stroke="#fbe8e8" strokeWidth="0.4" fill="none" />
+        </g>
+      ))}
+      <path d="M40,22 l3,-2 l0.6,2 Z" fill="#f4e8c0" />
+    </g>
+  );
+}
+function FoodSgAkakonnyaku() {
+  return (
+    <g>
+      <Food4Plate cy={33} c="#2a2a30" rim="#0a0a0c" />
+      {[[14, 28], [22, 26.4], [30, 27], [36, 30], [19, 32], [28, 32.4]].map(([x, y], i) => (
+        <g key={i}>
+          <path d={`M${x - 3.4},${y + 1.4} L${x - 2.6},${y - 2.6} L${x + 3},${y - 2.8} L${x + 3.6},${y + 1.4} Z`} fill="#c82a1a" stroke="#5a0a04" strokeWidth="0.35" />
+          <path d={`M${x - 2.6},${y - 2.6} L${x + 3},${y - 2.8} L${x + 2.4},${y - 1.2} L${x - 2},${y - 1} Z`} fill="#e85a3a" />
+        </g>
+      ))}
+    </g>
+  );
+}
+function FoodSgDecchiyokan() {
+  return (
+    <g>
+      <Food4Plate cy={34} c="#e8e0cc" />
+      <rect x="8" y="22" width="32" height="10" rx="1.4" fill="#c8a060" stroke="#6a4a1a" strokeWidth="0.5" />
+      <path d="M10,24 H38 M10,30 H38" stroke="#a88040" strokeWidth="0.4" />
+      {[12, 20, 28, 36].map((x) => <path key={x} d={`M${x} 22 V32`} stroke="#7a5a2a" strokeWidth="0.4" />)}
+      <rect x="12" y="25" width="24" height="4" rx="0.6" fill="#5a1e14" />
+    </g>
+  );
+}
+function FoodSgChampon() {
+  return (
+    <Food5Ramen bowl={{ body: "#f2ece0", light: "#fff", dark: "#b8ae9a", rim: "#7a7060", band: "#2a4a8a" }} broth="#e0c890" noodle="#f2d070" n={4}>
+      <path d="M11,21 Q18,16 26,18 Q34,17 37,22 Q30,25 24,24 Q16,25 11,21 Z" fill="#d8eab0" opacity="0.9" stroke="#8aa050" strokeWidth="0.35" />
+      {[[15, 20.6], [20, 19.4], [25, 19.6], [30, 20], [34, 21.4]].map(([x, y], i) => <path key={i} d={`M${x - 2} ${y} q2 -1.6 4 0`} stroke={["#f08a2a", "#7ac04a", "#f4f0dc", "#c87a5a", "#7ac04a"][i]} strokeWidth="1" fill="none" />)}
+    </Food5Ramen>
+  );
+}
+function FoodSgItokirimochi() {
+  return (
+    <Food6Blocks c="#fbf8f2" top="#fff" d="#c8c0a8" plate="#2a2a30" rim="#0a0a0c" w={9} h={3.4}
+      deco={(x, y) => <g><path d={`M${x - 4.4} ${y - 0.6} h8.8`} stroke="#3a6ac8" strokeWidth="0.5" /><path d={`M${x - 4.4} ${y} h8.8`} stroke="#c82a2a" strokeWidth="0.5" /><path d={`M${x - 4.4} ${y + 0.6} h8.8`} stroke="#3a6ac8" strokeWidth="0.5" /></g>} />
+  );
+}
+function FoodSgMisozuke() {
+  return (
+    <g>
+      <Food4Board x={4} y={27} w={40} h={11} c="#c8a070" d="#7a5a30" />
+      {[[12, 0], [22, 1], [32, 2]].map(([x, k]) => (
+        <g key={k} transform={`translate(${x + 2},${30}) rotate(-6)`}>
+          <rect x="-4.4" y="-4" width="8.8" height="7" rx="1.4" fill="#6a2a14" stroke="#2a0c04" strokeWidth="0.4" />
+          <rect x="-4.4" y="-4" width="8.8" height="2.6" rx="1.2" fill="#a85a2a" opacity="0.7" />
+          <path d="M-3 0 q3 1 6 0" stroke="#e8c0a8" strokeWidth="0.5" fill="none" />
+        </g>
+      ))}
+    </g>
+  );
+}
+function FoodSgYakisabasomen() {
+  return (
+    <g>
+      <Food4Plate cy={32} rx={20} c="#f4f0e8" />
+      <Food4Noodles cx={22} cy={31} rx={14} ry={4.4} c="#a8742a" n={6} w={0.8} />
+      <g transform="translate(26,26) rotate(-8)">
+        <rect x="-10" y="-3" width="20" height="6" rx="2" fill="#8a5a2a" stroke="#3a1a08" strokeWidth="0.45" />
+        <rect x="-10" y="-3" width="20" height="2.4" rx="1" fill="#5a6a7a" />
+      </g>
+      <path d="M8,34 q3,-1 5,0" stroke="#7ac04a" strokeWidth="1" fill="none" />
+    </g>
+  );
+}
+function FoodSgKamonabe() {
+  return <Food7Nabe broth="#a87a3a" items={[[14, 20.6, "slice", "#a83a3a"], [22, 19.4, "slice", "#b84a4a"], [30, 20.6, "slice", "#a83a3a"], [18, 23.4, "leaf", "#5aa04a"], [27, 23, "rect", "#f4f0e4"], [34, 22.6, "leaf", "#7ac04a"]]} />;
+}
+function FoodSgNoppei() {
+  return (
+    <Food5Ramen bowl={{ body: "#2a1a10", light: "#4a3420", dark: "#0c0604", rim: "#000" }} broth="#c8a870" noodle="#fbf6e8" w={1.8} n={4} wave={0.4}>
+      <ellipse cx="24" cy="21" rx="12" ry="3.4" fill="#e8d8a8" opacity="0.75" />
+      <ellipse cx="18" cy="20" rx="3" ry="1.6" fill="#a86a3a" />
+      <rect x="25" y="19" width="5" height="2" rx="0.6" fill="#f8f2e4" stroke="#c8b8a0" strokeWidth="0.3" />
+      <path d="M28,23 l4,-0.6" stroke="#3a8a3a" strokeWidth="1" />
+      <ellipse cx="21" cy="23" rx="1.6" ry="0.9" fill="#7a5a3a" />
+    </Food5Ramen>
+  );
+}
+function FoodSgTonchan() {
+  return (
+    <g>
+      <Food4Iron />
+      {[[14, 29], [21, 27], [28, 28.6], [34, 30.6], [18, 32.4], [26, 32.6]].map(([x, y], i) => (
+        <path key={i} d={`M${x - 3} ${y} q1 -2.4 3 -1.6 q2.6 -0.6 3 1.6 q-1 2 -3 1.4 q-2 0.8 -3 -1.4 Z`} fill="#c84a2a" stroke="#4a1004" strokeWidth="0.35" />
+      ))}
+      {[[12, 31], [24, 30.4], [31, 32.4]].map(([x, y], i) => <path key={i} d={`M${x - 3} ${y} q3 -2 6 0`} stroke="#d8eab0" strokeWidth="1.6" fill="none" />)}
+      <Food1Steam x={24} y={20} s={0.8} />
+    </g>
+  );
+}
+function FoodSgSabazushi() {
+  return (
+    <g>
+      <Food4Board x={3} y={27} w={42} h={11} c="#c8a070" d="#7a5a30" />
+      {[10, 18, 26, 34].map((x, i) => (
+        <g key={i}>
+          <rect x={x - 3.4} y="28.6" width="7.6" height="4.4" rx="0.6" fill="#fbf8f0" stroke="#c8c0b0" strokeWidth="0.35" />
+          <rect x={x - 3.6} y="26.6" width="8" height="2.6" rx="0.6" fill="#9aa8b8" stroke="#3a4a5a" strokeWidth="0.35" />
+          <path d={`M${x - 3} 27.4 q4 -1 7 0`} stroke="#5a6a7a" strokeWidth="0.5" fill="none" />
+        </g>
+      ))}
+      <rect x="38" y="24" width="6" height="14" rx="1" fill="#3a7a2a" stroke="#1a3a10" strokeWidth="0.4" />
+    </g>
+  );
+}
+function FoodSgTochimochi() {
+  return <Food6Rounds c="#8a5a3a" d="#3a2010" plate="#e8dcc8" r={4.4} deco={(x, y) => <ellipse cx={x} cy={y - 0.4} rx="2" ry="1.2" fill="#5a1e14" opacity="0.6" />} />;
+}
+
+/* ---- 大阪 ---- */
+function FoodOsTakoyaki() {
+  const pts = [[13, 29], [20, 27], [27, 27], [34, 29], [16.6, 33.4], [24, 32.4], [31.4, 33.4]];
+  return (
+    <g>
+      <Food1Shadow rx={18} />
+      <path d="M6,28 L42,28 L38,38 L10,38 Z" fill="#c8a070" stroke="#6a4a1a" strokeWidth="0.5" />
+      {pts.map(([x, y], i) => (
+        <g key={i}>
+          <circle cx={x} cy={y - 2} r="4" fill="#c8782a" stroke="#6a3a08" strokeWidth="0.45" />
+          <path d={`M${x - 3.4} ${y - 2.6} Q${x} ${y - 6.6} ${x + 3.4} ${y - 2.6} Q${x} ${y - 1} ${x - 3.4} ${y - 2.6} Z`} fill="#4a1a08" />
+          <path d={`M${x - 2.4} ${y - 3} q1.2 -0.8 2.4 0 t2.4 0`} stroke="#fff4dc" strokeWidth="0.5" fill="none" />
+          <circle cx={x + 1} cy={y - 4} r="0.4" fill="#5aa04a" />
+        </g>
+      ))}
+      <path d="M38,18 L42,26" stroke="#d8b878" strokeWidth="0.8" />
+      <Food1Steam x={24} y={16} s={0.8} />
+    </g>
+  );
+}
+function FoodOsOkonomiyaki() {
+  return (
+    <Food7Teppan top={<g>{[[18, 27], [23, 26.4], [28, 27.6], [21, 29.6], [27, 29.8]].map(([x, y], i) => <path key={i} d={`M${x} ${y} q1 -1.2 2 0`} stroke="#c8a888" strokeWidth="0.7" fill="none" />)}<g fill="#5aa04a">{[[20, 28.4], [26, 28], [30, 29]].map(([x, y], i) => <circle key={i} cx={x} cy={y} r="0.5" />)}</g></g>} />
+  );
+}
+function FoodOsKushikatsu() {
+  return (
+    <g>
+      <Food4Plate cy={33} />
+      {[[10, 0], [17, 1], [24, 2], [31, 3]].map(([x, k]) => (
+        <g key={k}>
+          <Food5Skewer x1={x} y1={38} x2={x + 8} y2={10} />
+          <path d={`M${x + 1} 30 L${x + 5.6} 14 L${x + 9} 15 L${x + 4.4} 31 Z`} fill="#d8a050" stroke="#7a4a10" strokeWidth="0.5" />
+          {[0, 1, 2, 3].map((j) => <circle key={j} cx={x + 3.6 + j * 1.1} cy={27 - j * 3.6} r="0.6" fill="#f0c870" />)}
+        </g>
+      ))}
+      <rect x="36" y="28" width="9" height="8" rx="1" fill="#c8c8d0" stroke="#5a5a64" strokeWidth="0.4" />
+      <rect x="37" y="29" width="7" height="3" fill="#3a1408" />
+    </g>
+  );
+}
+function FoodOsMomiji() {
+  return (
+    <g>
+      <Food4Plate cy={34} c="#e8dcc8" />
+      {[[16, 27, -14], [30, 27, 12], [23, 32, 0]].map(([x, y, r], i) => (
+        <g key={i} transform={`translate(${x},${y}) rotate(${r})`}>
+          {[-90, -54, -18, 18, 54, 90, -126].slice(0, 5).map((a, k) => <path key={k} d={`M0 0 L${(Math.cos((a - 90) * Math.PI / 180) * 5).toFixed(2)} ${(Math.sin((a - 90) * Math.PI / 180) * 5 + 1).toFixed(2)}`} stroke="#d8a050" strokeWidth="2.8" strokeLinecap="round" />)}
+          <path d="M0 0 L0 4" stroke="#8a5a20" strokeWidth="0.6" />
+        </g>
+      ))}
+    </g>
+  );
+}
+function FoodOsKuri() {
+  return (
+    <g>
+      <Food4Plate cy={35} c="#e8dcc8" />
+      {[[15, 30], [24, 27.6], [33, 30], [19.6, 34], [28.4, 34]].map(([x, y], i) => (
+        <g key={i}>
+          <path d={`M${x - 4.4},${y + 1.6} Q${x - 4.6},${y - 2.6} ${x},${y - 4.6} Q${x + 4.6},${y - 2.6} ${x + 4.4},${y + 1.6} Q${x},${y + 3} ${x - 4.4},${y + 1.6} Z`} fill="#6a3a14" stroke="#2a1004" strokeWidth="0.45" />
+          <path d={`M${x - 4.2},${y + 1} Q${x},${y + 3} ${x + 4.2},${y + 1}`} fill="#c8a060" />
+          <ellipse cx={x - 1.4} cy={y - 2} rx="1" ry="0.6" fill="#a8683a" />
+        </g>
+      ))}
+    </g>
+  );
+}
+function FoodOsJidori() {
+  return (
+    <g>
+      <Food4Plate cy={32} c="#2a2a30" rim="#0a0a0c" />
+      {[[13, 28], [19, 27], [25, 26.6], [31, 27], [36, 28.6], [17, 32], [24, 32.4], [31, 32]].map(([x, y], i) => (
+        <ellipse key={i} cx={x} cy={y} rx="2.8" ry="2" fill="#5a3a1a" stroke="#1a0a04" strokeWidth="0.35" />
+      ))}
+      {[[16, 28], [28, 30]].map(([x, y], i) => <path key={i} d={`M${x} ${y} l4 -1`} stroke="#5aa04a" strokeWidth="1.2" />)}
+      <ellipse cx="38" cy="34" rx="2.4" ry="1.2" fill="#f4e0a0" />
+    </g>
+  );
+}
+function FoodOsUdonsuki() {
+  return <Food7Nabe broth="#d8b878" items={[[14, 20.6, "slice", "#f08a6a"], [21, 19.4, "rect", "#f4ecd8"], [28, 20.4, "leaf", "#5aa04a"], [33, 22.4, "slice", "#e8dcc0"], [18, 23.4, "rect", "#f8f2e4"], [26, 23.4, "ball", "#e8d8c0"]]} />;
+}
+function FoodOsUdo() {
+  return (
+    <g>
+      <Food4Plate cy={32} c="#f4f0e8" />
+      <path d="M7,30 q8,-6 15,-4 l-2,3 q-6,-1 -13,1 Z" fill="#fff" stroke="#c8c0b0" strokeWidth="0.3" />
+      {[[18, 27, -14], [29, 26, 12], [24, 32, -2]].map(([x, y, r], i) => (
+        <Food5Tempura key={i} x={x} y={y} w={12} h={4.6} rot={r} c="#e8d098" />
+      ))}
+      {[[22, 25.4], [30, 24.6]].map(([x, y], i) => <path key={i} d={`M${x} ${y} q2 -2 4 -1`} stroke="#9ac050" strokeWidth="1" fill="none" />)}
+    </g>
+  );
+}
+function FoodOsKanten() {
+  return (
+    <g>
+      <Food4Glass fill="#e8a8c0" top="#f4c8d8" level={17} />
+      {[[19, 25], [24, 30], [29, 26], [22, 34]].map(([x, y], i) => <rect key={i} x={x - 2} y={y - 2} width="4" height="4" rx="0.4" fill={["#fff", "#c8e8a0", "#fff4c0", "#fff"][i]} opacity="0.8" />)}
+      <circle cx="24" cy="15" r="2" fill="#e8202a" />
+      <path d="M24,13 q1,-3 3,-3" stroke="#4a9a3a" strokeWidth="0.6" fill="none" />
+    </g>
+  );
+}
+function FoodOsKurawanka() {
+  return <Food6Rounds c="#f4ecd8" d="#a8987a" plate="#2a2a30" rim="#0a0a0c" r={4.2} deco={(x, y) => <ellipse cx={x} cy={y - 0.6} rx="2.6" ry="1.2" fill="#5a1e14" />} />;
+}
+function FoodOsKashiwa() {
+  return <Food7Nabe body="#1a1a1e" broth="#6a3a14" items={[[14, 20.6, "slice", "#e8c8a8"], [22, 19.4, "slice", "#f0d0b0"], [30, 20.6, "slice", "#e8c8a8"], [26, 23, "rect", "#f4ecd8"], [17, 23.4, "leaf", "#5aa04a"], [33, 23, "rect", "#f4f0e4"]]} />;
+}
+function FoodOsNarazuke() {
+  return (
+    <g>
+      <Food4Board x={4} y={28} w={40} h={10} c="#c8a070" d="#7a5a30" />
+      {[[11, 28], [17, 27.4], [23, 27], [29, 27.4], [35, 28]].map(([x, y], i) => (
+        <g key={i}>
+          <ellipse cx={x} cy={y} rx="3.4" ry="2.4" fill="#8a4a1a" stroke="#3a1404" strokeWidth="0.45" />
+          <ellipse cx={x} cy={y} rx="2.4" ry="1.6" fill="#b86a2a" />
+        </g>
+      ))}
+      <path d="M8,22 L40,16 L41,20 L9,26 Z" fill="#6a3010" stroke="#2a1004" strokeWidth="0.5" />
+    </g>
+  );
+}
+function FoodOsGobou() {
+  return (
+    <g>
+      <Food4Plate cy={33} c="#e8e0cc" />
+      {Array.from({ length: 6 }, (_, i) => (
+        <g key={i}>
+          <path d={`M${10 + i * 4} 35 Q${12 + i * 4} 28 ${16 + i * 4} 20`} stroke="#6a4a2a" strokeWidth="1.4" fill="none" strokeLinecap="round" />
+          <path d={`M${16 + i * 4} 20 q1 -4 -1 -8 M${16 + i * 4} 20 q3 -3 5 -5`} stroke="#4a9a3a" strokeWidth="1.6" fill="none" strokeLinecap="round" />
+        </g>
+      ))}
+    </g>
+  );
+}
+function FoodOsEdamame() {
+  return (
+    <g>
+      <Food4Wan body="#e8e4dc" light="#fff" rim="#8a8478" inner="#c8c0b0" />
+      {[[16, 21, -20], [22, 20, 10], [28, 21, -6], [32, 22.6, 18], [19, 23.4, 6], [26, 23.6, -14]].map(([x, y, r], i) => (
+        <g key={i} transform={`translate(${x},${y}) rotate(${r})`}>
+          <path d="M-4,0 Q-4,-2 -1.4,-1.8 Q0,-2.4 1.4,-1.8 Q4,-2 4,0 Q4,1.8 1.4,1.6 Q0,2.2 -1.4,1.6 Q-4,1.8 -4,0 Z" fill="#6aa83a" stroke="#3a5a1a" strokeWidth="0.35" />
+          {[-2, 0, 2].map((d) => <ellipse key={d} cx={d} cy="-0.2" rx="1" ry="1.1" fill="#9ad050" />)}
+        </g>
+      ))}
+    </g>
+  );
+}
+function FoodOsBudou() {
+  const g = [];
+  for (let r = 0; r < 5; r++) for (let c = 0; c <= 4 - r; c++) g.push([24 - (4 - r) * 2.4 + c * 4.8, 16 + r * 4.4]);
+  return (
+    <g>
+      <Food1Shadow rx={12} />
+      <path d="M24,12 q0,-4 2,-6" stroke="#5a3a1a" strokeWidth="1" fill="none" />
+      <path d="M26,8 q5,-4 9,-1 q-4,4 -9,1 Z" fill="#4a9a3a" />
+      {g.map(([x, y], i) => (
+        <g key={i}><circle cx={x} cy={y} r="2.6" fill="#2a1a4a" stroke="#0a0420" strokeWidth="0.35" /><ellipse cx={x - 0.8} cy={y - 0.9} rx="0.7" ry="0.45" fill="#a8a0d0" opacity="0.6" /></g>
+      ))}
+    </g>
+  );
+}
+function FoodOsKasuudon() {
+  return (
+    <Food5Ramen bowl={{ body: "#2a1a10", light: "#4a3420", dark: "#0c0604", rim: "#000" }} broth="#c8a060" noodle="#fbf6e8" w={1.8} n={5} wave={0.5}>
+      {[[16, 20.6], [21, 19.4], [27, 19.8], [32, 21], [19, 23], [29, 23]].map(([x, y], i) => (
+        <path key={i} d={`M${x - 2} ${y} q1 -1.6 2 -1 q1.4 -0.2 2 1 q-1 1.4 -2 1 q-1.4 0.4 -2 -1 Z`} fill="#d8a050" stroke="#7a4a10" strokeWidth="0.3" />
+      ))}
+      <Food1Negi x={24} y={22} /><Food1Negi x={26} y={23.4} />
+    </Food5Ramen>
+  );
+}
+function FoodOsGrapejuice() {
+  return (
+    <g>
+      <Food4Glass fill="#7a1a3a" top="#a83a5a" level={15} />
+      <rect x="27" y="4" width="1.4" height="16" rx="0.6" fill="#f4f0e8" transform="rotate(14 27 4)" />
+      {[[19, 25], [28, 30]].map(([x, y], i) => <rect key={i} x={x} y={y} width="3.6" height="3.6" rx="0.6" fill="#e8f4ff" opacity="0.6" />)}
+    </g>
+  );
+}
+function FoodOsKamo() {
+  return (
+    <g>
+      <Food4Plate cy={32} c="#2a2a30" rim="#0a0a0c" />
+      {[[13, 28], [18.6, 27], [24, 26.6], [29.4, 27], [35, 28]].map(([x, y], i) => (
+        <g key={i} transform={`translate(${x},${y}) rotate(-8)`}>
+          <rect x="-2.6" y="-4" width="5.2" height="8" rx="0.8" fill="#c86a6a" stroke="#5a1a1a" strokeWidth="0.35" />
+          <rect x="-2.6" y="-4" width="5.2" height="1.4" rx="0.6" fill="#f4e8d0" />
+        </g>
+      ))}
+      <path d="M10,34 q14,3 28,0" stroke="#5aa04a" strokeWidth="1.2" fill="none" />
+    </g>
+  );
+}
+function FoodOsKurumimochi() {
+  return (
+    <Food6Rounds c="#f4efe4" d="#b8ac98" plate="#2a3a2a" rim="#0a140a" r={4} deco={(x, y) => <path d={`M${x - 4} ${y} Q${x} ${y - 4} ${x + 4} ${y} Q${x} ${y + 2} ${x - 4} ${y} Z`} fill="#8ab84a" stroke="#5a7a2a" strokeWidth="0.3" />} />
+  );
+}
+function FoodOsKeshimochi() {
+  return <Food6Rounds c="#f8f2e0" d="#b8ac88" plate="#e8dcc8" r={4} deco={(x, y) => <g>{Array.from({ length: 7 }, (_, k) => <circle key={k} cx={x - 2.4 + (k * 1.7) % 5} cy={y - 1.6 + (k * 0.9) % 2.4} r="0.25" fill="#3a3a3a" />)}</g>} />;
+}
+function FoodOsMatchazenzai() {
+  return (
+    <g>
+      <Food4Wan body="#1a1a1e" light="#3a3a42" rim="#000" inner="#0a0a0c" />
+      <ellipse cx="24" cy="22.2" rx="13.6" ry="4" fill="#7ab040" />
+      <ellipse cx="20" cy="21.6" rx="4" ry="2" fill="#5a1e14" />
+      <Food4Ball x={28} y={21} r={2.4} c="#fbf8f0" d="#c8c0b0" />
+      <Food4Ball x={24} y={23} r={2.2} c="#fbf8f0" d="#c8c0b0" />
+    </g>
+  );
+}
+function FoodOsMizunasu() {
+  return (
+    <g>
+      <Food4Plate cy={34} c="#e8e0cc" />
+      {[[16, 27, -24], [31, 26, 20]].map(([x, y, r], i) => (
+        <g key={i} transform={`translate(${x},${y}) rotate(${r})`}>
+          <ellipse rx="5.6" ry="8" fill="#4a2a6a" stroke="#1a0a2a" strokeWidth="0.5" />
+          <ellipse cx="-1.6" cy="-2" rx="1.4" ry="3" fill="#8a6aa8" opacity="0.6" />
+          <path d="M-3,-7 Q0,-11 3,-7 L2,-6 L-2,-6 Z" fill="#3a6a2a" />
+        </g>
+      ))}
+      {[[20, 34], [26, 34.4], [32, 34]].map(([x, y], i) => <ellipse key={i} cx={x} cy={y} rx="2.6" ry="1.6" fill="#f0e8f0" stroke="#4a2a6a" strokeWidth="0.6" />)}
+    </g>
+  );
+}
+function FoodOsKashimin() {
+  return (
+    <Food7Teppan c="#d8b070" sauce="#5a2008" top={<g>{[[18, 28], [24, 27.2], [30, 28.4]].map(([x, y], i) => <path key={i} d={`M${x - 2} ${y} q2 -1.6 4 0`} stroke="#f4f4e8" strokeWidth="1.2" fill="none" />)}</g>} />
+  );
+}
+function FoodOsTamanegi() {
+  return (
+    <g>
+      <Food4Plate cy={32} c="#f4f0e8" />
+      {[[18, 27], [30, 27], [24, 32]].map(([x, y], i) => (
+        <g key={i}>
+          <ellipse cx={x} cy={y} rx="6.6" ry="4" fill="#e8c070" stroke="#9a6a1a" strokeWidth="0.45" />
+          {Array.from({ length: 6 }, (_, k) => <path key={k} d={`M${x - 5 + k * 1.8} ${y - 2 + (k % 2) * 2} q1 -1 2 0`} stroke="#f8eac0" strokeWidth="0.7" fill="none" />)}
+        </g>
+      ))}
+    </g>
+  );
+}
+
+/* ---- 兵庫 ---- */
+function FoodHgKobebeef() {
+  return (
+    <g>
+      <Food4Plate cy={31} rx={20} c="#f4f0e8" />
+      {[[14, 27], [20, 26.4], [26, 26.4], [32, 27]].map(([x, y], i) => (
+        <g key={i} transform={`translate(${x},${y}) rotate(-6)`}>
+          <rect x="-2.8" y="-4" width="5.6" height="8" rx="0.8" fill="#6a2e14" stroke="#2a0c04" strokeWidth="0.35" />
+          <rect x="-2" y="-3" width="4" height="6" rx="0.6" fill="#e88a8e" />
+          <path d="M-1.4 -1.6 q1.4 1 2.8 0 M-1.4 1 q1.4 1 2.8 0" stroke="#fbe8e8" strokeWidth="0.4" fill="none" />
+        </g>
+      ))}
+      <path d="M34,34 q3,-2 6,0" stroke="#5aa04a" strokeWidth="1.2" fill="none" />
+      <circle cx="12" cy="34" r="1.2" fill="#f4e0a0" />
+    </g>
+  );
+}
+function FoodHgSobameshi() {
+  return (
+    <g>
+      <Food4Iron />
+      <ellipse cx="24" cy="30" rx="14" ry="5" fill="#8a4a1a" />
+      {Array.from({ length: 22 }, (_, i) => <ellipse key={i} cx={12 + (i * 5.3) % 24} cy={27 + (i * 2.3) % 6} rx="0.9" ry="0.5" fill="#f4e8d0" opacity="0.8" />)}
+      {Array.from({ length: 10 }, (_, i) => <path key={`n${i}`} d={`M${13 + i * 2.2} ${28 + (i % 3)} l1.4 -0.4`} stroke="#5a2a08" strokeWidth="0.8" />)}
+      {[[18, 29], [28, 30]].map(([x, y], i) => <path key={i} d={`M${x - 2} ${y} q2 -1.4 4 0`} stroke="#d8eab0" strokeWidth="1.2" fill="none" />)}
+      <Food1Steam x={24} y={20} s={0.8} />
+    </g>
+  );
+}
+function FoodHgBaum() {
+  return (
+    <g>
+      <Food4Plate cy={35} c="#e8e0cc" />
+      <ellipse cx="24" cy="30" rx="13" ry="5" fill="#a8641a" />
+      <path d="M11,30 L11,22 Q11,17 24,17 Q37,17 37,22 L37,30 Z" fill="#d89a4a" stroke="#7a4a10" strokeWidth="0.5" />
+      <ellipse cx="24" cy="22" rx="13" ry="5" fill="#f4dca0" stroke="#7a4a10" strokeWidth="0.5" />
+      {[10, 7.6, 5.2].map((r) => <ellipse key={r} cx="24" cy="22" rx={r} ry={r * 0.38} fill="none" stroke="#c88a3a" strokeWidth="0.7" />)}
+      <ellipse cx="24" cy="22" rx="2.6" ry="1" fill="#5a3010" />
+    </g>
+  );
+}
+function FoodHgKugini() {
+  return (
+    <g>
+      <Food4Wan body="#1a1a1e" light="#3a3a42" rim="#000" inner="#0a0a0c" />
+      {Array.from({ length: 16 }, (_, i) => (
+        <path key={i} d={`M${13 + (i * 3.1) % 22} ${20 + (i * 1.7) % 5} q1.4 -1 2.8 0.2`} stroke="#5a2a10" strokeWidth="1.1" fill="none" strokeLinecap="round" />
+      ))}
+      {[[18, 21], [27, 22.6]].map(([x, y], i) => <path key={i} d={`M${x} ${y} l2.4 -0.8`} stroke="#e8d070" strokeWidth="0.7" />)}
+    </g>
+  );
+}
+function FoodHgAmazake() {
+  return (
+    <g>
+      <Food1Shadow rx={12} />
+      <path d="M13,22 Q13,40 24,40 Q35,40 35,22 Z" fill="#8a5a3a" stroke="#3a2010" strokeWidth="0.5" />
+      <ellipse cx="24" cy="22" rx="11" ry="3" fill="#a87a4a" stroke="#3a2010" strokeWidth="0.45" />
+      <ellipse cx="24" cy="22.2" rx="9.6" ry="2.4" fill="#f4ecd8" />
+      {[[20, 22], [24, 21.6], [27, 22.4]].map(([x, y], i) => <ellipse key={i} cx={x} cy={y} rx="0.8" ry="0.4" fill="#fff" />)}
+      <path d="M35,26 q5,0 5,5 q0,4 -5,4" stroke="#8a5a3a" strokeWidth="1.6" fill="none" />
+      <Food1Steam x={24} y={16} s={0.6} />
+    </g>
+  );
+}
+function FoodHgTansan() {
+  return (
+    <g>
+      <Food1Shadow />
+      {[[24, 36], [24, 33.4], [24, 30.8]].map(([x, y], k) => (
+        <g key={k}><ellipse cx={x} cy={y + 0.8} rx="14" ry="4.4" fill="#c8a870" /><ellipse cx={x} cy={y} rx="14" ry="4.4" fill="#f4e8c8" stroke="#a8884a" strokeWidth="0.4" /></g>
+      ))}
+      {[[16, 30.4], [22, 29.6], [28, 30], [32, 31], [19, 32]].map(([x, y], i) => <circle key={i} cx={x} cy={y} r="0.5" fill="#e8d8a8" stroke="#c8b078" strokeWidth="0.2" />)}
+      <ellipse cx="24" cy="30.8" rx="10" ry="2.8" fill="none" stroke="#e0c890" strokeWidth="0.5" />
+    </g>
+  );
+}
+function FoodHgAkashiyaki() {
+  return (
+    <g>
+      <Food1Shadow rx={20} />
+      <path d="M4,26 L30,26 L28,40 L6,40 Z" fill="#c8402a" stroke="#6a1a10" strokeWidth="0.5" />
+      {[[9, 31], [15, 31], [21, 31], [12, 36], [18, 36], [24, 36]].map(([x, y], i) => (
+        <g key={i}><ellipse cx={x} cy={y} rx="3" ry="2.6" fill="#f2d090" stroke="#a8784a" strokeWidth="0.4" /><ellipse cx={x - 0.8} cy={y - 1} rx="1" ry="0.5" fill="#fff4d0" /></g>
+      ))}
+      <path d="M32,30 Q32,40 39,40 Q46,40 46,30 Z" fill="#f4f0e8" stroke="#8a8070" strokeWidth="0.45" />
+      <ellipse cx="39" cy="30" rx="7" ry="2" fill="#d8b878" />
+      <Food1Steam x={16} y={22} s={0.7} />
+    </g>
+  );
+}
+function FoodHgKatsumeshi() {
+  return (
+    <g>
+      <Food4Plate cy={32} rx={20} c="#f4f0e8" />
+      <ellipse cx="22" cy="29" rx="13" ry="5" fill="#fbf8f0" />
+      {[0, 1, 2, 3].map((k) => (
+        <g key={k} transform={`translate(${14 + k * 5.4},${27.6 - k * 0.3}) rotate(-8)`}>
+          <rect x="-2.6" y="-3.6" width="5.2" height="7.2" rx="0.8" fill="#c8782a" stroke="#6a3008" strokeWidth="0.4" />
+        </g>
+      ))}
+      <path d="M10,26 Q22,21 34,26 Q28,30 22,29 Q14,30 10,26 Z" fill="#4a2010" opacity="0.85" />
+      <path d="M36,24 q4,-2 6,2 q-3,3 -6,-2 Z" fill="#7ac04a" />
+    </g>
+  );
+}
+function FoodHgTai() {
+  return <Food6GrilledFish c="#e86a6a" belly="#f8e0d8" side="lemon" />;
+}
+function FoodHgHimejioden() {
+  return (
+    <Food7Nabe body="#1a1a1e" broth="#a8743a" items={[[13, 20.6, "rect", "#f4ecd8"], [19, 19.4, "ball", "#f8f4ea"], [25, 19.6, "rect", "#6a6a72"], [31, 20.6, "ball", "#a8743a"], [17, 23.4, "rect", "#d8b080"], [28, 23.4, "rect", "#f4f0e4"]]} />
+  );
+}
+function FoodHgEkisoba() {
+  return (
+    <Food5Ramen bowl={{ body: "#f2ece0", light: "#fff", dark: "#b8ae9a", rim: "#7a7060", band: "#c8a040" }} broth="#c8964a" noodle="#f4dc80" w={1.2} n={5}>
+      <Food5Tempura x={18} y={20.6} w={9} h={3.4} rot={-8} c="#d8a050" />
+      <path d="M26,19 q4,-1.6 8,0" stroke="#f4d870" strokeWidth="1.6" fill="none" />
+      <Food1Negi x={30} y={22.6} /><Food1Negi x={28} y={23.6} />
+    </Food5Ramen>
+  );
+}
+function FoodHgAlmondtoast() {
+  return (
+    <g>
+      <Food4Plate cy={34} c="#f4f0e8" />
+      <path d="M10,32 L10,20 Q10,15 16,15 L32,15 Q38,15 38,20 L38,32 Z" fill="#c88a3a" stroke="#6a4010" strokeWidth="0.5" />
+      <path d="M12,30 L12,21 Q12,17 16,17 L32,17 Q36,17 36,21 L36,30 Z" fill="#f4d890" />
+      {Array.from({ length: 16 }, (_, i) => <ellipse key={i} cx={14 + (i % 6) * 3.6} cy={20 + Math.floor(i / 6) * 3.6} rx="1.4" ry="0.7" fill="#e8c890" stroke="#a87a3a" strokeWidth="0.25" transform={`rotate(${(i * 31) % 60} ${14 + (i % 6) * 3.6} ${20 + Math.floor(i / 6) * 3.6})`} />)}
+    </g>
+  );
+}
+function FoodHgSomen() {
+  return (
+    <g>
+      <Food5Box c="#f4ecd8" d="#8a7050" />
+      {[[13, 32], [21, 32], [29, 32], [37, 32]].map(([x, y], i) => (
+        <g key={i}>
+          <rect x={x - 3} y={y - 4} width="6" height="9" rx="0.4" fill="#fbf8f0" stroke="#c8c0b0" strokeWidth="0.35" />
+          {[-2, -1, 0, 1, 2].map((d) => <path key={d} d={`M${x + d * 1} ${y - 4} V${y + 5}`} stroke="#e8e0d0" strokeWidth="0.3" />)}
+          <rect x={x - 3.2} y={y - 0.6} width="6.4" height="1.6" fill={i % 2 ? "#c82a1a" : "#2a4a8a"} />
+        </g>
+      ))}
+    </g>
+  );
+}
+function FoodHgShiomanju() {
+  return <Food6Rounds c="#fbf8f2" d="#b8b0a0" plate="#2a2a30" rim="#0a0a0c" r={4.2} deco={(x, y) => <path d={`M${x - 2} ${y - 0.6} q2 -1.4 4 0`} stroke="#c8b8a0" strokeWidth="0.5" fill="none" />} />;
+}
+function FoodHgKakioko() {
+  return (
+    <Food7Teppan top={<g>{[[17, 27.6], [23, 26.8], [29, 27.6], [20, 30], [27, 30.4]].map(([x, y], i) => <ellipse key={i} cx={x} cy={y} rx="2.4" ry="1.4" fill="#d8ccb0" stroke="#7a6a50" strokeWidth="0.3" />)}</g>} />
+  );
+}
+function FoodHgMatsubagani() {
+  return (
+    <g>
+      <Food4Pot body="#3a3a42" />
+      <ellipse cx="24" cy="21.4" rx="16" ry="4.8" fill="#e8dcc0" opacity="0.8" />
+      {[[14, 20], [22, 19], [30, 20.4]].map(([x, y], i) => (
+        <g key={i} transform={`translate(${x},${y}) rotate(${-10 + i * 10})`}>
+          <rect x="-4" y="-1.4" width="8" height="2.8" rx="1.2" fill="#e8402a" stroke="#6a0a04" strokeWidth="0.35" />
+          <rect x="-2.6" y="-0.8" width="6" height="1.6" rx="0.6" fill="#fbf2ec" />
+        </g>
+      ))}
+      <path d="M19,23.4 q3,-1.4 6,0" stroke="#5aa04a" strokeWidth="1.6" fill="none" />
+      <rect x="28" y="22.6" width="4" height="2" rx="0.4" fill="#f4ecd8" />
+      <Food1Steam x={24} y={11} />
+    </g>
+  );
+}
+function FoodHgIzushisoba() {
+  const plates = [[13, 33], [24, 33], [35, 33], [18.4, 26], [29.6, 26]];
+  return (
+    <g>
+      <Food1Shadow rx={20} />
+      {plates.map(([x, y], i) => (
+        <g key={i}>
+          <ellipse cx={x} cy={y} rx="6" ry="2.6" fill="#f8f4ea" stroke="#3a5a9a" strokeWidth="0.6" />
+          <ellipse cx={x} cy={y - 0.4} rx="4.4" ry="1.6" fill="#8a7a5a" />
+          <path d={`M${x - 3.4} ${y - 0.6} q1.2 -1 2.4 0 t2.4 0 t2 0`} stroke="#a89a7a" strokeWidth="0.5" fill="none" />
+        </g>
+      ))}
+    </g>
+  );
+}
+function FoodHgTajimagyu() {
+  return (
+    <g>
+      <Food4Grill />
+      {[[14, 27, -10], [24, 25.4, 6], [33, 28, 14], [19, 32, -4], [29, 32.4, 8]].map(([x, y, r], i) => (
+        <g key={i} transform={`translate(${x},${y}) rotate(${r})`}>
+          <ellipse rx="5" ry="2.6" fill="#d86a6a" stroke="#4a0c04" strokeWidth="0.4" />
+          {[-2.6, -0.6, 1.4, 3].map((d) => <path key={d} d={`M${d} -2 q0.6 2 0 4`} stroke="#fbe0e0" strokeWidth="0.45" fill="none" />)}
+        </g>
+      ))}
+      <Food1Steam x={24} y={17} s={0.8} />
+    </g>
+  );
+}
+function FoodHgKuromame() {
+  return (
+    <g>
+      <Food4Wan body="#7a1a14" light="#a83a2a" rim="#2a0604" inner="#3a0a06" />
+      {[[16, 21.4], [20.4, 20.6], [24.8, 20.4], [29.2, 20.8], [33, 22], [18, 23.4], [22.6, 23.6], [27.2, 23.6], [31, 23.4]].map(([x, y], i) => (
+        <g key={i}><ellipse cx={x} cy={y} rx="2.4" ry="1.7" fill="#1a1418" stroke="#000" strokeWidth="0.3" /><ellipse cx={x - 0.6} cy={y - 0.6} rx="0.7" ry="0.35" fill="#fff" opacity="0.7" /></g>
+      ))}
+    </g>
+  );
+}
+function FoodHgMontblanc() {
+  return (
+    <g>
+      <Food4Plate cy={36} c="#e8e0cc" />
+      <path d="M12,33 L36,33 L34,30 L14,30 Z" fill="#c8964a" stroke="#6a4010" strokeWidth="0.4" />
+      <path d="M14,30 Q14,16 24,12 Q34,16 34,30 Z" fill="#c8a060" stroke="#7a5a20" strokeWidth="0.45" />
+      {Array.from({ length: 7 }, (_, i) => <path key={i} d={`M${15 + i * 3} 30 Q${16 + i * 2.4} 20 24 13`} stroke="#a8803a" strokeWidth="0.6" fill="none" />)}
+      <path d="M21,12 Q24,6 27,12 Q24,13.4 21,12 Z" fill="#a8641a" stroke="#4a2008" strokeWidth="0.4" />
+      <ellipse cx="23" cy="10.6" rx="0.8" ry="0.5" fill="#d89a5a" />
+    </g>
+  );
+}
+function FoodHgBotannabe() {
+  return <Food7Nabe body="#5a3a1a" broth="#8a5a2a" items={[[14, 20.6, "slice", "#e8b0a0"], [21, 19.4, "slice", "#d89080"], [28, 19.6, "slice", "#e8b0a0"], [33, 22, "leaf", "#5aa04a"], [18, 23.4, "rect", "#f4ecd8"], [26, 23.4, "ball", "#c8a070"]]} />;
+}
+function FoodHgTamanegi() {
+  return (
+    <g>
+      <Food1Shadow rx={18} />
+      {[[15, 30], [33, 30], [24, 23]].map(([x, y], i) => (
+        <g key={i}>
+          <path d={`M${x},${y - 8} Q${x + 8},${y - 5} ${x + 8},${y + 1} Q${x + 6},${y + 7} ${x},${y + 7} Q${x - 6},${y + 7} ${x - 8},${y + 1} Q${x - 8},${y - 5} ${x},${y - 8} Z`} fill="#c8843a" stroke="#6a3a10" strokeWidth="0.5" />
+          {[-4, 0, 4].map((d) => <path key={d} d={`M${x + d * 0.4} ${y - 7} Q${x + d * 1.4} ${y} ${x + d * 0.6} ${y + 6.6}`} stroke="#a8682a" strokeWidth="0.4" fill="none" />)}
+          <path d={`M${x} ${y - 8} q0.4 -2 -0.4 -3.6`} stroke="#c8a870" strokeWidth="0.7" fill="none" />
+        </g>
+      ))}
+    </g>
+  );
+}
+function FoodHgAwajigyudon() {
+  return (
+    <Food5Don steam>
+      {[[15, 21], [22, 19.6], [29, 20.4], [33, 22.4], [19, 23.4], [26, 23.6]].map(([x, y], i) => (
+        <path key={i} d={`M${x - 3} ${y} q1.4 -1.4 3 -0.6 q1.6 0.6 3 -0.2 q-1 1.6 -3 1.4 q-2 0.6 -3 -0.6 Z`} fill="#8a4a2a" stroke="#3a1404" strokeWidth="0.3" />
+      ))}
+      {[[18, 21.6], [27, 22]].map(([x, y], i) => <path key={i} d={`M${x - 2.4} ${y} q2.4 -1.6 4.8 0`} stroke="#f4e8c8" strokeWidth="1.2" fill="none" />)}
+      <rect x="30" y="18" width="3" height="0.9" fill="#e83a4a" transform="rotate(-20 30 18)" />
+    </Food5Don>
+  );
+}
+function FoodHgHamo() {
+  return (
+    <g>
+      <Food4Pot body="#3a3a42" />
+      <ellipse cx="24" cy="21.4" rx="16" ry="4.8" fill="#e8dcc0" opacity="0.8" />
+      {[[16, 20.6], [24, 19.6], [31, 21]].map(([x, y], i) => (
+        <g key={i}>
+          <path d={`M${x - 3.4},${y + 1} Q${x - 3},${y - 2} ${x},${y - 2.4} Q${x + 3},${y - 2} ${x + 3.4},${y + 1} Z`} fill="#fbf8f0" stroke="#c8c0b0" strokeWidth="0.35" />
+          {[-2, -0.6, 0.8, 2.2].map((d) => <path key={d} d={`M${x + d} ${y - 1.8} l0 2.4`} stroke="#d8ccb8" strokeWidth="0.3" />)}
+        </g>
+      ))}
+      <path d="M20,23.6 q3,-1.4 6,0" stroke="#d8eab0" strokeWidth="1.6" fill="none" />
+      <Food1Steam x={24} y={11} />
+    </g>
+  );
+}
+
+/* ---- 奈良 ---- */
+function FoodNrKakinoha() {
+  return (
+    <g>
+      <Food5Box c="#d8c8a8" d="#7a6040" />
+      {[[13, 32], [24, 32], [35, 32], [18.6, 36.6], [29.6, 36.6]].slice(0, 3).map(([x, y], i) => (
+        <g key={i} transform={`translate(${x},${y})`}>
+          <path d="M-5.6,3 Q-6.4,-3 0,-5.6 Q6.4,-3 5.6,3 Q0,5 -5.6,3 Z" fill="#4a7a2a" stroke="#1a3a10" strokeWidth="0.45" />
+          <path d="M0,-5 L0,3.4 M0,-2 l-3,1.4 M0,-2 l3,1.4 M0,1 l-3.4,1 M0,1 l3.4,1" stroke="#6a9a4a" strokeWidth="0.35" />
+        </g>
+      ))}
+    </g>
+  );
+}
+function FoodNrNarazuke() {
+  return (
+    <g>
+      <Food1Shadow rx={14} />
+      <path d="M10,22 L38,22 L36,40 Q24,42 12,40 Z" fill="#e8dcc0" stroke="#8a7a5a" strokeWidth="0.5" />
+      <ellipse cx="24" cy="22" rx="14" ry="3.4" fill="#f4ecd8" stroke="#8a7a5a" strokeWidth="0.45" />
+      <ellipse cx="24" cy="22.2" rx="12.4" ry="2.6" fill="#d8c8a8" />
+      <path d="M14,22 Q24,16 34,22 Q24,26 14,22 Z" fill="#7a3a10" stroke="#3a1404" strokeWidth="0.4" />
+      <path d="M17,21.4 Q24,18 31,21.4" stroke="#a85a2a" strokeWidth="0.6" fill="none" />
+      <path d="M12,30 h24" stroke="#c82a1a" strokeWidth="1.2" opacity="0.6" />
+    </g>
+  );
+}
+function FoodNrChagayu() {
+  return (
+    <Food6Soup wan={{ body: "#5a1810", light: "#8a2a1c", rim: "#2a0604", inner: "#2a0a06" }} broth="#a8783a">
+      {Array.from({ length: 14 }, (_, i) => <ellipse key={i} cx={14 + (i * 7.3) % 20} cy={20.4 + (i * 2.3) % 4} rx="0.9" ry="0.5" fill="#f4ecd8" opacity="0.85" />)}
+    </Food6Soup>
+  );
+}
+function FoodNrMiwasomen() {
+  return (
+    <g>
+      <Food1Shadow rx={20} />
+      <ellipse cx="24" cy="31" rx="20" ry="8" fill="#c8e4f0" opacity="0.7" stroke="#7aa8c8" strokeWidth="0.6" />
+      {[[16, 28], [24, 26], [32, 28], [20, 32], [28, 32]].map(([x, y], i) => (
+        <g key={i}>{[0, 1, 2].map((k) => <ellipse key={k} cx={x} cy={y} rx={3.6 - k * 1} ry={1.6 - k * 0.4} fill="none" stroke="#fbf8f0" strokeWidth="0.8" />)}</g>
+      ))}
+      {[[12, 31], [36, 31]].map(([x, y], i) => <path key={i} d={`M${x - 2} ${y - 1.6} l4 -0.6 l0.6 3.2 l-4 0.6 Z`} fill="#e8f4ff" stroke="#a8c8e0" strokeWidth="0.35" />)}
+      <path d="M24,20 l3,-4" stroke="#5aa04a" strokeWidth="1.2" />
+    </g>
+  );
+}
+function FoodNrTenriramen() {
+  return (
+    <Food5Ramen bowl={{ body: "#8a2418", light: "#b5412e", dark: "#4e110a", rim: "#2a0604" }} broth="#c8401a" noodle="#f2d070" n={4}>
+      <path d="M11,21 Q18,15 26,17 Q34,16 37,22 Q30,25 24,24 Q16,25 11,21 Z" fill="#d8eab0" opacity="0.85" stroke="#8aa050" strokeWidth="0.35" />
+      {[[16, 20], [22, 19], [28, 19.4], [33, 21]].map(([x, y], i) => <path key={i} d={`M${x - 2} ${y} q2 -1.6 4 0`} stroke="#f4f0dc" strokeWidth="0.9" fill="none" />)}
+      <ellipse cx="24" cy="21.6" rx="2.4" ry="1.2" fill="#c87a5a" />
+    </Food5Ramen>
+  );
+}
+function FoodNrAsukanabe() {
+  return <Food7Nabe broth="#f4ecd8" items={[[14, 20.6, "slice", "#f0d0b0"], [21, 19.4, "leaf", "#5aa04a"], [28, 19.6, "slice", "#f0d0b0"], [33, 22, "rect", "#f08a2a"], [18, 23.4, "rect", "#f4ecd8"], [26, 23.4, "ball", "#e8d0b0"]]} />;
+}
+function FoodNrKuzukiri() {
+  return (
+    <g>
+      <Food1Shadow rx={18} />
+      <path d="M6,26 Q6,38 24,38 Q42,38 42,26 Z" fill="#1a1a1e" stroke="#000" strokeWidth="0.5" />
+      <ellipse cx="24" cy="26" rx="18" ry="4.6" fill="#3a3a42" stroke="#000" strokeWidth="0.45" />
+      <ellipse cx="24" cy="26.2" rx="16.4" ry="3.8" fill="#c8e0f0" opacity="0.7" />
+      {Array.from({ length: 7 }, (_, i) => <path key={i} d={`M${10 + i * 1.4} ${25 + (i % 3)} Q24 ${21 + i * 0.8} ${38 - i * 1.4} ${25 + (i % 3)}`} stroke="#f4f8fa" strokeWidth="1" fill="none" opacity="0.9" />)}
+      <ellipse cx="40" cy="16" rx="4.6" ry="2.2" fill="#f4f0e8" stroke="#8a8070" strokeWidth="0.4" />
+      <ellipse cx="40" cy="15.6" rx="3.4" ry="1.4" fill="#2a0e04" />
+    </g>
+  );
+}
+function FoodNrYamatocha() {
+  return (
+    <g>
+      <Food1Shadow rx={18} />
+      <path d="M10,30 Q10,18 22,16 Q34,18 34,30 Q34,38 22,38 Q10,38 10,30 Z" fill="#3a3a30" stroke="#141410" strokeWidth="0.5" />
+      <ellipse cx="22" cy="17" rx="5" ry="1.6" fill="#5a5a48" stroke="#141410" strokeWidth="0.4" />
+      <path d="M34,26 Q42,22 42,16" stroke="#3a3a30" strokeWidth="2" fill="none" strokeLinecap="round" />
+      <path d="M8,26 Q4,26 4,30 Q4,34 8,34" stroke="#3a3a30" strokeWidth="1.6" fill="none" />
+      <path d="M14,26 Q22,22 30,26" stroke="#7a7a60" strokeWidth="0.6" fill="none" />
+      {[[38, 34, 20], [42, 31, -30]].map(([x, y, r], i) => <path key={i} d="M-3 0 Q0 -2 3 0 Q0 2 -3 0 Z" transform={`translate(${x},${y}) rotate(${r})`} fill="#4a9a3a" />)}
+    </g>
+  );
+}
+function FoodNrOyakodon() {
+  return (
+    <Food5Don bowl={{ body: "#5a1810", light: "#8a2a1c", dark: "#2a0806", rim: "#140402", band: "#d8b040" }} rice={false} base="#f2c84a" steam>
+      <path d="M10,22 q5,-3 9,0 q5,3 10,0 q5,-3 9,0" stroke="#fae890" strokeWidth="1.4" fill="none" />
+      {[[15, 21], [22, 20], [29, 21.4], [19, 24], [27, 24.2]].map(([x, y], i) => <ellipse key={i} cx={x} cy={y} rx="2.6" ry="1.6" fill="#e8c8a0" stroke="#8a6a4a" strokeWidth="0.3" />)}
+      <path d="M24,19.6 l4,-2 l1,1 Z" fill="#5aa04a" />
+      <rect x="31" y="22.6" width="3" height="1" fill="#8a3a1a" />
+    </Food5Don>
+  );
+}
+function FoodNrKaki() {
+  return (
+    <g>
+      <Food4Plate cy={34} c="#e8e0cc" />
+      {[[16, 28, -14], [30, 28, 14], [23, 32, 0]].map(([x, y, r], i) => (
+        <g key={i} transform={`translate(${x},${y}) rotate(${r})`}>
+          <path d="M-6,1 Q-6,-4 0,-4.6 Q6,-4 6,1 Q0,3.4 -6,1 Z" fill="#f08a1a" stroke="#8a3a04" strokeWidth="0.45" />
+          <path d="M-5,0.4 Q0,-3 5,0.4 Q0,2 -5,0.4 Z" fill="#f8c060" />
+          <ellipse cx="0" cy="-0.4" rx="0.8" ry="1.2" fill="#9a5a1a" />
+        </g>
+      ))}
+    </g>
+  );
+}
+function FoodNrTofu() {
+  return (
+    <g>
+      <Food1Shadow rx={18} />
+      <path d="M8,26 Q8,38 24,38 Q40,38 40,26 Z" fill="#c8a870" stroke="#6a4a1a" strokeWidth="0.5" />
+      <ellipse cx="24" cy="26" rx="16" ry="4" fill="#d8b880" stroke="#6a4a1a" strokeWidth="0.45" />
+      <ellipse cx="24" cy="26.2" rx="14.4" ry="3.2" fill="#c8e0f0" opacity="0.8" />
+      <path d="M16,26 L18,22 L30,22 L32,26 L30,28 L18,28 Z" fill="#fbfaf4" stroke="#c8c4b8" strokeWidth="0.4" />
+      <path d="M18,22 L30,22 L28.6,24 L19.4,24 Z" fill="#fff" />
+      <path d="M33,24 l4,-2" stroke="#3a8a3a" strokeWidth="1.2" />
+    </g>
+  );
+}
+function FoodNrSakuramochi() {
+  return (
+    <g>
+      <Food4Plate cy={34} c="#e8e0cc" />
+      {[[16, 28, -14], [30, 28, 14], [23, 32, 0]].map(([x, y, r], i) => (
+        <g key={i} transform={`translate(${x},${y}) rotate(${r})`}>
+          <ellipse rx="6" ry="3.6" fill="#f8c0d0" stroke="#c87a90" strokeWidth="0.45" />
+          <path d="M-6,0.4 Q-3,-5 4,-3.6 Q7,-2 6.4,1 Q0,4.6 -6,0.4 Z" fill="#6a8a3a" stroke="#2a4a10" strokeWidth="0.4" opacity="0.9" />
+          <path d="M-5 0 Q0 -3 6 0" stroke="#8aa85a" strokeWidth="0.4" fill="none" />
+        </g>
+      ))}
+    </g>
+  );
+}
+
+/* ---- 和歌山 ---- */
+function FoodWkRamen() {
+  return (
+    <Food5Ramen bowl={{ body: "#f2ece0", light: "#fff", dark: "#b8ae9a", rim: "#7a7060", band: "#c82a1a" }} broth="#6a3410" noodle="#f2d070">
+      <Food1Chashu x={15} y={20.6} r={3.6} rot={-10} />
+      <Food1Chashu x={21} y={19.4} r={3.2} rot={4} />
+      <ellipse cx="28" cy="20" rx="3.2" ry="1.6" fill="#f8f2e4" stroke="#c8b8a0" strokeWidth="0.3" />
+      <path d="M26.4,20 q1.6,-1 3.2,0" stroke="#e85a8a" strokeWidth="0.5" fill="none" />
+      <Food1Negi x={30} y={23} /><Food1Negi x={24} y={23.6} />
+    </Food5Ramen>
+  );
+}
+function FoodWkHayazushi() {
+  return (
+    <g>
+      <Food4Board x={3} y={27} w={42} h={11} c="#c8a070" d="#7a5a30" />
+      {[9, 17, 25, 33, 40].map((x, i) => (
+        <g key={i} transform={`translate(${x},${31})`}>
+          <rect x="-3.4" y="-1.4" width="6.8" height="4" rx="0.6" fill="#fbf8f0" stroke="#c8c0b0" strokeWidth="0.3" />
+          <rect x="-3.6" y="-3.4" width="7.2" height="2.4" rx="0.6" fill={i % 2 ? "#9aa8b8" : "#e8a890"} stroke="#3a4a5a" strokeWidth="0.3" />
+        </g>
+      ))}
+    </g>
+  );
+}
+function FoodWkMomo() {
+  return (
+    <g>
+      <Food4Plate cy={34} c="#f4f0e8" />
+      {[[14, 29, -30], [21, 27, -10], [28, 27, 10], [35, 29, 30]].map(([x, y, r], i) => (
+        <g key={i} transform={`translate(${x},${y}) rotate(${r})`}>
+          <path d="M-4,2 Q0,-6 4,2 Z" fill="#fbe0c8" stroke="#c8705a" strokeWidth="0.4" />
+          <path d="M-4,2 Q0,-6 4,2" stroke="#f07a7a" strokeWidth="0.9" fill="none" />
+        </g>
+      ))}
+      <path d="M20,33 q4,-2 8,0" stroke="#4a9a3a" strokeWidth="1.2" fill="none" />
+    </g>
+  );
+}
+function FoodWkMikan() {
+  return (
+    <g>
+      <Food1Shadow rx={20} />
+      <path d="M5,24 L43,24 L41,40 L7,40 Z" fill="#c8a070" stroke="#6a4a1a" strokeWidth="0.5" />
+      {[10, 18, 26, 34].map((x, i) => <path key={i} d={`M${x} 24 V40`} stroke="#a8804a" strokeWidth="0.4" />)}
+      {[[11, 22], [19, 21], [27, 21.4], [35, 22], [15, 18], [23, 17.4], [31, 18]].map(([x, y], i) => (
+        <g key={i}><circle cx={x} cy={y} r="4" fill="#f8901a" stroke="#9a4a04" strokeWidth="0.4" /><ellipse cx={x - 1.2} cy={y - 1.2} rx="1" ry="0.6" fill="#fff" opacity="0.5" /></g>
+      ))}
+    </g>
+  );
+}
+function FoodWkUmeboshi() {
+  return (
+    <g>
+      <Food4Plate cy={33} c="#2a2a30" rim="#0a0a0c" />
+      {[[15, 28], [24, 26.4], [33, 28], [19.6, 32], [28.4, 32]].map(([x, y], i) => (
+        <g key={i}>
+          <ellipse cx={x} cy={y} rx="4" ry="3.4" fill="#e84a3a" stroke="#7a0a10" strokeWidth="0.4" />
+          {[-2, 0, 2].map((d) => <path key={d} d={`M${x + d - 1} ${y - 1} q1 0.8 2 0`} stroke="#a81a1a" strokeWidth="0.4" fill="none" />)}
+          <ellipse cx={x - 1.4} cy={y - 1.4} rx="1.2" ry="0.6" fill="#fff" opacity="0.55" />
+        </g>
+      ))}
+    </g>
+  );
+}
+function FoodWkKinzanji() {
+  return (
+    <g>
+      <Food1Shadow rx={14} />
+      <path d="M10,24 L38,24 L36,40 Q24,42 12,40 Z" fill="#3a2a1a" stroke="#140c04" strokeWidth="0.5" />
+      <ellipse cx="24" cy="24" rx="14" ry="3.4" fill="#5a4a32" stroke="#140c04" strokeWidth="0.45" />
+      <ellipse cx="24" cy="24.2" rx="12.6" ry="2.6" fill="#8a5a1a" />
+      {Array.from({ length: 12 }, (_, i) => <ellipse key={i} cx={14 + (i * 7.1) % 20} cy={23.6 + (i % 3) * 0.5} rx="0.7" ry="0.4" fill={i % 3 ? "#c8a050" : "#6a8a3a"} />)}
+      <path d="M34,16 L42,8" stroke="#c8a870" strokeWidth="1.2" />
+    </g>
+  );
+}
+function FoodWkMaguro() {
+  return (
+    <g>
+      <Food4Plate cy={32} rx={20} c="#1e3a5a" rim="#0a1a2a" />
+      {[[11, 29], [16, 28], [21, 27.4], [26, 27.4], [31, 28], [36, 29]].map(([x, y], i) => (
+        <g key={i} transform={`translate(${x},${y}) rotate(-8)`}>
+          <rect x="-2.4" y="-4" width="4.8" height="8" rx="0.8" fill={i % 2 ? "#e86a7a" : "#c81a2a"} stroke="#4a0610" strokeWidth="0.35" />
+          <path d="M-1.4 -2 v4" stroke={i % 2 ? "#ffc0c8" : "#e85a60"} strokeWidth="0.5" />
+        </g>
+      ))}
+      <path d="M8,35 q16,2 32,0" stroke="#f4f4f0" strokeWidth="1.6" fill="none" />
+      <circle cx="38" cy="22" r="1.4" fill="#9ac050" />
+    </g>
+  );
+}
+function FoodWkKuenabe() {
+  return <Food7Nabe broth="#e8dcc0" items={[[14, 20.6, "slice", "#f8f2e8"], [22, 19.4, "slice", "#fbf6ec"], [30, 20.6, "slice", "#f8f2e8"], [18, 23.4, "leaf", "#5aa04a"], [27, 23, "rect", "#f4ecd8"], [34, 22.4, "rect", "#f08a2a"]]} />;
+}
+function FoodWkJabara() {
+  return <Food6Fruit c="#e8c830" d="#8a7010" pts={[[15, 31], [33, 31], [24, 23]]} r={7} leaf="#3a8a2a" />;
+}
+
+const FOOD_ART_7 = {
+  me_tonteki: FoodMeTonteki, me_hamaguri: FoodMeHamaguri, me_misoyakiudon: FoodMeMisoyakiudon,
+  me_matsusaka: FoodMeMatsusaka, me_tsugyoza: FoodMeTsugyoza, me_toriyakiniku: FoodMeToriyakiniku,
+  me_katayaki: FoodMeKatayaki, me_igagyu: FoodMeIgagyu, me_igadengaku: FoodMeIgadengaku,
+  me_iseudon: FoodMeIseudon, me_ankoromochi: FoodMeAnkoromochi, me_tekone: FoodMeTekone,
+  me_meharizushi: FoodMeMeharizushi, me_sanmazushi: FoodMeSanmazushi, me_shinhime: FoodMeShinhime,
+  sg_shijimijiru: FoodSgShijimijiru, sg_chikaramochi: FoodSgChikaramochi, sg_koayu: FoodSgKoayu,
+  sg_melon: FoodSgMelon, sg_aobana: FoodSgAobana, sg_ichijiku: FoodSgIchijiku,
+  sg_tsuchiyamacha: FoodSgTsuchiyamacha, sg_ninjamanju: FoodSgNinjamanju, sg_chasoba: FoodSgChasoba,
+  sg_omigyu: FoodSgOmigyu, sg_akakonnyaku: FoodSgAkakonnyaku, sg_decchiyokan: FoodSgDecchiyokan,
+  sg_champon: FoodSgChampon, sg_itokirimochi: FoodSgItokirimochi, sg_misozuke: FoodSgMisozuke,
+  sg_yakisabasomen: FoodSgYakisabasomen, sg_kamonabe: FoodSgKamonabe, sg_noppei: FoodSgNoppei,
+  sg_tonchan: FoodSgTonchan, sg_sabazushi: FoodSgSabazushi, sg_tochimochi: FoodSgTochimochi,
+  os_takoyaki: FoodOsTakoyaki, os_okonomiyaki: FoodOsOkonomiyaki, os_kushikatsu: FoodOsKushikatsu,
+  os_momiji: FoodOsMomiji, os_kuri: FoodOsKuri, os_jidori: FoodOsJidori,
+  os_udonsuki: FoodOsUdonsuki, os_udo: FoodOsUdo, os_kanten: FoodOsKanten,
+  os_kurawanka: FoodOsKurawanka, os_kashiwa: FoodOsKashiwa, os_narazuke: FoodOsNarazuke,
+  os_gobou: FoodOsGobou, os_edamame: FoodOsEdamame, os_budou: FoodOsBudou,
+  os_kasuudon: FoodOsKasuudon, os_grapejuice: FoodOsGrapejuice, os_kamo: FoodOsKamo,
+  os_kurumimochi: FoodOsKurumimochi, os_keshimochi: FoodOsKeshimochi, os_matchazenzai: FoodOsMatchazenzai,
+  os_mizunasu: FoodOsMizunasu, os_kashimin: FoodOsKashimin, os_tamanegi: FoodOsTamanegi,
+  hg_kobebeef: FoodHgKobebeef, hg_sobameshi: FoodHgSobameshi, hg_baum: FoodHgBaum,
+  hg_kugini: FoodHgKugini, hg_amazake: FoodHgAmazake, hg_tansan: FoodHgTansan,
+  hg_akashiyaki: FoodHgAkashiyaki, hg_katsumeshi: FoodHgKatsumeshi, hg_tai: FoodHgTai,
+  hg_himejioden: FoodHgHimejioden, hg_ekisoba: FoodHgEkisoba, hg_almondtoast: FoodHgAlmondtoast,
+  hg_somen: FoodHgSomen, hg_shiomanju: FoodHgShiomanju, hg_kakioko: FoodHgKakioko,
+  hg_matsubagani: FoodHgMatsubagani, hg_izushisoba: FoodHgIzushisoba, hg_tajimagyu: FoodHgTajimagyu,
+  hg_kuromame: FoodHgKuromame, hg_montblanc: FoodHgMontblanc, hg_botannabe: FoodHgBotannabe,
+  hg_tamanegi: FoodHgTamanegi, hg_awajigyudon: FoodHgAwajigyudon, hg_hamo: FoodHgHamo,
+  nr_kakinoha: FoodNrKakinoha, nr_narazuke: FoodNrNarazuke, nr_chagayu: FoodNrChagayu,
+  nr_miwasomen: FoodNrMiwasomen, nr_tenriramen: FoodNrTenriramen, nr_asukanabe: FoodNrAsukanabe,
+  nr_kuzukiri: FoodNrKuzukiri, nr_yamatocha: FoodNrYamatocha, nr_oyakodon: FoodNrOyakodon,
+  nr_kaki: FoodNrKaki, nr_tofu: FoodNrTofu, nr_sakuramochi: FoodNrSakuramochi,
+  wk_ramen: FoodWkRamen, wk_hayazushi: FoodWkHayazushi, wk_momo: FoodWkMomo,
+  wk_mikan: FoodWkMikan, wk_umeboshi: FoodWkUmeboshi, wk_kinzanji: FoodWkKinzanji,
+  wk_maguro: FoodWkMaguro, wk_kuenabe: FoodWkKuenabe, wk_jabara: FoodWkJabara,
+};
+
+/* ==== 中国・四国のご当地グルメの絵（2026-10-10）。⚠️ viewBox 0 0 48 48・静止・defs と id を使わない ==== */
+/* ---- 鳥取 ---- */
+function FoodTtNashi() {
+  return <Food6Fruit c="#d8e070" d="#7a8a20" hi="#fff" leaf="#4a9a3a" pts={[[15, 30], [33, 30], [24, 22]]} r={7.6} />;
+}
+function FoodTtTofuchikuwa() {
+  return (
+    <g>
+      <Food4Plate cy={34} c="#e8e0cc" />
+      {[0, 1, 2].map((k) => (
+        <g key={k} transform={`translate(24,${25 + k * 4.4}) rotate(${-6 + k * 4})`}>
+          <rect x="-15" y="-2.2" width="28" height="4.4" rx="2.2" fill="#fbf8ee" stroke="#b8b098" strokeWidth="0.4" />
+          <rect x="-11" y="-2.2" width="20" height="2.6" rx="1.3" fill="#e8d8b0" />
+          <ellipse cx="13" cy="0" rx="1.4" ry="2.2" fill="#fbf8ee" stroke="#b8b098" strokeWidth="0.35" />
+          <ellipse cx="13" cy="0" rx="0.6" ry="1" fill="#8a7a5a" />
+        </g>
+      ))}
+    </g>
+  );
+}
+function FoodTtRakkyo() {
+  return (
+    <g>
+      <Food1Shadow rx={14} />
+      <path d="M12,18 L36,18 L35,40 Q24,42 13,40 Z" fill="#e8f0f4" opacity="0.5" stroke="#a8b8c4" strokeWidth="0.6" />
+      <path d="M12.4,22 L35.6,22 L35,40 Q24,42 13,40 Z" fill="#f4ecc8" opacity="0.6" />
+      {[[17, 26], [23, 25], [29, 26], [20, 31], [26, 31], [32, 32], [17, 36], [24, 36.6], [30, 36.4]].map(([x, y], i) => (
+        <g key={i}><path d={`M${x},${y - 3} Q${x + 2.6},${y} ${x},${y + 2.4} Q${x - 2.6},${y} ${x},${y - 3} Z`} fill="#fbf8f0" stroke="#c8c0a0" strokeWidth="0.35" /></g>
+      ))}
+      <rect x="11" y="13" width="26" height="5" rx="1" fill="#c82a1a" stroke="#6a0a04" strokeWidth="0.45" />
+    </g>
+  );
+}
+function FoodTtGyukotsu() {
+  return (
+    <Food5Ramen bowl={{ body: "#f2ece0", light: "#fff", dark: "#b8ae9a", rim: "#7a7060", band: "#8a1a14" }} broth="#d8b070" noodle="#f2d070">
+      <Food1Chashu x={15} y={20.6} r={3.6} rot={-10} />
+      <path d="M22,19 q3,-2.4 6,-0.4 q-3,1.6 -6,0.4 Z" fill="#8a4a2a" stroke="#3a1404" strokeWidth="0.3" />
+      <path d="M30,23 l5,-1" stroke="#c8a050" strokeWidth="1.6" />
+      <Food1Negi x={26} y={23.6} /><Food1Negi x={20} y={23.4} />
+    </Food5Ramen>
+  );
+}
+function FoodTtSanshokudango() {
+  return (
+    <g>
+      <Food4Plate cy={34} />
+      {[[16, 0], [30, 1]].map(([x, k]) => (
+        <g key={k}>
+          <Food5Skewer x1={x - 6} y1={38} x2={x + 6} y2={12} />
+          {["#7ac04a", "#fbf8f0", "#f4a0b8"].map((c, j) => <Food4Ball key={j} x={x - 2.4 + j * 3.6} y={31 - j * 7.4} r={3.4} c={c} d="#0003" />)}
+        </g>
+      ))}
+    </g>
+  );
+}
+function FoodTtShijimi() {
+  return (
+    <g>
+      <Food4Plate cy={32} c="#2a2a30" rim="#0a0a0c" />
+      {Array.from({ length: 14 }, (_, i) => {
+        const x = 11 + (i * 7.1) % 26, y = 26 + ((i * 3.3) % 9);
+        return <g key={i} transform={`translate(${x},${y}) rotate(${(i * 37) % 60 - 30})`}><ellipse rx="2.2" ry="1.6" fill="#3a3428" stroke="#000" strokeWidth="0.3" /><path d="M-1.6 0 q1.6 -1.1 3.2 0" stroke="#8a7a5a" strokeWidth="0.35" fill="none" /></g>;
+      })}
+      <Food1Steam x={24} y={18} s={0.8} />
+    </g>
+  );
+}
+function FoodTtBenizuwai() {
+  return (
+    <Food5Don bowl={{ body: "#1e3a5a", light: "#3a5a7a", dark: "#0a1a2a", rim: "#000" }}>
+      {[[13, 21, -24], [18, 19.4, -12], [24, 19, 0], [30, 19.4, 12], [35, 21, 24], [20, 23.6, -4], [28, 23.6, 6]].map(([x, y, r], i) => (
+        <g key={i} transform={`translate(${x},${y}) rotate(${r})`}>
+          <rect x="-3.4" y="-1.2" width="6.8" height="2.4" rx="1" fill="#f8ece4" stroke="#c8a898" strokeWidth="0.3" />
+          <path d="M-3 -0.8 H3" stroke="#e8402a" strokeWidth="0.8" />
+        </g>
+      ))}
+      <path d="M33,25 q2,-2 4,-0.6" stroke="#5aa04a" strokeWidth="1" fill="none" />
+    </Food5Don>
+  );
+}
+function FoodTtDaisenokowa() {
+  return (
+    <Food5Don bowl={{ body: "#3a2a1a", light: "#5a4a32", dark: "#1a0e04", rim: "#0c0602" }} rice={false} base="#c8a070" steam>
+      {Array.from({ length: 16 }, (_, i) => <ellipse key={i} cx={11 + (i * 7) % 26} cy={20 + (i * 3) % 5} rx="0.8" ry="0.5" fill="#f4e8d0" opacity="0.8" />)}
+      {[[15, 21], [22, 20], [29, 21.4], [20, 23.6], [27, 23.6]].map(([x, y], i) => <rect key={i} x={x - 1.6} y={y - 0.8} width="3.2" height="1.6" rx="0.4" fill={["#f08a2a", "#7a5a3a", "#e8dcc0", "#5a7a3a", "#c87a5a"][i]} />)}
+    </Food5Don>
+  );
+}
+function FoodTtJelato() {
+  return (
+    <g>
+      <Food1Shadow rx={8} />
+      <path d="M17.6,24 L24,42 L30.4,24 Z" fill="#d89a4a" stroke="#8a5a1a" strokeWidth="0.5" />
+      <Food4Ball x={24} y={20} r={7} c="#fbf8f0" d="#c8c0b0" />
+      <Food4Ball x={24} y={11} r={5.6} c="#a8c8f0" d="#5a7aa8" />
+      <path d="M18,14 Q24,6 30,14" stroke="#fff" strokeWidth="0.6" fill="none" opacity="0.6" />
+    </g>
+  );
+}
+
+/* ---- 島根 ---- */
+function FoodSmWarigo() {
+  return (
+    <g>
+      <Food1Shadow rx={18} />
+      {[[24, 37, 15], [24, 29, 14], [24, 21, 13]].map(([x, y, w], i) => (
+        <g key={i}>
+          <path d={`M${x - w},${y} L${x - w + 1.4},${y + 5.4} L${x + w - 1.4},${y + 5.4} L${x + w},${y} Z`} fill="#8a1e16" stroke="#2a0604" strokeWidth="0.5" />
+          <ellipse cx={x} cy={y} rx={w} ry="3.6" fill="#5a1410" stroke="#2a0604" strokeWidth="0.45" />
+          <ellipse cx={x} cy={y} rx={w - 1.6} ry="2.8" fill="#6e5e42" />
+          <path d={`M${x - w + 3} ${y - 0.4} q1.6 -1.2 3.2 0 t3.2 0 t3.2 0 t3.2 0 t3.2 0 t3.2 0`} stroke="#a89a7a" strokeWidth="0.6" fill="none" />
+          <path d={`M${x - w + 4} ${y + 1} q1.6 -1 3.2 0 t3.2 0 t3.2 0 t3.2 0 t3.2 0`} stroke="#8a7a5a" strokeWidth="0.5" fill="none" />
+        </g>
+      ))}
+      <Food1Negi x={21} y={20.4} /><Food1Negi x={27} y={21.4} />
+      <ellipse cx="24" cy="20" rx="2" ry="1.2" fill="#f4b42a" />
+      <rect x="13" y="19.6" width="4" height="1.4" rx="0.4" fill="#e8dcb0" />
+    </g>
+  );
+}
+function FoodSmShijimijiru() {
+  return (
+    <Food6Soup wan={{ body: "#1a1a1e", light: "#3a3a42", rim: "#000", inner: "#0a0a0c" }} broth="#b8a07a">
+      {[[16, 21.4], [20.6, 20.4], [25.2, 21.4], [29.8, 20.6], [33, 22], [18.4, 23.6], [23, 23.6], [27.6, 23.6]].map(([x, y], i) => (
+        <g key={i} transform={`translate(${x},${y}) rotate(${(i * 31) % 50 - 25})`}><ellipse rx="1.9" ry="1.3" fill="#2a2620" stroke="#000" strokeWidth="0.25" /><path d="M-1.4 0 q1.4 -0.9 2.8 0" stroke="#7a6a50" strokeWidth="0.3" fill="none" /></g>
+      ))}
+    </Food6Soup>
+  );
+}
+function FoodSmZenzai() {
+  return (
+    <g>
+      <Food4Wan body="#7a1a14" light="#a83a2a" rim="#2a0604" inner="#3a0a06" />
+      <ellipse cx="24" cy="22.2" rx="13.6" ry="4" fill="#5a1e14" />
+      {Array.from({ length: 12 }, (_, i) => <ellipse key={i} cx={14 + (i * 7.1) % 20} cy={21 + (i % 3)} rx="0.9" ry="0.6" fill="#8a2a1a" />)}
+      {[[19, 21], [26, 20.6], [22, 23.4]].map(([x, y], i) => <Food4Ball key={i} x={x} y={y} r={2.2} c={i === 2 ? "#f8b0c0" : "#fbf8f0"} d="#c8c0b0" />)}
+      <Food1Steam x={24} y={13} s={0.8} />
+    </g>
+  );
+}
+function FoodSmNodoguro() {
+  return <Food6GrilledFish c="#d84a3a" belly="#f8e0d8" plate="#2a2a30" side="daikon" />;
+}
+function FoodSmAgoyaki() {
+  return (
+    <g>
+      <Food4Board x={4} y={28} w={40} h={10} c="#c8a070" d="#7a5a30" />
+      {[0, 1].map((k) => (
+        <g key={k} transform={`translate(24,${25 + k * 6}) rotate(${-3 + k * 5})`}>
+          <rect x="-18" y="-2.6" width="34" height="5.2" rx="2.6" fill="#a85a2a" stroke="#4a1a08" strokeWidth="0.45" />
+          {[-14, -8, -2, 4, 10].map((d) => <path key={d} d={`M${d} -2.4 l2 4.8`} stroke="#6a2a08" strokeWidth="0.6" opacity="0.7" />)}
+          <ellipse cx="16" cy="0" rx="1.6" ry="2.6" fill="#f4ecd8" stroke="#8a6a3a" strokeWidth="0.35" />
+        </g>
+      ))}
+    </g>
+  );
+}
+function FoodSmGenjimaki() {
+  return (
+    <g>
+      <Food4Plate cy={34} c="#e8e0cc" />
+      {[[16, 28, -14], [30, 28, 14], [23, 32.4, 0]].map(([x, y, r], i) => (
+        <g key={i} transform={`translate(${x},${y}) rotate(${r})`}>
+          <rect x="-7" y="-2.8" width="14" height="5.6" rx="2.8" fill="#d89a4a" stroke="#7a4a10" strokeWidth="0.45" />
+          <ellipse cx="7" cy="0" rx="1.6" ry="2.8" fill="#f2d090" stroke="#7a4a10" strokeWidth="0.35" />
+          <ellipse cx="7" cy="0" rx="1" ry="1.8" fill="#5a1e14" />
+        </g>
+      ))}
+    </g>
+  );
+}
+function FoodSmOkigyu() {
+  return (
+    <g>
+      <Food4Iron />
+      <path d="M10,31 Q12,24 20,24 L28,23 Q36,24 38,30 Q34,35 24,35 Q14,35 10,31 Z" fill="#7a3418" stroke="#2a0c04" strokeWidth="0.55" />
+      <path d="M13,28 Q20,24.6 30,25 Q35,26.4 36,29" stroke="#a8582a" strokeWidth="1" fill="none" />
+      {[16, 22, 28].map((x) => <path key={x} d={`M${x} 26 l-1.4 7`} stroke="#2a0c04" strokeWidth="0.8" opacity="0.7" />)}
+      {[[30, 31], [32, 32.4]].map(([x, y], i) => <ellipse key={i} cx={x} cy={y} rx="1" ry="0.6" fill="#f4e8c0" />)}
+      <Food1Steam x={24} y={18} s={0.8} />
+    </g>
+  );
+}
+function FoodSmSazaecurry() {
+  return (
+    <g>
+      <Food4Plate cy={31} rx={20} c="#f4f0e8" />
+      <path d="M8,30 Q10,24 20,24 Q26,24 26,30 Q20,35 8,30 Z" fill="#fbf8f0" stroke="#d8d0c0" strokeWidth="0.35" />
+      <path d="M22,26 Q28,22 36,24 Q42,28 38,33 Q30,36 22,32 Q20,29 22,26 Z" fill="#b8762a" stroke="#5a3008" strokeWidth="0.4" />
+      {[[27, 27], [32, 26], [34, 30], [28, 31]].map(([x, y], i) => (
+        <g key={i}><path d={`M${x - 1.6},${y + 1} Q${x - 1.4},${y - 1.6} ${x + 0.6},${y - 1.6} Q${x + 2},${y - 1} ${x + 1.6},${y + 1} Z`} fill="#6a5a3a" stroke="#2a2010" strokeWidth="0.3" /></g>
+      ))}
+      <path d="M36,18 q4,-1 6,2" stroke="#4a9a3a" strokeWidth="1" fill="none" />
+    </g>
+  );
+}
+function FoodSmIwagaki() {
+  return (
+    <g>
+      <Food4Plate cy={32} c="#c8e4f0" rim="#7aa8c8" />
+      {[[16, 27, -16], [31, 28, 14]].map(([x, y, r], i) => (
+        <g key={i} transform={`translate(${x},${y}) rotate(${r})`}>
+          <path d="M-9,0 Q-8,-6 0,-6.4 Q9,-6 9,0 Q8,5 0,5 Q-8,5 -9,0 Z" fill="#6a6458" stroke="#2a2620" strokeWidth="0.5" />
+          <path d="M-7.6,0 Q-7,-4.6 0,-5 Q7.6,-4.6 7.6,0 Q7,3.6 0,3.6 Q-7,3.6 -7.6,0 Z" fill="#e8e4d8" />
+          <path d="M-5,0 Q0,-3.6 5,0 Q0,2.4 -5,0 Z" fill="#d8ccb0" stroke="#8a7a5a" strokeWidth="0.35" />
+        </g>
+      ))}
+      <path d="M36,35 l5,-2 l1,2 l-5,2 Z" fill="#f4e050" />
+    </g>
+  );
+}
+
+/* ---- 岡山 ---- */
+function FoodOyKibidango() {
+  return (
+    <g>
+      <Food5Box c="#e8dcc8" d="#8a7050" />
+      {[[13, 31], [19, 31], [25, 31], [31, 31], [37, 31], [16, 36], [22, 36], [28, 36], [34, 36]].map(([x, y], i) => (
+        <Food4Ball key={i} x={x} y={y} r={2.6} c="#f4e8c8" d="#b8a078" />
+      ))}
+    </g>
+  );
+}
+function FoodOyBarazushi() {
+  return (
+    <g>
+      <Food1Shadow rx={20} />
+      <ellipse cx="24" cy="31" rx="19" ry="8" fill="#c8a060" stroke="#6a4a1a" strokeWidth="0.6" />
+      <ellipse cx="24" cy="29.6" rx="17" ry="6.6" fill="#f8f2e0" />
+      <path d="M8,29 Q24,25 40,29" stroke="#f4d040" strokeWidth="2.4" fill="none" opacity="0.8" />
+      {[[13, 29, "#c8283a"], [18, 27.4, "#f08a4a"], [23, 28, "#4a9a3a"], [28, 27.4, "#c8283a"], [33, 29, "#f4c040"], [16, 31.6, "#e85a8a"], [24, 32, "#8a5a3a"], [31, 31.6, "#f4ece0"]].map(([x, y, c], i) => (
+        <ellipse key={i} cx={x} cy={y} rx="2.4" ry="1.3" fill={c} stroke="#0003" strokeWidth="0.25" />
+      ))}
+      <Food4Ikura pts={[[20, 30], [27, 30.4]]} />
+    </g>
+  );
+}
+function FoodOyDemikatsu() {
+  return (
+    <Food5Don bowl={{ body: "#1a1a1e", light: "#3a3a42", dark: "#0a0a0c", rim: "#000", band: "#c8a040" }} steam>
+      {[0, 1, 2, 3].map((k) => (
+        <g key={k} transform={`translate(${14 + k * 6.4},${19.8 + (k % 2) * 0.8}) rotate(${-8 + k * 5})`}>
+          <rect x="-3.4" y="-2.6" width="6.8" height="5.2" rx="1" fill="#c8782a" stroke="#6a3008" strokeWidth="0.4" />
+        </g>
+      ))}
+      <path d="M11,20 Q24,15 37,20 Q30,24 24,23 Q18,24 11,20 Z" fill="#5a2208" opacity="0.88" />
+      <path d="M17,25 q2,-1.6 4,-0.4" stroke="#5aa04a" strokeWidth="1" fill="none" />
+    </Food5Don>
+  );
+}
+function FoodOyHakuto() {
+  return (
+    <g>
+      <Food1Shadow rx={18} />
+      {[[15, 30], [33, 30], [24, 23]].map(([x, y], i) => (
+        <g key={i}>
+          <path d={`M${x},${y - 8} Q${x + 9},${y - 8} ${x + 8},${y + 1} Q${x + 6},${y + 8} ${x},${y + 8} Q${x - 6},${y + 8} ${x - 8},${y + 1} Q${x - 9},${y - 8} ${x},${y - 8} Z`} fill="#fbeee0" stroke="#c8a090" strokeWidth="0.5" />
+          <path d={`M${x},${y - 8} Q${x + 6},${y - 6} ${x + 6},${y + 2}`} fill="#f8c8c0" opacity="0.6" />
+          <path d={`M${x},${y - 7} Q${x - 1.4},${y} ${x},${y + 7}`} stroke="#d8a8a0" strokeWidth="0.5" fill="none" />
+          <ellipse cx={x - 4} cy={y - 3} rx="1.6" ry="1" fill="#fff" opacity="0.7" />
+        </g>
+      ))}
+      <path d="M8,38 h32" stroke="#f4f0e8" strokeWidth="3" opacity="0.5" />
+    </g>
+  );
+}
+function FoodOyBukkake() {
+  return (
+    <Food5Ramen bowl={{ body: "#2a3a5a", light: "#4a5a7a", dark: "#0a1428", rim: "#000" }} broth="#8a5a2a" noodle="#fbf6e8" w={1.8} n={5} wave={0.4} steam={false}>
+      <path d="M14,20 Q18,17 22,20 Q18,22 14,20 Z" fill="#fbf8f0" stroke="#d8d0c0" strokeWidth="0.3" />
+      <path d="M27,19.6 q3,-2 5,0 q-2,1.6 -5,0 Z" fill="#f4e050" />
+      <Food5Tempura x={30} y={23} w={7} h={2.6} c="#e8c070" />
+      <Food1Negi x={22} y={23} /><Food1Negi x={24} y={24} />
+    </Food5Ramen>
+  );
+}
+function FoodOyKasaoka() {
+  return (
+    <Food5Ramen bowl={{ body: "#8a2418", light: "#b5412e", dark: "#4e110a", rim: "#2a0604" }} broth="#6a3410" noodle="#f2d070">
+      {[[14, 20.6, -12], [20, 19.4, -4], [26, 19.4, 6], [32, 20.6, 14]].map(([x, y, r], i) => (
+        <ellipse key={i} cx={x} cy={y} rx="2.8" ry="1.6" fill="#8a4a2a" stroke="#3a1404" strokeWidth="0.3" transform={`rotate(${r} ${x} ${y})`} />
+      ))}
+      <Food1Negi x={22} y={23.4} /><Food1Negi x={27} y={23.6} /><Food1Negi x={18} y={23} />
+    </Food5Ramen>
+  );
+}
+function FoodOyHorumonudon() {
+  return (
+    <g>
+      <Food4Iron />
+      <Food4Noodles cx={24} cy={30.4} rx={15} ry={4.6} c="#f0d8a0" n={4} w={2.2} />
+      {[[15, 29], [21, 28], [27, 28.4], [33, 30], [19, 32], [28, 32]].map(([x, y], i) => (
+        <path key={i} d={`M${x - 2.6} ${y} q1 -2 2.6 -1.4 q2 -0.4 2.6 1.4 q-1 1.6 -2.6 1.2 q-1.6 0.6 -2.6 -1.2 Z`} fill="#b8642a" stroke="#4a1a08" strokeWidth="0.3" />
+      ))}
+      <path d="M12,28 q12,-4 24,1" stroke="#3a1004" strokeWidth="1.2" fill="none" opacity="0.6" />
+      <Food1Steam x={24} y={20} s={0.8} />
+    </g>
+  );
+}
+function FoodOyHiruzen() {
+  return (
+    <g>
+      <Food4Iron />
+      <Food4Noodles cx={24} cy={30.4} rx={15} ry={4.6} c="#a8582a" n={5} w={1.3} />
+      {[[16, 29], [24, 28.4], [31, 30]].map(([x, y], i) => <path key={i} d={`M${x - 3} ${y} q3 -2 6 0`} stroke="#d8eab0" strokeWidth="1.6" fill="none" />)}
+      {[[19, 31.6], [28, 32]].map(([x, y], i) => <path key={i} d={`M${x - 2} ${y} q1 -1.4 2 -1 q1.4 -0.2 2 1 q-1 1.2 -2 1 Z`} fill="#d8a080" stroke="#5a2a14" strokeWidth="0.3" />)}
+      <Food1Steam x={24} y={20} s={0.8} />
+    </g>
+  );
+}
+function FoodOyJerseysoft() {
+  return (
+    <g>
+      <Food1Shadow rx={8} />
+      <path d="M17.6,24 L24,42 L30.4,24 Z" fill="#d89a4a" stroke="#8a5a1a" strokeWidth="0.5" />
+      <path d="M16,24 Q15,20 19,19 Q17,15 22,14 Q21,10 24,7 Q27,10 26,14 Q31,15 29,19 Q33,20 32,24 Z" fill="#fbf0d0" stroke="#c8b080" strokeWidth="0.5" />
+      <path d="M18,20.6 Q24,22 30,20.6 M19.6,15.6 Q24,17 28.4,15.6" stroke="#e8d8a8" strokeWidth="0.5" fill="none" />
+    </g>
+  );
+}
+
+/* ---- 広島 ---- */
+function FoodHrOkonomi() {
+  return (
+    <g>
+      <Food4Iron />
+      <ellipse cx="24" cy="31" rx="13" ry="5" fill="#c8862a" stroke="#6a3a08" strokeWidth="0.45" />
+      <path d="M11,31 L11,27 Q24,23 37,27 L37,31" fill="#d8eab0" stroke="#8aa050" strokeWidth="0.35" />
+      <path d="M11,27 Q24,23 37,27 L37,25 Q24,21 11,25 Z" fill="#a8742a" />
+      <ellipse cx="24" cy="24" rx="13" ry="4.4" fill="#4a1a08" />
+      <path d="M14,24 q3,-1.6 6,0 t6,0 t6,0" stroke="#5aa04a" strokeWidth="0.7" fill="none" />
+      <Food1Steam x={24} y={14} s={0.8} />
+    </g>
+  );
+}
+function FoodHrMomijimanju() {
+  const leaf = (s) => {
+    const p = [];
+    for (let k = 0; k < 5; k++) {
+      const a0 = (-90 + k * 72) * Math.PI / 180, a1 = (-90 + k * 72 + 36) * Math.PI / 180;
+      p.push(`${(Math.cos(a0) * 6.4 * s).toFixed(2)},${(Math.sin(a0) * 6.4 * s).toFixed(2)}`, `${(Math.cos(a1) * 3 * s).toFixed(2)},${(Math.sin(a1) * 3 * s).toFixed(2)}`);
+    }
+    return "M" + p.join(" L") + " Z";
+  };
+  return (
+    <g>
+      <Food4Plate cy={34} c="#e8dcc8" />
+      {[[15, 27, -14], [32, 27, 12], [23.6, 32, 2]].map(([x, y, r], i) => (
+        <g key={i} transform={`translate(${x},${y}) rotate(${r})`}>
+          <path d={leaf(1)} fill="#c8782a" stroke="#6a3a08" strokeWidth="0.5" strokeLinejoin="round" />
+          <path d={leaf(0.72)} fill="#e0a050" />
+          <path d="M0 4.6 L0 -4 M0 0 L-3.4 -1.4 M0 0 L3.4 -1.4 M0 1.6 L-2.4 3 M0 1.6 L2.4 3" stroke="#8a4a10" strokeWidth="0.45" />
+          <path d="M0 3 l0 3" stroke="#6a3a08" strokeWidth="0.9" strokeLinecap="round" />
+        </g>
+      ))}
+    </g>
+  );
+}
+function FoodHrTsukemen() {
+  return (
+    <g>
+      <Food4Plate cy={33} rx={20} c="#f4f0e8" />
+      <Food4Noodles cx={17} cy={31} rx={10} ry={4} c="#f2d070" n={5} w={1} />
+      {[[10, 29], [14, 28], [12, 31]].map(([x, y], i) => <path key={i} d={`M${x} ${y} q2 -1 4 0`} stroke="#7ac04a" strokeWidth="1" fill="none" />)}
+      <path d="M28,26 Q28,38 35,38 Q42,38 42,26 Z" fill="#1a1a1e" stroke="#000" strokeWidth="0.45" />
+      <ellipse cx="35" cy="26" rx="7" ry="2" fill="#c82a1a" />
+      {[[33, 25.6], [36, 26.2]].map(([x, y], i) => <circle key={i} cx={x} cy={y} r="0.5" fill="#f4e8c0" />)}
+    </g>
+  );
+}
+function FoodHrKurereimen() {
+  return (
+    <Food5Ramen bowl={{ body: "#e8f0f4", light: "#fff", dark: "#a8b8c4", rim: "#5a6a7a", band: "#4a8ab8" }} broth="#a8642a" noodle="#f4e8c0" w={1.4} n={4} steam={false}>
+      <Food1Chashu x={16} y={20.6} r={3.2} />
+      <ellipse cx="23" cy="19.8" rx="2.4" ry="1.8" fill="#fff" stroke="#c8c0b0" strokeWidth="0.3" />
+      <circle cx="23" cy="19.8" r="1" fill="#f4c42a" />
+      <path d="M27,19 l5,0.6" stroke="#8ab84a" strokeWidth="1.4" />
+      <path d="M30,23 l4,-1 l0.6,1.4 l-4,1 Z" fill="#f4b0a8" />
+    </Food5Ramen>
+  );
+}
+function FoodHrGansu() {
+  return (
+    <g>
+      <Food4Plate cy={32} c="#f4f0e8" />
+      {[[15, 27, -10], [28, 26.4, 6], [21, 32, 2]].map(([x, y, r], i) => (
+        <g key={i} transform={`translate(${x},${y}) rotate(${r})`}>
+          <rect x="-7" y="-3.4" width="14" height="6.8" rx="1.4" fill="#d8984a" stroke="#7a4a10" strokeWidth="0.45" />
+          {Array.from({ length: 8 }, (_, k) => <circle key={k} cx={-5 + (k * 1.5)} cy={-1.4 + (k % 3) * 1.2} r="0.55" fill="#f0c070" />)}
+          <path d="M-5 2 l2 0" stroke="#d83a1a" strokeWidth="0.6" />
+        </g>
+      ))}
+    </g>
+  );
+}
+function FoodHrFrycake() {
+  return (
+    <g>
+      <Food4Plate cy={34} c="#e8dcc8" />
+      {[[16, 28, -20], [30, 27, 16], [23, 32, 0]].map(([x, y, r], i) => (
+        <g key={i} transform={`translate(${x},${y}) rotate(${r})`}>
+          <ellipse rx="7" ry="3.6" fill="#b8702a" stroke="#5a3008" strokeWidth="0.45" />
+          <ellipse cx="-1.4" cy="-1" rx="3" ry="1.2" fill="#d8984a" opacity="0.8" />
+          {[-3, 0, 3].map((d) => <circle key={d} cx={d} cy="0.8" r="0.4" fill="#f4e0b0" />)}
+        </g>
+      ))}
+    </g>
+  );
+}
+function FoodHrBishunabe() {
+  return <Food7Nabe broth="#e8d8a8" items={[[14, 20.6, "slice", "#e8b8a0"], [21, 19.4, "rect", "#f4f0e4"], [28, 19.6, "slice", "#d8a090"], [33, 22, "leaf", "#5aa04a"], [18, 23.4, "ball", "#f4f0e4"], [26, 23.4, "rect", "#c8a070"]]} />;
+}
+function FoodHrJagaimo() {
+  return (
+    <g>
+      <Food4Plate cy={33} c="#f4f0e8" />
+      {[[15, 28], [24, 26.6], [33, 28], [19.4, 32.6], [28.6, 32.6]].map(([x, y], i) => (
+        <g key={i}>
+          <ellipse cx={x} cy={y} rx="4.6" ry="3.2" fill="#c8862a" stroke="#6a3a08" strokeWidth="0.45" />
+          {Array.from({ length: 5 }, (_, k) => <circle key={k} cx={x - 3 + k * 1.5} cy={y - 1 + (k % 2) * 1.6} r="0.5" fill="#f0c070" />)}
+        </g>
+      ))}
+      <path d="M36,23 q3,-2 5,0" stroke="#5aa04a" strokeWidth="1.2" fill="none" />
+    </g>
+  );
+}
+function FoodHrBlueberry() {
+  return (
+    <g>
+      <Food1Shadow rx={12} />
+      <path d="M13,20 L35,20 L34,38 Q24,40 14,38 Z" fill="#e8f0f4" opacity="0.45" stroke="#a8b8c4" strokeWidth="0.6" />
+      <path d="M13.4,24 L34.6,24 L34,38 Q24,40 14,38 Z" fill="#3a2a6a" />
+      <rect x="12" y="15" width="24" height="5" rx="1" fill="#f4ecd8" stroke="#8a7a5a" strokeWidth="0.45" />
+      <path d="M12 16.6 H36" stroke="#4a5ab8" strokeWidth="1.4" />
+      {[[18, 28], [23, 30], [28, 28.6], [20, 33], [26, 34]].map(([x, y], i) => <circle key={i} cx={x} cy={y} r="1.4" fill="#5a4a9a" />)}
+    </g>
+  );
+}
+function FoodHrOnomichi() {
+  return (
+    <Food5Ramen bowl={{ body: "#f2ece0", light: "#fff", dark: "#b8ae9a", rim: "#7a7060", band: "#2a4a8a" }} broth="#7a4018" noodle="#f2e0a0" w={1.1}>
+      {[[16, 20], [21, 19.4], [26, 19.6], [31, 20.4], [18, 22.6], [29, 23]].map(([x, y], i) => <ellipse key={i} cx={x} cy={y} rx="1.2" ry="0.6" fill="#f8f0d8" />)}
+      <Food1Chashu x={24} y={21.6} r={3.2} />
+      <Food1Negi x={14} y={22.4} /><Food1Negi x={33} y={22} />
+    </Food5Ramen>
+  );
+}
+function FoodHrTakoten() {
+  return (
+    <g>
+      <Food4Plate cy={32} c="#f4f0e8" />
+      <path d="M7,30 q8,-6 15,-4 l-2,3 q-6,-1 -13,1 Z" fill="#fff" stroke="#c8c0b0" strokeWidth="0.3" />
+      {[[18, 27], [28, 26.6], [23, 32], [32, 31.4]].map(([x, y], i) => (
+        <g key={i}>
+          <Food5Tempura x={x} y={y} w={9} h={4.6} rot={(i * 23) % 40 - 20} c="#e8c070" />
+          <circle cx={x + 1.4} cy={y - 1} r="1" fill="#c84a3a" opacity="0.7" />
+        </g>
+      ))}
+    </g>
+  );
+}
+function FoodHrLemon() {
+  return <Food6Fruit c="#f4dc2a" d="#9a8a04" pts={[[15, 31], [33, 31], [24, 23]]} r={7} leaf="#3a8a2a" />;
+}
+function FoodHrFuchuyaki() {
+  return (
+    <g>
+      <Food4Iron />
+      <ellipse cx="24" cy="30" rx="13" ry="5" fill="#d8a050" stroke="#6a3a08" strokeWidth="0.45" />
+      <ellipse cx="24" cy="29" rx="11" ry="4" fill="#5a2208" />
+      {[[18, 28.4], [24, 27.4], [30, 28.6]].map(([x, y], i) => <path key={i} d={`M${x - 2.4} ${y} q1.2 -1.4 2.4 -1 q1.4 -0.2 2.4 1 q-1 1.4 -2.4 1 q-1.4 0.4 -2.4 -1 Z`} fill="#c87a5a" />)}
+      <path d="M15,30 q9,3 18,0" stroke="#d8eab0" strokeWidth="1" fill="none" />
+      <Food1Steam x={24} y={19} s={0.8} />
+    </g>
+  );
+}
+function FoodHrTaimeshi() {
+  return (
+    <g>
+      <Food1Shadow rx={20} />
+      <path d="M5,24 L43,24 L41,38 L7,38 Z" fill="#2a2a30" stroke="#0a0a0c" strokeWidth="0.5" />
+      <ellipse cx="24" cy="24" rx="19" ry="5.4" fill="#3a3a42" stroke="#0a0a0c" strokeWidth="0.5" />
+      <ellipse cx="24" cy="24.2" rx="17.4" ry="4.6" fill="#d8b070" />
+      <Food4Fish x={24} y={23} len={26} c="#e86a6a" belly="#f8e0d8" />
+      <path d="M12,26 q3,-1 5,0" stroke="#5aa04a" strokeWidth="1" fill="none" />
+    </g>
+  );
+}
+function FoodHrUzumi() {
+  return (
+    <g>
+      <Food4Wan body="#3a2a1a" light="#5a4a32" rim="#140c04" inner="#1c140a" />
+      <path d="M10.6,22.4 Q24,14 37.4,22.4 Q24,27 10.6,22.4 Z" fill="#fbf8f0" stroke="#c8c0b0" strokeWidth="0.35" />
+      {Array.from({ length: 12 }, (_, i) => <ellipse key={i} cx={14 + (i * 7.1) % 20} cy={20 + (i * 1.7) % 4} rx="0.9" ry="0.5" fill="#fff" stroke="#e8e0d0" strokeWidth="0.15" />)}
+      <path d="M24,21 l3,-3" stroke="#5aa04a" strokeWidth="1" />
+      <Food1Steam x={24} y={13} s={0.8} />
+    </g>
+  );
+}
+function FoodHrShobarayaki() {
+  return (
+    <g>
+      <Food4Iron />
+      <ellipse cx="24" cy="30" rx="13" ry="5" fill="#d8a050" stroke="#6a3a08" strokeWidth="0.45" />
+      <path d="M14,29 Q24,25 34,29" stroke="#f4f0e8" strokeWidth="2.4" fill="none" opacity="0.8" />
+      {[[18, 30], [24, 31], [30, 30]].map(([x, y], i) => <circle key={i} cx={x} cy={y} r="1" fill="#f4c040" />)}
+      <path d="M33,26 q3,-1 5,0" stroke="#f4e050" strokeWidth="1.2" fill="none" />
+      <Food1Steam x={24} y={19} s={0.8} />
+    </g>
+  );
+}
+function FoodHrKaramen() {
+  return (
+    <g>
+      <Food4Iron />
+      <Food4Noodles cx={24} cy={30.4} rx={15} ry={4.6} c="#c8401a" n={5} w={1.3} />
+      {[[16, 29], [26, 28.4], [31, 31]].map(([x, y], i) => <path key={i} d={`M${x - 3} ${y} q3 -2 6 0`} stroke="#d8eab0" strokeWidth="1.4" fill="none" />)}
+      <ellipse cx="22" cy="30" rx="2" ry="1.2" fill="#f8b42a" />
+      <Food1Steam x={24} y={20} s={0.8} />
+    </g>
+  );
+}
+function FoodHrWani() {
+  return (
+    <g>
+      <Food4Plate cy={32} c="#1e3a5a" rim="#0a1a2a" />
+      {[[12, 29], [17, 28], [22, 27.4], [27, 27.4], [32, 28], [37, 29]].map(([x, y], i) => (
+        <g key={i} transform={`translate(${x},${y}) rotate(-8)`}>
+          <rect x="-2.4" y="-4" width="4.8" height="8" rx="0.8" fill="#f4ecec" stroke="#a89a9a" strokeWidth="0.35" />
+          <path d="M-1.4 -2 v4" stroke="#e8c8c8" strokeWidth="0.5" />
+        </g>
+      ))}
+      <ellipse cx="24" cy="35" rx="3" ry="1.2" fill="#f4e0a0" />
+      <path d="M38,34 q2,-2 3,0" stroke="#4a9a3a" strokeWidth="1.1" fill="none" />
+    </g>
+  );
+}
+
+/* ---- 山口 ---- */
+function FoodYgIwakunizushi() {
+  return (
+    <g>
+      <Food4Board x={4} y={26} w={40} h={12} c="#c8a070" d="#7a5a30" />
+      {[0, 1, 2].map((r) => [0, 1, 2].map((c) => (
+        <g key={`${r}${c}`} transform={`translate(${12 + c * 12},${23 + r * 4.2})`}>
+          <rect x="-5.4" y="-1.8" width="10.8" height="3.6" fill="#fbf8f0" stroke="#c8c0b0" strokeWidth="0.3" />
+          {r === 0 && <g><circle cx="-2.4" cy="-1.6" r="0.9" fill="#f4c040" /><circle cx="0" cy="-1.6" r="0.9" fill="#e85a8a" /><circle cx="2.4" cy="-1.6" r="0.9" fill="#5aa04a" /></g>}
+        </g>
+      )))}
+    </g>
+  );
+}
+function FoodYgRenkon() {
+  return (
+    <g>
+      <Food4Plate cy={32} c="#f4f0e8" />
+      {[[16, 27], [28, 26.4], [22, 32], [33, 31.4]].map(([x, y], i) => (
+        <g key={i}>
+          <ellipse cx={x} cy={y} rx="5.6" ry="3.6" fill="#e8c070" stroke="#9a6a1a" strokeWidth="0.45" />
+          {[[-2.4, -0.6], [0, -1.2], [2.4, -0.6], [-1.2, 1], [1.2, 1]].map(([dx, dy], k) => <ellipse key={k} cx={x + dx} cy={y + dy} rx="0.9" ry="0.6" fill="#9a6a1a" opacity="0.7" />)}
+        </g>
+      ))}
+    </g>
+  );
+}
+function FoodYgOhira() {
+  return (
+    <Food6Soup wan={{ body: "#5a1810", light: "#8a2a1c", rim: "#2a0604", inner: "#2a0a06" }} broth="#c8a070">
+      {[[17, 21.6, "#f08a2a"], [21, 20.4, "#8a5a3a"], [26, 20.6, "#e8dcc0"], [30, 22, "#c87a5a"], [23, 23.4, "#5a7a3a"]].map(([x, y, c], i) => <ellipse key={i} cx={x} cy={y} rx="2.2" ry="1.3" fill={c} stroke="#0003" strokeWidth="0.2" />)}
+      <rect x="13.6" y="21.4" width="2.4" height="1.4" fill="#f4ecd8" />
+    </Food6Soup>
+  );
+}
+function FoodYgTokuyamaramen() {
+  return (
+    <Food5Ramen bowl={{ body: "#1a1a1e", light: "#3a3a42", dark: "#0a0a0c", rim: "#000", band: "#c8a040" }} broth="#8a5020" noodle="#f2d070">
+      <Food1Chashu x={15} y={20.6} r={3.4} rot={-10} />
+      <path d="M22,19 q4,-1.6 8,0" stroke="#d8eab0" strokeWidth="1.6" fill="none" />
+      <path d="M30,22.6 l4,-1" stroke="#c8a050" strokeWidth="1.6" />
+      <Food1Negi x={22} y={23} /><Food1Negi x={26} y={23.6} />
+    </Food5Ramen>
+  );
+}
+function FoodYgNashi() {
+  return <Food6Fruit c="#c89a4a" d="#7a5010" pts={[[15, 30], [33, 30], [24, 22]]} r={7.6} leaf="#5a9a3a" />;
+}
+function FoodYgShirasu() {
+  return (
+    <g>
+      <Food4Plate cy={34} c="#e8e0cc" />
+      {[[15, 0], [33, 1]].map(([x, k]) => (
+        <g key={k}>
+          <path d={`M${x - 8},31 Q${x - 7},15 ${x},12 Q${x + 7},15 ${x + 8},31 Q${x},34 ${x - 8},31 Z`} fill="#fbf8f0" stroke="#b8ac98" strokeWidth="0.45" />
+          {Array.from({ length: 14 }, (_, i) => <path key={i} d={`M${x - 5 + (i * 2.3) % 10} ${16 + (i * 3.1) % 13} q0.8 -0.5 1.6 0`} stroke="#e8e0c8" strokeWidth="0.6" fill="none" />)}
+          <path d={`M${x - 6},33 L${x - 6},27 L${x + 6},27 L${x + 6},33 Q${x},34.4 ${x - 6},33 Z`} fill="#1a2418" />
+        </g>
+      ))}
+    </g>
+  );
+}
+function FoodYgUiro() {
+  return (
+    <g>
+      <Food4Plate cy={34} c="#2a2a30" rim="#0a0a0c" />
+      {[[16, 28, "#a8784a"], [24, 27, "#4a1a10"], [32, 28, "#e8d8c8"]].map(([x, y, c], i) => (
+        <g key={i}>
+          <rect x={x - 3.6} y={y - 5} width="7.2" height="10" rx="0.8" fill={c} stroke="#0004" strokeWidth="0.4" opacity="0.95" />
+          <rect x={x - 3} y={y - 4.4} width="2" height="8.8" rx="0.6" fill="#fff" opacity="0.18" />
+        </g>
+      ))}
+    </g>
+  );
+}
+function FoodYgBarisoba() {
+  return (
+    <g>
+      <Food4Plate cy={32} c="#f4f0e8" />
+      <path d="M8,30 Q10,22 24,22 Q38,22 40,30 Q24,35 8,30 Z" fill="#e8b860" stroke="#9a6a1a" strokeWidth="0.45" />
+      {Array.from({ length: 14 }, (_, i) => <path key={i} d={`M${11 + i * 2} ${27 + (i % 3)} q1 -1.6 2 -0.4`} stroke="#c88a3a" strokeWidth="0.7" fill="none" />)}
+      <path d="M12,26 Q24,20 36,26 Q30,30 24,29 Q18,30 12,26 Z" fill="#c8a070" opacity="0.7" />
+      {[[18, 26], [24, 25], [30, 26]].map(([x, y], i) => <rect key={i} x={x - 1.6} y={y - 0.8} width="3.2" height="1.6" rx="0.4" fill={["#f08a2a", "#7ac04a", "#c87a5a"][i]} />)}
+    </g>
+  );
+}
+function FoodYgOnsentamago() {
+  return (
+    <g>
+      <Food1Shadow rx={13} />
+      <path d="M11,24 Q11,38 24,38 Q37,38 37,24 Z" fill="#f4f0e8" stroke="#8a8070" strokeWidth="0.5" />
+      <ellipse cx="24" cy="24" rx="13" ry="3.4" fill="#fbf8f0" stroke="#8a8070" strokeWidth="0.45" />
+      <ellipse cx="24" cy="24.4" rx="11.4" ry="2.6" fill="#c8a060" opacity="0.6" />
+      <ellipse cx="24" cy="24" rx="7" ry="2.4" fill="#fbfaf4" opacity="0.9" />
+      <ellipse cx="24" cy="23.4" rx="3" ry="1.8" fill="#f4b42a" />
+      <path d="M28,22 l3,-1" stroke="#5aa04a" strokeWidth="0.9" />
+      <Food1Steam x={24} y={17} s={0.6} />
+    </g>
+  );
+}
+function FoodYgUberamen() {
+  return (
+    <Food5Ramen bowl={{ body: "#f2ece0", light: "#fff", dark: "#b8ae9a", rim: "#7a7060", band: "#c82a1a" }} broth="#e8d0a0" noodle="#f2d070">
+      <Food1Chashu x={15} y={20.6} r={3.6} rot={-10} />
+      <Food1Chashu x={21} y={19.4} r={3.2} rot={4} />
+      <path d="M26,19 q4,-1.6 8,0" stroke="#7ac04a" strokeWidth="1.4" fill="none" />
+      <Food1Negi x={28} y={23} /><Food1Negi x={22} y={23.6} />
+    </Food5Ramen>
+  );
+}
+function FoodYgOnocha() {
+  return (
+    <g>
+      <Food1Shadow rx={14} />
+      <rect x="10" y="14" width="20" height="26" rx="2" fill="#2a5a3a" stroke="#0a2a10" strokeWidth="0.5" />
+      <rect x="12" y="18" width="16" height="10" rx="1" fill="#f4ecd8" />
+      <path d="M14 21 h12 M14 24 h8" stroke="#2a5a3a" strokeWidth="0.8" />
+      <rect x="10" y="12" width="20" height="3" rx="1" fill="#1a3a20" />
+      {[[34, 30, 20], [38, 27, -20], [36, 34, 50], [40, 32, 0]].map(([x, y, r], i) => <path key={i} d="M-3 0 Q0 -2 3 0 Q0 2 -3 0 Z" transform={`translate(${x},${y}) rotate(${r})`} fill={i % 2 ? "#3a8a2a" : "#5aa83a"} />)}
+    </g>
+  );
+}
+function FoodYgTorikawa() {
+  return (
+    <g>
+      <Food4Plate cy={33} />
+      {[[10, 0], [18, 1], [26, 2]].map(([x, k]) => (
+        <g key={k}>
+          <Food5Skewer x1={x - 2} y1={36} x2={x + 12} y2={12} />
+          <path d={`M${x} 30 Q${x + 4} 22 ${x + 7} 24 Q${x + 4} 18 ${x + 10} 15`} stroke="#c8782a" strokeWidth="3.6" fill="none" strokeLinecap="round" />
+          <path d={`M${x} 30 Q${x + 4} 22 ${x + 7} 24 Q${x + 4} 18 ${x + 10} 15`} stroke="#e8a050" strokeWidth="1" fill="none" strokeLinecap="round" opacity="0.7" />
+        </g>
+      ))}
+    </g>
+  );
+}
+function FoodYgFugusashi() {
+  const n = 16;
+  return (
+    <g>
+      <Food1Shadow rx={20} />
+      <ellipse cx="24" cy="30" rx="20" ry="9" fill="#2a4a8a" stroke="#0a1a3a" strokeWidth="0.6" />
+      {Array.from({ length: n }, (_, i) => {
+        const a = (i / n) * Math.PI * 2;
+        return <path key={i} d={`M24 30 L${(24 + Math.cos(a) * 17).toFixed(2)} ${(30 + Math.sin(a) * 7.4).toFixed(2)} L${(24 + Math.cos(a + 0.33) * 17).toFixed(2)} ${(30 + Math.sin(a + 0.33) * 7.4).toFixed(2)} Z`} fill="#f4f8fa" opacity="0.75" stroke="#c8d8e8" strokeWidth="0.2" />;
+      })}
+      <circle cx="24" cy="30" r="2.6" fill="#e8f4c8" />
+      <ellipse cx="34" cy="29" rx="2" ry="1" fill="#f08a6a" />
+    </g>
+  );
+}
+function FoodYgKawarasoba() {
+  return (
+    <g>
+      <Food1Shadow rx={20} />
+      <path d="M4,30 Q24,22 44,30 L42,36 Q24,30 6,36 Z" fill="#5a5a62" stroke="#1a1a1e" strokeWidth="0.55" />
+      <Food4Noodles cx={24} cy={28} rx={16} ry={4} c="#4a6a2a" n={4} w={1} />
+      {[[16, 26.4], [22, 26], [28, 26], [34, 26.4]].map(([x, y], i) => <path key={i} d={`M${x - 2} ${y} q1 -1.4 2 -1 q1.4 -0.2 2 1 q-1 1.2 -2 1 Z`} fill="#8a4a2a" />)}
+      <path d="M14,25 q10,-3 20,0" stroke="#f4d040" strokeWidth="1" fill="none" />
+      <circle cx="22" cy="24.4" r="1" fill="#f8e088" /><circle cx="27" cy="24.6" r="1" fill="#e8f0b0" />
+    </g>
+  );
+}
+function FoodYgUni() {
+  return (
+    <g>
+      <Food1Shadow rx={12} />
+      <path d="M14,18 L34,18 L33,40 Q24,42 15,40 Z" fill="#e8f0f4" opacity="0.5" stroke="#a8b8c4" strokeWidth="0.6" />
+      <path d="M14.4,22 L33.6,22 L33,40 Q24,42 15,40 Z" fill="#f08a2a" />
+      {Array.from({ length: 10 }, (_, i) => <ellipse key={i} cx={17 + (i * 3.1) % 14} cy={25 + (i * 2.7) % 13} rx="1.6" ry="0.8" fill="#f8b04a" />)}
+      <rect x="13" y="14" width="22" height="5" rx="1.4" fill="#c8a040" stroke="#6a5010" strokeWidth="0.45" />
+    </g>
+  );
+}
+function FoodYgNagatoyakitori() {
+  return (
+    <g>
+      <Food4Plate cy={33} />
+      {[[10, 0], [18, 1], [26, 2]].map(([x, k]) => (
+        <g key={k}>
+          <Food5Skewer x1={x - 2} y1={36} x2={x + 12} y2={12} />
+          {[0, 1, 2].map((j) => <rect key={j} x={x - 1 + j * 3.8} y={26.6 - j * 6.6} width="5" height="4.4" rx="1.2" fill="#e8c890" stroke="#7a5a2a" strokeWidth="0.35" transform={`rotate(-30 ${x + 1.4 + j * 3.8} ${28.8 - j * 6.6})`} />)}
+        </g>
+      ))}
+      {[[36, 30], [38, 32], [40, 30.4]].map(([x, y], i) => <circle key={i} cx={x} cy={y} r="0.6" fill="#f4f4f0" />)}
+    </g>
+  );
+}
+function FoodYgKamaboko() {
+  return (
+    <g>
+      <Food4Board x={4} y={30} w={40} h={8} c="#d8b080" d="#8a6a3a" />
+      {[[14, 0], [24, 1], [34, 2]].map(([x, k]) => (
+        <g key={k}>
+          <path d={`M${x - 5},31 L${x - 5},25 Q${x},19 ${x + 5},25 L${x + 5},31 Z`} fill="#fbf8f0" stroke="#c8c0b0" strokeWidth="0.45" />
+          <path d={`M${x - 3.4} 27 q3.4 -2 6.8 0`} stroke="#e8a0b0" strokeWidth="0.8" fill="none" />
+          <path d={`M${x - 3} 29 q3 -1.6 6 0`} stroke="#a8d0f0" strokeWidth="0.6" fill="none" />
+        </g>
+      ))}
+    </g>
+  );
+}
+function FoodYgYuzukichi() {
+  return <Food4Glass fill="#c8e050" top="#e0f080" level={16} />;
+}
+function FoodYgMirangyu() {
+  return (
+    <g>
+      <Food4Plate cy={31} rx={20} c="#2a2a30" rim="#0a0a0c" />
+      {[[12, 28], [17.6, 27], [23.2, 26.6], [28.8, 27], [34.4, 28]].map(([x, y], i) => (
+        <g key={i} transform={`translate(${x},${y}) rotate(-8)`}>
+          <rect x="-2.6" y="-4" width="5.2" height="8" rx="0.8" fill="#6a2e14" stroke="#2a0c04" strokeWidth="0.35" />
+          <rect x="-1.8" y="-3" width="3.6" height="6" rx="0.6" fill="#c84a4a" />
+        </g>
+      ))}
+      <ellipse cx="38" cy="34" rx="2.4" ry="1.2" fill="#f4e0a0" />
+    </g>
+  );
+}
+function FoodYgNatsumikan() {
+  return (
+    <Food6Blocks c="#f8d860" top="#fff4b0" d="#b8902a" plate="#e8dcc8" w={8} h={4}
+      deco={(x, y) => <path d={`M${x - 3} ${y} q1.5 -1 3 0 q1.5 1 3 0`} stroke="#f8f0d0" strokeWidth="0.6" fill="none" />} />
+  );
+}
+function FoodYgKintaro() {
+  return (
+    <g>
+      <Food4Plate cy={32} c="#f4f0e8" />
+      {[[20, 26, -14], [28, 27, 10], [24, 31, -4], [32, 32, 18], [18, 33, 6]].map(([x, y, r], i) => (
+        <g key={i} transform={`translate(${x},${y}) rotate(${r})`}>
+          <path d="M-6,0 Q-3,-2.4 3,-1.4 L6,-2.6 L6,2.6 L3,1.4 Q-3,2.4 -6,0 Z" fill="#d8642a" stroke="#7a2a08" strokeWidth="0.4" />
+          <circle cx="-4.4" cy="-0.4" r="0.5" fill="#3a2a1a" />
+        </g>
+      ))}
+      <path d="M37,25 l4,-1.6 l1,1.6 l-4,1.6 Z" fill="#f4e050" />
+    </g>
+  );
+}
+
+/* ---- 徳島 ---- */
+function FoodTsRamen() {
+  return (
+    <Food5Ramen bowl={{ body: "#1a1a1e", light: "#3a3a42", dark: "#0a0a0c", rim: "#000", band: "#c82a1a" }} broth="#3a1a08" noodle="#f2d070">
+      {[[14, 20.6], [20, 19.6], [27, 19.6], [33, 21]].map(([x, y], i) => <path key={i} d={`M${x - 2.6} ${y} q1.4 -1.4 2.6 -0.8 q1.6 0.4 2.6 -0.2 q-1 1.6 -2.6 1.4 q-1.6 0.6 -2.6 -0.4 Z`} fill="#6a2e14" stroke="#2a0c04" strokeWidth="0.3" />)}
+      <ellipse cx="24" cy="22.6" rx="2.4" ry="1.8" fill="#f8b42a" stroke="#b8860b" strokeWidth="0.3" />
+      <Food1Negi x={18} y={23} /><Food1Negi x={30} y={23.4} />
+    </Food5Ramen>
+  );
+}
+function FoodTsSudachi() {
+  return (
+    <g>
+      <Food4Plate cy={35} c="#f4f0e8" />
+      {[[15, 28], [33, 28]].map(([x, y], i) => <g key={i}><circle cx={x} cy={y} r="5.6" fill="#4a9a2a" stroke="#1a4a0a" strokeWidth="0.45" /><ellipse cx={x - 1.6} cy={y - 1.6} rx="1.4" ry="0.8" fill="#fff" opacity="0.4" /></g>)}
+      <g transform="translate(24,33)">
+        <circle r="5.6" fill="#4a9a2a" stroke="#1a4a0a" strokeWidth="0.45" />
+        <circle r="4.6" fill="#e8f0b0" />
+        {[0, 45, 90, 135, 180, 225, 270, 315].map((a) => <path key={a} d={`M0 0 L${(Math.cos(a * Math.PI / 180) * 4.2).toFixed(2)} ${(Math.sin(a * Math.PI / 180) * 4.2).toFixed(2)}`} stroke="#c8d888" strokeWidth="0.4" />)}
+      </g>
+    </g>
+  );
+}
+function FoodTsNarutokintoki() {
+  return (
+    <g>
+      <Food4Plate cy={34} c="#2a2a30" rim="#0a0a0c" />
+      {[[16, 27, -16], [31, 27, 14]].map(([x, y, r], i) => (
+        <g key={i} transform={`translate(${x},${y}) rotate(${r})`}>
+          <path d="M-9,0 Q-7,-5 0,-5 Q7,-5 9,0 Q7,5 0,5 Q-7,5 -9,0 Z" fill="#a8304a" stroke="#4a0a1a" strokeWidth="0.5" />
+          <path d="M-7,-1 Q0,-4 7,-1" stroke="#d8506a" strokeWidth="0.6" fill="none" />
+        </g>
+      ))}
+      <g transform="translate(23,33)"><ellipse rx="6" ry="3.4" fill="#a8304a" stroke="#4a0a1a" strokeWidth="0.45" /><ellipse rx="5" ry="2.6" fill="#f8d060" /></g>
+      <Food1Steam x={23} y={20} s={0.7} />
+    </g>
+  );
+}
+function FoodTsAwaodori() {
+  return (
+    <g>
+      <Food4Plate cy={33} />
+      {[[10, 0], [18, 1], [26, 2]].map(([x, k]) => (
+        <g key={k}>
+          <Food5Skewer x1={x - 2} y1={36} x2={x + 12} y2={12} />
+          {[0, 1, 2].map((j) => <ellipse key={j} cx={x + 1.6 + j * 3.6} cy={29 - j * 6.4} rx="2.8" ry="2.4" fill="#c8782a" stroke="#5a2a0a" strokeWidth="0.35" />)}
+        </g>
+      ))}
+      <ellipse cx="39" cy="34" rx="3" ry="1.4" fill="#4a9a2a" />
+    </g>
+  );
+}
+function FoodTsYuzujam() {
+  return (
+    <g>
+      <Food1Shadow rx={12} />
+      <path d="M14,18 L34,18 L33,40 Q24,42 15,40 Z" fill="#e8f0f4" opacity="0.5" stroke="#a8b8c4" strokeWidth="0.6" />
+      <path d="M14.4,22 L33.6,22 L33,40 Q24,42 15,40 Z" fill="#f4c02a" />
+      {Array.from({ length: 8 }, (_, i) => <path key={i} d={`M${17 + (i * 3.1) % 14} ${26 + (i * 2.7) % 12} l2 -0.6`} stroke="#f8e070" strokeWidth="0.8" />)}
+      <rect x="13" y="13" width="22" height="5.4" rx="1.4" fill="#e8c040" stroke="#8a6a10" strokeWidth="0.45" />
+      <path d="M13 15 H35" stroke="#4a9a2a" strokeWidth="1.2" />
+    </g>
+  );
+}
+function FoodTsWakame() {
+  return (
+    <Food6Soup wan={{ body: "#7a1a14", light: "#a83a2a", rim: "#2a0604", inner: "#3a0a06" }} broth="#a8783a">
+      {[[16, 21, -10], [21, 20, 8], [27, 21, -4], [31, 22, 14], [23, 23.4, 0]].map(([x, y, r], i) => (
+        <path key={i} d="M-3,0 Q-1,-2 1,0 Q3,2 4,0" transform={`translate(${x},${y}) rotate(${r})`} stroke="#2a5a1a" strokeWidth="1.4" fill="none" strokeLinecap="round" />
+      ))}
+      <rect x="18" y="22.4" width="3" height="1.6" rx="0.3" fill="#f4f0e4" />
+    </Food6Soup>
+  );
+}
+function FoodTsIyasoba() {
+  return (
+    <Food5Ramen bowl={{ body: "#5a3a1a", light: "#7a5a32", dark: "#2a1a08", rim: "#140c04" }} broth="#c8a060" noodle={null}>
+      {Array.from({ length: 10 }, (_, i) => <path key={i} d={`M${12 + i * 2.4} ${20 + (i % 3)} l2.6 ${i % 2 ? 1 : -1}`} stroke="#8a7a5a" strokeWidth="1.2" strokeLinecap="round" />)}
+      <Food1Negi x={20} y={21} /><Food1Negi x={28} y={22} />
+      <path d="M24,23.4 l4,0" stroke="#3a8a3a" strokeWidth="1" />
+    </Food5Ramen>
+  );
+}
+function FoodTsDekomawashi() {
+  return (
+    <g>
+      <Food1Shadow rx={18} />
+      <ellipse cx="24" cy="38" rx="16" ry="3" fill="#c8a870" stroke="#6a4a1a" strokeWidth="0.4" />
+      {[[13, 0], [24, 1], [35, 2]].map(([x, k]) => (
+        <g key={k}>
+          <Food5Skewer x1={x} y1={39} x2={x} y2={6} />
+          <Food4Ball x={x} y={11} r={2.6} c="#f4ecd8" d="#8a7a5a" />
+          <rect x={x - 2.4} y="15" width="4.8" height="5" rx="0.6" fill="#f8f4ea" stroke="#a89878" strokeWidth="0.35" />
+          <ellipse cx={x} cy="25" rx="2.6" ry="3.2" fill="#a8783a" stroke="#4a2a10" strokeWidth="0.35" />
+          <path d={`M${x - 2.4} 17 h4.8`} stroke="#8a3a10" strokeWidth="1.4" />
+          <path d={`M${x - 2.6} 12 h5.2 M${x - 2.4} 24 h4.8`} stroke="#8a3a10" strokeWidth="1.2" />
+        </g>
+      ))}
+    </g>
+  );
+}
+function FoodTsHandasomen() {
+  return (
+    <Food5Ramen bowl={{ body: "#e8f0f4", light: "#fff", dark: "#a8b8c4", rim: "#5a6a7a", band: "#2a6a8a" }} broth="#d8c090" noodle="#fbf8f0" w={1.1} n={6} wave={0.3}>
+      <ellipse cx="18" cy="21" rx="2.6" ry="1.2" fill="#c8a060" />
+      <path d="M26,19.4 l5,-0.6" stroke="#3a8a3a" strokeWidth="1.2" />
+      <Food1Negi x={30} y={23} />
+    </Food5Ramen>
+  );
+}
+
+/* ---- 愛媛 ---- */
+function FoodEhYakitori() {
+  return (
+    <g>
+      <Food4Iron />
+      {[[14, 29], [21, 27], [28, 28.6], [34, 30.6], [18, 32.4], [26, 32.6]].map(([x, y], i) => (
+        <path key={i} d={`M${x - 3.2} ${y} q1 -2.2 3.2 -1.6 q2.4 -0.4 3.2 1.6 q-1 2 -3.2 1.4 q-2.2 0.6 -3.2 -1.4 Z`} fill="#c8742a" stroke="#4a1a04" strokeWidth="0.35" />
+      ))}
+      <rect x="34" y="20" width="6" height="3" rx="1" fill="#c8c8d0" stroke="#5a5a64" strokeWidth="0.4" />
+      <Food1Steam x={22} y={19} s={0.8} />
+    </g>
+  );
+}
+function FoodEhYakibuta() {
+  return (
+    <g>
+      <Food4Plate cy={31} rx={20} c="#f4f0e8" />
+      <ellipse cx="24" cy="28" rx="14" ry="5" fill="#fbf8f0" />
+      {[[16, 27], [22, 26], [28, 26], [32, 27.6]].map(([x, y], i) => <Food1Chashu key={i} x={x} y={y} r={3.4} rot={(i * 13) % 30 - 15} />)}
+      {[[19, 29], [29, 29.4]].map(([x, y], i) => <g key={i}><ellipse cx={x} cy={y} rx="3.6" ry="2.2" fill="#fff" stroke="#d8d0c0" strokeWidth="0.3" /><circle cx={x} cy={y} r="1.3" fill="#f4b42a" /></g>)}
+      <path d="M12,27 q12,-4 24,1" stroke="#3a1004" strokeWidth="1.2" fill="none" opacity="0.6" />
+    </g>
+  );
+}
+function FoodEhTaikomanju() {
+  return (
+    <Food6Rounds c="#d89a4a" d="#7a4a10" plate="#2a2a30" rim="#0a0a0c" r={4.2} deco={(x, y) => (
+      <g><ellipse cx={x} cy={y} rx="3.4" ry="2.2" fill="none" stroke="#7a4a10" strokeWidth="0.5" /><path d={`M${x - 1.4} ${y} h2.8 M${x} ${y - 1.2} v2.4`} stroke="#7a4a10" strokeWidth="0.5" /></g>
+    )} />
+  );
+}
+function FoodEhMikan() {
+  return (
+    <g>
+      <Food4Plate cy={34} c="#f4f0e8" />
+      <g transform="translate(16,28)"><circle r="7" fill="#f8901a" stroke="#9a4a04" strokeWidth="0.5" /><ellipse cx="-2.4" cy="-2.4" rx="1.6" ry="1" fill="#fff" opacity="0.5" /><path d="M0 -7 q1 -2 3 -2.4" stroke="#4a9a3a" strokeWidth="1" fill="none" /></g>
+      <g transform="translate(32,30)">
+        {[0, 45, 90, 135, 180, 225, 270, 315].map((a) => <path key={a} d={`M0 0 L${(Math.cos(a * Math.PI / 180) * 6).toFixed(2)} ${(Math.sin(a * Math.PI / 180) * 5).toFixed(2)} L${(Math.cos((a + 45) * Math.PI / 180) * 6).toFixed(2)} ${(Math.sin((a + 45) * Math.PI / 180) * 5).toFixed(2)} Z`} fill="#fbb030" stroke="#e88a10" strokeWidth="0.4" />)}
+        <circle r="1" fill="#fbf0d0" />
+      </g>
+    </g>
+  );
+}
+function FoodEhMatsuyamataimeshi() {
+  return (
+    <Food5Don bowl={{ body: "#5a1810", light: "#8a2a1c", dark: "#2a0806", rim: "#140402", band: "#d8b040" }} steam>
+      {[[14, 21, -20], [19.6, 19.4, -8], [25.4, 19.2, 6], [31, 20.4, 16], [35, 22.4, 26]].map(([x, y, r], i) => (
+        <Food4Slice key={i} x={x} y={y} rot={r} w={6} h={3.2} c="#f8e0d8" l="#e85a6a" />
+      ))}
+      <path d="M20,24 q4,-2 8,0" stroke="#5aa04a" strokeWidth="1.1" fill="none" />
+    </Food5Don>
+  );
+}
+function FoodEhBotchandango() {
+  return <Food6Kushi sticks={[[14, 0], [24, 1], [34, 2]]} r={3} c="#7ab040" d="#3a6a1a" glaze={null} />;
+}
+function FoodEhUwajimataimeshi() {
+  return (
+    <g>
+      <Food4Plate cy={33} rx={20} c="#f4f0e8" />
+      <path d="M8,30 Q8,38 18,38 Q28,38 28,30 Z" fill="#1a1a1e" stroke="#000" strokeWidth="0.45" />
+      <ellipse cx="18" cy="30" rx="10" ry="2.6" fill="#fbf8f0" />
+      {[[33, 27, -10], [37, 29, 6], [35, 32, -4]].map(([x, y, r], i) => <Food4Slice key={i} x={x} y={y} rot={r} w={6} h={3} c="#f8e0d8" l="#e85a6a" />)}
+      <ellipse cx="18" cy="23" rx="6" ry="2" fill="#f4b42a" opacity="0.9" />
+      <path d="M14,22 q4,-2 8,0" stroke="#a8641a" strokeWidth="0.6" fill="none" />
+    </g>
+  );
+}
+function FoodEhJakoten() {
+  return (
+    <g>
+      <Food4Plate cy={33} c="#e8e0cc" />
+      {[[16, 28, -14], [30, 27, 12], [23, 32.6, 0]].map(([x, y, r], i) => (
+        <g key={i} transform={`translate(${x},${y}) rotate(${r})`}>
+          <ellipse rx="7.4" ry="3.6" fill="#a8783a" stroke="#4a2a08" strokeWidth="0.45" />
+          {Array.from({ length: 10 }, (_, k) => <circle key={k} cx={-5.6 + k * 1.2} cy={-1 + (k % 3) * 0.9} r="0.35" fill="#5a3a1a" />)}
+        </g>
+      ))}
+    </g>
+  );
+}
+function FoodEhChampon() {
+  return (
+    <Food5Ramen bowl={{ body: "#f2ece0", light: "#fff", dark: "#b8ae9a", rim: "#7a7060", band: "#2a4a8a" }} broth="#e8d8a8" noodle="#f4dc80" n={4}>
+      <path d="M11,21 Q18,16 26,18 Q34,17 37,22 Q30,25 24,24 Q16,25 11,21 Z" fill="#d8eab0" opacity="0.85" stroke="#8aa050" strokeWidth="0.35" />
+      <ellipse cx="18" cy="20" rx="2.4" ry="1.2" fill="#f8f2e4" stroke="#c8b8a0" strokeWidth="0.3" />
+      <path d="M16.4,20 q1.6,-1 3.2,0" stroke="#e85a8a" strokeWidth="0.5" fill="none" />
+      {[[25, 20], [30, 21]].map(([x, y], i) => <ellipse key={i} cx={x} cy={y} rx="1.8" ry="1" fill="#a8742a" />)}
+    </Food5Ramen>
+  );
+}
+
+/* ---- 高知 ---- */
+function FoodKcKinmedon() {
+  return (
+    <Food5Don bowl={{ body: "#1a1a1e", light: "#3a3a42", dark: "#0a0a0c", rim: "#000", band: "#c82a1a" }} steam>
+      {[[14, 21, -16], [21, 19.6, -4], [28, 19.6, 6], [34, 21.6, 18]].map(([x, y, r], i) => (
+        <g key={i} transform={`translate(${x},${y}) rotate(${r})`}><rect x="-3.6" y="-2" width="7.2" height="4" rx="1.4" fill="#d8402a" stroke="#6a0a04" strokeWidth="0.35" /><path d="M-3 1 H3" stroke="#f8e0d0" strokeWidth="0.8" /></g>
+      ))}
+      <path d="M12,24 q12,3 24,0" stroke="#4a1a08" strokeWidth="1.2" fill="none" opacity="0.6" />
+    </Food5Don>
+  );
+}
+function FoodKcChirimen() {
+  return (
+    <Food5Don bowl={{ body: "#e8f0f4", light: "#fff", dark: "#a8b8c4", rim: "#5a6a7a", band: "#2a6a8a" }}>
+      <ellipse cx="24" cy="22" rx="14" ry="4.4" fill="#f4ecd8" />
+      {Array.from({ length: 30 }, (_, i) => {
+        const a = i * 2.4, rr = Math.sqrt((i + 0.5) / 30);
+        return <path key={i} d={`M${(24 + Math.cos(a) * rr * 13).toFixed(1)} ${(22 + Math.sin(a) * rr * 3.8).toFixed(1)} q0.8 -0.5 1.6 0`} stroke="#f0e4c8" strokeWidth="0.8" fill="none" />;
+      })}
+      <path d="M22,20 q2,-2 4,-0.4" stroke="#5aa04a" strokeWidth="1" fill="none" />
+      <ellipse cx="30" cy="22" rx="1.6" ry="1" fill="#f4e0a0" />
+    </Food5Don>
+  );
+}
+function FoodKcYuzudrink() {
+  return (
+    <g>
+      <Food1Shadow rx={10} />
+      <path d="M17,10 L31,10 L31,14 Q34,16 34,20 L34,40 Q24,42 14,40 L14,20 Q14,16 17,14 Z" fill="#f4e070" stroke="#9a8a10" strokeWidth="0.5" />
+      <rect x="18" y="6" width="12" height="4" rx="0.8" fill="#f4f0e8" stroke="#8a8070" strokeWidth="0.4" />
+      <rect x="14" y="24" width="20" height="10" fill="#fbf8e0" />
+      <circle cx="24" cy="29" r="3.4" fill="#f4c02a" stroke="#9a7a04" strokeWidth="0.4" />
+      <path d="M24 25.6 q1 -1.6 2.6 -1.8" stroke="#4a9a3a" strokeWidth="0.8" fill="none" />
+    </g>
+  );
+}
+function FoodKcTataki() {
+  return (
+    <g>
+      <Food4Plate cy={32} rx={20} c="#1e3a5a" rim="#0a1a2a" />
+      {[[11, 29], [16, 28], [21, 27.4], [26, 27.4], [31, 28], [36, 29]].map(([x, y], i) => (
+        <g key={i} transform={`translate(${x},${y}) rotate(-8)`}>
+          <rect x="-2.4" y="-4" width="4.8" height="8" rx="0.8" fill="#c81a2a" stroke="#4a0610" strokeWidth="0.35" />
+          <rect x="-2.4" y="-4" width="4.8" height="1.8" rx="0.6" fill="#3a2a2a" />
+          <rect x="-2.4" y="2.4" width="4.8" height="1.6" rx="0.6" fill="#3a2a2a" />
+        </g>
+      ))}
+      {[[14, 34], [20, 34.6], [26, 34.6], [32, 34]].map(([x, y], i) => <ellipse key={i} cx={x} cy={y} rx="1.6" ry="0.8" fill={i % 2 ? "#f4f0e4" : "#d8eab0"} />)}
+      <path d="M38,24 q2,-3 4,-1" stroke="#5aa04a" strokeWidth="1.2" fill="none" />
+    </g>
+  );
+}
+function FoodKcNabeyakiramen() {
+  return (
+    <g>
+      <Food4Pot body="#3a3a42" light="#5a5a66" />
+      <ellipse cx="24" cy="21.4" rx="16" ry="4.8" fill="#6a3410" />
+      <Food4Noodles cy={21.4} rx={14} ry={3.6} c="#f2d070" n={4} w={0.9} />
+      <ellipse cx="22" cy="20" rx="3.4" ry="2.6" fill="#fff" stroke="#d8d0c0" strokeWidth="0.3" />
+      <circle cx="22" cy="20" r="1.4" fill="#f4b42a" />
+      <ellipse cx="30" cy="20.6" rx="2.6" ry="1.4" fill="#f8f2e4" stroke="#c8b8a0" strokeWidth="0.3" />
+      <path d="M28.4,20.6 q1.6,-1 3.2,0" stroke="#e85a8a" strokeWidth="0.5" fill="none" />
+      <Food1Negi x={16} y={22} /><Food1Negi x={27} y={23} />
+      <Food1Steam x={24} y={11} />
+    </g>
+  );
+}
+function FoodKcImokenpi() {
+  return (
+    <g>
+      <Food4Plate cy={34} c="#e8e0cc" />
+      {Array.from({ length: 16 }, (_, i) => (
+        <rect key={i} x={10 + (i * 7.3) % 26} y={24 + (i * 3.1) % 10} width="7" height="1.6" rx="0.5" fill="#d8862a" stroke="#7a4008" strokeWidth="0.3" transform={`rotate(${(i * 37) % 120 - 60} ${13 + (i * 7.3) % 26} ${25 + (i * 3.1) % 10})`} />
+      ))}
+    </g>
+  );
+}
+function FoodKcAonori() {
+  return (
+    <g>
+      <Food4Plate cy={32} c="#f4f0e8" />
+      <path d="M7,30 q8,-6 15,-4 l-2,3 q-6,-1 -13,1 Z" fill="#fff" stroke="#c8c0b0" strokeWidth="0.3" />
+      {[[18, 27, -14], [29, 26, 12], [24, 32, -2]].map(([x, y, r], i) => (
+        <g key={i}>
+          <Food5Tempura x={x} y={y} w={11} h={4.6} rot={r} c="#c8d070" />
+          {Array.from({ length: 6 }, (_, k) => <circle key={k} cx={x - 3 + k * 1.3} cy={y - 1 + (k % 2)} r="0.5" fill="#2a7a2a" />)}
+        </g>
+      ))}
+    </g>
+  );
+}
+function FoodKcBuntan() {
+  return (
+    <g>
+      <Food1Shadow rx={18} />
+      <circle cx="17" cy="27" r="10" fill="#f4e060" stroke="#9a8a10" strokeWidth="0.5" />
+      <ellipse cx="13" cy="23" rx="2.4" ry="1.4" fill="#fff" opacity="0.5" />
+      <path d="M17,17 q1,-3 3,-3.4" stroke="#5a3a1a" strokeWidth="0.8" fill="none" />
+      <g transform="translate(34,32)">
+        {[0, 40, 80, 120, 160, 200, 240, 280, 320].map((a) => <path key={a} d={`M0 0 L${(Math.cos(a * Math.PI / 180) * 7).toFixed(2)} ${(Math.sin(a * Math.PI / 180) * 6).toFixed(2)} L${(Math.cos((a + 40) * Math.PI / 180) * 7).toFixed(2)} ${(Math.sin((a + 40) * Math.PI / 180) * 6).toFixed(2)} Z`} fill="#fae8a0" stroke="#e8c840" strokeWidth="0.4" />)}
+        <circle r="1.2" fill="#fbf8e8" />
+      </g>
+    </g>
+  );
+}
+function FoodKcKawaebi() {
+  return (
+    <g>
+      <Food4Plate cy={32} c="#f4f0e8" />
+      {[[16, 27, -20], [24, 26, 10], [31, 28, -6], [20, 32, 14], [28, 33, -10]].map(([x, y, r], i) => (
+        <g key={i} transform={`translate(${x},${y}) rotate(${r})`}>
+          <path d="M-4,0 Q-2,-3 2,-2 Q4,-1 3,2 Q0,3 -4,0 Z" fill="#e85a2a" stroke="#7a1a04" strokeWidth="0.4" />
+          {[-1.6, 0, 1.6].map((d) => <path key={d} d={`M${d} -2 q0.6 1.6 0 3`} stroke="#a82a08" strokeWidth="0.4" fill="none" />)}
+          <path d="M-4 0 q-3 -2 -4 -5 M-4 0 q-3 -1 -5 -3" stroke="#e85a2a" strokeWidth="0.4" fill="none" />
+        </g>
+      ))}
+      <path d="M37,25 l4,-1.6 l1,1.6 l-4,1.6 Z" fill="#4a9a2a" />
+    </g>
+  );
+}
+
+const FOOD_ART_8 = {
+  tt_nashi: FoodTtNashi, tt_tofuchikuwa: FoodTtTofuchikuwa, tt_rakkyo: FoodTtRakkyo,
+  tt_gyukotsu: FoodTtGyukotsu, tt_sanshokudango: FoodTtSanshokudango, tt_shijimi: FoodTtShijimi,
+  tt_benizuwai: FoodTtBenizuwai, tt_daisenokowa: FoodTtDaisenokowa, tt_jelato: FoodTtJelato,
+  sm_warigo: FoodSmWarigo, sm_shijimijiru: FoodSmShijimijiru, sm_zenzai: FoodSmZenzai,
+  sm_nodoguro: FoodSmNodoguro, sm_agoyaki: FoodSmAgoyaki, sm_genjimaki: FoodSmGenjimaki,
+  sm_okigyu: FoodSmOkigyu, sm_sazaecurry: FoodSmSazaecurry, sm_iwagaki: FoodSmIwagaki,
+  oy_kibidango: FoodOyKibidango, oy_barazushi: FoodOyBarazushi, oy_demikatsu: FoodOyDemikatsu,
+  oy_hakuto: FoodOyHakuto, oy_bukkake: FoodOyBukkake, oy_kasaoka: FoodOyKasaoka,
+  oy_horumonudon: FoodOyHorumonudon, oy_hiruzen: FoodOyHiruzen, oy_jerseysoft: FoodOyJerseysoft,
+  hr_okonomi: FoodHrOkonomi, hr_momijimanju: FoodHrMomijimanju, hr_tsukemen: FoodHrTsukemen,
+  hr_kurereimen: FoodHrKurereimen, hr_gansu: FoodHrGansu, hr_frycake: FoodHrFrycake,
+  hr_bishunabe: FoodHrBishunabe, hr_jagaimo: FoodHrJagaimo, hr_blueberry: FoodHrBlueberry,
+  hr_onomichi: FoodHrOnomichi, hr_takoten: FoodHrTakoten, hr_lemon: FoodHrLemon,
+  hr_fuchuyaki: FoodHrFuchuyaki, hr_taimeshi: FoodHrTaimeshi, hr_uzumi: FoodHrUzumi,
+  hr_shobarayaki: FoodHrShobarayaki, hr_karamen: FoodHrKaramen, hr_wani: FoodHrWani,
+  yg_iwakunizushi: FoodYgIwakunizushi, yg_renkon: FoodYgRenkon, yg_ohira: FoodYgOhira,
+  yg_tokuyamaramen: FoodYgTokuyamaramen, yg_nashi: FoodYgNashi, yg_shirasu: FoodYgShirasu,
+  yg_uiro: FoodYgUiro, yg_barisoba: FoodYgBarisoba, yg_onsentamago: FoodYgOnsentamago,
+  yg_uberamen: FoodYgUberamen, yg_onocha: FoodYgOnocha, yg_torikawa: FoodYgTorikawa,
+  yg_fugusashi: FoodYgFugusashi, yg_kawarasoba: FoodYgKawarasoba, yg_uni: FoodYgUni,
+  yg_nagatoyakitori: FoodYgNagatoyakitori, yg_kamaboko: FoodYgKamaboko, yg_yuzukichi: FoodYgYuzukichi,
+  yg_mirangyu: FoodYgMirangyu, yg_natsumikan: FoodYgNatsumikan, yg_kintaro: FoodYgKintaro,
+  ts_ramen: FoodTsRamen, ts_sudachi: FoodTsSudachi, ts_narutokintoki: FoodTsNarutokintoki,
+  ts_awaodori: FoodTsAwaodori, ts_yuzujam: FoodTsYuzujam, ts_wakame: FoodTsWakame,
+  ts_iyasoba: FoodTsIyasoba, ts_dekomawashi: FoodTsDekomawashi, ts_handasomen: FoodTsHandasomen,
+  eh_yakitori: FoodEhYakitori, eh_yakibuta: FoodEhYakibuta, eh_taikomanju: FoodEhTaikomanju,
+  eh_mikan: FoodEhMikan, eh_matsuyamataimeshi: FoodEhMatsuyamataimeshi, eh_botchandango: FoodEhBotchandango,
+  eh_uwajimataimeshi: FoodEhUwajimataimeshi, eh_jakoten: FoodEhJakoten, eh_champon: FoodEhChampon,
+  kc_kinmedon: FoodKcKinmedon, kc_chirimen: FoodKcChirimen, kc_yuzudrink: FoodKcYuzudrink,
+  kc_tataki: FoodKcTataki, kc_nabeyakiramen: FoodKcNabeyakiramen, kc_imokenpi: FoodKcImokenpi,
+  kc_aonori: FoodKcAonori, kc_buntan: FoodKcBuntan, kc_kawaebi: FoodKcKawaebi,
+};
+
+/* ==== 九州・沖縄のご当地グルメの絵（2026-10-10）。⚠️ viewBox 0 0 48 48・静止・defs と id を使わない ==== */
+/* 小串（串に刺した具） */
+function Food9Stick({ x, y, len = 22, rot = -30, items = [] }) {
+  return (
+    <g transform={`translate(${x},${y}) rotate(${rot})`}>
+      <path d={`M0 0 L${len} 0`} stroke="#c8a870" strokeWidth="0.9" strokeLinecap="round" />
+      {items.map(([d, w, h, c], i) => <rect key={i} x={d - w / 2} y={-h / 2} width={w} height={h} rx={Math.min(w, h) * 0.35} fill={c} stroke="#0005" strokeWidth="0.35" />)}
+    </g>
+  );
+}
+/* 刺身の並び（扇） */
+function Food9Sashimi({ plate = "#1e3a5a", rim = "#0a1a2a", c = "#f8e0d8", l = "#e85a6a", n = 6, garnish = "#5aa04a" }) {
+  return (
+    <g>
+      <Food4Plate cy={32} rx={20} c={plate} rim={rim} />
+      {Array.from({ length: n }, (_, i) => {
+        const x = 12 + i * (24 / Math.max(1, n - 1));
+        return <Food4Slice key={i} x={x} y={28 - Math.sin((i / Math.max(1, n - 1)) * Math.PI) * 2} rot={-24 + i * (48 / Math.max(1, n - 1))} w={7} h={3.6} c={c} l={l} />;
+      })}
+      <path d="M36,35 q3,-3 6,-1" stroke={garnish} strokeWidth="1.3" fill="none" />
+      <ellipse cx="14" cy="35" rx="2.4" ry="1.1" fill="#f4f4ec" />
+    </g>
+  );
+}
+
+/* ---- 福岡 ---- */
+function FoodFoTonkotsu() {
+  return (
+    <Food5Ramen bowl={{ body: "#f2ece0", light: "#fff", dark: "#b8ae9a", rim: "#7a7060", band: "#c82a1a" }} broth="#f4ecd8" noodle="#f8f0d0" w={0.7} n={7} wave={0.3}>
+      <Food1Chashu x={16} y={20.4} r={3.4} rot={-8} />
+      <path d="M22,19.4 q1.4,-1.4 3,-0.4 q1.6,0.8 3,-0.2" stroke="#c82a3a" strokeWidth="1.4" fill="none" strokeLinecap="round" />
+      <path d="M29,21 l5,-1.4" stroke="#1a2a10" strokeWidth="2" />
+      {[[20, 23], [24, 23.6], [27.6, 22.6], [31, 23.4]].map(([x, y], i) => <circle key={i} cx={x} cy={y} r="0.8" fill="#6ab04a" />)}
+    </Food5Ramen>
+  );
+}
+function FoodFoMotsunabe() {
+  return (
+    <g>
+      <Food4Pot body="#c8a060" light="#e0c080" rim="#6a4a1a" />
+      <ellipse cx="24" cy="21.4" rx="16" ry="4.8" fill="#c88a4a" />
+      {[[13, 21], [17, 22.6], [21, 21], [26, 22.8], [30, 21.4], [34, 22.4]].map(([x, y], i) => (
+        <path key={i} d={`M${x - 2} ${y} q1 -1.6 2 -0.8 q1.2 -0.8 2 0.8 q-1 1.2 -2 0.8 q-1 0.6 -2 -0.8 Z`} fill="#f4e0c0" stroke="#a8784a" strokeWidth="0.3" />
+      ))}
+      <path d="M16,19 Q24,13 32,19" stroke="#5aa04a" strokeWidth="2.4" fill="none" strokeLinecap="round" />
+      <path d="M18,18 Q24,14 30,18" stroke="#f4f0d8" strokeWidth="2" fill="none" strokeLinecap="round" />
+      {[[22, 17.4], [25, 17], [28, 17.6]].map(([x, y], i) => <circle key={i} cx={x} cy={y} r="0.8" fill="#d82a1a" />)}
+      <Food1Steam x={24} y={9} />
+    </g>
+  );
+}
+function FoodFoMentaiko() {
+  return (
+    <g>
+      <Food4Plate cy={33} c="#f4f0e8" />
+      <path d="M8,32 q16,-6 32,0 q-16,4 -32,0 Z" fill="#5aa04a" opacity="0.8" />
+      {[[17, 28, -10], [30, 28, 12]].map(([x, y, r], i) => (
+        <g key={i} transform={`translate(${x},${y}) rotate(${r})`}>
+          <path d="M-9,0 Q-9,-4.4 -2,-4 Q6,-4.6 9,-1 Q9.6,3 2,3.4 Q-8,4 -9,0 Z" fill="#d83a3a" stroke="#6a0a0a" strokeWidth="0.5" />
+          {Array.from({ length: 10 }, (_, k) => <circle key={k} cx={-6 + k * 1.4} cy={-1 + (k % 3) * 0.9} r="0.45" fill="#f08070" />)}
+          <ellipse cx="-3" cy="-2.6" rx="2.4" ry="0.7" fill="#fff" opacity="0.4" />
+        </g>
+      ))}
+    </g>
+  );
+}
+function FoodFoYakiudon() {
+  return (
+    <g>
+      <Food4Plate cy={32} c="#f4f0e8" />
+      <path d="M8,30 Q10,22 24,21 Q38,22 40,30 Q24,35 8,30 Z" fill="#a86a2a" stroke="#5a3008" strokeWidth="0.4" />
+      {Array.from({ length: 9 }, (_, i) => <path key={i} d={`M${11 + i * 3} ${29 - (i % 2)} q1.6 -4 3 -6`} stroke="#d8a050" strokeWidth="1.8" fill="none" strokeLinecap="round" />)}
+      {[[16, 26], [27, 25], [32, 28]].map(([x, y], i) => <path key={i} d={`M${x - 2.4} ${y} q2.4 -1.4 4.8 0`} stroke="#d8eab0" strokeWidth="1.4" fill="none" />)}
+      {Array.from({ length: 8 }, (_, i) => <path key={i} d={`M${14 + i * 2.6} ${23 + (i % 3)} l1.4 -1`} stroke="#8a5a3a" strokeWidth="0.6" />)}
+    </g>
+  );
+}
+function FoodFoNukadaki() {
+  return (
+    <g>
+      <Food4Plate cy={33} c="#2a2a30" rim="#0a0a0c" />
+      {[[16, 28, -14], [30, 28, 10]].map(([x, y, r], i) => (
+        <g key={i} transform={`translate(${x},${y}) rotate(${r})`}>
+          <path d="M-8,0 Q-6,-4 0,-4 Q6,-4 8,0 Q6,3.6 0,3.6 Q-6,3.6 -8,0 Z" fill="#6a4a2a" stroke="#2a1404" strokeWidth="0.45" />
+          <path d="M-6,0 Q0,-2.4 6,0" stroke="#a87a4a" strokeWidth="0.6" fill="none" />
+          {[-4, -1, 2, 5].map((d) => <circle key={d} cx={d} cy="1.2" r="0.6" fill="#c8a070" />)}
+        </g>
+      ))}
+      <ellipse cx="23" cy="34" rx="5" ry="1.6" fill="#8a6a3a" opacity="0.9" />
+      <path d="M33,23 q2,-2 4,-1" stroke="#f4e8c0" strokeWidth="1.2" fill="none" />
+    </g>
+  );
+}
+function FoodFoYakicurry() {
+  return (
+    <g>
+      <Food1Shadow rx={18} />
+      <path d="M8,26 Q8,38 24,38 Q40,38 40,26 Z" fill="#f4ece0" stroke="#8a7a60" strokeWidth="0.55" />
+      <ellipse cx="24" cy="26" rx="16" ry="5" fill="#fbf8f0" stroke="#8a7a60" strokeWidth="0.5" />
+      <ellipse cx="24" cy="26" rx="14" ry="4" fill="#c8862a" />
+      <path d="M12,25 q3,-2 6,0 q3,2 6,0 q3,-2 6,0 q3,2 6,0" stroke="#f4dc8a" strokeWidth="2" fill="none" opacity="0.9" />
+      {[[16, 24.6], [26, 25.6], [32, 24.2]].map(([x, y], i) => <ellipse key={i} cx={x} cy={y} rx="2" ry="1.2" fill="#8a4a10" opacity="0.7" />)}
+      <ellipse cx="24" cy="25" rx="2.6" ry="1.8" fill="#f8b42a" stroke="#b8760a" strokeWidth="0.3" />
+      <Food1Steam x={24} y={16} s={0.8} />
+    </g>
+  );
+}
+function FoodFoHorumonnabe() {
+  return <Food7Nabe body="#5a5a62" broth="#a8582a" items={[[14, 21, "slice", "#f0d0b0"], [19, 19.6, "slice", "#e8c8a8"], [25, 20, "leaf", "#7ac04a"], [31, 20.4, "slice", "#f0d0b0"], [17, 23.4, "rect", "#f4f0e4"], [24, 23.6, "slice", "#e8b890"], [31, 23.4, "leaf", "#d8eab0"]]} />;
+}
+function FoodFoKashiwameshi() {
+  return (
+    <g>
+      <Food1Shadow rx={18} />
+      <rect x="7" y="20" width="34" height="18" rx="2" fill="#d8b070" stroke="#7a5a2a" strokeWidth="0.55" />
+      <rect x="9" y="22" width="30" height="14" rx="1" fill="#c8a060" />
+      <rect x="9" y="22" width="10" height="14" fill="#8a5a2a" />
+      <rect x="19" y="22" width="10" height="14" fill="#f4d040" />
+      <rect x="29" y="22" width="10" height="14" fill="#3a2a1a" />
+      {Array.from({ length: 8 }, (_, i) => <rect key={i} x={10 + (i % 2) * 4} y={23.6 + Math.floor(i / 2) * 3} width="3" height="2" rx="0.5" fill="#a8743a" />)}
+      {Array.from({ length: 10 }, (_, i) => <path key={i} d={`M${30 + (i % 3) * 3} ${24 + Math.floor(i / 3) * 3} l2 0.4`} stroke="#1a2a1a" strokeWidth="0.8" />)}
+    </g>
+  );
+}
+function FoodFoYokan() {
+  return (
+    <g>
+      <Food4Plate cy={34} c="#e8dcc8" />
+      <g transform="translate(8,22)">
+        <path d="M0,4 L4,0 L28,0 L24,4 Z" fill="#3a1a14" />
+        <rect x="0" y="4" width="24" height="9" fill="#1e0c08" stroke="#000" strokeWidth="0.45" />
+        <path d="M24,4 L28,0 L28,9 L24,13 Z" fill="#2a120c" />
+        <path d="M2,6 L22,6" stroke="#fff" strokeWidth="0.5" opacity="0.25" />
+        {[8, 16].map((x) => <path key={x} d={`M${x} 4 v9`} stroke="#4a2a20" strokeWidth="0.5" />)}
+      </g>
+      <path d="M37,30 l4,-6" stroke="#c8a870" strokeWidth="0.9" strokeLinecap="round" />
+    </g>
+  );
+}
+function FoodFoKurumeramen() {
+  return (
+    <Food5Ramen bowl={{ body: "#1a1a1e", light: "#3a3a42", dark: "#0a0a0c", rim: "#000", band: "#e8c040" }} broth="#e8d8b8" noodle="#f8f0d0" w={0.8} n={6} wave={0.3}>
+      <Food1Chashu x={15} y={20.6} r={3.4} rot={-10} />
+      <path d="M21,19 l7,0 l-1,2.6 l-7,0 Z" fill="#2a3a1a" />
+      <ellipse cx="31" cy="20.6" rx="2.2" ry="1.4" fill="#f4e8c8" stroke="#c8b890" strokeWidth="0.3" />
+      <circle cx="31" cy="20.6" r="0.8" fill="#f4b42a" />
+      {Array.from({ length: 6 }, (_, i) => <circle key={i} cx={18 + i * 2.6} cy={23 + (i % 2) * 0.6} r="0.7" fill="#d8b070" />)}
+    </Food5Ramen>
+  );
+}
+function FoodFoUnagiseiro() {
+  return (
+    <g>
+      <Food1Shadow rx={19} />
+      <rect x="6" y="22" width="36" height="16" rx="2" fill="#a86a2a" stroke="#4a2a08" strokeWidth="0.55" />
+      <rect x="8" y="24" width="32" height="12" fill="#c8862a" />
+      <rect x="8" y="24" width="32" height="12" fill="#e8a040" opacity="0.4" />
+      {[0, 1, 2].map((k) => (
+        <g key={k}>
+          <rect x={9 + k * 10.4} y="25" width="9.6" height="5" rx="1" fill="#8a3a10" stroke="#3a1404" strokeWidth="0.35" />
+          <path d={`M${10 + k * 10.4} 26.6 h7.6`} stroke="#c8642a" strokeWidth="0.5" />
+        </g>
+      ))}
+      {Array.from({ length: 12 }, (_, i) => <ellipse key={i} cx={10 + i * 2.6} cy={32 + (i % 2)} rx="1.4" ry="0.8" fill="#f4d040" />)}
+      <path d="M6 22 h36" stroke="#2a1404" strokeWidth="0.6" />
+      <Food1Steam x={24} y={14} s={0.8} />
+    </g>
+  );
+}
+function FoodFoYamecha() {
+  return (
+    <g>
+      <Food1Shadow rx={15} />
+      <path d="M9,26 Q9,38 18,38 Q27,38 27,26 Z" fill="#f4ecdc" stroke="#8a7a60" strokeWidth="0.5" />
+      <ellipse cx="18" cy="26" rx="9" ry="2.6" fill="#fbf8f0" stroke="#8a7a60" strokeWidth="0.45" />
+      <ellipse cx="18" cy="26.2" rx="7.6" ry="2" fill="#7ab040" />
+      <path d="M30,22 L42,22 L40,36 Q36,38 32,36 Z" fill="#3a5a2a" stroke="#1a2a10" strokeWidth="0.5" />
+      <ellipse cx="36" cy="22" rx="6" ry="1.4" fill="#2a4a1a" stroke="#1a2a10" strokeWidth="0.4" />
+      {[[34, 28, 30], [38, 31, -20]].map(([x, y, r], i) => <path key={i} d="M-3 0 Q0 -2 3 0 Q0 2 -3 0 Z" transform={`translate(${x},${y}) rotate(${r})`} fill="#8ac85a" />)}
+      <Food1Steam x={18} y={17} s={0.6} />
+    </g>
+  );
+}
+
+/* ---- 佐賀 ---- */
+function FoodSrSicilian() {
+  return (
+    <g>
+      <Food4Plate cy={32} rx={20} c="#f4f0e8" />
+      <ellipse cx="24" cy="29" rx="15" ry="5.4" fill="#fbf8f0" />
+      <path d="M11,28 Q18,22 26,24 Q36,23 37,29 Q30,33 24,32 Q14,33 11,28 Z" fill="#7ac04a" />
+      {[[14, 27, "#d83a2a"], [20, 25.6, "#fbf0e0"], [27, 25, "#d83a2a"], [33, 27, "#fbf0e0"]].map(([x, y, c], i) => <ellipse key={i} cx={x} cy={y} rx="2.4" ry="1.4" fill={c} stroke="#0003" strokeWidth="0.25" />)}
+      {[[17, 29], [24, 28], [30, 29.6]].map(([x, y], i) => <path key={i} d={`M${x - 3} ${y} q1.4 -1.4 3 -0.6 q1.6 -0.4 3 0.6 q-1.4 1 -3 0.6 q-1.6 0.4 -3 -0.6 Z`} fill="#8a4a2a" />)}
+      <path d="M13,30 q11,4 22,0" stroke="#f8f4e8" strokeWidth="1.2" fill="none" />
+    </g>
+  );
+}
+function FoodSrMarubouro() {
+  return (
+    <Food6Rounds c="#e8b860" d="#8a5a1a" plate="#f4f0e8" r={5}
+      deco={(x, y) => <g><ellipse cx={x - 1.2} cy={y - 1.2} rx="2.4" ry="1.2" fill="#f4d890" opacity="0.8" /><circle cx={x + 1.6} cy={y + 1} r="0.5" fill="#a8742a" /></g>} />
+  );
+}
+function FoodSrSagagyu() {
+  return (
+    <g>
+      <Food4Plate cy={33} c="#2a2a30" rim="#0a0a0c" />
+      {[[13, 28], [19, 27], [25, 26.6], [31, 27], [37, 28]].map(([x, y], i) => (
+        <g key={i} transform={`translate(${x},${y}) rotate(-6)`}>
+          <rect x="-2.8" y="-3.6" width="5.6" height="7.2" rx="1" fill="#7a3418" stroke="#2a0c04" strokeWidth="0.4" />
+          <rect x="-2" y="-2.4" width="4" height="4.8" rx="0.6" fill="#d8706a" />
+          {[[-1, -1], [0.6, 0.6], [-0.4, 1.4]].map(([dx, dy], k) => <path key={k} d={`M${dx - 0.8} ${dy} h1.6`} stroke="#f8e0d8" strokeWidth="0.4" />)}
+        </g>
+      ))}
+      <ellipse cx="24" cy="35.4" rx="3" ry="1" fill="#f4e050" />
+    </g>
+  );
+}
+function FoodSrIkizukuri() {
+  return (
+    <g>
+      <Food4Plate cy={32} rx={20} c="#c8e4f0" rim="#5a8ab8" />
+      <path d="M8,30 Q6,26 10,25 L14,27 Z" fill="#f0f4f8" stroke="#a8b8c8" strokeWidth="0.4" />
+      <path d="M10,26 Q24,20 38,26 Q24,32 10,26 Z" fill="#f4f8fa" stroke="#a8c0d0" strokeWidth="0.45" opacity="0.95" />
+      {Array.from({ length: 10 }, (_, i) => <path key={i} d={`M${13 + i * 2.4} 23.4 l0 6`} stroke="#c8dce8" strokeWidth="0.5" />)}
+      <path d="M38,26 Q42,22 44,26 Q42,30 38,26 Z" fill="#e8d8e8" stroke="#a890a8" strokeWidth="0.4" />
+      {[[36, 30], [38, 32], [40, 31]].map(([x, y], i) => <path key={i} d={`M${x} ${y} q2 2 1 4`} stroke="#d8b8d0" strokeWidth="0.8" fill="none" />)}
+      <circle cx="40.6" cy="25" r="0.6" fill="#1a1a1a" />
+    </g>
+  );
+}
+function FoodSrIkashumai() {
+  return (
+    <g>
+      <Food4Plate cy={33} c="#f4f0e8" />
+      {[[15, 28], [24, 26.4], [33, 28], [19.6, 32.4], [28.4, 32.4]].map(([x, y], i) => (
+        <g key={i}>
+          <path d={`M${x - 4},${y + 2} L${x - 3.6},${y - 2} Q${x},${y - 3.6} ${x + 3.6},${y - 2} L${x + 4},${y + 2} Q${x},${y + 3} ${x - 4},${y + 2} Z`} fill="#f4e8c8" stroke="#a8946a" strokeWidth="0.4" />
+          {[-2.4, -0.8, 0.8, 2.4].map((d) => <path key={d} d={`M${x + d} ${y - 2} l${d * 0.4} 1.6`} stroke="#e8d8a8" strokeWidth="0.8" />)}
+          <ellipse cx={x} cy={y - 2.2} rx="2" ry="0.8" fill="#f8f0e0" />
+        </g>
+      ))}
+    </g>
+  );
+}
+function FoodSrShoromanju() {
+  return (
+    <Food6Rounds c="#c8862a" d="#6a3a08" plate="#2a2a30" rim="#0a0a0c" r={4.4}
+      pts={[[14, 29], [24, 27.4], [34, 29], [19, 33], [29, 33]]}
+      deco={(x, y) => <g><ellipse cx={x} cy={y} rx="4.4" ry="1.6" fill="#f4ecd8" opacity="0.9" /><ellipse cx={x - 1.4} cy={y - 2} rx="1.6" ry="0.8" fill="#e8a050" /></g>} />
+  );
+}
+function FoodSrKashiwaudon() {
+  return (
+    <Food5Ramen bowl={{ body: "#e8dcc8", light: "#fff", dark: "#a8987a", rim: "#6a5a40" }} broth="#c8904a" noodle="#fbf6e8" w={1.7} n={5} wave={0.5}>
+      {Array.from({ length: 10 }, (_, i) => <rect key={i} x={13 + (i * 2.3)} y={19.4 + (i % 3) * 1.2} width="2" height="1.2" rx="0.4" fill="#8a4a1a" />)}
+      <Food1Negi x={18} y={23} /><Food1Negi x={24} y={23.6} /><Food1Negi x={30} y={23} />
+    </Food5Ramen>
+  );
+}
+function FoodSrTosuyakiniku() {
+  return (
+    <g>
+      <Food1Shadow rx={18} />
+      <ellipse cx="24" cy="30" rx="17" ry="7" fill="#2a2a2e" stroke="#000" strokeWidth="0.55" />
+      {Array.from({ length: 7 }, (_, i) => <path key={i} d={`M${10 + i * 4.6} 25 l0 10`} stroke="#5a5a62" strokeWidth="0.7" />)}
+      {[[15, 28, -12], [24, 27, 4], [32, 29, 16], [20, 32, 0], [29, 33, -8]].map(([x, y, r], i) => (
+        <g key={i} transform={`translate(${x},${y}) rotate(${r})`}>
+          <path d="M-4,0 Q-3,-2.2 0,-2 Q3.6,-2.2 4,0 Q3,2 0,2 Q-3.4,2 -4,0 Z" fill="#9a3a24" stroke="#3a0a04" strokeWidth="0.35" />
+          <path d="M-2.6 -0.6 l5 0.6" stroke="#f0c8b8" strokeWidth="0.4" />
+          {[-1.6, 0, 1.6].map((d) => <path key={d} d={`M${d} -2 l-0.6 4`} stroke="#2a0a04" strokeWidth="0.4" opacity="0.6" />)}
+        </g>
+      ))}
+      <Food1Steam x={24} y={18} s={0.8} />
+    </g>
+  );
+}
+function FoodSrKanzakisomen() {
+  return (
+    <g>
+      <Food1Shadow rx={18} />
+      <path d="M6,26 Q8,38 24,38 Q40,38 42,26 Z" fill="#e8f4fa" opacity="0.6" stroke="#8ab0c8" strokeWidth="0.5" />
+      <ellipse cx="24" cy="26" rx="18" ry="5" fill="#c8e4f4" opacity="0.7" stroke="#8ab0c8" strokeWidth="0.45" />
+      {[[16, 25.6], [24, 24.4], [32, 25.8]].map(([x, y], i) => (
+        <g key={i}>
+          <ellipse cx={x} cy={y} rx="4.6" ry="2.4" fill="#fbfaf4" stroke="#d8d4c8" strokeWidth="0.3" />
+          {[-2.4, -0.8, 0.8, 2.4].map((d) => <path key={d} d={`M${x - 3.6} ${y + d * 0.4} q3.6 -1 7.2 0`} stroke="#e8e4d8" strokeWidth="0.35" fill="none" />)}
+        </g>
+      ))}
+      {[[12, 28], [36, 28.6], [21, 29]].map(([x, y], i) => <rect key={i} x={x} y={y} width="2.4" height="2.4" rx="0.4" fill="#fff" opacity="0.7" stroke="#c8e0f0" strokeWidth="0.3" />)}
+      <path d="M38,22 q2,-3 4,-2" stroke="#5aa04a" strokeWidth="1.2" fill="none" />
+    </g>
+  );
+}
+function FoodSrImarihamburg() {
+  return (
+    <g>
+      <Food4Iron />
+      <ellipse cx="22" cy="29.6" rx="9" ry="5" fill="#6a3418" stroke="#2a0c04" strokeWidth="0.5" />
+      <ellipse cx="20.6" cy="28" rx="6" ry="2.6" fill="#8a4a24" />
+      <path d="M14,28 Q22,24 30,28 Q26,31 22,30.4 Q17,31 14,28 Z" fill="#5a1e08" opacity="0.9" />
+      <rect x="32" y="27" width="5" height="2" rx="0.6" fill="#f4d040" transform="rotate(-20 34 28)" />
+      <rect x="31" y="31" width="5" height="2" rx="0.6" fill="#f4d040" transform="rotate(10 33 32)" />
+      <ellipse cx="34" cy="34" rx="2.4" ry="1.4" fill="#f08a2a" />
+      <Food1Steam x={22} y={18} s={0.8} />
+    </g>
+  );
+}
+function FoodSrAritacurry() {
+  return (
+    <g>
+      <Food1Shadow rx={17} />
+      <path d="M9,26 Q9,38 24,38 Q39,38 39,26 Z" fill="#f4f6fa" stroke="#5a6a8a" strokeWidth="0.55" />
+      <path d="M11,30 Q24,34 37,30" stroke="#2a4a9a" strokeWidth="1.4" fill="none" />
+      {[14, 19, 24, 29, 34].map((x) => <circle key={x} cx={x} cy={33.6 - Math.abs(x - 24) * 0.12} r="0.9" fill="#d83a2a" />)}
+      <ellipse cx="24" cy="26" rx="15" ry="4.4" fill="#fbfaf4" stroke="#5a6a8a" strokeWidth="0.5" />
+      <ellipse cx="24" cy="26" rx="13.4" ry="3.6" fill="#c8862a" />
+      <path d="M12,25.6 q4,-2.4 8,0 q4,2.4 8,0 q4,-2.4 8,0" stroke="#f4dc8a" strokeWidth="2.2" fill="none" />
+      <Food1Steam x={24} y={16} s={0.8} />
+    </g>
+  );
+}
+function FoodSrImarinashi() {
+  return <Food6Fruit c="#e0c070" d="#8a6a20" pts={[[14, 30], [34, 30], [24, 24]]} r={8} leaf="#5a9a3a" />;
+}
+function FoodSrYudofu() {
+  return (
+    <g>
+      <Food4Pot body="#3a3a42" light="#5a5a66" />
+      <ellipse cx="24" cy="21.4" rx="16" ry="4.8" fill="#f4f0e8" />
+      <ellipse cx="24" cy="21.6" rx="14" ry="3.8" fill="#fbfaf6" opacity="0.8" />
+      {[[16, 21, 7, 4.6], [25, 20, 7, 4.6], [21, 23.6, 6, 3]].map(([x, y, w, h], i) => (
+        <g key={i}>
+          <rect x={x - w / 2} y={y - h / 2} width={w} height={h} rx="1.4" fill="#fdfbf2" stroke="#d8d0b8" strokeWidth="0.35" />
+          <rect x={x - w / 2 + 0.6} y={y - h / 2 + 0.4} width={w - 1.2} height="1" rx="0.4" fill="#fff" />
+        </g>
+      ))}
+      <path d="M31,21 q2,-2 4,0" stroke="#5aa04a" strokeWidth="1.2" fill="none" />
+      <Food1Steam x={24} y={11} />
+    </g>
+  );
+}
+function FoodSrUreshinocha() {
+  return (
+    <g>
+      <Food1Shadow rx={16} />
+      <path d="M8,22 Q6,34 18,36 L22,36 Q34,34 32,22 Z" fill="#6a8a5a" stroke="#2a3a1a" strokeWidth="0.55" />
+      <ellipse cx="20" cy="22" rx="12" ry="3" fill="#7a9a6a" stroke="#2a3a1a" strokeWidth="0.45" />
+      <path d="M32,25 Q40,22 41,16" stroke="#6a8a5a" strokeWidth="2.4" fill="none" strokeLinecap="round" />
+      <path d="M12,15 Q20,9 28,15" stroke="#3a2a1a" strokeWidth="1.4" fill="none" />
+      <ellipse cx="20" cy="22" rx="9.6" ry="2" fill="#1a2a10" />
+      <path d="M12,28 q8,3 16,0" stroke="#a8c098" strokeWidth="0.6" fill="none" />
+      {[[36, 34, 20], [41, 32, -30]].map(([x, y, r], i) => <path key={i} d="M-3 0 Q0 -2.2 3 0 Q0 2.2 -3 0 Z" transform={`translate(${x},${y}) rotate(${r})`} fill="#4a9a2a" />)}
+    </g>
+  );
+}
+function FoodSrRenkon() {
+  return (
+    <g>
+      <Food4Plate cy={33} c="#2a2a30" rim="#0a0a0c" />
+      {[[15, 28], [25, 27], [33, 29], [21, 32.6]].map(([x, y], i) => (
+        <g key={i}>
+          <ellipse cx={x} cy={y} rx="5" ry="3.4" fill="#f4e8d0" stroke="#a8946a" strokeWidth="0.4" />
+          <ellipse cx={x} cy={y} rx="3.8" ry="2.6" fill="#a8743a" opacity="0.5" />
+          {[[-2, -0.8], [0, -1.4], [2, -0.8], [-1.2, 0.8], [1.2, 0.8], [0, 0]].map(([dx, dy], k) => <circle key={k} cx={x + dx} cy={y + dy} r="0.6" fill="#3a2a1a" />)}
+        </g>
+      ))}
+      <path d="M33,23 q3,-2 5,0" stroke="#5aa04a" strokeWidth="1.1" fill="none" />
+    </g>
+  );
+}
+
+/* ---- 長崎 ---- */
+function FoodNgChampon() {
+  return (
+    <Food5Ramen bowl={{ body: "#e8f0f4", light: "#fff", dark: "#a8b8c4", rim: "#5a6a7a", band: "#c82a1a" }} broth="#f4ecd8" noodle="#f4dc80" w={1.2} n={4}>
+      <path d="M10,21 Q18,15 26,17 Q35,16 38,22 Q30,25 24,24 Q15,25 10,21 Z" fill="#d8eab0" opacity="0.9" stroke="#8aa050" strokeWidth="0.35" />
+      {[[15, 19.6, "#f4a8a0"], [22, 18.4, "#e85a4a"], [29, 19, "#f4f0e4"], [33, 21, "#8a5a3a"]].map(([x, y, c], i) => <ellipse key={i} cx={x} cy={y} rx="2.2" ry="1.2" fill={c} stroke="#0003" strokeWidth="0.25" />)}
+      <path d="M18,21 q2,-1.6 4,0 M26,21.4 q2,-1.6 4,0" stroke="#f4b0c0" strokeWidth="0.9" fill="none" />
+      <path d="M20.6,18 q1.6,1.6 3,0" stroke="#e85a4a" strokeWidth="0.9" fill="none" />
+    </Food5Ramen>
+  );
+}
+function FoodNgSaraudon() {
+  return (
+    <g>
+      <Food4Plate cy={32} rx={20} c="#f4f0e8" />
+      {Array.from({ length: 22 }, (_, i) => <path key={i} d={`M${9 + (i * 13) % 30} ${25 + (i * 7) % 9} q2 -1.4 4 0.4`} stroke="#d8a040" strokeWidth="0.9" fill="none" />)}
+      <path d="M11,27 Q18,21 26,23 Q36,22 37,28 Q30,31 24,30 Q15,31 11,27 Z" fill="#e8d8a0" opacity="0.85" />
+      {[[15, 26, "#e85a4a"], [21, 24.4, "#d8eab0"], [27, 25, "#f4a8a0"], [32, 26.4, "#5aa04a"], [24, 27.4, "#f4f0e4"]].map(([x, y, c], i) => <ellipse key={i} cx={x} cy={y} rx="2.2" ry="1.2" fill={c} stroke="#0003" strokeWidth="0.25" />)}
+    </g>
+  );
+}
+function FoodNgCastella() {
+  return (
+    <Food6Blocks c="#f4c840" top="#f8dc70" d="#8a5a0a" plate="#f4f0e8" w={9} h={5}
+      pts={[[14, 29], [26, 28], [20, 34], [32, 33.4]]}
+      deco={(x, y) => <g><rect x={x - 4.5} y={y - 3} width="9" height="1.6" fill="#7a3a0a" /><rect x={x - 4.5} y={y + 1.6} width="9" height="0.8" fill="#c8862a" opacity="0.7" /></g>} />
+  );
+}
+function FoodNgIsahayaunagi() {
+  return (
+    <g>
+      <Food1Shadow rx={19} />
+      <rect x="6" y="20" width="36" height="18" rx="2.6" fill="#1a1a1e" stroke="#000" strokeWidth="0.55" />
+      <rect x="6" y="20" width="36" height="3" rx="1" fill="#c82a1a" />
+      <rect x="8" y="23.6" width="32" height="12.6" rx="1" fill="#fbf8f0" />
+      {[0, 1].map((k) => (
+        <g key={k}>
+          <rect x={9 + k * 15.6} y="24.6" width="14.6" height="10.4" rx="2" fill="#7a2e0a" stroke="#2a0c04" strokeWidth="0.4" />
+          <path d={`M${10 + k * 15.6} 27 h12.6 M${10 + k * 15.6} 30 h12.6 M${10 + k * 15.6} 33 h12.6`} stroke="#b8582a" strokeWidth="0.6" />
+          <rect x={10 + k * 15.6} y="25.2" width="12.6" height="1.6" rx="0.6" fill="#c8682a" opacity="0.7" />
+        </g>
+      ))}
+    </g>
+  );
+}
+function FoodNgOmurazushi() {
+  return (
+    <g>
+      <Food4Board x={4} y={28} w={40} h={10} c="#d8b080" d="#8a6a3a" />
+      {[0, 1, 2].map((c) => (
+        <g key={c} transform={`translate(${10 + c * 14},${24})`}>
+          <rect x="-6" y="0" width="12" height="7" fill="#fbf8f0" stroke="#c8c0b0" strokeWidth="0.35" />
+          <rect x="-6" y="2.4" width="12" height="1.4" fill="#c8a070" />
+          <rect x="-6" y="-1.6" width="12" height="2" fill="#f4d040" />
+          {[-3.6, -1.2, 1.2, 3.6].map((d, k) => <rect key={k} x={d - 0.9} y="-1.4" width="1.8" height="1" fill={["#e85a8a", "#7a5a3a", "#5aa04a", "#f08a2a"][k]} />)}
+        </g>
+      ))}
+    </g>
+  );
+}
+function FoodNgKakunimanju() {
+  return (
+    <g>
+      <Food4Plate cy={34} c="#e8dcc8" />
+      {[[16, 28, -8], [31, 28, 8]].map(([x, y, r], i) => (
+        <g key={i} transform={`translate(${x},${y}) rotate(${r})`}>
+          <path d="M-8,2 Q-8,-5 0,-5.4 Q8,-5 8,2 Z" fill="#fbf8f0" stroke="#c8c0b0" strokeWidth="0.45" />
+          <path d="M-8,2 Q-8,5 0,5.4 Q8,5 8,2 Z" fill="#f4f0e4" stroke="#c8c0b0" strokeWidth="0.45" />
+          <rect x="-6" y="-0.4" width="12" height="3.6" rx="1" fill="#7a3a14" stroke="#3a1404" strokeWidth="0.35" />
+          <path d="M-6 0.6 h12" stroke="#f4e0c0" strokeWidth="0.6" />
+          <path d="M-5 -0.6 q2 -1 4 0 q2 1 4 0" stroke="#5aa04a" strokeWidth="0.9" fill="none" />
+        </g>
+      ))}
+      <Food1Steam x={24} y={17} s={0.7} />
+    </g>
+  );
+}
+function FoodNgHamburger() {
+  return (
+    <g>
+      <Food1Shadow rx={13} />
+      <path d="M11,22 Q11,10 24,10 Q37,10 37,22 Z" fill="#d8862a" stroke="#6a3a08" strokeWidth="0.55" />
+      {[[18, 14], [24, 12.6], [30, 14], [21, 17], [28, 17]].map(([x, y], i) => <ellipse key={i} cx={x} cy={y} rx="0.8" ry="0.5" fill="#fbf0d0" />)}
+      <path d="M10,22 q3,2.4 6,0 q3,2.4 6,0 q3,2.4 6,0 q3,2.4 6,0 q3,2.4 2,0" fill="#5aa04a" stroke="#2a6a1a" strokeWidth="0.4" />
+      <rect x="11" y="23" width="26" height="3" rx="0.6" fill="#d83a2a" />
+      <rect x="10" y="26" width="28" height="5" rx="2.4" fill="#5a2a10" stroke="#2a0c04" strokeWidth="0.45" />
+      <path d="M10,31 L38,31 L36,33 L12,33 Z" fill="#f4c42a" />
+      <path d="M11,33 Q11,38 24,38 Q37,38 37,33 Z" fill="#c8782a" stroke="#6a3a08" strokeWidth="0.5" />
+      <path d="M24,4 v10" stroke="#c8a870" strokeWidth="0.8" />
+      <path d="M24,4 l5,1.6 l-5,1.6 Z" fill="#c82a1a" />
+    </g>
+  );
+}
+function FoodNgLemonsteak() {
+  return (
+    <g>
+      <Food4Iron />
+      <ellipse cx="24" cy="29.6" rx="13" ry="5" fill="#5a2a14" />
+      {[[14, 29, -10], [20, 28, -2], [26, 28, 4], [32, 29, 12]].map(([x, y, r], i) => (
+        <g key={i} transform={`translate(${x},${y}) rotate(${r})`}>
+          <rect x="-2.6" y="-3.4" width="5.2" height="6.8" rx="1" fill="#c8705a" stroke="#4a1404" strokeWidth="0.35" />
+          <rect x="-2.6" y="-3.4" width="5.2" height="1.4" rx="0.6" fill="#7a3418" />
+        </g>
+      ))}
+      {[[18, 30.6], [29, 30.6]].map(([x, y], i) => (
+        <g key={i}><circle cx={x} cy={y} r="2.6" fill="#f4e050" stroke="#a89010" strokeWidth="0.35" /><circle cx={x} cy={y} r="1.8" fill="#fbf4a0" />{[0, 60, 120].map((a) => <path key={a} d={`M${x - Math.cos(a * Math.PI / 180) * 1.8} ${y - Math.sin(a * Math.PI / 180) * 1.8} L${x + Math.cos(a * Math.PI / 180) * 1.8} ${y + Math.sin(a * Math.PI / 180) * 1.8}`} stroke="#e8d040" strokeWidth="0.3" />)}</g>
+      ))}
+      <Food1Steam x={24} y={18} s={0.8} />
+    </g>
+  );
+}
+function FoodNgKaki() {
+  return (
+    <g>
+      <Food1Shadow rx={19} />
+      <path d="M5,30 Q24,22 43,30 L41,36 Q24,32 7,36 Z" fill="#7a6a58" stroke="#3a2a18" strokeWidth="0.5" />
+      {[[13, 0], [24, 1], [35, 2]].map(([x, k]) => (
+        <g key={k} transform={`translate(${x},${29 - (k === 1 ? 2 : 0)})`}>
+          <path d="M-6,0 Q-5,-4 0,-4.4 Q5,-4 6,0 Q5,3 0,3 Q-5,3 -6,0 Z" fill="#5a544a" stroke="#1a1610" strokeWidth="0.45" />
+          <path d="M-4.6,0 Q-4,-3 0,-3.2 Q4,-3 4.6,0 Q4,2 0,2 Q-4,2 -4.6,0 Z" fill="#d8d4c4" />
+          <path d="M-3,0 Q0,-2.2 3,0 Q0,1.4 -3,0 Z" fill="#b8ae98" />
+        </g>
+      ))}
+      <Food1Steam x={24} y={16} s={0.8} />
+    </g>
+  );
+}
+function FoodNgGuzoni() {
+  return (
+    <Food6Soup wan={{ body: "#1a1a1e", light: "#3a3a42", rim: "#000", inner: "#0a0a0c" }} broth="#e8d0a0">
+      {[[16, 21, "rect", "#f8f4ea"], [20.6, 20, "ball", "#e8a050"], [25.6, 20.4, "rect", "#8a5a3a"], [30, 21.4, "ball", "#f4b0a0"], [22, 23.2, "rect", "#5aa04a"], [27.6, 23.2, "ball", "#f4f0e4"]].map(([x, y, k, c], i) => k === "ball"
+        ? <circle key={i} cx={x} cy={y} r="1.6" fill={c} stroke="#0003" strokeWidth="0.25" />
+        : <rect key={i} x={x - 1.8} y={y - 1} width="3.6" height="2" rx="0.5" fill={c} stroke="#0003" strokeWidth="0.25" />)}
+      <path d="M13,22 q2,-1 3,0" stroke="#f08a2a" strokeWidth="1" />
+    </Food6Soup>
+  );
+}
+function FoodNgKanzarashi() {
+  return (
+    <g>
+      <Food1Shadow rx={13} />
+      <path d="M10,22 Q11,36 24,36 Q37,36 38,22 Z" fill="#e8f4fa" opacity="0.6" stroke="#8ab0c8" strokeWidth="0.5" />
+      <ellipse cx="24" cy="22" rx="14" ry="3.6" fill="#f4e0a0" opacity="0.8" stroke="#8ab0c8" strokeWidth="0.45" />
+      {[[17, 22], [22, 21], [27, 22], [31, 21.4], [20, 24.4], [26, 24.6]].map(([x, y], i) => <Food4Ball key={i} x={x} y={y} r={2.2} c="#fdfcf6" d="#c8c4b4" />)}
+      <path d="M12,30 q12,4 24,0" stroke="#f4d880" strokeWidth="1.4" fill="none" opacity="0.6" />
+    </g>
+  );
+}
+function FoodNgRokube() {
+  return (
+    <Food5Ramen bowl={{ body: "#3a2a1a", light: "#5a4a32", dark: "#1a0e04", rim: "#0c0602" }} broth="#c8a070" noodle="#6a4a2a" w={1.8} n={5} wave={0.2}>
+      <path d="M15,20 l6,-0.6" stroke="#f4b0c0" strokeWidth="1.4" />
+      <path d="M26,19.4 l6,0.6" stroke="#3a8a3a" strokeWidth="1.2" />
+      <Food1Negi x={22} y={23} /><Food1Negi x={27} y={23.4} />
+    </Food5Ramen>
+  );
+}
+function FoodNgGotoudon() {
+  return (
+    <g>
+      <Food4Pot body="#2a2a30" light="#4a4a54" />
+      <ellipse cx="24" cy="21.4" rx="16" ry="4.8" fill="#f4f0e4" opacity="0.9" />
+      <Food4Noodles cy={21.4} rx={14} ry={3.6} c="#fdfaf0" n={8} w={0.5} wave={0.8} />
+      <path d="M30,8 Q34,14 32,20" stroke="#c8a870" strokeWidth="0.9" fill="none" />
+      <path d="M33,8 Q37,14 34,20" stroke="#c8a870" strokeWidth="0.9" fill="none" />
+      <path d="M31,19 q2,-2 3,1" stroke="#fdfaf0" strokeWidth="0.8" fill="none" />
+      <Food1Steam x={20} y={11} />
+    </g>
+  );
+}
+function FoodNgKankoromochi() {
+  return (
+    <g>
+      <Food4Board x={4} y={28} w={40} h={10} c="#d8b080" d="#8a6a3a" />
+      <path d="M8,22 L40,22 L40,30 L8,30 Z" fill="#a8642a" stroke="#4a2408" strokeWidth="0.5" />
+      <path d="M8,22 L12,19 L44,19 L40,22 Z" fill="#c8823a" stroke="#4a2408" strokeWidth="0.4" />
+      <path d="M40,22 L44,19 L44,27 L40,30 Z" fill="#8a4a1a" />
+      {[16, 24, 32].map((x) => <path key={x} d={`M${x} 22 v8`} stroke="#4a2408" strokeWidth="0.5" />)}
+      {Array.from({ length: 10 }, (_, i) => <circle key={i} cx={10 + i * 3} cy={24.6 + (i % 2) * 2.6} r="0.5" fill="#d8a060" />)}
+    </g>
+  );
+}
+function FoodNgAgodashi() {
+  return (
+    <g>
+      <Food1Shadow rx={12} />
+      <path d="M19,8 L29,8 L29,12 Q33,14 33,18 L33,40 Q24,42 15,40 L15,18 Q15,14 19,12 Z" fill="#e8f0f4" opacity="0.4" stroke="#8aa0b0" strokeWidth="0.55" />
+      <path d="M15.4,20 L32.6,20 L32.6,40 Q24,42 15.4,40 Z" fill="#c8862a" opacity="0.85" />
+      <rect x="18" y="5" width="12" height="3.6" rx="0.8" fill="#c82a1a" stroke="#5a0a04" strokeWidth="0.4" />
+      <g transform="translate(24,30) rotate(-20)">
+        <path d="M-6,0 Q-3,-2 3,-1.2 L6,-3 L5.4,0 L6,3 L3,1.2 Q-3,2 -6,0 Z" fill="#6a7a8a" stroke="#2a3a4a" strokeWidth="0.35" />
+        <path d="M-2 -1 L2 -4 L3 -1 Z" fill="#a8b8c8" opacity="0.8" />
+      </g>
+    </g>
+  );
+}
+function FoodNgTonchan() {
+  return (
+    <g>
+      <Food1Shadow rx={18} />
+      <path d="M7,28 Q24,22 41,28 L40,32 Q24,27 8,32 Z" fill="#3a3a42" stroke="#0a0a0c" strokeWidth="0.5" />
+      <ellipse cx="24" cy="27" rx="16" ry="4.6" fill="#4a4a54" />
+      {[[13, 27, -10], [19, 25.6, 2], [26, 25.6, -6], [32, 27, 10], [22, 28.6, 0]].map(([x, y, r], i) => (
+        <g key={i} transform={`translate(${x},${y}) rotate(${r})`}>
+          <path d="M-3.4,0 Q-2.6,-1.8 0,-1.6 Q3,-1.8 3.4,0 Q2.6,1.6 0,1.6 Q-3,1.6 -3.4,0 Z" fill="#b84a2a" stroke="#3a0a04" strokeWidth="0.3" />
+          <path d="M-2 -0.4 h4" stroke="#f0b8a0" strokeWidth="0.4" />
+        </g>
+      ))}
+      {[[16, 24], [29, 24.4], [35, 26]].map(([x, y], i) => <path key={i} d={`M${x - 2.6} ${y} q2.6 -1.6 5.2 0`} stroke="#d8eab0" strokeWidth="1.4" fill="none" />)}
+      <Food1Steam x={24} y={16} s={0.8} />
+    </g>
+  );
+}
+function FoodNgIkiuni() {
+  return (
+    <Food5Don bowl={{ body: "#2a3a5a", light: "#4a5a7a", dark: "#0a1428", rim: "#000", band: "#e8c040" }}>
+      <ellipse cx="24" cy="21.6" rx="13" ry="3.8" fill="#f0901a" />
+      {Array.from({ length: 16 }, (_, i) => <ellipse key={i} cx={13 + (i * 5.3) % 22} cy={20 + (i * 1.9) % 4} rx="1.8" ry="0.9" fill={i % 2 ? "#f8b040" : "#e8801a"} stroke="#a8500a" strokeWidth="0.2" />)}
+      <path d="M33,20 q3,-1 4,1" stroke="#5aa04a" strokeWidth="1.2" fill="none" />
+    </Food5Don>
+  );
+}
+function FoodNgAnago() {
+  return (
+    <g>
+      <Food4Board x={4} y={28} w={40} h={10} c="#c8a070" d="#7a5a30" />
+      {[0, 1, 2].map((k) => (
+        <g key={k} transform={`translate(${11 + k * 13},${27})`}>
+          <ellipse cx="0" cy="1" rx="5.4" ry="2.6" fill="#fbf8f0" stroke="#c8c0b0" strokeWidth="0.35" />
+          <path d="M-6,-1 Q-6,-3.6 0,-3.6 Q6,-3.6 6,-1 Q6,0.6 0,0.6 Q-6,0.6 -6,-1 Z" fill="#a8642a" stroke="#4a2408" strokeWidth="0.4" />
+          <path d="M-4 -2 h8" stroke="#5a2a08" strokeWidth="0.6" />
+          <path d="M-5 -1.2 q5 -1 10 0" stroke="#e0a060" strokeWidth="0.4" fill="none" />
+        </g>
+      ))}
+    </g>
+  );
+}
+
+/* ---- 熊本 ---- */
+function FoodKmTaipien() {
+  return (
+    <Food5Ramen bowl={{ body: "#f2ece0", light: "#fff", dark: "#b8ae9a", rim: "#7a7060", band: "#2a7a4a" }} broth="#f0e0b8" noodle="#f0f4f8" w={0.7} n={6} wave={0.6}>
+      <path d="M11,21 Q18,16 25,18 Q34,17 37,22 Q30,24.4 24,24 Q15,24.6 11,21 Z" fill="#d8eab0" opacity="0.85" stroke="#8aa050" strokeWidth="0.3" />
+      {[[17, 19.6], [29, 20]].map(([x, y], i) => <g key={i}><ellipse cx={x} cy={y} rx="2.8" ry="2" fill="#fff" stroke="#d8d0c0" strokeWidth="0.3" /><ellipse cx={x} cy={y} rx="1.4" ry="1.1" fill="#f4b42a" /></g>)}
+      {[[22, 19], [24.6, 21.6], [33, 21.6]].map(([x, y], i) => <path key={i} d={`M${x - 1.6} ${y} q1.6 1.4 3.2 0`} stroke="#e85a4a" strokeWidth="1" fill="none" />)}
+    </Food5Ramen>
+  );
+}
+function FoodKmIkinaridango() {
+  return (
+    <g>
+      <Food4Plate cy={34} c="#e8dcc8" />
+      {[[16, 28], [32, 28], [24, 32]].map(([x, y], i) => (
+        <g key={i}>
+          <path d={`M${x - 7},${y + 2} Q${x - 7},${y - 6} ${x},${y - 6} Q${x + 7},${y - 6} ${x + 7},${y + 2} Q${x},${y + 4} ${x - 7},${y + 2} Z`} fill="#f4ecd8" stroke="#b8a888" strokeWidth="0.45" />
+          <path d={`M${x - 3},${y - 3.6} Q${x},${y - 5} ${x + 3},${y - 3.6} L${x + 3.4},${y} Q${x},${y + 1} ${x - 3.4},${y} Z`} fill="#e8a040" opacity="0.8" />
+          <path d={`M${x - 3},${y + 1} Q${x},${y - 1} ${x + 3},${y + 1}`} fill="#5a2418" opacity="0.8" />
+        </g>
+      ))}
+      <Food1Steam x={24} y={18} s={0.7} />
+    </g>
+  );
+}
+function FoodKmBasashi() {
+  return <Food9Sashimi plate="#f4f0e8" rim="#b8ae9e" c="#c83a4a" l="#e8808a" n={7} garnish="#5aa04a" />;
+}
+function FoodKmTamanaramen() {
+  return (
+    <Food5Ramen bowl={{ body: "#8a2418", light: "#b5412e", dark: "#4e110a", rim: "#2a0604", band: "#e8c040" }} broth="#e8d0a8" noodle="#f8f0d0" w={0.8} n={6} wave={0.3}>
+      <Food1Chashu x={16} y={20.4} r={3.4} rot={-6} />
+      {[[22, 19.6], [24.6, 19], [27.4, 19.6]].map(([x, y], i) => <path key={i} d={`M${x - 1} ${y} q1 -1.6 2 0`} fill="#d8a050" stroke="#7a4a10" strokeWidth="0.3" />)}
+      <path d="M29,21 l5,-1" stroke="#1a2a10" strokeWidth="2" />
+      <Food1Negi x={20} y={23} /><Food1Negi x={26} y={23.6} />
+    </Food5Ramen>
+  );
+}
+function FoodKmKuri() {
+  return (
+    <g>
+      <Food1Shadow rx={17} />
+      {[[14, 30], [24, 26], [34, 30], [19, 34], [29, 34]].map(([x, y], i) => (
+        <g key={i}>
+          <path d={`M${x},${y - 5} Q${x + 5.4},${y - 2} ${x + 5},${y + 2.4} Q${x},${y + 4} ${x - 5},${y + 2.4} Q${x - 5.4},${y - 2} ${x},${y - 5} Z`} fill="#7a3a14" stroke="#2a0c04" strokeWidth="0.45" />
+          <path d={`M${x - 5},${y + 1.6} Q${x},${y + 4} ${x + 5},${y + 1.6}`} stroke="#c8a070" strokeWidth="1.4" fill="none" />
+          <ellipse cx={x - 1.6} cy={y - 1.6} rx="1.2" ry="0.6" fill="#fff" opacity="0.4" />
+        </g>
+      ))}
+    </g>
+  );
+}
+function FoodKmNankansomen() {
+  return (
+    <g>
+      <Food1Shadow rx={17} />
+      {[[10, 22], [10, 28.6]].map(([x, y], i) => (
+        <g key={i}>
+          <rect x={x} y={y} width="28" height="5.4" rx="1" fill="#fbf8f0" stroke="#c8c0b0" strokeWidth="0.4" />
+          {[0, 1, 2, 3].map((k) => <path key={k} d={`M${x + 4 + k * 6.4} ${y + 0.6} q-1 2 0 4.2`} stroke="#e8e0d0" strokeWidth="0.5" fill="none" />)}
+          <rect x={x + 12} y={y} width="4" height="5.4" fill="#2a4a8a" />
+        </g>
+      ))}
+      <path d="M8,36 Q24,32 40,36 L38,40 L10,40 Z" fill="#c8a870" stroke="#7a5a30" strokeWidth="0.45" />
+      {Array.from({ length: 8 }, (_, i) => <path key={i} d={`M${12 + i * 3} 37 q1 1 0 2`} stroke="#fbf8f0" strokeWidth="0.5" fill="none" />)}
+    </g>
+  );
+}
+function FoodKmAkaushidon() {
+  return (
+    <Food5Don bowl={{ body: "#5a1810", light: "#8a2a1c", dark: "#2a0806", rim: "#140402", band: "#e8c040" }} steam>
+      {[[14, 21, -16], [19.6, 19.4, -6], [25.4, 19, 4], [31, 19.8, 14], [35, 22, 24]].map(([x, y, r], i) => (
+        <g key={i} transform={`translate(${x},${y}) rotate(${r})`}>
+          <rect x="-3.2" y="-2.4" width="6.4" height="4.8" rx="1" fill="#a84a3a" stroke="#4a1004" strokeWidth="0.35" />
+          <rect x="-2.4" y="-1.6" width="4.8" height="3.2" rx="0.6" fill="#e07a7a" />
+        </g>
+      ))}
+      <ellipse cx="24" cy="23.6" rx="2" ry="1.4" fill="#f4b42a" />
+      <path d="M17,24.4 q2,-1.6 4,0" stroke="#5aa04a" strokeWidth="1" fill="none" />
+    </Food5Don>
+  );
+}
+function FoodKmDagojiru() {
+  return (
+    <Food6Soup wan={{ body: "#5a3a1a", light: "#7a5a32", rim: "#1a0e04", inner: "#2a1a08" }} broth="#c8945a">
+      {[[16, 21, -14], [24, 20, 4], [31, 21.6, 16]].map(([x, y, r], i) => (
+        <path key={i} d="M-4,0 Q-3,-2 0,-1.6 Q3,-2 4,0 Q3,1.8 0,1.4 Q-3,1.8 -4,0 Z" transform={`translate(${x},${y}) rotate(${r})`} fill="#f4ecd8" stroke="#b8a888" strokeWidth="0.3" />
+      ))}
+      {[[19, 23.4, "#f08a2a"], [27, 23.4, "#8a5a3a"], [22, 22, "#e8dcc0"]].map(([x, y, c], i) => <rect key={i} x={x - 1.4} y={y - 0.8} width="2.8" height="1.6" rx="0.4" fill={c} />)}
+      <Food1Negi x={29} y={22.6} />
+    </Food6Soup>
+  );
+}
+function FoodKmTakanameshi() {
+  return (
+    <g>
+      <Food4Iron />
+      <path d="M11,31 Q11,24 24,23.4 Q37,24 37,31 Q24,35 11,31 Z" fill="#f4ecd8" stroke="#b8a888" strokeWidth="0.4" />
+      {Array.from({ length: 22 }, (_, i) => <rect key={i} x={13 + (i * 5.3) % 22} y={25 + (i * 2.3) % 7} width="1.8" height="0.9" rx="0.3" fill={i % 3 ? "#5a7a2a" : "#3a5a1a"} transform={`rotate(${(i * 41) % 90} ${14 + (i * 5.3) % 22} ${25.4 + (i * 2.3) % 7})`} />)}
+      {Array.from({ length: 6 }, (_, i) => <ellipse key={i} cx={15 + i * 3.6} cy={28 + (i % 2) * 2} rx="1" ry="0.6" fill="#f4d040" />)}
+      <Food1Steam x={24} y={16} s={0.8} />
+    </g>
+  );
+}
+function FoodKmShiranui() {
+  return (
+    <g>
+      <Food1Shadow rx={18} />
+      {[[15, 30], [33, 30], [24, 24]].map(([x, y], i) => (
+        <g key={i}>
+          <circle cx={x} cy={y} r="7.4" fill="#f8901a" stroke="#9a4a04" strokeWidth="0.5" />
+          <path d={`M${x - 3},${y - 7} Q${x},${y - 11.4} ${x + 3},${y - 7} Q${x},${y - 6} ${x - 3},${y - 7} Z`} fill="#f8901a" stroke="#9a4a04" strokeWidth="0.5" />
+          <ellipse cx={x - 3} cy={y - 2.6} rx="1.6" ry="1" fill="#fff" opacity="0.5" />
+          <path d={`M${x},${y - 10.4} l0.6 -1.6`} stroke="#5a3a1a" strokeWidth="0.7" />
+        </g>
+      ))}
+    </g>
+  );
+}
+function FoodKmTachiuo() {
+  return (
+    <g>
+      <Food4Plate cy={31} rx={21} c="#f4f0e8" />
+      <path d="M5,30 Q12,24 24,24.6 Q36,25 44,27 Q38,30 24,31 Q12,32 5,30 Z" fill="#d8dce4" stroke="#6a7484" strokeWidth="0.5" />
+      <path d="M8,28 Q24,25.6 40,27.4" stroke="#f4f6fa" strokeWidth="1" fill="none" />
+      {[12, 18, 24, 30, 36].map((x) => <path key={x} d={`M${x} 25 l-1 5`} stroke="#8a5a2a" strokeWidth="1.2" opacity="0.7" />)}
+      <circle cx="8.6" cy="28.4" r="0.8" fill="#1a1a1a" />
+      <path d="M36,34 l5,-2 l1,2 l-5,2 Z" fill="#f4e050" />
+    </g>
+  );
+}
+function FoodKmMikanjelly() {
+  return (
+    <g>
+      <Food1Shadow rx={11} />
+      <path d="M14,16 L34,16 L32,38 Q24,40 16,38 Z" fill="#e8f0f4" opacity="0.45" stroke="#8ab0c8" strokeWidth="0.55" />
+      <path d="M14.6,22 L33.4,22 L32,38 Q24,40 16,38 Z" fill="#f8a030" opacity="0.85" />
+      {[[20, 28], [27, 26], [24, 33]].map(([x, y], i) => (
+        <path key={i} d={`M${x - 3},${y} Q${x},${y - 3} ${x + 3},${y} Q${x},${y + 1.4} ${x - 3},${y} Z`} fill="#fbb84a" stroke="#e88a10" strokeWidth="0.35" />
+      ))}
+      <ellipse cx="24" cy="22" rx="9.4" ry="1.4" fill="#fcc860" />
+      <path d="M17,19 l2,16" stroke="#fff" strokeWidth="0.8" opacity="0.5" />
+    </g>
+  );
+}
+function FoodKmTomato() {
+  return (
+    <g>
+      <Food1Shadow rx={18} />
+      {[[15, 30], [33, 30], [24, 24]].map(([x, y], i) => (
+        <g key={i}>
+          <ellipse cx={x} cy={y} rx="7.6" ry="6.8" fill="#d82a1a" stroke="#6a0a04" strokeWidth="0.5" />
+          <ellipse cx={x - 3} cy={y - 2.4} rx="1.8" ry="1" fill="#fff" opacity="0.5" />
+          {[0, 72, 144, 216, 288].map((a) => <path key={a} d={`M${x} ${y - 6} l${(Math.cos(a * Math.PI / 180) * 3).toFixed(2)} ${(Math.sin(a * Math.PI / 180) * 1.4).toFixed(2)}`} stroke="#3a8a2a" strokeWidth="1" strokeLinecap="round" />)}
+        </g>
+      ))}
+    </g>
+  );
+}
+function FoodKmHitomoji() {
+  return (
+    <g>
+      <Food4Plate cy={33} c="#2a2a30" rim="#0a0a0c" />
+      {[[13, 29], [19, 28], [25, 28], [31, 28], [37, 29], [16, 32.4], [22, 32.6], [28, 32.6], [34, 32.4]].map(([x, y], i) => (
+        <g key={i}>
+          <path d={`M${x - 2.4},${y + 1} Q${x - 2.6},${y - 3} ${x},${y - 3.4} Q${x + 2.6},${y - 3} ${x + 2.4},${y + 1} Q${x},${y + 2} ${x - 2.4},${y + 1} Z`} fill="#6ab04a" stroke="#2a5a1a" strokeWidth="0.35" />
+          <path d={`M${x - 1.6},${y - 1} Q${x},${y - 2.6} ${x + 1.6},${y - 1}`} stroke="#f4f8e8" strokeWidth="0.8" fill="none" />
+          <ellipse cx={x} cy={y + 0.8} rx="1.4" ry="0.6" fill="#f4f8e8" />
+        </g>
+      ))}
+      <ellipse cx="24" cy="36" rx="4" ry="1" fill="#c8a050" />
+    </g>
+  );
+}
+function FoodKmAyu() {
+  return (
+    <g>
+      <Food4Plate cy={33} rx={20} c="#c8e4d8" rim="#6a9a7a" />
+      {[[22, 26.6, -6], [26, 31.4, 4]].map(([x, y, r], i) => (
+        <g key={i} transform={`translate(${x},${y}) rotate(${r})`}>
+          <path d="M-12,0 Q-6,-4 4,-3 L10,-4 L8,0 L10,4 L4,3 Q-6,4 -12,0 Z" fill="#a8a07a" stroke="#4a4428" strokeWidth="0.45" />
+          <path d="M-10,0.6 Q0,3 6,1.6" stroke="#f4ecd8" strokeWidth="1" fill="none" />
+          <ellipse cx="-4" cy="-1" rx="1.4" ry="0.6" fill="#f4c040" />
+          <circle cx="-9.4" cy="-0.6" r="0.6" fill="#1a1a1a" />
+          {[-6, -2, 2].map((d) => <path key={d} d={`M${d} -2.6 l-1 2`} stroke="#5a3a1a" strokeWidth="0.9" opacity="0.6" />)}
+        </g>
+      ))}
+      <path d="M38,26 l4,-1 l0,3 Z" fill="#5aa04a" />
+    </g>
+  );
+}
+function FoodKmDaio() {
+  return (
+    <g>
+      <Food1Shadow rx={18} />
+      <rect x="6" y="28" width="36" height="9" rx="1.4" fill="#8a7a6a" stroke="#3a2a1a" strokeWidth="0.5" />
+      {[8, 14, 20, 26, 32, 38].map((x) => <rect key={x} x={x} y="29.4" width="2.6" height="6" rx="0.6" fill="#d83a1a" opacity="0.7" />)}
+      {Array.from({ length: 9 }, (_, i) => <path key={i} d={`M${8 + i * 4} 27 l0 -1`} stroke="#3a3a3a" strokeWidth="0.6" />)}
+      {[[14, 23, -8], [24, 22, 2], [34, 23, 10]].map(([x, y, r], i) => (
+        <g key={i} transform={`translate(${x},${y}) rotate(${r})`}>
+          <path d="M-5,1.6 Q-5,-3.4 0,-3.4 Q5,-3.4 5,1.6 Z" fill="#c8742a" stroke="#4a1a04" strokeWidth="0.45" />
+          <path d="M-3,-1.6 q3,-1.4 6,0" stroke="#f0b060" strokeWidth="0.7" fill="none" />
+          <path d="M-2 1.6 l-1 -3 M2 1.6 l1 -3" stroke="#2a0c04" strokeWidth="0.7" opacity="0.6" />
+        </g>
+      ))}
+      <Food1Steam x={24} y={13} s={0.7} />
+    </g>
+  );
+}
+function FoodKmKurumaebi() {
+  return (
+    <g>
+      <Food4Plate cy={32} rx={20} c="#1e3a5a" rim="#0a1a2a" />
+      {[[17, 28, -14], [31, 28, 14]].map(([x, y, r], i) => (
+        <g key={i} transform={`translate(${x},${y}) rotate(${r})`}>
+          <path d="M-9,0 Q-6,-4 2,-3.6 Q8,-3 9,1 Q6,3 0,2.6 Q-6,2.6 -9,0 Z" fill="#e8642a" stroke="#6a1a04" strokeWidth="0.45" />
+          {[-5, -2, 1, 4].map((d) => <path key={d} d={`M${d} -3.4 q1 3 0 5.6`} stroke="#f8c0a0" strokeWidth="0.55" fill="none" />)}
+          {[-6, -2, 2, 6].map((d) => <path key={d} d={`M${d} -3 l-0.4 -1`} stroke="#3a3a8a" strokeWidth="0.6" opacity="0.5" />)}
+          <path d="M9,1 L12,-2 L12.6,2.6 Z" fill="#c83a1a" />
+          <path d="M-9,0 Q-14,-6 -16,-9 M-9,0 Q-14,-3 -17,-4" stroke="#e8642a" strokeWidth="0.4" fill="none" />
+        </g>
+      ))}
+      <path d="M22,34 l5,-1.6 l0.8,1.6 l-5,1.6 Z" fill="#f4e050" />
+    </g>
+  );
+}
+function FoodKmSugiyokan() {
+  return (
+    <g>
+      <Food4Plate cy={34} c="#e8dcc8" />
+      {[[16, 28, -8], [30, 28, 8], [23, 32, 0]].map(([x, y, r], i) => (
+        <g key={i} transform={`translate(${x},${y}) rotate(${r})`}>
+          <rect x="-7" y="-3.4" width="14" height="6.8" rx="3" fill="#f8f0e0" stroke="#c8b898" strokeWidth="0.4" />
+          <rect x="-7" y="-1.6" width="14" height="3.2" fill="#6a2a1a" />
+          <path d="M-7,-3.4 Q-4,-5 -1,-3.4 Q2,-5 5,-3.4" stroke="#5a8a3a" strokeWidth="1.2" fill="none" />
+        </g>
+      ))}
+    </g>
+  );
+}
+
+const FOOD_ART_9 = {
+  fo_tonkotsu: FoodFoTonkotsu, fo_motsunabe: FoodFoMotsunabe, fo_mentaiko: FoodFoMentaiko,
+  fo_yakiudon: FoodFoYakiudon, fo_nukadaki: FoodFoNukadaki, fo_yakicurry: FoodFoYakicurry,
+  fo_horumonnabe: FoodFoHorumonnabe, fo_kashiwameshi: FoodFoKashiwameshi, fo_yokan: FoodFoYokan,
+  fo_kurumeramen: FoodFoKurumeramen, fo_unagiseiro: FoodFoUnagiseiro, fo_yamecha: FoodFoYamecha,
+  sr_sicilian: FoodSrSicilian, sr_marubouro: FoodSrMarubouro, sr_sagagyu: FoodSrSagagyu,
+  sr_ikizukuri: FoodSrIkizukuri, sr_ikashumai: FoodSrIkashumai, sr_shoromanju: FoodSrShoromanju,
+  sr_kashiwaudon: FoodSrKashiwaudon, sr_tosuyakiniku: FoodSrTosuyakiniku, sr_kanzakisomen: FoodSrKanzakisomen,
+  sr_imarihamburg: FoodSrImarihamburg, sr_aritacurry: FoodSrAritacurry, sr_imarinashi: FoodSrImarinashi,
+  sr_yudofu: FoodSrYudofu, sr_ureshinocha: FoodSrUreshinocha, sr_renkon: FoodSrRenkon,
+  ng_champon: FoodNgChampon, ng_saraudon: FoodNgSaraudon, ng_castella: FoodNgCastella,
+  ng_isahayaunagi: FoodNgIsahayaunagi, ng_omurazushi: FoodNgOmurazushi, ng_kakunimanju: FoodNgKakunimanju,
+  ng_hamburger: FoodNgHamburger, ng_lemonsteak: FoodNgLemonsteak, ng_kaki: FoodNgKaki,
+  ng_guzoni: FoodNgGuzoni, ng_kanzarashi: FoodNgKanzarashi, ng_rokube: FoodNgRokube,
+  ng_gotoudon: FoodNgGotoudon, ng_kankoromochi: FoodNgKankoromochi, ng_agodashi: FoodNgAgodashi,
+  ng_tonchan: FoodNgTonchan, ng_ikiuni: FoodNgIkiuni, ng_anago: FoodNgAnago,
+  km_taipien: FoodKmTaipien, km_ikinaridango: FoodKmIkinaridango, km_basashi: FoodKmBasashi,
+  km_tamanaramen: FoodKmTamanaramen, km_kuri: FoodKmKuri, km_nankansomen: FoodKmNankansomen,
+  km_akaushidon: FoodKmAkaushidon, km_dagojiru: FoodKmDagojiru, km_takanameshi: FoodKmTakanameshi,
+  km_shiranui: FoodKmShiranui, km_tachiuo: FoodKmTachiuo, km_mikanjelly: FoodKmMikanjelly,
+  km_tomato: FoodKmTomato, km_hitomoji: FoodKmHitomoji, km_ayu: FoodKmAyu,
+  km_daio: FoodKmDaio, km_kurumaebi: FoodKmKurumaebi, km_sugiyokan: FoodKmSugiyokan,
+};
+
+/* ---- 大分 ---- */
+function FoodOtToriten() {
+  return (
+    <g>
+      <Food4Plate cy={33} c="#f4f0e8" />
+      <path d="M8,31 q8,-8 16,-6 l-2,4 q-7,-1 -14,2 Z" fill="#7ac04a" />
+      {[[16, 28, -12], [26, 26.6, 8], [33, 30, 20], [22, 32, -4]].map(([x, y, r], i) => (
+        <g key={i} transform={`translate(${x},${y}) rotate(${r})`}>
+          <path d="M-5,0 Q-5,-3.4 -1,-3 Q4,-3.6 5,-0.6 Q5.4,2.6 1,2.8 Q-4.6,3 -5,0 Z" fill="#f4dc9a" stroke="#a88a3a" strokeWidth="0.45" />
+          <path d="M-3,-1 q2,-1.4 5,-0.4" stroke="#fff4c8" strokeWidth="0.8" fill="none" />
+          <circle cx="2" cy="1" r="0.5" fill="#d8b860" />
+        </g>
+      ))}
+      <path d="M36,23 Q40,22 41,26 Q38,28 36,23 Z" fill="#c8a040" opacity="0.4" />
+      <ellipse cx="38.6" cy="25" rx="2.6" ry="1.4" fill="#5a3a1a" />
+    </g>
+  );
+}
+function FoodOtRyukyu() {
+  return (
+    <Food5Don bowl={{ body: "#1a1a1e", light: "#3a3a42", dark: "#0a0a0c", rim: "#000", band: "#2a6a9a" }}>
+      {[[14, 21, -20], [19, 19.6, -10], [24.6, 19.2, 0], [30, 19.6, 10], [35, 21.4, 20]].map(([x, y, r], i) => (
+        <Food4Slice key={i} x={x} y={y} rot={r} w={5.6} h={3} c="#8a5a4a" l="#c88070" />
+      ))}
+      {Array.from({ length: 8 }, (_, i) => <circle key={i} cx={15 + i * 2.6} cy={23 + (i % 2) * 0.6} r="0.45" fill="#f4ecd8" />)}
+      <Food1Negi x={20} y={23.4} /><Food1Negi x={28} y={23.6} />
+    </Food5Don>
+  );
+}
+function FoodOtYasemuma() {
+  return (
+    <g>
+      <Food4Plate cy={33} c="#2a2a30" rim="#0a0a0c" />
+      {[[13, 28, -4], [24, 27, 2], [35, 28, 6]].map(([x, y, r], i) => (
+        <g key={i} transform={`translate(${x},${y}) rotate(${r})`}>
+          <rect x="-4" y="-6" width="8" height="12" rx="3.4" fill="#fbf8f0" stroke="#c8c0b0" strokeWidth="0.4" />
+          <rect x="-4" y="-6" width="8" height="12" rx="3.4" fill="#d8b878" opacity="0.6" />
+          <path d="M-2.4,-4 Q0,0 -2.4,4 M1.6,-4 Q3.4,0 1.6,4" stroke="#fff" strokeWidth="0.6" fill="none" opacity="0.6" />
+        </g>
+      ))}
+      {Array.from({ length: 14 }, (_, i) => <circle key={i} cx={10 + (i * 2.2)} cy={34 + (i % 2) * 0.8} r="0.6" fill="#c8a060" />)}
+    </g>
+  );
+}
+function FoodOtKaraage() {
+  return (
+    <g>
+      <Food1Shadow rx={14} />
+      <path d="M10,22 L38,22 L35,40 L13,40 Z" fill="#fbf8f0" stroke="#a89878" strokeWidth="0.5" />
+      <path d="M10,22 L38,22 L37.4,26 L10.6,26 Z" fill="#d83a2a" />
+      {[[15, 19, 4.8], [22, 16, 5.4], [30, 17, 5], [36, 20.6, 4.2], [19, 22, 4.4], [27, 21.6, 4.8]].map(([x, y, r], i) => (
+        <g key={i}>
+          <path d={`M${x - r},${y} Q${x - r},${y - r} ${x},${y - r} Q${x + r * 0.8},${y - r * 1.1} ${x + r},${y - r * 0.2} Q${x + r * 1.1},${y + r * 0.8} ${x},${y + r * 0.8} Q${x - r * 0.9},${y + r * 0.9} ${x - r},${y} Z`} fill="#b8641a" stroke="#5a2a04" strokeWidth="0.45" />
+          <ellipse cx={x - r * 0.3} cy={y - r * 0.4} rx={r * 0.4} ry={r * 0.2} fill="#e8a040" opacity="0.8" />
+        </g>
+      ))}
+    </g>
+  );
+}
+function FoodOtHamo() {
+  return (
+    <g>
+      <Food4Plate cy={32} rx={20} c="#f4f0e8" />
+      {[[14, 27], [21, 25.6], [28, 25.6], [35, 27], [18, 31.4], [30, 31.4]].map(([x, y], i) => (
+        <g key={i}>
+          <path d={`M${x - 3.4},${y} Q${x - 3.6},${y - 3.4} ${x},${y - 3.4} Q${x + 3.6},${y - 3.4} ${x + 3.4},${y} Q${x},${y + 2} ${x - 3.4},${y} Z`} fill="#fdfbf4" stroke="#d8d0c0" strokeWidth="0.35" />
+          {[-2, -0.7, 0.6, 1.9].map((d) => <path key={d} d={`M${x + d} ${y - 3} q0.4 1.4 0 2.6`} stroke="#e8e0d0" strokeWidth="0.45" fill="none" />)}
+        </g>
+      ))}
+      <ellipse cx="24" cy="35" rx="3" ry="1.2" fill="#c8283a" />
+      <path d="M38,33 q2,-2 3,0" stroke="#5aa04a" strokeWidth="1" fill="none" />
+    </g>
+  );
+}
+function FoodOtBudou() {
+  return (
+    <g>
+      <Food4Plate cy={36} c="#f4f0e8" />
+      <path d="M24,8 q1,-3 4,-3" stroke="#5a3a1a" strokeWidth="1" fill="none" />
+      <path d="M27,7 q5,-3 8,1 q-4,2 -8,-1 Z" fill="#5a9a3a" />
+      {[[24, 12], [20, 15], [28, 15], [16, 19], [24, 18.6], [32, 19], [19, 23], [27, 23], [23, 27], [30, 26], [17, 27], [24, 31]].map(([x, y], i) => (
+        <g key={i}><circle cx={x} cy={y} r="3.4" fill="#5a2a7a" stroke="#2a0a3a" strokeWidth="0.4" /><ellipse cx={x - 1} cy={y - 1.1} rx="1" ry="0.6" fill="#c8a8e0" opacity="0.6" /></g>
+      ))}
+    </g>
+  );
+}
+function FoodOtJigokumushi() {
+  return (
+    <g>
+      <Food1Shadow rx={18} />
+      <rect x="8" y="22" width="32" height="16" rx="2" fill="#c8a070" stroke="#6a4a1a" strokeWidth="0.55" />
+      {Array.from({ length: 6 }, (_, i) => <path key={i} d={`M${10 + i * 5.4} 22 v16`} stroke="#a8804a" strokeWidth="0.5" />)}
+      <path d="M8,22 Q24,18 40,22" fill="#d8b080" stroke="#6a4a1a" strokeWidth="0.4" />
+      {[[14, 27, "#f4e8d0", 4], [24, 26, "#f8901a", 3.4], [33, 27, "#8a5a3a", 3.6], [19, 32, "#7ac04a", 3], [29, 32, "#f4f0e4", 3.6]].map(([x, y, c, r], i) => <ellipse key={i} cx={x} cy={y} rx={r} ry={r * 0.7} fill={c} stroke="#0004" strokeWidth="0.3" />)}
+      {[14, 24, 34].map((x, i) => <path key={i} d={`M${x} 18 q-2 -3 0 -6 q2 -3 0 -6`} stroke="#fff" strokeWidth="1.6" fill="none" opacity="0.5" strokeLinecap="round" />)}
+    </g>
+  );
+}
+function FoodOtReimen() {
+  return (
+    <Food5Ramen bowl={{ body: "#e8f0f4", light: "#fff", dark: "#a8b8c4", rim: "#5a6a7a", band: "#5a8ab8" }} broth="#c8904a" noodle="#6a5a4a" w={1.2} n={5} steam={false}>
+      {[[15, 20.6], [20.6, 19.4], [26.4, 19.4]].map(([x, y], i) => <Food1Chashu key={i} x={x} y={y} r={2.6} rot={(i - 1) * 8} />)}
+      <path d="M30,19 l6,1.6" stroke="#d8eab0" strokeWidth="2.4" />
+      <path d="M17,23.4 l5,0.4" stroke="#c82a1a" strokeWidth="1.4" />
+      <ellipse cx="29" cy="22.6" rx="2" ry="1.4" fill="#fff" stroke="#c8c0b0" strokeWidth="0.3" />
+      <circle cx="29" cy="22.6" r="0.8" fill="#f4b42a" />
+    </Food5Ramen>
+  );
+}
+function FoodOtShirokarei() {
+  return (
+    <g>
+      <Food4Plate cy={32} rx={20} c="#1e3a5a" rim="#0a1a2a" />
+      <g transform="translate(22,28)">
+        <path d="M-12,0 Q-10,-7 0,-7 Q10,-7 12,0 Q10,7 0,7 Q-10,7 -12,0 Z" fill="#f8f4ec" stroke="#a8a090" strokeWidth="0.5" />
+        <path d="M12,0 L17,-4 L16,0 L17,4 Z" fill="#e8e4d8" stroke="#a8a090" strokeWidth="0.4" />
+        {[-8, -4, 0, 4, 8].map((d) => <path key={d} d={`M${d} -6 q0.6 6 0 12`} stroke="#e0dcd0" strokeWidth="0.4" fill="none" />)}
+        <path d="M-10,0 h20" stroke="#d8d0c0" strokeWidth="0.5" />
+        <circle cx="-8" cy="-2.6" r="0.8" fill="#2a2a2a" />
+      </g>
+      <path d="M35,35 l5,-2 l1,2 l-5,2 Z" fill="#f4e050" />
+    </g>
+  );
+}
+function FoodOtGomadashi() {
+  return (
+    <Food5Ramen bowl={{ body: "#5a1810", light: "#8a2a1c", dark: "#2a0806", rim: "#140402" }} broth="#d8b890" noodle="#fbf6e8" w={1.7} n={5} wave={0.5}>
+      <ellipse cx="24" cy="20.4" rx="5" ry="2.4" fill="#a8783a" stroke="#5a3a10" strokeWidth="0.3" />
+      {Array.from({ length: 10 }, (_, i) => <ellipse key={i} cx={20.6 + (i % 5) * 1.6} cy={19.6 + Math.floor(i / 5) * 1.4} rx="0.4" ry="0.25" fill="#f4e8c8" />)}
+      <Food1Negi x={16} y={22.6} /><Food1Negi x={31} y={22.6} />
+    </Food5Ramen>
+  );
+}
+function FoodOtSaikisushi() {
+  return (
+    <g>
+      <Food4Board x={4} y={28} w={40} h={10} c="#c8a070" d="#7a5a30" />
+      {[[10, 0], [19, 1], [28, 2], [37, 3]].map(([x, k]) => (
+        <g key={k} transform={`translate(${x},${26})`}>
+          <ellipse cx="0" cy="1.6" rx="3.6" ry="2" fill="#fbf8f0" stroke="#c8c0b0" strokeWidth="0.3" />
+          <path d="M-4.2,0 Q-4.4,-3 0,-3.2 Q4.4,-3 4.2,0 Q0,1 -4.2,0 Z" fill={["#e86a5a", "#c8d0d8", "#f4a8a0", "#d8401a"][k]} stroke="#0004" strokeWidth="0.35" />
+          <path d="M-2.6 -1.6 q2.6 -1 5.2 0" stroke="#fff" strokeWidth="0.5" fill="none" opacity="0.6" />
+        </g>
+      ))}
+    </g>
+  );
+}
+function FoodOtHiogi() {
+  const fan = (c) => (
+    <g>
+      <path d="M0,4 L-7,-3 Q0,-8 7,-3 Z" fill={c} stroke="#0005" strokeWidth="0.45" />
+      {[-5, -2.6, 0, 2.6, 5].map((d) => <path key={d} d={`M0 4 L${d} ${-4.6 - (d === 0 ? 0.6 : 0)}`} stroke="#fff" strokeWidth="0.45" opacity="0.6" />)}
+      <path d="M-2,4 L2,4 L1.4,5.4 L-1.4,5.4 Z" fill={c} />
+    </g>
+  );
+  return (
+    <g>
+      <Food4Plate cy={33} c="#f4f0e8" />
+      <g transform="translate(13,28) rotate(-16)">{fan("#e84a6a")}</g>
+      <g transform="translate(24,26)">{fan("#f4a02a")}</g>
+      <g transform="translate(35,28) rotate(16)">{fan("#9a4ab8")}</g>
+      <g transform="translate(24,33) rotate(180) scale(0.8)">{fan("#f4d040")}</g>
+    </g>
+  );
+}
+function FoodOtKabosu() {
+  return (
+    <g>
+      <Food4Plate cy={35} c="#2a2a30" rim="#0a0a0c" />
+      {[[14, 28], [26, 26]].map(([x, y], i) => (
+        <g key={i}><circle cx={x} cy={y} r="6.4" fill="#3a8a2a" stroke="#1a3a0a" strokeWidth="0.45" /><ellipse cx={x - 2} cy={y - 2} rx="1.6" ry="0.9" fill="#fff" opacity="0.4" /><circle cx={x} cy={y - 6.2} r="0.7" fill="#5a3a1a" /></g>
+      ))}
+      <g transform="translate(34,32)">
+        <ellipse rx="6" ry="3.4" fill="#3a8a2a" stroke="#1a3a0a" strokeWidth="0.45" />
+        <ellipse rx="5" ry="2.6" fill="#f4f4b0" />
+        {[0, 45, 90, 135].map((a) => <path key={a} d={`M${(-Math.cos(a * Math.PI / 180) * 4.6).toFixed(2)} ${(-Math.sin(a * Math.PI / 180) * 2.4).toFixed(2)} L${(Math.cos(a * Math.PI / 180) * 4.6).toFixed(2)} ${(Math.sin(a * Math.PI / 180) * 2.4).toFixed(2)}`} stroke="#d8d880" strokeWidth="0.35" />)}
+      </g>
+    </g>
+  );
+}
+function FoodOtShiitake() {
+  return (
+    <g>
+      <Food1Shadow rx={18} />
+      <path d="M6,30 Q24,26 42,30 L40,38 Q24,41 8,38 Z" fill="#c8a870" stroke="#6a4a1a" strokeWidth="0.5" />
+      {Array.from({ length: 8 }, (_, i) => <path key={i} d={`M${8 + i * 4.4} 31 l-1 7`} stroke="#a8864a" strokeWidth="0.5" />)}
+      {[[14, 26, 7], [26, 23, 7.6], [36, 27, 6]].map(([x, y, r], i) => (
+        <g key={i}>
+          <path d={`M${x - 1.4},${y + 1} L${x - 1},${y + 6} L${x + 1},${y + 6} L${x + 1.4},${y + 1} Z`} fill="#f0e4c8" stroke="#a8946a" strokeWidth="0.35" />
+          <path d={`M${x - r},${y + 1} Q${x - r},${y - r * 0.8} ${x},${y - r * 0.8} Q${x + r},${y - r * 0.8} ${x + r},${y + 1} Q${x},${y + 2.4} ${x - r},${y + 1} Z`} fill="#6a3a1a" stroke="#2a1404" strokeWidth="0.5" />
+          {[[-0.4, -0.3], [0.3, -0.5], [0.1, 0.1], [-0.2, 0.2]].map(([dx, dy], k) => <path key={k} d={`M${x + dx * r} ${y + dy * r} l${1.2 + k * 0.2} ${0.6 - k * 0.3}`} stroke="#d8c8a8" strokeWidth="0.6" strokeLinecap="round" />)}
+        </g>
+      ))}
+    </g>
+  );
+}
+function FoodOtDangojiru() {
+  return (
+    <Food6Soup wan={{ body: "#1a1a1e", light: "#3a3a42", rim: "#000", inner: "#0a0a0c" }} broth="#b88a50">
+      {[[15, 21, 9], [24, 20.4, 10], [32, 21.8, 7]].map(([x, y, w], i) => (
+        <path key={i} d={`M${x - w / 2},${y} q${w / 4},-1.4 ${w / 2},-0.4 q${w / 4},1 ${w / 2},0 q-${w / 4},1.6 -${w / 2},0.8 q-${w / 4},0.4 -${w / 2},-0.4 Z`} fill="#f4ecd8" stroke="#b8a888" strokeWidth="0.3" />
+      ))}
+      {[[19, 23.2, "#f08a2a"], [27, 23.2, "#6a4a2a"]].map(([x, y, c], i) => <ellipse key={i} cx={x} cy={y} rx="1.8" ry="0.9" fill={c} />)}
+      <path d="M22,22.6 q2,-1 4,0" stroke="#5aa04a" strokeWidth="1" fill="none" />
+    </Food6Soup>
+  );
+}
+function FoodOtHitayakisoba() {
+  return (
+    <g>
+      <Food4Iron />
+      <Food4Noodles cx={24} cy={30} rx={15} ry={4.8} c="#5a2e0a" n={6} w={1.1} />
+      {Array.from({ length: 10 }, (_, i) => <path key={i} d={`M${12 + i * 2.6} ${28 + (i % 3)} l2 -1.4`} stroke="#3a1804" strokeWidth="1.2" strokeLinecap="round" />)}
+      {[[15, 28], [24, 26.6], [32, 28.6]].map(([x, y], i) => <path key={i} d={`M${x - 3} ${y} q3 -1.4 6 0`} stroke="#f4f4e8" strokeWidth="1" fill="none" />)}
+      <Food1Steam x={24} y={19} s={0.8} />
+    </g>
+  );
+}
+function FoodOtNashi() {
+  return (
+    <g>
+      <Food4Plate cy={35} c="#f4f0e8" />
+      <g transform="translate(17,27)"><circle r="7.6" fill="#c8964a" stroke="#6a4a10" strokeWidth="0.5" /><ellipse cx="-2.6" cy="-2.6" rx="1.8" ry="1" fill="#fff" opacity="0.5" />{Array.from({ length: 6 }, (_, i) => <circle key={i} cx={-3 + (i * 2.3) % 6} cy={-1 + (i * 1.7) % 5} r="0.3" fill="#8a5a1a" />)}</g>
+      {[[30, 31, -10], [36, 31, 10]].map(([x, y, r], i) => (
+        <g key={i} transform={`translate(${x},${y}) rotate(${r})`}>
+          <path d="M-4,1 Q-4,-4 0,-5 Q4,-4 4,1 Q0,2 -4,1 Z" fill="#fbf6e0" stroke="#c8964a" strokeWidth="0.6" />
+          <ellipse cx="0" cy="-1" rx="1" ry="1.4" fill="#e8dcb0" />
+        </g>
+      ))}
+    </g>
+  );
+}
+function FoodOtBungogyu() {
+  return (
+    <g>
+      <Food4Iron />
+      <path d="M11,30 Q12,24 22,23.6 Q34,23.4 37,29 Q34,35 24,35 Q13,35 11,30 Z" fill="#6a2a14" stroke="#2a0a04" strokeWidth="0.55" />
+      {[16, 21, 26, 31].map((x) => <path key={x} d={`M${x} 25 l-1.6 9`} stroke="#3a0e04" strokeWidth="0.8" />)}
+      <g transform="translate(29,30)"><path d="M-3,-4 L3,-4 L4,4 L-2,4 Z" fill="#d8706a" stroke="#4a1004" strokeWidth="0.35" /><path d="M-3,-4 L3,-4 L3.4,-2.6 L-2.8,-2.6 Z" fill="#7a3418" /></g>
+      <rect x="14" y="27" width="4" height="1.6" rx="0.4" fill="#f4e8c0" />
+      <Food1Steam x={22} y={17} s={0.8} />
+    </g>
+  );
+}
+
+/* ---- 宮崎 ---- */
+function FoodMzNanban() {
+  return (
+    <g>
+      <Food4Plate cy={32} rx={20} c="#f4f0e8" />
+      <path d="M30,30 q4,-8 10,-6" stroke="#7ac04a" strokeWidth="2.4" fill="none" strokeLinecap="round" />
+      {[[13, 27, -6], [20, 26, 0], [27, 27, 6]].map(([x, y, r], i) => (
+        <g key={i} transform={`translate(${x},${y}) rotate(${r})`}>
+          <rect x="-3.4" y="-4" width="6.8" height="8" rx="1.4" fill="#d8962a" stroke="#6a3a08" strokeWidth="0.4" />
+          <rect x="-2.6" y="-3.2" width="5.2" height="1.2" rx="0.4" fill="#f0c060" />
+        </g>
+      ))}
+      <path d="M10,24 Q20,20 30,25 Q28,30 20,29 Q12,30 10,24 Z" fill="#fbf8e8" stroke="#d8d0b0" strokeWidth="0.35" opacity="0.95" />
+      {[[15, 25], [20, 24], [25, 25.6], [18, 27], [23, 27.6]].map(([x, y], i) => <rect key={i} x={x} y={y} width="1.4" height="0.9" rx="0.3" fill={i % 2 ? "#5aa04a" : "#f4e8a0"} />)}
+    </g>
+  );
+}
+function FoodMzAyuyana() {
+  return (
+    <g>
+      <Food1Shadow rx={19} />
+      <rect x="6" y="30" width="36" height="8" rx="1" fill="#3a3a3a" stroke="#0a0a0a" strokeWidth="0.5" />
+      <path d="M8,30 Q24,26 40,30" stroke="#f08a2a" strokeWidth="1.4" fill="none" opacity="0.8" />
+      {[12, 22, 32].map((x, i) => (
+        <g key={i} transform={`translate(${x + 3},${21}) rotate(${70 + i * 6})`}>
+          <path d="M0 -14 L0 12" stroke="#c8a870" strokeWidth="0.9" />
+          <path d="M-2,8 Q-3,0 -1,-8 Q0,-11 1,-8 Q3,0 2,8 L3,11 L0,9 L-3,11 Z" fill="#a8a07a" stroke="#4a4428" strokeWidth="0.4" />
+          <ellipse cx="0" cy="-3" rx="0.6" ry="1.2" fill="#f4c040" />
+          <circle cx="0" cy="-8" r="0.5" fill="#1a1a1a" />
+        </g>
+      ))}
+    </g>
+  );
+}
+function FoodMzKuri() {
+  return (
+    <g>
+      <Food1Shadow rx={17} />
+      <path d="M8,26 Q8,38 24,38 Q40,38 40,26 Z" fill="#8a6a40" stroke="#3a2a10" strokeWidth="0.5" />
+      <ellipse cx="24" cy="26" rx="16" ry="4.4" fill="#a8804a" stroke="#3a2a10" strokeWidth="0.45" />
+      {[[15, 24.6], [21, 23], [27, 23], [33, 24.6], [18, 26.4], [24, 26], [30, 26.4]].map(([x, y], i) => (
+        <g key={i}><ellipse cx={x} cy={y} rx="2.8" ry="2.2" fill="#f4d060" stroke="#a8862a" strokeWidth="0.35" /><ellipse cx={x - 0.8} cy={y - 0.8} rx="0.8" ry="0.4" fill="#fff" opacity="0.5" /></g>
+      ))}
+      <Food1Steam x={24} y={16} s={0.7} />
+    </g>
+  );
+}
+function FoodMzHiyajiru() {
+  return (
+    <g>
+      <Food1Shadow rx={19} />
+      <path d="M5,24 Q7,36 18,36 Q29,36 31,24 Z" fill="#5a5a62" stroke="#1a1a1e" strokeWidth="0.5" />
+      <ellipse cx="18" cy="24" rx="13" ry="3.6" fill="#c8b890" stroke="#1a1a1e" strokeWidth="0.45" />
+      {[[11, 23.6], [16, 22.6], [21, 23], [25, 24.4]].map(([x, y], i) => <ellipse key={i} cx={x} cy={y} rx="1.8" ry="1" fill="#5aa04a" />)}
+      {[[13, 25], [19, 25.2], [23, 22.6]].map(([x, y], i) => <rect key={i} x={x - 1.4} y={y - 1} width="2.8" height="2" rx="0.4" fill="#fbf8f0" stroke="#d8d0c0" strokeWidth="0.2" />)}
+      <path d="M30,30 Q30,38 37,38 Q44,38 44,30 Z" fill="#1a1a1e" stroke="#000" strokeWidth="0.45" />
+      <ellipse cx="37" cy="30" rx="7" ry="2" fill="#fbf8f0" />
+      <path d="M17,20 q2,-2 4,-1" stroke="#f4e8c8" strokeWidth="0.6" fill="none" />
+    </g>
+  );
+}
+function FoodMzMango() {
+  return (
+    <g>
+      <Food4Plate cy={34} c="#f4f0e8" />
+      <g transform="translate(15,26) rotate(-20)">
+        <path d="M-6,4 Q-8,-4 0,-8 Q7,-7 7,1 Q5,7 -6,4 Z" fill="#d8283a" stroke="#6a0a14" strokeWidth="0.5" />
+        <path d="M-3,-5 Q3,-7 5,-2" stroke="#f8a040" strokeWidth="1.6" fill="none" opacity="0.6" />
+      </g>
+      <g transform="translate(31,30)">
+        {Array.from({ length: 9 }, (_, i) => <rect key={i} x={-7 + (i % 3) * 4.6} y={-6 + Math.floor(i / 3) * 4} width="4" height="3.6" rx="1" fill="#f8b02a" stroke="#c8780a" strokeWidth="0.3" transform={`rotate(${(i % 3 - 1) * 8})`} />)}
+      </g>
+    </g>
+  );
+}
+function FoodMzJidori() {
+  return (
+    <g>
+      <Food4Plate cy={33} c="#2a2a30" rim="#0a0a0c" />
+      {[[14, 29, -10], [22, 27.4, 6], [30, 28.6, -4], [36, 31, 12], [19, 32.4, 4], [27, 32.6, -8]].map(([x, y, r], i) => (
+        <g key={i} transform={`translate(${x},${y}) rotate(${r})`}>
+          <path d="M-3.6,0 Q-3,-2.4 0,-2.2 Q3.6,-2.4 3.6,0 Q3,2 0,2 Q-3.4,2 -3.6,0 Z" fill="#2a1a10" stroke="#000" strokeWidth="0.35" />
+          <path d="M-2,-0.6 q2,-1 4,0" stroke="#8a6a4a" strokeWidth="0.5" fill="none" />
+        </g>
+      ))}
+      <path d="M33,24 q3,-2 6,0" stroke="#7ac04a" strokeWidth="1.4" fill="none" />
+      <ellipse cx="38" cy="26" rx="1.6" ry="1" fill="#f4e050" />
+    </g>
+  );
+}
+function FoodMzMiyazakigyu() {
+  return (
+    <g>
+      <Food4Plate cy={33} rx={20} c="#f4f0e8" />
+      <path d="M8,30 Q9,22 20,22 L30,22 Q40,23 40,30 Q36,36 24,36 Q12,36 8,30 Z" fill="#5a2210" stroke="#1a0604" strokeWidth="0.55" />
+      {[14, 20, 26, 32].map((x) => (
+        <g key={x}>
+          <path d={`M${x} 22.4 L${x + 4.6} 22.4 L${x + 4} 35.4 L${x - 0.4} 35.4 Z`} fill="#d86a6a" stroke="#4a1004" strokeWidth="0.3" />
+          <path d={`M${x + 0.6} 26 h3 M${x + 0.4} 30 h3.4`} stroke="#f8d8d0" strokeWidth="0.45" />
+        </g>
+      ))}
+      <ellipse cx="11" cy="34" rx="2" ry="1" fill="#f4f0e4" />
+    </g>
+  );
+}
+function FoodMzKurobuta() {
+  return <Food7Nabe body="#2a2a30" broth="#e8e0c8" items={[[14, 20.6, "slice", "#f4d8d0"], [20, 19.4, "slice", "#f8e0d8"], [27, 19.6, "slice", "#f4d8d0"], [33, 21.4, "leaf", "#5aa04a"], [18, 23.4, "leaf", "#d8eab0"], [26, 23.4, "rect", "#f4f0e4"]]} />;
+}
+function FoodMzTocha() {
+  return (
+    <g>
+      <Food1Shadow rx={15} />
+      {[[15, 0], [31, 1]].map(([x, k]) => (
+        <g key={k}>
+          <path d={`M${x - 7},22 Q${x - 6},36 ${x},36 Q${x + 6},36 ${x + 7},22 Z`} fill={k ? "#c8a070" : "#3a4a6a"} stroke="#1a1a1e" strokeWidth="0.5" />
+          <ellipse cx={x} cy="22" rx="7" ry="2" fill={k ? "#d8b080" : "#4a5a7a"} stroke="#1a1a1e" strokeWidth="0.4" />
+          <ellipse cx={x} cy="22.2" rx="5.8" ry="1.4" fill="#9ac860" />
+        </g>
+      ))}
+      <Food1Steam x={15} y={13} s={0.55} />
+      <Food1Steam x={31} y={13} s={0.55} />
+      <path d="M21,38 q3,-2 6,0" stroke="#5a8a2a" strokeWidth="1.2" fill="none" />
+    </g>
+  );
+}
+function FoodMzObiten() {
+  return (
+    <g>
+      <Food4Plate cy={33} c="#e8e0cc" />
+      {[[16, 28, -8], [31, 28, 10], [23, 32.6, 0]].map(([x, y, r], i) => (
+        <g key={i} transform={`translate(${x},${y}) rotate(${r})`}>
+          <ellipse rx="8" ry="4" fill="#d8a050" stroke="#7a4a10" strokeWidth="0.45" />
+          <ellipse cx="-1" cy="-1" rx="5.4" ry="2" fill="#f0c878" />
+          <path d="M-5 1.4 q5 1 10 0" stroke="#a8641a" strokeWidth="0.5" fill="none" />
+        </g>
+      ))}
+    </g>
+  );
+}
+function FoodMzSakanaudon() {
+  return (
+    <Food5Ramen bowl={{ body: "#2a3a5a", light: "#4a5a7a", dark: "#0a1428", rim: "#000" }} broth="#d8b878" noodle="#e8dcd0" w={1.1} n={5} wave={0.5}>
+      <path d="M14,20 Q18,18 22,20 Q18,21.4 14,20 Z" fill="#f8b4a8" />
+      <path d="M26,19.6 l6,0.4" stroke="#3a8a3a" strokeWidth="1.2" />
+      <path d="M28,22.6 q2.4,-1.6 5,0" stroke="#f4f0e4" strokeWidth="1" fill="none" />
+      <Food1Negi x={20} y={23} />
+    </Food5Ramen>
+  );
+}
+function FoodMzKinkan() {
+  return (
+    <g>
+      <Food4Plate cy={34} c="#2a2a30" rim="#0a0a0c" />
+      {[[13, 29], [19, 27], [25, 28.4], [31, 27], [36, 29.6], [16, 32.6], [22, 32.4], [28, 32.6], [34, 33]].map(([x, y], i) => (
+        <g key={i}><ellipse cx={x} cy={y} rx="3.2" ry="2.8" fill="#f8a01a" stroke="#9a5004" strokeWidth="0.4" /><ellipse cx={x - 1} cy={y - 1} rx="0.9" ry="0.5" fill="#fff" opacity="0.6" /></g>
+      ))}
+      <path d="M19,24.2 q2,-3 5,-2 q-2,2 -5,2 Z" fill="#4a9a3a" />
+    </g>
+  );
+}
+
+/* ---- 鹿児島 ---- */
+function FoodKhTonkotsu() {
+  return (
+    <g>
+      <Food4Wan body="#3a2a1a" light="#5a4a32" rim="#140c04" inner="#1c140a" />
+      <ellipse cx="24" cy="22.2" rx="13.6" ry="4" fill="#a8743a" />
+      {[[18, 20, -8], [27, 20.4, 8]].map(([x, y, r], i) => (
+        <g key={i} transform={`translate(${x},${y}) rotate(${r})`}>
+          <path d="M-5,2 L-5,-2 Q0,-4 5,-2 L5,2 Q0,3 -5,2 Z" fill="#7a3a14" stroke="#2a0c04" strokeWidth="0.4" />
+          <path d="M-5,-0.6 Q0,-2.4 5,-0.6" stroke="#f4e0c0" strokeWidth="0.8" fill="none" />
+          <path d="M-0.4 -3 v6" stroke="#f4ecd8" strokeWidth="0.9" />
+        </g>
+      ))}
+      <ellipse cx="22.6" cy="24" rx="3" ry="1" fill="#f08a2a" />
+      <Food1Steam x={24} y={13} s={0.8} />
+    </g>
+  );
+}
+function FoodKhShirokuma() {
+  return (
+    <g>
+      <Food1Shadow rx={13} />
+      <path d="M12,28 L36,28 L33,38 Q24,40 15,38 Z" fill="#e8f0f4" opacity="0.6" stroke="#8ab0c8" strokeWidth="0.5" />
+      <path d="M10,28 Q10,10 24,9 Q38,10 38,28 Z" fill="#fbfaf6" stroke="#c8d0d8" strokeWidth="0.5" />
+      {[[16, 18, "#f8901a"], [24, 14, "#d82a3a"], [31, 18, "#7ac04a"], [20, 24, "#f4d040"], [28, 23.6, "#f8901a"], [24, 20, "#5a2a14"]].map(([x, y, c], i) => <circle key={i} cx={x} cy={y} r="1.8" fill={c} stroke="#0003" strokeWidth="0.25" />)}
+      {[[18, 13], [30, 13]].map(([x, y], i) => <path key={i} d={`M${x - 2} ${y} q2 -2 4 0`} fill="#f4e8c8" />)}
+      <path d="M13,26 Q24,22 35,26" stroke="#f4e8c8" strokeWidth="1.4" fill="none" opacity="0.8" />
+    </g>
+  );
+}
+function FoodKhKarukan() {
+  return (
+    <Food6Blocks c="#fdfbf4" top="#ffffff" d="#c8c0b0" plate="#2a2a30" rim="#0a0a0c" w={8.4} h={5}
+      deco={(x, y) => <g>{[[-2, -1.4], [1.6, -0.6], [-0.4, 1.4], [2.6, 1.6]].map(([dx, dy], k) => <circle key={k} cx={x + dx} cy={y + dy} r="0.35" fill="#e8e0d0" />)}</g>} />
+  );
+}
+function FoodKhKatsuo() {
+  return (
+    <g>
+      <Food4Board x={4} y={30} w={40} h={8} c="#c8a070" d="#7a5a30" />
+      <g transform="translate(24,26)">
+        <path d="M-17,0 Q-12,-6 0,-6 Q10,-6 15,-2 L19,-6 L18,0 L19,6 L15,2 Q10,6 0,6 Q-12,6 -17,0 Z" fill="#3a4a6a" stroke="#0a1428" strokeWidth="0.5" />
+        <path d="M-15,1.6 Q0,6 14,2" fill="#e8ecf0" />
+        {[-8, -3, 2, 7].map((d) => <path key={d} d={`M${d} 1.6 l0 3.6`} stroke="#5a6a8a" strokeWidth="0.8" />)}
+        <circle cx="-12" cy="-1.4" r="1" fill="#1a1a1a" />
+        <path d="M-2,-6 L2,-9 L4,-6 Z" fill="#2a3a5a" />
+      </g>
+    </g>
+  );
+}
+function FoodKhSomennagashi() {
+  return (
+    <g>
+      <Food1Shadow rx={19} />
+      <ellipse cx="24" cy="30" rx="18" ry="8" fill="#5a9ac8" stroke="#1a4a7a" strokeWidth="0.6" />
+      <ellipse cx="24" cy="29" rx="15.4" ry="6.4" fill="#a8d8f0" />
+      <path d="M14,29 Q24,23 34,29 Q24,35 14,29" stroke="#fff" strokeWidth="0.8" fill="none" opacity="0.7" />
+      {[[18, 27, 20], [28, 26, -20], [24, 32, 0]].map(([x, y, r], i) => (
+        <g key={i} transform={`translate(${x},${y}) rotate(${r})`}>
+          {[-1.2, -0.4, 0.4, 1.2].map((d) => <path key={d} d={`M-4 ${d} q4 -1 8 0`} stroke="#fdfcf4" strokeWidth="0.6" fill="none" />)}
+        </g>
+      ))}
+      <ellipse cx="24" cy="29" rx="2.4" ry="1" fill="#2a6a9a" />
+      <path d="M40,22 q2,-3 4,-2" stroke="#5aa04a" strokeWidth="1.2" fill="none" />
+    </g>
+  );
+}
+function FoodKhChirancha() {
+  return (
+    <g>
+      <Food1Shadow rx={14} />
+      <path d="M12,18 L36,18 L34,40 Q24,42 14,40 Z" fill="#e8f0f4" opacity="0.45" stroke="#8ab0c8" strokeWidth="0.55" />
+      <path d="M12.4,22 L35.6,22 L34,40 Q24,42 14,40 Z" fill="#8ac040" opacity="0.85" />
+      {[[18, 28], [28, 30], [22, 35]].map(([x, y], i) => <rect key={i} x={x} y={y} width="4" height="4" rx="0.6" fill="#fff" opacity="0.6" transform={`rotate(${i * 20} ${x + 2} ${y + 2})`} />)}
+      <path d="M30,8 L26,40" stroke="#4a8a2a" strokeWidth="1.4" />
+      <path d="M17,20 l1,18" stroke="#fff" strokeWidth="0.8" opacity="0.5" />
+    </g>
+  );
+}
+function FoodKhSatsumaage() {
+  return (
+    <g>
+      <Food4Plate cy={33} c="#f4f0e8" />
+      {[[15, 28, "r"], [27, 26.6, "o"], [34, 30.6, "r"], [21, 32, "o"]].map(([x, y, k], i) => (
+        k === "r"
+          ? <g key={i}><ellipse cx={x} cy={y} rx="6" ry="3.6" fill="#c8862a" stroke="#6a3a08" strokeWidth="0.45" /><ellipse cx={x - 1} cy={y - 1} rx="3.6" ry="1.4" fill="#e0a850" /></g>
+          : <g key={i}><rect x={x - 6} y={y - 2.2} width="12" height="4.4" rx="2.2" fill="#b8742a" stroke="#5a3008" strokeWidth="0.45" />{[-3, 0, 3].map((d) => <circle key={d} cx={x + d} cy={y} r="0.7" fill="#f08a2a" />)}</g>
+      ))}
+    </g>
+  );
+}
+function FoodKhKibinago() {
+  return (
+    <g>
+      <Food4Plate cy={31} rx={20} c="#2a2a30" rim="#0a0a0c" />
+      <g transform="translate(24,29) scale(1,0.5)">
+        {Array.from({ length: 14 }, (_, i) => (
+          <g key={i} transform={`rotate(${i * (360 / 14)})`}>
+            <path d="M0,-3 Q-2.2,-9 0,-15 Q2.2,-9 0,-3 Z" fill="#eef0f6" stroke="#8a9ab8" strokeWidth="0.5" />
+            <path d="M0,-4 L0,-14" stroke="#4a6ab8" strokeWidth="1" />
+          </g>
+        ))}
+      </g>
+      <ellipse cx="24" cy="29" rx="3" ry="1.6" fill="#f4e0a0" />
+      <path d="M38,34 q2,-2 4,0" stroke="#5aa04a" strokeWidth="1.1" fill="none" />
+    </g>
+  );
+}
+function FoodKhPonkan() {
+  return (
+    <g>
+      <Food1Shadow rx={18} />
+      {[[15, 30], [33, 30], [24, 23]].map(([x, y], i) => (
+        <g key={i}>
+          <circle cx={x} cy={y} r="7.6" fill="#f88a10" stroke="#9a4004" strokeWidth="0.5" />
+          <path d={`M${x - 2.4},${y - 7} Q${x},${y - 9.4} ${x + 2.4},${y - 7}`} fill="#f88a10" stroke="#9a4004" strokeWidth="0.4" />
+          {Array.from({ length: 6 }, (_, k) => <circle key={k} cx={x - 3 + (k * 2.3) % 6} cy={y - 2 + (k * 1.9) % 5} r="0.3" fill="#c85a04" />)}
+          <ellipse cx={x - 3} cy={y - 3} rx="1.6" ry="0.9" fill="#fff" opacity="0.5" />
+        </g>
+      ))}
+      <path d="M25,15 q3,-3 6,-1 q-3,2 -6,1 Z" fill="#3a8a2a" />
+    </g>
+  );
+}
+function FoodKhJambomochi() {
+  return (
+    <g>
+      <Food4Plate cy={34} c="#e8dcc8" />
+      {[[13, 0], [21, 1], [29, 2], [37, 3]].map(([x, k]) => (
+        <g key={k} transform={`translate(${x},${30 - (k % 2) * 1.4})`}>
+          <path d="M-1.6,-1 L-3.6,-12 M1.6,-1 L3.6,-12" stroke="#d8c090" strokeWidth="0.8" strokeLinecap="round" />
+          <rect x="-3.4" y="-3" width="6.8" height="5" rx="1.6" fill="#f8f2e0" stroke="#b8a880" strokeWidth="0.4" />
+          <rect x="-3.4" y="-3" width="6.8" height="2.4" rx="1.2" fill="#a8642a" opacity="0.9" />
+        </g>
+      ))}
+    </g>
+  );
+}
+function FoodKhIsaonigiri() {
+  return (
+    <g>
+      <Food4Plate cy={34} c="#e8e0cc" />
+      {[[16, 0, -8], [32, 1, 8]].map(([x, k, r]) => (
+        <g key={k} transform={`translate(${x},29) rotate(${r})`}>
+          <path d="M0,-10 Q4,-10 8,-1 Q10,5 0,5 Q-10,5 -8,-1 Q-4,-10 0,-10 Z" fill="#fdfbf4" stroke="#c8c0b0" strokeWidth="0.45" />
+          {Array.from({ length: 10 }, (_, i) => <ellipse key={i} cx={-5 + (i * 3.1) % 10} cy={-5 + (i * 2.3) % 8} rx="0.7" ry="0.4" fill="#ece6d4" />)}
+          {k === 0 ? <rect x="-5" y="0" width="10" height="5" rx="0.6" fill="#1a2418" /> : <ellipse cx="0" cy="-2" rx="2" ry="1.6" fill="#c82a3a" />}
+        </g>
+      ))}
+    </g>
+  );
+}
+function FoodKhTorisashi() {
+  return (
+    <g>
+      <Food4Plate cy={32} rx={20} c="#f4f0e8" />
+      {[[12, 28], [17.6, 27], [23.2, 26.6], [28.8, 27], [34.4, 28]].map(([x, y], i) => (
+        <g key={i} transform={`translate(${x},${y}) rotate(-8)`}>
+          <rect x="-2.6" y="-4" width="5.2" height="8" rx="0.8" fill="#f4c8b8" stroke="#a8786a" strokeWidth="0.35" />
+          <rect x="-2.6" y="-4" width="5.2" height="2" rx="0.8" fill="#e8d8c8" />
+          <rect x="-2.6" y="-4" width="5.2" height="0.8" rx="0.4" fill="#8a6a5a" opacity="0.5" />
+        </g>
+      ))}
+      <ellipse cx="38" cy="34" rx="2.4" ry="1.2" fill="#f4f0e4" />
+      <path d="M8,34 q3,-2 5,0" stroke="#5aa04a" strokeWidth="1" fill="none" />
+    </g>
+  );
+}
+function FoodKhKuroushi() {
+  return (
+    <g>
+      <Food1Shadow rx={18} />
+      <rect x="6" y="24" width="36" height="14" rx="1" fill="#1a1a1e" stroke="#000" strokeWidth="0.5" />
+      {Array.from({ length: 6 }, (_, i) => <path key={i} d={`M8 ${26 + i * 2} h32`} stroke="#5a5a62" strokeWidth="0.4" />)}
+      {[[13, 28, -10], [22, 27, 4], [31, 28, -6], [18, 33, 8], [28, 33, -4], [36, 32, 12]].map(([x, y, r], i) => (
+        <g key={i} transform={`translate(${x},${y}) rotate(${r})`}>
+          <rect x="-3.6" y="-1.8" width="7.2" height="3.6" rx="1" fill="#c86a6a" stroke="#4a1004" strokeWidth="0.35" />
+          {[-2, 0, 2].map((d) => <path key={d} d={`M${d - 0.6} -1.4 l1.2 2.8`} stroke="#f8e0d8" strokeWidth="0.4" />)}
+        </g>
+      ))}
+      <Food1Steam x={24} y={15} s={0.8} />
+    </g>
+  );
+}
+function FoodKhKanpachi() {
+  return <Food9Sashimi plate="#2a2a30" rim="#0a0a0c" c="#f8e8e0" l="#e8a8a0" n={6} garnish="#7ac04a" />;
+}
+function FoodKhUnagi() {
+  return (
+    <Food5Don bowl={{ body: "#1a1a1e", light: "#3a3a42", dark: "#0a0a0c", rim: "#000", band: "#c82a1a" }} steam>
+      {[[16.6, 20.4, -8], [30.6, 20.4, 8]].map(([x, y, r], i) => (
+        <g key={i} transform={`translate(${x},${y}) rotate(${r})`}>
+          <rect x="-7" y="-3" width="14" height="6" rx="1.6" fill="#7a2e0a" stroke="#2a0c04" strokeWidth="0.4" />
+          <path d="M-6 -1 h12 M-6 1 h12" stroke="#b8582a" strokeWidth="0.5" />
+          <rect x="-6" y="-2.6" width="12" height="1.4" rx="0.6" fill="#c8682a" opacity="0.7" />
+        </g>
+      ))}
+    </Food5Don>
+  );
+}
+function FoodKhAnno() {
+  return (
+    <g>
+      <Food1Shadow rx={18} />
+      <path d="M6,32 Q24,26 42,32 L40,38 Q24,34 8,38 Z" fill="#c8c8d0" stroke="#5a5a64" strokeWidth="0.45" />
+      {[[16, 27, -16], [31, 27, 14]].map(([x, y, r], i) => (
+        <g key={i} transform={`translate(${x},${y}) rotate(${r})`}>
+          <path d="M-9,0 Q-7,-5 0,-5 Q7,-5 9,0 Q7,4.6 0,4.6 Q-7,4.6 -9,0 Z" fill="#8a3a4a" stroke="#3a0a14" strokeWidth="0.5" />
+          {i === 1 && <path d="M-6,-1 Q0,-6 6,-1 Q0,4 -6,-1 Z" fill="#f8c040" stroke="#c8800a" strokeWidth="0.35" />}
+          {i === 1 && <ellipse cx="-1" cy="-1.6" rx="2" ry="0.8" fill="#fff0a0" />}
+        </g>
+      ))}
+      <Food1Steam x={31} y={15} s={0.7} />
+    </g>
+  );
+}
+function FoodKhTobiuo() {
+  return (
+    <g>
+      <Food4Plate cy={32} rx={20} c="#f4f0e8" />
+      <g transform="translate(24,28)">
+        <path d="M-14,0 Q-8,-4 4,-3 L10,-5 L9,0 L10,5 L4,3 Q-8,4 -14,0 Z" fill="#a8762a" stroke="#4a2a08" strokeWidth="0.5" />
+        <path d="M-4,-2 L4,-11 L8,-4 Z" fill="#c8964a" stroke="#4a2a08" strokeWidth="0.4" />
+        <path d="M-4,2 L4,11 L8,4 Z" fill="#c8964a" stroke="#4a2a08" strokeWidth="0.4" />
+        {[0, 2.4, 4.8].map((d) => <path key={d} d={`M${-2 + d} -3 L${3 + d} -9`} stroke="#8a5a1a" strokeWidth="0.4" />)}
+        <circle cx="-11" cy="-0.6" r="0.9" fill="#1a1a1a" />
+      </g>
+      <path d="M8,35 l5,-1.6 l1,1.6 l-5,1.6 Z" fill="#f4e050" />
+    </g>
+  );
+}
+function FoodKhTankan() {
+  return (
+    <g>
+      <Food4Plate cy={35} c="#e8dcc8" />
+      <g transform="translate(15,28)"><circle r="7" fill="#f89a2a" stroke="#9a4a04" strokeWidth="0.5" />{Array.from({ length: 8 }, (_, i) => <circle key={i} cx={-4 + (i * 2.9) % 8} cy={-3 + (i * 2.1) % 6} r="0.35" fill="#c8640a" />)}<ellipse cx="-2.6" cy="-2.6" rx="1.6" ry="0.9" fill="#fff" opacity="0.5" /></g>
+      <g transform="translate(31,32)">
+        {[0, 1, 2, 3, 4].map((k) => <path key={k} d={`M${-6 + k * 3} 0 Q${-4.4 + k * 3} -4 ${-3 + k * 3} 0 Z`} fill="#fbb048" stroke="#e88a10" strokeWidth="0.4" />)}
+      </g>
+    </g>
+  );
+}
+function FoodKhKeihan() {
+  return (
+    <g>
+      <Food4Wan body="#7a1a14" light="#a83a2a" rim="#2a0604" inner="#3a0a06" />
+      <ellipse cx="24" cy="22.2" rx="13.6" ry="4" fill="#e8c890" />
+      {Array.from({ length: 8 }, (_, i) => <rect key={i} x={13 + i * 2.6} y={20.4 + (i % 2) * 1.6} width="2.4" height="0.9" rx="0.3" fill="#f8f2e4" />)}
+      {Array.from({ length: 8 }, (_, i) => <rect key={i} x={14 + i * 2.4} y={21 + ((i + 1) % 2) * 1.6} width="2" height="0.8" rx="0.3" fill="#f4d040" />)}
+      {Array.from({ length: 6 }, (_, i) => <rect key={i} x={16 + i * 2.6} y={19.6 + (i % 2) * 2.8} width="1.8" height="0.8" rx="0.3" fill="#5a3a1a" />)}
+      <path d="M28,20 q2,-1.4 4,0" stroke="#5aa04a" strokeWidth="1" fill="none" />
+      <ellipse cx="30" cy="22.6" rx="1.4" ry="0.8" fill="#f8b02a" />
+      <Food1Steam x={24} y={13} s={0.8} />
+    </g>
+  );
+}
+function FoodKhKokuto() {
+  return (
+    <g>
+      <Food4Plate cy={34} c="#f4f0e8" />
+      {[[13, 28, 6], [20, 25, 7], [27, 27, 6.4], [34, 29, 5.6], [17, 32, 5], [25, 32.4, 6], [32, 33, 4.6]].map(([x, y, s], i) => (
+        <g key={i}>
+          <path d={`M${x - s / 2},${y + s / 3} L${x - s / 2.4},${y - s / 3} L${x + s / 3},${y - s / 2.2} L${x + s / 2},${y + s / 4} Z`} fill="#3a2010" stroke="#1a0a04" strokeWidth="0.4" />
+          <path d={`M${x - s / 2.4},${y - s / 3} L${x + s / 3},${y - s / 2.2}`} stroke="#8a5a2a" strokeWidth="0.7" />
+        </g>
+      ))}
+    </g>
+  );
+}
+function FoodKhPassion() {
+  return (
+    <g>
+      <Food4Plate cy={35} c="#2a2a30" rim="#0a0a0c" />
+      <g transform="translate(15,28)"><circle r="7" fill="#5a1a4a" stroke="#2a0a20" strokeWidth="0.5" /><ellipse cx="-2.4" cy="-2.4" rx="1.6" ry="0.9" fill="#fff" opacity="0.35" />{Array.from({ length: 6 }, (_, i) => <circle key={i} cx={-3 + (i * 2.4) % 6} cy={-1 + (i * 1.9) % 5} r="0.4" fill="#8a4a7a" />)}</g>
+      <g transform="translate(32,31)">
+        <ellipse rx="7.4" ry="4.4" fill="#5a1a4a" stroke="#2a0a20" strokeWidth="0.5" />
+        <ellipse rx="6.2" ry="3.4" fill="#f8f0d0" />
+        <ellipse rx="5.2" ry="2.6" fill="#f4b81a" />
+        {Array.from({ length: 12 }, (_, i) => <circle key={i} cx={-4 + (i * 2.3) % 8} cy={-1.6 + (i * 1.3) % 3.4} r="0.55" fill="#2a1a0a" />)}
+      </g>
+    </g>
+  );
+}
+
+/* ---- 沖縄 ---- */
+function FoodOkSoba() {
+  return (
+    <Food5Ramen bowl={{ body: "#f2ece0", light: "#fff", dark: "#b8ae9a", rim: "#7a7060", band: "#2a7ab8" }} broth="#e8d0a0" noodle="#f4d890" w={1.4} n={5} wave={0.2}>
+      {[[16.6, 20.4, -8], [24, 19.4, 0]].map(([x, y, r], i) => (
+        <g key={i} transform={`translate(${x},${y}) rotate(${r})`}>
+          <rect x="-3.6" y="-2.4" width="7.2" height="4.8" rx="1" fill="#7a3a14" stroke="#2a0c04" strokeWidth="0.35" />
+          <path d="M-3.6 -0.6 h7.2" stroke="#f4e0c0" strokeWidth="0.8" />
+        </g>
+      ))}
+      <path d="M29,19 l5,1" stroke="#f4b0c0" strokeWidth="1.8" />
+      <Food1Negi x={30} y={22.6} /><Food1Negi x={20} y={23.4} />
+      <path d="M33,22 l3,-1" stroke="#e8402a" strokeWidth="1" />
+    </Food5Ramen>
+  );
+}
+function FoodOkRafute() {
+  return (
+    <g>
+      <Food4Plate cy={33} c="#1e3a5a" rim="#0a1a2a" />
+      {[[16, 27], [29, 27], [22.6, 32]].map(([x, y], i) => (
+        <g key={i}>
+          <path d={`M${x - 5.6},${y - 2} L${x - 3.6},${y - 4.4} L${x + 5.6},${y - 4.4} L${x + 3.6},${y - 2} Z`} fill="#5a2208" />
+          <rect x={x - 5.6} y={y - 2} width="9.2" height="6" rx="0.6" fill="#7a3414" stroke="#2a0c04" strokeWidth="0.4" />
+          <rect x={x - 5.6} y={y - 0.6} width="9.2" height="1.4" fill="#f4dcb0" />
+          <rect x={x - 5.6} y={y + 2} width="9.2" height="1" fill="#e8c898" />
+          <path d={`M${x + 3.6},${y - 2} L${x + 5.6},${y - 4.4} L${x + 5.6},${y + 1.6} L${x + 3.6},${y + 4} Z`} fill="#4a1a06" />
+        </g>
+      ))}
+      <path d="M34,33 q3,-2 5,0" stroke="#5aa04a" strokeWidth="1.2" fill="none" />
+    </g>
+  );
+}
+function FoodOkAndagi() {
+  return (
+    <g>
+      <Food4Plate cy={34} c="#e8dcc8" />
+      {[[15, 29], [24, 26.6], [33, 29], [19.6, 32.6], [28.4, 32.6]].map(([x, y], i) => (
+        <g key={i}>
+          <circle cx={x} cy={y} r="4.6" fill="#b8641a" stroke="#5a2a04" strokeWidth="0.45" />
+          <path d={`M${x - 3.4},${y - 1.6} Q${x - 1},${y - 4.4} ${x + 2},${y - 3.4} Q${x},${y - 1.6} ${x - 3.4},${y - 1.6} Z`} fill="#f4c880" />
+          <path d={`M${x - 3},${y - 1.6} q3,1 6,-1`} stroke="#5a2a04" strokeWidth="0.4" fill="none" />
+        </g>
+      ))}
+    </g>
+  );
+}
+function FoodOkTacorice() {
+  return (
+    <g>
+      <Food4Plate cy={32} rx={20} c="#f4f0e8" />
+      <ellipse cx="24" cy="29" rx="15" ry="5.4" fill="#fbf8f0" />
+      <path d="M11,28 Q18,23 26,24.4 Q36,24 37,29 Q30,32 24,31.6 Q15,32 11,28 Z" fill="#8a4a1a" />
+      {Array.from({ length: 12 }, (_, i) => <rect key={i} x={13 + (i * 5.3) % 22} y={24.6 + (i * 1.9) % 5} width="1.8" height="0.9" rx="0.3" fill="#f4c42a" />)}
+      {Array.from({ length: 8 }, (_, i) => <rect key={i} x={15 + (i * 4.1) % 18} y={25.4 + (i * 2.3) % 4} width="2" height="1.2" rx="0.4" fill="#7ac04a" />)}
+      {[[18, 26.6], [25, 25.6], [31, 27.4]].map(([x, y], i) => <rect key={i} x={x} y={y} width="2" height="2" rx="0.4" fill="#d83a2a" />)}
+    </g>
+  );
+}
+function FoodOkChampuru() {
+  return (
+    <g>
+      <Food4Plate cy={32} c="#f4f0e8" />
+      <path d="M8,30 Q10,23 24,22 Q38,23 40,30 Q24,35 8,30 Z" fill="#f4e8b0" opacity="0.8" />
+      {[[14, 27, -20], [21, 25, 10], [29, 26, -10], [34, 29, 20], [19, 30, 0]].map(([x, y, r], i) => (
+        <g key={i} transform={`translate(${x},${y}) rotate(${r})`}>
+          <path d="M-3.6,0 Q-3.6,-2.2 0,-2.2 Q3.6,-2.2 3.6,0 Q3.6,2.2 0,2.2 Q-3.6,2.2 -3.6,0 Z" fill="#4a9a2a" stroke="#1a4a0a" strokeWidth="0.35" />
+          <path d="M-2.2,0 Q0,-1.2 2.2,0 Q0,1.2 -2.2,0 Z" fill="#e8f4c8" />
+          {[-1.4, 1.4].map((d) => <circle key={d} cx={d} cy="-1.6" r="0.4" fill="#2a6a1a" />)}
+        </g>
+      ))}
+      {[[24, 29], [27, 31], [31, 31.6]].map(([x, y], i) => <rect key={i} x={x} y={y} width="3" height="2" rx="0.4" fill="#fdfbf2" stroke="#d8d0b8" strokeWidth="0.3" />)}
+      {[[16, 31], [26, 27.4]].map(([x, y], i) => <path key={i} d={`M${x} ${y} q2 -1.4 4 0`} stroke="#f4c42a" strokeWidth="1.4" fill="none" />)}
+    </g>
+  );
+}
+function FoodOkJushi() {
+  return (
+    <Food5Don bowl={{ body: "#2a6a8a", light: "#4a8aaa", dark: "#0a2a3a", rim: "#041018" }} rice={false} base="#d8b070" steam>
+      {Array.from({ length: 18 }, (_, i) => <ellipse key={i} cx={11 + (i * 7) % 26} cy={20 + (i * 3) % 5} rx="0.8" ry="0.5" fill="#f4e4c0" opacity="0.8" />)}
+      {[[15, 21, "#7a3a14"], [21, 20, "#f08a2a"], [27, 21, "#5a7a3a"], [32, 20.6, "#7a3a14"], [24, 23, "#6a4a2a"]].map(([x, y, c], i) => <rect key={i} x={x - 1.4} y={y - 0.8} width="2.8" height="1.6" rx="0.4" fill={c} />)}
+    </Food5Don>
+  );
+}
+function FoodOkAgu() {
+  return (
+    <g>
+      <Food4Plate cy={33} rx={20} c="#2a2a30" rim="#0a0a0c" />
+      {[[13, 28, -14], [20, 26.6, -4], [28, 26.6, 6], [35, 28.4, 16]].map(([x, y, r], i) => (
+        <g key={i} transform={`translate(${x},${y}) rotate(${r})`}>
+          <path d="M-4,4 Q-5,-2 -2,-5 Q2,-6 4,-3 Q5,2 3,5 Q0,6 -4,4 Z" fill="#f8d0c8" stroke="#b8807a" strokeWidth="0.35" />
+          <path d="M-3,4 Q-4,-1 -1.6,-4.4" stroke="#fdf4f0" strokeWidth="1.2" fill="none" />
+        </g>
+      ))}
+      {[[17, 33], [27, 33.4]].map(([x, y], i) => <path key={i} d={`M${x - 3} ${y} q3 -2 6 0 q-3 1.4 -6 0 Z`} fill="#5aa04a" />)}
+    </g>
+  );
+}
+function FoodOkPine() {
+  return (
+    <g>
+      <Food1Shadow rx={13} />
+      {[[-30, 6], [-14, 9], [0, 11], [14, 9], [30, 6]].map(([a, l], i) => <path key={i} d={`M24 18 L${24 + Math.sin(a * Math.PI / 180) * l * 1.2 - 1.4} ${18 - Math.cos(a * Math.PI / 180) * l * 1.2} L${24 + Math.sin(a * Math.PI / 180) * l * 1.2 + 1.4} ${18 - Math.cos(a * Math.PI / 180) * l * 1.2} Z`} fill={i % 2 ? "#3a8a2a" : "#5aaa3a"} stroke="#1a4a0a" strokeWidth="0.35" />)}
+      <path d="M14,28 Q14,18 24,18 Q34,18 34,28 Q34,40 24,40 Q14,40 14,28 Z" fill="#e8a020" stroke="#8a5004" strokeWidth="0.55" />
+      {Array.from({ length: 5 }, (_, r) => Array.from({ length: 3 }, (_, c) => (
+        <path key={`${r}${c}`} d={`M${18 + c * 6 + (r % 2) * 3} ${21 + r * 4} l-2 2 l2 2 l2 -2 Z`} fill="none" stroke="#a86004" strokeWidth="0.5" />
+      )))}
+    </g>
+  );
+}
+function FoodOkShikuwasa() {
+  return (
+    <g>
+      <Food1Shadow rx={14} />
+      <path d="M13,16 L29,16 L27.6,40 Q21,41 14.4,40 Z" fill="#e8f0f4" opacity="0.45" stroke="#8ab0c8" strokeWidth="0.55" />
+      <path d="M13.4,22 L28.6,22 L27.6,40 Q21,41 14.4,40 Z" fill="#c8e050" opacity="0.85" />
+      <path d="M24,8 L19,36" stroke="#f4f0e8" strokeWidth="1.2" />
+      {[[34, 32], [39, 35], [36.6, 28.4]].map(([x, y], i) => <g key={i}><circle cx={x} cy={y} r="3.4" fill="#3a9a2a" stroke="#1a4a0a" strokeWidth="0.4" /><ellipse cx={x - 1} cy={y - 1} rx="0.9" ry="0.5" fill="#fff" opacity="0.4" /></g>)}
+      <g transform="translate(27,19)"><circle r="3" fill="#3a9a2a" /><circle r="2.4" fill="#f4f4b0" /></g>
+    </g>
+  );
+}
+function FoodOkMiyakosoba() {
+  return (
+    <Food5Ramen bowl={{ body: "#e8f0f4", light: "#fff", dark: "#a8b8c4", rim: "#5a6a7a", band: "#f08a2a" }} broth="#ecd8a8" noodle="#f4d890" w={1.3} n={5} wave={0.2}>
+      <ellipse cx="24" cy="20.6" rx="12" ry="3.2" fill="#f4d890" opacity="0.9" />
+      {Array.from({ length: 6 }, (_, i) => <path key={i} d={`M${14 + i * 3.6} 19.4 q1.6 1 3.2 0`} stroke="#d8b860" strokeWidth="0.5" fill="none" />)}
+      <path d="M22,17.4 l4,0" stroke="#3a8a3a" strokeWidth="1" />
+    </Food5Ramen>
+  );
+}
+function FoodOkMango() {
+  return (
+    <g>
+      <Food1Shadow rx={18} />
+      {[[16, 28, -24], [32, 28, 24]].map(([x, y, r], i) => (
+        <g key={i} transform={`translate(${x},${y}) rotate(${r})`}>
+          <path d="M0,-11 Q8,-9 8,0 Q7,10 0,10 Q-8,9 -7,0 Q-7,-8 0,-11 Z" fill={i ? "#f0a02a" : "#c8303a"} stroke="#6a1a0a" strokeWidth="0.5" />
+          <path d="M-3,-7 Q2,-9 5,-4" stroke={i ? "#f8d060" : "#f08a4a"} strokeWidth="1.6" fill="none" opacity="0.7" />
+          <path d="M0,-11 q1,-2 3,-2" stroke="#4a6a1a" strokeWidth="0.9" fill="none" />
+        </g>
+      ))}
+      <path d="M20,38 L28,38 L27,40 L21,40 Z" fill="#c8a870" />
+    </g>
+  );
+}
+function FoodOkUmibudo() {
+  return (
+    <g>
+      <Food4Plate cy={33} c="#c8e4f0" rim="#5a8ab8" />
+      {[[14, 0, -30], [20, 1, -10], [26, 2, 10], [32, 3, 28]].map(([x, k, r]) => (
+        <g key={k} transform={`translate(${x},34) rotate(${r})`}>
+          <path d="M0 0 L0 -14" stroke="#3a8a3a" strokeWidth="0.9" />
+          {Array.from({ length: 8 }, (_, j) => <circle key={j} cx={(j % 2 ? 1.2 : -1.2)} cy={-2 - j * 1.6} r="1.2" fill="#5ac05a" stroke="#2a7a2a" strokeWidth="0.25" />)}
+          <circle cx="0" cy="-15" r="1.3" fill="#5ac05a" stroke="#2a7a2a" strokeWidth="0.25" />
+        </g>
+      ))}
+      <ellipse cx="38" cy="34" rx="2.6" ry="1.2" fill="#5a3a1a" opacity="0.8" />
+    </g>
+  );
+}
+function FoodOkYaeyamasoba() {
+  return (
+    <Food5Ramen bowl={{ body: "#1a1a1e", light: "#3a3a42", dark: "#0a0a0c", rim: "#000", band: "#2a7ab8" }} broth="#e0c890" noodle="#f4d890" w={1.1} n={6} wave={0.15}>
+      {Array.from({ length: 9 }, (_, i) => <rect key={i} x={13 + i * 2.4} y={19 + (i % 3) * 1.2} width="2.2" height="0.8" rx="0.3" fill={i % 2 ? "#7a3a14" : "#f4b0c0"} />)}
+      <Food1Negi x={24} y={23.4} /><Food1Negi x={29} y={23} />
+    </Food5Ramen>
+  );
+}
+function FoodOkIshigakigyu() {
+  return (
+    <g>
+      <Food1Shadow rx={18} />
+      <ellipse cx="24" cy="30" rx="17" ry="7" fill="#3a3a3e" stroke="#000" strokeWidth="0.55" />
+      <ellipse cx="24" cy="29" rx="14.6" ry="5.6" fill="#5a5a62" />
+      {Array.from({ length: 6 }, (_, i) => <circle key={i} cx={14 + i * 4} cy={29} r="0.7" fill="#2a2a2e" />)}
+      {[[16, 28, -12], [25, 26.6, 4], [32, 29, 14], [21, 31.6, -2]].map(([x, y, r], i) => (
+        <g key={i} transform={`translate(${x},${y}) rotate(${r})`}>
+          <path d="M-4.4,0 Q-3.6,-2.4 0,-2.2 Q4,-2.4 4.4,0 Q3.6,2.2 0,2.2 Q-4,2.2 -4.4,0 Z" fill="#c85a5a" stroke="#4a1004" strokeWidth="0.35" />
+          {[-2, 0, 2].map((d) => <path key={d} d={`M${d - 1} -1.4 l2 2.6`} stroke="#f8d8d0" strokeWidth="0.4" />)}
+        </g>
+      ))}
+      <Food1Steam x={24} y={17} s={0.8} />
+    </g>
+  );
+}
+function FoodOkMozuku() {
+  return (
+    <g>
+      <Food4Plate cy={33} c="#f4f0e8" />
+      <path d="M8,31 q8,-8 16,-6 l-2,4 q-7,-1 -14,2 Z" fill="#fff" stroke="#c8c0b0" strokeWidth="0.3" />
+      {[[18, 27.6, -10], [29, 27, 8], [24, 32.4, 0]].map(([x, y, r], i) => (
+        <g key={i} transform={`translate(${x},${y}) rotate(${r})`}>
+          <path d="M-6,0 Q-6,-3.4 -2,-3 Q3,-3.6 6,-1 Q6.4,2.6 1,3 Q-5,3 -6,0 Z" fill="#c8a858" stroke="#6a5a1a" strokeWidth="0.45" />
+          {Array.from({ length: 6 }, (_, k) => <path key={k} d={`M${-4.6 + k * 1.8} -1.6 q0.6 1.4 0 3`} stroke="#3a4a1a" strokeWidth="0.8" fill="none" strokeLinecap="round" />)}
+        </g>
+      ))}
+      <ellipse cx="38" cy="30" rx="2.4" ry="1.2" fill="#f4f4f0" />
+    </g>
+  );
+}
+
+const FOOD_ART_10 = {
+  ot_toriten: FoodOtToriten, ot_ryukyu: FoodOtRyukyu, ot_yasemuma: FoodOtYasemuma,
+  ot_karaage: FoodOtKaraage, ot_hamo: FoodOtHamo, ot_budou: FoodOtBudou,
+  ot_jigokumushi: FoodOtJigokumushi, ot_reimen: FoodOtReimen, ot_shirokarei: FoodOtShirokarei,
+  ot_gomadashi: FoodOtGomadashi, ot_saikisushi: FoodOtSaikisushi, ot_hiogi: FoodOtHiogi,
+  ot_kabosu: FoodOtKabosu, ot_shiitake: FoodOtShiitake, ot_dangojiru: FoodOtDangojiru,
+  ot_hitayakisoba: FoodOtHitayakisoba, ot_nashi: FoodOtNashi, ot_bungogyu: FoodOtBungogyu,
+  mz_nanban: FoodMzNanban, mz_ayuyana: FoodMzAyuyana, mz_kuri: FoodMzKuri,
+  mz_hiyajiru: FoodMzHiyajiru, mz_mango: FoodMzMango, mz_jidori: FoodMzJidori,
+  mz_miyazakigyu: FoodMzMiyazakigyu, mz_kurobuta: FoodMzKurobuta, mz_tocha: FoodMzTocha,
+  mz_obiten: FoodMzObiten, mz_sakanaudon: FoodMzSakanaudon, mz_kinkan: FoodMzKinkan,
+  kh_tonkotsu: FoodKhTonkotsu, kh_shirokuma: FoodKhShirokuma, kh_karukan: FoodKhKarukan,
+  kh_katsuo: FoodKhKatsuo, kh_somennagashi: FoodKhSomennagashi, kh_chirancha: FoodKhChirancha,
+  kh_satsumaage: FoodKhSatsumaage, kh_kibinago: FoodKhKibinago, kh_ponkan: FoodKhPonkan,
+  kh_jambomochi: FoodKhJambomochi, kh_isaonigiri: FoodKhIsaonigiri, kh_torisashi: FoodKhTorisashi,
+  kh_kuroushi: FoodKhKuroushi, kh_kanpachi: FoodKhKanpachi, kh_unagi: FoodKhUnagi,
+  kh_anno: FoodKhAnno, kh_tobiuo: FoodKhTobiuo, kh_tankan: FoodKhTankan,
+  kh_keihan: FoodKhKeihan, kh_kokuto: FoodKhKokuto, kh_passion: FoodKhPassion,
+  ok_soba: FoodOkSoba, ok_rafute: FoodOkRafute, ok_andagi: FoodOkAndagi,
+  ok_tacorice: FoodOkTacorice, ok_champuru: FoodOkChampuru, ok_jushi: FoodOkJushi,
+  ok_agu: FoodOkAgu, ok_pine: FoodOkPine, ok_shikuwasa: FoodOkShikuwasa,
+  ok_miyakosoba: FoodOkMiyakosoba, ok_mango: FoodOkMango, ok_umibudo: FoodOkUmibudo,
+  ok_yaeyamasoba: FoodOkYaeyamasoba, ok_ishigakigyu: FoodOkIshigakigyu, ok_mozuku: FoodOkMozuku,
+};
+
+const FOOD_ART = { ...FOOD_ART_1, ...FOOD_ART_2, ...FOOD_ART_3, ...FOOD_ART_4, ...FOOD_ART_5, ...FOOD_ART_6, ...FOOD_ART_7, ...FOOD_ART_8, ...FOOD_ART_9, ...FOOD_ART_10 };
 /* ご当地グルメの札。⚠️ 名産品の札（MeiCard）と同じ大きさの二つ。まだのものは「？？？」 */
 function GourmetCard({ d, lang, big, count, seen, packed }) {
   const t = gourmetT(lang), a = advT(lang);
@@ -85647,11 +94886,13 @@ function GourmetPanel({ lang, onClose }) {
   const t = gourmetT(lang), a = advT(lang);
   const [have, setHave] = useState(() => loadGourmet());
   const seen = loadGourmet(LS_GOURMET_SEEN);
-  const [pack, setPack] = useState(() => loadGourmetPack());
+  const slots = gourmetSlots();
+  const [pack, setPack0] = useState(() => gourmetPackFit(loadGourmetPack(), loadGourmet(), gourmetSlots()));
+  const setPack = (v) => { saveGourmetPack(v); setPack0(v); };
   const prefs = [...new Set(GOURMET.map((d) => d.pref))];
   const got = GOURMET.filter((d) => seen[d.id]).length;
   const tierTot = GOURMET_DROP[1] + GOURMET_DROP[2] + GOURMET_DROP[3];
-  const pk = GOURMET.find((d) => d.id === pack && (have[d.id] || 0) > 0);
+  const inPack = (id) => pack.filter((x) => x === id).length;
   return (
     <div className="eq-sheet">
       <div className="eq-sheet-head">
@@ -85659,10 +94900,22 @@ function GourmetPanel({ lang, onClose }) {
         <span className="eq-slot-n">{t.have(got, GOURMET.length)}</span>
         <button type="button" className="adv-back" onClick={onClose}>{a.close}</button>
       </div>
-      {pk ? (
-        <p className="gm-pack">{t.packed}：<b>{lang === "ja" ? pk.name : pk.en}</b>（{t.eff(pk.eff, GOURMET_EFF_V[pk.tier])}）
-          <button type="button" className="adv-back" onClick={() => { saveGourmetPack(null); setPack(null); }}>{t.unpack}</button></p>
-      ) : <p className="gm-note">{t.packNote}</p>}
+      {/* ★ 持って行く枠。⚠️ 空きも枠として見せる（あと何品持てるか分かるように）。押すと外す */}
+      <div className="gm-slots">
+        <span className="gm-slots-t">{t.packed}<i>{t.slotN(pack.length, slots)}</i></span>
+        <div className="gm-slot-row">
+          {Array.from({ length: slots }, (_, i) => {
+            const d = GOURMET.find((x) => x.id === pack[i]);
+            return d ? (
+              <button key={i} type="button" className="gm-slot on" title={t.unpack}
+                onClick={() => setPack(pack.filter((_, j) => j !== i))}>
+                <b>{lang === "ja" ? d.name : d.en}</b><small>{t.eff(d.eff, GOURMET_EFF_V[d.tier])}</small><em>×</em>
+              </button>
+            ) : <span key={i} className="gm-slot">{t.slotEmpty}</span>;
+          })}
+        </div>
+        <p className="gm-note">{t.packNote}{slots < 1 + GOURMET_SLOT_AT.length ? t.slotMore(GOURMET_SLOT_AT.find((n) => n > (advProgress().conquered || 0))) : ""}</p>
+      </div>
       {!got && <p className="eq-empty">{t.none}</p>}
       {prefs.map((p) => (
         <div key={p}>
@@ -85673,10 +94926,10 @@ function GourmetPanel({ lang, onClose }) {
               <div className="mei-grid">
                 {GOURMET.filter((d) => d.pref === p && d.area === ar).map((d) => (
                   <div key={d.id} className="mei-cell">
-                    <GourmetCard d={d} lang={lang} count={have[d.id] || 0} seen={!!seen[d.id]} packed={pack === d.id} />
+                    <GourmetCard d={d} lang={lang} count={have[d.id] || 0} seen={!!seen[d.id]} packed={inPack(d.id) > 0} />
                     <span className="mei-odd">{t.odd(Math.round(GOURMET_DROP[d.tier] / tierTot * 100))}</span>
-                    {(have[d.id] || 0) > 0 && pack !== d.id && (
-                      <button type="button" className="adv-back gm-pack-btn" onClick={() => { saveGourmetPack(d.id); setPack(d.id); setHave(loadGourmet()); }}>{t.pack}</button>
+                    {(have[d.id] || 0) > inPack(d.id) && pack.length < slots && (
+                      <button type="button" className="adv-back gm-pack-btn" onClick={() => { const h = loadGourmet(); setHave(h); setPack(gourmetPackFit([...pack, d.id], h, slots)); }}>{t.pack}</button>
                     )}
                   </div>
                 ))}
@@ -86495,7 +95748,30 @@ function GlyphHealer() {
   );
 }
 
+/* 幸運の蜘蛛：銀の糸の巣に、金の小さな蜘蛛。⚠️ 怖くしない（丸い体・短い脚・目の光） */
+function GlyphSpider() {
+  const web = [0, 45, 90, 135, 180, 225, 270, 315];
+  return (
+    <g>
+      <ellipse cx="0" cy="4.6" rx="6" ry="1.7" fill={GlyphShadowFill} />
+      <g transform="translate(0,-2.4)">
+        {web.map((a) => <path key={a} d={`M0 0 L${(Math.cos(a * Math.PI / 180) * 7).toFixed(2)} ${(Math.sin(a * Math.PI / 180) * 6).toFixed(2)}`} stroke="#DDE6F2" strokeWidth="0.3" opacity="0.8" />)}
+        {[2.4, 4.4, 6.4].map((r) => <path key={r} d={web.map((a, i) => `${i ? "L" : "M"}${(Math.cos(a * Math.PI / 180) * r).toFixed(2)} ${(Math.sin(a * Math.PI / 180) * r * 0.86).toFixed(2)}`).join(" ") + " Z"} fill="none" stroke="#DDE6F2" strokeWidth="0.3" opacity="0.75" />)}
+        {[-1, 1].map((sgn) => [0, 1, 2, 3].map((j) => (
+          <path key={`${sgn}${j}`} d={`M${sgn * 1.2} ${-0.6 + j * 0.7} q${sgn * 1.8} ${-1.6 + j * 0.9} ${sgn * 3.2} ${-0.4 + j * 1.3}`} fill="none" stroke="#3A2A08" strokeWidth="0.55" strokeLinecap="round" />
+        )))}
+        <ellipse cx="0" cy="1.2" rx="2.2" ry="2.5" fill="#E8B830" stroke="#5A3A08" strokeWidth="0.45" />
+        <circle cx="0" cy="-1.6" r="1.4" fill="#F4CC50" stroke="#5A3A08" strokeWidth="0.4" />
+        <circle cx="-0.5" cy="-1.8" r="0.35" fill="#1A1208" /><circle cx="0.5" cy="-1.8" r="0.35" fill="#1A1208" />
+        <ellipse cx="-0.7" cy="0.4" rx="0.7" ry="0.9" fill="#FFF0B0" opacity="0.7" />
+      </g>
+      <path d={GlyphStar4(5.4, -8.2, 1.3)} fill="#FFF6C8" />
+    </g>
+  );
+}
+
 const ADV_GLYPH = {
+  spider: GlyphSpider,
   merchant: GlyphMerchant,
   challenge: GlyphChallenge,
   tunnel: GlyphTunnel,
@@ -86515,6 +95791,7 @@ const ADV_GLYPH = {
 
 /* 台の地の色（天面の基本色）。⚠️ 既存のマス（宝箱の金・お店の朱・雑魚の赤・回復の桃・井戸の青灰・イベントの紫…）と見分けが付くこと */
 const ADV_GLYPH_TILE = {
+  spider: [120, 132, 150],
   merchant: [52, 124, 116],
   challenge: [180, 56, 62],
   tunnel: [158, 118, 70],
@@ -86902,6 +96179,130 @@ function Glyph2Bow() {
   );
 }
 
+/* ★ 2026-10-10 Aki「酒場はまずい。剣は道場、棒は学校、聖杯は湧き水、貨幣は銀行」 */
+/* 道場：瓦屋根の木の道場。前で二本の刀が刃を合わせる（鍔迫り合い）。⚠️ 2026-10-10 Aki の指定で刀を交差させる（斜めの×。縦横の十字にはしない） */
+function Glyph2Dojo() {
+  const katana = (flip) => (
+    <g transform={flip ? "scale(-1,1)" : undefined}>
+      <path d="M-5.4 5.0 L-3.9 3.5" stroke="#1A1A22" strokeWidth="1.2" strokeLinecap="round" />
+      <path d="M-5.2 4.8 L-4.6 4.2 M-4.6 4.4 L-4.1 3.8" stroke="#C8303A" strokeWidth="0.5" />
+      <ellipse cx="-3.7" cy="3.3" rx="0.9" ry="0.45" transform="rotate(-45 -3.7 3.3)" fill="#E0B040" stroke="#5A3A08" strokeWidth="0.3" />
+      <path d="M-3.4 3.0 Q0.2 -0.6 3.6 -6.4 L3.9 -6.1 Q0.8 -0.2 -3.1 3.3 Z" fill="#E8EEF6" stroke="#4A5464" strokeWidth="0.3" />
+      <path d="M-2.9 2.6 Q0.4 -0.6 3.5 -5.9" stroke="#FFFFFF" strokeWidth="0.25" fill="none" opacity="0.8" />
+    </g>
+  );
+  return (
+    <g>
+      <ellipse cx="0" cy="4.6" rx="7.2" ry="1.8" fill={Glyph2ShadowFill} />
+      <path d="M-6.4 4.2 L-6.4 3.2 L6.4 3.2 L6.4 4.2 Q0 4.9 -6.4 4.2 Z" fill="#8A7A64" stroke="#2A2014" strokeWidth="0.45" />
+      <rect x="-5.6" y="-2.2" width="11.2" height="5.5" fill="#C89A5C" stroke="#3A2410" strokeWidth="0.45" />
+      <rect x="2.6" y="-2.2" width="3.0" height="5.5" fill="#9A6E3A" />
+      {[-5.0, -1.8, 1.8, 5.0].map((x) => <rect key={x} x={x - 0.4} y="-2.2" width="0.8" height="5.5" fill="#5A3818" />)}
+      <rect x="-1.6" y="-1.2" width="3.2" height="4.5" fill="#2A1A10" />
+      <path d="M-7.4 -2.0 Q0 -3.4 7.4 -2.0 L5.6 -6.0 Q0 -7.0 -5.6 -6.0 Z" fill="#3A3E4A" stroke="#14161C" strokeWidth="0.5" />
+      <path d="M-6.4 -3.2 Q0 -4.4 6.4 -3.2 M-5.9 -4.6 Q0 -5.7 5.9 -4.6" stroke="#5A6070" strokeWidth="0.35" fill="none" />
+      <path d="M-5.6 -6.0 Q0 -7.0 5.6 -6.0 L4.2 -7.8 Q0 -8.5 -4.2 -7.8 Z" fill="#4A4E5C" stroke="#14161C" strokeWidth="0.45" />
+      <path d="M-4.6 -7.9 Q-5.4 -8.8 -6.0 -8.6 M4.6 -7.9 Q5.4 -8.8 6.0 -8.6" stroke="#14161C" strokeWidth="0.6" fill="none" strokeLinecap="round" />
+      {/* 鍔迫り合い：二本の刀が上で刃を合わせる。火花 */}
+      {katana(false)}
+      {katana(true)}
+      <path d={GlyphStar4(0, -1.9, 1.5)} fill="#FFF4B0" />
+      <circle cx="0" cy="-1.9" r="0.5" fill="#FFFFFF" />
+    </g>
+  );
+}
+/* 魔法学校：尖り屋根の塔が三本並ぶ石の学び舎。窓に灯り、右に先の光る杖。⚠️ 塔の先は星（十字にしない） */
+function Glyph2School() {
+  return (
+    <g>
+      <ellipse cx="0" cy="4.6" rx="7.2" ry="1.8" fill={Glyph2ShadowFill} />
+      {/* 左右の塔 */}
+      {[-4.6, 3.0].map((x, i) => (
+        <g key={x}>
+          <rect x={x - 1.5} y="-3.0" width="3.0" height="7.2" fill={i ? "#8A86A0" : "#A8A4C0"} stroke="#2A2838" strokeWidth="0.4" />
+          <path d={`M${x - 1.9} -3.0 L${x} -7.6 L${x + 1.9} -3.0 Z`} fill="#5A3A9A" stroke="#1E1438" strokeWidth="0.4" />
+          <path d={`M${x} -7.6 L${x + 1.9} -3.0 L${x + 0.4} -3.0 Z`} fill="#3E2870" />
+          <path d={`M${x - 0.5} 0.2 L${x - 0.5} -1.2 Q${x} -1.8 ${x + 0.5} -1.2 L${x + 0.5} 0.2 Z`} fill="#FFD870" />
+        </g>
+      ))}
+      {/* 中央の大きな塔 */}
+      <rect x="-2.2" y="-4.2" width="4.4" height="8.4" fill="#B8B4D0" stroke="#2A2838" strokeWidth="0.45" />
+      <path d="M-2.7 -4.2 L0 -9.6 L2.7 -4.2 Z" fill="#6A44B0" stroke="#1E1438" strokeWidth="0.45" />
+      <path d="M0 -9.6 L2.7 -4.2 L0.6 -4.2 Z" fill="#4A3088" />
+      <path d={GlyphStar4(0, -9.6, 1.1)} fill="#FFE88A" />
+      <circle cx="0" cy="-2.4" r="1.0" fill="#FFE070" stroke="#6A4A08" strokeWidth="0.3" />
+      <path d="M-1.2 4.2 L-1.2 1.4 Q0 0.2 1.2 1.4 L1.2 4.2 Z" fill="#3A2A1A" stroke="#1A1008" strokeWidth="0.3" />
+      <path d="M-6.4 4.2 h12.0" stroke="#5A5670" strokeWidth="0.6" />
+      {/* 杖：右に立て掛け、先の玉が光る */}
+      <path d="M5.4 4.6 L6.8 -4.8" stroke="#7A4A20" strokeWidth="0.8" strokeLinecap="round" />
+      <path d="M6.6 -4.6 Q7.6 -5.4 7.2 -6.4 M6.9 -4.8 Q6.0 -5.6 6.4 -6.6" stroke="#7A4A20" strokeWidth="0.45" fill="none" strokeLinecap="round" />
+      <circle cx="6.85" cy="-5.9" r="1.4" fill="#8AD8FF" opacity="0.35" />
+      <circle cx="6.85" cy="-5.9" r="0.85" fill="#BDEBFF" stroke="#2A6A9A" strokeWidth="0.3" />
+    </g>
+  );
+}
+/* 湧き水：苔むした岩の間から湧く清水と、澄んだ小さな池 */
+function Glyph2Spring() {
+  return (
+    <g>
+      <ellipse cx="0" cy="4.6" rx="7.0" ry="1.8" fill={Glyph2ShadowFill} />
+      <ellipse cx="0.6" cy="2.6" rx="6.4" ry="2.2" fill="#5A6A58" stroke="#22281E" strokeWidth="0.45" />
+      <ellipse cx="0.6" cy="2.4" rx="5.4" ry="1.7" fill="#4AA8D8" />
+      <ellipse cx="-0.6" cy="2.0" rx="2.2" ry="0.45" fill="#D8F4FF" opacity="0.85" />
+      <ellipse cx="2.4" cy="2.8" rx="1.3" ry="0.4" fill="none" stroke="#BCE8FF" strokeWidth="0.35" />
+      <path d="M-6.8 1.8 Q-7.2 -3.8 -3.6 -6.2 Q-0.6 -7.8 1.2 -5.6 Q2.4 -3.6 0.6 -1.4 Q-1.2 0.6 -2.6 1.8 Z" fill="#7A7468" stroke="#2A2620" strokeWidth="0.45" />
+      <path d="M-3.6 -6.2 Q-0.6 -7.8 1.2 -5.6 Q-1.0 -6.2 -3.0 -5.0 Z" fill="#5CA04A" />
+      <path d="M-6.4 -1.0 Q-6.2 -3.4 -4.8 -4.6" stroke="#9A9284" strokeWidth="0.5" fill="none" />
+      <path d="M-0.6 -2.6 Q1.6 -2.4 2.0 0.2 Q2.2 1.4 1.6 2.0" stroke="#6AC8F0" strokeWidth="1.2" fill="none" strokeLinecap="round" />
+      <path d="M-0.6 -2.6 Q1.6 -2.4 2.0 0.2" stroke="#E8FAFF" strokeWidth="0.45" fill="none" strokeLinecap="round" />
+      {/* ★ 2026-10-10 Aki：右下に盃（聖杯のマスだと分かるように）。湧き水の雫が落ちる */}
+      <path d="M5.0 -4.4 Q5.8 -3.3 5.0 -2.8 Q4.2 -3.3 5.0 -4.4 Z" fill="#8AD8FF" stroke="#2A6A9A" strokeWidth="0.3" />
+      <g transform="translate(5.0,1.0)">
+        <ellipse cx="0" cy="3.6" rx="2.2" ry="0.55" fill="#000" opacity="0.3" />
+        <path d="M-1.8 3.4 L1.8 3.4 L1.2 2.6 L-1.2 2.6 Z" fill="#C8962A" stroke="#5A3A08" strokeWidth="0.35" />
+        <rect x="-0.35" y="0.6" width="0.7" height="2.1" fill="#D8A83A" stroke="#5A3A08" strokeWidth="0.3" />
+        <path d="M-2.6 -1.6 L2.6 -1.6 Q2.5 0.9 0 1.0 Q-2.5 0.9 -2.6 -1.6 Z" fill="#E8B840" stroke="#5A3A08" strokeWidth="0.4" />
+        <ellipse cx="0" cy="-1.6" rx="2.6" ry="0.6" fill="#F4CC50" stroke="#5A3A08" strokeWidth="0.35" />
+        <ellipse cx="0" cy="-1.55" rx="2.1" ry="0.42" fill="#6AC8F0" />
+        <path d="M-1.9 -1.0 Q-1.7 0.2 -0.8 0.6" stroke="#FFF0B0" strokeWidth="0.4" fill="none" opacity="0.8" />
+      </g>
+    </g>
+  );
+}
+/* 銀行：柱の並ぶ石造りの建物、破風に金貨の印。前に積まれた金貨（⚠️ 五芒星は描かない。丸の印だけ） */
+function Glyph2Bank() {
+  const stack = (x, y, n) => Array.from({ length: n }, (_, i) => (
+    <ellipse key={i} cx={x} cy={y - i * 0.62} rx="1.35" ry="0.5" fill={i === n - 1 ? "#FFD860" : "#E6AE34"} stroke="#5A3A08" strokeWidth="0.3" />
+  ));
+  return (
+    <g>
+      <ellipse cx="0" cy="4.6" rx="7.2" ry="1.8" fill={Glyph2ShadowFill} />
+      <path d="M-7.0 4.2 L-7.0 3.0 L7.0 3.0 L7.0 4.2 Q0 4.9 -7.0 4.2 Z" fill="#B8B0A0" stroke="#3A3428" strokeWidth="0.45" />
+      <rect x="-6.2" y="2.2" width="12.4" height="0.9" fill="#D8D0BE" stroke="#3A3428" strokeWidth="0.35" />
+      <rect x="-6.2" y="-3.0" width="12.4" height="0.9" fill="#D8D0BE" stroke="#3A3428" strokeWidth="0.35" />
+      {[-5.0, -2.5, 0, 2.5, 5.0].map((x, i) => (
+        <g key={x}>
+          <rect x={x - 0.75} y="-2.1" width="1.5" height="4.3" fill={i >= 3 ? "#C4BCA8" : "#ECE6D6"} stroke="#3A3428" strokeWidth="0.3" />
+          <path d={`M${x - 0.25} -1.9 v3.9`} stroke="#B0A894" strokeWidth="0.25" />
+        </g>
+      ))}
+      <path d="M-7.0 -3.0 L0 -7.6 L7.0 -3.0 Z" fill="#E4DCC8" stroke="#3A3428" strokeWidth="0.45" />
+      <path d="M-5.4 -3.5 L0 -6.9 L5.4 -3.5 Z" fill="#CFC6AE" />
+      <circle cx="0" cy="-4.6" r="1.4" fill="#F2C440" stroke="#6A4A08" strokeWidth="0.4" />
+      <circle cx="0" cy="-4.6" r="0.8" fill="none" stroke="#FFE88A" strokeWidth="0.3" />
+      {/* 前に積まれた金貨 */}
+      {stack(-4.6, 4.8, 4)}
+      {stack(-2.4, 5.2, 2)}
+      {stack(4.2, 4.9, 5)}
+      <g transform="translate(1.6,4.6) rotate(-20)">
+        <ellipse rx="1.3" ry="1.3" fill="#F2C440" stroke="#6A4A08" strokeWidth="0.35" />
+        <ellipse rx="0.8" ry="0.8" fill="none" stroke="#FFE88A" strokeWidth="0.3" />
+      </g>
+      <path d={GlyphStar4(5.8, -7.4, 1.2)} fill="#FFF0B0" />
+      <path d={GlyphStar4(-3.6, 1.6, 0.8)} fill="#FFF6C8" />
+    </g>
+  );
+}
 /* 闘技場：石のアーチが並ぶ円形の闘技場（小さく、正面から） */
 function Glyph2Arena() {
   const RX = 6.8;
@@ -87111,10 +96512,10 @@ const ADV_GLYPH2 = {
   spear: Glyph2Spear,
   axe: Glyph2Axe,
   bow: Glyph2Bow,
-  arena: Glyph2Arena,
-  tower: Glyph2Tower,
-  tavern: Glyph2Tavern,
-  market: Glyph2Market,
+  arena: Glyph2Dojo,
+  tower: Glyph2School,
+  tavern: Glyph2Spring,
+  market: Glyph2Bank,
   garden: Glyph2Garden,
 };
 
@@ -88671,6 +98072,14 @@ function AdventurePanel({ lang, items, onItem }) {
     spinsUsed … この探索で回した回数（入口と井戸）。mapCurse … イベントの封印（主戦まで続く）。
   */
   const [roul, setRoul] = useState(null);
+  const byKeyRef = useRef(null);
+  const usedNodesRef = useRef([]);
+  /* 四つ葉の引き直しの確認・幸運の蜘蛛の確認（2026-10-10）。⚠️ 出ているあいだは進まない（roulBusy） */
+  const [rerollAsk, setRerollAsk] = useState(null);
+  const [spiderAsk, setSpiderAsk] = useState(null);
+  /* ★ 装備 pickTwice：二つ目の選択の札（一つ目の効果が済んでから開く） */
+  const [pickAgain, setPickAgain] = useState(null);
+  const roulBusy = !!roul || !!rerollAsk || !!spiderAsk || !!pickAgain;
   const [spinsUsed, setSpinsUsed] = useState(0);
   const [mapCurse, setMapCurse] = useState({});
   /*
@@ -88702,17 +98111,26 @@ function AdventurePanel({ lang, items, onItem }) {
     ★ 最大HPが上がる料理は、今のHPも上限まで満たして出発する。
   */
   const eatPack = (m0) => {
-    const pid = loadGourmetPack();
-    const d = pid && GOURMET.find((x) => x.id === pid);
     const h = loadGourmet();
-    if (!d || !(h[pid] > 0)) return m0;
-    h[pid] -= 1; saveGourmet(h);
-    if (!h[pid]) saveGourmetPack(null);
-    const m = gourmetRunMod(d, m0);
+    const list = gourmetPackFit(loadGourmetPack(), h, gourmetSlots());
+    if (!list.length) return m0;
+    let m = m0;
+    const ate = [];
+    list.forEach((id) => {
+      const d = GOURMET.find((x) => x.id === id);
+      if (!d || !(h[id] > 0)) return;
+      h[id] -= 1;
+      m = gourmetRunMod(d, m);
+      ate.push(lang === "ja" ? d.name : d.en);
+    });
+    saveGourmet(h);
+    /* ⚠️ 並びは残す（在庫が尽きたものだけ外れる） */
+    saveGourmetPack(gourmetPackFit(list, h, gourmetSlots()));
     const GT = gourmetT(lang);
+    const up = (m.maxHp || 0) - (m0.maxHp || 0);
     setTimeout(() => {
-      setLog((l) => [...l, GT.ate(lang === "ja" ? d.name : d.en)]);
-      if (m.maxHp) setHp((v) => Math.round(v * (1 + m.maxHp)));
+      setLog((l) => [...l, ...ate.map((n) => GT.ate(n))]);
+      if (up > 0) setHp((v) => Math.round(v * (1 + m.maxHp) / (1 + (m0.maxHp || 0))));
     }, 0);
     return m;
   };
@@ -88902,6 +98320,8 @@ function AdventurePanel({ lang, items, onItem }) {
   const walkRef = useRef(null);
   /* ⚠️ 走り出したステージを覚えておく。同じ場面で二重に走らせない */
   const kickRef = useRef("");
+  /* ボス前の増幅ルーレットの送りの印（2026-10-10） */
+  const boostKickRef = useRef("");
   /* ★ 手動で一つ進める（advance）。盤のはじきから呼ぶので ref で持つ */
   const advanceRef = useRef(null);
   /* ★ 画面の型（SP／PC）。⚠️ 戦闘と同じ設定（LS_BT_LAYOUT）を共有する（2026-10-05 Aki） */
@@ -88951,6 +98371,23 @@ function AdventurePanel({ lang, items, onItem }) {
   const [cullAt, setCullAt] = useState(null);
   useEffect(() => () => timers.current.forEach(clearTimeout), []);
   /*
+    ⚠️⚠️ 2026-10-10 Aki「料理を獲得したときに、MAP選択画面まで進むと『閉じる』を押しても料理獲得画面が消えなくなり進行不能」。
+    ★ 手に入れた知らせ（料理・チケット・名産品）は、盤を離れたら必ず消す。残ったまま別の画面に重なると、
+      その画面の操作を塞ぐ。県・区分・名所が変わるたびに消す。
+  */
+  useEffect(() => { setGmGot(null); setTkGot(null); setMeiGot(null); }, [pref, area, stage]);
+  /* ★ 二つ目の選択の札。⚠️ 一つ目のルーレット・確認が全部済んでから開く */
+  useEffect(() => {
+    if (!pickAgain || roul || rerollAsk || spiderAsk) return undefined;
+    const id = Date.now();
+    const of = { id, nodeKey: pickAgain.nodeKey, nd: pickAgain.nd, opts: pickAgain.opts, chosen: null, second: true };
+    setPickAgain(null);
+    pickOfferRef.current = of;
+    setPickOffer(of);
+    setRoul({ id, pickPanel: true });
+    return undefined;
+  }, [pickAgain, roul, rerollAsk, spiderAsk]);
+  /*
     戦闘の画面へ寄せる。
     ⚠️⚠️ 早期 return より後ろにフックを置かないこと。描画ごとにフックの数が変わり、
       React が止まる（#310）。実際そうして落とした。
@@ -88973,7 +98410,34 @@ function AdventurePanel({ lang, items, onItem }) {
     */
     timers.current.push(setTimeout(() => {
       const el2 = battleRef.current;
-      if (el2) el2.scrollIntoView({ behavior: "smooth", block: "start" });
+      if (!el2) return;
+      /*
+        ★ 2026-10-10 Aki：下端が「4手動必殺の『発動』の文字がギリギリ見える」位置へ寄せる。
+        ⚠️ 必殺の欄が無い戦闘（描かれていない）は、従来どおり枠の上端へ寄せる。
+      */
+      const capBottom = () => {
+        const caps = el2.querySelectorAll ? el2.querySelectorAll(".bt-sp-cap") : [];
+        let bottom = 0;
+        for (const c of caps) { const r = c.getBoundingClientRect(); if (r.height > 0) bottom = Math.max(bottom, r.bottom); }
+        return bottom;
+      };
+      const bottom = capBottom();
+      if (bottom > 0 && typeof window !== "undefined") {
+        const y = Math.max(0, (window.scrollY || window.pageYOffset || 0) + bottom - (window.innerHeight || 0) + 6);
+        window.scrollTo({ top: y, behavior: "smooth" });
+        /*
+          ⚠️ 戦闘の画面は寄せている途中にも高さが変わる（敵や札が後から並ぶ）。
+            寄せ終わったころにもう一度測り、ずれていれば直す（小さなずれだけ。読んでいる途中に大きく飛ばさない）。
+        */
+        [900, 1900, 2900].forEach((wait) => timers.current.push(setTimeout(() => {
+          const b2 = capBottom();
+          if (!b2) return;
+          const d = b2 - (window.innerHeight || 0) + 6;
+          if (Math.abs(d) > 2 && Math.abs(d) < 160) window.scrollBy({ top: d, behavior: "smooth" });
+        }, wait)));
+      } else {
+        el2.scrollIntoView({ behavior: "smooth", block: "start" });
+      }
     }, 140));
     return undefined;
   });
@@ -89027,9 +98491,11 @@ function AdventurePanel({ lang, items, onItem }) {
   /* ⚠️ 開いている魔法・物理・必殺。開いていないもののマスは置かない（倍率が上がっても使えない） */
   const laneOpen = (() => { const pg = advProgress(); return { elems: pg.elems || [], phys: pg.physOpen || [], sp: pg.spOpen || [] }; })();
   const laneOpenKey = `${laneOpen.elems.join()}|${laneOpen.phys.join()}|${laneOpen.sp.join()}`;
-  const map = useMemo(() => (walking && pref ? buildLaneMap(pref, mapArea, seed, mapNo, laneReach, laneStar, laneOpen) : null),
+  /* ★ 装備 safePath（悪いマスの減少）。⚠️ 盤を作るときに一度だけ読む */
+  const laneSafe = (equipBonus(equippedGear()).safePath || 0) / 100;
+  const map = useMemo(() => (walking && pref ? buildLaneMap(pref, mapArea, seed, mapNo, laneReach, laneStar, laneOpen, laneSafe) : null),
   // eslint-disable-next-line react-hooks/exhaustive-deps
-  [walking, pref, mapArea, seed, mapNo, laneReach, laneStar, laneOpenKey]); // eslint-disable-line react-hooks/exhaustive-deps
+  [walking, pref, mapArea, seed, mapNo, laneReach, laneStar, laneOpenKey, laneSafe]); // eslint-disable-line react-hooks/exhaustive-deps
   /*
     【動かせる範囲】2026-09-29 Aki：「スクロールできる範囲を狭く」。
     ★ 道のあるマスの広がり＋少しの余白までしか視点を動かせない。その外は描かない（TerrainLayer の clip）。
@@ -89906,6 +99372,8 @@ function AdventurePanel({ lang, items, onItem }) {
   const LAST_COL = MAP_RINGS;
   const byKey = {};
   map.forEach((n) => { byKey[n.key] = n; });
+  byKeyRef.current = byKey;
+  usedNodesRef.current = usedNodes;
   /* ⚠️ 地図に無いキーを指していたら入口に戻す。ここを一箇所で決める */
   const cur = (at && byKey[at]) ? at : map[0].key;
   const node = byKey[cur];
@@ -89940,7 +99408,7 @@ function AdventurePanel({ lang, items, onItem }) {
   const wellPending = node.kind === "well" && node.wellMiss && !usedNodes.includes(node.key) && unexplored.length > 0;
   /* ⚠️ 黄金の道の最中は終わらせない（井戸に戻って回し直す） */
   /* ⚠️ 主のマスは先が無いが、戦う前は終わりにしない（戦闘の下に「旅はここまで」が出ていた） */
-  const over = !zako && !roul && !goldRun && (dead || (node.kind === "boss" && fought)
+  const over = !zako && !roulBusy && !goldRun && (dead || (node.kind === "boss" && fought)
     || (node.kind !== "boss" && !(node.next || []).length && !wellPending));
   /*
     ⚠️⚠️ 主のマスに着いたら、それ以上は絶対に動かさないこと。
@@ -90036,11 +99504,72 @@ function AdventurePanel({ lang, items, onItem }) {
       ⚠️ 2026-10-04 Aki「最大倍速のときはルーレットも一瞬で」。最大の速さでは、回さずに針の位置へ短く滑らせて止める。
       ★ 結果はすぐ反映し、盤は少しだけ残す（何が出たか目で拾える最短）。
     */
-    const fast = (advSpeedRef.current || 1) >= SPEED_STEPS[SPEED_STEPS.length - 1];
-    setRoul({ id: Date.now(), kind, opts, pick, icon: icon || null, title: title || null, fast });
-    timers.current.push(setTimeout(() => onDone(opts[pick]), fast ? 260 : ms(1700)));
-    /* ⚠️ 中身の一覧があるルーレットは読む時間を少し長く */
-    timers.current.push(setTimeout(() => setRoul(null), fast ? (opts.some((o) => o.desc) ? 750 : 520) : ms(opts.some((o) => o.desc) ? 2900 : 2300)));
+    /* ⚠️ ボス前の増幅は山場なので、最大の速さでも普通に回す（一瞬で終わると気づかない） */
+    const fast = kind !== "boost" && (advSpeedRef.current || 1) >= SPEED_STEPS[SPEED_STEPS.length - 1];
+    const rid = Date.now() + Math.random();
+    setRoul({ id: rid, kind, opts, pick, icon: icon || null, title: title || null, fast });
+    timers.current.push(setTimeout(() => finishRoul(kind, opts, opts[pick], onDone, icon, title), fast ? 260 : ms(1700)));
+    /* ⚠️ 中身の一覧があるルーレットは読む時間を少し長く。⚠️ 引き直しで次の盤が出ていたら消さない（id で確かめる） */
+    timers.current.push(setTimeout(() => setRoul((r) => (r && r.id === rid ? null : r)), fast ? (opts.some((o) => o.desc) ? 750 : 520) : ms(opts.some((o) => o.desc) ? 2900 : 2300)));
+  };
+  /*
+    出た目を確定する前に、四つ葉の引き直しを挟む（ADV_REROLL_KINDS の注）。
+    ★ 手動は「引き直す／このまま」を選ぶ。オートは期待値より低いときだけ引き直す。
+  */
+  const finishRoul = (kind, opts, o, onDone, icon, title) => {
+    const rr = runModRef.current.reroll || 0;
+    if (!(rr > 0) || ADV_REROLL_KINDS.indexOf(kind) < 0 || opts.length < 2) { onDone(o); return; }
+    const vals = opts.map((x) => advOptVal(kind, x));
+    const known = vals.every((v) => typeof v === "number" && !isNaN(v));
+    const tw = opts.reduce((x, y) => x + Math.max(0, y.w == null ? 1 : y.w), 0) || 1;
+    const ev = known ? opts.reduce((x, y, i) => x + vals[i] * Math.max(0, y.w == null ? 1 : y.w), 0) / tw : null;
+    const cur = advOptVal(kind, o);
+    const low = known && cur < ev - 1e-9;
+    const again = () => {
+      modRun((m) => ({ ...m, reroll: Math.max(0, (m.reroll || 0) - 1) }));
+      setLog((l) => [...l, a.sp.rerollLog(o.desc || o.label)]);
+      spinRoulette(kind, opts, onDone, icon, title);
+    };
+    if (autoRef.current) {
+      if (low) timers.current.push(setTimeout(again, ms(500)));
+      else onDone(o);
+      return;
+    }
+    setRerollAsk({ id: Date.now(), o, low,
+      go: () => { setRerollAsk(null); again(); },
+      keep: () => { setRerollAsk(null); onDone(o); } });
+  };
+  /*
+    幸運の蜘蛛（ADV_SPIDER_RATE の注）。悪い目のあるルーレットの前に挟む。
+    ★ 使うと悪い目を消して回す。悪い目しか無ければ回さずに終わる。良い目が一つだけなら回さずにそれ。
+  */
+  const spiderAutoUse = (k, opts) => {
+    if (k === "chain") return true;
+    if (k === "statue") return opts.some((o) => o.key === "cards");
+    if (k === "hoard") return runChestsAlive(runModRef.current.chests).length >= 3;
+    if (k === "event") return !Object.values(byKeyRef.current || {}).some((n) => n && n.kind === "chain" && !usedNodesRef.current.includes(n.key));
+    return false;
+  };
+  const guardBad = (k, kind, opts, onDone, icon, title) => {
+    const bad = opts.filter((o) => { const v = advOptVal(kind, o); return typeof v === "number" && v < 0; });
+    if (!((runModRef.current.spider || 0) > 0) || !bad.length) { spinRoulette(kind, opts, onDone, icon, title); return; }
+    const S = a.sp;
+    const nm = title || S.name[k] || k;
+    const use = () => {
+      modRun((m) => ({ ...m, spider: Math.max(0, (m.spider || 0) - 1) }));
+      const rest = opts.filter((o) => bad.indexOf(o) < 0);
+      if (!rest.length) { setLog((l) => [...l, S.spiderVoid(nm)]); return; }
+      setLog((l) => [...l, S.spiderUsed(nm)]);
+      if (rest.length === 1) { onDone(rest[0]); return; }
+      spinRoulette(kind, rest, onDone, icon, title);
+    };
+    if (autoRef.current) {
+      if (spiderAutoUse(k, opts)) use(); else spinRoulette(kind, opts, onDone, icon, title);
+      return;
+    }
+    setSpiderAsk({ id: Date.now(), name: nm, bad: bad.map((o) => o.desc || o.label),
+      use: () => { setSpiderAsk(null); use(); },
+      skip: () => { setSpiderAsk(null); spinRoulette(kind, opts, onDone, icon, title); } });
   };
   /*
     【特別なマス】2026-10-03。ADV_SPECIALS の注を参照。
@@ -90053,7 +99582,9 @@ function AdventurePanel({ lang, items, onItem }) {
   const modRun = (f) => { runModRef.current = f(runModRef.current); setRunMod(f); };
   /* ⚠️ 探索の中で拾う宝箱は必ずここを通す（闇商人・鍛冶屋・竜の巣・盗賊が対象にできるよう id を覚える） */
   const pushRunChest = (star, hi) => {
-    const ch = pushChest(Math.max(1, Math.min(12, star)), { pref, area }, seekBox(), hi || 0);
+    /* ★ 装備 chestUp：その確率で★+1 */
+    const up = Math.random() < (equipBonus(equippedGear()).chestUp || 0) / 100 ? 1 : 0;
+    const ch = pushChest(Math.max(1, Math.min(12, star + up)), { pref, area }, seekBox(), hi || 0);
     modRun((m) => ({ ...m, chests: [...(m.chests || []), ch.id] }));
     return ch;
   };
@@ -90261,9 +99792,12 @@ function AdventurePanel({ lang, items, onItem }) {
         const B = map.find((n) => n.kind === "boss");
         if (B) {
           directBonus(true);
-          setAt(B.key);
-          setVisited((v) => (v.includes(B.key) ? v : [...v, B.key]));
-          setSteps((n) => n + 1);
+          /* ⚠️ 2026-10-10：ボス前のマスを飛ばすので、増幅のルーレットをここで回してからボスへ */
+          timers.current.push(setTimeout(() => spinBoost(() => {
+            setAt(B.key);
+            setVisited((v) => (v.includes(B.key) ? v : [...v, B.key]));
+            setSteps((n) => n + 1);
+          }), ms(400)));
         }
       }
       if (key === "pass") {
@@ -90277,7 +99811,7 @@ function AdventurePanel({ lang, items, onItem }) {
           enterLane(bl.head);
         }
       }
-    } else if (k === "clover") { if (key === "plus") modRun((m) => ({ ...m, spins: (m.spins || 0) + 1 })); say(); }
+    } else if (k === "clover") { if (key === "plus") modRun((m) => ({ ...m, reroll: (m.reroll || 0) + 1 })); say(); }
     else if (k === "lost") { if (key === "minus") modRun((m) => ({ ...m, spins: (m.spins || 0) - 1 })); say(); }
     else if (k === "cannon") {
       const d = key === "hit8" ? 0.08 : key === "hit4" ? 0.04 : 0;
@@ -90319,22 +99853,91 @@ function AdventurePanel({ lang, items, onItem }) {
     } else say();
   };
   /* 数値のマスの「何が上がるか」の名前。⚠️ ルーレット（runSpecial）とピック（makePickOpts）で同じものを使う */
-  const numLab = (k, suNm) => {
+  /*
+    選択の札の短い名前（2026-10-10 Aki「一般的・抽象的・過不足ない情報」：「腐食耐性 大」「貨幣必殺効率 小」）。
+    ⚠️ 札には数値を書かない（大きさは 小・中・大・特大）。数値は選んだあとのルーレットで出す。
+  */
+  const pickLab = (k, suNm) => {
     const S = a.sp;
     const row = ADV_SPECIALS.find((x) => x.key === k) || {};
-    return row.allAttr ? S.allAttrLabel
-      : row.res ? `${S.resWhat[row.res]}${lang === "ja" ? "の耐性" : " resistance"}`
-      : k === "armorer" ? S.allResLabel
-      : row.attr ? S.attrOf(row.attr)
-      : row.suit ? S.chargeOf(suitLabel(row.suit, lang))
-      : row.heal ? S.healLabel
-      : (k === "fruit" || k === "kaki") ? S.maxHpLabel
-      : S.chargeOf(suNm);
+    return row.allAttr ? S.pl.allAttr
+      : row.res ? S.pl.res(S.pl.resNm[row.res] || row.res)
+      : k === "armorer" ? S.pl.allRes
+      : row.attr ? (PHYS_KEYS.indexOf(row.attr) >= 0 ? S.pl.phys(a.physName[row.attr] || row.attr) : S.pl.magic(a.attrShort[row.attr] || row.attr))
+      : row.suit ? S.pl.charge(suitLabel(row.suit, lang))
+      : row.heal ? S.pl.heal
+      : k === "kaki" ? S.pl.kaki
+      : k === "fruit" ? S.pl.maxHp
+      : S.pl.charge(suNm);
+  };
+  /* 代償の短い名前（種類と鍵から） */
+  const pickCostLab = (c) => {
+    const S = a.sp;
+    return c.type === "attr" ? (PHYS_KEYS.indexOf(c.key) >= 0 ? S.pl.phys(a.physName[c.key] || c.key) : S.pl.magic(a.attrShort[c.key] || c.key))
+      : c.type === "charge" ? S.pl.charge(suitLabel(c.key, lang))
+      : c.type === "res" ? S.pl.res(S.pl.resNm[c.key] || c.key)
+      : c.type === "heal" ? S.pl.heal : S.pl.maxHp;
+  };
+  /* ルーレットの目の名前。⚠️ 2026-10-10 Aki「ルーレットの文言もそろえて」→ 選択の札と同じ短い名前（「腐食耐性 +12%」） */
+  const numLab = (k, suNm) => pickLab(k, suNm);
+
+  /*
+    特別なマスのルーレットの目（2026-10-10 切り出し）。⚠️ 踏んだとき（runSpecial）と選択の札の説明（makePickOpts）で同じものを使う。
+    返り値 { opts } … 目の一覧。{ quiet } … 回さずに一言だけ（その key の文）。
+  */
+  const spOptsOf = (k, m, alive, su, descOf) => {
+    const S = a.sp;
+    const O = (key, w) => ({ key, w, label: S.opt[key] || key, desc: descOf[key] || (S.desc[k] || {})[key] || "" });
+    let opts = [];
+    if (k === "merchant") {
+      if (alive.length >= 1) opts.push(O("c1", 1));
+      if (alive.length >= 2) opts.push(O("c2", 1));
+      if (!m.bossSure) opts.push(O("sure", 1));
+      opts.push(O("none", 1));
+    } else if (k === "challenge") { if (m.bossSure) { return { quiet: "already" }; } opts = [O("sure", 1), O("none", 1)]; }
+    /* ⚠️ 2026-10-04 Aki「3%でボスマスそのものに飛ぶ」。重みは合計100（ボス3・抜ける49・行き止まり24・落盤24） */
+    else if (k === "tunnel") opts = [O("boss", 3), O("pass", 49), O("none", 24), O("cave", 24)];
+    else if (k === "clover") opts = [O("plus", 1), O("none", 1)];
+    else if (k === "lost") opts = [O("minus", 1), O("none", 1)];
+    else if (k === "cannon") {
+      if ((m.bossCut || 0) >= ADV_RUN_CAP.bossCut - 1e-9) { return { quiet: "cap" }; }
+      opts = [O("hit4", 2), O("hit8", 1), O("miss", 2)];
+    } else if (k === "anvil") { if (!alive.length) { return { quiet: "empty" }; } opts = [O("up1", 3), O("up2", 1), O("broke", 1)]; }
+    else if (k === "hoard") { if (!alive.length) { return { quiet: "empty" }; } opts = [O("dbl", 2), O("lose", 2), O("none", 1)]; }
+    else if (k === "thief") { if (alive.length) opts.push(O("steal", 2)); opts.push(O("escape", 2), O("drop", 1)); }
+    else if (k === "statue") {
+      opts = [O("maxhp", 1)];
+      /* ⚠️ 必殺ゲージが一本も開いていなければ「溜まり」の目は入れない */
+      if (su) opts.push(O("charge", 1));
+      /* ⚠️ 手札は3枚より減らさない。減らせない★では目に入れない */
+      if (!m.cards && ((BATTLE_SHAPE[laneStar] || {}).cards || 3) - 1 >= 3) opts.push(O("cards", 1));
+      opts.push(O("none", 1));
+    } else if (k === "fog") opts = [O("charge", 1), O("none", 1)];
+    else if (k === "chain") {
+      /* ⚠️ まだ封じられていない必殺が残っているときだけ封印の目を入れる */
+      const left = (laneOpen.sp.length ? laneOpen.sp : SP_SUITS).filter((x) => !(mapCurse.spSeal || []).includes(x));
+      const nMax = Math.min(4, left.length);
+      for (let n = 0; n <= nMax; n++) {
+        const all = n > 0 && n === nMax;
+        descOf[`n${n}`] = S.chainDesc(n, all);
+        opts.push({ key: `n${n}`, w: all ? ADV_CHAIN_W[4] : ADV_CHAIN_W[n], label: S.chainOpt(n, all), desc: descOf[`n${n}`] });
+      }
+    }
+    else if (k === "fruit") opts = [O("p10", 2), O("p5", 2), O("m5", 1)];
+    else if (k === "lake") opts = [O("c20", 1), O("c10", 2), O("none", 1)];
+    else if (k === "shufM" || k === "shufP") opts = [O("s1", 2), O("s2", 2), O("s3", 1)];
+    else if (k === "healer") {
+      if ((m.potHeal || 0) < ADV_RUN_CAP.potHeal - 1e-9) opts.push(O("heal5", 2));
+      opts.push(O("pot1", 1), O("none", 1));
+    }
+    return { opts };
   };
   const runSpecial = (nd) => {
     const k = nd.kind;
     /* ★ 選択の札は三択を開く（openPick） */
     if (k === "pick") { openPick(nd); return; }
+    /* ★ 幸運の蜘蛛（ADV_SPIDER_RATE の注）。回さずに一つ持つ */
+    if (k === "spider") { modRun((m0) => ({ ...m0, spider: (m0.spider || 0) + 1 })); setLog((l) => [...l, a.sp.spiderGot]); return; }
     const quietFood = () => setLog((l) => [...l, `【${a.sp.name[k]}】${a.sp.nothing}`]);
     const m = runModRef.current;
     const S = a.sp;
@@ -90345,9 +99948,9 @@ function AdventurePanel({ lang, items, onItem }) {
     const suNm = su ? suitLabel(su, lang) : "";
     const descOf = {};
     if (su) {
-      if (k === "lake") { descOf.c20 = S.pct(S.chargeOf(suNm), 20); descOf.c10 = S.pct(S.chargeOf(suNm), 10); }
-      if (k === "fog") descOf.charge = S.pct(S.chargeOf(suNm), -20);
-      if (k === "statue") descOf.charge = S.curse + S.pct(S.chargeOf(suNm), -25);
+      if (k === "lake") { descOf.c20 = S.pct(S.pl.charge(suNm), 20); descOf.c10 = S.pct(S.pl.charge(suNm), 10); }
+      if (k === "fog") descOf.charge = S.pct(S.pl.charge(suNm), -20);
+      if (k === "statue") descOf.charge = S.curse + S.pct(S.pl.charge(suNm), -25);
     }
     /*
       数値の目のマス（2026-10-04 Aki「ルーレットの数値をそれなりに細かく」）。
@@ -90361,7 +99964,7 @@ function AdventurePanel({ lang, items, onItem }) {
     if (row.food) {
       const GT = gourmetT(lang);
       const TW = ADV_FOOD_TIER_W[k] || { 1: 1 };
-      const local = GOURMET.filter((d) => d.pref === pref && d.area === area);
+      const local = GOURMET.filter((d) => d.pref === pref && d.area === gourmetArea(pref, area));
       const candOf = (tier) => {
         const l2 = local.filter((d) => d.tier === tier);
         const pool2 = l2.length ? l2 : GOURMET.filter((d) => d.tier === tier);
@@ -90395,7 +99998,7 @@ function AdventurePanel({ lang, items, onItem }) {
       const optsBr = Object.keys(ADV_BEAR_W).map((key) => ({ key, w: ADV_BEAR_W[key], label: S.bearOpt[key],
         desc: key === "hurt" ? S.bearDesc.hurt(hurtP) : S.bearDesc[key] }));
       const say2 = (txt) => setLog((l) => [...l, `【${S.name[k]}】${txt}`]);
-      spinRoulette("sp", optsBr, (o) => {
+      guardBad(k, "sp", optsBr, (o) => {
         if (o.key === "calm") { say2(S.bearDesc.calm); return; }
         if (o.key === "hurt") { setHp((v) => Math.max(1, Math.round(v * (1 - hurtP / 100)))); say2(S.bearDesc.hurt(hurtP)); return; }
         if (o.key === "fight") {
@@ -90416,9 +100019,10 @@ function AdventurePanel({ lang, items, onItem }) {
           say2(S.bearFood(d ? nm(d) : id));
           return;
         }
-        const pid = loadGourmetPack(), h2 = loadGourmet();
-        if (pid && h2[pid] > 0) {
-          h2[pid] -= 1; saveGourmet(h2); if (!h2[pid]) saveGourmetPack(null);
+        const h2 = loadGourmet();
+        const pid = loadGourmetPack().find((x) => h2[x] > 0);
+        if (pid) {
+          h2[pid] -= 1; saveGourmet(h2); saveGourmetPack(gourmetPackFit(loadGourmetPack(), h2, gourmetSlots()));
           const d = GOURMET.find((x) => x.id === pid);
           say2(S.bearFood(d ? nm(d) : pid));
           return;
@@ -90455,55 +100059,15 @@ function AdventurePanel({ lang, items, onItem }) {
       const lab = numLab(k, suNm);
       NUM.forEach(([p]) => { descOf[`v${p}`] = (p ? S.pct(lab, p) : S.nothing) + (k === "kaki" ? S.kakiPlus(ADV_KAKI_MAGIC) : ""); });
       const optsN = NUM.map(([p, w]) => ({ key: `v${p}`, w, label: p ? `${p > 0 ? "+" : "−"}${Math.abs(p)}` : (S.opt.none || "—"), desc: descOf[`v${p}`] }));
-      spinRoulette("sp", optsN, (o) => applySpecial(k, o.key, [], su, descOf), k, S.name[k]);
+      guardBad(k, "sp", optsN, (o) => applySpecial(k, o.key, [], su, descOf), k, S.name[k]);
       return;
     }
-    const O = (key, w) => ({ key, w, label: S.opt[key] || key, desc: descOf[key] || (S.desc[k] || {})[key] || "" });
     const quiet = (key) => setLog((l) => [...l, `【${S.name[k]}】${(S.desc[k] || {})[key] || ""}`]);
-    let opts = [];
-    if (k === "merchant") {
-      if (alive.length >= 1) opts.push(O("c1", 1));
-      if (alive.length >= 2) opts.push(O("c2", 1));
-      if (!m.bossSure) opts.push(O("sure", 1));
-      opts.push(O("none", 1));
-    } else if (k === "challenge") { if (m.bossSure) { quiet("already"); return; } opts = [O("sure", 1), O("none", 1)]; }
-    /* ⚠️ 2026-10-04 Aki「3%でボスマスそのものに飛ぶ」。重みは合計100（ボス3・抜ける49・行き止まり24・落盤24） */
-    else if (k === "tunnel") opts = [O("boss", 3), O("pass", 49), O("none", 24), O("cave", 24)];
-    else if (k === "clover") opts = [O("plus", 1), O("none", 1)];
-    else if (k === "lost") opts = [O("minus", 1), O("none", 1)];
-    else if (k === "cannon") {
-      if ((m.bossCut || 0) >= ADV_RUN_CAP.bossCut - 1e-9) { quiet("cap"); return; }
-      opts = [O("hit4", 2), O("hit8", 1), O("miss", 2)];
-    } else if (k === "anvil") { if (!alive.length) { quiet("empty"); return; } opts = [O("up1", 3), O("up2", 1), O("broke", 1)]; }
-    else if (k === "hoard") { if (!alive.length) { quiet("empty"); return; } opts = [O("dbl", 2), O("lose", 2), O("none", 1)]; }
-    else if (k === "thief") { if (alive.length) opts.push(O("steal", 2)); opts.push(O("escape", 2), O("drop", 1)); }
-    else if (k === "statue") {
-      opts = [O("maxhp", 1)];
-      /* ⚠️ 必殺ゲージが一本も開いていなければ「溜まり」の目は入れない */
-      if (su) opts.push(O("charge", 1));
-      /* ⚠️ 手札は3枚より減らさない。減らせない★では目に入れない */
-      if (!m.cards && ((BATTLE_SHAPE[laneStar] || {}).cards || 3) - 1 >= 3) opts.push(O("cards", 1));
-      opts.push(O("none", 1));
-    } else if (k === "fog") opts = [O("charge", 1), O("none", 1)];
-    else if (k === "chain") {
-      /* ⚠️ まだ封じられていない必殺が残っているときだけ封印の目を入れる */
-      const left = (laneOpen.sp.length ? laneOpen.sp : SP_SUITS).filter((x) => !(mapCurse.spSeal || []).includes(x));
-      const nMax = Math.min(4, left.length);
-      for (let n = 0; n <= nMax; n++) {
-        const all = n > 0 && n === nMax;
-        descOf[`n${n}`] = S.chainDesc(n, all);
-        opts.push({ key: `n${n}`, w: all ? ADV_CHAIN_W[4] : ADV_CHAIN_W[n], label: S.chainOpt(n, all), desc: descOf[`n${n}`] });
-      }
-    }
-    else if (k === "fruit") opts = [O("p10", 2), O("p5", 2), O("m5", 1)];
-    else if (k === "lake") opts = [O("c20", 1), O("c10", 2), O("none", 1)];
-    else if (k === "shufM" || k === "shufP") opts = [O("s1", 2), O("s2", 2), O("s3", 1)];
-    else if (k === "healer") {
-      if ((m.potHeal || 0) < ADV_RUN_CAP.potHeal - 1e-9) opts.push(O("heal5", 2));
-      opts.push(O("pot1", 1), O("none", 1));
-    }
+    const so = spOptsOf(k, m, alive, su, descOf);
+    if (so.quiet) { quiet(so.quiet); return; }
+    const opts = so.opts;
     if (!opts.length) return;
-    spinRoulette("sp", opts, (o) => applySpecial(k, o.key, alive, su, descOf), k, S.name[k]);
+    guardBad(k, "sp", opts, (o) => applySpecial(k, o.key, alive, su, descOf), k, S.name[k]);
   };
   /*
     ★ ピックの三択を作る（ADV_PICK_NONPICK の注）。
@@ -90518,6 +100082,8 @@ function AdventurePanel({ lang, items, onItem }) {
       || (m.heal || 0) < -0.0049 || (m.maxHp || 0) < -0.0049 || (m.cards || 0) < 0 || (m.spins || 0) < 0 || (m.bossUp || 0) > 0
       || (mapCurse.spSeal || []).length > 0 || !!mapCurse.elem || !!mapCurse.noSp;
     const op = laneOpen;
+    /* 装備（札の段の上振れ・代償の消去） */
+    const eqbP = equipBonus(equippedGear());
     const pool = ADV_SPECIALS.filter((x) => advPickable(x.key) && x.from <= laneStar && (!x.cap || (used[x.key] || 0) < x.cap)
       && !(x.food && m.pkFood)
       && !(x.attr && op.elems.concat(op.phys).indexOf(x.attr) < 0)
@@ -90539,7 +100105,7 @@ function AdventurePanel({ lang, items, onItem }) {
     return out.map((x) => {
       const vals = advPickVals(x.key);
       if (vals) {
-        const tier = advPickRollTier();
+        const tier = advPickRollTier(Math.random, eqbP.pickTier || 0);
         const p = vals[tier - 1];
         const su = x.key === "lake" ? pickSuit() : null;
         const lab = numLab(x.key, su ? suitLabel(su, lang) : "");
@@ -90565,8 +100131,8 @@ function AdventurePanel({ lang, items, onItem }) {
           else if (x.key === "fruit" || x.key === "kaki") { tp = "heal"; key = "heal"; }
           if (tp) {
             const v = ADV_PICK_COST_V[tp][tier];
-            const cLab = tp === "attr" ? S.attrOf(key) : tp === "charge" ? S.chargeOf(suitLabel(key, lang))
-              : tp === "res" ? `${S.resWhat[key]}${lang === "ja" ? "の耐性" : " resistance"}` : tp === "heal" ? S.healLabel : S.maxHpLabel;
+            /* ⚠️ 2026-10-10：代償の名前も札・ルーレットと同じ短い名前 */
+            const cLab = pickCostLab({ type: tp, key });
             const c = { type: tp, key, v, text: S.pct(cLab, -v) };
             pv = Math.round(p * ADV_PICK_COST_BOOST);
             /* ⚠️ 正味がプラスになるように。代償の点がプラスの5割を超えるなら代償を小さくする（1まで）。それでも超えるなら付けない */
@@ -90574,20 +100140,41 @@ function AdventurePanel({ lang, items, onItem }) {
             while (c.v > 1 && advPickCostScore(c, m, op) > plusSc * 0.5) c.v -= 1;
             c.text = S.pct(cLab, -c.v);
             if (advPickCostScore(c, m, op) <= plusSc * 0.5) cost = c; else pv = p;
+            /* ★ 装備 noCost：その確率で代償だけ消える（上乗せ ×1.3 は残る） */
+            if (cost && Math.random() < (eqbP.noCost || 0) / 100) cost = null;
           }
         }
         const band = advPickBand(pv);
-        const eff = `${lab} +${band[0]}${lang === "ja" ? "〜" : "–"}${band[2]}%` + (x.key === "kaki" ? S.kakiPlus(ADV_KAKI_MAGIC) : "");
+        /* ★ 2026-10-10 Aki：札は「腐食耐性 大」の形（数値は書かない） */
+        const eff = `${pickLab(x.key, su ? suitLabel(su, lang) : "")} ${S.pl.size[tier]}`;
+        /* ⚠️ 代償は「代償：瘴気耐性 小」の形。大きさは札の段の一つ下（最低は小） */
+        if (cost) cost.short = `${pickCostLab(cost)} ${S.pl.size[Math.max(1, Math.min(4, tier - 1))]}`;
         return { kind: x.key, num: true, tier, p: pv, su, eff, band, lab, cost };
       }
-      return { kind: x.key, num: false, tier: 0, eff: S.pickGamble };
+      /*
+        ⚠️⚠️ 2026-10-10 Aki「マス効果の説明がほとんど『ルーレットで決まる』になっているのは致命的」。
+        ★ 賭けのマスも、目と確率を書く（踏んだときと同じ目 ＝ spOptsOf）。
+      */
+      /* ★ 2026-10-10 Aki：悪い面は赤で代償として書く（挑戦状のボスの最大HP上昇）。⚠️ 表示だけ（効果は踏んだときのマスの処理が持つ） */
+      return { kind: x.key, num: false, tier: 0, eff: gambleText(x), costShow: S.pl.gambleCost[x.key] || null };
     });
+  };
+  /*
+    賭けのマスの札の説明。⚠️ 2026-10-10 Aki「一般的・抽象的・過不足ない情報」（例「ボスの最大HP減少効果」）。
+    ★ 何に効くマスかだけを書く。目と確率は踏んだときのルーレットに出る。
+  */
+  const gambleText = (x) => {
+    const S = a.sp;
+    if (x.food) return S.pl.gamble.food;
+    return S.pl.gamble[x.key] || S.pickGamble;
   };
   const openPick = (nd) => {
     const opts = makePickOpts();
     if (!opts.length) { setLog((l) => [...l, `【${a.sp.name.pick}】${a.sp.pickNone}`]); return; }
     const id = Date.now();
-    const of = { id, nodeKey: nd.key, nd, opts, chosen: null };
+    /* ★ 装備 pickTwice：その確率で二つ選べる */
+    const twice = opts.length >= 2 && Math.random() < (equipBonus(equippedGear()).pickTwice || 0) / 100;
+    const of = { id, nodeKey: nd.key, nd, opts, chosen: null, twice };
     pickOfferRef.current = of;
     setPickOffer(of);
     /* ⚠️ 開いているあいだは進まない（ルーレットと同じ扱い。盤の上の印だけ立てる） */
@@ -90605,6 +100192,7 @@ function AdventurePanel({ lang, items, onItem }) {
       pickOfferRef.current = null;
       setPickOffer(null);
       setRoul(null);
+      if (of.twice && !of.second) setPickAgain({ nd: of.nd, nodeKey: of.nodeKey, opts: of.opts.filter((_, j) => j !== i) });
       const isFood = !!(ADV_SPECIALS.find((x) => x.key === o.kind) || {}).food;
       modRun((m) => ({ ...m,
         pkUsed: { ...(m.pkUsed || {}), [o.kind]: ((m.pkUsed || {})[o.kind] || 0) + 1 },
@@ -90646,12 +100234,79 @@ function AdventurePanel({ lang, items, onItem }) {
   };
   const toBossHere = nexts.some((n) => n.kind === "boss");
   /*
+    ★ 2026-10-10 Aki「ボス前のマスでは、現在のすべてのマスバフに倍率がかかるルーレットを回す」。
+    ★ 着いたら一度だけ自動で回る（オートでも手動でも）。チケット・札はそのあと。
+    ⚠️ 掛けるのは「良い向き」の値だけ（代償のマイナスは増やさない）。枠（cards）・回数（spins）・箱・ボス確定は対象外。
+  */
+  /*
+    ボス前の増幅のルーレット（ADV_BOOST_OPTS）。andThen … 回し終えたあとに続けること（抜け穴の大当たりでボスへ飛ぶとき）。
+    ⚠️ 一つの探索で一度（runMod.boost）。
+  */
+  const spinBoost = (andThen) => {
+    if (runModRef.current.boost) { if (andThen) andThen(); return; }
+      const S = a.sp;
+      /*
+        ★ 装備 boostUp：各目の「上乗せ分」（倍率−1）を (1＋値%) 倍する。
+        ⚠️ 2026-10-10 Aki「しょぼくない？」→ 足し算をやめた。×2.0 の目がいちばん伸びる。
+      */
+      const bu = (equipBonus(equippedGear()).boostUp || 0) / 100;
+      const kOf = (k0) => Math.round((1 + (k0 - 1) * (1 + bu)) * 1000) / 1000;
+      let opts = ADV_BOOST_OPTS.map((o) => ({ key: `x${kOf(o.k)}`, w: o.w, label: `×${kOf(o.k)}`, desc: S.boostDesc(kOf(o.k)) }));
+      /* ★ 幸運の蜘蛛が残っていたら、最低の目を外す（ここで消費） */
+      if ((runModRef.current.spider || 0) > 0) {
+        const lo = kOf(Math.min(...ADV_BOOST_OPTS.map((o) => o.k)));
+        opts = opts.filter((o) => o.key !== `x${lo}`);
+        modRun((m) => ({ ...m, spider: Math.max(0, (m.spider || 0) - 1) }));
+        setLog((l) => [...l, S.spiderBoost(lo)]);
+      }
+      spinRoulette("boost", opts, (o) => {
+        const k = parseFloat(o.key.slice(1)) || 1;
+        const up = (v) => (typeof v === "number" && v > 0 ? v * k : v);
+        const upObj = (ob) => Object.fromEntries(Object.entries(ob || {}).map(([k2, v]) => [k2, up(v)]));
+        /*
+          ⚠️ 属性・耐性には、レアなマスの「全」の分（rare）が混ざっている。
+            値ごと掛けると、表示の「全」を引いた残り（代償のマイナス）まで動いてしまう。
+            「全」の分と、残りの分を別々に掛ける（マイナスはそのまま）。
+        */
+        const upMixed = (ob, baseOf) => Object.fromEntries(Object.entries(ob || {}).map(([k2, v]) => {
+          const b0 = baseOf(k2);
+          return [k2, up(b0) + up((v || 0) - b0)];
+        }));
+        const m0 = runModRef.current;
+        const before = runMaxOf(m0);
+        modRun((m) => {
+          const rr = m.rare || {};
+          const rA = (k2) => (rr.attr || 0) + (PHYS_KEYS.indexOf(k2) < 0 ? (rr.magic || 0) : 0);
+          return { ...m, boost: k,
+            maxHp: up(m.maxHp || 0), heal: up(m.heal || 0), potHeal: up(m.potHeal || 0), bossCut: up(m.bossCut || 0),
+            attr: upMixed(m.attr, rA), charge: upObj(m.charge), res: upMixed(m.res, () => rr.res || 0), rare: upObj(m.rare) };
+        });
+        const after = runMaxOf(runModRef.current);
+        if (after > before) setHp((v) => (v <= 0 ? v : Math.min(after, v + (after - before))));
+        setLog((l) => [...l, S.boostLog(k)]);
+        if (andThen) andThen();
+      }, null, S.boostTitle);
+  };
+  const boostPending = toBossHere && !runMod.boost;
+  if (boostPending && !over && !busy && !roulBusy && phase === "idle") {
+    const mark = `boost:${walking}:${seed}:${at}`;
+    if (boostKickRef.current !== mark) {
+      boostKickRef.current = mark;
+      timers.current.push(setTimeout(() => {
+        if (runModRef.current.boost) return;
+        /* ⚠️ 動いている最中なら、印を戻して次の描画でもう一度試す（戻さないと二度と回らない） */
+        if (phaseRef.current !== "idle") { boostKickRef.current = ""; return; }
+        spinBoost(null);
+      }, ms(500)));
+    }
+  }
+  /*
     主の前のチケット（2026-10-05 Aki「オート中は、チケット使いますかを適切な時間待つと、オートが再開される」）。
     ★ 使えるチケットがあれば、オートでも札を出す前に一度止めて聞く。AutoCount が数え終えたら使わずに進む。
     ⚠️ チケットを回しているあいだ（tkRoll）も止める。
   */
   const tkAsk = !runMod.bossSure && TICKET_KINDS.some((k2) => tickets[k2] > 0 && !(runMod.tkUsed || []).includes(k2));
-  const tkHold = toBossHere && (!!tkRoll || (tkAsk && tkSkip !== `${walking}:${seed}:${at}`));
+  const tkHold = toBossHere && (boostPending || !!tkRoll || (tkAsk && tkSkip !== `${walking}:${seed}:${at}`));
   /* ⚠️ 歩いたあとの自動の送り（タイマーの中）からも見えるように写しておく */
   tkHoldRef.current = tkHold;
   /* その探索のあいだ効いている変化の札（盤の左上）。⚠️ 良いものは緑、悪いものは赤 */
@@ -90701,6 +100356,9 @@ function AdventurePanel({ lang, items, onItem }) {
     if (m.bossUp) out.push({ t: C.bossUp(Math.round(m.bossUp * 100)), good: false });
     /* ⚠️ ボス確定は挑戦状・闇商人・チケットで付く珍しい効果。黄色 */
     if (m.bossSure) out.push({ t: C.bossSure, good: true, rare: true });
+    /* ★ 持ち物（四つ葉の引き直し・幸運の蜘蛛）。黄色 */
+    if (m.reroll > 0) out.push({ t: C.reroll(m.reroll), good: true, rare: true });
+    if (m.spider > 0) out.push({ t: C.spider, good: true, rare: true });
     return out;
   })();
   /*
@@ -90735,7 +100393,7 @@ function AdventurePanel({ lang, items, onItem }) {
           commit(null, o.key);
         });
   };
-  const forkReady = !over && !busy && !atBoss && !roul && phase === "idle" && !pool && nexts.length >= 2 && !toBossHere;
+  const forkReady = !over && !busy && !atBoss && !roulBusy && phase === "idle" && !pool && nexts.length >= 2 && !toBossHere;
   if (autoRef.current && forkReady) {
     if (kickRef.current !== forkMark) {
       kickRef.current = forkMark;
@@ -90777,14 +100435,14 @@ function AdventurePanel({ lang, items, onItem }) {
           enterLane(o.key);
         });
   };
-  const wellReady = !busy && !roul && !goldRun && phase === "idle" && !pool && wellPending;
+  const wellReady = !busy && !roulBusy && !goldRun && phase === "idle" && !pool && wellPending;
   if (autoRef.current && wellReady) {
     if (kickRef.current !== wellMark) {
       kickRef.current = wellMark;
       timers.current.push(setTimeout(() => { if (autoRef.current) runWell(); }, ms(700)));
     }
   }
-  const oneReady = !over && !busy && !atBoss && !roul && phase === "idle" && !pool && nexts.length === 1;
+  const oneReady = !over && !busy && !atBoss && !roulBusy && phase === "idle" && !pool && nexts.length === 1;
   if (autoRef.current && oneReady) {
     const mark = oneMark;
     if (kickRef.current !== mark) {
@@ -90891,7 +100549,7 @@ function AdventurePanel({ lang, items, onItem }) {
     ⚠️ 送りの印（kickRef）も立てる。あとでオートを入れたとき、同じ場面で二重に動かさない。
   */
   const stepKind = wellReady ? "well" : forkReady ? "fork" : oneReady ? "walk"
-    : (!over && !busy && !roul && !tkRoll && phase === "idle" && !pool && nexts.length >= 2 && toBossHere) ? "deal" : null;
+    : (!over && !busy && !roulBusy && !tkRoll && phase === "idle" && !pool && nexts.length >= 2 && toBossHere && !boostPending) ? "deal" : null;
   const advance = () => {
     if (goingRef.current || phaseRef.current !== "idle") return;
     if (stepKind === "well") { kickRef.current = wellMark; runWell(); }
@@ -91040,7 +100698,7 @@ function AdventurePanel({ lang, items, onItem }) {
             ⚠️ 封印は主を倒すまで（この探索のあいだ）続く。雑魚戦にも主戦にも掛かる。
           */
           setUsedNodes((v) => [...v, nd.key]);
-          spinRoulette("event", EVENT_FX.map((e) => ({ key: e.key, w: e.w, label: a.evName[e.key] })), (o) => {
+          guardBad("event", "event", EVENT_FX.map((e) => ({ key: e.key, w: e.w, label: a.evName[e.key] })), (o) => {
             const mx = runMaxOf(runModRef.current);
             if (o.key === "hp") { const d = Math.round(mx * 0.15); setHp((v) => Math.max(1, v - d)); setLog((l) => [...l, a.evLog.hp(d)]); }
             else if (o.key === "pot") { setCarryPot((v) => Math.max(0, v - 1)); setLog((l) => [...l, a.evLog.pot]); }
@@ -91255,6 +100913,8 @@ function AdventurePanel({ lang, items, onItem }) {
     setUsedNodes([]); setCarryMult(1); setCarrySp(null); setCarryPot(advProgress().potStart);
     setRoul(null); setSpinsUsed(0); setMapCurse({});
     setRunMod(eatPack(advRun0())); setZakoKind(null); zakoKindRef.current = null; setGoldRun(null);
+    /* ⚠️ 知らせも消す（前の回の料理の知らせが残ると、次の回の操作を塞ぐ） */
+    setGmGot(null); setTkGot(null); setMeiGot(null);
   };
   return (
     <div className="adv-wrap">
@@ -91404,7 +101064,7 @@ function AdventurePanel({ lang, items, onItem }) {
       {pickOffer && (
         <div className="adv-pick" aria-live="polite">
           <div className="adv-pick-in">
-            <b className="adv-pick-t">{a.sp.pickTitle}</b>
+            <b className="adv-pick-t">{pickOffer.second ? a.sp.pickTitle2 : pickOffer.twice ? a.sp.pickTitleTwice : a.sp.pickTitle}</b>
             <div className="adv-pick-row">
               {pickOffer.opts.map((o, i) => {
                 const Gl = ADV_GLYPH[o.kind];
@@ -91415,7 +101075,7 @@ function AdventurePanel({ lang, items, onItem }) {
                     <svg viewBox="-10 -11 20 18" aria-hidden="true">{Gl && <Gl />}</svg>
                     <span className="adv-pick-nm">{a.sp.name[o.kind] || o.kind}</span>
                     <span className="adv-pick-eff">{o.eff}</span>
-                    {o.cost && <span className="adv-pick-cost">{a.sp.pickCost}：{o.cost.text}</span>}
+                    {(o.cost || o.costShow) && <span className="adv-pick-cost">{a.sp.pickCost}：{o.cost ? (o.cost.short || o.cost.text) : o.costShow}</span>}
                     <span className="adv-pick-tier">{o.num ? a.sp.pickTier[o.tier] : a.sp.pickBet}</span>
                   </button>
                 );
@@ -91582,7 +101242,7 @@ function AdventurePanel({ lang, items, onItem }) {
       {/*
         ボスチケット（2026-10-04）。⚠️ 手で進めているときだけ（オートでは出さない）。ボス確定ならもう要らないので出さない。
       */}
-      {!over && !busy && !roul && phase === "idle" && nexts.length >= 2 && toBossHere && tkAsk && (() => {
+      {!over && !busy && !roulBusy && phase === "idle" && nexts.length >= 2 && toBossHere && !boostPending && tkAsk && (() => {
         const TK = ticketT(lang);
         const goNow = Math.min(1, goForReach(diffOf(rank, mapNo).reach) * laneReachComp(laneStar));
         return (
@@ -91614,11 +101274,11 @@ function AdventurePanel({ lang, items, onItem }) {
         </div>
       )}
       {gmGot && (
-        <div className="mei-pop" key={gmGot.id} onClick={() => setGmGot(null)}>
+        <div className="mei-pop" key={gmGot.id} onClick={() => setGmGot(null)} onPointerUp={(e) => { if (e.target === e.currentTarget) setGmGot(null); }}>
           <div className="mei-pop-in" onClick={(e) => e.stopPropagation()}>
             <span className="mei-pop-tag">{gmGot.fresh ? a.meiFirst : gourmetT(lang).got}</span>
             <GourmetCard d={gmGot.d} lang={lang} big count={gmGot.count} seen />
-            <button type="button" className="adv-back win" onClick={() => setGmGot(null)}>{a.close}</button>
+            <button type="button" className="adv-back win" onPointerUp={(e) => { e.stopPropagation(); setGmGot(null); }} onClick={(e) => { e.stopPropagation(); setGmGot(null); }}>{a.close}</button>
           </div>
         </div>
       )}
@@ -91631,7 +101291,29 @@ function AdventurePanel({ lang, items, onItem }) {
           </div>
         </div>
       )}
-      {!over && !busy && !roul && !tkRoll && phase === "idle" && nexts.length >= 2 && toBossHere && (
+      {/* ★ 四つ葉の引き直し（手動のときだけ。オートは期待値で決める） */}
+      {rerollAsk && (
+        <div className="adv-tk adv-ask" key={rerollAsk.id}>
+          <p className="adv-tk-t">{a.sp.rerollTitle((runMod.reroll || 0))}</p>
+          <p className="adv-tk-lead">{a.sp.rerollGot(rerollAsk.o.desc || rerollAsk.o.label)}{rerollAsk.low ? a.sp.rerollLow : ""}</p>
+          <div className="adv-ask-row">
+            <button type="button" className="draw-btn adv-go" onClick={rerollAsk.go}><span className="adv-go-shine" />{a.sp.rerollGo}</button>
+            <button type="button" className="adv-back" onClick={rerollAsk.keep}>{a.sp.rerollKeep}</button>
+          </div>
+        </div>
+      )}
+      {/* ★ 幸運の蜘蛛（手動のときだけ。オートは致命的なマスでだけ使う） */}
+      {spiderAsk && (
+        <div className="adv-tk adv-ask" key={spiderAsk.id}>
+          <p className="adv-tk-t">{a.sp.spiderTitle(spiderAsk.name)}</p>
+          <p className="adv-tk-lead">{a.sp.spiderLead(spiderAsk.bad)}</p>
+          <div className="adv-ask-row">
+            <button type="button" className="draw-btn adv-go" onClick={spiderAsk.use}><span className="adv-go-shine" />{a.sp.spiderGo}</button>
+            <button type="button" className="adv-back" onClick={spiderAsk.skip}>{a.sp.spiderKeep}</button>
+          </div>
+        </div>
+      )}
+      {!over && !busy && !roulBusy && !tkRoll && phase === "idle" && nexts.length >= 2 && toBossHere && !boostPending && (
         <div className="adv-act">
           <p className="adv-need">{t.advNeed(need)}</p>
           <button className="draw-btn adv-go" onClick={() => deal(auto)}>
@@ -91739,6 +101421,15 @@ function AdventurePanel({ lang, items, onItem }) {
               const ch = pushRunChest(laneStar + (zk === "higuma" ? 3 : 2));
               setLog((l) => [...l, a.zkWin[zk] + chestText(ch)]);
               grantTicket(TICKET_DROP.special, laneStar);
+            } else if (win) {
+              /*
+                ★ 2026-10-10 Aki「マス敵を倒したら必ず宝箱がドロップ（レア度は違う）」。
+                ★ 普通の敵は土地の★の前後で揺らす（ZAKO_BOX_W：−1／±0／+1）。特別な敵は今までどおり★+2〜3。
+              */
+              let r = Math.random() * ZAKO_BOX_W.reduce((v, x) => v + x, 0), d = -1;
+              for (let j = 0; j < ZAKO_BOX_W.length; j++) { if ((r -= ZAKO_BOX_W[j]) < 0) { d = j - 1; break; } }
+              const ch = pushRunChest(Math.max(1, laneStar + d));
+              setLog((l) => [...l, chestText(ch)]);
             }
             if (leftSp) setCarrySp(leftSp);
             if (leftPot != null) setCarryPot(leftPot);
@@ -91783,6 +101474,8 @@ function AdventurePanel({ lang, items, onItem }) {
                 : String(walking || "").endsWith(BOSS_SUFFIX) ? CHEST_HIGH_AT.extraBoss : 0;
               if (hiB) {
                 const cb = pushChest(12, { pref, area }, 0, hiB);
+                /* ⚠️ 制覇の画面の一覧にも入れる（上の注と同じ） */
+                modRun((m) => ({ ...m, chests: [...(m.chests || []), cb.id] }));
                 setLog((l) => [...l, a.advChestHi(cb.hi)]);
               }
             }
@@ -91948,6 +101641,11 @@ function AdventurePanel({ lang, items, onItem }) {
               onReward={(seek) => {
                 const st = isWardStage(pref, area) ? 12 : starOfStage(rank, walking);
                 const cb = pushChest(st, { pref, area }, seek);
+                /*
+                  ⚠️⚠️ 2026-10-10 Aki「最後のカードで宝箱がもらえたのに、リザルトで今回獲得した宝箱はありませんでした」。
+                  ★ この探索で拾った箱の一覧（runMod.chests）にも入れる。制覇の画面はこの一覧から出す。
+                */
+                modRun((m) => ({ ...m, chests: [...(m.chests || []), cb.id] }));
                 setLog((l) => [...l, a.advChestHi ? a.advChestHi(cb.star) : ""]);
                 return cb;
               }} />
@@ -94050,6 +103748,72 @@ function EquipArt({ kind }) {
           <path className="eqa-cardglow" d="M24 17 L26 23 L32 24 L26 25 L24 31 L22 25 L16 24 L22 23 Z"
             fill="#FFFFFF" opacity="0" />
         </g>
+      </g>
+    );
+    /* 古地図 ―― 悪いマスの減少。巻きの付いた紙に道と丸印 */
+    case "map": return (
+      <g className="eqa map">
+        <path d="M10 14 L20 11 L28 14 L38 11 L38 35 L28 38 L20 35 L10 38 Z" fill="#E8D6A8" stroke="#6A4E22" strokeWidth="1.1" />
+        <path d="M20 11 L20 35 M28 14 L28 38" stroke="#B89A62" strokeWidth="0.9" />
+        <path d="M13 31 Q18 24 23 27 Q29 30 34 20" fill="none" stroke="#B83A2A" strokeWidth="1.4" strokeDasharray="2.4 1.8" strokeLinecap="round" />
+        <circle cx="34" cy="19" r="2.6" fill="none" stroke="#2A6A3A" strokeWidth="1.3" />
+        <circle cx="13" cy="31" r="1.4" fill="#2A3A6A" />
+      </g>
+    );
+    /* 天秤 ―― 札の代償の消去。釣り合った皿 */
+    case "scale": return (
+      <g className="eqa scale">
+        <rect x="22.8" y="12" width="2.4" height="24" fill={EQ_G.mid} />
+        <path d="M16 39 H32 L30 35 H18 Z" fill={EQ_G.dark} />
+        <rect x="10" y="13" width="28" height="2.2" rx="1.1" fill={EQ_G.lit} stroke={EQ_G.dark} strokeWidth="0.6" />
+        <circle cx="24" cy="11" r="2.4" fill={EQ_G.lit} stroke={EQ_G.dark} strokeWidth="0.6" />
+        <path d="M12 15 L8 26 M12 15 L16 26 M36 15 L32 26 M36 15 L40 26" stroke={EQ_M.dark} strokeWidth="0.7" />
+        <path d="M6.5 26 Q12 31 17.5 26 Z" fill={EQ_G.mid} stroke={EQ_G.dark} strokeWidth="0.6" />
+        <path d="M30.5 26 Q36 31 41.5 26 Z" fill={EQ_G.mid} stroke={EQ_G.dark} strokeWidth="0.6" />
+      </g>
+    );
+    /* 鍵 ―― 宝箱の★+1。丸い持ち手の金の鍵 */
+    case "key": return (
+      <g className="eqa key">
+        <circle cx="16" cy="18" r="7" fill="none" stroke={EQ_G.mid} strokeWidth="3.4" />
+        <circle cx="16" cy="18" r="7" fill="none" stroke={EQ_G.lit} strokeWidth="1" />
+        <path d="M21 23 L36 38" stroke={EQ_G.mid} strokeWidth="3.4" strokeLinecap="round" />
+        <path d="M30 32 L34 28 M34 36 L38 32" stroke={EQ_G.mid} strokeWidth="3" strokeLinecap="round" />
+        <path d="M21.5 22.5 L35 36" stroke={EQ_G.lit} strokeWidth="0.9" strokeLinecap="round" />
+      </g>
+    );
+    /* 扇子 ―― 札を二つ選ぶ。開いた扇 */
+    case "fan": return (
+      <g className="eqa fan">
+        {Array.from({ length: 9 }, (_, j) => {
+          const a0 = (-150 + j * 13.3) * Math.PI / 180, a1 = (-150 + (j + 1) * 13.3) * Math.PI / 180;
+          return <path key={j} d={`M24 38 L${(24 + Math.cos(a0) * 20).toFixed(2)} ${(38 + Math.sin(a0) * 20).toFixed(2)} L${(24 + Math.cos(a1) * 20).toFixed(2)} ${(38 + Math.sin(a1) * 20).toFixed(2)} Z`}
+            fill={j % 2 ? "#C83A4A" : "#E8606A"} stroke="#6A1A22" strokeWidth="0.5" />;
+        })}
+        <path d="M8 26 A20 20 0 0 1 40 26" fill="none" stroke={EQ_G.mid} strokeWidth="1.2" />
+        <circle cx="24" cy="38" r="2" fill={EQ_W.dark} />
+      </g>
+    );
+    /* 賽 ―― 札の段の上振れ。白い立方体（目は丸。⚠️ 文字は入れない） */
+    case "dice": return (
+      <g className="eqa dice">
+        <path d="M24 9 L38 16 L24 23 L10 16 Z" fill="#FFFFFF" stroke="#5A5A64" strokeWidth="0.9" />
+        <path d="M10 16 L24 23 L24 39 L10 32 Z" fill="#DCDCE4" stroke="#5A5A64" strokeWidth="0.9" />
+        <path d="M38 16 L24 23 L24 39 L38 32 Z" fill="#B8B8C4" stroke="#5A5A64" strokeWidth="0.9" />
+        <ellipse cx="24" cy="16" rx="2.2" ry="1.2" fill="#C8303A" />
+        {[[14, 21], [20, 30], [17, 25.5]].map(([x, y], j) => <ellipse key={j} cx={x} cy={y} rx="1.3" ry="1.5" fill="#2A2A34" />)}
+        {[[28, 23], [34, 22], [28, 31], [34, 30]].map(([x, y], j) => <ellipse key={j} cx={x} cy={y} rx="1.2" ry="1.4" fill="#2A2A34" />)}
+      </g>
+    );
+    /* 銅鑼 ―― ボス前の増幅の底上げ。枠に吊るした金の銅鑼 */
+    case "gong": return (
+      <g className="eqa gong">
+        <path d="M8 40 L10 8 M40 40 L38 8 M8 9 H40" stroke={EQ_W.mid} strokeWidth="2.6" strokeLinecap="round" />
+        <path d="M18 9 L20 14 M30 9 L28 14" stroke={EQ_M.dark} strokeWidth="0.8" />
+        <circle cx="24" cy="25" r="11" fill={EQ_G.mid} stroke={EQ_G.dark} strokeWidth="1" />
+        <circle cx="24" cy="25" r="7.5" fill="none" stroke={EQ_G.dark} strokeWidth="0.7" />
+        <circle cx="24" cy="25" r="3.4" fill={EQ_G.lit} />
+        <path d="M17 20 Q20 16 25 16" stroke="#FFFFFF" strokeWidth="1.1" fill="none" opacity="0.7" strokeLinecap="round" />
       </g>
     );
     default: return null;
@@ -106129,9 +115893,8 @@ export default function TarotDraw() {
            行の中に入れると、中央揃えのタイトルがボタンの幅だけ左へずれる */
         /* 中身が2つとも絶対配置なので、この入れ物は高さを持たせない。
            インラインのまま置くと空の行ボックスができてタイトルが下へずれる */
-        .reload-wrap { display: block; height: 0; }
+        .reload-wrap { position: relative; display: inline-block; margin-left: 10px; text-indent: 0; }
         .reload-btn {
-          position: absolute; top: 0; right: 0;
           font-family: inherit; font-size: 10px; letter-spacing: 0.06em;
           padding: 4px 11px; border-radius: 999px; cursor: pointer;
           background: rgba(201,162,75,0.07);
@@ -106147,13 +115910,13 @@ export default function TarotDraw() {
         .reload-btn[disabled] { opacity: 0.55; cursor: default; transform: none; }
         /* 説明は触れたときに出す。高さを先に確保して、出入りでタイトルが動かないようにする */
         .reload-note {
-          position: absolute; top: 26px; right: 0;
+          position: absolute; top: 24px; right: 0;
           font-size: 9.5px; color: var(--muted); letter-spacing: 0.02em;
           opacity: 0; pointer-events: none; transition: opacity 0.18s ease;
           white-space: nowrap; max-width: 60vw; overflow: hidden; text-overflow: ellipsis;
         }
         .reload-wrap:hover .reload-note, .reload-wrap:focus-within .reload-note { opacity: 1; }
-        .eyebrow { display: inline-flex; align-items: center; gap: 7px; font-family: 'Cinzel', serif; font-size: 10px; letter-spacing: 0.32em; text-indent: 0.32em; color: var(--gold); margin-bottom: 14px; opacity: 0.9; }
+        .eyebrow { display: inline-flex; flex-wrap: wrap; justify-content: center; row-gap: 6px; align-items: center; gap: 7px; font-family: 'Cinzel', serif; font-size: 10px; letter-spacing: 0.32em; text-indent: 0.32em; color: var(--gold); margin-bottom: 14px; opacity: 0.9; }
         .privacy-note { font-size: 11px; color: var(--gold-soft); opacity: 0.8; margin-top: 10px; letter-spacing: 0.02em; }
         .tarot-header h1 { font-family: 'Shippori Mincho', serif; font-size: 30px; font-weight: 400; margin: 0 0 14px; letter-spacing: 0.18em; text-indent: 0.18em; color: var(--parchment); animation: titleGlow 3.2s ease-in-out infinite; }
         @keyframes titleGlow {
@@ -118820,6 +128583,19 @@ export default function TarotDraw() {
         .gm-pack, .gm-note { font-size: 11px; margin: 4px 2px 8px; color: var(--parchment); display: flex; align-items: center; gap: 6px; flex-wrap: wrap; }
         .gm-note { opacity: 0.75; }
         .gm-pack-btn { font-size: 10px; padding: 3px 8px; }
+        .gm-slots { margin: 4px 2px 10px; }
+        .adv-ask-row { display: flex; gap: 10px; justify-content: center; align-items: center; flex-wrap: wrap; margin-top: 6px; }
+        .adv-ask-row .adv-go { width: auto; min-width: 150px; padding: 10px 18px; }
+        .gm-slots-t { font-size: 11px; color: var(--gold-soft); display: flex; gap: 8px; align-items: baseline; }
+        .gm-slots-t i { font-style: normal; color: var(--muted); font-size: 10px; }
+        .gm-slot-row { display: grid; grid-template-columns: repeat(auto-fill, minmax(118px, 1fr)); gap: 6px; margin-top: 5px; }
+        .gm-slot { position: relative; min-height: 42px; border-radius: 9px; border: 1px dashed rgba(201,162,75,0.4);
+          display: flex; flex-direction: column; justify-content: center; align-items: flex-start; padding: 5px 22px 5px 8px;
+          font-size: 10px; color: var(--muted); background: rgba(255,255,255,0.02); font-family: inherit; text-align: left; }
+        .gm-slot.on { border-style: solid; border-color: #7AE08E; color: var(--parchment); cursor: pointer; background: rgba(122,224,142,0.08); }
+        .gm-slot b { font-size: 11px; font-weight: 600; line-height: 1.3; }
+        .gm-slot small { font-size: 9.5px; color: #9fe8b0; }
+        .gm-slot em { position: absolute; right: 7px; top: 50%; transform: translateY(-50%); font-style: normal; color: var(--muted); font-size: 12px; }
         .mei-card.big .mei-art { width: 112px; height: 112px; }
         .mei-card.big .mei-name { font-size: 18px; }
         .mei-card.big .mei-pref { font-size: 11px; }
@@ -119971,7 +129747,7 @@ export default function TarotDraw() {
         .adv-pick-card.off { opacity: 0.35; }
         .adv-pick-card svg { width: 44px; height: 40px; display: block; }
         .adv-pick-nm { font-size: 10.5px; font-weight: 700; color: #FFF3D6; text-align: center; line-height: 1.25; }
-        .adv-pick-eff { font-size: 10px; line-height: 1.3; text-align: center; min-height: 26px; color: #E2D8FF; }
+        .adv-pick-eff { font-size: 10px; line-height: 1.3; text-align: center; min-height: 26px; color: #E2D8FF; white-space: pre-line; }
         /* ★ 代償。⚠️ 赤（悪いもの）。色だけに頼らず「代償：」と書く */
         .adv-pick-cost { font-size: 9.5px; line-height: 1.3; text-align: center; color: #FFB0C0; padding: 1px 5px; border-radius: 6px;
           background: rgba(120,30,50,0.55); border: 1px solid rgba(255,120,140,0.45); }
@@ -120688,21 +130464,6 @@ export default function TarotDraw() {
         ))}
       </div>
       <header className="tarot-header">
-        {phase === "idle" && mode === "normal" && drawMode === "select" && (
-          <span className="reload-wrap">
-            <button
-              type="button"
-              className="reload-btn"
-              onClick={handleReload}
-              disabled={reloading}
-              title={t.reloadNote}
-              aria-label={`${t.reloadLabel} ― ${t.reloadNote}`}
-            >
-              {t.reloadLabel}
-            </button>
-            <span className="reload-note" aria-hidden="true">{t.reloadNote}</span>
-          </span>
-        )}
         <div className="eyebrow">
           <Sparkles size={14} />
           <span>{t.eyebrow}</span>
@@ -120727,6 +130488,24 @@ export default function TarotDraw() {
             title={soundOff ? soundToggleT(lang).on : soundToggleT(lang).off}>
             {soundOff ? soundToggleT(lang).labelOff : soundToggleT(lang).labelOn}
           </button>
+          {/* 更新ボタン。⚠️ 右上に絶対配置しないこと。狭い画面で「音 ON」と重なった。
+             入切の並びに入れて、同じ行で折り返させる */
+          }
+          {phase === "idle" && mode === "normal" && drawMode === "select" && (
+            <span className="reload-wrap">
+              <button
+                type="button"
+                className="reload-btn"
+                onClick={handleReload}
+                disabled={reloading}
+                title={t.reloadNote}
+                aria-label={`${t.reloadLabel} ― ${t.reloadNote}`}
+              >
+                {t.reloadLabel}
+              </button>
+              <span className="reload-note" aria-hidden="true">{t.reloadNote}</span>
+            </span>
+          )}
         </div>
         <h1>{t.appTitle}</h1>
         {t.tagline && <p className="app-tagline">{t.tagline}</p>}
