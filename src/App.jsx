@@ -9816,6 +9816,8 @@ const ADV_SPECIALS = [
   */
   { key: "shufM",    w: ADV_SP_W_RARE, from: 3, cap: 1, shuf: "m" },
   { key: "shufP",    w: ADV_SP_W_RARE, from: 3, cap: 1, shuf: "p" },
+  /* ★ 2026-10-10 Aki：修行の札。経験値の倍率を貯める。⚠️ ボスを倒したときだけ効く（負けたら消える） */
+  { key: "train",    w: ADV_SP_W_RARE, from: 1, cap: 2 },
 ];
 /* シャッフルの「増える幅」（合計に対する割合）。ルーレットの目 s1・s2・s3（重み 2・2・1）。⚠️ 平均は約 +19% */
 const ADV_SHUF_G = { s1: 0.10, s2: 0.20, s3: 0.35 };
@@ -9950,14 +9952,22 @@ function advPickChoose(opts, m, open, star, grade, rnd = Math.random) {
   /* ⚠️ 代償の分は引く。竹（堅実）は代償を重く見る */
   const sc = opts.map((o) => Math.max(0.1, advPickScore(o, m, open, star) * (grade === "take" && !o.num ? 0.7 : 1)
     - advPickCostScore(o.cost, m, open) * (grade === "take" ? 1.5 : 1)));
+  /*
+    ⚠️ 2026-10-12 Aki「レジェンダリーがあるのに薬草を優先して取るのはオートおかしい」。
+    ★ 梅も点数の3乗で選ぶ（点が倍なら8倍選ばれやすい）。竹が二番を取るのは、二番が一番の8割以上のときだけ。
+    ★ 段（レアリティ）が二つ以上離れた札があれば、低い方の段の数値の札は候補から外す（どの頭でも）。
+  */
+  const topTier = Math.max(0, ...opts.map((o) => (o.num ? o.tier || 0 : 0)));
+  const sc2 = sc.map((v, i) => (opts[i].num && opts[i].tier && opts[i].tier <= topTier - 2 ? 0.01 : v));
   if (grade === "ume") {
-    const tot = sc.reduce((x, y) => x + Math.max(0.1, y), 0);
+    const wt = sc2.map((v) => Math.pow(Math.max(0.1, v), 3));
+    const tot = wt.reduce((x, y) => x + y, 0);
     let r = rnd() * tot;
-    for (let i = 0; i < sc.length; i++) { r -= Math.max(0.1, sc[i]); if (r < 0) return i; }
-    return sc.length - 1;
+    for (let i = 0; i < wt.length; i++) { r -= wt[i]; if (r < 0) return i; }
+    return wt.length - 1;
   }
-  const ord = sc.map((v, i) => [v, i]).sort((x, y) => y[0] - x[0]);
-  if (grade === "take" && ord.length > 1 && rnd() >= 0.75) return ord[1][1];
+  const ord = sc2.map((v, i) => [v, i]).sort((x, y) => y[0] - x[0]);
+  if (grade === "take" && ord.length > 1 && ord[1][0] >= ord[0][0] * 0.8 && rnd() >= 0.75) return ord[1][1];
   return ord[0][1];
 }
 /*
@@ -10370,7 +10380,7 @@ const ADV_I18N = {
     skNowBlast: (n) => `コスモフォース ${n}枚`,
     skNowMajor: (n) => `完成した大アルカナ ${n}/22`,
     /* ⚠️ ★ごとに分かれていることを最初に伝える。通算だと思われると点が余る */
-    skSheetNote: "★ごとに別のシート。その★のMAPで得た点だけが振れます",
+    skSheetNote: "★ごとに別のシート。その★のレベル帯で上がった分の点が入ります",
     skCost: "消費", skGet: "開放する", skDone: "開放済み",
     skLocked: "前提が足りない", skShort: "点が足りない",
     skLeftLabel: "使える点", skOfGot: (n) => `このシートで得た ${n} 点のうち`,
@@ -10442,14 +10452,14 @@ const ADV_I18N = {
     zakoDodge: "うまくすり抜けた！（戦闘を回避）",
     roulTitle: { lane: "どの道へ？", well: "井戸の底へ……", zako: "すり抜けられるか？", event: "何が起きる？", box: "宝箱を開ける……", boost: "ボス前の増幅" },
     rFight: "戦う", rDodge: "回避", spinsLeft: (n) => `ルーレット 残り${n}`,
-    evName: { hp: "毒の霧", pot: "瓶が割れる", elem: "属性の封印", nosp: "必殺の封印", heal: "癒しの風", potUp: "落とし物", shuffle: "倍率の渦" },
-    evLog: { hp: (n) => `毒の霧を吸った（HP −${n}）。`, pot: "ポーションの瓶が割れた（−1）。", elem: (n) => `属性が封じられた。主を倒すまで、構えは「${n}」だけ。`,
-      nosp: "必殺が封じられた。主を倒すまで、手動の必殺は撃てない。", heal: (n) => `癒しの風が吹いた（HP ＋${n}）。`, potUp: "ポーションを拾った（＋1）。",
-      shuffle: (t) => `渦に巻かれて、倍率が入れ替わった（${t}）。`, shuffleNone: "渦は何も動かさなかった。" },
+    evName: { hp: "HP −15%", pot: "ポーション −1", elem: "属性の封印", nosp: "必殺の封印", heal: "HP +20%", potUp: "ポーション +1", shuffle: "倍率の入れ替え" },
+    evLog: { hp: (n) => `HP −${n}`, pot: "ポーション −1", elem: (n) => `属性の封印：使える属性は「${n}」のみ（ボス撃破まで）`,
+      nosp: "必殺の封印（ボス撃破まで）", heal: (n) => `HP +${n}`, potUp: "ポーション +1",
+      shuffle: (t) => `倍率の入れ替え（${t}）`, shuffleNone: "はずれ" },
     curseTag: { elem: (n) => `封印：${n}のみ`, nosp: "封印：必殺", spSeal: (n) => `封印：${n}の必殺` },
     /* ---- 特別なマス（2026-10-03）。⚠️ opt は扇に載る短い文字、desc は扇の下の一覧と記録の一行 ---- */
     sp: {
-      chainOpt: (n, all) => (all ? "全部" : n ? `${n}つ` : "なし"), chainDesc: (n, all) => (all ? "鎖が絡みついた。必殺が全部封じられた" : n ? `鎖が絡みついた。必殺が${n}つ封じられた` : "鎖をすり抜けた"),
+      chainOpt: (n, all) => (all ? "全部" : n ? `${n}つ` : "回避"), chainDesc: (n, all) => (all ? "鎖が絡みついた。必殺が全部封じられた" : n ? `鎖が絡みついた。必殺が${n}つ封じられた` : "鎖をすり抜けた"),
       pickTitle: "三つから一つ選ぶ", pickTitleTwice: "二つ選べる！（一つ目）", pickTitle2: "もう一つ選ぶ", pickTier: ["", "コモン", "レア", "エピック", "レジェンダリー"], pickBet: "ユニーク", pickGamble: "ルーレットで決まる", pickFood: "ご当地の料理を一品", pickBarber: "いま付いている悪い効果を、ルーレットで一つ消す",
       pl: {
         size: ["", "小", "中", "大", "特大"],
@@ -10457,19 +10467,19 @@ const ADV_I18N = {
         res: (n) => `${n}耐性`, allRes: "全状態異常耐性", allAttr: "全属性倍率",
         magic: (n) => `${n}魔法倍率`, phys: (n) => `${n}倍率`, charge: (n) => `${n}必殺効率`,
         heal: "回復量", maxHp: "最大HP", kaki: "最大HP・全魔法倍率",
-        gambleCost: { challenge: "ボスの最大HP上昇" },
+        gambleCost: { challenge: "ボスの最大HP上昇", train: "負けると消える" },
         gamble: { cannon: "ボスの最大HP減少効果", merchant: "宝箱・最大HPとの取引", challenge: "ボス確定",
-          clover: "効果ルーレットの引き直し", healer: "ポーション強化", anvil: "宝箱の強化", barber: "悪い効果の解除", food: "料理の入手" },
+          clover: "効果ルーレットの引き直し", train: "経験値倍率（ボス撃破で）", healer: "ポーション強化", anvil: "宝箱の強化", barber: "悪い効果の解除", food: "料理の入手" },
       },
       pickNone: "選べるものがなかった", pickCost: "代償",
-      spiderGot: "【幸運の蜘蛛】蜘蛛が肩に乗った。悪い目を一度だけ払える（ボス前まで残せば、増幅の最低の目を引かない）。",
+      spiderGot: "【幸運の蜘蛛】獲得：悪い目の除外 1回（未使用ならボス前の増幅で最低倍率を除外）",
       spiderTitle: (n) => `幸運の蜘蛛を「${n}」で使いますか？`, spiderLead: (b) => `使うと消える目：${b.join("／")}`,
       spiderGo: "蜘蛛を使う", spiderKeep: "使わずに回す",
-      spiderUsed: (n) => `【幸運の蜘蛛】「${n}」の悪い目を糸で払った。`, spiderVoid: (n) => `【幸運の蜘蛛】「${n}」の悪い目を糸で払った。何も起きなかった。`,
-      spiderBoost: (k) => `【幸運の蜘蛛】ボス前の増幅で ×${k} を退けた。`,
+      spiderUsed: (n) => `【幸運の蜘蛛】「${n}」の悪い目を除外`, spiderVoid: (n) => `【幸運の蜘蛛】「${n}」の悪い目を除外：効果なし`,
+      spiderBoost: (k) => `【幸運の蜘蛛】ボス前の増幅：×${k} を除外`,
       rerollTitle: (n) => `四つ葉で引き直しますか？（残り${n}）`, rerollGot: (d) => `出た目：${d}`, rerollLow: "（平均より低い目です）",
-      rerollGo: "引き直す", rerollKeep: "このまま", rerollLog: (d) => `【四つ葉】「${d}」を引き直した。`,
-      boostTitle: "ボス前の増幅", boostDesc: (k) => `今あるマスのバフをすべて ×${k}`, boostLog: (k) => `【ボス前の増幅】マスのバフがすべて ×${k} になった。`,
+      rerollGo: "引き直す", rerollKeep: "このまま", rerollLog: (d) => `【四つ葉】引き直し（「${d}」を破棄）`,
+      boostTitle: "ボス前の増幅", boostDesc: (k) => `今あるマスのバフをすべて ×${k}`, boostLog: (k) => `【ボス前の増幅】マスのバフ すべて ×${k}`,
       name: { pick: "選択の札", merchant: "闇商人", challenge: "挑戦状", tunnel: "抜け穴", clover: "四つ葉", lost: "迷い道", cannon: "砲台",
         anvil: "鍛冶屋", hoard: "竜の巣", thief: "盗賊", statue: "呪いの石像", fog: "重い霧", fruit: "巨人の果実",
         lake: "静かな湖", armorer: "鎧職人", healer: "名医",
@@ -10477,41 +10487,42 @@ const ADV_I18N = {
         sword: "刃の岩", spear: "槍の陣", axe: "木こり小屋", bow: "射的場",
         arena: "道場", tower: "学校", tavern: "湧き水", market: "銀行", garden: "薬草園",
         rainbow: "虹の丘", silence: "静寂の谷", saltpan: "塩田", stargaze: "星見台", bamboo: "竹林", dojo: "稽古場", onsen: "温泉", chain: "封じの鎖",
-        stall: "屋台", kissa: "喫茶", ryotei: "料亭", kaki: "柿の木", barber: "床屋", bear: "熊", shufM: "巡る泉", shufP: "回る武器棚", spider: "幸運の蜘蛛", event: "何が起こるかわからない" },
-      bearOpt: { calm: "去った", food: "奪われた", hurt: "襲われた", fight: "立ちはだかる" },
-      bearDesc: { calm: "熊は静かに去っていった", food: "食べ物を奪われる", hurt: (n) => `襲われた（HP −${n}%）`, fight: "熊が立ちはだかる（勝てば宝箱）" },
-      bearFood: (s2) => `「${s2}」を奪われた`, bearPot: "ポーションを1本奪われた", bearNoFood: "奪われる物は何もなかった",
-      kakiPlus: (n) => `・全魔法倍率 +${n}%`, barberCut: (s2) => `「${s2}」を切り落とした`, barberNone: "切り落とす悪い効果がなかった",
+        stall: "屋台", kissa: "喫茶", ryotei: "料亭", kaki: "柿の木", barber: "床屋", bear: "熊", shufM: "巡る泉", shufP: "回る武器棚", spider: "幸運の蜘蛛", event: "何が起こるかわからない", train: "修行の札" },
+      bearOpt: { calm: "回避", food: "料理 −1", hurt: "HP減少", fight: "戦闘" },
+      bearDesc: { calm: "回避", food: "料理 −1（無ければポーション −1）", hurt: (n) => `HP −${n}%`, fight: "熊と戦闘（勝てば宝箱）" },
+      bearFood: (s2) => `料理「${s2}」 −1`, bearPot: "ポーション −1", bearNoFood: "回避（料理・ポーションなし）",
+      kakiPlus: (n) => `・全魔法倍率 +${n}%`, barberCut: (s2) => `悪い効果の解除：${s2}`, barberNone: "はずれ（悪い効果なし）",
       barberSpins: (n) => `ルーレット ${n}回`,
-      opt: { s1: "+10%", s2: "+20%", s3: "+35%", c1: "薬+2", c2: "★+2箱", sure: "ボス確定", none: "なし", boss: "ボスへ！", seal: "封印", pass: "抜ける", cave: "落盤", plus: "引き直し+1", minus: "−1回",
-        hit4: "−4%", hit8: "−8%", miss: "外れ", up1: "★+1", up2: "★+2", broke: "壊れる", dbl: "倍", lose: "全部失う",
-        steal: "盗まれる", escape: "逃げ切る", drop: "拾う", maxhp: "最大HP", charge: "溜まり", cards: "手札",
-        p10: "+10%", p5: "+5%", m5: "−5%", c20: "+20%", c10: "+10%", heal5: "回復量", pot1: "薬+1",
+      opt: { s1: "+10%", s2: "+20%", s3: "+35%", c1: "ポーション+2", c2: "★+2宝箱", sure: "ボス確定", none: "はずれ", boss: "ボスへ移動", seal: "封印", pass: "ボスの道へ", cave: "最大HP−10%", plus: "引き直し+1", minus: "道ルーレット−1",
+        hit4: "ボスHP−4%", hit8: "ボスHP−8%", miss: "はずれ", up1: "宝箱★+1", up2: "宝箱★+2", broke: "宝箱−1", dbl: "宝箱×2", lose: "宝箱全損",
+        steal: "宝箱−1", escape: "回避", drop: "宝箱+1", maxhp: "最大HP−10%", charge: "必殺効率−25%", cards: "手札−1",
+        p10: "+10%", p5: "+5%", m5: "−5%", c20: "+20%", c10: "+10%", heal5: "ポーション回復+5%", pot1: "ポーション+1", t30: "経験値+30%", t50: "経験値+50%", t100: "経験値+100%",
         resRoar: "轟音耐性", resRot: "腐食耐性", resDread: "波動耐性", resMiasma: "瘴気耐性", resKill: "殺気耐性", resSap: "虚脱耐性" },
       shufSame: "どれも元のまま",
       desc: {
-        shufM: { s1: "魔法の倍率が入れ替わった。合計 +10%", s2: "魔法の倍率が入れ替わった。合計 +20%", s3: "魔法の倍率が入れ替わった。合計 +35%" },
-        shufP: { s1: "武器の倍率が入れ替わった。合計 +10%", s2: "武器の倍率が入れ替わった。合計 +20%", s3: "武器の倍率が入れ替わった。合計 +35%" },
-        merchant: { c1: "宝箱1個を渡して、ポーション+2", c2: "宝箱2個を渡して、★+2の宝箱", sure: "最大HP−10%を払って、ボス確定", none: "取引は成立しなかった" },
-        challenge: { sure: "ボス確定。ただしボスのHP+15%", none: "何も起きなかった", already: "もうボスは確定している" },
-        tunnel: { boss: "大当たり！ ボスの目の前へ抜けた（通らないマスの平均はすべて受け取れる）",
-          pass: "ボスの道の入口へ抜けた（ルーレットの回数は使わない。通らないマスの平均は受け取れる）", none: "行き止まりだった", cave: "落盤！ 最大HP−10%" },
-        clover: { plus: "四つ葉を摘んだ。効果のルーレットを一回引き直せる", none: "ただの三つ葉だった" },
-        lost: { minus: "道に迷った。道のルーレット−1回", none: "迷わずに済んだ" },
-        cannon: { hit4: "命中！ ボスのHP−4%", hit8: "会心！ ボスのHP−8%", miss: "外れた", cap: "砲台はもう撃ち尽くした（ボスのHP−12%が上限）" },
-        anvil: { up1: "宝箱を鍛えた。★+1", up2: "宝箱を鍛えた。★+2", broke: "鍛えすぎて宝箱が壊れた", empty: "鍛える宝箱を持っていない" },
-        hoard: { dbl: "竜の宝と取り替えた。宝箱が倍に", lose: "竜が目覚めた。宝箱を全部失った", none: "竜は眠っている", empty: "巣は空っぽだった" },
-        thief: { steal: "宝箱を1個盗まれた", escape: "盗賊から逃げ切った", drop: "盗賊が落とした宝箱を拾った" },
-        statue: { maxhp: "呪い：最大HP−10%", charge: "呪い：必殺効率 −25%", cards: "呪い：手札−1", none: "石像は黙っている" },
-        fog: { charge: "霧に呑まれた。必殺効率 −20%", none: "霧を抜けた" },
-        chain: { seal: "鎖が絡みついた。必殺が一つ封じられた", none: "鎖をすり抜けた", n0: "鎖をすり抜けた",
-          n1: "鎖が絡みついた。必殺が1つ封じられた", n2: "鎖が絡みついた。必殺が2つ封じられた",
-          n3: "鎖が絡みついた。必殺が3つ封じられた", n4: "鎖が絡みついた。必殺が4つ封じられた" },
-        fruit: { p10: "最大HP+10%", p5: "最大HP+5%", m5: "腐っていた。最大HP−5%" },
-        lake: { c20: "心が澄んだ。必殺効率 +20%", c10: "必殺効率 +10%", none: "何も起きなかった" },
+        shufM: { s1: "魔法倍率の入れ替え（合計 +10%）", s2: "魔法倍率の入れ替え（合計 +20%）", s3: "魔法倍率の入れ替え（合計 +35%）" },
+        shufP: { s1: "武器倍率の入れ替え（合計 +10%）", s2: "武器倍率の入れ替え（合計 +20%）", s3: "武器倍率の入れ替え（合計 +35%）" },
+        merchant: { c1: "宝箱 −1・ポーション +2", c2: "宝箱 −2・★+2の宝箱 +1", sure: "最大HP −10%・ボス確定", none: "はずれ" },
+        challenge: { sure: "ボス確定・ボスの最大HP +15%", none: "はずれ", already: "ボスは確定済み" },
+        tunnel: { boss: "ボスのマスへ移動（通らないマスの平均効果を獲得）",
+          pass: "ボスの道の入口へ移動（ルーレット消費なし・通らないマスの平均効果を獲得）", none: "はずれ（行き止まり）", cave: "最大HP −10%" },
+        clover: { plus: "効果ルーレットの引き直し +1回", none: "はずれ" },
+        lost: { minus: "道のルーレット −1回", none: "回避" },
+        cannon: { hit4: "ボスの最大HP −4%", hit8: "ボスの最大HP −8%", miss: "はずれ", cap: "はずれ（ボスの最大HP −12% が上限）" },
+        anvil: { up1: "宝箱 ★+1", up2: "宝箱 ★+2", broke: "宝箱 −1", empty: "はずれ（宝箱なし）" },
+        hoard: { dbl: "宝箱 ×2", lose: "宝箱 全て失う", none: "回避", empty: "回避（宝箱なし）" },
+        thief: { steal: "宝箱 −1", escape: "回避", drop: "宝箱 +1" },
+        statue: { maxhp: "最大HP −10%", charge: "必殺効率 −25%", cards: "手札 −1", none: "回避" },
+        fog: { charge: "必殺効率 −20%", none: "回避" },
+        chain: { seal: "必殺の封印 1つ（ボス撃破まで）", none: "回避", n0: "回避",
+          n1: "必殺の封印 1つ（ボス撃破まで）", n2: "必殺の封印 2つ（ボス撃破まで）",
+          n3: "必殺の封印 3つ（ボス撃破まで）", n4: "必殺の封印 4つ（ボス撃破まで）" },
+        fruit: { p10: "最大HP +10%", p5: "最大HP +5%", m5: "最大HP −5%" },
+        train: { t30: "経験値 +30%（ボス撃破時）", t50: "経験値 +50%（ボス撃破時）", t100: "経験値 +100%（ボス撃破時）" },
+        lake: { c20: "必殺効率 +20%", c10: "必殺効率 +10%", none: "はずれ" },
         armorer: { resRoar: "轟音耐性 +15%", resRot: "腐食耐性 +15%", resDread: "波動耐性 +15%",
-          resMiasma: "瘴気（回復封じ）の耐性+15%", resKill: "殺気（必殺封じ）の耐性+15%" },
-        healer: { heal5: "ポーション1本の回復量が最大HPの+5%", pot1: "ポーション+1", none: "留守だった" },
+          resMiasma: "瘴気耐性 +15%", resKill: "殺気耐性 +15%" },
+        healer: { heal5: "ポーション回復量 +5%（最大HP比）", pot1: "ポーション +1", none: "はずれ" },
       },
       boxN: (n) => (n >= 0 ? `（宝箱+${n}）` : `（宝箱−${-n}）`),
       /* 第2弾：倍率のマスの文言（目の数字から作る） */
@@ -10519,7 +10530,7 @@ const ADV_I18N = {
         slash: "斬撃", thrust: "突撃", blunt: "打撃", shoot: "射撃" })[k] || k,
       chargeOf: (su) => `${su}必殺効率`, healLabel: "回復量", curse: "呪い：",
       directBonus: (n) => `近道のご褒美：通らなかった特別なマス${n}か所ぶんの平均を受け取った（ルーレット無しで確定）。`,
-      allAttrLabel: "全属性倍率", allResLabel: "全状態異常耐性", nothing: "何も起きなかった", maxHpLabel: "最大HP",
+      allAttrLabel: "全属性倍率", allResLabel: "全状態異常耐性", nothing: "はずれ", dodge: "回避", maxHpLabel: "最大HP",
       resWhat: { resRoar: "轟音（倍率が削られる）", resRot: "腐食（選んだカードが不発になる）", resDread: "波動（大アルカナが封じられる）",
         resMiasma: "瘴気（回復が封じられる）", resKill: "殺気（必殺が封じられる）", resSap: "虚脱（必殺ゲージが削られる）" },
       pct: (lab, p) => `${lab} ${p > 0 ? "+" : "−"}${Math.abs(p)}%`,
@@ -10802,7 +10813,7 @@ const ADV_I18N = {
     skNowFlash: (n) => `Finishers unlocked ${n}/4`,
     skNowBlast: (n) => `Cosmo Force ${n} cards`,
     skNowMajor: (n) => `Major arcana completed ${n}/22`,
-    skSheetNote: "One sheet per star. Points only spend on the star that earned them.",
+    skSheetNote: "One sheet per star. Level-ups within that star's level band add its points.",
     skCost: "Cost", skGet: "Unlock", skDone: "Unlocked",
     skLocked: "Needs a prior node", skShort: "Not enough points",
     skLeftLabel: "Points", skOfGot: (n) => `of ${n} earned here`,
@@ -10869,12 +10880,12 @@ const ADV_I18N = {
     zakoDodge: "You slipped past! (battle avoided)",
     roulTitle: { lane: "Which road?", well: "Into the well…", zako: "Slip past?", event: "What happens?", box: "Opening the chest…", boost: "Pre-boss Boost" },
     rFight: "Fight", rDodge: "Dodge", spinsLeft: (n) => `Spins left: ${n}`,
-    evName: { hp: "Toxic mist", pot: "Broken flask", elem: "Element seal", nosp: "Finisher seal", heal: "Healing wind", potUp: "Lucky find", shuffle: "Multiplier whirl" },
-    evLog: { hp: (n) => `You breathed toxic mist (HP −${n}).`, pot: "A potion flask broke (−1).", elem: (n) => `Your elements are sealed: only ${n} until the master falls.`,
-      nosp: "Your finishers are sealed until the master falls.", heal: (n) => `A healing wind (HP +${n}).`, potUp: "You found a potion (+1)." },
+    evName: { hp: "HP −15%", pot: "Potion −1", elem: "Element seal", nosp: "Finisher seal", heal: "HP +20%", potUp: "Potion +1", shuffle: "Multiplier shuffle" },
+    evLog: { hp: (n) => `HP −${n}`, pot: "Potion −1", elem: (n) => `Element seal: only ${n} usable (until boss)`,
+      nosp: "Finisher seal (until boss)", heal: (n) => `HP +${n}`, potUp: "Potion +1" },
     curseTag: { elem: (n) => `Seal: ${n} only`, nosp: "Seal: finisher", spSeal: (n) => `Seal: ${n} finisher` },
     sp: {
-      chainOpt: (n, all) => (all ? "All" : n ? `${n}` : "None"), chainDesc: (n, all) => (all ? "Chains wrapped around you: every finisher sealed" : n ? `Chains wrapped around you: ${n} finisher${n > 1 ? "s" : ""} sealed` : "You slipped past the chains"),
+      chainOpt: (n, all) => (all ? "All" : n ? `${n}` : "Dodged"), chainDesc: (n, all) => (all ? "Chains wrapped around you: every finisher sealed" : n ? `Chains wrapped around you: ${n} finisher${n > 1 ? "s" : ""} sealed` : "You slipped past the chains"),
       pickTitle: "Pick one of three", pickTitleTwice: "Pick two! (first)", pickTitle2: "Pick one more", pickTier: ["", "Common", "Rare", "Epic", "Legendary"], pickBet: "Unique", pickGamble: "Decided by roulette", pickFood: "One local dish", pickBarber: "Removes one of your current bad effects (by roulette)",
       pl: {
         size: ["", "S", "M", "L", "XL"],
@@ -10882,9 +10893,9 @@ const ADV_I18N = {
         res: (n) => `${n} Res`, allRes: "All Status Res", allAttr: "All Element Mult.",
         magic: (n) => `${n} Magic Mult.`, phys: (n) => `${n} Mult.`, charge: (n) => `${n} Finisher Rate`,
         heal: "Healing", maxHp: "Max HP", kaki: "Max HP & All Magic",
-        gambleCost: { challenge: "Boss Max HP up" },
+        gambleCost: { challenge: "Boss Max HP up", train: "Lost on defeat" },
         gamble: { cannon: "Boss Max HP Reduction", merchant: "Trade for chests / Max HP", challenge: "Boss Guaranteed",
-          clover: "Effect Roulette Re-spin", healer: "Potion Boost", anvil: "Chest Upgrade", barber: "Remove a Bad Effect", food: "Get a Dish" },
+          clover: "Effect Roulette Re-spin", train: "EXP multiplier (on boss win)", healer: "Potion Boost", anvil: "Chest Upgrade", barber: "Remove a Bad Effect", food: "Get a Dish" },
       },
       pickNone: "Nothing to pick", pickCost: "Cost",
       spiderGot: "[Lucky Spider] A spider climbed onto your shoulder. It can brush away bad results once (kept until the boss, it removes the lowest boost).",
@@ -10902,48 +10913,49 @@ const ADV_I18N = {
         sword: "Blade Rock", spear: "Spear Camp", axe: "Lumber Camp", bow: "Archery Range",
         arena: "Dojo", tower: "School", tavern: "Spring", market: "Bank", garden: "Herb Garden",
         rainbow: "Rainbow Hill", silence: "Silent Vale", saltpan: "Salt Pans", stargaze: "Stargazer's Hill", bamboo: "Bamboo Grove", dojo: "Training Yard", onsen: "Hot Spring", chain: "Binding Chains",
-        stall: "Food Stall", kissa: "Café", ryotei: "Ryotei", kaki: "Persimmon Tree", barber: "Barber", bear: "Bear", shufM: "Swirling Spring", shufP: "Spinning Rack", spider: "Lucky Spider", event: "Unknown Event" },
-      bearOpt: { calm: "Leaves", food: "Robbed", hurt: "Mauled", fight: "Fight" },
-      bearDesc: { calm: "The bear wandered quietly away", food: "It steals your food", hurt: (n) => `Mauled (HP −${n}%)`, fight: "The bear blocks the way (a chest if you win)" },
-      bearFood: (s2) => `"${s2}" was stolen`, bearPot: "A potion was stolen", bearNoFood: "There was nothing to steal",
-      kakiPlus: (n) => ` · All Magic Mult. +${n}%`, barberCut: (s2) => `Snipped away "${s2}"`, barberNone: "Nothing bad to snip away",
+        stall: "Food Stall", kissa: "Café", ryotei: "Ryotei", kaki: "Persimmon Tree", barber: "Barber", bear: "Bear", shufM: "Swirling Spring", shufP: "Spinning Rack", spider: "Lucky Spider", event: "Unknown Event", train: "Training Scroll" },
+      bearOpt: { calm: "Dodged", food: "Robbed", hurt: "Mauled", fight: "Fight" },
+      bearDesc: { calm: "Dodged", food: "Dish −1 (or Potion −1)", hurt: (n) => `HP −${n}%`, fight: "Battle the bear (chest if you win)" },
+      bearFood: (s2) => `"${s2}" was stolen`, bearPot: "A potion was stolen", bearNoFood: "Dodged (nothing to steal)",
+      kakiPlus: (n) => ` · All Magic Mult. +${n}%`, barberCut: (s2) => `Bad effect removed: ${s2}`, barberNone: "Miss (no bad effects)",
       barberSpins: (n) => `Roulette ${n}`,
-      opt: { s1: "+10%", s2: "+20%", s3: "+35%", c1: "Pot+2", c2: "★+2 box", sure: "Boss!", none: "None", boss: "To the boss!", seal: "Seal", pass: "Through", cave: "Cave-in", plus: "Re-spin +1", minus: "−1 spin",
-        hit4: "−4%", hit8: "−8%", miss: "Miss", up1: "★+1", up2: "★+2", broke: "Broken", dbl: "Double", lose: "Lose all",
-        steal: "Stolen", escape: "Escape", drop: "Loot", maxhp: "Max HP", charge: "Charge", cards: "Hand",
-        p10: "+10%", p5: "+5%", m5: "−5%", c20: "+20%", c10: "+10%", heal5: "Heal+", pot1: "Pot+1",
+      opt: { s1: "+10%", s2: "+20%", s3: "+35%", c1: "Potion+2", c2: "★+2 chest", sure: "Boss guaranteed", none: "Miss", boss: "To the boss", seal: "Seal", pass: "To boss road", cave: "Max HP−10%", plus: "Re-spin +1", minus: "Road spin −1",
+        hit4: "Boss HP−4%", hit8: "Boss HP−8%", miss: "Miss", up1: "Chest ★+1", up2: "Chest ★+2", broke: "Chest −1", dbl: "Chests ×2", lose: "All chests lost",
+        steal: "Chest −1", escape: "Dodged", drop: "Chest +1", maxhp: "Max HP−10%", charge: "Finisher rate−25%", cards: "Hand −1",
+        t30: "EXP+30%", t50: "EXP+50%", t100: "EXP+100%", p10: "+10%", p5: "+5%", m5: "−5%", c20: "+20%", c10: "+10%", heal5: "Potion heal+5%", pot1: "Potion+1",
         resRoar: "Roar res", resRot: "Rot res", resDread: "Dread res", resMiasma: "Miasma res", resKill: "Killing-intent res", resSap: "Sap res" },
       shufSame: "Everything stayed as it was",
       desc: {
-        shufM: { s1: "Your magic multipliers were shuffled. Total +10%", s2: "Your magic multipliers were shuffled. Total +20%", s3: "Your magic multipliers were shuffled. Total +35%" },
-        shufP: { s1: "Your weapon multipliers were shuffled. Total +10%", s2: "Your weapon multipliers were shuffled. Total +20%", s3: "Your weapon multipliers were shuffled. Total +35%" },
-        merchant: { c1: "Trade 1 chest for 2 potions", c2: "Trade 2 chests for a ★+2 chest", sure: "Pay 10% max HP: the boss is certain", none: "No deal" },
-        challenge: { sure: "The boss is certain, but the boss has +15% HP", none: "Nothing happened", already: "The boss is already certain" },
-        tunnel: { boss: "Jackpot! Straight to the boss (you get the average of every tile you skip)",
-          pass: "Out at the start of the boss road (no spin used; you still get the average of the tiles you skip)", none: "A dead end", cave: "Cave-in! Max HP −10%" },
-        clover: { plus: "Picked a four-leaf clover. You can re-spin one effect roulette", none: "Just a three-leaf clover" },
-        lost: { minus: "You lost your way: road roulette −1 spin", none: "You kept your way" },
-        cannon: { hit4: "Hit! Boss HP −4%", hit8: "Critical! Boss HP −8%", miss: "Missed", cap: "The cannons are spent (boss HP −12% is the limit)" },
-        anvil: { up1: "Your chest was forged: ★+1", up2: "Your chest was forged: ★+2", broke: "Forged too hard: the chest broke", empty: "You have no chest to forge" },
-        hoard: { dbl: "Swapped for the dragon's gold: chests doubled", lose: "The dragon woke: you lost every chest", none: "The dragon sleeps", empty: "The hoard was empty" },
-        thief: { steal: "A chest was stolen", escape: "You escaped the thief", drop: "You picked up the thief's dropped chest" },
-        statue: { maxhp: "Curse: max HP −10%", charge: "Curse: gauge charge −25%", cards: "Curse: hand −1", none: "The statue is silent" },
-        fog: { charge: "Swallowed by fog: gauge charge −20%", none: "You came through the fog" },
-        chain: { seal: "Chains wrapped around you: one finisher is sealed", none: "You slipped past the chains", n0: "You slipped past the chains",
-          n1: "Chains wrapped around you: 1 finisher sealed", n2: "Chains wrapped around you: 2 finishers sealed",
-          n3: "Chains wrapped around you: 3 finishers sealed", n4: "Chains wrapped around you: 4 finishers sealed" },
-        fruit: { p10: "Max HP +10%", p5: "Max HP +5%", m5: "It was rotten: max HP −5%" },
-        lake: { c20: "A clear mind: gauge charge +20%", c10: "Gauge charge +10%", none: "Nothing happened" },
-        armorer: { resRoar: "Roar resistance +15%", resRot: "Rot resistance +15%", resDread: "Dread resistance +15%",
-          resMiasma: "Miasma resistance +15%", resKill: "Killing-intent resistance +15%" },
-        healer: { heal5: "Each potion heals +5% of max HP more", pot1: "Potion +1", none: "Nobody was home" },
+        shufM: { s1: "Magic multipliers shuffled (total +10%)", s2: "Magic multipliers shuffled (total +20%)", s3: "Magic multipliers shuffled (total +35%)" },
+        shufP: { s1: "Weapon multipliers shuffled (total +10%)", s2: "Weapon multipliers shuffled (total +20%)", s3: "Weapon multipliers shuffled (total +35%)" },
+        merchant: { c1: "Chest −1 · Potion +2", c2: "Chest −2 · ★+2 chest +1", sure: "Max HP −10% · Boss guaranteed", none: "No trade" },
+        challenge: { sure: "Boss guaranteed · Boss max HP +15%", none: "Miss", already: "Boss already guaranteed" },
+        tunnel: { boss: "Moved to the boss tile (average of skipped tiles gained)",
+          pass: "Moved to the boss road entrance (no spin used; average of skipped tiles gained)", none: "No move", cave: "Max HP −10%" },
+        clover: { plus: "Effect roulette re-spin +1", none: "Miss" },
+        lost: { minus: "Road roulette −1", none: "Dodged" },
+        cannon: { hit4: "Boss max HP −4%", hit8: "Boss max HP −8%", miss: "Miss", cap: "Miss (boss max HP −12% is the cap)" },
+        anvil: { up1: "Chest ★+1", up2: "Chest ★+2", broke: "Chest −1", empty: "Miss (no chest)" },
+        hoard: { dbl: "Chests ×2", lose: "All chests lost", none: "Dodged", empty: "Miss (no chest)" },
+        thief: { steal: "Chest −1", escape: "Dodged", drop: "Chest +1" },
+        statue: { maxhp: "Max HP −10%", charge: "Finisher rate −25%", cards: "Hand −1", none: "Dodged" },
+        fog: { charge: "Finisher rate −20%", none: "Dodged" },
+        chain: { seal: "1 finisher sealed (until boss)", none: "Dodged", n0: "Dodged",
+          n1: "1 finisher sealed (until boss)", n2: "2 finishers sealed (until boss)",
+          n3: "3 finishers sealed (until boss)", n4: "4 finishers sealed (until boss)" },
+        fruit: { p10: "Max HP +10%", p5: "Max HP +5%", m5: "Max HP −5%" },
+        train: { t30: "EXP +30% (on boss win)", t50: "EXP +50% (on boss win)", t100: "EXP +100% (on boss win)" },
+        lake: { c20: "Finisher rate +20%", c10: "Finisher rate +10%", none: "Miss" },
+        armorer: { resRoar: "Roar res +15%", resRot: "Rot res +15%", resDread: "Dread res +15%",
+          resMiasma: "Miasma res +15%", resKill: "Killing-intent res +15%" },
+        healer: { heal5: "Potion healing +5% (of max HP)", pot1: "Potion +1", none: "Miss" },
       },
       boxN: (n) => (n >= 0 ? ` (chests +${n})` : ` (chests −${-n})`),
       attrOf: (k) => ({ earth: "Earth magic", fire: "Fire magic", water: "Water magic", wind: "Wind magic", light: "Light magic", dark: "Dark magic",
         slash: "Slash", thrust: "Thrust", blunt: "Blunt", shoot: "Shot" })[k] || k,
       chargeOf: (su) => `${su} finisher charge`, healLabel: "Healing received", curse: "Curse: ",
       directBonus: (n) => `Shortcut reward: you received the average of the ${n} special tiles you skipped (guaranteed, no spin).`,
-      allAttrLabel: "All Element Mult.", allResLabel: "All Status Res", nothing: "Nothing happened", maxHpLabel: "Max HP",
+      allAttrLabel: "All Element Mult.", allResLabel: "All Status Res", nothing: "Miss", dodge: "Dodged", maxHpLabel: "Max HP",
       resWhat: { resRoar: "Roar (multiplier cut)", resRot: "Rot (chosen cards misfire)", resDread: "Despair (Major Arcana sealed)",
         resMiasma: "Miasma (healing sealed)", resKill: "Killing intent (finishers sealed)", resSap: "Sap (finisher gauges drained)" },
       pct: (lab, p) => `${lab} ${p > 0 ? "+" : "−"}${Math.abs(p)}%`,
@@ -12386,18 +12398,14 @@ function skillPointsBySheet(cleared) {
     for (let i = 1; i <= 12; i++) d[i] = SKILL_SHEET_PT[i] * SKILL_PER;
     return Object.fromEntries(Object.keys(d).map((k) => [k, SKILL_SHEET_PT[k]]));
   }
-  /* ⚠️ 主の印（__area / __pref）は数えない。名所の踏破だけで点が入る */
-  const done = (cleared || loadAdvDone() || []).filter((nm) => !isAdvMark(nm));
-  const n = {};
-  for (let i = 1; i <= 12; i++) n[i] = 0;
-  done.forEach((nm, i) => {
-    /* ⚠️ 並び順を通算の段として使う。何番目に取ったかで★が決まる */
-    const step = Math.min(ADV_STEPS - 1, Math.floor(i / Math.max(1, SKILL_PER)) % ADV_STEPS);
-    const st = Math.max(1, Math.min(12, starOfStage(step, nm)));
-    n[st] += 1;
-  });
+  /*
+    ⚠️⚠️ 2026-10-10 Aki：スキルポイントはレベルアップで入る（名所の踏破による点は廃止）。
+    ★ レベル L に上がるたび、★ lvStarOf(L) のシートへ LV_PTS[L] 点。
+  */
+  const lv = loadLv().lv;
   const out = {};
-  for (let i = 1; i <= 12; i++) out[i] = Math.floor(n[i] / SKILL_PER);
+  for (let i = 1; i <= 12; i++) out[i] = 0;
+  for (let L = 2; L <= lv; L++) out[lvStarOf(L)] += LV_PTS[L] || 0;
   return out;
 }
 function skillPointsOf(cleared, taken, sheet) {
@@ -12512,6 +12520,109 @@ const SKILL_SKY = {
 */
 const SKILL_SHEET_PT = { 1: 15, 2: 25, 3: 25, 4: 25, 5: 25, 6: 25,
   7: 25, 8: 25, 9: 25, 10: 25, 11: 25, 12: 47 };
+/*
+  ============================================================
+  【レベル】2026-10-10 Aki
+  ★ 上限 Lv99。レベル帯がそのまま★：LV_BAND[n] からが★n の帯（★12 は Lv91〜99）。
+  ★ 装備できる★の上限 ＝ いまのレベル帯の★（★2の帯に入ったら★2、★12の帯で★12）。
+  ★ スキルポイントはレベルアップで入る（名所の踏破による点は廃止）。★n の帯で上がった分は★n のシートへ。
+    帯の終わり（次の帯の手前）に着いた時点で、そのシートの枝を全部取れる点数になる（★6 の帯の終わり Lv49 で乙女座まで全部）。
+  ★ 経験値の補正：自分のレベルが MAP の帯の終わり（lvMapTop）より高いほど減る（+3で70%…+7以上でほぼ0）。
+    帯の始まりより低いときは少し多い（1レベルごとに+5%、+30%まで）。⚠️ 能力値には補正しない（勝率の測定を変えない）。
+  ⚠️ 必要経験値は「その帯を、前の名所の踏破のときの約半分の回数（LV_RUN_K）で抜ける」ように逆算した（LV_NEED）。
+  ============================================================
+*/
+const LV_MAX = 99;
+const LV_BAND = [0, 1, 9, 17, 26, 34, 42, 50, 59, 67, 75, 83, 91];
+function lvStarOf(lv) { let st = 1; for (let n = 1; n <= 12; n++) if (LV_BAND[n] <= lv) st = n; return st; }
+function lvMapTop(star) { const n = Math.max(1, Math.min(12, star | 0)); return n >= 12 ? LV_MAX : LV_BAND[n + 1] - 1; }
+/* 経験値の素（★ごと）。雑魚 ×1、特別な雑魚 ×2、主 ×5、制覇の札 ×（可1・良1.5・優2・秀3・極5） */
+function lvExpBase(star) { return 10 + 6 * Math.max(1, Math.min(12, star | 0)); }
+const LV_GRADE_MUL = { 0: 1, 1: 1.5, 2: 2, 4: 3, 7: 5 };
+/* 経験値の補正（差 ＝ 自分のレベル − MAP の帯の終わり） */
+const LV_OVER_RATE = [1, 1, 1, 0.7, 0.45, 0.25, 0.1];
+function lvExpRate(lv, star) {
+  const d = lv - lvMapTop(star);
+  if (d >= LV_OVER_RATE.length) return 0.001;
+  if (d > 0) return LV_OVER_RATE[d];
+  const under = LV_BAND[Math.max(1, Math.min(12, star | 0))] - lv;
+  return under > 0 ? 1 + Math.min(0.3, under * 0.05) : 1;
+}
+/* レベル L に上がったときに入る点（★ lvStarOf(L) のシートへ） */
+const LV_PTS = (() => {
+  const pts = new Array(LV_MAX + 1).fill(0);
+  for (let n = 1; n <= 12; n++) {
+    const ups = [];
+    for (let L = Math.max(2, LV_BAND[n]); L <= lvMapTop(n); L++) ups.push(L);
+    const T = SKILL_SHEET_PT[n] || 0;
+    ups.forEach((L, k) => { pts[L] = Math.floor(T * (k + 1) / ups.length) - Math.floor(T * k / ups.length); });
+  }
+  return pts;
+})();
+/* L → L+1 に要る経験値 */
+/* 帯を抜けるのに要る探索の数（前の名所の踏破での点の数 ×6 に掛ける）。⚠️ 仮。遊んで合わせる */
+const LV_RUN_K = 0.5;
+const LV_NEED = (() => {
+  const need = new Array(LV_MAX + 1).fill(0);
+  for (let L = 1; L < LV_MAX; L++) {
+    const n = lvStarOf(L + 1);
+    const lo = Math.max(2, LV_BAND[n]), ups = lvMapTop(n) - lo + 1;
+    /* ⚠️ 帯の中では、はじめ軽く・あと重く（0.5 → 1.5 倍）。最初のレベルアップを早く味わえるように */
+    const k = ups > 1 ? (L + 1 - lo) / (ups - 1) : 0.5;
+    const runs = (SKILL_SHEET_PT[n] || 25) * 6 * LV_RUN_K;
+    need[L] = Math.round(runs * 8.6 * lvExpBase(n) / Math.max(1, ups) * (0.5 + k));
+  }
+  return need;
+})();
+const LS_LV = "oo_level";
+function saveLv(v) {
+  try { localStorage.setItem(LS_LV, JSON.stringify(v)); } catch (e) { /* */ }
+  try { if (typeof window !== "undefined") window.dispatchEvent(new Event("oo-level")); } catch (e) { /* */ }
+}
+/* ⚠️ 前の記録（名所の踏破で点が入っていたころ）からの引き継ぎ：踏破した中でいちばん高い★の帯の始まりから */
+function lvMigrate() {
+  let top = 0;
+  try {
+    const done = (loadAdvDone() || []).filter((nm) => !isAdvMark(nm));
+    done.forEach((nm, i) => {
+      const step = Math.min(ADV_STEPS - 1, Math.floor(i / 6) % ADV_STEPS);
+      top = Math.max(top, Math.max(1, Math.min(12, starOfStage(step, nm))));
+    });
+  } catch (e) { top = 0; }
+  const v = { lv: top ? LV_BAND[top] : 1, exp: 0 };
+  saveLv(v);
+  return v;
+}
+function loadLv() {
+  try {
+    const v = JSON.parse(localStorage.getItem(LS_LV) || "null");
+    if (v && v.lv >= 1) return { lv: Math.min(LV_MAX, v.lv | 0), exp: Math.max(0, v.exp || 0) };
+  } catch (e) { /* */ }
+  return lvMigrate();
+}
+/* 経験値を足す。返り値 { lv, ups:[上がったレベル…] } */
+function addExp(amount) {
+  const v = loadLv();
+  let lv = v.lv, exp = v.exp + Math.max(0, Math.round(amount));
+  const ups = [];
+  while (lv < LV_MAX && exp >= LV_NEED[lv]) { exp -= LV_NEED[lv]; lv += 1; ups.push(lv); }
+  if (lv >= LV_MAX) exp = 0;
+  saveLv({ lv, exp });
+  return { lv, ups };
+}
+/* 装備できる★の上限 */
+function equipStarCap() { return lvStarOf(loadLv().lv); }
+const LV_I18N = {
+  ja: { lv: (n) => `Lv${n}`, got: (n, r) => `経験値 +${n}${r < 0.999 ? `（レベル差で ${Math.round(r * 100)}%）` : r > 1.001 ? `（格上で ${Math.round(r * 100)}%）` : ""}`,
+    up: "LEVEL UP", upLead: (n) => `Lv${n} になった`, upPts: (sh, k) => `${sh}座のスキルポイント +${k}`,
+    upEq: (st) => `★${st} の装備を装備できるようになった`, eqLock: (lv) => `Lv${lv}で装備可`, eqLockWarn: "まだ装備できない★です（レベル帯の★まで）",
+    next: (a2, b2) => `${a2} / ${b2}`, max: "MAX", expMul: (x) => `経験値 ×${x}（ボス撃破で）` },
+  en: { lv: (n) => `Lv${n}`, got: (n, r) => `EXP +${n}${r < 0.999 ? ` (level gap ${Math.round(r * 100)}%)` : r > 1.001 ? ` (tougher map ${Math.round(r * 100)}%)` : ""}`,
+    up: "LEVEL UP", upLead: (n) => `Reached Lv${n}`, upPts: (sh, k) => `${sh} skill points +${k}`,
+    upEq: (st) => `You can now equip ★${st} gear`, eqLock: (lv) => `Equip at Lv${lv}`, eqLockWarn: "That ★ is above your level band",
+    next: (a2, b2) => `${a2} / ${b2}`, max: "MAX", expMul: (x) => `EXP ×${x} (on boss win)` },
+};
+const lvT = (lang) => LV_I18N[lang] || LV_I18N.en;
 const SKILL_STAT_STEPS = 4;
 /* ⚠️ HPだけ12段。★ごとに必ず一つ置く。四段だと八枚のシートにHPが無くなる */
 const SKILL_HP_STEPS = 12;
@@ -13707,8 +13818,11 @@ function equippedGear(eq) {
     ★ 前からの保存で重なっていても、枠の若い順に一つだけ効かせる。
   */
   const seen = {};
+  /* ⚠️ 2026-10-10：レベル帯の★より上の装備は効かない（装備できない） */
+  const cap = equipStarCap();
   return on.map((id) => (e.owned || []).find((x) => x.id === id)).filter((x) => {
     if (!x) return false;
+    if (x.main && lmcTierOf(x.tier || "bronze").star > cap) return false;
     if (seen[x.main]) return false;
     seen[x.main] = true;
     return true;
@@ -20018,6 +20132,7 @@ const ADV_OPT_VAL = {
   n0: 0, n1: -1, n2: -2, n3: -3, n4: -4,
   hp: -1, pot: -1, elem: -3, heal: 1, potUp: 1, shuffle: 0,
   calm: 0, food: -1, hurt: -2, fight: -1,
+  t30: 1, t50: 2, t100: 3,
 };
 function advOptVal(kind, o) {
   if (o.val != null) return o.val;
@@ -20102,8 +20217,10 @@ function AutoCount({ sec, onGo }) {
     </span>
   );
 }
-function ConquerShow({ lang, ids, auto, stage, onDone }) {
-  const t = CONQ_I18N[lang] || CONQ_I18N.en;
+function ConquerShow({ lang, ids, auto, stage, onDone, lose }) {
+  /* ★ 2026-10-12 Aki「ボス前の三択で外れても宝箱のリザルトを出す」：lose のときは紙吹雪なし・見出しは「探索終了」 */
+  const t0 = CONQ_I18N[lang] || CONQ_I18N.en;
+  const t = lose ? { ...t0, big: lang === "ja" ? "探索終了" : "Journey's End", sub: "RESULT" } : t0;
   const [ph, setPh] = useState("clear");   /* clear → list → opening */
   const [res, setRes] = useState(null);    /* { list, at, bestKey, stepMs, msg } */
   const timers = useRef([]);
@@ -20145,12 +20262,12 @@ function ConquerShow({ lang, ids, auto, stage, onDone }) {
   }, [ph, auto]);
   const done = res && res.at >= res.list.length;
   return (
-    <div className="cq-wrap" onClick={() => { if (res && !done) setRes((v) => ({ ...v, at: v.list.length })); }}>
-      <div className="cq-confetti" aria-hidden="true">
+    <div className={`cq-wrap${lose ? " lose" : ""}`} onClick={() => { if (res && !done) setRes((v) => ({ ...v, at: v.list.length })); }}>
+      {!lose && <div className="cq-confetti" aria-hidden="true">
         {Array.from({ length: 26 }, (_, i) => (
           <i key={i} style={{ "--x": `${(i * 37) % 100}%`, "--d": `${(i * 113) % 1400}ms`, "--h": (i * 47) % 360, "--r": `${(i * 71) % 360}deg`, "--s": `${2.6 + ((i * 7) % 10) / 6}s` }} />
         ))}
-      </div>
+      </div>}
       <div className={`cq-in ph-${ph}`}>
         <div className="cq-head">
           <span className="cq-band" aria-hidden="true" />
@@ -47869,9 +47986,9 @@ function ZkFoxfireQ() {
           <path d="M18 50 C24 48 30 51 38 53 C33 57 25 57 20 53 Z" fill="url(#zkFxChest)" />
           <path d="M27 28 L21 9 L36 23 Z" fill="#B8381E" /><path d="M28 25 L24 14 L33 23 Z" fill="#FFB060" />
           <path d="M45 24 L50 8 L54 29 Z" fill="#9A2E18" /><path d="M47 24 L50 13 L52 27 Z" fill="#FF9A50" />
-          <path className="zk-blink" d="M25 37 Q29.4 33.6 34 36.6 Q29.4 38.6 25 37 Z" fill="#FFE070" />
-          <path className="zk-blink" d="M42 35.6 Q45 33.4 48 35.4 Q45 36.8 42 35.6 Z" fill="#FFE070" />
-          <circle cx="28.6" cy="36.6" r="1" fill="#3A0A04" /><circle cx="44.6" cy="35.4" r="0.8" fill="#3A0A04" />
+          <g transform="translate(29.5 36.1) scale(0.667) translate(-29.5 -36.1)"><path className="zk-blink" d="M25 37 Q29.4 33.6 34 36.6 Q29.4 38.6 25 37 Z" fill="#FFE070" /></g>
+          <g transform="translate(45 35.1) scale(1.500) translate(-45 -35.1)"><path className="zk-blink" d="M42 35.6 Q45 33.4 48 35.4 Q45 36.8 42 35.6 Z" fill="#FFE070" /></g>
+          <g transform="translate(29.5 36.1) scale(0.667) translate(-29.5 -36.1)"><circle cx="28.6" cy="36.6" r="1" fill="#3A0A04" /></g><g transform="translate(45 35.1) scale(1.500) translate(-45 -35.1)"><circle cx="44.6" cy="35.4" r="0.8" fill="#3A0A04" /></g>
           <circle cx="18.6" cy="49" r="1.3" fill="#2A0A06" />
           <path d="M32 30 Q38 26 46 28" fill="none" stroke="#FFD0A0" strokeWidth="1" opacity="0.6" strokeLinecap="round" />
         </g>
@@ -47916,10 +48033,10 @@ function ZkKappaQ() {
           <path d="M34 20.6 C37 19.8 43 19.8 46 20.6" fill="none" stroke="#FFFFFF" strokeWidth="0.6" opacity="0.6" />
           <path d="M23 35 L12 39 L23 42 C27 41 27 36 23 35 Z" fill="url(#zkKpBeak)" />
           <path d="M14 39.6 L24 40.6" stroke="#8A5A10" strokeWidth="0.6" />
-          <ellipse className="zk-blink" cx="30" cy="30" rx="3.4" ry="3.8" fill="#DDF4FF" />
-          <ellipse className="zk-blink" cx="44" cy="29.4" rx="2.4" ry="3.4" fill="#DDF4FF" />
-          <circle cx="29.2" cy="30.6" r="1.6" fill="#0A2A40" /><circle cx="43.4" cy="30" r="1.2" fill="#0A2A40" />
-          <circle cx="28.6" cy="29.6" r="0.5" fill="#FFFFFF" />
+          <g transform="translate(30 30) scale(0.706) translate(-30 -30)"><ellipse className="zk-blink" cx="30" cy="30" rx="3.4" ry="3.8" fill="#DDF4FF" /></g>
+          <g transform="translate(44 29.4) scale(1.417) translate(-44 -29.4)"><ellipse className="zk-blink" cx="44" cy="29.4" rx="2.4" ry="3.4" fill="#DDF4FF" /></g>
+          <g transform="translate(30 30) scale(0.706) translate(-30 -30)"><circle cx="29.2" cy="30.6" r="1.6" fill="#0A2A40" /></g><g transform="translate(44 29.4) scale(1.417) translate(-44 -29.4)"><circle cx="43.4" cy="30" r="1.2" fill="#0A2A40" /></g>
+          <g transform="translate(30 30) scale(0.706) translate(-30 -30)"><circle cx="28.6" cy="29.6" r="0.5" fill="#FFFFFF" /></g>
           <path d="M25 25 L33 27 M48 25 L41 27" stroke="#0A2A2A" strokeWidth="1" />
         </g>
       </g>
@@ -47965,9 +48082,9 @@ function ZkTenguQ() {
           <path d="M40 18 C42 11 54 11 56 18 Z" fill="#1A1A1A" /><circle cx="48" cy="12" r="1.4" fill="#E8C46A" />
           <path d="M40 29 L20 36 L40 41 C43 38 43 32 40 29 Z" fill="url(#zkTgBeak)" />
           <path d="M22 36 L40 36" stroke="#8A5A10" strokeWidth="0.6" />
-          <path className="zk-blink" d="M40 26 Q43.6 23.4 47 26 Q43.6 27.6 40 26 Z" fill="#9AF0B0" />
-          <path className="zk-blink" d="M52 25.4 Q54.6 23.6 57 25.4 Q54.6 26.6 52 25.4 Z" fill="#9AF0B0" />
-          <circle cx="42.8" cy="26" r="0.9" fill="#0A1A10" /><circle cx="54" cy="25.4" r="0.7" fill="#0A1A10" />
+          <g transform="translate(43.5 25.5) scale(0.714) translate(-43.5 -25.5)"><path className="zk-blink" d="M40 26 Q43.6 23.4 47 26 Q43.6 27.6 40 26 Z" fill="#9AF0B0" /></g>
+          <g transform="translate(54.5 25.1) scale(1.400) translate(-54.5 -25.1)"><path className="zk-blink" d="M52 25.4 Q54.6 23.6 57 25.4 Q54.6 26.6 52 25.4 Z" fill="#9AF0B0" /></g>
+          <g transform="translate(43.5 25.5) scale(0.714) translate(-43.5 -25.5)"><circle cx="42.8" cy="26" r="0.9" fill="#0A1A10" /></g><g transform="translate(54.5 25.1) scale(1.400) translate(-54.5 -25.1)"><circle cx="54" cy="25.4" r="0.7" fill="#0A1A10" /></g>
           <path d="M38 22 L47 24 M59 22 L52 24" stroke="#0A0A0A" strokeWidth="1" />
         </g>
       </g>
@@ -48044,9 +48161,9 @@ function ZkBearSumoQ() {
           <path d="M46 11 C48 5 54 5 56 9 C54 9 52 10 50 12 Z" fill="#1A0E08" /><path d="M48 9 L54 7" stroke="#E8C46A" strokeWidth="1" />
           <path d="M31 29 C25 29 22 33 24 36.6 C28 38.6 36 37.6 38 33 Z" fill="#D8B088" /><ellipse cx="25" cy="32" rx="2.2" ry="1.5" fill="#1A0E08" />
           <path d="M27 36.2 L33 36" stroke="#1A0E08" strokeWidth="0.8" />
-          <path className="zk-blink" d="M34 24 Q37.4 21.8 41 24 Q37.4 25.6 34 24 Z" fill="#FFE870" />
-          <path className="zk-blink" d="M48 23.4 Q50.6 21.8 53 23.4 Q50.6 24.6 48 23.4 Z" fill="#FFE870" />
-          <circle cx="37" cy="24" r="0.8" fill="#1A0E08" /><circle cx="50.2" cy="23.4" r="0.7" fill="#1A0E08" />
+          <g transform="translate(37.5 23.7) scale(0.714) translate(-37.5 -23.7)"><path className="zk-blink" d="M34 24 Q37.4 21.8 41 24 Q37.4 25.6 34 24 Z" fill="#FFE870" /></g>
+          <g transform="translate(50.5 23.2) scale(1.400) translate(-50.5 -23.2)"><path className="zk-blink" d="M48 23.4 Q50.6 21.8 53 23.4 Q50.6 24.6 48 23.4 Z" fill="#FFE870" /></g>
+          <g transform="translate(37.5 23.7) scale(0.714) translate(-37.5 -23.7)"><circle cx="37" cy="24" r="0.8" fill="#1A0E08" /></g><g transform="translate(50.5 23.2) scale(1.400) translate(-50.5 -23.2)"><circle cx="50.2" cy="23.4" r="0.7" fill="#1A0E08" /></g>
           <path d="M33 20.4 L41 22 M55 20 L48 21.6" stroke="#1A0E08" strokeWidth="1.1" />
         </g>
       </g>
@@ -48436,9 +48553,9 @@ function ZkGround1Q() {
         <path d="M26 42 Q34 36 44 38" fill="none" stroke="#F0D0A8" strokeWidth="1.2" opacity="0.5" strokeLinecap="round" />
         <ellipse cx="38" cy="38.4" rx="3.6" ry="1.8" fill="url(#zkGround1Soil)" />
         <circle cx="62" cy="42" r="1.8" fill="url(#zkGround1Soil)" />
-        <ellipse className="zk-blink" cx="28" cy="50" rx="2" ry="1.5" fill="#FFC860" />
-        <circle cx="27.5" cy="50.2" r="0.7" fill="#2A1404" />
-        <ellipse className="zk-blink" cx="41" cy="47" rx="1.3" ry="0.8" fill="#FFC860" />
+        {/* ⚠️ 2026-10-11 Aki「頭が大きくて後頭部に目」→ 横顔に近い斜め。奥の目は頭の陰で見えない（手前の目だけ） */}
+        <ellipse className="zk-blink" cx="34" cy="50" rx="2" ry="1.5" fill="#FFC860" />
+        <circle cx="33.5" cy="50.2" r="0.7" fill="#2A1404" />
         {/* 手前の手：低く前へ構える */}
         <path d="M38 66 C34 70 32 74 30 77 L35 80 C37 77 40 74 45 72 Z" fill="url(#zkGround1Fur)" />
         <g transform="translate(32 80) rotate(-6) scale(1.08)"><g className="zk-claw"><ZkGround1Hand /></g></g>
@@ -48827,8 +48944,9 @@ function ZkGround4Q() {
         <path d="M28 28 C28 18 36 12 46 12 C56 12 64 18 64 28 C64 37 56 42 46 42 C36 42 28 37 28 28 Z" fill="url(#zkGround4Clay)" />
         <path d="M31 16 C33 8 42 5 48 10 C54 5 62 8 64 16 C58 12 52 12 48 14 C42 12 36 13 31 16 Z" fill="#6A4A2C" />
         <path d="M36 9.4 Q42 6.6 48 10 Q54 6.6 60 9" fill="none" stroke="#E8C46A" strokeWidth="0.9" />
-        <g transform="translate(37 27) rotate(-6)"><ZkGround4Eye rx={7.4} ry={5.8} /></g>
-        <g transform="translate(55 26) rotate(-2)"><ZkGround4Eye rx={5} ry={5} /></g>
+        {/* ⚠️ 2026-10-11 Aki「左向きの斜めで右の目が小さいことはありえない」→ 大小を入れ替え（右＝手前が大きい） */}
+        <g transform="translate(37 27) rotate(-6)"><ZkGround4Eye rx={5} ry={5} /></g>
+        <g transform="translate(55 26) rotate(-2)"><ZkGround4Eye rx={7.4} ry={5.8} /></g>
         <path d="M40 37 Q43 39 46 37" fill="none" stroke="#2A1608" strokeWidth="0.8" />
         {/* 手前の腕：肘を張って構える */}
         <g><g className="zk-claw">
@@ -49044,8 +49162,8 @@ function ZkGround6Q() {
         {/* 頭 */}
         <path d="M34 30 C34 22 40 18 46 18 C52 18 56 22 56 30 C56 36 50 40 45 40 C39 40 34 36 34 30 Z" fill="url(#zkGround6Rock)" />
         <path d="M35 27 L55 26" stroke="#2A1E14" strokeWidth="1.4" />
-        <path className="zk-blink" d="M36 30 L43 29.4 L42.6 31.6 L36.6 32 Z" fill="#FFC860" />
-        <path className="zk-blink" d="M48 29.4 L53 29 L52.6 30.8 L48.4 31 Z" fill="#FFC860" />
+        <g transform="translate(39.5 30.7) scale(0.714) translate(-39.5 -30.7)"><path className="zk-blink" d="M36 30 L43 29.4 L42.6 31.6 L36.6 32 Z" fill="#FFC860" /></g>
+        <g transform="translate(50.5 30) scale(1.400) translate(-50.5 -30)"><path className="zk-blink" d="M48 29.4 L53 29 L52.6 30.8 L48.4 31 Z" fill="#FFC860" /></g>
         {/* 手前の肩と、振り上げた拳 */}
         <path d="M24 38 L34 30 L44 34 L42 46 L28 48 Z" fill="url(#zkGround6Rock)" />
         <g><g className="zk-claw">
@@ -49184,10 +49302,10 @@ function ZkRock2Q() {
         {/* 頭巾：こちらへ向ける */}
         <path d="M58 60 C50 54 38 54 33 60 C28 66 30 76 38 80 C46 83 54 80 57 74 Z" fill="url(#zkRock2Body)" />
         <path d="M36 59 C42 55 50 55 56 59" fill="none" stroke="#FFD8B0" strokeWidth="0.9" opacity="0.6" strokeLinecap="round" />
-        <ellipse className="zk-blink" cx="39" cy="66" rx="3.4" ry="3.8" fill="#FFE0A0" />
-        <ellipse className="zk-blink" cx="50" cy="64.6" rx="2.2" ry="3" fill="#FFE0A0" />
-        <circle cx="38.2" cy="66.6" r="1.6" fill="#2A1404" /><circle cx="49.4" cy="65.2" r="1.1" fill="#2A1404" />
-        <circle cx="37.6" cy="65.6" r="0.5" fill="#FFFFFF" />
+        <g transform="translate(39 66) scale(0.647) translate(-39 -66)"><ellipse className="zk-blink" cx="39" cy="66" rx="3.4" ry="3.8" fill="#FFE0A0" /></g>
+        <g transform="translate(50 64.6) scale(1.545) translate(-50 -64.6)"><ellipse className="zk-blink" cx="50" cy="64.6" rx="2.2" ry="3" fill="#FFE0A0" /></g>
+        <g transform="translate(39 66) scale(0.647) translate(-39 -66)"><circle cx="38.2" cy="66.6" r="1.6" fill="#2A1404" /></g><g transform="translate(50 64.6) scale(1.545) translate(-50 -64.6)"><circle cx="49.4" cy="65.2" r="1.1" fill="#2A1404" /></g>
+        <g transform="translate(39 66) scale(0.647) translate(-39 -66)"><circle cx="37.6" cy="65.6" r="0.5" fill="#FFFFFF" /></g>
         <path d="M34.6 61 L42.6 62.6 M53.4 60.4 L47.4 62" stroke="#2A1404" strokeWidth="0.9" />
       </g></g>
     </g>
@@ -49305,8 +49423,8 @@ function ZkRock3Q() {
           <path d="M18 58 C16 51 22 46 31 46 C39 46 45 50 45 56 C45 63 39 67 31 67 C25 67 18 66 11 66 C9 64 12 61 18 58 Z" fill="url(#zkRock3Skin)" />
           <path d="M11 66 C18 64 25 63 32 63 C28 68 20 70 14 69 Z" fill="#3A120A" />
           <path d="M14 65.4 L15 67 L16 65.2 M19 64.6 L20 66.4 L21 64.4" fill="#FFF4E0" />
-          <path className="zk-blink" d="M21 55 Q25 52 29 54.6 Q25 56.6 21 55 Z" fill="#FFD070" />
-          <path className="zk-blink" d="M35 53.6 Q38 51.8 40.6 53.4 Q38 54.6 35 53.6 Z" fill="#FFD070" />
+          <g transform="translate(25 54.3) scale(0.700) translate(-25 -54.3)"><path className="zk-blink" d="M21 55 Q25 52 29 54.6 Q25 56.6 21 55 Z" fill="#FFD070" /></g>
+          <g transform="translate(37.8 53.2) scale(1.429) translate(-37.8 -53.2)"><path className="zk-blink" d="M35 53.6 Q38 51.8 40.6 53.4 Q38 54.6 35 53.6 Z" fill="#FFD070" /></g>
           <path d="M25 53.4 L25 56 M38 52.4 L38 54.4" stroke="#2A1404" strokeWidth="0.9" />
           <path d="M20 52.4 L29 53 M42 51 L35 52" stroke="#2A1404" strokeWidth="1" />
           <path d="M22 49 Q30 45 40 48" fill="none" stroke="#FFE0B0" strokeWidth="0.9" opacity="0.6" strokeLinecap="round" />
@@ -49426,10 +49544,11 @@ function ZkRock4Q() {
           <path d="M30 58 C24 54 16 56 14 62 C12 66 14 70 18 72 C24 74 30 72 34 68 C36 64 34 60 30 58 Z" fill="url(#zkRock4Skin)" />
           <path d="M14 66 C18 68 24 68 30 67 C27 72 20 74 16 71 Z" fill="#3A120A" />
           <path d="M13 64 L16 66 L14 69 Z" fill="url(#zkRock4Beak)" />
-          <path className="zk-blink" d="M18 61 Q21.4 58.6 25 60.6 Q21.4 62.4 18 61 Z" fill="#FFD070" />
-          <path className="zk-blink" d="M28.6 59.6 Q30.6 58.4 32.6 59.6 Q30.6 60.6 28.6 59.6 Z" fill="#FFD070" />
-          <circle cx="21.2" cy="60.8" r="0.9" fill="#2A1404" /><circle cx="30.6" cy="59.6" r="0.6" fill="#2A1404" />
-          <path d="M17 58.4 L25 59 M33.4 57.4 L28.6 58.4" stroke="#2A1404" strokeWidth="1.1" />
+          {/* ⚠️ 2026-10-11 Aki「小さい目が耳の位置」→ 斜め左向き：鼻筋を挟み、手前の目は右・大きく、奥の目は左・小さく（輪郭の際） */}
+          <path className="zk-blink" d="M21.95 61 Q25.35 58.6 28.95 60.6 Q25.35 62.4 21.95 61 Z" fill="#FFD070" />
+          <path className="zk-blink" d="M15.91 59.6 Q17.91 58.4 19.91 59.6 Q17.91 60.6 15.91 59.6 Z" fill="#FFD070" />
+          <circle cx="25.15" cy="60.8" r="0.9" fill="#2A1404" /><circle cx="17.91" cy="59.6" r="0.6" fill="#2A1404" />
+          <path d="M20.95 58.4 L28.95 59 M20.71 57.4 L15.91 58.4" stroke="#2A1404" strokeWidth="1.1" />
         </g>
       </g></g>
       <g className="zk-stomp"><ellipse cx="31" cy="90" rx="9" ry="2" fill="#E8D0A8" opacity="0.5" /></g>
@@ -49566,8 +49685,8 @@ function ZkRock5Q() {
           <path d="M12 32.6 L13.4 35.4 L14.6 33 M17 33.4 L18.4 36.2 L19.6 33.8 M22 34.4 L23.4 37 L24.6 34.8 M15 45 L15.6 42.4 L17.6 44.6 M20.4 44.6 L21 42 L23 44" fill="#FFF4E0" />
           <ellipse cx="27" cy="26" rx="4" ry="3.4" fill="#2A1A0C" />
           <ellipse cx="38.6" cy="25" rx="2.2" ry="2.8" fill="#2A1A0C" />
-          <ellipse className="zk-blink" cx="26.6" cy="26.2" rx="2" ry="1.8" fill="#FFC060" />
-          <ellipse className="zk-blink" cx="38.4" cy="25.2" rx="1.1" ry="1.4" fill="#FFC060" />
+          <g transform="translate(26.6 26.2) scale(0.550) translate(-26.6 -26.2)"><ellipse className="zk-blink" cx="26.6" cy="26.2" rx="2" ry="1.8" fill="#FFC060" /></g>
+          <g transform="translate(38.4 25.2) scale(1.818) translate(-38.4 -25.2)"><ellipse className="zk-blink" cx="38.4" cy="25.2" rx="1.1" ry="1.4" fill="#FFC060" /></g>
           <path d="M16 29 L22 28 L19 31.4 Z" fill="#2A1A0C" />
           <circle cx="12.6" cy="29.4" r="0.9" fill="#2A1A0C" />
           <path d="M18 22 Q28 16 40 21" fill="none" stroke="#FFFFFF" strokeWidth="0.9" opacity="0.55" strokeLinecap="round" />
@@ -49689,8 +49808,8 @@ function ZkRock6Q() {
         <path d="M32 39 L62 36.4" stroke="#FFF0D0" strokeWidth="1" opacity="0.55" strokeLinecap="round" />
         {/* 頭：左手前へ向ける */}
         <ZkRock6Slabs list={["M36 22 L52 21 L53 35 L37 37 Z"]} />
-        <path className="zk-blink" d="M38 27.6 L44.6 27.2 L44.2 29.8 L38.2 30.2 Z" fill="#FFC870" />
-        <path className="zk-blink" d="M47.4 27 L51 26.8 L50.8 28.8 L47.6 29 Z" fill="#FFC870" />
+        <g transform="translate(41.3 28.7) scale(0.545) translate(-41.3 -28.7)"><path className="zk-blink" d="M38 27.6 L44.6 27.2 L44.2 29.8 L38.2 30.2 Z" fill="#FFC870" /></g>
+        <g transform="translate(49.2 27.9) scale(1.833) translate(-49.2 -27.9)"><path className="zk-blink" d="M47.4 27 L51 26.8 L50.8 28.8 L47.6 29 Z" fill="#FFC870" /></g>
         <path d="M37 23 L51 22" stroke="#FFF0D0" strokeWidth="0.9" opacity="0.6" strokeLinecap="round" />
         {/* 手前の腕：拳を頭上へ振りかぶる */}
         <ZkRock6Slabs list={["M24 36 L37 34 L39 47 L26 49 Z", "M20 22 L31 21 L34 34 L23 36 Z", "M22 8 L37 7 L37 21 L22 23 Z"]} />
@@ -49830,9 +49949,9 @@ function ZkGrass1Q() {
         {/* 口 */}
         <ellipse cx="42" cy="57" rx="6" ry="8.4" fill="url(#zkGrass1Mouth)" stroke="#3A200C" strokeWidth="0.6" />
         {/* 目：手前は大きく、奥は細く */}
-        <path className="zk-blink" d="M31 42 Q36 38.4 41 42 Q36 44 31 42 Z" fill="#FFD070" />
-        <path className="zk-blink" d="M50 41 Q53 39.4 56 41 Q53 42 50 41 Z" fill="#FFD070" />
-        <circle cx="35.4" cy="42" r="1.1" fill="#2A1404" /><circle cx="52.6" cy="41" r="0.7" fill="#2A1404" />
+        <g transform="translate(36 41.2) scale(0.600) translate(-36 -41.2)"><path className="zk-blink" d="M31 42 Q36 38.4 41 42 Q36 44 31 42 Z" fill="#FFD070" /></g>
+        <g transform="translate(53 40.7) scale(1.667) translate(-53 -40.7)"><path className="zk-blink" d="M50 41 Q53 39.4 56 41 Q53 42 50 41 Z" fill="#FFD070" /></g>
+        <g transform="translate(36 41.2) scale(0.600) translate(-36 -41.2)"><circle cx="35.4" cy="42" r="1.1" fill="#2A1404" /></g><g transform="translate(53 40.7) scale(1.667) translate(-53 -40.7)"><circle cx="52.6" cy="41" r="0.7" fill="#2A1404" /></g>
         <path d="M30 38.2 L41 40.6 M49.6 38.8 L56 39.8" stroke="#3A200C" strokeWidth="1.1" strokeLinecap="round" />
         <path d="M34 36 Q38 32 46 31" fill="none" stroke="#FFE8C0" strokeWidth="1" opacity="0.6" strokeLinecap="round" />
       </g></g>
@@ -49956,9 +50075,9 @@ function ZkGrass2Q() {
         <path d="M36 61 C42 65 56 65 64 61 L63 64 C56 68 43 68 37 64 Z" fill="#E8D4B0" stroke="#E8C46A" strokeWidth="0.7" />
         <path d="M36 84 L30 90 C30 92 32 93 36 92 L46 90 L45 84 Z" fill="url(#zkGrass2Stem)" />
         {/* 目：手前（左）は大きく、奥は小さく */}
-        <ellipse className="zk-blink" cx="42" cy="56" rx="2.8" ry="3.4" fill="#FFD070" />
-        <ellipse className="zk-blink" cx="53.4" cy="55.6" rx="1.7" ry="2.4" fill="#FFD070" />
-        <circle cx="41.2" cy="56.6" r="1.3" fill="#2A1404" /><circle cx="52.8" cy="56" r="0.8" fill="#2A1404" />
+        <g transform="translate(42 56) scale(0.607) translate(-42 -56)"><ellipse className="zk-blink" cx="42" cy="56" rx="2.8" ry="3.4" fill="#FFD070" /></g>
+        <g transform="translate(53.4 55.6) scale(1.647) translate(-53.4 -55.6)"><ellipse className="zk-blink" cx="53.4" cy="55.6" rx="1.7" ry="2.4" fill="#FFD070" /></g>
+        <g transform="translate(42 56) scale(0.607) translate(-42 -56)"><circle cx="41.2" cy="56.6" r="1.3" fill="#2A1404" /></g><g transform="translate(53.4 55.6) scale(1.647) translate(-53.4 -55.6)"><circle cx="52.8" cy="56" r="0.8" fill="#2A1404" /></g>
         <path d="M38.4 52.2 L45 53.8 M51.4 52.4 L55 53.2" stroke="#3A200C" strokeWidth="1" strokeLinecap="round" />
         <path d="M43 70 Q46 72.6 49 70 Q46 71 43 70 Z" fill="#4A1E0C" stroke="#4A1E0C" strokeWidth="0.8" />
         {/* 手前の腕：振り上げる */}
@@ -50083,9 +50202,10 @@ function ZkGrass3Q() {
         <path d="M62 38 C52 45 38 48 28 48 C34 43 46 40 60 36 Z" fill="url(#zkGrass3Inner)" />
         <ZkGrass3Teeth x1={28} y1={47.4} x2={58} y2={38} n={8} dir={1} h={4.4} />
         <ellipse cx="62" cy="34" rx="7" ry="6.4" fill="url(#zkGrass3Trap)" />
-        <path className="zk-blink" d="M57 30 Q60.4 27.8 64 30 Q60.4 31.6 57 30 Z" fill="#FFD070" />
-        <path className="zk-blink" d="M65.6 29.4 Q67.6 28.4 69.4 29.6 Q67.6 30.4 65.6 29.4 Z" fill="#FFD070" />
-        <circle cx="59.8" cy="30" r="0.9" fill="#2A1404" /><circle cx="67.4" cy="29.6" r="0.6" fill="#2A1404" />
+        {/* ⚠️ 2026-10-11 Aki「目が枠外」→ 頭（楕円）の上の縁と右の縁から出ていた。頭の内側へ（手前の目は右・大きく、奥の目は左・小さく） */}
+        <path className="zk-blink" d="M61 32.4 Q64.5 30 68 32.4 Q64.5 34 61 32.4 Z" fill="#FFD070" />
+        <path className="zk-blink" d="M56.8 32 Q58.6 31 60.2 32.2 Q58.6 32.8 56.8 32 Z" fill="#FFD070" />
+        <circle cx="64.4" cy="32.3" r="0.9" fill="#2A1404" /><circle cx="58.6" cy="32" r="0.5" fill="#2A1404" />
         <g className="zk-claw" style={{ animationDelay: "-600ms" }}>
           <path d="M60 32 C56 16 38 8 20 14 C18 18 20 22 24 23 C36 22 50 26 60 34 Z" fill="url(#zkGrass3Trap)" />
           <path d="M60 34 C50 28 36 24 24 23 C30 28 44 32 60 37 Z" fill="url(#zkGrass3Inner)" />
@@ -50221,9 +50341,10 @@ function ZkGrass4Q() {
         <path d="M36 48 Q42 52 48 50" fill="none" stroke="#E8C46A" strokeWidth="1.3" />
         <circle cx="42" cy="51.4" r="1.4" fill="#E8C46A" />
         {/* 目：手前大・奥小 */}
-        <path className="zk-blink" d="M29 35 Q32 33 35 35 Q32 36.6 29 35 Z" fill="#FFD070" />
-        <path className="zk-blink" d="M38.6 34 Q40.4 33 42 34.2 Q40.4 35 38.6 34 Z" fill="#FFD070" />
-        <circle cx="31.8" cy="35" r="0.8" fill="#2A1404" /><circle cx="40.4" cy="34" r="0.55" fill="#2A1404" />
+        {/* ⚠️ 2026-10-11 Aki「小さい目が耳の位置」→ 斜め左向き：鼻筋を挟み、手前の目は右・大きく、奥の目は左・小さく（輪郭の際） */}
+        <path className="zk-blink" d="M32.61 35 Q35.61 33 38.61 35 Q35.61 36.6 32.61 35 Z" fill="#FFD070" />
+        <path className="zk-blink" d="M26.99 34 Q28.79 33 30.39 34.2 Q28.79 35 26.99 34 Z" fill="#FFD070" />
+        <circle cx="35.41" cy="35" r="0.8" fill="#2A1404" /><circle cx="28.79" cy="34" r="0.55" fill="#2A1404" />
         {/* 手前の前脚：持ち上げて蹄を掻く */}
         <path d="M38 62 C34 66 30 68 26 70 L22 76 L26 78 L30 73 C34 72 40 70 44 66 Z" fill="url(#zkGrass4Hide)" />
         <path d="M21 75.6 L26.2 78.2 L24.6 80.4 L20 78 Z" fill="#1E120A" />
@@ -50359,8 +50480,8 @@ function ZkGrass5Q() {
         <path d="M28 38 C27 44 29 48 28 52 C30 48 31 44 30 38 Z" fill="#8A7E3A" opacity="0.9" />
         {/* 顔：手前の洞は大きく、奥は細く */}
         <path d="M36 42 C40 40 46 41 48 44 M53 42 C56 41 59 42 60 44" fill="none" stroke="#22130A" strokeWidth="1.6" strokeLinecap="round" />
-        <ellipse className="zk-blink" cx="42" cy="47" rx="3.4" ry="2.6" fill="url(#zkGrass5Hollow)" />
-        <ellipse className="zk-blink" cx="56.4" cy="46.6" rx="2" ry="1.5" fill="url(#zkGrass5Hollow)" />
+        <g transform="translate(42 47) scale(0.588) translate(-42 -47)"><ellipse className="zk-blink" cx="42" cy="47" rx="3.4" ry="2.6" fill="url(#zkGrass5Hollow)" /></g>
+        <g transform="translate(56.4 46.6) scale(1.700) translate(-56.4 -46.6)"><ellipse className="zk-blink" cx="56.4" cy="46.6" rx="2" ry="1.5" fill="url(#zkGrass5Hollow)" /></g>
         <path d="M46 48 C45 52 44 55 42 57 C45 57 48 56 50 54 Z" fill="#8A5A30" />
         <path d="M40 62 C44 59 52 59 55 62 C54 67 48 70 44 69 C41 67 40 65 40 62 Z" fill="url(#zkGrass5Hollow)" />
         <path d="M42.6 62 L44 64.6 L45.6 61.4 M49.4 61.4 L50.6 64.4 L52 61.8" fill="none" stroke="#3A1E0C" strokeWidth="0.8" />
@@ -50507,10 +50628,12 @@ function ZkGrass6Q() {
         <path d="M18 56.4 L19 59 L20.4 56.6 Z M24 56.8 L25 59.6 L26.4 56.8 Z M29 56.2 L29.8 58.8 L31 56 Z" fill="#FFF0C8" />
         <ellipse cx="14.6" cy="55" rx="1.4" ry="1.1" fill="#0A0604" />
         <path d="M26 34 L26 24 L32 34 Z M36 33 L40 24 L41 36 Z" fill="#553620" {...zkGrass6Edge} />
-        <path className="zk-blink" d="M22 44 Q26 41.2 30 43.6 Q26 45.4 22 44 Z" fill="#FFD060" />
-        <path className="zk-blink" d="M33.6 42.4 Q36 41 38.4 42.4 Q36 43.4 33.6 42.4 Z" fill="#FFD060" />
-        <circle cx="25.8" cy="43.8" r="0.9" fill="#2A0A00" /><circle cx="36" cy="42.4" r="0.6" fill="#2A0A00" />
-        <path d="M21 41.6 L30 41.2 M33.4 40.4 L39 40.6" stroke="#1A0E06" strokeWidth="1" strokeLinecap="round" />
+        {/* ⚠️ 2026-10-11 Aki「小さい目が耳の位置」→ 斜め左向き：鼻筋を挟み、手前の目は右・大きく、奥の目は左・小さく（輪郭の際） */}
+        <path className="zk-blink" d="M26.28 44 Q30.28 41.2 34.28 43.6 Q30.28 45.4 26.28 44 Z" fill="#FFD060" />
+        {/* ⚠️ 2026-10-11 Aki「小さい目が耳の位置」→ 奥の目が輪郭から出ていた。輪郭の内側へ */}
+        <path className="zk-blink" d="M21.83 42.4 Q24.23 41 26.63 42.4 Q24.23 43.4 21.83 42.4 Z" fill="#FFD060" />
+        <circle cx="30.08" cy="43.8" r="0.9" fill="#2A0A00" /><circle cx="24.23" cy="42.4" r="0.6" fill="#2A0A00" />
+        <path d="M25.28 41.6 L34.28 41.2 M21.63 40.4 L27.23 40.6" stroke="#1A0E06" strokeWidth="1" strokeLinecap="round" />
         {/* 手前の前脚：一歩踏み出して爪を立てる */}
         <path d="M36 62 C34 70 30 78 26 86 L24 90 L31 90 L32 86 C36 80 40 72 44 66 Z" fill="url(#zkGrass6Bark)" {...zkGrass6Edge} />
         <path d="M24 89 L22 91.6 M27 89.4 L26 92 M30 89.4 L30 92" stroke="#E0C090" strokeWidth="0.9" strokeLinecap="round" />
@@ -50642,7 +50765,8 @@ function ZkFire1S() {
         <ellipse cx="37.6" cy="49.6" rx="3.8" ry="5" transform="rotate(-20 37.6 49.6)" fill="#FF9A6A" />
         <path className="zk-blink" d="M23.6 58 Q27.4 55 31 57.6 Q27.4 59.6 23.6 58 Z" fill="#FFD050" />
         <circle cx="26.4" cy="57.8" r="0.9" fill="#3A0A04" />
-        <path d="M16 63 L6 59 M16 64.4 L7 66 M18 65 L10 70" stroke="#E8C46A" strokeWidth="0.5" opacity="0.8" />
+        {/* ⚠️ 2026-10-11 Aki「髭の向きがおかしい」→ 鼻先からではなく、鼻の後ろ（口吻の脇）から生やし、外へ水平寄りに扇形（上・水平・下）に広げる */}
+        <path d="M17 62 L5 59.4 M17.4 63.2 L5 63.6 M17 64.4 L6 67.8" stroke="#E8C46A" strokeWidth="0.5" opacity="0.8" />
         <path d="M33 54 Q44 50 54 53" fill="none" stroke="#FFD0A0" strokeWidth="1" opacity="0.6" strokeLinecap="round" />
       </g></g>
       <ZkFire1Embers pts={[[86, 40, 0], [92, 60, -900], [72, 44, -1700]]} />
@@ -50683,10 +50807,12 @@ function ZkFire1Q() {
         <circle cx="20.4" cy="50" r="1.4" fill="#3A0A08" />
         <ellipse cx="31" cy="31" rx="7" ry="8" transform="rotate(-24 31 31)" fill="#B8381E" />
         <ellipse cx="30.6" cy="31.6" rx="4.2" ry="5.4" transform="rotate(-24 30.6 31.6)" fill="#FF9A6A" />
-        <path className="zk-blink" d="M28 40.4 Q32 36.8 36 39.6 Q32 42 28 40.4 Z" fill="#FFD050" />
-        <path className="zk-blink" d="M43 38 Q45.6 36 48 37.8 Q45.6 39 43 38 Z" fill="#FFD050" />
-        <circle cx="31.4" cy="40" r="1" fill="#3A0A04" /><circle cx="45.4" cy="37.8" r="0.7" fill="#3A0A04" />
-        <path d="M22 50 L11 47 M22 51 L12 53 M24 52 L16 57" stroke="#E8C46A" strokeWidth="0.5" opacity="0.8" />
+        {/* ⚠️ 2026-10-11 Aki「小さい目が耳の位置」→ 斜め左向き：鼻筋を挟み、手前の目は右・大きく、奥の目は左・小さく（輪郭の際） */}
+        {/* ⚠️ 2026-10-11 Aki「赤いたち、耳に目がある。目は1個でいい」→ 横顔に近い斜め。奥の目は頭と耳の陰で見えない（手前の目だけ） */}
+        <path className="zk-blink" d="M34.6 40.4 Q38.6 36.8 42.6 39.6 Q38.6 42 34.6 40.4 Z" fill="#FFD050" />
+        <circle cx="38" cy="40" r="1" fill="#3A0A04" />
+        {/* ⚠️ 2026-10-11 Aki「髭の向きがおかしい」→ 鼻先からではなく、鼻の後ろ（口吻の脇）から生やし、外へ水平寄りに扇形（上・水平・下）に広げる */}
+        <path d="M25 49 L13 46.4 M25.4 50.2 L13 50.6 M25 51.4 L14 54.6 M29 49.8 L36 51.2 M29 51 L35 53.6" stroke="#E8C46A" strokeWidth="0.5" opacity="0.8" />
         <path d="M36 31 Q44 28 50 32" fill="none" stroke="#FFD0A0" strokeWidth="1" opacity="0.6" strokeLinecap="round" />
       </g></g>
       <ZkFire1Embers pts={[[84, 50, -300], [90, 68, -1300], [16, 30, -2000]]} />
@@ -50811,9 +50937,9 @@ function ZkFire2Q() {
         <path d="M15 62 C22 64 32 66 43 63 C34 69 22 69 15 62 Z" fill="url(#zkFire2Maw)" />
         <ZkFire2Crack d="M20 47.4 L26 50 L32 46 L38 49 L44 48" w={0.8} dl="-300ms" />
         <path d="M21 50 C23 46 29 46 31 50 Z M38 48.4 C40 45.6 44 45.6 45 48.4 Z" fill="#4A2222" {...zkFire2Rim} />
-        <path className="zk-blink" d="M21.6 52.6 Q26 48.6 30.6 52 Q26 54.6 21.6 52.6 Z" fill="#FFD050" />
-        <path className="zk-blink" d="M38 50.6 Q41 48.4 44 50.2 Q41 51.6 38 50.6 Z" fill="#FFD050" />
-        <ellipse cx="26" cy="52" rx="0.6" ry="1.5" fill="#2A0604" /><ellipse cx="41" cy="50.2" rx="0.45" ry="1" fill="#2A0604" />
+        <g transform="translate(26.1 51.6) scale(0.667) translate(-26.1 -51.6)"><path className="zk-blink" d="M21.6 52.6 Q26 48.6 30.6 52 Q26 54.6 21.6 52.6 Z" fill="#FFD050" /></g>
+        <g transform="translate(41 50) scale(1.500) translate(-41 -50)"><path className="zk-blink" d="M38 50.6 Q41 48.4 44 50.2 Q41 51.6 38 50.6 Z" fill="#FFD050" /></g>
+        <g transform="translate(26.1 51.6) scale(0.667) translate(-26.1 -51.6)"><ellipse cx="26" cy="52" rx="0.6" ry="1.5" fill="#2A0604" /></g><g transform="translate(41 50) scale(1.500) translate(-41 -50)"><ellipse cx="41" cy="50.2" rx="0.45" ry="1" fill="#2A0604" /></g>
         <circle cx="17" cy="57" r="0.7" fill="#140608" />
         <path d="M22 46.4 Q30 43.6 38 45" fill="none" stroke="#C87A6A" strokeWidth="1" opacity="0.6" strokeLinecap="round" />
       </g></g>
@@ -50952,9 +51078,9 @@ function ZkFire4Q() {
           <ellipse cx="44" cy="58" rx="12.2" ry="13.6" fill="none" stroke="#E8C46A" strokeWidth="1.2" />
           <path d="M36 49 C32 44 30 38 31 31 C35 36 39 42 41 47 Z" fill="url(#zkFire4Horn)" />
           <path d="M33 52 L41 54.4 M46 53.6 L52 51.6" stroke="#2A0A06" strokeWidth="1.6" strokeLinecap="round" />
-          <path className="zk-blink" d="M34 56 Q37.6 53 41.4 55.4 Q37.6 57.6 34 56 Z" fill="#FFD050" />
-          <path className="zk-blink" d="M46.4 55 Q48.8 53.4 51.2 54.8 Q48.8 56 46.4 55 Z" fill="#FFD050" />
-          <circle cx="37.2" cy="55.8" r="0.9" fill="#2A0604" /><circle cx="48.4" cy="54.9" r="0.7" fill="#2A0604" />
+          <g transform="translate(37.7 55.3) scale(0.649) translate(-37.7 -55.3)"><path className="zk-blink" d="M34 56 Q37.6 53 41.4 55.4 Q37.6 57.6 34 56 Z" fill="#FFD050" /></g>
+          <g transform="translate(48.8 54.7) scale(1.542) translate(-48.8 -54.7)"><path className="zk-blink" d="M46.4 55 Q48.8 53.4 51.2 54.8 Q48.8 56 46.4 55 Z" fill="#FFD050" /></g>
+          <g transform="translate(37.7 55.3) scale(0.649) translate(-37.7 -55.3)"><circle cx="37.2" cy="55.8" r="0.9" fill="#2A0604" /></g><g transform="translate(48.8 54.7) scale(1.542) translate(-48.8 -54.7)"><circle cx="48.4" cy="54.9" r="0.7" fill="#2A0604" /></g>
           <path d="M41 57.6 C39 60.4 37 62.4 37.6 64.2 C40 64.8 42 64 43.4 62.4 Z" fill="#8A1E12" />
           <path d="M34 66 C38 72 48 72 52 65 C46 68 40 68 34 66 Z" fill="#2A0606" />
           <path d="M36.4 66.6 L37.4 69.6 L39 67.2 Z M46.6 67.4 L47.6 70.4 L48.8 67 Z" fill="#FFF4E0" />
@@ -51089,10 +51215,11 @@ function ZkFire5Q() {
         <path d="M20 46 C21 44.6 24 44.6 25 46 C24 47.6 21 47.6 20 46 Z" fill="#2A0A06" />
         <path d="M20 53 C24 55 32 55 36 52 C34 60 28 64 24 62 C21 60 20 57 20 53 Z" fill="#3A0808" />
         <path d="M22 53.6 L23 56.8 L24.4 54 Z M32 53.8 L31.4 57 L33.6 53.4 Z" fill="#FFF4E0" />
-        <path className="zk-blink" d="M25 40.6 Q29 37.4 33 39.8 Q29 42 25 40.6 Z" fill="#FFD050" />
-        <path className="zk-blink" d="M41.6 39 Q44.4 37 47 38.6 Q44.4 40 41.6 39 Z" fill="#FFD050" />
-        <circle cx="28.6" cy="40.4" r="0.9" fill="#3A0A04" /><circle cx="44.2" cy="38.7" r="0.7" fill="#3A0A04" />
-        <path d="M24 37.6 L33 38 M48 36 L41.6 37" stroke="#2A0A06" strokeWidth="1.1" />
+        {/* ⚠️ 2026-10-11 Aki「小さい目が耳の位置」→ 斜め左向き：鼻筋を挟み、手前の目は右・大きく、奥の目は左・小さく（輪郭の際） */}
+        <path className="zk-blink" d="M31.55 40.6 Q35.55 37.4 39.55 39.8 Q35.55 42 31.55 40.6 Z" fill="#FFD050" />
+        <path className="zk-blink" d="M20.54 39 Q23.34 37 25.94 38.6 Q23.34 40 20.54 39 Z" fill="#FFD050" />
+        <circle cx="35.15" cy="40.4" r="0.9" fill="#3A0A04" /><circle cx="23.14" cy="38.7" r="0.7" fill="#3A0A04" />
+        <path d="M30.55 37.6 L39.55 38 M26.94 36 L20.54 37" stroke="#2A0A06" strokeWidth="1.1" />
         <path d="M30 31 Q40 28 48 31" fill="none" stroke="#FFE0B0" strokeWidth="0.9" opacity="0.6" strokeLinecap="round" />
       </g></g>
       <ZkFire1Embers pts={[[18, 20, -200], [84, 30, -1000], [14, 74, -1800]]} />
@@ -51216,8 +51343,8 @@ function ZkFire6Q() {
       <g className="zk-breathe"><g transform="rotate(-6 42 40)">
         <path d="M30 40 C28 32 34 26 42 26 C50 26 56 32 54 40 C52 48 46 52 38 52 C32 52 30 46 30 40 Z" fill="url(#zkFire6Rock)" {...zkFire6Rim} />
         <path d="M29 35 L38 33 L46 34 L53 32 L53 35.6 L46 37 L38 37 L30 38.4 Z" fill="#140A0C" />
-        <path className="zk-blink" d="M32.4 38.6 Q36.4 35.8 40.4 38 Q36.4 40.2 32.4 38.6 Z" fill="#FFD050" />
-        <path className="zk-blink" d="M45 37.6 Q47.6 36 50.2 37.4 Q47.6 38.6 45 37.6 Z" fill="#FFD050" />
+        <g transform="translate(36.4 38) scale(0.650) translate(-36.4 -38)"><path className="zk-blink" d="M32.4 38.6 Q36.4 35.8 40.4 38 Q36.4 40.2 32.4 38.6 Z" fill="#FFD050" /></g>
+        <g transform="translate(47.6 37.3) scale(1.538) translate(-47.6 -37.3)"><path className="zk-blink" d="M45 37.6 Q47.6 36 50.2 37.4 Q47.6 38.6 45 37.6 Z" fill="#FFD050" /></g>
         <path d="M32 45 C36 49.6 44 50 49 45.6 C44 47.6 37 47.4 32 45 Z" fill="url(#zkFire6Maw)" stroke="#FF8A3A" strokeWidth="0.6" />
         <path d="M34 27.6 L32 22 L38 26.4 Z M48 27 L52 22.4 L51 28.6 Z" fill="#2A1C1E" {...zkFire6Rim} />
       </g></g>
@@ -51359,10 +51486,10 @@ function ZkDragon1Q() {
           <path d="M19 45 C24 47 30 48 36 47 C33 51 26 52 22 50 C20 49 19 47 19 45 Z" fill="#8A2618" />
           <path d="M22 45.6 L23 47.4 L24.4 46 M28 46.4 L29 48.2 L30.4 46.6" fill="#FFF4E0" />
           <path d="M31 22 L27 11 L36 21 Z" fill="url(#zkDragon1Horn)" /><path d="M45 22 L50 13 L50 25 Z" fill="url(#zkDragon1Horn)" />
-          <ellipse className="zk-blink" cx="31" cy="33" rx="3.4" ry="3.8" fill="#FFD060" />
-          <ellipse className="zk-blink" cx="45.5" cy="31.6" rx="2" ry="3" fill="#FFD060" />
-          <ellipse cx="30.2" cy="33.6" rx="1.3" ry="2.1" fill="#3A0A04" /><ellipse cx="45" cy="32" rx="0.9" ry="1.6" fill="#3A0A04" />
-          <circle cx="31" cy="32.2" r="0.6" fill="#FFFFFF" />
+          {/* ⚠️ 2026-10-11 Aki「頭が大きくて後頭部に目」→ 横顔に近い斜め。奥の目は頭の陰で見えない（手前の目だけ） */}
+          <g><ellipse className="zk-blink" cx="31" cy="33" rx="3.4" ry="3.8" fill="#FFD060" /></g>
+          <g><ellipse cx="30.2" cy="33.6" rx="1.3" ry="2.1" fill="#3A0A04" /></g>
+          <g><circle cx="31" cy="32.2" r="0.6" fill="#FFFFFF" /></g>
           <circle cx="20.4" cy="40" r="0.8" fill="#3A0A04" />
           <path d="M28 25 Q36 21 44 23" fill="none" stroke="#FFD0A0" strokeWidth="1" opacity="0.6" strokeLinecap="round" />
         </g>
@@ -51512,10 +51639,11 @@ function ZkDragon2Q() {
           <path d="M18 60.4 L19 62.2 L20 60.6 M24 60.6 L25 62.4 L26 60.8" fill="#FFF4E0" />
           <path d="M17 49 L10 42 L20 45.6 Z" fill="url(#zkDragon2Horn)" />
           <path d="M26 42 L27 30 L32 41 Z" fill="url(#zkDragon2Horn)" /><path d="M38 42 L42 32 L42 45 Z" fill="url(#zkDragon2Horn)" />
-          <path className="zk-blink" d="M22 49 Q26 45.8 30 48.4 Q26 50.4 22 49 Z" fill="#FFD060" />
-          <path className="zk-blink" d="M35 47.6 Q37.6 45.8 40 47.4 Q37.6 48.6 35 47.6 Z" fill="#FFD060" />
-          <circle cx="25.8" cy="48.6" r="1" fill="#3A0A04" /><circle cx="37.4" cy="47.4" r="0.7" fill="#3A0A04" />
-          <path d="M21 45.4 L30 46.4 M41 44.6 L35 45.4" stroke="#2A0604" strokeWidth="0.9" />
+          {/* ⚠️ 2026-10-11 Aki「小さい目が耳の位置」→ 斜め左向き：鼻筋を挟み、手前の目は右・大きく、奥の目は左・小さく（輪郭の際） */}
+          <path className="zk-blink" d="M26.87 49 Q30.87 45.8 34.87 48.4 Q30.87 50.4 26.87 49 Z" fill="#FFD060" />
+          <path className="zk-blink" d="M19.34 47.6 Q21.94 45.8 24.34 47.4 Q21.94 48.6 19.34 47.6 Z" fill="#FFD060" />
+          <circle cx="30.67" cy="48.6" r="1" fill="#3A0A04" /><circle cx="21.74" cy="47.4" r="0.7" fill="#3A0A04" />
+          <path d="M25.87 45.4 L34.87 46.4 M25.34 44.6 L19.34 45.4" stroke="#2A0604" strokeWidth="0.9" />
           <circle cx="15.4" cy="53" r="0.7" fill="#2A0604" />
         </g>
       </g>
@@ -51642,9 +51770,10 @@ function ZkDragon3Q() {
           <path d="M17 44 L28 42.6 L36 42 L28 43.4 Z" fill="#1A0204" />
           <path d="M20 43.4 L21 45 L22 43.2 M25 43 L26 44.6 L27 42.8" fill="#FFF4E0" />
           <path d="M30 29 L44 20 L36 32 Z" fill="url(#zkDragon3Gold)" /><path d="M36 31 L46 27 L40 34 Z" fill="#B8802A" />
-          <path className="zk-blink" d="M20 35 Q23.8 32.2 27.6 34.4 Q23.8 36.2 20 35 Z" fill="#FFB850" />
-          <path className="zk-blink" d="M32 33.4 Q34.4 31.8 36.6 33.2 Q34.4 34.4 32 33.4 Z" fill="#FFB850" />
-          <circle cx="23.6" cy="34.8" r="0.9" fill="#1A0204" /><circle cx="34.2" cy="33.2" r="0.6" fill="#1A0204" />
+          {/* ⚠️ 2026-10-11 Aki「斜めの顔で目があり得ない位置」→ 奥の目が後頭部にあった。奥の目は鼻筋の向こう（左上）、手前の目はその右 */}
+          <path className="zk-blink" d="M26 35 Q29.8 32.2 33.6 34.4 Q29.8 36.2 26 35 Z" fill="#FFB850" />
+          <path className="zk-blink" d="M19.4 32.6 Q21.8 31 24 32.4 Q21.8 33.6 19.4 32.6 Z" fill="#FFB850" />
+          <circle cx="29.6" cy="34.8" r="0.9" fill="#1A0204" /><circle cx="21.6" cy="32.4" r="0.6" fill="#1A0204" />
           <path d="M18 32 Q24 29 32 30" fill="none" stroke="#FFC0A0" strokeWidth="0.8" opacity="0.6" strokeLinecap="round" />
         </g>
       </g>
@@ -51771,8 +51900,8 @@ function ZkDragon4Q() {
             <path d="M58 30 L68 30.6 L74 30 C72 34 64 36 60 34 Z" fill="#4A0C18" />
             <path d="M58 30 L68 30.6 L74 30 L68 31.4 L59 31.2 Z" fill="#FFB040" />
             <path d="M74 16 L80 8 L78 18 Z" fill="url(#zkDragon4Gold)" />
-            <path className="zk-blink" d="M65 21 Q67.6 19.4 70 20.8 Q67.6 22 65 21 Z" fill="#FFB850" />
-            <circle cx="67.4" cy="21" r="0.6" fill="#1A0206" />
+            <g transform="translate(67.5 20.7) scale(1.600) translate(-67.5 -20.7)"><path className="zk-blink" d="M65 21 Q67.6 19.4 70 20.8 Q67.6 22 65 21 Z" fill="#FFB850" /></g>
+            <g transform="translate(67.5 20.7) scale(1.600) translate(-67.5 -20.7)"><circle cx="67.4" cy="21" r="0.6" fill="#1A0206" /></g>
           </g>
           <g transform="translate(58 30) rotate(-50)"><ZkDragon4Breath /></g>
           {/* 胴 */}
@@ -51791,10 +51920,11 @@ function ZkDragon4Q() {
           <path d="M15 49 L30 48 L40 47 L30 49.4 L16 50.4 Z" fill="#1A0206" />
           <path d="M18 49.2 L19 51 L20 49.4 M24 48.8 L25 50.6 L26 49" fill="#FFF4E0" />
           <path d="M34 31 L44 20 L42 34 Z" fill="url(#zkDragon4Gold)" /><path d="M26 31 L26 22 L31 30 Z" fill="#B8802A" />
-          <path className="zk-blink" d="M21 38.6 Q25 35.4 29 37.8 Q25 39.8 21 38.6 Z" fill="#FFB850" />
-          <path className="zk-blink" d="M34 37.2 Q36.6 35.4 39 37 Q36.6 38.2 34 37.2 Z" fill="#FFB850" />
-          <circle cx="24.8" cy="38.4" r="1" fill="#1A0206" /><circle cx="36.4" cy="37" r="0.7" fill="#1A0206" />
-          <path d="M20 35 L29 36 M40 34.6 L34 35.4" stroke="#1A0206" strokeWidth="0.9" />
+          {/* ⚠️ 2026-10-11 Aki「小さい目が耳の位置」→ 斜め左向き：鼻筋を挟み、手前の目は右・大きく、奥の目は左・小さく（輪郭の際） */}
+          <g transform="translate(29.87 37.6) scale(0.625) translate(-29.87 -37.6)"><path className="zk-blink" d="M25.87 38.6 Q29.87 35.4 33.87 37.8 Q29.87 39.8 25.87 38.6 Z" fill="#FFB850" /></g>
+          <path className="zk-blink" d="M18.34 37.2 Q20.94 35.4 23.34 37 Q20.94 38.2 18.34 37.2 Z" fill="#FFB850" />
+          <g transform="translate(29.87 37.6) scale(0.625) translate(-29.87 -37.6)"><circle cx="29.67" cy="38.4" r="1" fill="#1A0206" /></g><circle cx="20.74" cy="37" r="0.7" fill="#1A0206" />
+          <path d="M24.87 35 L33.87 36 M24.34 34.6 L18.34 35.4" stroke="#1A0206" strokeWidth="0.9" />
           <circle cx="15.6" cy="42" r="0.7" fill="#1A0206" />
         </g>
       </g>
@@ -51960,10 +52090,11 @@ function ZkDragon5Q() {
           <path d="M26 28 C26 20 32 14 40 14 C48 14 54 20 52 28 C50 34 44 36 38 36 L26 36 C24 34 24 31 26 28 Z" fill="url(#zkDragon5Scale)" />
           <path d="M25 35 L36 36 L42 36 C38 40 30 40 26 38 Z" fill="#5A1A10" />
           <path d="M46 16 L58 8 L52 20 Z" fill="url(#zkDragon5Gold)" /><path d="M34 16 L30 6 L38 14 Z" fill="url(#zkDragon5Gold)" />
-          <path className="zk-blink" d="M30 25 Q33.6 22.2 37 24.4 Q33.6 26.2 30 25 Z" fill="#FFC850" />
-          <path className="zk-blink" d="M43 24 Q45.4 22.4 48 23.8 Q45.4 25 43 24 Z" fill="#FFC850" />
-          <circle cx="33.4" cy="24.8" r="0.9" fill="#1A0404" /><circle cx="45.4" cy="23.8" r="0.7" fill="#1A0404" />
-          <path d="M29 21.6 L37 22.6 M49 21 L43 22" stroke="#1A0404" strokeWidth="1" />
+          {/* ⚠️ 2026-10-11 Aki「小さい目が耳の位置」→ 斜め左向き：鼻筋を挟み、手前の目は右・大きく、奥の目は左・小さく（輪郭の際） */}
+          <path className="zk-blink" d="M35.04 25 Q38.64 22.2 42.04 24.4 Q38.64 26.2 35.04 25 Z" fill="#FFC850" />
+          <path className="zk-blink" d="M26.8 24 Q29.2 22.4 31.8 23.8 Q29.2 25 26.8 24 Z" fill="#FFC850" />
+          <circle cx="38.44" cy="24.8" r="0.9" fill="#1A0404" /><circle cx="29.2" cy="23.8" r="0.7" fill="#1A0404" />
+          <path d="M34.04 21.6 L42.04 22.6 M32.8 21 L26.8 22" stroke="#1A0404" strokeWidth="1" />
           <circle cx="27" cy="30" r="0.7" fill="#1A0404" />
         </g>
       </g>
@@ -52116,10 +52247,11 @@ function ZkDragon6Q() {
           <path d="M20 44.4 L21 46.4 L22 44.6 M26 44.6 L27 46.6 L28 44.8" fill="#E8D8C0" />
           <path d="M38 24 C44 16 54 12 62 14 C54 16 48 22 44 30 Z" fill="url(#zkDragon6Horn)" />
           <path d="M28 24 C26 16 22 12 18 10 C24 10 30 16 32 22 Z" fill="url(#zkDragon6Horn)" />
-          <path className="zk-blink" d="M23 33 Q27 30 31 32.4 Q27 34.4 23 33 Z" fill="#FFA040" />
-          <path className="zk-blink" d="M38 31.6 Q40.8 29.8 43.4 31.4 Q40.8 32.6 38 31.6 Z" fill="#FFA040" />
-          <circle cx="26.8" cy="32.8" r="0.9" fill="#1A0404" /><circle cx="40.8" cy="31.4" r="0.7" fill="#1A0404" />
-          <path d="M22 29.6 L31 30.6 M45 29 L38 30" stroke="#08050A" strokeWidth="1" />
+          {/* ⚠️ 2026-10-11 Aki「小さい目が耳の位置」→ 斜め左向き：鼻筋を挟み、手前の目は右・大きく、奥の目は左・小さく（輪郭の際） */}
+          <path className="zk-blink" d="M28.88 33 Q32.88 30 36.88 32.4 Q32.88 34.4 28.88 33 Z" fill="#FFA040" />
+          <path className="zk-blink" d="M19.1 31.6 Q21.9 29.8 24.5 31.4 Q21.9 32.6 19.1 31.6 Z" fill="#FFA040" />
+          <circle cx="32.68" cy="32.8" r="0.9" fill="#1A0404" /><circle cx="21.9" cy="31.4" r="0.7" fill="#1A0404" />
+          <path d="M27.88 29.6 L36.88 30.6 M26.1 29 L19.1 30" stroke="#08050A" strokeWidth="1" />
           <path d="M30 26 L34 30 L32 36 M44 36 L46 40" {...zkDragon6Crack} />
         </g>
       </g>
@@ -52338,8 +52470,9 @@ function ZkSteel1Q() {
         <path d="M18 80 C12 82 10 86 13 88 C15 85 18 84 22 83 Z" fill="#B8802A" />
         <path d="M33 83 C34 87 32 89 30 90 C30 88 30 86 29 84 Z" fill="#8A5A1A" />
         <path d="M34 61 C37 54 42 51 46 52" fill="none" stroke="#2A2C34" strokeWidth="0.9" /><circle cx="46" cy="52" r="1" fill="#E8B860" />
-        <ZkSteel1Eye x={23} y={71} r={2.7} ry={2.3} />
-        <ZkSteel1Eye x={37} y={68} r={1.5} ry={1.1} d="-120ms" />
+        {/* ⚠️ 2026-10-11 Aki「左向きの斜めで右の目が小さいことはありえない」→ 大小を入れ替え（右＝手前が大きい） */}
+        <ZkSteel1Eye x={23} y={71} r={1.5} ry={1.1} />
+        <ZkSteel1Eye x={37} y={68} r={2.7} ry={2.3} d="-120ms" />
         {/* 手前の脚：前脚を振り上げる */}
         <ZkSteel1Leg pts={[[30, 76], [20, 72], [11, 80]]} />
         <ZkSteel1Leg pts={[[46, 81], [40, 86], [36, 92]]} />
@@ -52910,8 +53043,9 @@ function ZkSteel5Q() {
         <path d="M33 50 C36 44 42 40 46 40 C44 44 42 48 40 52 Z" fill="url(#zkSteel5Brass)" opacity="0.85" />
         <path d="M12 66 C10 55 17 47 28 46 C38 46 44 53 42 62 C40 71 32 77 23 77 C16 77 13 72 12 66 Z" fill="url(#zkSteel5Hull)" {...ZkSteel1Rim} />
         <path d="M16 51 C20 48 26 47 31 48" fill="none" stroke="#E4EAF4" strokeWidth="1.2" opacity="0.5" strokeLinecap="round" />
-        <ZkSteel1Eye x={21} y={57} r={2.6} ry={1.7} />
-        <ZkSteel1Eye x={35} y={55} r={1.6} ry={1} d="-100ms" />
+        {/* ⚠️ 2026-10-11 Aki「左向きの斜めで右の目が小さいことはありえない」→ 大小を入れ替え（右＝手前が大きい） */}
+        <ZkSteel1Eye x={21} y={57} r={1.6} ry={1} />
+        <ZkSteel1Eye x={35} y={55} r={2.6} ry={1.7} d="-100ms" />
         <path d="M16 53 L25 55.4 M38 52 L33 53.6" stroke="#0A0B10" strokeWidth="1.1" strokeLinecap="round" />
         <path d="M14 68 L38 66 L35 72 C28 76 18 75 14 68 Z" fill="#1A0804" />
         <ZkSteel1Seam d="M17 69 L35 67.6" w={0.9} />
@@ -53047,8 +53181,9 @@ function ZkSteel6Q() {
         <g className="zk-glow"><ellipse cx="24" cy="40" rx="7" ry="4" fill="url(#zkSteel1Hot)" /></g>
         <path d="M20 40 L34 38 L44 37 L40 44 C32 46 24 44 20 40 Z" fill="url(#zkSteel6Plate)" {...ZkSteel1Rim} />
         <path d="M21 37.4 L23 39.6 L25 37.2 L27 39.4 L29 37 M22 40.4 L24 38.6 L26 40.8" fill="none" stroke="#FFF0C0" strokeWidth="0.6" />
-        <ZkSteel1Eye x={28} y={27} r={2.5} ry={1.6} />
-        <ZkSteel1Eye x={41} y={25.6} r={1.5} ry={1} d="-100ms" />
+        {/* ⚠️ 2026-10-11 Aki「左向きの斜めで右の目が小さいことはありえない」→ 大小を入れ替え（右＝手前が大きい） */}
+        <ZkSteel1Eye x={28} y={27} r={1.5} ry={1} />
+        <ZkSteel1Eye x={41} y={25.6} r={2.5} ry={1.6} d="-100ms" />
         <path d="M23 24 L32 25.4 M44 23 L39 24.4" stroke="#0A0B10" strokeWidth="1.1" strokeLinecap="round" />
         <path d="M40 58 L30 56 L24 60 L26 63 L31 60 L40 64 Z" fill="url(#zkSteel6Plate)" {...ZkSteel1Rim} />
         <path d="M24 60 L20 60 M25 62 L21 64 M26 63 L24 67" stroke="#E8B860" strokeWidth="1.1" strokeLinecap="round" />
@@ -53259,8 +53394,9 @@ function ZkWater1Q() {
         {/* 目：手前は大きく、奥は細く */}
         <circle cx="33" cy="41" r="7" fill="url(#zkWater1Skin)" />
         <circle cx="57" cy="39.6" r="5.4" fill="url(#zkWater1Skin)" />
-        <ZkWater1Eye x={32.4} y={40.6} rx={4.2} ry={4.4} />
-        <ZkWater1Eye x={57.4} y={39.6} rx={2.6} ry={3.2} px={-0.8} />
+        {/* ⚠️ 2026-10-11 Aki「左向きの斜めで右の目が小さいことはありえない」→ 大小を入れ替え（右＝手前が大きい） */}
+        <ZkWater1Eye x={32.4} y={40.6} rx={2.6} ry={3.2} />
+        <ZkWater1Eye x={57.4} y={39.6} rx={4.2} ry={4.4} px={-0.8} />
         <path d="M26 35 Q33 32 39 35.6" fill="none" stroke="#15357A" strokeWidth="1" />
         <path d="M26 50 Q30 45 36 45" fill="none" stroke="#CFF0FF" strokeWidth="0.9" opacity="0.6" strokeLinecap="round" />
         <ZkWater1Orb x={45.6} y={29.4} r={9} />
@@ -53383,8 +53519,9 @@ function ZkWater3Q() {
         <ZkWater0Arm {...A} p={[36, 56, 26, 50, 22, 38, 28, 28]} w0={7} w1={1.4} side={1} />
         <path d="M24 64.6 L25.4 61 M36 81 L39 79" stroke="#E8C46A" strokeWidth="1.3" strokeLinecap="round" />
         {/* 目：手前は大きく、奥は小さく */}
-        <ZkWater3Eye x={38} y={50} s={1.15} a={-8} />
-        <ZkWater3Eye x={58} y={49} s={0.72} a={6} />
+        {/* ⚠️ 2026-10-11 Aki「左向きの斜めで右の目が小さいことはありえない」→ 大小を入れ替え（右＝手前が大きい） */}
+        <ZkWater3Eye x={38} y={50} s={0.72} a={-8} />
+        <ZkWater3Eye x={58} y={49} s={1.15} a={6} />
       </g></g>
       <ZkWater3Sphere x={30} y={22} r={5.4} />
       <ZkWater3Sphere x={10} y={46} r={4.6} d={-900} />
@@ -53546,9 +53683,9 @@ function ZkWater4Q() {
         <path d="M34 28 C34 20 40 17 47 17 C54 17 58 22 57 29 C56 36 50 40 44 40 C38 40 34 35 34 28 Z" fill="url(#zkWater4Skin)" />
         <ZkWater4Fin x={55} y={27} a={-30} s={0.95} />
         <path d="M34 25 L30 21 L36 22 Z" fill="url(#zkWater4Fin)" stroke="#3A8AE8" strokeWidth="0.4" />
-        <path className="zk-blink" d="M37 27 Q40.4 24.6 43.6 26.8 Q40.4 28.4 37 27 Z" fill="#BFF0FF" />
-        <path className="zk-blink" d="M48 26.4 Q50.4 24.8 52.6 26.2 Q50.4 27.2 48 26.4 Z" fill="#BFF0FF" />
-        <circle cx="39.6" cy="27" r="0.9" fill="#0A1E48" /><circle cx="49.8" cy="26.4" r="0.7" fill="#0A1E48" />
+        <g transform="translate(40.3 26.5) scale(0.697) translate(-40.3 -26.5)"><path className="zk-blink" d="M37 27 Q40.4 24.6 43.6 26.8 Q40.4 28.4 37 27 Z" fill="#BFF0FF" /></g>
+        <g transform="translate(50.3 26) scale(1.435) translate(-50.3 -26)"><path className="zk-blink" d="M48 26.4 Q50.4 24.8 52.6 26.2 Q50.4 27.2 48 26.4 Z" fill="#BFF0FF" /></g>
+        <g transform="translate(40.3 26.5) scale(0.697) translate(-40.3 -26.5)"><circle cx="39.6" cy="27" r="0.9" fill="#0A1E48" /></g><g transform="translate(50.3 26) scale(1.435) translate(-50.3 -26)"><circle cx="49.8" cy="26.4" r="0.7" fill="#0A1E48" /></g>
         <path d="M36 23.8 L43 24.8 M53 23.4 L48 24.4" stroke="#1A3A7A" strokeWidth="0.9" />
         <path d="M38.6 35 Q41 36 43.4 35" fill="none" stroke="#3A5A7A" strokeWidth="0.7" />
         <path d="M38 19 Q44 16 50 18" fill="none" stroke="#FFFFFF" strokeWidth="0.8" opacity="0.6" strokeLinecap="round" />
@@ -53685,8 +53822,9 @@ function ZkWater5Q() {
         <path d="M40 22 C46 17 58 17 66 24" fill="none" stroke="#9AD0FF" strokeWidth="1.1" opacity="0.6" strokeLinecap="round" />
         <path d="M30 52 Q38 57 46 52 Q38 55 30 52 Z" fill="#02061A" />
         {/* 目：手前は大きく、奥は細く */}
-        <ZkWater5Eye x={36} y={37} r={5.4} />
-        <ZkWater5Eye x={56} y={35} r={3.6} sq={0.6} />
+        {/* ⚠️ 2026-10-11 Aki「左向きの斜めで右の目が小さいことはありえない」→ 大小を入れ替え（右＝手前が大きい） */}
+        <ZkWater5Eye x={36} y={37} r={3.6} sq={0.6} />
+        <ZkWater5Eye x={56} y={35} r={5.4} />
         <ZkWater5Foam x={20} y={92} w={18} s={1.2} />
         <ZkWater5Foam x={42} y={93} w={16} />
         <ZkWater5Foam x={64} y={93} w={20} s={1.1} />
@@ -53844,8 +53982,9 @@ function ZkWater6Q() {
         <ZkWater6Leg p={[44, 78, 40, 84, 36, 88, 32, 93]} />
         <ZkWater6Leg p={[56, 78, 56, 84, 54, 88, 52, 93]} />
         {/* 目：手前は大きく */}
-        <ZkWater6Eye x0={34} y0={44} x={30} y={34} r={3} />
-        <ZkWater6Eye x0={46} y0={40} x={47} y={31} r={2.2} />
+        {/* ⚠️ 2026-10-11 Aki「左向きの斜めで右の目が小さいことはありえない」→ 大小を入れ替え（右＝手前が大きい） */}
+        <ZkWater6Eye x0={34} y0={44} x={30} y={34} r={2.2} />
+        <ZkWater6Eye x0={46} y0={40} x={47} y={31} r={3} />
         {/* 大鋏：手前で開いて構える */}
         <ZkWater6Leg p={[30, 62, 24, 64, 20, 62, 18, 58]} w0={8} w1={7} fill="url(#zkWater6Shell)" />
         <ZkWater6Claw x={22} y={60} a={-6} s={1.15} />
@@ -54010,8 +54149,9 @@ function ZkIce1Q() {
         <path d="M29 39 C26 29 27 17 32 6 C37 16 38 28 37 38 Z" fill="url(#zkIce1Ear)" />
         <g className="zk-shine"><path d="M30.6 34 C29.6 26 30.2 18 32 11" fill="none" stroke="#FFFFFF" strokeWidth="1" strokeLinecap="round" /></g>
         {/* 目：近い方は大きく、奥は細く */}
-        <ZkIce0Eye cx={32} cy={46} rx={2.9} ry={3.3} />
-        <ZkIce0Eye cx={46} cy={45} rx={1.8} ry={2.7} p={1} dx={-0.4} />
+        {/* ⚠️ 2026-10-11 Aki「左向きの斜めで右の目が小さいことはありえない」→ 大小を入れ替え（右＝手前が大きい） */}
+        {/* ⚠️ 2026-10-11 Aki「目1個でいい」→ 横顔に近い斜め。奥の目は頭の陰で見えない（手前の目だけ） */}
+        <ZkIce0Eye cx={38} cy={45.4} rx={2.9} ry={3.3} p={1.3} dx={-0.6} />
         <ellipse cx="23.4" cy="53" rx="1.3" ry="1" fill="#5A7AB8" />
         <path d="M24 55.6 Q26 57 28 55.8" fill="none" stroke="#5A7AB8" strokeWidth="0.7" />
         <path d="M34 62 Q42 66 50 61" fill="none" stroke="#E8C46A" strokeWidth="1.4" /><circle cx="42" cy="64.6" r="1.5" fill="#E8C46A" />
@@ -54134,9 +54274,11 @@ function ZkIce2Q() {
           <path d="M15 53 C21 52 27 55 35 57 C30 60 21 59 17 56 Z" fill="url(#zkIce2Chest)" />
           <path d="M25 36 L19 18 L34 30 Z" fill="url(#zkIce2Fur)" /><path d="M26 33 L22 23 L31 30 Z" fill="#8ADAFF" />
           <path d="M43 32 L49 17 L52 38 Z" fill="#4A6E9E" />
-          <path className="zk-blink" d="M23 43 Q27.6 39.6 32 42.6 Q27.6 44.8 23 43 Z" fill="#8AEEFF" />
-          <path className="zk-blink" d="M40 41.6 Q43 39.6 46 41.4 Q43 42.8 40 41.6 Z" fill="#8AEEFF" />
-          <circle cx="26.6" cy="42.6" r="1" fill="#0A2440" /><circle cx="42.6" cy="41.4" r="0.8" fill="#0A2440" />
+          {/* ⚠️ 2026-10-11 Aki「小さい目が耳の位置」→ 斜め左向き：鼻筋を挟み、手前の目は右・大きく、奥の目は左・小さく（輪郭の際） */}
+          <path className="zk-blink" d="M29.72 43 Q34.32 39.6 38.72 42.6 Q34.32 44.8 29.72 43 Z" fill="#8AEEFF" />
+          {/* ⚠️ 2026-10-11 Aki「小さい目が耳の位置」→ 奥の目が輪郭から出ていた。輪郭の内側へ */}
+          <path className="zk-blink" d="M20.8 41.6 Q23.8 39.6 26.8 41.4 Q23.8 42.8 20.8 41.6 Z" fill="#8AEEFF" />
+          <circle cx="33.32" cy="42.6" r="1" fill="#0A2440" /><circle cx="23.4" cy="41.4" r="0.8" fill="#0A2440" />
           <circle cx="15.8" cy="52.4" r="1.3" fill="#1A2E50" />
           <path d="M30 34 Q36 30 44 32" fill="none" stroke="#FFFFFF" strokeWidth="0.9" opacity="0.7" strokeLinecap="round" />
           <path d="M48 46 L52 47 M47 49 L51 51" stroke="#FFFFFF" strokeWidth="0.8" opacity="0.8" />
@@ -54267,8 +54409,8 @@ function ZkIce3Q() {
           <path d="M32 24 L35 13 L44 7 L54 9 L61 16 L61 24 C52 21 40 21 32 24 Z" fill="url(#zkIce3Helm)" />
           <path d="M33 24 C40 22 52 22 60 24 L59 27.4 C51 25.6 42 25.6 34 28 Z" fill="#14305C" />
           <ellipse cx="40" cy="28" rx="6" ry="3.6" fill="url(#zkIce3Glow)" />
-          <path className="zk-blink" d="M36 27.4 L44 26.6 L43.4 29 L36.6 29.4 Z" fill="#BFF4FF" />
-          <path className="zk-blink" d="M50 26.4 L55.4 26.4 L55 28.2 L50.4 28.2 Z" fill="#BFF4FF" />
+          <g transform="translate(40 28) scale(0.675) translate(-40 -28)"><path className="zk-blink" d="M36 27.4 L44 26.6 L43.4 29 L36.6 29.4 Z" fill="#BFF4FF" /></g>
+          <g transform="translate(52.7 27.3) scale(1.481) translate(-52.7 -27.3)"><path className="zk-blink" d="M50 26.4 L55.4 26.4 L55 28.2 L50.4 28.2 Z" fill="#BFF4FF" /></g>
           <path d="M40 30.6 L27 36 L41 33.6 Z" fill="url(#zkIce3Ice)" />
           <path d="M37 35.6 L39 34.4 L41 36 L43 34.6 L45 36 L47 34.8" fill="none" stroke="#2A3E5E" strokeWidth="0.9" />
         </g>
@@ -54410,9 +54552,10 @@ function ZkIce4Q() {
         {/* 嘴：左下へ */}
         <path d="M36 37 L21 43 L36 43.4 C38.4 41 38.4 39 36 37 Z" fill="url(#zkIce4Beak)" />
         <path d="M23 42.6 L36 41" stroke="#8A5A10" strokeWidth="0.6" />
-        <ZkIce0Eye cx={41} cy={36} rx={2.5} ry={2.8} p={1.2} />
-        <ZkIce0Eye cx={54} cy={34.6} rx={1.6} ry={2.2} p={0.9} dx={-0.3} />
-        <path d="M37 32.4 L44 34 M57 31.6 L51.6 33" stroke="#0A1024" strokeWidth="1" />
+        {/* ⚠️ 2026-10-11 Aki「左向きの斜めで右の目が小さいことはありえない」→ 大小を入れ替え（右＝手前が大きい） */}
+        {/* ⚠️ 2026-10-11 Aki「目1個でいい」→ 横顔に近い斜め。奥の目は頭の陰で見えない（手前の目だけ） */}
+        <ZkIce0Eye cx={46} cy={35.4} rx={2.6} ry={2.9} p={1.25} dx={-0.6} />
+        <path d="M42 31.4 L49.6 32.6" stroke="#0A1024" strokeWidth="1" />
         {/* 手前の翼：剣を斜めに構える */}
         <path d="M38 54 C33 60 33 66 37 71 L41 69 C39 65 39 61 42 57 Z" fill="url(#zkIce4Body)" {...ZK_ICE4_RIM} />
         <ZkIce4Blade x={40} y={72} a={-30} l={30} />
@@ -54542,8 +54685,8 @@ function ZkIce5Q() {
         <path d="M34 20 C31 28 31 38 33 46 C35 38 35 30 36 24 Z" fill="url(#zkIce5Hair)" {...ZK_ICE5_RIM} />
         <path d="M51 6 L59 4.4 L59.6 6.8 L51.6 8.4 Z" fill="#E8C46A" />
         <g transform="translate(59 6.6)"><g className="zk-sway"><path d="M0 0 L1.6 6" stroke="#E8C46A" strokeWidth="0.5" /><path d="M1.7 5.6 L3 8 L1.7 10.4 L0.4 8 Z" fill="#BFEAFF" /></g></g>
-        <path className="zk-blink" d="M37 22.4 Q40.4 20.4 44 22.4 Q40.4 24 37 22.4 Z" fill="#9AF0FF" />
-        <path className="zk-blink" d="M48 22 Q50.4 20.6 53 22 Q50.4 23 48 22 Z" fill="#9AF0FF" />
+        <g transform="translate(40.5 22.2) scale(0.714) translate(-40.5 -22.2)"><path className="zk-blink" d="M37 22.4 Q40.4 20.4 44 22.4 Q40.4 24 37 22.4 Z" fill="#9AF0FF" /></g>
+        <g transform="translate(50.5 21.8) scale(1.400) translate(-50.5 -21.8)"><path className="zk-blink" d="M48 22 Q50.4 20.6 53 22 Q50.4 23 48 22 Z" fill="#9AF0FF" /></g>
         <path d="M36.4 20 L43 19.4 M49 19.4 L53.4 19.8" stroke="#141C38" strokeWidth="0.7" />
         <ellipse cx="38.6" cy="30" rx="1.3" ry="0.9" fill="#6A7AC8" />
       </g></g>
@@ -54835,15 +54978,20 @@ function ZkPoison1Q() {
         <path d="M22 88 L16 88 M23 89 L19 93 M26 89.4 L26 94" stroke="#1A5A7A" strokeWidth="1.2" strokeLinecap="round" />
         <circle cx="15.6" cy="88" r="1" fill="#E8C46A" /><circle cx="18.6" cy="93.2" r="1" fill="#E8C46A" /><circle cx="26" cy="94.2" r="1" fill="#E8C46A" />
         <ZkPoison1Spots g="zkPoison1Spot" pts={[[54, 52, 3], [64, 62, 2.2], [48, 74, 1.6], [70, 74, 1.8], [72, 82, 1.4]]} />
-        {/* 奥の目：小さく細く */}
-        <circle cx="54" cy="42" r="4.6" fill="url(#zkPoison1Skin)" />
-        <ellipse className="zk-blink" cx="54" cy="41.6" rx="2.6" ry="3" fill="url(#zkPoison1Eye)" />
-        <ellipse cx="53.4" cy="41.8" rx="1.4" ry="0.8" fill="#06202E" />
-        {/* 近い目：大きく */}
+        {/* ⚠️ 2026-10-11 Aki「左向きの斜めで右の目が小さいことはありえない」→ 大小を入れ替え（右＝手前が大きい） */}
+        {/* 奥の目（左）：小さく */}
+        <g transform="translate(31.5 44.7) scale(0.62) translate(-31.5 -44.7)">
         <circle cx="32" cy="45" r="7.4" fill="url(#zkPoison1Skin)" />
         <circle className="zk-blink" cx="31" cy="44.4" r="5.2" fill="url(#zkPoison1Eye)" />
         <ellipse cx="30.2" cy="44.8" rx="2.6" ry="1.4" fill="#06202E" />
-        <circle cx="29.2" cy="42.6" r="0.9" fill="#FFFFFF" />
+        </g>
+        {/* 近い目（右）：大きく */}
+        <g transform="translate(54 41.8) scale(1.6) translate(-54 -41.8)">
+        <circle cx="54" cy="42" r="4.6" fill="url(#zkPoison1Skin)" />
+        <ellipse className="zk-blink" cx="54" cy="41.6" rx="2.6" ry="3" fill="url(#zkPoison1Eye)" />
+        <ellipse cx="53.4" cy="41.8" rx="1.4" ry="0.8" fill="#06202E" />
+        <circle cx="52.6" cy="40.2" r="0.6" fill="#FFFFFF" />
+        </g>
         <path d="M38 48 Q48 46 58 50" fill="none" stroke="#DDF4FF" strokeWidth="1.1" opacity="0.5" strokeLinecap="round" />
       </g></g>
     </g>
@@ -55101,8 +55249,9 @@ function ZkPoison3Q() {
         <path d="M32 74 C26 74 22 72 20 70" fill="none" stroke="url(#zkPoison3Leg)" strokeWidth="4" strokeLinecap="round" />
         <g transform="translate(22 70) rotate(-24) scale(1.15)"><ZkPoison3Claw /></g>
         {/* 目：手前は大きく、奥は小さく */}
-        <circle className="zk-blink" cx="31" cy="68" r="2" fill="#BFF4FF" />
-        <circle className="zk-blink" cx="37" cy="64.4" r="1.2" fill="#BFF4FF" />
+        {/* ⚠️ 2026-10-11 Aki「左向きの斜めで右の目が小さいことはありえない」→ 大小を入れ替え（右＝手前が大きい） */}
+        <circle className="zk-blink" cx="31" cy="68" r="1.2" fill="#BFF4FF" />
+        <circle className="zk-blink" cx="37" cy="64.4" r="2" fill="#BFF4FF" />
       </g></g>
     </g>
   );
@@ -55225,8 +55374,8 @@ function ZkPoison4Q() {
           <path d="M-8 3 C-13 5 -15 9 -13 13 C-12 10 -10 8 -6 7 Z" fill="url(#zkPoison4Fang)" />
           <path d="M2 6 C0 9 -2 12 -6 13 C-3 10 -2 8 -1 6 Z" fill="url(#zkPoison4Fang)" opacity="0.85" />
           <circle cx="-12.8" cy="13" r="1" fill="#B07AE8" />
-          <path className="zk-blink" d="M-7.6 -1.6 Q-5 -3.8 -2.2 -1.8 Q-5 -0.4 -7.6 -1.6 Z" fill="#BFF4FF" />
-          <path className="zk-blink" d="M1 -2.4 Q2.8 -3.6 4.6 -2.4 Q2.8 -1.6 1 -2.4 Z" fill="#BFF4FF" />
+          <g transform="translate(-4.9 -2.1) scale(0.667) translate(4.9 2.1)"><path className="zk-blink" d="M-7.6 -1.6 Q-5 -3.8 -2.2 -1.8 Q-5 -0.4 -7.6 -1.6 Z" fill="#BFF4FF" /></g>
+          <g transform="translate(2.8 -2.6) scale(1.500) translate(-2.8 2.6)"><path className="zk-blink" d="M1 -2.4 Q2.8 -3.6 4.6 -2.4 Q2.8 -1.6 1 -2.4 Z" fill="#BFF4FF" /></g>
         </g>
       </g>
       <ZkPoison1Drop x={19} y={66} d={-1100} s={0.9} />
@@ -55338,9 +55487,9 @@ function ZkPoison5Q() {
           <path d="M22 37 L38 41 C34 45 28 48 22 48 Z" fill="#3A0A2A" />
           <path d="M50 38 C44 42 36 46 24 49 C28 45 32 42 38 41 Z" fill="#12444C" />
           <path d="M24.6 37.4 L25.6 43 L27.2 37.8 Z M31 39 L31.8 42.6 L33 39.2 Z" fill="#F0FFF8" />
-          <path className="zk-blink" d="M32 30.4 Q36 28 40 30.4 Q36 32.2 32 30.4 Z" fill="#BFF4FF" />
-          <path d="M35.8 29.4 L35.6 31.6" stroke="#06202E" strokeWidth="0.9" />
-          <path className="zk-blink" d="M45 29.6 Q47.4 28.4 49.4 29.8 Q47.4 30.8 45 29.6 Z" fill="#BFF4FF" />
+          <g transform="translate(36 30.1) scale(0.550) translate(-36 -30.1)"><path className="zk-blink" d="M32 30.4 Q36 28 40 30.4 Q36 32.2 32 30.4 Z" fill="#BFF4FF" /></g>
+          <g transform="translate(36 30.1) scale(0.550) translate(-36 -30.1)"><path d="M35.8 29.4 L35.6 31.6" stroke="#06202E" strokeWidth="0.9" /></g>
+          <g transform="translate(47.2 29.6) scale(1.818) translate(-47.2 -29.6)"><path className="zk-blink" d="M45 29.6 Q47.4 28.4 49.4 29.8 Q47.4 30.8 45 29.6 Z" fill="#BFF4FF" /></g>
           <path d="M30 28.4 L41 28.6 M44 28 L50 28.8" stroke="#06202E" strokeWidth="0.9" />
         </g>
       </g></g>
@@ -55574,8 +55723,9 @@ function ZkFly1S() {
         <path d="M24 46 C26 52 32 55 38 53 C34 51 29 49 24 46 Z" fill="#1A1410" />
         {/* 嘴（少し開く） */}
         <path d="M24 40 L12 42 L23 44 Z" fill="url(#zkFly1Beak)" /><path d="M23 44.6 L14 45.2 L24 47 Z" fill="#B8801A" />
-        <path className="zk-blink" d="M27 39 Q30.5 36.4 34 39 Q30.5 41 27 39 Z" fill="#9AF0B0" />
-        <circle cx="30" cy="39" r="0.9" fill="#0A1A10" />
+        {/* ⚠️ 2026-10-11 Aki「すずめの横顔の目」→ 嘴の付け根に貼り付いて低かった。嘴の線より上、頭の前から1/3ほど奥へ */}
+        <path className="zk-blink" d="M30 37 Q33.5 34.4 37 37 Q33.5 39 30 37 Z" fill="#9AF0B0" />
+        <circle cx="33.6" cy="37" r="0.9" fill="#0A1A10" />
         <path d="M34 30 Q40 28 46 31" fill="none" stroke="#FFD8A8" strokeWidth="1" opacity="0.6" strokeLinecap="round" />
       </g></g>
       <ZkFly1Swirl x={80} y={24} s={1.2} />
@@ -55602,13 +55752,17 @@ function ZkFly1Q() {
         <g transform="rotate(-10 44 40)">
           <path d="M28 40 C28 30 36 24 45 24 C54 24 60 30 60 39 C60 48 53 54 44 54 C35 54 28 49 28 40 Z" fill="url(#zkFly1Back)" />
           <path d="M29 35 C31 27 39 23 48 24 C55 26 59 30 60 36 C52 31 38 30 29 35 Z" fill="url(#zkFly1Cap)" />
-          <path d="M29 42 C31 39 37 40 38 44 C36 48 31 47 29 42 Z" fill="url(#zkFly1Belly)" />
-          <path d="M52 41 C54 39 58 40 59 43 C57 46 53 45 52 41 Z" fill="url(#zkFly1Belly)" opacity="0.8" />
-          <path d="M36 49 C40 54 48 55 52 51 C47 50 41 50 36 49 Z" fill="#1A1410" />
-          <path d="M34 42 L27 50 L37 46 Z" fill="url(#zkFly1Beak)" />
-          <path className="zk-blink" d="M31 37 Q35 33.6 39 36.6 Q35 39 31 37 Z" fill="#9AF0B0" />
-          <path className="zk-blink" d="M48 35.4 Q50.6 33.8 53 35.2 Q50.6 36.4 48 35.4 Z" fill="#9AF0B0" />
-          <circle cx="34.6" cy="36.8" r="1" fill="#0A1A10" /><circle cx="50.4" cy="35.2" r="0.7" fill="#0A1A10" />
+          {/*
+            ⚠️ 2026-10-11 Aki「すずめみたいな鳥の目」→ 嘴が頭の左端にあり、奥の目が後頭部にあった。
+            斜め左向き：嘴は顔の中心から左下へ。手前の目と頬は嘴の右、奥の目と頬は嘴の左（輪郭の際で小さく）
+          */}
+          <path d="M44 43 C46 40 52 41 53 44 C51 48 45 47 44 43 Z" fill="url(#zkFly1Belly)" />
+          <path d="M29 41 C30 39.6 33 40 33.6 42.4 C32.4 44.6 30 44 29 41 Z" fill="url(#zkFly1Belly)" opacity="0.8" />
+          <path d="M31 49 C35 53 42 54 46 51 C41 50.6 36 50 31 49 Z" fill="#1A1410" />
+          <path d="M38 41.6 L29.6 50.6 L41.4 45.6 Z" fill="url(#zkFly1Beak)" />
+          <path className="zk-blink" d="M41 36.4 Q45 33 49 36 Q45 38.4 41 36.4 Z" fill="#9AF0B0" />
+          <path className="zk-blink" d="M31.4 35.6 Q33.6 34.2 35.8 35.4 Q33.6 36.6 31.4 35.6 Z" fill="#9AF0B0" />
+          <circle cx="44.6" cy="36.2" r="1" fill="#0A1A10" /><circle cx="33.8" cy="35.4" r="0.7" fill="#0A1A10" />
           <path d="M40 28 Q46 26 52 28" fill="none" stroke="#FFD8A8" strokeWidth="1" opacity="0.6" strokeLinecap="round" />
         </g>
       </g></g>
@@ -55730,8 +55884,10 @@ function ZkFly2Q() {
           <path d="M26 38 C26 26 36 20 48 20 C60 20 66 28 66 38 C66 50 58 56 46 56 C34 56 26 50 26 38 Z" fill="url(#zkFly2Body)" />
           <path d="M30 26 L27 12 L38 22 Z" fill="#5A4A34" /><path d="M56 22 L63 12 L64 27 Z" fill="#4A3C28" />
           <path d="M28 40 C28 30 34 27 40 28 C46 29 48 34 52 34 C56 30 62 31 63 38 C64 48 56 54 46 54 C36 54 28 50 28 40 Z" fill="url(#zkFly2Face)" />
-          <ZkFly2Eye x={37} y={39} r={6} />
-          <ZkFly2Eye x={56} y={38} r={4.4} sx={0.75} />
+          {/* ⚠️ 2026-10-11 Aki「左向きの斜めで右の目が小さいことはありえない」→ 大小を入れ替え（右＝手前が大きい） */}
+          {/* ⚠️ 2026-10-11 Aki「フクロウは2個」→ フクロウは両目とも顔の前面。同じくらいの大きさで、奥（左）だけ少し横に縮める */}
+          <ZkFly2Eye x={38} y={39} r={5.4} sx={0.86} />
+          <ZkFly2Eye x={55} y={38} r={5.6} />
           <path d="M44 42 L48 42 L44 50 C42 48 42 44 44 42 Z" fill="url(#zkFly2Beak)" />
           <path d="M30 31 L44 34 M61 31 L52 34" stroke="#2E2618" strokeWidth="1.1" />
         </g>
@@ -55852,9 +56008,10 @@ function ZkFly4Q() {
           <path d="M32 34 C32 24 38 18 46 18 C54 18 58 24 58 32 C58 40 54 46 48 48 C40 48 32 42 32 34 Z" fill="url(#zkFly4Head)" />
           <path d="M36 32 C30 32 26 36 26 42 C28 44 30 44 30 42 C31 40 34 40 36 40 C38 38 38 34 36 32 Z" fill="url(#zkFly4Beak)" />
           <path d="M34 26 L44 29 M56 26 L50 28" stroke="#2A2014" strokeWidth="1.4" />
-          <path className="zk-blink" d="M36 30 Q39.5 27.6 43 30 Q39.5 31.8 36 30 Z" fill="#9AF0B0" />
-          <path className="zk-blink" d="M50 29.4 Q52.4 28 54.6 29.4 Q52.4 30.4 50 29.4 Z" fill="#9AF0B0" />
-          <circle cx="39" cy="30" r="0.9" fill="#0A1A10" /><circle cx="52" cy="29.3" r="0.6" fill="#0A1A10" />
+          {/* ⚠️ 2026-10-11 Aki「小さい目が耳の位置」→ 斜め左向き：鼻筋を挟み、手前の目は右・大きく、奥の目は左・小さく（輪郭の際） */}
+          <path className="zk-blink" d="M41.46 30 Q44.96 27.6 48.46 30 Q44.96 31.8 41.46 30 Z" fill="#9AF0B0" />
+          <path className="zk-blink" d="M32.45 29.4 Q34.85 28 37.05 29.4 Q34.85 30.4 32.45 29.4 Z" fill="#9AF0B0" />
+          <circle cx="44.46" cy="30" r="0.9" fill="#0A1A10" /><circle cx="34.45" cy="29.3" r="0.6" fill="#0A1A10" />
           <path d="M40 21 Q46 19 52 21" fill="none" stroke="#FFFFFF" strokeWidth="1" opacity="0.7" strokeLinecap="round" />
         </g>
       </g></g>
@@ -55987,9 +56144,10 @@ function ZkFly5Q() {
           <path d="M46 16 L56 8 L52 18 L60 18 L52 24 Z" fill="#CDEBD6" />
           <path d="M32 28 C26 28 22 32 22 38 C24 40 26 40 26 38 C27 36 30 36 32 36 C34 34 34 30 32 28 Z" fill="url(#zkFly5Beak)" />
           <path d="M30 22 L40 25 M52 22 L46 24" stroke="#1A2A20" strokeWidth="1.2" />
-          <path className="zk-blink" d="M32 26.4 Q35.5 24 39 26.4 Q35.5 28.2 32 26.4 Z" fill="#9AF0B0" />
-          <path className="zk-blink" d="M46 25.6 Q48.4 24.2 50.6 25.6 Q48.4 26.6 46 25.6 Z" fill="#9AF0B0" />
-          <circle cx="35" cy="26.4" r="0.9" fill="#0A1A10" /><circle cx="48" cy="25.5" r="0.6" fill="#0A1A10" />
+          {/* ⚠️ 2026-10-11 Aki「小さい目が耳の位置」→ 斜め左向き：鼻筋を挟み、手前の目は右・大きく、奥の目は左・小さく（輪郭の際） */}
+          <path className="zk-blink" d="M37.46 26.4 Q40.96 24 44.46 26.4 Q40.96 28.2 37.46 26.4 Z" fill="#9AF0B0" />
+          <path className="zk-blink" d="M28.45 25.6 Q30.85 24.2 33.05 25.6 Q30.85 26.6 28.45 25.6 Z" fill="#9AF0B0" />
+          <circle cx="40.46" cy="26.4" r="0.9" fill="#0A1A10" /><circle cx="30.45" cy="25.5" r="0.6" fill="#0A1A10" />
         </g>
       </g></g>
       <ZkFly5Motes pts={[[14, 40, 0], [84, 30, -1000, 2], [16, 72, -2000, 2.2], [88, 84, -2600, 1.8]]} />
@@ -56126,10 +56284,14 @@ function ZkFly6Q() {
             <path d="M0 0 C4 -6 10 -10 18 -10 C12 -8 8 -4 4 2 Z M-2 -1 C0 -8 4 -14 10 -16 C6 -12 4 -6 2 0 Z" fill="#9AF0B0" />
             <circle cx="18" cy="-10" r="1.3" fill="#E8C46A" /><circle cx="10" cy="-16" r="1.3" fill="#E8C46A" />
           </g></g>
-          <path d="M33 28 L24 34 L35 33 Z" fill="url(#zkFly6Beak)" />
-          <path className="zk-blink" d="M33 25.4 Q36.5 23 40 25.4 Q36.5 27.2 33 25.4 Z" fill="#9AF0B0" />
-          <path className="zk-blink" d="M45 24.8 Q47.4 23.4 49.6 24.8 Q47.4 25.8 45 24.8 Z" fill="#9AF0B0" />
-          <circle cx="36" cy="25.4" r="0.9" fill="#0A2A18" /><circle cx="47" cy="24.7" r="0.6" fill="#0A2A18" />
+          {/*
+            ⚠️ 2026-10-11 Aki「緑の鳥の目」→ 嘴が頭の左端から出て、奥の目が後頭部にあった。
+            斜め左向き：嘴は顔の中心（両目の間の下）から出し、奥の目は嘴の左上（輪郭の際）、手前の目は嘴の右上
+          */}
+          <path d="M36.6 27.6 L26 34 L38.6 32 Z" fill="url(#zkFly6Beak)" />
+          <path className="zk-blink" d="M39.4 25.2 Q42.9 22.8 46.4 25.2 Q42.9 27 39.4 25.2 Z" fill="#9AF0B0" />
+          <path className="zk-blink" d="M31.4 24.8 Q33.4 23.6 35.4 24.8 Q33.4 25.8 31.4 24.8 Z" fill="#9AF0B0" />
+          <circle cx="42.4" cy="25.2" r="0.9" fill="#0A2A18" /><circle cx="33.6" cy="24.7" r="0.6" fill="#0A2A18" />
           <path d="M34 31 C38 33 44 33 50 30" stroke="#E8C46A" strokeWidth="0.8" fill="none" opacity="0.8" />
         </g>
       </g></g>
@@ -56274,10 +56436,10 @@ function ZkBug1Q() {
         <path d="M25 44 Q29 39 35 38" stroke="#FFF0D0" strokeWidth="0.8" opacity="0.7" fill="none" strokeLinecap="round" />
         {/* 頭（左下へ） */}
         <path d="M18 60 C17 54 22 51 28 52 C34 53 36 58 34 62 C31 66 22 66 18 60 Z" fill="url(#zkBug1Shell)" {...ZK_BUG_RIM} />
-        <ellipse className="zk-blink" cx="23" cy="58.6" rx="3.2" ry="3.4" fill="#9AF0B0" />
-        <ellipse className="zk-blink" cx="31.4" cy="57.8" rx="1.8" ry="2.6" fill="#9AF0B0" />
-        <circle cx="22.2" cy="59" r="1.3" fill="#0A1A10" /><circle cx="31" cy="58.2" r="0.9" fill="#0A1A10" />
-        <circle cx="21.6" cy="58" r="0.5" fill="#FFFFFF" />
+        <g transform="translate(23 58.6) scale(0.562) translate(-23 -58.6)"><ellipse className="zk-blink" cx="23" cy="58.6" rx="3.2" ry="3.4" fill="#9AF0B0" /></g>
+        <g transform="translate(31.4 57.8) scale(1.778) translate(-31.4 -57.8)"><ellipse className="zk-blink" cx="31.4" cy="57.8" rx="1.8" ry="2.6" fill="#9AF0B0" /></g>
+        <g transform="translate(23 58.6) scale(0.562) translate(-23 -58.6)"><circle cx="22.2" cy="59" r="1.3" fill="#0A1A10" /></g><g transform="translate(31.4 57.8) scale(1.778) translate(-31.4 -57.8)"><circle cx="31" cy="58.2" r="0.9" fill="#0A1A10" /></g>
+        <g transform="translate(23 58.6) scale(0.562) translate(-23 -58.6)"><circle cx="21.6" cy="58" r="0.5" fill="#FFFFFF" /></g>
         <path d="M21 54 C16 48 12 44 8 42 M27 53 C26 44 24 38 20 32" stroke="#1A2620" strokeWidth="1.1" fill="none" strokeLinecap="round" />
       </g></g>
       <ZkBugMotes id="zkBug1Mote" pts={[[86, 40, 0], [14, 78, -1400, 2], [72, 88, -2200, 2]]} />
@@ -56393,10 +56555,10 @@ function ZkBug2Q() {
         {/* 大角：左下から天へ反る */}
         <path d="M20 66 C16 60 14 50 16 38 C17 32 20 28 24 26 C22 32 22 36 24 38 C25 34 28 32 30 32 C27 38 25 46 26 54 C27 58 28 62 28 64 Z" fill="url(#zkBug2Horn)" {...ZK_BUG_RIM} />
         <path d="M18 44 C18 50 20 58 23 63" stroke="#9AF0B0" strokeWidth="0.6" opacity="0.55" fill="none" />
-        <ellipse className="zk-blink" cx="22.4" cy="70.4" rx="2.6" ry="2.8" fill="#9AF0B0" />
-        <ellipse className="zk-blink" cx="33" cy="69" rx="1.6" ry="2.2" fill="#9AF0B0" />
-        <circle cx="21.8" cy="70.8" r="1" fill="#0A1A10" /><circle cx="32.8" cy="69.3" r="0.7" fill="#0A1A10" />
-        <circle cx="21.3" cy="70" r="0.4" fill="#FFFFFF" />
+        <g transform="translate(22.4 70.4) scale(0.615) translate(-22.4 -70.4)"><ellipse className="zk-blink" cx="22.4" cy="70.4" rx="2.6" ry="2.8" fill="#9AF0B0" /></g>
+        <g transform="translate(33 69) scale(1.625) translate(-33 -69)"><ellipse className="zk-blink" cx="33" cy="69" rx="1.6" ry="2.2" fill="#9AF0B0" /></g>
+        <g transform="translate(22.4 70.4) scale(0.615) translate(-22.4 -70.4)"><circle cx="21.8" cy="70.8" r="1" fill="#0A1A10" /></g><g transform="translate(33 69) scale(1.625) translate(-33 -69)"><circle cx="32.8" cy="69.3" r="0.7" fill="#0A1A10" /></g>
+        <g transform="translate(22.4 70.4) scale(0.615) translate(-22.4 -70.4)"><circle cx="21.3" cy="70" r="0.4" fill="#FFFFFF" /></g>
       </g></g>
       <g className="zk-gust"><path d="M50 30 Q68 26 88 30" fill="none" stroke="#DFFFE8" strokeWidth="0.8" opacity="0.6" /></g>
     </g>
@@ -56500,10 +56662,10 @@ function ZkBug3Q() {
         {/* 頭：左手前へ */}
         <path d="M30 28 C32 20 44 18 50 22 C54 26 52 32 48 36 L40 42 C34 40 30 34 30 28 Z" fill="url(#zkBug3Body)" />
         <path d="M40 42 L38 46 L43 42 Z" fill="#1E5A2E" />
-        <ellipse className="zk-blink" cx="34" cy="27" rx="3.6" ry="4" fill="#9AF0B0" />
-        <ellipse className="zk-blink" cx="47.4" cy="24.6" rx="2" ry="2.8" fill="#9AF0B0" />
-        <circle cx="33.2" cy="27.6" r="1.3" fill="#0A1A10" /><circle cx="47" cy="25" r="0.9" fill="#0A1A10" />
-        <circle cx="32.6" cy="26.4" r="0.5" fill="#FFFFFF" />
+        <g transform="translate(34 27) scale(0.556) translate(-34 -27)"><ellipse className="zk-blink" cx="34" cy="27" rx="3.6" ry="4" fill="#9AF0B0" /></g>
+        <g transform="translate(47.4 24.6) scale(1.800) translate(-47.4 -24.6)"><ellipse className="zk-blink" cx="47.4" cy="24.6" rx="2" ry="2.8" fill="#9AF0B0" /></g>
+        <g transform="translate(34 27) scale(0.556) translate(-34 -27)"><circle cx="33.2" cy="27.6" r="1.3" fill="#0A1A10" /></g><g transform="translate(47.4 24.6) scale(1.800) translate(-47.4 -24.6)"><circle cx="47" cy="25" r="0.9" fill="#0A1A10" /></g>
+        <g transform="translate(34 27) scale(0.556) translate(-34 -27)"><circle cx="32.6" cy="26.4" r="0.5" fill="#FFFFFF" /></g>
         <path d="M38 22 C34 14 30 10 24 8 M42 21 C44 14 50 10 56 8" stroke="#6AC870" strokeWidth="0.7" fill="none" strokeLinecap="round" />
         {/* 手前の鎌：構えて刃を見せる */}
         <path d="M44 44 L34 54 L26 44" stroke="url(#zkBug3Body)" strokeWidth="3.4" fill="none" strokeLinecap="round" strokeLinejoin="round" />
@@ -56642,9 +56804,9 @@ function ZkBug4Q() {
         <path d="M20 46 C18 36 28 30 38 32 C46 34 48 42 46 50 C42 58 26 58 20 46 Z" fill="url(#zkBug4Body)" />
         <path d="M22 40 C26 36 32 38 32 44 C32 50 28 54 24 52 C21 50 20 44 22 40 Z" fill="#2A2A10" />
         <path d="M40 38 C44 38 46 42 44 48 C42 50 40 48 39 44 Z" fill="#2A2A10" />
-        <path className="zk-blink" d="M23 41 C26 38 30 40 30.6 44 C30.6 48 27 51 25 50 C23 48 22 44 23 41 Z" fill="#9AF0B0" />
-        <path className="zk-blink" d="M40.6 40 C42.6 40 44 42.6 43 46.6 C41.6 47 40.6 45 40.6 40 Z" fill="#9AF0B0" />
-        <circle cx="25.4" cy="42.6" r="0.6" fill="#FFFFFF" />
+        <g transform="translate(26.3 44.5) scale(0.395) translate(-26.3 -44.5)"><path className="zk-blink" d="M23 41 C26 38 30 40 30.6 44 C30.6 48 27 51 25 50 C23 48 22 44 23 41 Z" fill="#9AF0B0" /></g>
+        <g transform="translate(42.3 43.5) scale(2.529) translate(-42.3 -43.5)"><path className="zk-blink" d="M40.6 40 C42.6 40 44 42.6 43 46.6 C41.6 47 40.6 45 40.6 40 Z" fill="#9AF0B0" /></g>
+        <g transform="translate(26.3 44.5) scale(0.395) translate(-26.3 -44.5)"><circle cx="25.4" cy="42.6" r="0.6" fill="#FFFFFF" /></g>
         {/* 大顎（開く） */}
         <path d="M26 54 L20 60 L28 57 Z M34 55 L34 62 L38 56 Z" fill="#6A3A10" />
         <path d="M30 34 C26 26 22 22 16 22 M36 33 C38 26 42 22 48 20" stroke="#2A1A0C" strokeWidth="1.1" fill="none" strokeLinecap="round" />
@@ -56789,9 +56951,9 @@ function ZkBug5Q() {
         <path d="M32 30 C32 22 40 18 48 20 C54 24 54 32 50 36 C44 40 34 38 32 30 Z" fill="url(#zkBug5Armor)" {...ZK_BUG_RIM} />
         <path d="M36 26 C32 20 32 12 36 6 C38 10 40 12 42 12 C40 16 40 20 42 24 Z" fill="url(#zkBug5Armor)" {...ZK_BUG_RIM} />
         <path d="M36 10 C35 16 36 20 39 24" stroke="#E8C46A" strokeWidth="0.7" fill="none" />
-        <path className="zk-blink" d="M34 30 Q37.4 27.4 41 29.6 Q37.4 31.6 34 30 Z" fill="#9AF0B0" />
-        <path className="zk-blink" d="M45 28.6 Q47.2 27 49.4 28.4 Q47.2 29.6 45 28.6 Z" fill="#9AF0B0" />
-        <circle cx="37" cy="30" r="0.8" fill="#0A1A10" /><circle cx="47.2" cy="28.6" r="0.6" fill="#0A1A10" />
+        <g transform="translate(37.5 29.5) scale(0.629) translate(-37.5 -29.5)"><path className="zk-blink" d="M34 30 Q37.4 27.4 41 29.6 Q37.4 31.6 34 30 Z" fill="#9AF0B0" /></g>
+        <g transform="translate(47.2 28.3) scale(1.591) translate(-47.2 -28.3)"><path className="zk-blink" d="M45 28.6 Q47.2 27 49.4 28.4 Q47.2 29.6 45 28.6 Z" fill="#9AF0B0" /></g>
+        <g transform="translate(37.5 29.5) scale(0.629) translate(-37.5 -29.5)"><circle cx="37" cy="30" r="0.8" fill="#0A1A10" /></g><g transform="translate(47.2 28.3) scale(1.591) translate(-47.2 -28.3)"><circle cx="47.2" cy="28.6" r="0.6" fill="#0A1A10" /></g>
       </g></g>
       <ZkBugMotes id="zkBug5Mote" pts={[[14, 40, 0], [86, 26, -1300, 2.2], [84, 84, -2300, 2]]} />
     </g>
@@ -56927,10 +57089,10 @@ function ZkBug6Q() {
         <path d="M45 60 Q50 62 55 60 M46 68 Q50 70 54 68" stroke="#4A4434" strokeWidth="0.8" opacity="0.6" fill="none" />
         {/* 頭：左手前 */}
         <path d="M38 44 C36 38 42 34 48 36 C54 38 54 44 52 48 C48 52 40 50 38 44 Z" fill="url(#zkBug6Fur)" />
-        <ellipse className="zk-blink" cx="41.6" cy="43.6" rx="3" ry="3.2" fill="#9AF0B0" />
-        <ellipse className="zk-blink" cx="50" cy="42.6" rx="1.8" ry="2.4" fill="#9AF0B0" />
-        <circle cx="41" cy="44" r="1.2" fill="#0A1A10" /><circle cx="49.8" cy="43" r="0.8" fill="#0A1A10" />
-        <circle cx="40.5" cy="43" r="0.45" fill="#FFFFFF" />
+        <g transform="translate(41.6 43.6) scale(0.600) translate(-41.6 -43.6)"><ellipse className="zk-blink" cx="41.6" cy="43.6" rx="3" ry="3.2" fill="#9AF0B0" /></g>
+        <g transform="translate(50 42.6) scale(1.667) translate(-50 -42.6)"><ellipse className="zk-blink" cx="50" cy="42.6" rx="1.8" ry="2.4" fill="#9AF0B0" /></g>
+        <g transform="translate(41.6 43.6) scale(0.600) translate(-41.6 -43.6)"><circle cx="41" cy="44" r="1.2" fill="#0A1A10" /></g><g transform="translate(50 42.6) scale(1.667) translate(-50 -42.6)"><circle cx="49.8" cy="43" r="0.8" fill="#0A1A10" /></g>
+        <g transform="translate(41.6 43.6) scale(0.600) translate(-41.6 -43.6)"><circle cx="40.5" cy="43" r="0.45" fill="#FFFFFF" /></g>
         <path d="M42 37 C38 30 34 26 28 24 M48 36 C50 28 54 24 60 22" stroke="#C8963A" strokeWidth="1" fill="none" />
         <path d="M40 33 L36 34 M37 30 L34 30 M34 27 L31 27 M40 33 L40 29 M37 30 L37 26 M50 32 L54 33 M52 28 L55 28 M50 32 L49 28 M52 28 L52 24" stroke="#E8C46A" strokeWidth="0.6" />
       </g></g>
@@ -57090,10 +57252,10 @@ function ZkFairy1Q() {
         <g transform="translate(50 32)"><ZkFairy1Puff r={23} g0={-40} g1={25} /></g>
         {/* 顔（斜め：左下へ） */}
         <ellipse cx="42" cy="39" rx="9" ry="9.2" fill="url(#zkFairy1Face)" />
-        <path className="zk-blink" d="M34.6 37.4 Q38.2 34.2 41.8 37.4 Q38.2 39.8 34.6 37.4 Z" fill="#3ACB70" />
-        <path className="zk-blink" d="M45.2 36.8 Q47.6 35 50 36.8 Q47.6 38.2 45.2 36.8 Z" fill="#3ACB70" />
-        <circle cx="37.6" cy="37.4" r="1.1" fill="#0A2A18" /><circle cx="47" cy="36.8" r="0.75" fill="#0A2A18" />
-        <circle cx="37" cy="36.7" r="0.4" fill="#FFFFFF" />
+        <g transform="translate(38.2 37) scale(0.667) translate(-38.2 -37)"><path className="zk-blink" d="M34.6 37.4 Q38.2 34.2 41.8 37.4 Q38.2 39.8 34.6 37.4 Z" fill="#3ACB70" /></g>
+        <g transform="translate(47.6 36.6) scale(1.500) translate(-47.6 -36.6)"><path className="zk-blink" d="M45.2 36.8 Q47.6 35 50 36.8 Q47.6 38.2 45.2 36.8 Z" fill="#3ACB70" /></g>
+        <g transform="translate(38.2 37) scale(0.667) translate(-38.2 -37)"><circle cx="37.6" cy="37.4" r="1.1" fill="#0A2A18" /></g><g transform="translate(47.6 36.6) scale(1.500) translate(-47.6 -36.6)"><circle cx="47" cy="36.8" r="0.75" fill="#0A2A18" /></g>
+        <g transform="translate(38.2 37) scale(0.667) translate(-38.2 -37)"><circle cx="37" cy="36.7" r="0.4" fill="#FFFFFF" /></g>
         <path d="M34 33.6 L41 35 M50.4 33.6 L45.6 34.8" stroke="#2A6A44" strokeWidth="0.9" strokeLinecap="round" />
         <path d="M37.6 43.6 Q40 45.6 42.4 43.4" fill="none" stroke="#1E4A30" strokeWidth="1" strokeLinecap="round" />
       </g></g>
@@ -57213,7 +57375,8 @@ function ZkFairy2Q() {
         {/* 手のように伸ばす毛 */}
         <path d="M30 74 C24 78 18 78 12 72 C18 74 24 72 28 68 Z" fill="url(#zkFairy2WispL)" />
         <path d="M30 50 C26 44 22 42 16 42 C20 46 24 50 28 54 Z" fill="url(#zkFairy2WispL)" opacity="0.8" />
-        <ZkFairy2Eye x={37} y={62} s={1.1} /><ZkFairy2Eye x={48} y={60} s={0.8} />
+        {/* ⚠️ 2026-10-11 Aki「左向きの斜めで右の目が小さいことはありえない」→ 大小を入れ替え（右＝手前が大きい） */}
+        <ZkFairy2Eye x={37} y={62} s={0.8} /><ZkFairy2Eye x={48} y={60} s={1.1} />
         <path d="M33 56 L40.4 57.4" stroke="#2A6A44" strokeWidth="0.9" strokeLinecap="round" />
         <path d="M36.4 69 Q39 70.6 41.4 69" fill="none" stroke="#2A6A44" strokeWidth="0.8" strokeLinecap="round" />
       </g></g>
@@ -57340,9 +57503,9 @@ function ZkFairy3Q() {
         <path d="M38 27 C37 19 45 16 51 17 C57 18 62 23 66 30 C61 28 59 30 57 32 C60 36 60 40 58 45 C54 39 52 33 51 28 C47 24 42 24 38 27 Z" fill="url(#zkFairy3Hair)" />
         <path d="M44 21 C41 16 37 13 33 12 M48 20.6 C50 15 53 12 57 11" fill="none" stroke="#DFFFE8" strokeWidth="0.6" />
         <circle cx="33" cy="12" r="1.1" fill="#E8C46A" /><circle cx="57" cy="11" r="1.1" fill="#E8C46A" />
-        <path className="zk-blink" d="M39.4 29.4 Q42.4 26.8 45.4 29.4 Q42.4 31.2 39.4 29.4 Z" fill="#3ACB70" />
-        <path className="zk-blink" d="M47.6 28.8 Q49.6 27.2 51.6 28.8 Q49.6 29.8 47.6 28.8 Z" fill="#3ACB70" />
-        <circle cx="42" cy="29.4" r="0.95" fill="#0A2A18" /><circle cx="49.4" cy="28.8" r="0.7" fill="#0A2A18" />
+        <g transform="translate(42.4 29) scale(0.667) translate(-42.4 -29)"><path className="zk-blink" d="M39.4 29.4 Q42.4 26.8 45.4 29.4 Q42.4 31.2 39.4 29.4 Z" fill="#3ACB70" /></g>
+        <g transform="translate(49.6 28.5) scale(1.500) translate(-49.6 -28.5)"><path className="zk-blink" d="M47.6 28.8 Q49.6 27.2 51.6 28.8 Q49.6 29.8 47.6 28.8 Z" fill="#3ACB70" /></g>
+        <g transform="translate(42.4 29) scale(0.667) translate(-42.4 -29)"><circle cx="42" cy="29.4" r="0.95" fill="#0A2A18" /></g><g transform="translate(49.6 28.5) scale(1.500) translate(-49.6 -28.5)"><circle cx="49.4" cy="28.8" r="0.7" fill="#0A2A18" /></g>
         <path d="M42 33.6 Q43.4 34.4 44.8 33.4" fill="none" stroke="#3A8A5A" strokeWidth="0.6" strokeLinecap="round" />
         {/* 手前の腕：杖を斜めに構える */}
         <ZkFairy3Staff x1={40} y1={78} x2={25} y2={17} />
@@ -57489,9 +57652,10 @@ function ZkFairy4Q() {
           <path d="M42 20 C41.4 13 43.4 8 47 7 C48 12 47 16 45 21 Z" fill="url(#zkFairy4Ear)" />
           <ellipse cx="29.8" cy="39" rx="1.3" ry="1" fill="#5E8474" />
           <path d="M30.4 41 C33 43.4 36 44 39 43" fill="none" stroke="#9CC4B2" strokeWidth="0.7" />
-          <path className="zk-blink" d="M33.4 32.4 Q37 29.4 40.6 32.4 Q37 34.4 33.4 32.4 Z" fill="#3ACB70" />
-          <path className="zk-blink" d="M46 31.4 Q48.4 29.8 50.8 31.4 Q48.4 32.6 46 31.4 Z" fill="#3ACB70" />
-          <circle cx="36.4" cy="32.4" r="1.05" fill="#0A2A18" /><circle cx="48" cy="31.4" r="0.75" fill="#0A2A18" />
+          {/* ⚠️ 2026-10-11 Aki「小さい目が耳の位置」→ 斜め左向き：鼻筋を挟み、手前の目は右・大きく、奥の目は左・小さく（輪郭の際） */}
+          <path className="zk-blink" d="M38.27 32.4 Q41.87 29.4 45.47 32.4 Q41.87 34.4 38.27 32.4 Z" fill="#3ACB70" />
+          <path className="zk-blink" d="M30.34 31.4 Q32.74 29.8 35.14 31.4 Q32.74 32.6 30.34 31.4 Z" fill="#3ACB70" />
+          <circle cx="41.27" cy="32.4" r="1.05" fill="#0A2A18" /><circle cx="32.34" cy="31.4" r="0.75" fill="#0A2A18" />
           <circle cx="35.8" cy="31.8" r="0.4" fill="#FFFFFF" />
         </g>
         {/* 両腕：杵の柄を握る */}
@@ -57648,9 +57812,9 @@ function ZkFairy5Q() {
         <path d="M30 60 L26 66 L32 62 Z" fill="url(#zkFairy5Tusk)" /><path d="M40 60 L42 66 L42.6 59.6 Z" fill="url(#zkFairy5Tusk)" />
         <path d="M46 35 C46 28 53 26 55 31 C56 35 51 38 46 35 Z" fill="url(#zkFairy5HideD)" stroke="#E8FFF0" strokeWidth="0.8" />
         <path d="M26 36 C24 31 27 28 30 30 C31 33 29 35 26 36 Z" fill="url(#zkFairy5HideD)" stroke="#E8FFF0" strokeWidth="0.7" />
-        <path className="zk-blink" d="M29 45 Q32.6 42 36.2 45 Q32.6 47.2 29 45 Z" fill="#6AF0A0" />
-        <path className="zk-blink" d="M41.4 44 Q43.8 42.4 46.2 44 Q43.8 45.2 41.4 44 Z" fill="#6AF0A0" />
-        <circle cx="32.4" cy="45" r="1" fill="#04100A" /><circle cx="43.6" cy="44" r="0.75" fill="#04100A" />
+        <g transform="translate(32.6 44.6) scale(0.667) translate(-32.6 -44.6)"><path className="zk-blink" d="M29 45 Q32.6 42 36.2 45 Q32.6 47.2 29 45 Z" fill="#6AF0A0" /></g>
+        <g transform="translate(43.8 43.8) scale(1.500) translate(-43.8 -43.8)"><path className="zk-blink" d="M41.4 44 Q43.8 42.4 46.2 44 Q43.8 45.2 41.4 44 Z" fill="#6AF0A0" /></g>
+        <g transform="translate(32.6 44.6) scale(0.667) translate(-32.6 -44.6)"><circle cx="32.4" cy="45" r="1" fill="#04100A" /></g><g transform="translate(43.8 43.8) scale(1.500) translate(-43.8 -43.8)"><circle cx="43.6" cy="44" r="0.75" fill="#04100A" /></g>
         <path d="M28.4 41.4 L36 42.4 M46.6 40.6 L41.6 41.4" stroke="#8AE8B0" strokeWidth="0.7" opacity="0.7" strokeLinecap="round" />
       </g></g>
       <ZkFairy0Motes pts={[[88, 26, -700, 2], [70, 18, -1900, 1.6], [12, 76, -2600, 1.8]]} />
@@ -57790,9 +57954,10 @@ function ZkFairy6Q() {
           <path d="M0 0 C8 -2 14 4 16 10 C22 10 28 6 34 0 C30 10 22 16 14 18 C18 22 20 28 18 34 C14 28 8 24 4 22 Z" fill="url(#zkFairy6Mane)" />
         </g></g>
         <path d="M36 23 C34 26 34 29 36 31 C36 28 38 26 40 25 Z" fill="#FFFFFF" opacity="0.8" />
-        <path className="zk-blink" d="M31.4 30.4 Q34.6 27.6 37.8 30.4 Q34.6 32.4 31.4 30.4 Z" fill="#3ACB70" />
-        <path className="zk-blink" d="M42.4 29 Q44.6 27.4 46.8 29 Q44.6 30.2 42.4 29 Z" fill="#3ACB70" />
-        <circle cx="34.4" cy="30.4" r="1" fill="#0A2A18" /><circle cx="44.4" cy="29" r="0.7" fill="#0A2A18" />
+        {/* ⚠️ 2026-10-11 Aki「小さい目が耳の位置」→ 斜め左向き：鼻筋を挟み、手前の目は右・大きく、奥の目は左・小さく（輪郭の際） */}
+        <path className="zk-blink" d="M35.6 30.4 Q38.8 27.6 42 30.4 Q38.8 32.4 35.6 30.4 Z" fill="#3ACB70" />
+        <path className="zk-blink" d="M28.9 29 Q31.1 27.4 33.3 29 Q31.1 30.2 28.9 29 Z" fill="#3ACB70" />
+        <circle cx="38.6" cy="30.4" r="1" fill="#0A2A18" /><circle cx="30.9" cy="29" r="0.7" fill="#0A2A18" />
       </g></g>
       <ZkFairy0Motes pts={[[16, 16, -500, 1.8], [84, 30, -1600, 2], [18, 62, -2600, 1.6]]} />
     </g>
@@ -57943,9 +58108,9 @@ function ZkFight1Q() {
         <ellipse cx="30.6" cy="36.4" rx="6" ry="4" fill="#FFF0DC" opacity="0.6" />
         <circle cx="28.4" cy="35.2" r="0.6" fill="#2A140A" /><circle cx="31" cy="35.2" r="0.6" fill="#2A140A" />
         <path d="M26 38.6 Q31 40.2 35.4 38.4" fill="none" stroke="#3A1E0C" strokeWidth="0.8" strokeLinecap="round" />
-        <path className="zk-blink" d="M28 29 Q31.6 26.4 35 29 Q31.6 30.6 28 29 Z" fill="#FFF2A0" />
-        <path className="zk-blink" d="M41 28 Q43.6 26.4 46 28 Q43.6 29.2 41 28 Z" fill="#FFF2A0" />
-        <circle cx="31.2" cy="29" r="0.85" fill="#2A140A" /><circle cx="43.4" cy="28" r="0.7" fill="#2A140A" />
+        <g transform="translate(31.5 28.5) scale(0.714) translate(-31.5 -28.5)"><path className="zk-blink" d="M28 29 Q31.6 26.4 35 29 Q31.6 30.6 28 29 Z" fill="#FFF2A0" /></g>
+        <g transform="translate(43.5 27.8) scale(1.400) translate(-43.5 -27.8)"><path className="zk-blink" d="M41 28 Q43.6 26.4 46 28 Q43.6 29.2 41 28 Z" fill="#FFF2A0" /></g>
+        <g transform="translate(31.5 28.5) scale(0.714) translate(-31.5 -28.5)"><circle cx="31.2" cy="29" r="0.85" fill="#2A140A" /></g><g transform="translate(43.5 27.8) scale(1.400) translate(-43.5 -27.8)"><circle cx="43.4" cy="28" r="0.7" fill="#2A140A" /></g>
         <path d="M27 25.6 L35 27 M47 25 L41 26.6" stroke="#3A1E0C" strokeWidth="1.1" />
         <path d="M27 21 C34 15 50 15 57 21 L57 24.4 C50 19 34 19 28 24.6 Z" fill="url(#zkFight1Gold)" />
         <path d="M56 22 C62 20 68 24 74 20 C70 26 62 27 57 25 Z" fill="#E8C46A" />
@@ -58086,10 +58251,11 @@ function ZkFight2Q() {
         <ellipse cx="22.6" cy="34.2" rx="1.8" ry="1.3" fill="#1A0E08" />
         <path d="M24 37 Q30 39.4 37 36.4" fill="none" stroke="#2A140A" strokeWidth="0.8" strokeLinecap="round" />
         <path d="M29.6 37.9 L30.6 39.4 L31.6 37.9 Z" fill="#FFF4E0" />
-        <path className="zk-blink" d="M28 26.6 Q31.4 24 35 26.6 Q31.4 28.2 28 26.6 Z" fill="#FFF2A0" />
-        <path className="zk-blink" d="M40.4 25.4 Q42.8 23.8 45 25.4 Q42.8 26.6 40.4 25.4 Z" fill="#FFF2A0" />
-        <circle cx="30.8" cy="26.6" r="0.85" fill="#1A0E08" /><circle cx="42.4" cy="25.4" r="0.7" fill="#1A0E08" />
-        <path d="M27 23.4 L35 24.6 M46 22.6 L40.6 23.8" stroke="#2A140A" strokeWidth="1" />
+        {/* ⚠️ 2026-10-11 Aki「小さい目が耳の位置」→ 斜め左向き：鼻筋を挟み、手前の目は右・大きく、奥の目は左・小さく（輪郭の際） */}
+        <path className="zk-blink" d="M32.87 26.6 Q36.27 24 39.87 26.6 Q36.27 28.2 32.87 26.6 Z" fill="#FFF2A0" />
+        <path className="zk-blink" d="M24.74 25.4 Q27.14 23.8 29.34 25.4 Q27.14 26.6 24.74 25.4 Z" fill="#FFF2A0" />
+        <circle cx="35.67" cy="26.6" r="0.85" fill="#1A0E08" /><circle cx="26.74" cy="25.4" r="0.7" fill="#1A0E08" />
+        <path d="M31.87 23.4 L39.87 24.6 M30.34 22.6 L24.94 23.8" stroke="#2A140A" strokeWidth="1" />
       </g></g>
       <g className="zk-breathe">
         <ZkFight2Glove x={55} y={35} s={0.8} r={-70} cls="" />
@@ -58361,9 +58527,9 @@ function ZkFight5Q() {
         <path d="M32 15 C29 9 26 5 22 3 C25 8 26.6 13 27.4 18 Z" fill="url(#zkFight5Horn)" />
         <path d="M48 13 C49 8 52 5 55 3 C55.6 8 54 12 52 15 Z" fill="url(#zkFight5Horn)" opacity="0.85" />
         <path d="M28 20 C32 17 36 18 37 21 M44 20 C47 18 50 18 52 20" fill="none" stroke="#1A0604" strokeWidth="1.6" strokeLinecap="round" />
-        <path className="zk-blink" d="M28.4 24 Q32 21.4 36 24 Q32 25.6 28.4 24 Z" fill="#FFF2A0" />
-        <path className="zk-blink" d="M44 23.4 Q46.8 21.6 49.4 23.4 Q46.8 24.6 44 23.4 Z" fill="#FFF2A0" />
-        <circle cx="31.4" cy="24" r="0.9" fill="#1A0604" /><circle cx="46.2" cy="23.4" r="0.75" fill="#1A0604" />
+        <g transform="translate(32.2 23.5) scale(0.711) translate(-32.2 -23.5)"><path className="zk-blink" d="M28.4 24 Q32 21.4 36 24 Q32 25.6 28.4 24 Z" fill="#FFF2A0" /></g>
+        <g transform="translate(46.7 23.1) scale(1.407) translate(-46.7 -23.1)"><path className="zk-blink" d="M44 23.4 Q46.8 21.6 49.4 23.4 Q46.8 24.6 44 23.4 Z" fill="#FFF2A0" /></g>
+        <g transform="translate(32.2 23.5) scale(0.711) translate(-32.2 -23.5)"><circle cx="31.4" cy="24" r="0.9" fill="#1A0604" /></g><g transform="translate(46.7 23.1) scale(1.407) translate(-46.7 -23.1)"><circle cx="46.2" cy="23.4" r="0.75" fill="#1A0604" /></g>
         <path d="M34 28 C33 30 34 31 36 31" fill="none" stroke="#6A1A10" strokeWidth="0.8" />
         <path d="M27 33.4 Q34 37 42 33.4 Q34 35.4 27 33.4 Z" fill="#2A0604" />
         <path d="M29 34 L30 30.4 L31.4 34.6 Z M39 34.4 L40 31 L41 34 Z" fill="#FFF8E8" />
@@ -58500,9 +58666,9 @@ function ZkFight6Q() {
         <path d="M32 18 C38 12 48 12 54 18 L53 21 C48 16 38 16 33 21 Z" fill="url(#zkFight6Gold)" />
         <path d="M24 34 C24 28 30 26 36 28 C42 26 48 28 48 34 C48 42 42 46 36 46 C28 46 24 42 24 34 Z" fill="url(#zkFight6Skin)" />
         <path d="M25 27.6 C29 25.6 34 26 36 28 C39 26 44 26 47 28" fill="none" stroke="#0A0A0E" strokeWidth="2.2" strokeLinecap="round" />
-        <path className="zk-blink" d="M28 31 Q31.4 29 35 31 Q31.4 32.4 28 31 Z" fill="#FFF2A0" />
-        <path className="zk-blink" d="M40 30.6 Q42.4 29 45 30.6 Q42.4 31.6 40 30.6 Z" fill="#FFF2A0" />
-        <circle cx="31" cy="31" r="0.85" fill="#0A0A0E" /><circle cx="42.2" cy="30.6" r="0.7" fill="#0A0A0E" />
+        <g transform="translate(31.5 30.7) scale(0.714) translate(-31.5 -30.7)"><path className="zk-blink" d="M28 31 Q31.4 29 35 31 Q31.4 32.4 28 31 Z" fill="#FFF2A0" /></g>
+        <g transform="translate(42.5 30.3) scale(1.400) translate(-42.5 -30.3)"><path className="zk-blink" d="M40 30.6 Q42.4 29 45 30.6 Q42.4 31.6 40 30.6 Z" fill="#FFF2A0" /></g>
+        <g transform="translate(31.5 30.7) scale(0.714) translate(-31.5 -30.7)"><circle cx="31" cy="31" r="0.85" fill="#0A0A0E" /></g><g transform="translate(42.5 30.3) scale(1.400) translate(-42.5 -30.3)"><circle cx="42.2" cy="30.6" r="0.7" fill="#0A0A0E" /></g>
         <ellipse cx="31" cy="36.4" rx="4" ry="2.2" fill="#3A2E30" />
         <ellipse cx="29.4" cy="36.4" rx="1" ry="0.8" fill="#0A0A0E" /><ellipse cx="32.6" cy="36.4" rx="1" ry="0.8" fill="#0A0A0E" />
         <path d="M27 40.6 Q32 44 38 40.6 Q32 42 27 40.6 Z" fill="#0A0406" />
@@ -58612,7 +58778,8 @@ function ZkElectric1S() {
         <path className="zk-blink" d="M22 53 Q26 50 30 53 Q26 55 22 53 Z" fill="#FFF3A0" />
         <circle cx="25.4" cy="53" r="0.9" fill="#1A1030" />
         <circle cx="12.6" cy="59.4" r="1.2" fill="#1A1030" />
-        <path d="M17 58 L10 55 M17 60.5 L10 62" stroke="#FFE880" strokeWidth="0.5" />
+        {/* ⚠️ 2026-10-11 Aki「髭の向きがおかしい」→ 鼻先からではなく、鼻の後ろ（口吻の脇）から生やし、外へ水平寄りに扇形（上・水平・下）に広げる */}
+        <path d="M17 58.4 L6 56 M17.2 59.8 L6 60.6 M17 61 L7 64.2" stroke="#FFE880" strokeWidth="0.5" />
         <path d="M22 49 Q30 45 38 48" stroke="#D8DCFF" strokeWidth="1" opacity="0.6" fill="none" strokeLinecap="round" />
       </g></g>
       {[[14, 40, 0], [48, 34, -1300]].map(([x, y, d], i) => (
@@ -58647,11 +58814,13 @@ function ZkElectric1Q() {
           <path d="M15 52 C22 51 30 54 38 56 C33 60 24 59 18 55 Z" fill="url(#zkElectric1Belly)" />
           <path d="M22 35 C19 28 25 25 29 31 Z" fill="#3A3E80" /><path d="M23 33.6 C21.6 29.6 25 28.4 27 32 Z" fill="#F0D8A8" />
           <path d="M44 32 C45 26 50 26 50 34 Z" fill="#2E3270" />
-          <path className="zk-blink" d="M22 42 Q26.4 38.6 31 41.6 Q26.4 43.8 22 42 Z" fill="#FFF3A0" />
-          <path className="zk-blink" d="M39 40.4 Q42 38.6 45 40.2 Q42 41.4 39 40.4 Z" fill="#FFF3A0" />
-          <circle cx="25.8" cy="41.6" r="1.05" fill="#1A1030" /><circle cx="41.8" cy="40.2" r="0.75" fill="#1A1030" />
+          {/* ⚠️ 2026-10-11 Aki「小さい目が耳の位置」→ 斜め左向き：鼻筋を挟み、手前の目は右・大きく、奥の目は左・小さく（輪郭の際） */}
+          <path className="zk-blink" d="M28.72 42 Q33.12 38.6 37.72 41.6 Q33.12 43.8 28.72 42 Z" fill="#FFF3A0" />
+          <path className="zk-blink" d="M17.4 40.4 Q20.4 38.6 23.4 40.2 Q20.4 41.4 17.4 40.4 Z" fill="#FFF3A0" />
+          <circle cx="32.52" cy="41.6" r="1.05" fill="#1A1030" /><circle cx="20.2" cy="40.2" r="0.75" fill="#1A1030" />
           <circle cx="15.6" cy="51" r="1.3" fill="#1A1030" />
-          <path d="M19 50 L11 47 M19 52.4 L11 54" stroke="#FFE880" strokeWidth="0.5" />
+          {/* ⚠️ 2026-10-11 Aki「髭の向きがおかしい」→ 鼻先からではなく、鼻の後ろ（口吻の脇）から生やし、外へ水平寄りに扇形（上・水平・下）に広げる */}
+          <path d="M20 50.4 L9 48 M20.2 51.6 L9 52.4 M20 52.8 L10 56 M24 51 L31 52.6" stroke="#FFE880" strokeWidth="0.5" />
           <path d="M28 33 Q36 30 44 32" stroke="#D8DCFF" strokeWidth="1" opacity="0.6" fill="none" strokeLinecap="round" />
         </g>
         <path d="M36 58 Q44 62 52 56" fill="none" stroke="#E8C46A" strokeWidth="1.6" />
@@ -58772,9 +58941,9 @@ function ZkElectric2Q() {
           <g className="zk-glow"><ellipse cx="50" cy="34" rx="15" ry="10" fill="url(#zkElectric2Core)" /></g>
           <path d="M26 45 C36 50 66 50 76 45" fill="none" stroke="#F0C830" strokeWidth="1.2" />
           <path d="M32 33 C33 24 40 18 48 17" fill="none" stroke="#FFFFFF" strokeWidth="1.5" opacity="0.65" strokeLinecap="round" />
-          <path className="zk-blink" d="M32 36 Q36.6 32.4 41 35.6 Q36.6 38 32 36 Z" fill="#FFF3A0" />
-          <path className="zk-blink" d="M51 35 Q54 33 57 34.8 Q54 36.2 51 35 Z" fill="#FFF3A0" />
-          <circle cx="36" cy="35.6" r="1.1" fill="#2A1A40" /><circle cx="53.8" cy="34.9" r="0.8" fill="#2A1A40" />
+          <g transform="translate(36.5 35.2) scale(0.667) translate(-36.5 -35.2)"><path className="zk-blink" d="M32 36 Q36.6 32.4 41 35.6 Q36.6 38 32 36 Z" fill="#FFF3A0" /></g>
+          <g transform="translate(54 34.6) scale(1.500) translate(-54 -34.6)"><path className="zk-blink" d="M51 35 Q54 33 57 34.8 Q54 36.2 51 35 Z" fill="#FFF3A0" /></g>
+          <g transform="translate(36.5 35.2) scale(0.667) translate(-36.5 -35.2)"><circle cx="36" cy="35.6" r="1.1" fill="#2A1A40" /></g><g transform="translate(54 34.6) scale(1.500) translate(-54 -34.6)"><circle cx="53.8" cy="34.9" r="0.8" fill="#2A1A40" /></g>
           <path d="M31 31 L40 33 M58 30.6 L52 32" stroke="#2A1A40" strokeWidth="0.9" />
         </g>
         <path d="M30 50 C24 52 18 50 14 44" fill="none" stroke="#DCD4FF" strokeWidth="1.4" strokeLinecap="round" />
@@ -58896,10 +59065,11 @@ function ZkElectric3Q() {
           <path d="M16 54 L28 52 L42 50 C42 56 36 60 29 59 C22 58 17 57 16 54 Z" fill="url(#zkElectric3Belly)" />
           <path d="M12 46 C12 38 22 32 32 32 C42 32 48 38 46 46 L26 50 C18 50 13 49 12 46 Z" fill="url(#zkElectric3Head)" stroke="#F0C830" strokeWidth="0.6" strokeOpacity="0.6" />
           <path d="M16 48.6 L17 50.6 L18.4 48.8 M21 49.2 L22 51.2 L23.4 49.2 M20 53.6 L21 52 L22.2 53.4" fill="#FFF4E0" />
-          <path className="zk-blink" d="M20 41.4 Q24.4 37.8 29 40.8 Q24.4 43.2 20 41.4 Z" fill="#FFF3A0" />
-          <path className="zk-blink" d="M35 39 Q38 37.2 41 38.8 Q38 40.2 35 39 Z" fill="#FFF3A0" />
-          <circle cx="23.8" cy="40.9" r="1.05" fill="#101020" /><circle cx="37.8" cy="38.8" r="0.75" fill="#101020" />
-          <path d="M19 38 L29 39.2 M42 36.4 L35.6 37.6" stroke="#101020" strokeWidth="0.9" />
+          {/* ⚠️ 2026-10-11 Aki「小さい目が耳の位置」→ 斜め左向き：鼻筋を挟み、手前の目は右・大きく、奥の目は左・小さく（輪郭の際） */}
+          <path className="zk-blink" d="M25.88 41.4 Q30.28 37.8 34.88 40.8 Q30.28 43.2 25.88 41.4 Z" fill="#FFF3A0" />
+          <path className="zk-blink" d="M16.1 39 Q19.1 37.2 22.1 38.8 Q19.1 40.2 16.1 39 Z" fill="#FFF3A0" />
+          <circle cx="29.68" cy="40.9" r="1.05" fill="#101020" /><circle cx="18.9" cy="38.8" r="0.75" fill="#101020" />
+          <path d="M24.88 38 L34.88 39.2 M23.1 36.4 L16.7 37.6" stroke="#101020" strokeWidth="0.9" />
           <path d="M22 35 Q30 32 40 35" fill="none" stroke="#C8DCEC" strokeWidth="1" opacity="0.6" strokeLinecap="round" />
         </g>
       </g></g>
@@ -59032,8 +59202,8 @@ function ZkElectric4Q() {
         <g transform="rotate(-6 48 38)">
           <path d="M33 44 C33 33 40 27 49 27 C58 27 64 33 64 44 Z" fill="url(#zkElectric4Iron)" stroke="#F0C830" strokeWidth="0.6" strokeOpacity="0.6" />
           <path d="M34 34 C38 33 50 33 54 34 L54 40 C50 41 38 41 35 40 Z" fill="#1A1420" />
-          <path className="zk-blink" d="M36 36 C40 35.4 44 35.4 46 36 L46 38.6 C43 39 40 39 36.4 38.6 Z" fill="#FFF3A0" />
-          <path className="zk-blink" d="M48.6 36 L52.6 36.2 L52.6 38.4 L48.6 38.6 Z" fill="#FFF3A0" opacity="0.8" />
+          <g transform="translate(41 37.2) scale(0.400) translate(-41 -37.2)"><path className="zk-blink" d="M36 36 C40 35.4 44 35.4 46 36 L46 38.6 C43 39 40 39 36.4 38.6 Z" fill="#FFF3A0" /></g>
+          <g transform="translate(50.6 37.3) scale(2.500) translate(-50.6 -37.3)"><path className="zk-blink" d="M48.6 36 L52.6 36.2 L52.6 38.4 L48.6 38.6 Z" fill="#FFF3A0" opacity="0.8" /></g>
           <path d="M40 29.6 Q48 26 56 30" fill="none" stroke="#C8CCD8" strokeWidth="1" opacity="0.6" strokeLinecap="round" />
           <path d="M42 28 L34 14 M56 28 L62 15" stroke="url(#zkElectric4Copper)" strokeWidth="1.8" />
           <path d="M37 20 L40 19 M35.6 17 L38.2 16 M59.6 20.6 L62.4 20 M60.6 17.6 L63 17" stroke="#E8C46A" strokeWidth="1.1" />
@@ -59196,10 +59366,12 @@ function ZkElectric5Q() {
           <circle cx="9.6" cy="55.4" r="1.4" fill="#0A0A18" />
           <path d="M24 32 L19 15 L32 27 Z" fill="#2A2E60" /><path d="M24.4 29 L21.4 19.6 L29 27 Z" fill="#E8C46A" />
           <path d="M44 29 L50 14 L51 32 Z" fill="#1E2046" />
-          <path className="zk-blink" d="M22 42 Q26.4 38.4 31 41.4 Q26.4 43.8 22 42 Z" fill="#FFF3A0" />
-          <path className="zk-blink" d="M38 39.4 Q41 37.4 44 39 Q41 40.6 38 39.4 Z" fill="#FFF3A0" />
-          <circle cx="25.8" cy="41.6" r="1.05" fill="#0A0A18" /><circle cx="40.8" cy="39.1" r="0.75" fill="#0A0A18" />
-          <path d="M20 38.4 L31 39.6 M46 36 L38.6 37.8" stroke="#0A0A18" strokeWidth="1" />
+          {/* ⚠️ 2026-10-11 Aki「小さい目が耳の位置」→ 斜め左向き：鼻筋を挟み、手前の目は右・大きく、奥の目は左・小さく（輪郭の際） */}
+          <path className="zk-blink" d="M28.3 42 Q32.7 38.4 37.3 41.4 Q32.7 43.8 28.3 42 Z" fill="#FFF3A0" />
+          {/* ⚠️ 2026-10-11 Aki「小さい目が耳の位置」→ 奥の目が輪郭から出ていた。輪郭の内側へ */}
+          <path className="zk-blink" d="M19.75 39.4 Q22.75 37.4 25.75 39 Q22.75 40.6 19.75 39.4 Z" fill="#FFF3A0" />
+          <circle cx="32.1" cy="41.6" r="1.05" fill="#0A0A18" /><circle cx="22.55" cy="39.1" r="0.75" fill="#0A0A18" />
+          <path d="M26.3 38.4 L37.3 39.6 M27.75 36 L20.35 37.8" stroke="#0A0A18" strokeWidth="1" />
           <path d="M28 31 Q36 27 46 30" fill="none" stroke="#D8DCFF" strokeWidth="1" opacity="0.6" strokeLinecap="round" />
           <path d="M46 48 L54 50 L49 52 L54 57 L43 54 Z" fill="#4A5090" />
         </g>
@@ -59361,10 +59533,14 @@ function ZkElectric6Q() {
           <path d="M13.6 45.6 C14 44 17 43.6 18 45.4 C17.4 47 14.6 47.4 13.6 45.6 Z" fill="#6A3A4A" />
           <path d="M14 53 Q20 56.6 28 52 L27 55.4 Q20 59 15 56 Z" fill="#2A0A20" />
           <path d="M17 54.6 L18 57 L19.2 54.8 M23.4 54.4 L24.4 56.6 L25.4 54" fill="#FFF4E0" />
-          <path className="zk-blink" d="M20 38.4 Q24.4 34.8 29 37.8 Q24.4 40.2 20 38.4 Z" fill="#FFE36A" />
-          <path className="zk-blink" d="M37 36.4 Q40 34.6 43 36.2 Q40 37.6 37 36.4 Z" fill="#FFE36A" />
-          <circle cx="23.8" cy="38" r="1.05" fill="#1C1830" /><circle cx="39.8" cy="36.2" r="0.75" fill="#1C1830" />
-          <path d="M19 34.6 L29 35.6 M45 33.4 L37.6 34.6" stroke="#1C1830" strokeWidth="1" />
+          {/*
+            ⚠️ 2026-10-11 Aki「小さい目が耳の位置にある」→ 奥の目を手前の目の右（後頭部）に置いていた。
+            斜め左向き：鼻筋（鼻の上）を挟んで、手前の目は右・大きく、奥の目は左・小さく輪郭の際に
+          */}
+          <path className="zk-blink" d="M26.6 38 Q31 34.4 35.6 37.4 Q31 39.8 26.6 38 Z" fill="#FFE36A" />
+          <path className="zk-blink" d="M16.6 37.6 Q18.8 36 21 37.2 Q18.8 38.6 16.6 37.6 Z" fill="#FFE36A" />
+          <circle cx="30.4" cy="37.6" r="1.05" fill="#1C1830" /><circle cx="19" cy="37.3" r="0.75" fill="#1C1830" />
+          <path d="M25.6 34.2 L35.6 35.2 M22.4 34.6 L16.4 35.6" stroke="#1C1830" strokeWidth="1" />
           <ZkElectric6Stripes d="M31 26.4 L32 31 M36 25.4 L36 30.4 M41 26.6 L39.4 31 M53 40 L47 41 M53 45 L47 45.4" w={1.8} delay="-1300ms" />
           <path d="M22 29 Q30 25 42 26" fill="none" stroke="#FFFFFF" strokeWidth="1" opacity="0.7" strokeLinecap="round" />
         </g>
@@ -59519,11 +59695,10 @@ function ZkNormal1Q() {
         <path d="M24 26 C22 18 28 16 32 22 Z" fill="#3A2818" /><path d="M25 24 C24.4 20 27.4 19.4 29.6 22.6 Z" fill="#C8A078" />
         <path d="M17 47 C22 42 30 44 35 48 C31 54 22 55 17 52 Z" fill="url(#zkNormal1Cream)" />
         <path d="M22 36 C26 32 34 34 36 40 C32 44 26 44 22 42 Z" fill="#2A1C12" />
-        <path d="M42 34 C46 32 50 34 51 37 C48 40 44 40 42 38 Z" fill="#2A1C12" />
-        <ellipse className="zk-blink" cx="29" cy="38.6" rx="3" ry="2.3" fill="#FFF2A0" />
-        <ellipse className="zk-blink" cx="46.4" cy="36.4" rx="1.9" ry="1.3" fill="#FFF2A0" />
-        <circle cx="28.2" cy="38.8" r="1.1" fill="#2A140A" /><circle cx="46" cy="36.5" r="0.7" fill="#2A140A" />
-        <circle cx="27.6" cy="38.2" r="0.4" fill="#FFFFFF" />
+        {/* ⚠️ 2026-10-11 Aki「右目は描かなくていい」→ 横顔に近い斜め。奥の目は頭の陰で見えない（手前の目だけ） */}
+        <g><ellipse className="zk-blink" cx="29" cy="38.6" rx="3" ry="2.3" fill="#FFF2A0" /></g>
+        <g><circle cx="28.2" cy="38.8" r="1.1" fill="#2A140A" /></g>
+        <g><circle cx="27.6" cy="38.2" r="0.4" fill="#FFFFFF" /></g>
         <ellipse cx="17.6" cy="48.4" rx="2" ry="1.5" fill="#1A0E08" />
         <path d="M19 51.6 Q22 53.4 25 51.8" fill="none" stroke="#2A140A" strokeWidth="0.7" strokeLinecap="round" />
         <path d="M26 25 Q34 21 44 23" fill="none" stroke="#FFE8C0" strokeWidth="0.9" opacity="0.55" strokeLinecap="round" />
@@ -59658,9 +59833,9 @@ function ZkNormal2Q() {
         <path d="M18 40 C18 30 26 24 36 24 C46 24 54 30 54 40 C54 48 48 54 38 54 C28 54 18 50 18 40 Z" fill="url(#zkNormal2Fur)" />
         <path d="M36 24 C44 24 52 28 54 36 C50 38 44 36 40 32 C38 30 36 28 36 24 Z" fill="url(#zkNormal2Orange)" />
         <path d="M20 30 C23 27 28 26 31 27 C30 30 26 32 22 34 Z" fill="#2A2020" opacity="0.85" />
-        <path className="zk-blink" d="M22 38.6 Q26.4 34.4 31.6 38 Q26.6 41.4 22 38.6 Z" fill="#FFF2A0" />
-        <path className="zk-blink" d="M40.6 37 Q43.6 34.8 46.6 36.8 Q43.6 38.6 40.6 37 Z" fill="#FFF2A0" />
-        <ellipse cx="27" cy="38.2" rx="0.8" ry="1.8" fill="#2A140A" /><ellipse cx="43.8" cy="36.8" rx="0.5" ry="1.2" fill="#2A140A" />
+        <g transform="translate(26.8 37.9) scale(0.625) translate(-26.8 -37.9)"><path className="zk-blink" d="M22 38.6 Q26.4 34.4 31.6 38 Q26.6 41.4 22 38.6 Z" fill="#FFF2A0" /></g>
+        <g transform="translate(43.6 36.7) scale(1.600) translate(-43.6 -36.7)"><path className="zk-blink" d="M40.6 37 Q43.6 34.8 46.6 36.8 Q43.6 38.6 40.6 37 Z" fill="#FFF2A0" /></g>
+        <g transform="translate(26.8 37.9) scale(0.625) translate(-26.8 -37.9)"><ellipse cx="27" cy="38.2" rx="0.8" ry="1.8" fill="#2A140A" /></g><g transform="translate(43.6 36.7) scale(1.600) translate(-43.6 -36.7)"><ellipse cx="43.8" cy="36.8" rx="0.5" ry="1.2" fill="#2A140A" /></g>
         <path d="M21 35.6 L30 34.6 M41 34 L47 34.4" stroke="#6A3A1A" strokeWidth="0.8" strokeLinecap="round" />
         <path d="M29 44 L32.4 43.6 L30.6 46 Z" fill="#E8889A" />
         <path d="M26 48 Q31 52 37 47.6 Q31 49.4 26 48 Z" fill="#3A1208" />
@@ -59795,10 +59970,11 @@ function ZkNormal3Q() {
         <ellipse cx="16.6" cy="68" rx="0.9" ry="1.2" fill="#1A0804" /><ellipse cx="20.6" cy="68" rx="0.9" ry="1.2" fill="#1A0804" />
         <path d="M24 70 C20 72 14 70 11 62 C15 66 19 67 24 66 Z" fill="url(#zkNormal3Tusk)" />
         <path d="M34 67 C36 66 40 62 40 56 C38 60 35 62 31 63.4 Z" fill="#D8CCB0" />
-        <path className="zk-blink" d="M22 58.4 Q25.6 55.8 29.4 58 Q25.6 60 22 58.4 Z" fill="#FFF2A0" />
-        <path className="zk-blink" d="M35.4 57.4 Q37.8 56 40 57.2 Q37.8 58.4 35.4 57.4 Z" fill="#FFF2A0" />
-        <circle cx="25.4" cy="58.2" r="0.9" fill="#2A140A" /><circle cx="37.8" cy="57.2" r="0.6" fill="#2A140A" />
-        <path d="M21.6 55.6 L29.6 56.6 M40.4 55 L35 55.8" stroke="#1A0E08" strokeWidth="1" />
+        {/* ⚠️ 2026-10-11 Aki「小さい目が耳の位置」→ 斜め左向き：鼻筋を挟み、手前の目は右・大きく、奥の目は左・小さく（輪郭の際） */}
+        <path className="zk-blink" d="M27.21 58.4 Q30.81 55.8 34.61 58 Q30.81 60 27.21 58.4 Z" fill="#FFF2A0" />
+        <path className="zk-blink" d="M18.66 57.4 Q21.06 56 23.26 57.2 Q21.06 58.4 18.66 57.4 Z" fill="#FFF2A0" />
+        <circle cx="30.61" cy="58.2" r="0.9" fill="#2A140A" /><circle cx="21.06" cy="57.2" r="0.6" fill="#2A140A" />
+        <path d="M26.81 55.6 L34.81 56.6 M23.66 55 L18.26 55.8" stroke="#1A0E08" strokeWidth="1" />
       </g></g>
       <g className="zk-stomp"><ellipse cx="34" cy="91" rx="8" ry="2" fill="#E8D0A8" opacity="0.5" /></g>
     </g>
@@ -59921,10 +60097,11 @@ function ZkNormal4Q() {
         {/* 手前の角 */}
         <path d="M27 38 C20 38 14 34 13 27 C13 21 17 17 23 15 C20 21 20 27 25 31 C26 33 28 34 30 35 Z" fill="url(#zkNormal4Horn)" />
         <path d="M16 28 C15.6 24 17 21 19 19" fill="none" stroke="#FFFFFF" strokeWidth="0.7" opacity="0.6" strokeLinecap="round" />
-        <path className="zk-blink" d="M23 46.4 Q26.6 43.8 30.4 46 Q26.6 48 23 46.4 Z" fill="#FFF2A0" />
-        <path className="zk-blink" d="M37 45 Q39.4 43.6 41.6 44.8 Q39.4 46 37 45 Z" fill="#FFF2A0" />
-        <circle cx="26.6" cy="46.2" r="0.9" fill="#2A140A" /><circle cx="39.4" cy="44.8" r="0.6" fill="#2A140A" />
-        <path d="M22.6 43.4 L30.6 44.2 M42 42.6 L37 43.4" stroke="#0A0604" strokeWidth="1" />
+        {/* ⚠️ 2026-10-11 Aki「小さい目が耳の位置」→ 斜め左向き：鼻筋を挟み、手前の目は右・大きく、奥の目は左・小さく（輪郭の際） */}
+        <path className="zk-blink" d="M28.38 46.4 Q31.98 43.8 35.78 46 Q31.98 48 28.38 46.4 Z" fill="#FFF2A0" />
+        <path className="zk-blink" d="M19.72 45 Q22.12 43.6 24.32 44.8 Q22.12 46 19.72 45 Z" fill="#FFF2A0" />
+        <circle cx="31.98" cy="46.2" r="0.9" fill="#2A140A" /><circle cx="22.12" cy="44.8" r="0.6" fill="#2A140A" />
+        <path d="M27.98 43.4 L35.98 44.2 M24.72 42.6 L19.72 43.4" stroke="#0A0604" strokeWidth="1" />
       </g></g>
       <ZkNormal4Snort x={18} y={66} />
     </g>
@@ -60049,10 +60226,11 @@ function ZkNormal5Q() {
         <path d="M18 38 C22 36 28 37 31 38 C29 43 23 45 19 42 Z" fill="#3A0E08" />
         <path d="M20 38 L21 40 L22 38 M27 38 L28 40.4 L29 38.4" fill="#FFF4E0" />
         <ellipse cx="18.4" cy="33.4" rx="2.2" ry="1.6" fill="#0E0804" />
-        <path className="zk-blink" d="M24 26 Q27.6 23.2 31.6 25.6 Q27.6 27.6 24 26 Z" fill="#FFF2A0" />
-        <path className="zk-blink" d="M39 24.6 Q41.6 23 44 24.4 Q41.6 25.8 39 24.6 Z" fill="#FFF2A0" />
-        <circle cx="27.8" cy="25.8" r="0.9" fill="#2A140A" /><circle cx="41.4" cy="24.4" r="0.6" fill="#2A140A" />
-        <path d="M23.6 22.6 L31.6 23.6 M44.6 21.8 L39 23" stroke="#0E0804" strokeWidth="1.1" />
+        {/* ⚠️ 2026-10-11 Aki「小さい目が耳の位置」→ 斜め左向き：鼻筋を挟み、手前の目は右・大きく、奥の目は左・小さく（輪郭の際） */}
+        <path className="zk-blink" d="M29.71 26 Q33.31 23.2 37.31 25.6 Q33.31 27.6 29.71 26 Z" fill="#FFF2A0" />
+        <path className="zk-blink" d="M20.64 24.6 Q23.24 23 25.64 24.4 Q23.24 25.8 20.64 24.6 Z" fill="#FFF2A0" />
+        <circle cx="33.51" cy="25.8" r="0.9" fill="#2A140A" /><circle cx="23.04" cy="24.4" r="0.6" fill="#2A140A" />
+        <path d="M29.31 22.6 L37.31 23.6 M26.24 21.8 L20.64 23" stroke="#0E0804" strokeWidth="1.1" />
         <path d="M29 17.6 L33 30" stroke="#F4E0C0" strokeWidth="0.8" opacity="0.75" strokeLinecap="round" />
         <path d="M28 16 C34 13 42 13 48 16" fill="none" stroke="#FFF4DC" strokeWidth="1.1" opacity="0.55" strokeLinecap="round" />
       </g></g>
@@ -60176,10 +60354,11 @@ function ZkNormal6Q() {
         <path d="M19 55 L20 57.6 L21.2 55.2 M28 54 L29 56.6 L30 54" fill="#FFFFFF" />
         <path d="M18 59 C22 60 28 60 33 57 C30 62 24 64 19 62 Z" fill="#C8D0DC" />
         <ellipse cx="16.4" cy="52" rx="2.2" ry="1.6" fill="#1A1420" />
-        <path className="zk-blink" d="M26 41 Q30 37.6 34.4 40 Q30 42.6 26 41 Z" fill="#FFD84A" />
-        <path className="zk-blink" d="M40.4 38.8 Q43 37 45.6 38.4 Q43 40 40.4 38.8 Z" fill="#FFD84A" />
-        <circle cx="30" cy="40.8" r="1" fill="#2A140A" /><circle cx="43" cy="38.6" r="0.65" fill="#2A140A" />
-        <path d="M25.6 37.8 L34.6 37.6 M46.4 36 L40.6 37" stroke="#5A6478" strokeWidth="1" />
+        {/* ⚠️ 2026-10-11 Aki「小さい目が耳の位置」→ 斜め左向き：鼻筋を挟み、手前の目は右・大きく、奥の目は左・小さく（輪郭の際） */}
+        <path className="zk-blink" d="M31.46 41 Q35.46 37.6 39.86 40 Q35.46 42.6 31.46 41 Z" fill="#FFD84A" />
+        <path className="zk-blink" d="M22.85 38.8 Q25.45 37 28.05 38.4 Q25.45 40 22.85 38.8 Z" fill="#FFD84A" />
+        <circle cx="35.46" cy="40.8" r="1" fill="#2A140A" /><circle cx="25.45" cy="38.6" r="0.65" fill="#2A140A" />
+        <path d="M31.06 37.8 L40.06 37.6 M28.85 36 L23.05 37" stroke="#5A6478" strokeWidth="1" />
       </g></g>
     </g>
   );
@@ -60317,11 +60496,12 @@ function ZkDark1Q() {
           <path d="M38 22 L43 15 L43 22 L48 19 L46 26 Z" fill="#2A1F3E" {...ZkDarkRim} />
           <path d="M26 37 L10 46 L28 43 Z" fill="url(#zkDark1Beak)" />
           <path d="M28 44 L13 47.4 L29 47 Z" fill="#3A3246" />
-          <ellipse className="zk-blink" cx="30.4" cy="33.4" rx="2.7" ry="2.2" fill="#E6C8FF" />
-          <circle cx="29.6" cy="33.8" r="1.1" fill="#1A0A28" />
-          <ellipse className="zk-blink" cx="42.4" cy="32.6" rx="1.5" ry="1.1" fill="#E6C8FF" />
-          <circle cx="42" cy="32.8" r="0.6" fill="#1A0A28" />
-          <path d="M26 29.6 L34 31 M46 29.4 L41 31" stroke="#0C0814" strokeWidth="1" />
+          {/* ⚠️ 2026-10-11 Aki「小さい目が耳の位置」→ 斜め左向き：鼻筋を挟み、手前の目は右・大きく、奥の目は左・小さく（輪郭の際） */}
+          <ellipse className="zk-blink" cx="35.4" cy="33.4" rx="2.7" ry="2.2" fill="#E6C8FF" />
+          <circle cx="34.6" cy="33.8" r="1.1" fill="#1A0A28" />
+          <ellipse className="zk-blink" cx="25.4" cy="32.6" rx="1.5" ry="1.1" fill="#E6C8FF" />
+          <circle cx="25" cy="32.8" r="0.6" fill="#1A0A28" />
+          <path d="M31 29.6 L39 31 M29 29.4 L24 31" stroke="#0C0814" strokeWidth="1" />
           <path d="M27 26.6 Q33 22.6 40 23.6" fill="none" stroke="#A88AE0" strokeWidth="1" opacity="0.6" strokeLinecap="round" />
         </g>
         <path d="M14 46.4 Q12 52 15 56" fill="none" stroke="#E8C46A" strokeWidth="0.9" />
@@ -60439,11 +60619,12 @@ function ZkDark2Q() {
           <path d="M17 55.4 L20 55 L18.6 57.4 Z" fill="#C878B8" />
           <path d="M17 59 C20 61 24 61 27 59.4 C24 63.4 20 63.4 17 60 Z" fill="#2A0A20" />
           <path d="M19 59.8 L20 62 L21 60.2 M24 60 L24.8 62 L25.8 59.8" fill="#F4ECFF" />
-          <path className="zk-blink" d="M19 49 Q24 45.4 29 48.6 Q24 51.4 19 49 Z" fill="url(#zkDark2Eye)" />
-          <ellipse cx="24" cy="48.6" rx="0.7" ry="1.8" fill="#1A0A28" />
-          <path className="zk-blink" d="M34 47.4 Q37 45.4 40 47 Q37 48.6 34 47.4 Z" fill="url(#zkDark2Eye)" />
-          <ellipse cx="37" cy="47.2" rx="0.5" ry="1.1" fill="#1A0A28" />
-          <path d="M18 46.6 L28 45.6 M41 44.6 L35 45.2" stroke="#0A0610" strokeWidth="0.9" />
+          {/* ⚠️ 2026-10-11 Aki「小さい目が耳の位置」→ 斜め左向き：鼻筋を挟み、手前の目は右・大きく、奥の目は左・小さく（輪郭の際） */}
+          <path className="zk-blink" d="M24 49 Q29 45.4 34 48.6 Q29 51.4 24 49 Z" fill="url(#zkDark2Eye)" />
+          <ellipse cx="29" cy="48.6" rx="0.7" ry="1.8" fill="#1A0A28" />
+          <path className="zk-blink" d="M17 47.4 Q20 45.4 23 47 Q20 48.6 17 47.4 Z" fill="url(#zkDark2Eye)" />
+          <ellipse cx="20" cy="47.2" rx="0.5" ry="1.1" fill="#1A0A28" />
+          <path d="M23 46.6 L33 45.6 M24 44.6 L18 45.2" stroke="#0A0610" strokeWidth="0.9" />
           <path d="M18 57 L8 55 M18 58.4 L9 61" stroke="#E0C8FF" strokeWidth="0.4" opacity="0.6" />
           <path d="M22 40 Q30 36.4 38 38.6" fill="none" stroke="#9A80C8" strokeWidth="1" opacity="0.55" strokeLinecap="round" />
         </g>
@@ -60586,11 +60767,12 @@ function ZkDark3Q() {
           <path d="M29 28 C28 22 34 21 35.4 26 Z" fill="#5A4678" /><path d="M30.6 27 C30.6 24 33 24 34 26 Z" fill="#C8A0D8" />
           <path d="M46 25 C47 20 52 20 52.4 25.6 Z" fill="#3A2A52" />
           <circle cx="24.6" cy="41.4" r="1.1" fill="#1A0A28" />
-          <path className="zk-blink" d="M30 34 Q34 31 38 33.4 Q34 35.6 30 34 Z" fill="#E6C8FF" />
-          <circle cx="33.4" cy="33.8" r="1" fill="#1A0A28" />
-          <path className="zk-blink" d="M43 32.6 Q45.6 31 48 32.4 Q45.6 33.6 43 32.6 Z" fill="#E6C8FF" />
-          <circle cx="45.4" cy="32.6" r="0.6" fill="#1A0A28" />
-          <path d="M29 31.4 L38 31.2 M49 30 L43 30.8" stroke="#1E1430" strokeWidth="0.9" />
+          {/* ⚠️ 2026-10-11 Aki「小さい目が耳の位置」→ 斜め左向き：鼻筋を挟み、手前の目は右・大きく、奥の目は左・小さく（輪郭の際） */}
+          <path className="zk-blink" d="M35 34 Q39 31 43 33.4 Q39 35.6 35 34 Z" fill="#E6C8FF" />
+          <circle cx="38.4" cy="33.8" r="1" fill="#1A0A28" />
+          <path className="zk-blink" d="M27 32.6 Q29.6 31 32 32.4 Q29.6 33.6 27 32.6 Z" fill="#E6C8FF" />
+          <circle cx="29.4" cy="32.6" r="0.6" fill="#1A0A28" />
+          <path d="M34 31.4 L43 31.2 M33 30 L27 30.8" stroke="#1E1430" strokeWidth="0.9" />
           <path d="M32 26 Q40 23 48 25" fill="none" stroke="#E0D0FF" strokeWidth="1" opacity="0.55" strokeLinecap="round" />
         </g>
         <path d="M38 47 Q44 50 50 46" fill="none" stroke="#E8C46A" strokeWidth="1.2" />
@@ -60733,11 +60915,12 @@ function ZkDark4Q() {
           <path d="M20 46.8 L21 49 L22 46.8 M25 46.4 L26 48.6 L27 46.4 M29 46 L30 48 L31 46" fill="#F4ECFF" />
           <path d="M27 26 C24 17 32 15 34 24 Z" fill="#6A5460" /><path d="M28.4 24.6 C27 19 31.4 18.4 32.6 23.6 Z" fill="#3A2A38" />
           <path d="M40 23 C41 15 47 16 46 25 Z" fill="#5A4652" />
-          <path className="zk-blink" d="M27 34 Q31 31 35 33.4 Q31 35.6 27 34 Z" fill="#E6C8FF" />
-          <circle cx="30.6" cy="33.8" r="1" fill="#1A0A28" />
-          <path className="zk-blink" d="M39.4 32.6 Q42 31 44.4 32.4 Q42 33.6 39.4 32.6 Z" fill="#E6C8FF" />
-          <circle cx="42" cy="32.6" r="0.6" fill="#1A0A28" />
-          <path d="M26 31 L35 31.2 M45 30 L39.6 30.6" stroke="#2A1E2E" strokeWidth="1" />
+          {/* ⚠️ 2026-10-11 Aki「小さい目が耳の位置」→ 斜め左向き：鼻筋を挟み、手前の目は右・大きく、奥の目は左・小さく（輪郭の際） */}
+          <path className="zk-blink" d="M32 34 Q36 31 40 33.4 Q36 35.6 32 34 Z" fill="#E6C8FF" />
+          <circle cx="35.6" cy="33.8" r="1" fill="#1A0A28" />
+          <path className="zk-blink" d="M23.4 32.6 Q26 31 28.4 32.4 Q26 33.6 23.4 32.6 Z" fill="#E6C8FF" />
+          <circle cx="26" cy="32.6" r="0.6" fill="#1A0A28" />
+          <path d="M31 31 L40 31.2 M29 30 L23.6 30.6" stroke="#2A1E2E" strokeWidth="1" />
           <circle cx="44.6" cy="36" r="1.1" fill="none" stroke="#E8C46A" strokeWidth="0.7" />
           <path d="M30 24 Q36 21 42 24" fill="none" stroke="#F0E0D0" strokeWidth="1" opacity="0.5" strokeLinecap="round" />
         </g>
@@ -60882,12 +61065,13 @@ function ZkDark5Q() {
         <g transform="rotate(-8 44 28)">
           <path d="M32 28 C32 20 38 15 45 15 C52 15 57 20 56 28 C55 35 50 39 44 39 C37 39 32 35 32 28 Z" fill="url(#zkDark5Body)" {...ZkDarkRim} />
           <path d="M32 25 L55 24 L55.6 29.4 L32.4 30.4 Z" fill="#2E2244" />
-          <g transform="translate(38 27)"><g className="zk-shine"><circle r="5" fill="url(#zkDark5Glow)" /></g></g>
-          <path className="zk-blink" d="M34 27.2 Q37.6 24.8 41.4 26.8 Q37.6 28.6 34 27.2 Z" fill="#F0DCFF" />
-          <circle cx="37.4" cy="27" r="0.9" fill="#2A0A48" />
-          <path className="zk-blink" d="M46 26.4 Q48.6 25 51 26.2 Q48.6 27.4 46 26.4 Z" fill="#F0DCFF" />
-          <circle cx="48.4" cy="26.4" r="0.6" fill="#2A0A48" />
-          <path d="M33 24 L41.6 24.6 M52 23.6 L46 24.2" stroke="#07040C" strokeWidth="0.9" />
+          {/* ⚠️ 2026-10-11 Aki「小さい目が耳の位置」→ 斜め左向き：鼻筋を挟み、手前の目は右・大きく、奥の目は左・小さく（耳の位置に目を置かない） */}
+          <g transform="translate(42.6 27)"><g className="zk-shine"><circle r="5" fill="url(#zkDark5Glow)" /></g></g>
+          <path className="zk-blink" d="M38.6 27.2 Q42.2 24.8 46 26.8 Q42.2 28.6 38.6 27.2 Z" fill="#F0DCFF" />
+          <circle cx="42" cy="27" r="0.9" fill="#2A0A48" />
+          <path className="zk-blink" d="M32.5 26.4 Q35.1 25 37.5 26.2 Q35.1 27.4 32.5 26.4 Z" fill="#F0DCFF" />
+          <circle cx="34.9" cy="26.4" r="0.6" fill="#2A0A48" />
+          <path d="M37.6 24 L46.2 24.6 M38.5 23.6 L32.5 24.2" stroke="#07040C" strokeWidth="0.9" />
         </g>
         {/* 手前の腕：逆手の苦無を顔の前に */}
         <path d="M38 48 C32 48 28 44 28 38 L32 37 C33 41 36 44 41 45 Z" fill="url(#zkDark5Body)" {...ZkDarkRim} />
@@ -61041,11 +61225,12 @@ function ZkDark6Q() {
           <path d="M16 47.4 L17 50 L18.4 47.4 M22 47.4 L23 50.4 L24.2 47.6 M28 47.8 L29 50.2 L30 48" fill="#F4ECFF" />
           <ellipse cx="13.6" cy="44.4" rx="2" ry="1.5" fill="#05030A" />
           <path d="M16 42 C20 40 22 40 24 42" fill="none" stroke="#4A3C66" strokeWidth="0.8" />
-          <path className="zk-blink" d="M20.6 35.4 Q25 32.4 29.4 35 Q25 37 20.6 35.4 Z" fill="#F0DCFF" />
-          <path className="zk-blink" d="M35 34 Q38 32 41 33.8 Q38 35.2 35 34 Z" fill="#F0DCFF" />
-          <path d="M19 32.4 L29 33.4 M42 31 L35.4 32" stroke="#05030A" strokeWidth="1" />
-          <ZkDark6EyeFlame x={27} y={34.8} r={-10} />
-          <ZkDark6EyeFlame x={40} y={33.4} r={-10} s={0.7} d={-450} />
+          {/* ⚠️ 2026-10-11 Aki「小さい目が耳の位置」→ 斜め左向き：鼻筋を挟み、手前の目は右・大きく、奥の目は左・小さく（輪郭の際） */}
+          <path className="zk-blink" d="M25.6 35.4 Q30 32.4 34.4 35 Q30 37 25.6 35.4 Z" fill="#F0DCFF" />
+          <path className="zk-blink" d="M18 34 Q21 32 24 33.8 Q21 35.2 18 34 Z" fill="#F0DCFF" />
+          <path d="M24 32.4 L34 33.4 M25 31 L18.4 32" stroke="#05030A" strokeWidth="1" />
+          <ZkDark6EyeFlame x={32} y={34.8} r={-10} />
+          <ZkDark6EyeFlame x={23} y={33.4} r={-10} s={0.7} d={-450} />
           <path d="M24 27 Q32 23.4 40 26" fill="none" stroke="#9A80C8" strokeWidth="1" opacity="0.55" strokeLinecap="round" />
         </g>
         <path d="M30 54 Q38 60 48 58" fill="none" stroke="#E8C46A" strokeWidth="1.2" strokeDasharray="2.2 1" />
@@ -61159,9 +61344,9 @@ function ZkGhost2Q() {
         <path d="M27 70 C27 59 35 52 45 52 C55 52 62 60 62 70 C62 80 54 88 44 88 C34 88 27 81 27 70 Z" fill="url(#zkGhost2Core)" />
         <path d="M32 61 Q37 55 45 55" fill="none" stroke="#FFFFFF" strokeWidth="1.2" opacity="0.7" strokeLinecap="round" />
         {/* 近い目は大きく、奥の目は細く */}
-        <path className="zk-blink" d="M32.5 68 Q37 63.6 42 67.4 Q37 70.8 32.5 68 Z" fill="#3A1466" />
-        <path className="zk-blink" d="M48.5 66.6 Q51.4 64.6 54.4 66.2 Q51.4 67.8 48.5 66.6 Z" fill="#3A1466" />
-        <circle cx="36" cy="67.2" r="1" fill="#F4E8FF" /><circle cx="51" cy="66.3" r="0.6" fill="#F4E8FF" />
+        <g transform="translate(37.25 67.2) scale(0.621) translate(-37.25 -67.2)"><path className="zk-blink" d="M32.5 68 Q37 63.6 42 67.4 Q37 70.8 32.5 68 Z" fill="#3A1466" /></g>
+        <g transform="translate(51.45 66.2) scale(1.610) translate(-51.45 -66.2)"><path className="zk-blink" d="M48.5 66.6 Q51.4 64.6 54.4 66.2 Q51.4 67.8 48.5 66.6 Z" fill="#3A1466" /></g>
+        <g transform="translate(37.25 67.2) scale(0.621) translate(-37.25 -67.2)"><circle cx="36" cy="67.2" r="1" fill="#F4E8FF" /></g><g transform="translate(51.45 66.2) scale(1.610) translate(-51.45 -66.2)"><circle cx="51" cy="66.3" r="0.6" fill="#F4E8FF" /></g>
         <ellipse cx="39" cy="77" rx="2.4" ry="3.4" fill="#3A1466" opacity="0.85" />
       </g></g>
       <ZkGhost2Motes pts={[[16, 58, -600, 3.2], [84, 58, -1700, 2.6], [22, 30, -2400, 2.4]]} />
@@ -61925,10 +62110,9 @@ function ZkPsychic2Q() {
           <path d="M31 32 L27 15 L41 27 Z" fill="url(#zkPsychic2Fur)" /><path d="M31.6 29 L29 19 L38 27 Z" fill="#D8A0E0" opacity="0.8" />
           <circle cx="29.6" cy="26" r="1" fill="#E8C46A" />
           <path d="M26 46 C30 45 34 47 37 49 C34 52 29 51 27 49 Z" fill="#E8DCF8" />
-          <path className="zk-blink" d="M30.6 39 Q35.6 34 40.4 38.4 Q35.6 42.6 30.6 39 Z" fill="#F6E8FF" stroke="#1E1238" strokeWidth="0.5" />
-          <ellipse cx="35.6" cy="38.6" rx="0.7" ry="1.9" fill="#1A0A2A" />
-          <path className="zk-blink" d="M45.8 37 Q49 34.4 52.2 36.6 Q49 39 45.8 37 Z" fill="#F6E8FF" stroke="#1E1238" strokeWidth="0.5" />
-          <ellipse cx="49" cy="36.8" rx="0.5" ry="1.2" fill="#1A0A2A" />
+          {/* ⚠️ 2026-10-11 Aki「右目は描かなくていい」→ 横顔に近い斜め。奥の目は頭の陰で見えない（手前の目だけ） */}
+          <g><path className="zk-blink" d="M30.6 39 Q35.6 34 40.4 38.4 Q35.6 42.6 30.6 39 Z" fill="#F6E8FF" stroke="#1E1238" strokeWidth="0.5" /></g>
+          <g><ellipse cx="35.6" cy="38.6" rx="0.7" ry="1.9" fill="#1A0A2A" /></g>
           <path d="M28.6 44.4 L31 44.4 L29.8 46 Z" fill="#E890C8" />
           <path d="M28 47 L18 46 M28 48 L19 50" stroke="#F0E4FF" strokeWidth="0.4" opacity="0.6" />
           <path d="M33 31 Q40 27 48 29" fill="none" stroke="#FFFFFF" strokeWidth="0.9" opacity="0.5" strokeLinecap="round" />
@@ -62067,8 +62251,8 @@ function ZkPsychic3Q() {
           <path d="M38 17 C44 14 52 16 54 22 C55 28 52 33 46 36 C42 37 37 37 34 36 L29 33 C29 31 31 30 33 28 C33 23 34 19 38 17 Z" fill="url(#zkPsychic3Mask)" />
           <path d="M38 18 L34 5 L44 15 Z" fill="url(#zkPsychic3Mask)" /><path d="M38.4 16 L36 9 L41.4 15 Z" fill="#B048D8" opacity="0.8" />
           <path d="M48 16 L53 5 L55 20 Z" fill="#CFC0E6" /><path d="M50 15.6 L53 9 L53.6 18 Z" fill="#9A40C8" opacity="0.7" />
-          <path className="zk-blink" d="M34.6 24.6 Q38.6 21.6 42.4 24 Q38.6 26.2 34.6 24.6 Z" fill="#E0C8FF" />
-          <path className="zk-blink" d="M46.2 23.4 Q48.8 21.8 51.2 23 Q48.8 24.6 46.2 23.4 Z" fill="#E0C8FF" />
+          <g transform="translate(38.5 23.9) scale(0.641) translate(-38.5 -23.9)"><path className="zk-blink" d="M34.6 24.6 Q38.6 21.6 42.4 24 Q38.6 26.2 34.6 24.6 Z" fill="#E0C8FF" /></g>
+          <g transform="translate(48.7 23.2) scale(1.560) translate(-48.7 -23.2)"><path className="zk-blink" d="M46.2 23.4 Q48.8 21.8 51.2 23 Q48.8 24.6 46.2 23.4 Z" fill="#E0C8FF" /></g>
           <path d="M36 27.6 C34 29.6 31.6 31 29.6 32" fill="none" stroke="#B048D8" strokeWidth="1.1" strokeLinecap="round" />
           <path d="M48 26 C48 28 47 30 45 31.6" fill="none" stroke="#B048D8" strokeWidth="0.8" opacity="0.7" />
           <circle cx="29.2" cy="33" r="0.9" fill="#2A0E3E" />
@@ -62194,11 +62378,11 @@ function ZkPsychic4Q() {
         <path d="M40 17 C35 21 32 28 31.6 36 M44 16.6 C40 20 38 24 37 28 M58 18 C61 22 62.6 28 63 34" fill="none" stroke="#1A1028" strokeWidth="1" strokeLinecap="round" />
         {/* 眉の彫り */}
         <path d="M31 36 C35 31 41 31 45 36 M50 35 C53 31 58 31 61 34" fill="none" stroke="#6A4A6A" strokeWidth="1.1" opacity="0.7" strokeLinecap="round" />
-        {/* 目：手前大・奥小 */}
-        <path d="M31.4 41 C34 36.6 41 36.6 44 41.6 C40 43 35 43 31.4 41 Z" fill="#E8C46A" />
-        <circle className="zk-blink" cx="37.4" cy="40.6" r="2" fill="url(#zkPsychic4Eye)" />
-        <path d="M51 40.6 C53 37.6 57 37.6 59 40.4 C56.6 41.6 53.4 41.6 51 40.6 Z" fill="#E8C46A" />
-        <circle className="zk-blink" cx="55" cy="40.2" r="1.3" fill="url(#zkPsychic4Eye)" />
+        {/* ⚠️ 2026-10-11 Aki「左向きの斜めで右の目が小さいことはありえない」→ 大小を入れ替え（右＝手前が大きい） */}
+        <g transform="translate(37.6 40.4) scale(0.66) translate(-37.6 -40.4)"><path d="M31.4 41 C34 36.6 41 36.6 44 41.6 C40 43 35 43 31.4 41 Z" fill="#E8C46A" />
+        <circle className="zk-blink" cx="37.4" cy="40.6" r="2" fill="url(#zkPsychic4Eye)" /></g>
+        <g transform="translate(55 40) scale(1.5) translate(-55 -40)"><path d="M51 40.6 C53 37.6 57 37.6 59 40.4 C56.6 41.6 53.4 41.6 51 40.6 Z" fill="#E8C46A" />
+        <circle className="zk-blink" cx="55" cy="40.2" r="1.3" fill="url(#zkPsychic4Eye)" /></g>
         <path d="M44 44 C43 48 42 50 40 51 L44 52" fill="none" stroke="#9C8CB4" strokeWidth="0.8" />
         {/* 口：大きく裂ける */}
         <path d="M31 57 C36 55 42 58 46 58 C50 58 55 55 60 56 C58 66 52 71 46 71 C40 71 33 66 31 57 Z" fill="#2A0A30" />
@@ -62937,11 +63121,11 @@ function ZkBGround1S() {
         </g>
         {/* 眉の板と金の輪 */}
         <path d="M34 36 L36.4 30.4 L43 30 L46 35.6 Z" fill="url(#zkBGround1Plate)" />
-        <path d="M36 35 C34.4 37 34.4 40 36 41.4 C37.6 40 37.6 37 36 35 Z" fill="none" stroke="url(#zkBGround1Gold)" strokeWidth="1.3" />
+        {/* ⚠️ 2026-10-11 Aki「目があり得ない位置」→ 縦長の金の輪は目に見えるので外した。目は頭の上の縁から頭の中へ下ろす */}
         {/* 目：鋭く琥珀に光る */}
-        <path className="zk-blink" d="M38.4 35 Q41.8 32.8 45 34.6 Q41.8 36.2 38.4 35 Z" fill="#FFC860" />
-        <path d="M41.8 33.4 L41.8 35.8" stroke="#2A1404" strokeWidth="0.9" />
-        <path d="M37.6 32.8 L45.6 33.4" stroke="#2A1608" strokeWidth="1" />
+        <path className="zk-blink" d="M35.4 39.8 Q38.8 37.6 42 39.4 Q38.8 41 35.4 39.8 Z" fill="#FFC860" />
+        <path d="M38.8 38.2 L38.8 40.6" stroke="#2A1404" strokeWidth="0.9" />
+        <path d="M34.6 37.6 L42.6 38.2" stroke="#2A1608" strokeWidth="1" />
       </g></g>
       {/* 砂丘の波（体の下を隠す） */}
       <path d="M22 92 C28 84 38 80 50 81 C60 80 70 82 78 92 Z" fill="url(#zkBGround1Sand)" />
@@ -62983,13 +63167,15 @@ function ZkBGround1Q() {
         </g>
         {/* 眉の板と金の輪 */}
         <path d="M38 38 L40 32 L47 31 L50 37 Z" fill="url(#zkBGround1Plate)" />
-        <path d="M39.4 37.6 C37.6 39.6 37.6 42.8 39.4 44.2 C41.2 42.8 41.2 39.6 39.4 37.6 Z" fill="none" stroke="url(#zkBGround1Gold)" strokeWidth="1.3" />
-        {/* 目：手前は大きく、奥は細く */}
-        <path className="zk-blink" d="M42 38 Q45.6 35.4 49 37.4 Q45.6 39.4 42 38 Z" fill="#FFC860" />
-        <path d="M45.6 36.2 L45.6 38.8" stroke="#2A1404" strokeWidth="0.9" />
-        <path d="M41 35.4 L49.4 35.2" stroke="#2A1608" strokeWidth="1" />
-        <path d="M54 35.6 L58 34" stroke="#4A2E16" strokeWidth="2.4" strokeLinecap="round" />
-        <path className="zk-blink" d="M54 36 Q56 34.6 58 35.4 Q56 36.6 54 36 Z" fill="#FFC860" />
+        {/*
+          目：手前は大きく、奥は細く。
+          ⚠️ 2026-10-11 Aki「目があり得ない位置」→ 奥の目が背の稜の上に乗っていた。奥の目は鼻筋の向こう（手前の目の左上）に置く
+        */}
+        <path className="zk-blink" d="M40 42 Q43.6 39.4 47 41.4 Q43.6 43.4 40 42 Z" fill="#FFC860" />
+        <path d="M43.6 40.2 L43.6 42.8" stroke="#2A1404" strokeWidth="0.9" />
+        <path d="M39 39.4 L47.4 39.2" stroke="#2A1608" strokeWidth="1" />
+        <path d="M32.6 40.4 L36.4 39.4" stroke="#4A2E16" strokeWidth="1.6" strokeLinecap="round" />
+        <path className="zk-blink" d="M32.8 41.6 Q34.6 40.4 36.4 41 Q34.6 42.2 32.8 41.6 Z" fill="#FFC860" />
       </g></g>
       <path d="M22 92 C30 84 40 81 52 82 C62 81 72 84 78 92 Z" fill="url(#zkBGround1Sand)" />
       <path d="M32 86 C40 83 48 83 56 84" fill="none" stroke="#FFF0D0" strokeWidth="0.8" opacity="0.6" strokeLinecap="round" />
@@ -63039,9 +63225,9 @@ function ZkBGround1F() {
           <path className="zk-blink" d="M60 37.4 Q64.4 35.2 68.4 38.4 Q64.4 39.6 60 37.4 Z" fill="#FFC860" />
           <path d="M35.8 36.6 L35.8 39.2 M64.2 36.6 L64.2 39.2" stroke="#2A1404" strokeWidth="0.9" />
           <path d="M30 35.6 L40.4 36.6 M70 35.6 L59.6 36.6" stroke="#2A1608" strokeWidth="1" />
-          {/* 眉間の板と金の輪 */}
+          {/* 眉間の板と金の鋲。⚠️ 2026-10-11 縦長の輪は三つ目の目に見えるので丸い鋲に */}
           <path d="M45 37 L47 31 L53 31 L55 37 Z" fill="url(#zkBGround1Plate)" />
-          <path d="M50 36 C48 38.4 48 42 50 43.6 C52 42 52 38.4 50 36 Z" fill="none" stroke="url(#zkBGround1Gold)" strokeWidth="1.4" />
+          <circle cx="50" cy="34" r="1.1" fill="url(#zkBGround1Gold)" />
         </g>
       </g></g>
       <path d="M22 92 C28 84 38 81 50 82 C62 81 72 84 78 92 Z" fill="url(#zkBGround1Sand)" />
@@ -63170,9 +63356,9 @@ function ZkBGround2Q() {
         <path d="M40 60 C38 52 40 46 44 42 C46 48 46 54 44 60 Z" fill="#6A4428" /><path d="M41.4 58 C40.6 52 42 48 43.6 46 C44.4 50 44.2 54 43 58 Z" fill="#C89A74" />
         <path d="M46 62 C46 56 50 52 52 50 C52 56 50 60 48 64 Z" fill="#4A2E18" />
         <path d="M24 64 C28 59 36 58 44 61 L42 67 C36 65 30 65 25 68 Z" fill="url(#zkBGround2Shell)" stroke="url(#zkBGround2Gold)" strokeWidth="0.9" />
-        <path className="zk-blink" d="M26 70 Q29.6 67 33.4 69.2 Q29.6 71.4 26 70 Z" fill="#FFC860" />
-        <circle cx="29.6" cy="69.4" r="0.85" fill="#2A1404" />
-        <path className="zk-blink" d="M38 67.6 Q40 66.4 42 67.4 Q40 68.4 38 67.6 Z" fill="#FFC860" />
+        <g transform="translate(29.7 69.2) scale(0.541) translate(-29.7 -69.2)"><path className="zk-blink" d="M26 70 Q29.6 67 33.4 69.2 Q29.6 71.4 26 70 Z" fill="#FFC860" /></g>
+        <g transform="translate(29.7 69.2) scale(0.541) translate(-29.7 -69.2)"><circle cx="29.6" cy="69.4" r="0.85" fill="#2A1404" /></g>
+        <g transform="translate(40 67.4) scale(1.850) translate(-40 -67.4)"><path className="zk-blink" d="M38 67.6 Q40 66.4 42 67.4 Q40 68.4 38 67.6 Z" fill="#FFC860" /></g>
         <path d="M25 67.4 L33.8 68.2" stroke="#1E120A" strokeWidth="1" />
         {/* 手前の腕：爪を振りかざす */}
         <path d="M36 70 C30 64 24 56 22 48 L17 50 C19 60 26 70 34 76 Z" fill="url(#zkBGround2Hide)" />
@@ -63358,10 +63544,11 @@ function ZkBGround3Q() {
           <path d="M15.6 70 L16.8 66.4" stroke="url(#zkBGround3Gold)" strokeWidth="1.8" />
           <path d="M14 72 C20 74 28 72 34 68" fill="none" stroke="#1A0E06" strokeWidth="1" />
           {/* 目：手前大、奥小 */}
-          <path className="zk-blink" d="M24 57 Q28.4 53.8 32.6 56.2 Q28.4 58.8 24 57 Z" fill="#FFC860" />
-          <circle cx="28.4" cy="56.4" r="1" fill="#2A1404" />
-          <path className="zk-blink" d="M40 52.6 Q42.4 51 44.6 52.2 Q42.4 53.6 40 52.6 Z" fill="#FFC860" />
-          <path d="M22 54.4 L33.4 54 M39.4 50.6 L45 50" stroke="#1A0E06" strokeWidth="1.1" />
+          {/* ⚠️ 2026-10-11 Aki「小さい目が耳の位置」→ 斜め左向き：鼻筋を挟み、手前の目は右・大きく、奥の目は左・小さく（輪郭の際） */}
+          <path className="zk-blink" d="M29.9 57 Q34.3 53.8 38.5 56.2 Q34.3 58.8 29.9 57 Z" fill="#FFC860" />
+          <circle cx="34.3" cy="56.4" r="1" fill="#2A1404" />
+          <path className="zk-blink" d="M21.1 52.6 Q23.5 51 25.7 52.2 Q23.5 53.6 21.1 52.6 Z" fill="#FFC860" />
+          <path d="M27.9 54.4 L39.3 54 M20.5 50.6 L26.1 50" stroke="#1A0E06" strokeWidth="1.1" />
         </g>
       </g></g>
       <g className="zk-stomp"><ellipse cx="32" cy="92" rx="10" ry="2.2" fill="#E8D0A8" opacity="0.55" /></g>
@@ -63595,9 +63782,10 @@ function ZkBRock1Q() {
           <path d="M41 29 L51 28 L43 34 Z" fill="url(#zkBRock1FurDk)" />
           <path d="M26 30 L17 28 L24 34 Z" fill="url(#zkBRock1FurDk)" />
           <g transform="translate(26 50)"><g className="zk-sway"><path d="M-3 0 C-4 6 -2 12 1 17 C2 11 4 5 5 0 Z" fill="url(#zkBRock1Beard)" /><path d="M0 2 L1 12 M2.4 2 L3 9" stroke="#B8946A" strokeWidth="0.5" opacity="0.7" /></g></g>
-          <ZkBRockEye x={29} y={35} w={2.8} h={1.5} r={12} glow="zkBRock1Glow" />
-          <ZkBRockEye x={39.4} y={33.4} w={1.8} h={1.1} r={4} glow="zkBRock1Glow" />
-          <path d="M25 30.6 L33 33 M43 30.4 L37.6 32" stroke="#2A1A10" strokeWidth="1.2" strokeLinecap="round" />
+          {/* ⚠️ 2026-10-11 Aki「小さい目が耳の位置」→ 斜め左向き：鼻筋を挟み、手前の目は右・大きく、奥の目は左・小さく（輪郭の際） */}
+          <ZkBRockEye x={33.4} y={35} w={2.8} h={1.5} r={12} glow="zkBRock1Glow" />
+          <ZkBRockEye x={25.4} y={33.4} w={1.8} h={1.1} r={4} glow="zkBRock1Glow" />
+          <path d="M29.4 30.6 L37.4 33 M29 30.4 L23.6 32" stroke="#2A1A10" strokeWidth="1.2" strokeLinecap="round" />
         </g>
         {/* 手前の角 */}
         <g transform="translate(30 27) rotate(-14) scale(1.2)"><ZkBRock1Horn /></g>
@@ -63754,8 +63942,9 @@ function ZkBRock2Q() {
           <path d="M17 67 C12 60 10 50 12 40 C16 49 21 57 24 63 Z" fill="url(#zkBRock2Horn)" />
           <path d="M11.2 48 C11.3 45 11.6 42.4 12 40 C13.6 44 15.2 47.4 17 50.6 C14.8 50 12.8 49 11.2 48 Z" fill="url(#zkBRock2Gold)" />
           <path d="M26 60 C25 56 26 52 28 49 C29.4 53 31 56 32 58 Z" fill="url(#zkBRock2Horn)" />
-          <ZkBRockEye x={27.6} y={61.6} w={2.6} h={1.4} r={10} glow="zkBRock2Glow" />
-          <ZkBRockEye x={38.6} y={59.4} w={1.7} h={1} r={0} glow="zkBRock2Glow" />
+          {/* ⚠️ 2026-10-11 Aki「小さい目が耳の位置」→ 斜め左向き：鼻筋を挟み、手前の目は右・大きく、奥の目は左・小さく（輪郭の際） */}
+          <ZkBRockEye x={32.2} y={61.6} w={2.6} h={1.4} r={10} glow="zkBRock2Glow" />
+          <ZkBRockEye x={23.7} y={59.4} w={1.7} h={1} r={0} glow="zkBRock2Glow" />
           <path d="M18 71 C22 72 27 71.4 30 70" fill="none" stroke="#1A0E06" strokeWidth="0.8" />
         </g>
       </g>
@@ -63946,9 +64135,10 @@ function ZkBRock3Q() {
           {/* 手前の角 */}
           <path d="M30 24 C32 16 38 12 44 12 C38 16 35 20 34 26 Z" fill="url(#zkBRock3Horn)" />
           <path d="M36.6 14.6 L38 17.4" stroke="url(#zkBRock3Gold)" strokeWidth="1.8" />
-          <ZkBRockEye x={24} y={30} w={2.7} h={1.3} r={12} glow="zkBRock3Glow" />
-          <ZkBRockEye x={33} y={29} w={1.7} h={0.9} r={0} glow="zkBRock3Glow" />
-          <path d="M20 27 L28 29 M36 26.6 L31.6 28" stroke="#1A0E06" strokeWidth="1.1" strokeLinecap="round" />
+          {/* ⚠️ 2026-10-11 Aki「小さい目が耳の位置」→ 斜め左向き：鼻筋を挟み、手前の目は右・大きく、奥の目は左・小さく（輪郭の際） */}
+          <ZkBRockEye x={27.8} y={30} w={2.7} h={1.3} r={12} glow="zkBRock3Glow" />
+          <ZkBRockEye x={20.8} y={29} w={1.7} h={0.9} r={0} glow="zkBRock3Glow" />
+          <path d="M23.8 27 L31.8 29 M23.8 26.6 L19.4 28" stroke="#1A0E06" strokeWidth="1.1" strokeLinecap="round" />
         </g>
       </g></g>
       {/* 手前の翼 */}
@@ -64148,9 +64338,9 @@ function ZkBGrass1Q() {
         <path d="M30.6 38.4 L45 40.8 L44 43.2 L31.4 41.2 Z" fill="#3A2210" />
         <path d="M61 37.4 L52 40 L52.2 41.8 L61 39.6 Z" fill="#3A2210" />
         <circle cx="38" cy="44" r="5.4" fill="url(#zkBGrass1Eye)" /><circle cx="56" cy="42.6" r="3.8" fill="url(#zkBGrass1Eye)" />
-        <path className="zk-blink" d="M33 44 Q38 40.8 43 43.4 Q38 46.2 33 44 Z" fill="#FFD27A" />
-        <path className="zk-blink" d="M52.4 42.6 Q55.8 40.6 59 42.2 Q55.8 44 52.4 42.6 Z" fill="#FFD27A" />
-        <circle cx="37" cy="43.8" r="1.1" fill="#2A1404" /><circle cx="55.2" cy="42.5" r="0.8" fill="#2A1404" />
+        <g transform="translate(38 43.5) scale(0.660) translate(-38 -43.5)"><path className="zk-blink" d="M33 44 Q38 40.8 43 43.4 Q38 46.2 33 44 Z" fill="#FFD27A" /></g>
+        <g transform="translate(55.7 42.3) scale(1.515) translate(-55.7 -42.3)"><path className="zk-blink" d="M52.4 42.6 Q55.8 40.6 59 42.2 Q55.8 44 52.4 42.6 Z" fill="#FFD27A" /></g>
+        <g transform="translate(38 43.5) scale(0.660) translate(-38 -43.5)"><circle cx="37" cy="43.8" r="1.1" fill="#2A1404" /></g><g transform="translate(55.7 42.3) scale(1.515) translate(-55.7 -42.3)"><circle cx="55.2" cy="42.5" r="0.8" fill="#2A1404" /></g>
         <path d="M45 46 C40.6 47.6 38.4 51.6 40.4 55 C43.4 56.4 46.4 54.2 47.4 51 Z" fill="url(#zkBGrass1Bark)" />
         <path d="M37 58.4 C41 56.2 51 56.4 55 58.6 C51 62.6 41 62.6 37 58.4 Z" fill="#1A0C06" />
         <path d="M40 58.2 L41 60.2 L42 58 M49 58 L50 60 L51 58" fill="#E8D0A8" />
@@ -64483,12 +64673,13 @@ function ZkBGrass3Q() {
         <circle cx="19.4" cy="41.6" r="0.9" fill="#1A0A04" />
         <path d="M28 28 C34 23.4 44 22.4 52 24" fill="none" stroke="#F0D0A0" strokeWidth="0.8" opacity="0.5" strokeLinecap="round" />
         {/* 目：手前は大きく、奥は細く */}
-        <path d="M25 28.6 L37 31 L36.2 32.8 L25.6 30.6 Z" fill="#2A160A" />
-        <path d="M53 27.6 L46 30 L46.4 31.4 L53 29.4 Z" fill="#2A160A" />
-        <circle cx="31" cy="34" r="5.4" fill="url(#zkBGrass3Eye)" /><circle cx="49" cy="32.4" r="3.6" fill="url(#zkBGrass3Eye)" />
-        <path className="zk-blink" d="M26.6 34 Q31 31 35.4 33.2 Q31 36 26.6 34 Z" fill="#FFD27A" />
-        <path className="zk-blink" d="M46 32.4 Q49 30.6 52 32 Q49 33.6 46 32.4 Z" fill="#FFD27A" />
-        <path d="M30.4 32.4 L30 35.4" stroke="#2A1404" strokeWidth="1" strokeLinecap="round" /><path d="M48.6 31.4 L48.4 33.2" stroke="#2A1404" strokeWidth="0.8" strokeLinecap="round" />
+        <path d="M30 28.6 L42 31 L41.2 32.8 L30.6 30.6 Z" fill="#2A160A" />
+        <path d="M29 27.6 L22 30 L22.4 31.4 L29 29.4 Z" fill="#2A160A" />
+        <circle cx="36" cy="34" r="5.4" fill="url(#zkBGrass3Eye)" /><circle cx="25" cy="32.4" r="3.6" fill="url(#zkBGrass3Eye)" />
+        {/* ⚠️ 2026-10-11 Aki「小さい目が耳の位置」→ 斜め左向き：鼻筋を挟み、手前の目は右・大きく、奥の目は左・小さく（輪郭の際） */}
+        <path className="zk-blink" d="M31.6 34 Q36 31 40.4 33.2 Q36 36 31.6 34 Z" fill="#FFD27A" />
+        <path className="zk-blink" d="M22 32.4 Q25 30.6 28 32 Q25 33.6 22 32.4 Z" fill="#FFD27A" />
+        <path d="M35.4 32.4 L35 35.4" stroke="#2A1404" strokeWidth="1" strokeLinecap="round" /><path d="M24.6 31.4 L24.4 33.2" stroke="#2A1404" strokeWidth="0.8" strokeLinecap="round" />
         {/* 金の首環 */}
         <path d="M43 50 Q50 54 58 49" fill="none" stroke="url(#zkBGrass3Gold)" strokeWidth="2" />
         <path d="M44 50.4 Q50 53.4 57 49.4" fill="none" stroke="#FFF4C8" strokeWidth="0.5" opacity="0.7" />
@@ -64732,11 +64923,12 @@ function ZkBFire1Q() {
           <path d="M18 45 L19 48 L20.2 45.4 Z M25.4 45.8 L26.2 49 L27.4 45.8 Z" fill="#FFF4DA" />
           <ellipse cx="15.6" cy="40.8" rx="1.5" ry="1.1" fill="#0A0406" />
           <path d="M17 43 L8 41 M17 44 L8.6 45.4" stroke="#FFB040" strokeWidth="0.5" opacity="0.7" />
-          <ellipse cx="25.5" cy="33.6" rx="5.4" ry="3.2" fill="url(#zkBFire1Mote)" opacity="0.7" />
-          <path className="zk-blink" d="M21 34 Q25.5 30.4 30 33.6 Q25.5 36 21 34 Z" fill="#FFB040" />
-          <path className="zk-blink" d="M37.4 32.6 Q40.4 30.8 43.2 32.4 Q40.4 33.8 37.4 32.6 Z" fill="#FFB040" />
-          <path d="M25.6 32.2 L25.6 35.2 M40.4 31.6 L40.4 33.4" stroke="#2A0804" strokeWidth="0.95" />
-          <path d="M19.6 31.6 L30.4 31.4 M36.6 30.6 L43.6 31" stroke="#0A0406" strokeWidth="1.1" />
+          {/* ⚠️ 2026-10-11 Aki「小さい目が耳の位置」→ 斜め左向き：鼻筋を挟み、手前の目は右・大きく、奥の目は左・小さく（輪郭の際） */}
+          <ellipse cx="31.5" cy="33.6" rx="5.4" ry="3.2" fill="url(#zkBFire1Mote)" opacity="0.7" />
+          <path className="zk-blink" d="M27 34 Q31.5 30.4 36 33.6 Q31.5 36 27 34 Z" fill="#FFB040" />
+          <path className="zk-blink" d="M17.4 32.6 Q20.4 30.8 23.2 32.4 Q20.4 33.8 17.4 32.6 Z" fill="#FFB040" />
+          <path d="M31.6 32.2 L31.6 35.2 M20.4 31.6 L20.4 33.4" stroke="#2A0804" strokeWidth="0.95" />
+          <path d="M25.6 31.6 L36.4 31.4 M16.6 30.6 L23.6 31" stroke="#0A0406" strokeWidth="1.1" />
         </g>
         <path d="M24 50 C29 57 41 58 48 50" fill="none" stroke="url(#zkBFire1Gold)" strokeWidth="2.4" />
         <path d="M35 54.6 L37.4 57.2 L35 60.6 L32.6 57.2 Z" fill="url(#zkBFire1Gold)" /><circle cx="28" cy="54.6" r="1" fill="#FFF0B0" /><circle cx="42.6" cy="55" r="1" fill="#FFF0B0" />
@@ -64908,10 +65100,11 @@ function ZkBFire2Q() {
         <path d="M26 30 L15.4 36.4 C15 38 16 39.4 17.6 39.2 L18.4 37.4 L28.4 35 Z" fill="url(#zkBFire2Gold)" />
         <path d="M18.4 37.4 L27 33.4" stroke="#8A5A10" strokeWidth="0.5" />
         <ellipse cx="30" cy="27.6" rx="4.8" ry="3" fill="url(#zkBFire2Mote)" opacity="0.8" />
-        <path className="zk-blink" d="M26.4 28.2 Q30 25.2 33.6 27.2 Q30 29.6 26.4 28.2 Z" fill="#FFE070" />
-        <path className="zk-blink" d="M36.4 26.6 Q38.6 25.2 40.4 26.4 Q38.6 27.8 36.4 26.6 Z" fill="#FFE070" />
-        <circle cx="30.2" cy="27.8" r="0.9" fill="#3A0A04" /><circle cx="38.6" cy="26.6" r="0.55" fill="#3A0A04" />
-        <path d="M25.6 25.2 L34 26.6 M36 25.4 L40.8 24.6" stroke="#3A0A08" strokeWidth="1.2" />
+        {/* ⚠️ 2026-10-11 Aki「小さい目が耳の位置」→ 斜め左向き：鼻筋を挟み、手前の目は右・大きく、奥の目は左・小さく（輪郭の際） */}
+        <path className="zk-blink" d="M29.93 28.2 Q33.53 25.2 37.13 27.2 Q33.53 29.6 29.93 28.2 Z" fill="#FFE070" />
+        <path className="zk-blink" d="M25.06 26.6 Q27.26 25.2 29.06 26.4 Q27.26 27.8 25.06 26.6 Z" fill="#FFE070" />
+        <circle cx="33.73" cy="27.8" r="0.9" fill="#3A0A04" /><circle cx="27.26" cy="26.6" r="0.55" fill="#3A0A04" />
+        <path d="M29.13 25.2 L37.53 26.6 M24.66 25.4 L29.46 24.6" stroke="#3A0A08" strokeWidth="1.2" />
         <path d="M33 39.4 C36 42 41 42 44.4 39" fill="none" stroke="url(#zkBFire2Gold)" strokeWidth="2" />
       </g></g>
       <ZkBFireEmbers pts={[[82, 64, 0], [76, 80, -1300], [90, 44, -2200], [50, 12, -700, 0.8]]} />
@@ -65013,7 +65206,8 @@ function ZkBFire3Head({ far = false }) {
       <path className="zk-blink" d="M9.4 -3.6 Q13 -6.4 16.6 -4.6 Q13 -2.4 9.4 -3.6 Z" fill="#FFE070" />
       <circle cx="13.2" cy="-4" r="0.85" fill="#3A0A04" />
       <path d="M7.6 -5.6 L18.6 -8.4 L18 -6.2 Z" fill="#1E0A08" />
-      {far && <path className="zk-blink" d="M20.4 -6 Q22.6 -7.4 24.4 -6.2 Q22.6 -5 20.4 -6 Z" fill="#FFE070" />}
+      {/* ⚠️ 2026-10-11 Aki「小さい目が耳の位置」→ 奥の目は角の根元ではなく、嘴の付け根の上（手前の目の左） */}
+      {far && <path className="zk-blink" d="M4.2 -3.4 Q6.2 -4.8 8 -3.6 Q6.2 -2.4 4.2 -3.4 Z" fill="#FFE070" />}
       <path d="M7 1 L22 1.6 M16 -2 L20 0" stroke="#1E0A08" strokeWidth="0.5" opacity="0.5" />
     </g>
   );
@@ -65319,8 +65513,8 @@ function ZkBDragon1Q() {
         <path d="M30 43 C32 38 36 36 40 37 C36 39 34 41 33 45 Z" fill="url(#zkBDragon1Gold)" />
         <path d="M25 42 C26 38 29 36 31 36 C29 38 28 40 28 43 Z" fill="url(#zkBDragon1Gold)" opacity="0.85" />
         <path d="M16 50.6 C19 46.4 24 44 29 43.6 L29.6 45.2 C25 45.6 20.6 47.6 17.6 51.4 Z" fill="url(#zkBDragon1Gold)" />
-        <path className="zk-blink" d="M22 48 Q25 45.8 28 47.4 Q25 49 22 48 Z" fill="#FFB040" />
-        <path className="zk-blink" d="M30.4 46.6 Q32 45.6 33.4 46.4 Q32 47.2 30.4 46.6 Z" fill="#FFB040" />
+        <g transform="translate(25 47.4) scale(0.500) translate(-25 -47.4)"><path className="zk-blink" d="M22 48 Q25 45.8 28 47.4 Q25 49 22 48 Z" fill="#FFB040" /></g>
+        <g transform="translate(31.9 46.4) scale(2.000) translate(-31.9 -46.4)"><path className="zk-blink" d="M30.4 46.6 Q32 45.6 33.4 46.4 Q32 47.2 30.4 46.6 Z" fill="#FFB040" /></g>
         <path d="M22 50 C30 46 42 44 52 44" fill="none" stroke="#FFD27A" strokeWidth="0.6" />
         {/* マント */}
         <path d="M60 30 C68 32 74 38 76 46 L72 46 L74 50 C68 48 62 42 60 36 Z" fill="url(#zkBDragon1Cloth)" />
@@ -65347,9 +65541,9 @@ function ZkBDragon1Q() {
         <path d="M61 26 L66 24.6 L62 28.4 L67 28.6 L62 30.4 Z" fill="url(#zkBDragon1Gold)" />
         <path d="M64 22.4 C64 16 60 12.4 54 12.4 C50 12.4 48 14.4 47 17.6 L62 22.6 Z" fill="url(#zkBDragon1Iron)" stroke="url(#zkBDragon1Gold)" strokeWidth="0.9" />
         <path d="M56 12.6 C60 9.8 66 10.4 69 13.4 C65 13.4 62 14.4 60 16.4 Z" fill="url(#zkBDragon1Cloth)" />
-        <path className="zk-blink" d="M47.4 20.8 Q50.2 18.8 53 20.4 Q50.2 21.8 47.4 20.8 Z" fill="#FFC060" />
-        <path d="M50.2 19.4 L50.2 21.6" stroke="#2A0806" strokeWidth="0.7" />
-        <path className="zk-blink" d="M56 20.6 Q57.4 19.8 58.6 20.6 Q57.4 21.2 56 20.6 Z" fill="#FFC060" />
+        <g transform="translate(50.2 20.3) scale(0.464) translate(-50.2 -20.3)"><path className="zk-blink" d="M47.4 20.8 Q50.2 18.8 53 20.4 Q50.2 21.8 47.4 20.8 Z" fill="#FFC060" /></g>
+        <g transform="translate(50.2 20.3) scale(0.464) translate(-50.2 -20.3)"><path d="M50.2 19.4 L50.2 21.6" stroke="#2A0806" strokeWidth="0.7" /></g>
+        <g transform="translate(57.3 20.5) scale(2.154) translate(-57.3 -20.5)"><path className="zk-blink" d="M56 20.6 Q57.4 19.8 58.6 20.6 Q57.4 21.2 56 20.6 Z" fill="#FFC060" /></g>
         <path d="M46.8 19.2 L59 20" stroke="#1A0806" strokeWidth="0.9" />
       </g></g>
       <ZkBDragonMotes fill="url(#zkBDragon1Mote)" pts={[[12, 30, 2.6, 0], [86, 24, 2.4, -1300], [10, 70, 2.2, -700], [88, 66, 2, -2000]]} />
@@ -65579,10 +65773,11 @@ function ZkBDragon2Q() {
         <path d="M17 51.4 L18 53.4 L19.4 51.6 L20.6 53.6 L22 51.6 L23.4 53.6 L25 51.6" fill="none" stroke="#FFF0D8" strokeWidth="0.6" />
         <ellipse cx="15.4" cy="47" rx="0.8" ry="0.5" fill="#2A0806" transform="rotate(-30 15.4 47)" />
         <g transform="translate(12 49)"><g className="zk-flick" style={{ animationDelay: "-200ms" }}><ellipse cx="-2" cy="0" rx="5" ry="2.6" fill="url(#zkBDragon2Fire)" /></g></g>
-        <path className="zk-blink" d="M26 41 Q29.6 38.6 33 40.4 Q29.6 42.2 26 41 Z" fill="#FFB040" />
-        <path d="M29.6 39.4 L29.6 41.8" stroke="#2A0806" strokeWidth="0.8" />
-        <path className="zk-blink" d="M38 38.6 Q40 37.4 42 38.4 Q40 39.4 38 38.6 Z" fill="#FFB040" />
-        <path d="M25 38.8 L34 39.4 M37.4 37 L42.4 37.4" stroke="#1A0604" strokeWidth="1.1" strokeLinecap="round" />
+        {/* ⚠️ 2026-10-11 Aki「小さい目が耳の位置」→ 斜め左向き：鼻筋を挟み、手前の目は右・大きく、奥の目は左・小さく（輪郭の際） */}
+        <path className="zk-blink" d="M30.4 41 Q34 38.6 37.4 40.4 Q34 42.2 30.4 41 Z" fill="#FFB040" />
+        <path d="M34 39.4 L34 41.8" stroke="#2A0806" strokeWidth="0.8" />
+        <path className="zk-blink" d="M24 38.6 Q26 37.4 28 38.4 Q26 39.4 24 38.6 Z" fill="#FFB040" />
+        <path d="M29.4 38.8 L38.4 39.4 M23.4 37 L28.4 37.4" stroke="#1A0604" strokeWidth="1.1" strokeLinecap="round" />
       </g></g>
       <ZkBDragonMotes fill="url(#zkBDragon2Mote)" pts={[[14, 26, 2.6, 0], [56, 16, 2, -1500], [90, 32, 2.4, -900], [10, 66, 2.2, -2100], [92, 82, 2, -400]]} />
     </g>
@@ -65801,9 +65996,9 @@ function ZkBDragon3Q() {
         <path d="M16 43 L17 44.6 L18.4 42.8 L19.8 44.4 L21 42.4 L22.4 44 L23.8 42" fill="none" stroke="#FFF0D8" strokeWidth="0.6" />
         <ellipse cx="15" cy="39" rx="0.8" ry="0.5" fill="#1A0408" transform="rotate(-30 15 39)" />
         <g transform="translate(34 28) rotate(4)"><ZkBDragon3HornL s={0.95} /></g>
-        <path className="zk-blink" d="M24 33.4 Q27.6 31 31 32.6 Q27.6 34.6 24 33.4 Z" fill="#FFB040" />
-        <path d="M27.6 31.8 L27.6 34.2" stroke="#2A0406" strokeWidth="0.8" />
-        <path className="zk-blink" d="M35 31.4 Q37 30.2 39 31.2 Q37 32.2 35 31.4 Z" fill="#FFB040" />
+        <g transform="translate(27.5 32.8) scale(0.571) translate(-27.5 -32.8)"><path className="zk-blink" d="M24 33.4 Q27.6 31 31 32.6 Q27.6 34.6 24 33.4 Z" fill="#FFB040" /></g>
+        <g transform="translate(27.5 32.8) scale(0.571) translate(-27.5 -32.8)"><path d="M27.6 31.8 L27.6 34.2" stroke="#2A0406" strokeWidth="0.8" /></g>
+        <g transform="translate(37 31.2) scale(1.750) translate(-37 -31.2)"><path className="zk-blink" d="M35 31.4 Q37 30.2 39 31.2 Q37 32.2 35 31.4 Z" fill="#FFB040" /></g>
         <path d="M23 31.4 L32 31.4 M34.4 29.8 L39.4 30.2" stroke="#1A0408" strokeWidth="1.2" strokeLinecap="round" />
       </g></g>
       {/* 手前の翼 */}
@@ -66855,10 +67050,9 @@ function ZkBWater1Q() {
           <path d="M9.6 50 C18 50 32 51 46 52" fill="none" stroke="#E4F2FA" strokeWidth="1.7" strokeLinecap="round" />
           <path d="M13 62.6 C20 68.6 34 68 45 56" fill="none" stroke="#C8E0F0" strokeWidth="1.3" strokeLinecap="round" />
           <path d="M16 51 L17 52.6 L18.2 51.2 M24 51.4 L25 53 L26.2 51.6 M32 51.8 L33 53.4 L34.2 52" fill="none" stroke="#FFFFFF" strokeWidth="0.5" opacity="0.8" />
-          {/* 目：手前は大きく、奥は細く */}
+          {/* ⚠️ 2026-10-11 Aki「目が後頭部にある」→ 横顔に近い斜め。奥の目は頭の陰で見えない（手前の目だけ） */}
           <ZkBWaterEye x={22} y={41} w={3} h={1.5} r={-8} glow="zkBWater1Mote" />
-          <ZkBWaterEye x={45} y={40.4} w={2} h={1.1} r={4} glow="zkBWater1Mote" d="-120ms" />
-          <path d="M16.6 37.6 L27 36.4 M49.6 37 L41.4 37" stroke="#06101E" strokeWidth="1.2" strokeLinecap="round" />
+          <path d="M16.6 37.6 L27 36.4" stroke="#06101E" strokeWidth="1.2" strokeLinecap="round" />
         </g>
         {/* 手前の胸びれ */}
         <path d="M40 64 C44 68 46 74 44 80 C40 76 37 71 36 66 Z" fill="url(#zkBWater1Fin)" {...ZK_BWATER_RIM} />
@@ -67078,9 +67272,9 @@ function ZkBWater2Q() {
           <path d="M22 46 C28 50 40 51 50 46 C48 52 40 56 32 55.6 C26 55 23 51 22 46 Z" fill="url(#zkBWater2Belly)" />
           <path d="M25 48 L26.4 46 L28 48.6 L29.6 46.4 L31.4 49 L33 46.6 L35 49 L36.8 46.4 L38.6 48.6 L40.6 46 L42.4 48" fill="none" stroke="#FFFFFF" strokeWidth="0.7" strokeLinejoin="round" />
           <path d="M20 28 Q30 21 44 22" fill="none" stroke="#FFFFFF" strokeWidth="1" opacity="0.6" strokeLinecap="round" />
+          {/* ⚠️ 2026-10-11 Aki「目が後頭部にある」→ 横顔に近い斜め。奥の目は頭の陰で見えない（手前の目だけ） */}
           <ZkBWaterEye x={27} y={31} w={3} h={1.6} r={-10} glow="zkBWater2Mote" />
-          <ZkBWaterEye x={50} y={30} w={2} h={1.1} r={8} glow="zkBWater2Mote" d="-150ms" />
-          <path d="M22 28 L32 26.4 M54 26.4 L46 27.4" stroke="#0A1428" strokeWidth="1.1" strokeLinecap="round" />
+          <path d="M22 28 L32 26.4" stroke="#0A1428" strokeWidth="1.1" strokeLinecap="round" />
           <path d="M56 34 L55 40 M58.4 33.4 L57.6 39" stroke="#1C3052" strokeWidth="0.8" opacity="0.8" />
           <g transform="translate(40 18) rotate(-10) scale(1.15)"><ZkBWater2HatSide /></g>
         </g>
@@ -67634,11 +67828,12 @@ function ZkBIce1Q() {
           <path d="M20.6 43.6 C24 44.6 28 44 30.4 41.8 L30 45 C26 47.4 22.6 46.6 20.6 43.6 Z" fill="url(#zkBIce1Mouth)" />
           <path d="M22.4 44.2 L23.2 46 L24 44.4 Z M27.6 43.6 L28.2 45.6 L29.2 43.4 Z" fill="#FFFFFF" />
           {/* 目：手前は大きく、奥は細く */}
-          <ellipse cx="30" cy="31" rx="4.4" ry="2.8" fill="url(#zkBIce1Mote)" opacity="0.9" />
-          <path className="zk-blink" d="M26.6 31.6 Q30 29 33.4 30.6 Q30.4 33 26.6 31.6 Z" fill="#7FE8FF" />
-          <circle cx="30.2" cy="31.2" r="0.85" fill="#0A1A3A" />
-          <path className="zk-blink" d="M39.4 30 Q41.6 28.6 43.4 29.6 Q41.6 31 39.4 30 Z" fill="#7FE8FF" />
-          <path d="M25.4 29 L34.6 28 M38.6 28 L44 27.4" stroke="#22365E" strokeWidth="1" strokeLinecap="round" />
+          {/* ⚠️ 2026-10-11 Aki「小さい目が耳の位置」→ 斜め左向き：鼻筋を挟み、手前の目は右・大きく、奥の目は左・小さく（輪郭の際） */}
+          <ellipse cx="34.8" cy="31" rx="4.4" ry="2.8" fill="url(#zkBIce1Mote)" opacity="0.9" />
+          <path className="zk-blink" d="M31.4 31.6 Q34.8 29 38.2 30.6 Q35.2 33 31.4 31.6 Z" fill="#7FE8FF" />
+          <circle cx="35" cy="31.2" r="0.85" fill="#0A1A3A" />
+          <path className="zk-blink" d="M23.9 30 Q26.1 28.6 27.9 29.6 Q26.1 31 23.9 30 Z" fill="#7FE8FF" />
+          <path d="M30.2 29 L39.4 28 M23.1 28 L28.5 27.4" stroke="#22365E" strokeWidth="1" strokeLinecap="round" />
         </g>
         {/* 凍る息 */}
         <g transform="translate(20 45) scale(0.7)"><ZkBIceBreath fill="url(#zkBIce1Mote)" d="-600" /></g>
@@ -67836,8 +68031,8 @@ function ZkBIce2Q() {
         <ZkBIceSpikes fill="url(#zkBIce2Ice)" pts={[[34.4, 31, 30, 6], [36, 36, 42, 6.6], [37.4, 41, 50, 6.4], [39.6, 46, 58, 6]]} />
         <path d="M20.4 47.6 L27 34 M26 45 C34 44 42 44 48 45" fill="none" stroke="url(#zkBIce2Gold)" strokeWidth="0.9" />
         <ellipse cx="21.6" cy="49.2" rx="0.9" ry="0.7" fill="#0A1A3A" />
-        <path className="zk-blink" d="M24.6 34.6 Q27.4 32.6 30 34.2 Q27.4 36 24.6 34.6 Z" fill="#9AF0FF" />
-        <path className="zk-blink" d="M32.4 32.6 Q33.6 32 34.4 32.6 Q33.6 33.4 32.4 32.6 Z" fill="#9AF0FF" />
+        <g transform="translate(27.3 34.3) scale(0.370) translate(-27.3 -34.3)"><path className="zk-blink" d="M24.6 34.6 Q27.4 32.6 30 34.2 Q27.4 36 24.6 34.6 Z" fill="#9AF0FF" /></g>
+        <g transform="translate(33.4 32.7) scale(2.700) translate(-33.4 -32.7)"><path className="zk-blink" d="M32.4 32.6 Q33.6 32 34.4 32.6 Q33.6 33.4 32.4 32.6 Z" fill="#9AF0FF" /></g>
         {/* 手前の前脚：高く上げる */}
         <path d="M34 64 C30 66 26 70 25.6 74 L29 80 L32.6 78.6 L30 74.4 C32 72 35 70 38 68.4 Z" {...ZK_BICE2_ICE} />
         <path d="M28.6 80 L32.8 78.4" stroke="url(#zkBIce2Gold)" strokeWidth="1.3" />
@@ -68051,11 +68246,12 @@ function ZkBIce3Q() {
           <path d="M18 53.4 C22 56.6 28 57.4 34 54.4 L40 46 L32 50.6 C28 53 22 54 18 53.4 Z" {...ZK_BICE3_BODY} />
           <path d="M21 51 L22 53 L23 51 Z M26 49.6 L27 52 L28 49.4 Z M24 55 L24.6 53.2 L25.6 55.2 Z" fill="#FFFFFF" />
           <path d="M28 36 L26 31 L31 34.6 Z" fill="#DDF4FF" />
-          <ellipse cx="33" cy="40" rx="5" ry="3" fill="url(#zkBIce3Mote)" />
-          <path className="zk-blink" d="M29.4 41 L36.6 38.6 Q34.4 42 30.4 42.2 Z" fill="#B8F4FF" />
-          <circle cx="33.2" cy="40.4" r="0.75" fill="#0A1A3A" />
-          <path className="zk-blink" d="M41.6 37.8 L45 37 Q44 38.6 42 38.8 Z" fill="#B8F4FF" />
-          <path d="M28.6 39.4 L37.6 36.6 M41 36.4 L45.4 35.4" stroke="#0E2458" strokeWidth="1" strokeLinecap="round" />
+          {/* ⚠️ 2026-10-11 Aki「小さい目が耳の位置」→ 斜め左向き：鼻筋を挟み、手前の目は右・大きく、奥の目は左・小さく（輪郭の際） */}
+          <ellipse cx="37.3" cy="40" rx="5" ry="3" fill="url(#zkBIce3Mote)" />
+          <path className="zk-blink" d="M33.7 41 L40.9 38.6 Q38.7 42 34.7 42.2 Z" fill="#B8F4FF" />
+          <circle cx="37.5" cy="40.4" r="0.75" fill="#0A1A3A" />
+          <path className="zk-blink" d="M27.7 37.8 L31.1 37 Q30.1 38.6 28.1 38.8 Z" fill="#B8F4FF" />
+          <path d="M32.9 39.4 L41.9 36.6 M27.1 36.4 L31.5 35.4" stroke="#0E2458" strokeWidth="1" strokeLinecap="round" />
         </g>
       </g></g>
       <g transform="translate(19 54) scale(0.8) rotate(-30)"><ZkBIceBreath fill="url(#zkBIce3Mote)" /></g>
@@ -68968,9 +69164,9 @@ function ZkBFly1HeadQ() {
       <path d="M-4 1 C-6.4 0 -9.4 1 -10.8 3.8 C-11.8 5.8 -11.4 7.8 -10 9 C-10.2 7.2 -9.4 6.2 -8 6.2 C-6 6.2 -4.2 5 -3 3.4 Z" fill="url(#zkBFly1Beak)" />
       <path d="M-4.8 0.2 C-3.4 -0.4 -1.8 0.4 -1.4 1.6 C-2 3 -3.4 3.8 -4.8 3.6 Z" fill="#FFD040" />
       <ellipse cx="-4.4" cy="-2" rx="3" ry="2.6" fill="#FFD040" />
-      <ZkBFlyEye x={-4.4} y={-2.1} w={2.4} h={1.4} r={-6} glow="zkBFly1Mote" />
+      <ZkBFlyEye x={-4.4} y={-2.1} w={1.5} h={0.88} r={-6} glow="zkBFly1Mote" />
       <ellipse cx="5.8" cy="-2.4" rx="1.9" ry="2.1" fill="#FFD040" />
-      <ZkBFlyEye x={5.8} y={-2.5} w={1.5} h={1.1} r={8} glow="zkBFly1Mote" flip d="-60ms" />
+      <ZkBFlyEye x={5.8} y={-2.5} w={2.4} h={1.76} r={8} glow="zkBFly1Mote" flip d="-60ms" />
       <path d="M-8.8 -3 C-8.8 -10.6 -1 -14.2 5.4 -12.6 C10 -11.2 12.6 -6.6 12 -1 L9.4 -1.6 C8 -4.4 5 -5.8 1 -6 C-3 -6.2 -6.8 -5.2 -8.8 -3 Z" fill="url(#zkBFly1Helm)" {...ZK_BFLY_RIM} />
       <path d="M-8.8 -3 C-6.8 -5.2 -3 -6.2 1 -6 C5 -5.8 8 -4.4 9.4 -1.6 L12 -1" stroke="url(#zkBFly1Gold)" strokeWidth="1.5" fill="none" strokeLinecap="round" />
       <path d="M-1 -13.8 C4 -15 9 -13 11.6 -8.4" stroke="url(#zkBFly1Gold)" strokeWidth="1.3" fill="none" strokeLinecap="round" />
@@ -69168,8 +69364,9 @@ function ZkBFly2HeadS() {
       <path d="M-5 -9 C-6.4 -7 -7 -5 -6.8 -3 L-8.8 0.8 L-6.6 1.8 L-7.2 3.2 L-5.2 3.8 L-5.8 5.8 L-6.2 7.6 C-4.6 9.6 -1.6 10.2 1.4 9 C4.4 7.8 6.4 4.6 6.6 0.6 C6.8 -4.6 3.6 -8.6 -5 -9 Z" fill="url(#zkBFly2Skin)" {...ZK_BFLY_RIM} />
       <path d="M-7.2 3.2 L-3.6 4.2 L-5.8 5.8 Z" fill="#3A0A18" />
       <path d="M-6.6 3.4 L-6.2 4.2 L-5.8 3.5" fill="#FFFFFF" />
-      <ZkBFlyEye x={-3.6} y={-2.4} w={2.1} h={1.2} r={-10} glow="zkBFly2Mote" />
-      <path d="M-6.8 -4.8 L-1.2 -4.6" stroke="#0A1A10" strokeWidth="1.1" strokeLinecap="round" />
+      {/* ⚠️ 2026-10-11 Aki「横顔の目があり得ない位置」→ 鼻先に寄りすぎていた。頭の幅の1/3ほど奥へ */}
+      <ZkBFlyEye x={-1.8} y={-2.2} w={2} h={1.2} r={-10} glow="zkBFly2Mote" />
+      <path d="M-4.8 -4.6 L0.6 -4.4" stroke="#0A1A10" strokeWidth="1.1" strokeLinecap="round" />
       <path d="M-4 4.6 C-2 6.6 0 7 2 6.6" stroke="#8A6A5A" strokeWidth="0.5" fill="none" opacity="0.6" />
       {/* 前髪 */}
       <path d="M-7.4 -5.4 C-7 -12 0 -15.4 6 -13.4 C10.6 -11.6 12.4 -7 11.6 -1.6 C11 3 9 6.6 6.4 9 C7 4 6.4 -1.6 3 -4.6 C0 -7 -4 -7.4 -7.4 -5.4 Z" fill="url(#zkBFly2Hair)" {...ZK_BFLY_RIM} />
@@ -69195,8 +69392,8 @@ function ZkBFly2HeadQ() {
       <path d="M-3.6 -1 L-5.4 3.2 L-3.2 3.8" stroke="#8A6A5A" strokeWidth="0.7" fill="none" strokeLinecap="round" />
       <path d="M-5.2 5.4 C-3.6 4.6 -1 4.6 0.6 5.6 C-0.4 7.8 -3 8.4 -4.8 7.2 Z" fill="#3A0A18" />
       <path d="M-4.4 5.3 L-4 6.3 L-3.6 5.2 M-0.6 5.4 L-0.2 6.3 L0.2 5.5" fill="#FFFFFF" />
-      <ZkBFlyEye x={-4} y={-2.2} w={2.1} h={1.2} r={-10} glow="zkBFly2Mote" />
-      <ZkBFlyEye x={2.8} y={-2.6} w={1.6} h={1} r={10} glow="zkBFly2Mote" flip d="-60ms" />
+      <ZkBFlyEye x={-4} y={-2.2} w={1.6} h={0.91} r={-10} glow="zkBFly2Mote" />
+      <ZkBFlyEye x={2.8} y={-2.6} w={2.1} h={1.31} r={10} glow="zkBFly2Mote" flip d="-60ms" />
       <path d="M-7 -4.6 L-2 -4 M4.8 -4.8 L1 -3.8" stroke="#0A1A10" strokeWidth="1" strokeLinecap="round" />
       <path d="M-8.6 -4 C-9 -11 -3 -15 3 -14 C9 -13 12 -8 11 -2 L9 -4 L10 2 L7 -2 C6 -6 3 -8.6 -1 -8.6 C-4 -8.6 -7 -7 -8.6 -4 Z" fill="url(#zkBFly2Hair)" {...ZK_BFLY_RIM} />
       <path d="M-8.4 -3 C-11 2 -11.4 8 -9.4 12.6 C-8.4 8 -7.8 4 -7 0 Z" fill="url(#zkBFly2Hair)" />
@@ -69457,10 +69654,9 @@ function ZkBFly3Q() {
         <path d="M12 63 C20 67 32 68 42 64.6 C45 63.6 47 61.6 47.6 59.6" stroke="#0E2A26" strokeWidth="1.2" fill="none" strokeLinecap="round" />
         <ZkBFly3Puffs pts={[[20, 43, 4.4], [28, 40, 5], [37, 38.6, 5.2], [46, 37, 4.8], [54, 34.6, 4.2], [61, 32, 3.6], [67, 29.6, 3]]} />
         <path d="M16 48 C24 42 34 40.6 44 40" stroke="#FFFFFF" strokeWidth="1.2" opacity="0.7" fill="none" strokeLinecap="round" />
-        {/* 目：手前は大きく、奥は小さく */}
+        {/* ⚠️ 2026-10-11 Aki「頭が大きくて後頭部に目」→ 横顔に近い斜め。奥の目は頭の陰で見えない（手前の目だけ、口の端の上） */}
         <path d="M24 54 C26.4 52.2 29.6 52.2 31.6 53.8" stroke="#1E4448" strokeWidth="1" fill="none" strokeLinecap="round" />
-        <ZkBFlyEye x={28} y={56.6} w={2.5} h={1.4} r={-4} glow="zkBFly3Mote" />
-        <ZkBFlyEye x={49} y={53.4} w={1.5} h={0.9} r={-14} glow="zkBFly3Mote" d="-60ms" />
+        <ZkBFlyEye x={28} y={56.6} w={2.5} h={1.5} r={-4} glow="zkBFly3Mote" />
         <circle cx="17" cy="50" r="1" fill="url(#zkBFly3Gold)" /><circle cx="20.6" cy="47" r="1" fill="url(#zkBFly3Gold)" /><circle cx="24.6" cy="45" r="1" fill="url(#zkBFly3Gold)" />
         <ZkBFly3Puffs op={0.85} pts={[[26, 79, 3.6], [34, 79, 4], [42, 77, 3.6], [50, 73, 3.4], [58, 66, 3], [18, 76, 3]]} />
         {/* 手前の胸鰭：左下手前へ大きく。⚠️ 羽ばたく */}
@@ -69671,8 +69867,8 @@ function ZkBBug1Q() {
         <path d="M31 63 L27 55 L19 53" fill="none" stroke="#10261A" strokeWidth="1" strokeLinejoin="round" />
         <path d="M19.6 52 L16 51 M19.4 53.2 L15.6 54 M19.8 54.4 L16.6 56" stroke="#2E7A4E" strokeWidth="0.9" strokeLinecap="round" />
         {/* 目：近い目は大きく、奥は小さく */}
-        <ZkBBugEye x={27} y={67} w={2.8} h={1.5} r={-10} glow="zkBBug1Glow" />
-        <ZkBBugEye x={39.4} y={63.4} w={1.6} h={0.9} r={-18} glow="zkBBug1Glow" d="-120ms" />
+        <ZkBBugEye x={27} y={67} w={1.6} h={0.86} r={-10} glow="zkBBug1Glow" />
+        <ZkBBugEye x={39.4} y={63.4} w={2.8} h={1.57} r={-18} glow="zkBBug1Glow" d="-120ms" />
         {/* 手前の大顎：左へ大きく開く */}
         <g transform="translate(31 70) rotate(-70) scale(0.8)"><ZkBBug1Mandible d={-100} /></g>
       </g></g>
@@ -69853,8 +70049,8 @@ function ZkBBug2Q() {
         <path d="M36 42 L34 47 L37.6 45.4 Z" fill="#0E2A1A" />
         <g transform="translate(40 25)"><ZkBBug2Antenna d="M0 0 L4 -7 L-2 -10" delay={-900} /></g>
         <g transform="translate(30 26)"><ZkBBug2Antenna d="M0 0 L-4 -7 L-13 -3 L-15 -3.4" /></g>
-        <ZkBBugEye x={31} y={31.6} w={3} h={1.6} r={-6} glow="zkBBug2Glow" />
-        <ZkBBugEye x={42.4} y={30} w={1.7} h={1} r={-14} glow="zkBBug2Glow" d="-100ms" />
+        <ZkBBugEye x={31} y={31.6} w={1.7} h={0.91} r={-6} glow="zkBBug2Glow" />
+        <ZkBBugEye x={42.4} y={30} w={3} h={1.76} r={-14} glow="zkBBug2Glow" d="-100ms" />
         <g transform="translate(36.4 22.4) rotate(-6)"><ZkBBug2Crown s={1} /></g>
       </g></g>
       <ZkBBugMotes fill="url(#zkBBug2Mote)" pts={[[12, 66, 2.4, -300], [88, 44, 2.2, -1500], [74, 14, 1.8, -2300], [84, 84, 1.8, -900]]} />
@@ -70042,8 +70238,8 @@ function ZkBBug3Q() {
         <g transform="translate(40.6 45)"><ZkBBug3Horn s={0.85} r={16} /></g>
         <path d="M26 61 C30 64.6 37 65 42.6 61.6 C41 67.6 34 70 28.6 67.6 C27 66 26.4 63.6 26 61 Z" fill="#0A1208" />
         <path d="M28.6 62.8 L29.6 65.4 L30.8 63.4 M34 63.8 L34.6 66.2 L35.8 63.8 M38.6 63 L39 65 L40 62.8" fill="#FFF4E0" />
-        <ZkBBugEye x={31} y={55} w={3} h={1.6} r={10} glow="zkBBug3Glow" />
-        <ZkBBugEye x={41.4} y={54.2} w={1.8} h={1} r={-12} glow="zkBBug3Glow" d="-100ms" />
+        <ZkBBugEye x={31} y={55} w={1.8} h={0.96} r={10} glow="zkBBug3Glow" />
+        <ZkBBugEye x={41.4} y={54.2} w={3} h={1.67} r={-12} glow="zkBBug3Glow" d="-100ms" />
         <circle cx="35" cy="50.2" r="0.8" fill="#B8FFD0" /><circle cx="38.4" cy="50.6" r="0.6" fill="#B8FFD0" />
         <g transform="translate(30 70)"><ZkBBug3Fang s={1.1} /></g>
         <g transform="translate(38.4 69.4) rotate(-10)"><ZkBBug3Fang s={0.85} /></g>
@@ -71142,8 +71338,9 @@ function ZkBFight1HeadFront({ q = 0 }) {
         <path d="M-3.8 6.9 L-3 9.6 L-2.2 7.2 Z M3.8 6.9 L3 9.6 L2.2 7.2 Z" fill="#FFFFFF" />
         <path d="M-2.6 1 C-1 0 1 0 2.6 1 C2 2.6 1 3.2 0 3.4 C-1 3.2 -2 2.6 -2.6 1 Z" fill="#B8625A" />
         <path d="M-6 3 L-12 2 M-6 4.4 L-12 5.2 M6 3 L12 2 M6 4.4 L12 5.2" stroke="#FFFFFF" strokeWidth="0.35" opacity="0.8" />
-        <ZkBFightEye x={-6} y={-3.4} w={2.6} h={1.3} r={-14} flip glow="zkBFight1Mote" />
-        <ZkBFightEye x={6 + k * 0.1} y={-3.4} w={2.6 * far} h={1.3 * far} r={-14} glow="zkBFight1Mote" d="-120ms" />
+        {/* ⚠️ 2026-10-11 Aki「左向きの斜めで右の目が小さいことはありえない」→ 斜め（q）では左（奥）を小さく */}
+        <ZkBFightEye x={-6 - k * 0.1} y={-3.4} w={2.6 * far} h={1.3 * far} r={-14} flip glow="zkBFight1Mote" />
+        <ZkBFightEye x={6} y={-3.4} w={2.6} h={1.3} r={-14} glow="zkBFight1Mote" d="-120ms" />
         <path d="M-10 -7 L-2.8 -4.8 M10 -7 L2.8 -4.8" stroke="#1E0E08" strokeWidth="1.2" strokeLinecap="round" />
       </g>
     </g>
@@ -71371,10 +71568,11 @@ function ZkBFight2HeadFront({ q = 0 }) {
   );
   return (
     <g>
-      <g transform={`translate(${-7 + k * 0.4} -6)`}><Horn /></g>
-      <g transform={`translate(${7 + k * 0.6} -6) scale(${-far} ${far})`}><Horn /></g>
-      <g transform={`translate(${-9.6 + k * 0.4} -1)`}><Ear /></g>
-      <g transform={`translate(${9.6 + k * 0.8} -1) scale(${-far} ${far})`}><Ear /></g>
+      {/* ⚠️ 2026-10-11 Aki「左向きの斜めで右の目が小さいことはありえない」→ 斜め（q）では左（奥）を小さく */}
+      <g transform={`translate(${-7 + k * 0.6} -6) scale(${far} ${far})`}><Horn /></g>
+      <g transform={`translate(${7 + k * 0.4} -6) scale(-1 1)`}><Horn /></g>
+      <g transform={`translate(${-9.6 + k * 0.8} -1) scale(${far} ${far})`}><Ear /></g>
+      <g transform={`translate(${9.6 + k * 0.4} -1) scale(-1 1)`}><Ear /></g>
       <path d="M0 -12 C8 -12 11 -7 10 0 C9 6 8.6 10 8.6 13 C8.6 18.6 4.6 21.6 0 21.6 C-4.6 21.6 -8.6 18.6 -8.6 13 C-8.6 10 -9 6 -10 0 C-11 -7 -8 -12 0 -12 Z" {...ZK_BFIGHT2_HIDE} transform={q ? "scale(0.94 1)" : undefined} />
       <g transform={`translate(${k} 0)`}>
         <path d="M-5 -11 C-2 -13.6 3 -13.6 5 -11 C3 -8.6 1 -9.6 0 -7 C-1 -9.6 -3 -8.6 -5 -11 Z" fill="#1A0C06" />
@@ -71385,8 +71583,8 @@ function ZkBFight2HeadFront({ q = 0 }) {
         <ellipse cy="21" rx="3.4" ry="3" fill="none" stroke="url(#zkBFight2Gold)" strokeWidth="1.5" />
         <ellipse cx="-2" cy="20" rx="0.45" ry="1.2" fill="#FFF6D0" />
         <path d="M-6.4 5 C-3 7 3 7 6.4 5" fill="none" stroke="#0E0604" strokeWidth="0.6" opacity="0.5" />
-        <ZkBFightEye x={-5.4} y={-1.6} w={2.4} h={1.2} r={-16} flip glow="zkBFight2Mote" pupil="none" iris="#FFF6C0" />
-        <ZkBFightEye x={5.4 + k * 0.1} y={-1.6} w={2.4 * far} h={1.2 * far} r={-16} glow="zkBFight2Mote" pupil="none" iris="#FFF6C0" d="-120ms" />
+        <ZkBFightEye x={-5.4 - k * 0.1} y={-1.6} w={2.4 * far} h={1.2 * far} r={-16} flip glow="zkBFight2Mote" pupil="none" iris="#FFF6C0" />
+        <ZkBFightEye x={5.4} y={-1.6} w={2.4} h={1.2} r={-16} glow="zkBFight2Mote" pupil="none" iris="#FFF6C0" d="-120ms" />
         <path d="M-9 -5 L-2.4 -3 M9 -5 L2.4 -3" stroke="#0E0604" strokeWidth="1.4" strokeLinecap="round" />
       </g>
     </g>
@@ -71636,8 +71834,9 @@ function ZkBFight3HeadFront({ q = 0 }) {
         <path d="M-3.4 6.4 L-2.8 9.2 L-2 6.8 Z M3.4 6.4 L2.8 9.2 L2 6.8 Z" fill="#FFFFFF" />
         <path d="M-2.4 1 C-1 0 1 0 2.4 1 C2 2.4 1 3 0 3.2 C-1 3 -2 2.4 -2.4 1 Z" fill="#3A1A10" />
         <path d="M0 -6 L0 0" stroke="#8A5A30" strokeWidth="0.6" opacity="0.5" />
-        <ZkBFightEye x={-5} y={-3} w={2.5} h={1.25} r={-14} flip glow="zkBFight3Mote" pupil="dot" />
-        <ZkBFightEye x={5 + k * 0.1} y={-3} w={2.5 * far} h={1.25 * far} r={-14} glow="zkBFight3Mote" pupil="dot" d="-120ms" />
+        {/* ⚠️ 2026-10-11 Aki「左向きの斜めで右の目が小さいことはありえない」→ 斜め（q）では左（奥）を小さく */}
+        <ZkBFightEye x={-5 - k * 0.1} y={-3} w={2.5 * far} h={1.25 * far} r={-14} flip glow="zkBFight3Mote" pupil="dot" />
+        <ZkBFightEye x={5} y={-3} w={2.5} h={1.25} r={-14} glow="zkBFight3Mote" pupil="dot" d="-120ms" />
         <path d="M-9 -6 L-2.4 -4.4 M9 -6 L2.4 -4.4" stroke="#2A1206" strokeWidth="1.2" strokeLinecap="round" />
       </g>
     </g>
@@ -71999,10 +72198,10 @@ function ZkBElectric1Q() {
         <path d="M33 31 C26 31 21 35 20 41 C20 43 21 44.6 22.4 45 C22.6 42.4 24 40.6 27 40.4 L35 39 Z" fill="url(#zkBElectric1Beak)" />
         <path d="M23 36 C25.6 33.4 29 32.4 32 32.4" fill="none" stroke="#FFFFFF" strokeWidth="0.7" opacity="0.75" />
         {/* 目：近い目は大きく、奥は細く */}
-        <path className="zk-blink" d="M32.4 33 Q36 30.8 39.6 32.6 Q36 34.6 32.4 33 Z" fill="#FFF2A0" />
-        <circle cx="36.2" cy="32.8" r="1" fill="#2A1A04" />
+        <g transform="translate(36 32.7) scale(0.528) translate(-36 -32.7)"><path className="zk-blink" d="M32.4 33 Q36 30.8 39.6 32.6 Q36 34.6 32.4 33 Z" fill="#FFF2A0" /></g>
+        <g transform="translate(36 32.7) scale(0.528) translate(-36 -32.7)"><circle cx="36.2" cy="32.8" r="1" fill="#2A1A04" /></g>
         <path d="M30.6 32.2 C33.6 29.4 37.6 28.6 41.4 29.6" fill="none" stroke="#2A2438" strokeWidth="1.8" strokeLinecap="round" />
-        <path className="zk-blink" d="M45.4 31.4 Q47.4 30.2 49.2 31 Q47.4 32.2 45.4 31.4 Z" fill="#FFF2A0" />
+        <g transform="translate(47.3 31.2) scale(1.895) translate(-47.3 -31.2)"><path className="zk-blink" d="M45.4 31.4 Q47.4 30.2 49.2 31 Q47.4 32.2 45.4 31.4 Z" fill="#FFF2A0" /></g>
         <path d="M44.6 30.2 L49.8 29.2" stroke="#2A2438" strokeWidth="1.2" strokeLinecap="round" />
         <path d="M33 25 C37 23 42 23 46 24.4" fill="none" stroke="#FFFFFF" strokeWidth="0.8" opacity="0.8" strokeLinecap="round" />
         {/* 金の首輪 */}
@@ -72228,10 +72427,11 @@ function ZkBElectric2Q() {
         <path d="M27 31.6 L34 28.6 L41 30 L39 33.8 L31 35 Z" fill="url(#zkBElectric2Gold)" />
         <circle cx="34" cy="31.8" r="1.2" fill="#FFFFFF" />
         {/* 目：近い目は大きく、奥は細く */}
-        <path className="zk-blink" d="M26.6 38.2 L33 36.8 L32.2 39.6 L27 39.6 Z" fill="#FFF6B0" />
-        <path d="M25.6 37.4 L34 35.2" stroke="#2A1606" strokeWidth="1.1" strokeLinecap="round" />
-        <path className="zk-blink" d="M38 36.6 L42 35.8 L41.4 37.6 L38.2 37.6 Z" fill="#FFF6B0" />
-        <path d="M37.6 35.8 L42.4 34.8" stroke="#2A1606" strokeWidth="0.8" strokeLinecap="round" />
+        {/* ⚠️ 2026-10-11 Aki「小さい目が耳の位置」→ 斜め左向き：鼻筋を挟み、手前の目は右・大きく、奥の目は左・小さく（輪郭の際） */}
+        <path className="zk-blink" d="M30.8 38.2 L37.2 36.8 L36.4 39.6 L31.2 39.6 Z" fill="#FFF6B0" />
+        <path d="M29.8 37.4 L38.2 35.2" stroke="#2A1606" strokeWidth="1.1" strokeLinecap="round" />
+        <path className="zk-blink" d="M24.5 36.6 L28.5 35.8 L27.9 37.6 L24.7 37.6 Z" fill="#FFF6B0" />
+        <path d="M24.1 35.8 L28.9 34.8" stroke="#2A1606" strokeWidth="0.8" strokeLinecap="round" />
       </g></g>
       <ZkBElectricMotes fill="url(#zkBElectric2Mote)" pts={[[12, 30, 2.4, 0], [66, 14, 2, -1000], [90, 76, 2, -1700], [10, 84, 1.8, -2300]]} />
     </g>
@@ -72416,12 +72616,12 @@ function ZkBElectric3Q() {
         <path d="M15 53.2 L16 55.2 L17 53.4 M20 53.6 L21 55.8 L22 53.8 M26 53.8 L27 55.6 L28 54" fill="#FFFFFF" />
         <path d="M14 57.4 C20 58 28 58 33 57 L34 59 C28 63 20 63 15 60 Z" fill="url(#zkBElectric3Jaw)" />
         <path d="M27 30 C33 27 40 27 45 30" fill="none" stroke="#FFFFFF" strokeWidth="0.8" opacity="0.8" strokeLinecap="round" />
-        {/* 目：近い目は大きく、奥は細く */}
-        <path className="zk-blink" d="M25.4 38.6 Q29.4 35.8 33.4 38 Q29.4 40.4 25.4 38.6 Z" fill="#FFF2A0" />
-        <path d="M29.4 36.8 L29.4 39.6" stroke="#2A1A04" strokeWidth="0.9" />
-        <path d="M24 37.4 L35 34.2" stroke="#3A3850" strokeWidth="1.5" strokeLinecap="round" />
-        <path className="zk-blink" d="M40 36.4 Q42 35 44 35.8 Q42 37.2 40 36.4 Z" fill="#FFF2A0" />
-        <path d="M39.4 35 L44.4 33.6" stroke="#3A3850" strokeWidth="1" strokeLinecap="round" />
+        {/* 目：近い目は大きく、奥は細く。⚠️ 2026-10-11 Aki「斜めの顔で目があり得ない位置」→ 奥の目が後頭部にあった。奥の目は鼻筋の向こう（左上）へ */}
+        <path className="zk-blink" d="M33 39 Q37 36.2 41 38.4 Q37 40.8 33 39 Z" fill="#FFF2A0" />
+        <path d="M37 37.2 L37 40" stroke="#2A1A04" strokeWidth="0.9" />
+        <path d="M31.6 37.8 L42.6 34.6" stroke="#3A3850" strokeWidth="1.5" strokeLinecap="round" />
+        <path className="zk-blink" d="M24.4 37 Q26.4 35.6 28.4 36.4 Q26.4 37.8 24.4 37 Z" fill="#FFF2A0" />
+        <path d="M23.8 35.6 L28.8 34.2" stroke="#3A3850" strokeWidth="1" strokeLinecap="round" />
         {/* 手前の前脚：爪を振りかざす */}
         <path d="M44 56 C38 60 34 64 32 68 L35 71 C38 68 44 64 50 62 Z" fill="#B0AECA" />
         <ZkBElectric3Claw x={32} y={70} rot={-20} s={1.1} />
@@ -73514,10 +73714,11 @@ function ZkBDark1Q() {
         <circle cx="25.6" cy="45" r="0.6" fill="#05020A" /><circle cx="28" cy="45.6" r="0.6" fill="#05020A" />
         <path d="M26 48.6 C29 51.4 35 51.4 39 48.4 C37 55 29.6 56 26 51.6 Z" fill="#3A0A2A" />
         <path d="M28 49.6 L28.8 53 L29.8 50 Z M35.4 50 L36.2 53.4 L37.2 49.6 Z" fill="#F4ECFF" />
-        <path d="M29 35 L37.6 37 M42 35.6 L47 34.4" stroke="#05020A" strokeWidth="1" />
+        {/* ⚠️ 2026-10-11 Aki「小さい目が耳の位置」→ 斜め左向き：鼻筋を挟み、手前の目は右・大きく、奥の目は左・小さく（輪郭の際） */}
+        <path d="M33.6 35 L42.2 37 M27.1 35.6 L32.1 34.4" stroke="#05020A" strokeWidth="1" />
         <path d="M31 30.6 Q38 27 45 29.6" fill="none" stroke="#C8A8F0" strokeWidth="1" opacity="0.55" strokeLinecap="round" />
-        <ZkBDarkEye x={33.4} y={39} w={2.9} h={1.45} r={-12} glow="zkBDark1Glow" />
-        <ZkBDarkEye x={44.4} y={38} w={1.8} h={1} r={10} glow="zkBDark1Glow" d="-80ms" />
+        <ZkBDarkEye x={38} y={39} w={2.9} h={1.45} r={-12} glow="zkBDark1Glow" />
+        <ZkBDarkEye x={29.5} y={38} w={1.8} h={1} r={10} glow="zkBDark1Glow" d="-94.9ms" />
         <ZkBDark1Ring x={27.6} y={24} s={1.1} d={-500} />
       </g></g>
       <ZkBDarkMotes fill="url(#zkBDark1Mote)" pts={[[88, 70, 2.2, 0], [84, 14, 1.8, -1100], [12, 74, 2, -1900], [72, 90, 1.6, -700]]} />
@@ -73709,10 +73910,11 @@ function ZkBDark2FaceQ() {
       <path d="M-11 6.6 C-8 8.4 -3 8.6 0 6.6 C-1 12.4 -9 12.8 -11 8.6 Z" fill="#3A0A2A" />
       <path d="M-9.4 7.2 L-8.6 10 L-7.6 7.6 Z M-3.4 7.6 L-2.6 10.2 L-1.6 7.2 Z" fill="#F4ECFF" />
       <circle cx="-8.4" cy="3" r="0.6" fill="#1A0612" /><circle cx="-5.6" cy="3.2" r="0.6" fill="#1A0612" />
-      <path d="M-11.4 -3.6 C-8 -5.8 -3 -5.6 0 -4 M3 -4.2 C5 -5.4 7 -5.2 8.6 -4.2" fill="none" stroke="#2A0E24" strokeWidth="1.3" strokeLinecap="round" />
+      {/* ⚠️ 2026-10-11 Aki「小さい目が耳の位置」→ 斜め左向き：鼻筋を挟み、手前の目は右・大きく、奥の目は左・小さく（耳の位置に目を置かない） */}
+      <path d="M-4.5 -3.6 C-1.1 -5.8 3.9 -5.6 6.9 -4 M-10.6 -4.2 C-8.6 -5.4 -6.6 -5.2 -5 -4.2" fill="none" stroke="#2A0E24" strokeWidth="1.3" strokeLinecap="round" />
       <path d="M-5 -8.6 Q1 -11 6 -8.4" fill="none" stroke="#FFF0F4" strokeWidth="0.9" opacity="0.6" strokeLinecap="round" />
-      <ZkBDarkEye x={-5.4} y={-1.4} w={2.6} h={1.3} r={-10} glow="zkBDark2Glow" />
-      <ZkBDarkEye x={5} y={-1.6} w={1.7} h={1} r={8} glow="zkBDark2Glow" d="-80ms" />
+      <ZkBDarkEye x={1.5} y={-1.4} w={2.6} h={1.3} r={-10} glow="zkBDark2Glow" />
+      <ZkBDarkEye x={-8.6} y={-1.6} w={1.7} h={1} r={8} glow="zkBDark2Glow" d="-93.6ms" />
       <path d="M9 -2 C11 -3 12.4 -1 11.6 1 C11 2.4 9.4 2.4 9 1.4 Z" fill="#8A5070" />
     </g>
   );
@@ -74009,8 +74211,8 @@ function ZkBDark3Q() {
         <path d="M18.6 44 C20 37 24 31 30 28 L33 31 C28 34 24 39 22 46 Z" {...ZK_BDARK3_ARM} />
         <path d="M18.6 44 C20 37 24 31 30 28" fill="none" stroke="url(#zkBDark3Gold)" strokeWidth="0.9" />
         <path d="M24.6 34 L19 29 L26.4 32 Z" fill="url(#zkBDark3Armor)" {...ZK_BDARK_RIM} />
-        <ZkBDarkEye x={28.4} y={34.6} w={2.1} h={1.1} r={-40} glow="zkBDark3Glow" pupil={false} />
-        <ZkBDarkEye x={36.4} y={33} w={1.3} h={0.8} r={30} glow="zkBDark3Glow" pupil={false} d="-80ms" />
+        <ZkBDarkEye x={28.4} y={34.6} w={1.3} h={0.68} r={-40} glow="zkBDark3Glow" pupil={false} />
+        <ZkBDarkEye x={36.4} y={33} w={2.1} h={1.29} r={30} glow="zkBDark3Glow" pupil={false} d="-80ms" />
         <circle cx="17.6" cy="49" r="2.6" fill="url(#zkBDark3Glow)" opacity="0.8" />
         {/* 騎士：脚 */}
         <path d="M56 48 C52 52 48 56 47 60 L47 68" fill="none" stroke="#C8A0FF" strokeWidth="6.2" strokeOpacity="0.55" strokeLinecap="round" strokeLinejoin="round" />
@@ -74244,8 +74446,8 @@ function ZkBGhost1HeadFront({ q = 0 }) {
       <path d="M-10 -1 C-11 -9 -6 -13.6 0 -13 C6 -13.6 11 -9 10 -1 C8 -6 4 -8.6 0.6 -8 L0 -6.6 L-0.6 -8 C-4 -8.6 -8 -6 -10 -1 Z" {...ZK_BGHOST1_HAIR} />
       <path d="M-9 -2 C-10.6 4 -9 10 -11 16" fill="none" stroke="#1E1030" strokeWidth="0.8" strokeLinecap="round" />
       <g transform={`translate(${k} 0)`}>
-        <ZkBGhostEye x={-4.2} y={0} w={2.4} h={1.1} r={10} glow="zkBGhost1Glow" />
-        <ZkBGhostEye x={4.2 + k * 0.2} y={0} w={2.4 * far} h={1.1 * far} r={-10} glow="zkBGhost1Glow" d="-120ms" />
+        <ZkBGhostEye x={-4.2 - k * 0.2} y={0} w={2.4 * far} h={1.1 * far} r={10} glow="zkBGhost1Glow" />
+        <ZkBGhostEye x={4.2} y={0} w={2.4} h={1.1} r={-10} glow="zkBGhost1Glow" d="-120ms" />
         <path d="M-7 -3.6 Q-4.6 -5.2 -2 -4.4 M7 -3.6 Q4.6 -5.2 2 -4.4" fill="none" stroke="#2A1440" strokeWidth="0.6" strokeLinecap="round" />
         <path d="M-0.2 2.6 L0.6 4.6 L-0.4 4.8" fill="none" stroke="#A890C0" strokeWidth="0.5" />
         <path d="M-2.6 7.6 Q0 6.6 2.6 7.6 Q0 9.6 -2.6 7.6 Z" fill="#B82E52" />
@@ -74498,8 +74700,9 @@ function ZkBGhost2HeadFront({ q = 0 }) {
       <g transform={`translate(${k} 0)`}>
         <path d="M-7 -1.6 C-5.4 -3.6 -2 -3.4 -1 -1 C-2.4 1.2 -5.6 1.2 -7 -1.6 Z" fill="#1A0A28" />
         <path d="M7 -1.6 C5.4 -3.6 2 -3.4 1 -1 C2.4 1.2 5.6 1.2 7 -1.6 Z" fill="#1A0A28" transform={q ? `scale(${far} 1)` : undefined} />
-        <ZkBGhostEye x={-4} y={-0.9} w={1.8} h={0.9} r={12} glow="zkBGhost2Glow" lash={false} iris="#B070FF" />
-        <ZkBGhostEye x={4 * far} y={-0.9} w={1.8 * far} h={0.9} r={-12} glow="zkBGhost2Glow" lash={false} iris="#B070FF" d="-140ms" />
+        {/* ⚠️ 2026-10-11 Aki「左向きの斜めで右の目が小さいことはありえない」→ 斜め（q）では左（奥）を小さく */}
+        <ZkBGhostEye x={-4 * far} y={-0.9} w={1.8 * far} h={0.9} r={12} glow="zkBGhost2Glow" lash={false} iris="#B070FF" />
+        <ZkBGhostEye x={4} y={-0.9} w={1.8} h={0.9} r={-12} glow="zkBGhost2Glow" lash={false} iris="#B070FF" d="-140ms" />
         <path d="M-7.6 -4.4 L-1.6 -2.6 M7.6 -4.4 L1.6 -2.6" stroke="#3A2458" strokeWidth="0.9" strokeLinecap="round" />
         <path d="M0 1 L-1 4.4 L1 4.4" fill="none" stroke="#8878AE" strokeWidth="0.6" />
         <path d="M-6 3 C-5 6 -4 8 -2 9 M6 3 C5 6 4 8 2 9" fill="none" stroke="#8878AE" strokeWidth="0.6" />
@@ -74697,8 +74900,9 @@ function ZkBGhost3Face({ q = 0 }) {
         {/* 白く太い怒り眉 */}
         <path d="M-18 -7 C-15 -11 -10 -12 -6 -10 C-4 -9 -3 -8 -2.2 -6.4 L-3.8 -5.4 C-7.6 -8 -12 -8 -16 -5.6 L-17 -6.6 Z" fill="#F0E6FF" stroke="#6A4A9A" strokeWidth="0.5" />
         <path d="M18 -7 C15 -11 10 -12 6 -10 C4 -9 3 -8 2.2 -6.4 L3.8 -5.4 C7.6 -8 12 -8 16 -5.6 L17 -6.6 Z" fill="#F0E6FF" stroke="#6A4A9A" strokeWidth="0.5" transform={q ? `translate(2 0) scale(${far} 1)` : undefined} />
-        <ZkBGhostEye x={-9} y={-2.4} w={4.6} h={2.2} r={10} glow="zkBGhost3Glow" iris="#9A4AF0" />
-        <ZkBGhostEye x={9 * far + (q ? 1 : 0)} y={-2.4} w={4.6 * far} h={2.2} r={-10} glow="zkBGhost3Glow" iris="#9A4AF0" d="-160ms" />
+        {/* ⚠️ 2026-10-11 Aki「左向きの斜めで右の目が小さいことはありえない」→ 斜め（q）では左（奥）を小さく */}
+        <ZkBGhostEye x={-9 * far - (q ? 1 : 0)} y={-2.4} w={4.6 * far} h={2.2} r={10} glow="zkBGhost3Glow" iris="#9A4AF0" />
+        <ZkBGhostEye x={9} y={-2.4} w={4.6} h={2.2} r={-10} glow="zkBGhost3Glow" iris="#9A4AF0" d="-160ms" />
         <path d="M-13.4 2 Q-9 4 -4.6 2.2 M13.4 2 Q9 4 4.6 2.2" fill="none" stroke="#8E7CB4" strokeWidth="0.7" opacity="0.8" />
         {/* 鼻 */}
         <path d="M-1.8 -4 C-2.4 0 -5.4 3.6 -5 6.4 C-3.4 8.4 3.4 8.4 5 6.4 C5.4 3.6 2.4 0 1.8 -4" fill="#DCD0EC" stroke="#8E7CB4" strokeWidth="0.6" />
@@ -75160,8 +75364,9 @@ function ZkBPsychic2FaceFront({ q = 0 }) {
       <path d="M-5.6 -4 C-5.6 -8.6 5.6 -8.6 5.6 -4 C5.6 2 3 7.6 0 8.4 C-3 7.6 -5.6 2 -5.6 -4 Z" fill="url(#zkBPsychic2Skin)" transform={q ? "translate(-0.6 0) scale(0.92 1)" : undefined} />
       <path d="M-6.6 -3 C-7 -8.6 -2 -10.6 1.4 -10 C5.6 -9.6 7.6 -6 6.6 -1.6 C4.6 -5.6 1.6 -6.4 -0.6 -5.4 C-2.6 -6.2 -5 -5.4 -6.6 -3 Z" fill="url(#zkBPsychic2Hair)" />
       <g transform={`translate(${k} 0)`}>
-        <ZkBPsychicEye x={-2.6} y={-0.8} w={1.9} h={1} r={8} glow="zkBPsychic2Glow" />
-        <ZkBPsychicEye x={2.6 + k * 0.2} y={-0.8} w={1.9 * far} h={1} r={-8} glow="zkBPsychic2Glow" d="-120ms" />
+        {/* ⚠️ 2026-10-11 Aki「左向きの斜めで右の目が小さいことはありえない」→ 斜め（q）では左（奥）を小さく */}
+        <ZkBPsychicEye x={-2.6 - k * 0.2} y={-0.8} w={1.9 * far} h={1} r={8} glow="zkBPsychic2Glow" />
+        <ZkBPsychicEye x={2.6} y={-0.8} w={1.9} h={1} r={-8} glow="zkBPsychic2Glow" d="-120ms" />
         <path d="M-4.6 -3.2 L-1.2 -2.4 M4.6 -3.2 L1.2 -2.4" stroke="#3A2A5A" strokeWidth="0.55" strokeLinecap="round" />
         <path d="M-1.4 4.8 Q0 4.2 1.4 4.8 Q0 5.8 -1.4 4.8 Z" fill="#9A3A7A" />
       </g>
@@ -75378,8 +75583,9 @@ function ZkBPsychic3Head({ x, y, r = 0, s = 1, q = 0 }) {
       <path d="M-8.2 -1.6 C-4 -3.8 4 -3.8 8.2 -1.6 L8 0.6 C4 -1.4 -4 -1.4 -8 0.6 Z" fill="url(#zkBPsychic3Gold)" stroke="#6A4A10" strokeWidth="0.3" />
       <path d={`M${q} -4 L${1.2 + q} -2.6 L${q} -1.4 L${-1.2 + q} -2.6 Z`} fill="#C890FF" stroke="#FFF0C0" strokeWidth="0.3" />
       <path d={`M${-5 + q} 1.2 L${-1 + q} 1.6 L${-1.4 + q} 3.2 L${-4.6 + q} 2.8 Z M${1 + q} 1.6 L${5 + q * 0.6} 1.2 L${4.6 + q * 0.6} 2.8 L${1.4 + q} 3.2 Z`} fill="#0A0414" />
-      <ZkBPsychicEye x={-3 + q} y={2.2} w={1.7} h={0.9} r={8} glow="zkBPsychic3Glow" pupil={false} />
-      <ZkBPsychicEye x={3 + q * 0.8} y={2.2} w={q ? 1.3 : 1.7} h={0.9} r={-8} glow="zkBPsychic3Glow" pupil={false} d="-100ms" />
+      {/* ⚠️ 2026-10-11 Aki「左向きの斜めで右の目が小さいことはありえない」→ 斜め（q）では左（奥）を小さく */}
+      <ZkBPsychicEye x={-3 + q} y={2.2} w={q ? 1.3 : 1.7} h={0.9} r={8} glow="zkBPsychic3Glow" pupil={false} />
+      <ZkBPsychicEye x={3 + q * 0.8} y={2.2} w={1.7} h={0.9} r={-8} glow="zkBPsychic3Glow" pupil={false} d="-100ms" />
       <path d={`M${q} 3.4 L${q + 0.2} 5.4 M${-2 + q} 6.6 L${2 + q} 6.6`} stroke="#0E0818" strokeWidth="0.5" strokeLinecap="round" />
     </g>
   );
@@ -80323,8 +80529,14 @@ function EquipPanel({ lang, onClose, onSwitch }) {
   /* ⚠️ 同じメインオプションが、置き先以外の枠に既にあれば置けない */
   const [eqWarn, setEqWarn] = useState(null);
   const mainOfId = (x) => { const it = (eq.owned || []).find((o) => o.id === x); return it ? it.main : null; };
+  const lvCap = equipStarCap();
+  const LT = lvT(lang);
+  const lockedIt = (it) => !!(it && it.main && lmcTierOf(it.tier || "bronze").star > lvCap);
+  const [eqLockW, setEqLockW] = useState(null);
   const placeAt = (id, to) => {
     if (to < 0 || to >= open) return;
+    /* ⚠️ レベル帯の★より上の装備は置けない */
+    if (lockedIt(byId[id])) { setEqLockW(Date.now()); return; }
     const arr = cur.slice();
     const from = arr.indexOf(id);
     const there = arr[to];
@@ -80467,14 +80679,16 @@ function EquipPanel({ lang, onClose, onSwitch }) {
       </div>
       {!pocket[pk].length && <p className="eq-empty">{a.equipNone}</p>}
       {eqWarn && <p className="eq-warn" key={eqWarn}>{a.eqSameMain}</p>}
+      {eqLockW && <p className="eq-warn" key={`lk${eqLockW}`}>{LT.eqLockWarn}</p>}
       <div className="eq-grid">
         {pocket[pk].map((it) => {
           const at = cur.indexOf(it.id);
           /* ⚠️ 同じメインオプションを既に付けていれば、薄くして付けられないと示す */
           const clash = at < 0 && cur.some((x) => x && mainOfId(x) === it.main);
+          const lk = lockedIt(it);
           return (
             <div key={it.id}
-              className={`eq-cell${at >= 0 ? " on" : ""}${clash ? " clash" : ""}${drag && drag.id === it.id ? " held" : ""}`}
+              className={`eq-cell${at >= 0 ? " on" : ""}${clash ? " clash" : ""}${lk ? " lvlock" : ""}${drag && drag.id === it.id ? " held" : ""}`}
               onPointerDown={onDown(it.id)} onPointerMove={onMoveDown}
               onPointerUp={onUpItem(it.id)}
               onPointerCancel={() => { if (press.current) clearTimeout(press.current.t); press.current = null; }}
@@ -80490,6 +80704,7 @@ function EquipPanel({ lang, onClose, onSwitch }) {
                 </span>
               </b>
               <em>{tierStars(it.tier || "bronze")}</em>
+              {lk && <span className="eq-lvlock">{LT.eqLock(LV_BAND[lmcTierOf(it.tier || "bronze").star])}</span>}
               <EquipOpts it={it} lang={lang} />
             </div>
           );
@@ -81519,6 +81734,37 @@ function PhysGlyph({ k, size }) {
     </g>
   );
   return <svg viewBox="0 0 24 24" width={z} height={z} aria-hidden="true">{body}</svg>;
+}
+/*
+  妨害の耐性の印（2026-10-11 Aki「増幅・耐性・魔法・物理のマスバフは印だけ。耐性だけ説明」）。
+  轟音＝音の輪、腐食＝滴る札、波動＝渦、瘴気＝霧の塊、殺気＝睨む目、虚脱＝抜ける小瓶。
+  ⚠️ 10〜12px で読めること。十字に見せない。
+*/
+const RES_MARK_COL = { resRoar: "#FFB07A", resRot: "#A8DC6A", resDread: "#C4A0FF", resMiasma: "#8FD8B0", resKill: "#FF7A8A", resSap: "#7AC0FF" };
+function ResMark({ k, size }) {
+  const c = RES_MARK_COL[k] || "#EDE4FF";
+  const z = size || 11;
+  const body = k === "resRoar" ? (
+    <><circle cx="3" cy="6" r="1.5" fill={c} />
+      <path d="M5.4 3.6 A3 3 0 0 1 5.4 8.4 M7.6 2 A5 5 0 0 1 7.6 10 M9.8 0.8 A6.6 6.6 0 0 1 9.8 11.2" fill="none" stroke={c} strokeWidth="1.1" strokeLinecap="round" /></>
+  ) : k === "resRot" ? (
+    <><rect x="2.4" y="1" width="6.4" height="8.4" rx="1" fill="none" stroke={c} strokeWidth="1.1" />
+      <path d="M4 1.4 L4 5.6 Q4 7 5 6.2 L5.6 5 L6.4 7.6 Q7 8.6 7.4 7.4 L7.4 1.4 Z" fill={c} opacity="0.85" />
+      <path d="M5 10.4 q0.9 1.2 0 1.5 q-0.9 -0.3 0 -1.5" fill={c} /></>
+  ) : k === "resDread" ? (
+    <path d="M6 6 m0 -0.6 a0.6 0.6 0 1 1 -0.6 0.8 a1.8 1.8 0 1 1 2.6 -1.6 a3 3 0 1 1 -4.4 -2.4 a4.4 4.4 0 1 1 -1.4 5.6" fill="none" stroke={c} strokeWidth="1.1" strokeLinecap="round" />
+  ) : k === "resMiasma" ? (
+    <><path d="M2 8.6 C0.6 8.6 0.6 6.2 2.2 6.2 C2.2 4 5 3.4 5.8 5 C6.6 3 10 3.4 9.8 5.8 C11.4 5.8 11.6 8.6 9.8 8.6 Z" fill={c} opacity="0.9" />
+      <path d="M2.6 10.4 L9.4 10.4" stroke={c} strokeWidth="0.9" strokeLinecap="round" opacity="0.6" /></>
+  ) : k === "resKill" ? (
+    <><path d="M0.8 6.6 Q6 1.6 11.2 5.4 Q6 9.8 0.8 6.6 Z" fill="none" stroke={c} strokeWidth="1.1" strokeLinejoin="round" />
+      <ellipse cx="6.2" cy="6" rx="0.9" ry="1.9" fill={c} /><path d="M1.6 3.2 L4.6 4.2 M10.4 2.6 L7.6 3.6" stroke={c} strokeWidth="1" strokeLinecap="round" /></>
+  ) : (
+    <><rect x="3.6" y="0.8" width="4.8" height="8" rx="2" fill="none" stroke={c} strokeWidth="1.1" />
+      <rect x="4.6" y="5.6" width="2.8" height="2.4" rx="1" fill={c} />
+      <path d="M6 9.6 q1 1.3 0 1.7 q-1 -0.4 0 -1.7" fill={c} /></>
+  );
+  return <svg className="res-mark" viewBox="0 0 12 12" width={z} height={z} aria-hidden="true">{body}</svg>;
 }
 /* 属性の印（魔法6は StanceGlyph、物理4は PhysGlyph） */
 function AttrGlyph({ k, size }) {
@@ -83161,9 +83407,14 @@ const GOURMET = [
   { id: "ib_melon", pref: "ibaraki", area: "鹿行", tier: 1, type: "gift", name: "鉾田のメロン", en: "Hokota Melon", eff: "charge" },
   { id: "ib_yakiimo", pref: "ibaraki", area: "鹿行", tier: 2, type: "gift", name: "焼き芋（なめがた）", en: "Namegata Roasted Sweet Potato", eff: "heal" },
   { id: "ib_hamaguri", pref: "ibaraki", area: "鹿行", tier: 3, type: "visit", name: "鹿島灘はまぐり", en: "Kashima-nada Clams", eff: "maxHp" },
+  /* ★ 2026-10-11 Aki 追加（★3）：鉾田のメロンをアイス・ワイン・果肉で一枚に。⚠️ ★1の「鉾田のメロン」と名前を分ける */
+  { id: "ib_melontrio", pref: "ibaraki", area: "鹿行", tier: 3, type: "gift", name: "鉾田メロンのアイスとワイン", en: "Hokota Melon Trio (Fruit, Ice Cream & Wine)", eff: "charge" },
   { id: "ib_renkon", pref: "ibaraki", area: "県南", tier: 1, type: "gift", name: "れんこんチップス", en: "Lotus Root Chips", eff: "magic" },
   { id: "ib_curry", pref: "ibaraki", area: "県南", tier: 2, type: "visit", name: "土浦カレー", en: "Tsuchiura Curry", eff: "maxHp" },
   { id: "ib_fukure", pref: "ibaraki", area: "県南", tier: 3, type: "gift", name: "福来みかんのお菓子", en: "Fukure Mandarin Sweets", eff: "heal" },
+  /* ★ 2026-10-11 Aki 追加（★3）：土浦のれんこん（調理済み）・稲敷のミルキークイーン（重箱に白米） */
+  { id: "ib_renkonten", pref: "ibaraki", area: "県南", tier: 3, type: "visit", name: "土浦れんこんの天ぷら", en: "Tsuchiura Lotus Root Tempura", eff: "magic" },
+  { id: "ib_milkyqueen", pref: "ibaraki", area: "県南", tier: 3, type: "gift", name: "稲敷のミルキークイーン", en: "Inashiki Milky Queen Rice", eff: "maxHp" },
   { id: "ib_nashi", pref: "ibaraki", area: "県西", tier: 1, type: "gift", name: "梨", en: "Japanese Pear", eff: "charge" },
   { id: "ib_hitachigyu", pref: "ibaraki", area: "県西", tier: 2, type: "visit", name: "常陸牛のステーキ", en: "Hitachi Beef Steak", eff: "phys" },
   { id: "ib_sashimacha", pref: "ibaraki", area: "県西", tier: 3, type: "gift", name: "さしま茶", en: "Sashima Tea", eff: "res" },
@@ -83289,6 +83540,8 @@ const GOURMET = [
   { id: "ch_nashi", pref: "chiba", area: "東葛飾", tier: 1, type: "gift", name: "千葉の梨", en: "Chiba Pears", eff: "heal" },
   { id: "ch_yagiri", pref: "chiba", area: "東葛飾", tier: 2, type: "visit", name: "矢切ねぎの焼きねぎ", en: "Grilled Yagiri Leeks", eff: "maxHp" },
   { id: "ch_shoyusoft", pref: "chiba", area: "東葛飾", tier: 3, type: "visit", name: "醤油ソフトクリーム", en: "Soy Sauce Soft Serve", eff: "charge" },
+  /* ★ 2026-10-11 Aki 追加（★3） */
+  { id: "ch_shiromirin", pref: "chiba", area: "東葛飾", tier: 3, type: "gift", name: "流山の白みりん", en: "Nagareyama White Mirin", eff: "magic" },
   { id: "ch_misopi", pref: "chiba", area: "千葉", tier: 1, type: "gift", name: "みそピー", en: "Miso Peanuts", eff: "charge" },
   { id: "ch_honbinos", pref: "chiba", area: "千葉", tier: 2, type: "visit", name: "ホンビノス貝の酒蒸し", en: "Sake-Steamed Quahog Clams", eff: "magic" },
   { id: "ch_hamaguri", pref: "chiba", area: "千葉", tier: 3, type: "visit", name: "焼きはまぐり", en: "Grilled Hard Clams", eff: "maxHp" },
@@ -83848,6 +84101,8 @@ function rollGourmet(pref, area) {
   for (const d of list) { p -= GOURMET_DROP[d.tier]; if (p < 0) return d; }
   return list[list.length - 1];
 }
+/* 料理を手に入れたときの札を出しておく時間（ms）。⚠️ 2026-10-12 Aki「一瞬だけ表示されて消える」 */
+const GM_GOT_MS = 1500;
 function addGourmet(id) {
   const h = loadGourmet(); h[id] = (h[id] || 0) + 1; saveGourmet(h);
   const sn = loadGourmet(LS_GOURMET_SEEN); const fresh = !sn[id]; sn[id] = true; saveGourmet(sn, LS_GOURMET_SEEN);
@@ -86410,6 +86665,137 @@ function FoodIbSashimacha() {
   );
 }
 
+/* ==== 追加の★3（2026-10-11 Aki「土浦レンコン（調理済み）・鉾田のメロン（アイスとワインとメロンを一枚に）・流山の白みりん・稲敷のミルキークイーン（重箱に白米）」）。⚠️ viewBox 0 0 48 48・静止・defs と id を使わない ==== */
+/* 土浦れんこんの天ぷら：衣をまとった輪切りが三枚、天つゆの小皿 */
+function FoodIbRenkonTen() {
+  const holes = [[0, 0, 0.75], [2, 0.4, 0.75], [1.1, 1.9, 0.7], [-0.9, 2, 0.7], [-2.1, 0.3, 0.7], [-1.2, -1.8, 0.7], [1, -1.9, 0.7]];
+  const Slice = ({ x, y, r, rot, sy }) => (
+    <g transform={`translate(${x} ${y}) rotate(${rot}) scale(1 ${sy})`}>
+      {/* 衣（ふちが波打つ） */}
+      <path d={`M${-r - 1.6} 0 Q${-r - 1} ${-r - 1.4} 0 ${-r - 1.6} Q${r + 1.8} ${-r - 1} ${r + 1.6} 0 Q${r + 1.2} ${r + 1.6} 0 ${r + 1.5} Q${-r - 1.6} ${r + 1} ${-r - 1.6} 0 Z`} fill="#f0c86a" stroke="#8a5a1a" strokeWidth={0.5} />
+      <circle r={r} fill="#f6e2b0" stroke="#c8963e" strokeWidth={0.5} />
+      {holes.map(([hx, hy, hr], k) => <circle key={k} cx={hx * r / 4} cy={hy * r / 4} r={hr * r / 4} fill="#a8742e" />)}
+      {[[-r, -1.4], [r - 0.6, 1.6], [0.8, -r - 0.6], [-1.6, r + 0.4]].map(([cx2, cy2], k) => <circle key={`c${k}`} cx={cx2} cy={cy2} r={0.55} fill="#fff0b8" />)}
+      <path d={`M${-r - 0.6} -1.2 Q${-r} ${-r} -0.6 ${-r - 0.8}`} fill="none" stroke="#fffbe4" strokeWidth={0.6} strokeLinecap="round" opacity={0.85} />
+    </g>
+  );
+  return (
+    <g>
+      <Food3Shadow cx={24} rx={19} />
+      {/* 竹ざる風の角皿 */}
+      <path d="M5 30 L37 27 L42 37.4 L9 40.6 Z" fill="#e2c88e" stroke="#5a3e1e" strokeWidth={0.6} />
+      {[0, 1, 2, 3, 4, 5].map((k) => <path key={k} d={`M${6 + k * 5.4} ${30 - k * 0.5} L${9.6 + k * 5.4} ${40.2 - k * 0.5}`} stroke="#b8975a" strokeWidth={0.4} />)}
+      {/* 天紙 */}
+      <path d="M9 29.4 L31 27.2 L34 37 L12 39.2 Z" fill="#faf6ec" stroke="#c8bca4" strokeWidth={0.35} />
+      <Slice x={15} y={30.6} r={4.6} rot={-12} sy={0.66} />
+      <Slice x={26.4} y={29.4} r={4.8} rot={10} sy={0.62} />
+      <Slice x={20.6} y={23.2} r={5} rot={-4} sy={0.74} />
+      {/* 天つゆ */}
+      <ellipse cx={38.6} cy={25} rx={6} ry={2.6} fill="#3a2a2a" stroke="#1a0e0a" strokeWidth={0.5} />
+      <path d="M32.6 25 Q32.8 30 38.6 30.6 Q44.4 30 44.6 25" fill="#4a3434" stroke="#1a0e0a" strokeWidth={0.5} />
+      <ellipse cx={38.6} cy={25} rx={4.8} ry={1.8} fill="#7a4a1e" />
+      <ellipse cx={39.6} cy={24.6} rx={1.6} ry={0.7} fill="#f4f0e4" />
+      <path d="M36 24.4 Q37.4 23.8 38.6 24" fill="none" stroke="#c88a4a" strokeWidth={0.4} />
+    </g>
+  );
+}
+/* 鉾田メロンの食べ比べ：くし形の果肉・バニラアイスにメロンをのせて・メロンのワインの瓶
+   ⚠️ 2026-10-11 Aki「ワインはボトルに、アイスはバニラにメロンのトッピング」 */
+function FoodIbMelonTrio() {
+  return (
+    <g>
+      <Food3Shadow cx={24} rx={20} />
+      {/* ワインの瓶（奥・右）。⚠️ 札に文字は入れない */}
+      <path d="M36.2 2.6 L39.8 2.6 L39.8 9 Q39.8 11 42 13.4 Q43.4 15 43.4 17.6 L43.4 34.4 Q43.4 35.6 42.2 35.6 L33.8 35.6 Q32.6 35.6 32.6 34.4 L32.6 17.6 Q32.6 15 34 13.4 Q36.2 11 36.2 9 Z" fill="#6a9a3a" stroke="#22380e" strokeWidth={0.55} />
+      <path d="M33 22 L43 22 L43 34.4 Q43 35.2 42.2 35.2 L33.8 35.2 Q33 35.2 33 34.4 Z" fill="#4e7a26" opacity={0.6} />
+      <rect x={35.8} y={1.6} width={4.4} height={3} rx={0.5} fill="#e8e0c0" stroke="#7a6a3a" strokeWidth={0.35} />
+      <path d="M33.6 22 L42.4 22 L42.4 31 L33.6 31 Z" fill="#f4f0dc" stroke="#a89a6a" strokeWidth={0.35} />
+      <ellipse cx={38} cy={26.4} rx={2.6} ry={2.2} fill="#a8c86a" stroke="#5a7a32" strokeWidth={0.3} />
+      <path d="M36 26 Q38 24.8 40 26 M36.4 27.4 Q38 26.4 39.6 27.4" fill="none" stroke="#e8f0c8" strokeWidth={0.25} />
+      <path d="M34 16 Q33.6 22 34 32" fill="none" stroke="#e0f4c0" strokeWidth={0.8} strokeLinecap="round" opacity={0.6} />
+      {/* バニラアイス＋メロンのトッピング（奥・左） */}
+      <path d="M6.6 21.6 L19.4 21.6 L17.6 31 L8.4 31 Z" fill="#f4f0e6" stroke="#6a6a5a" strokeWidth={0.5} />
+      <path d="M7 24 L19 24" stroke="#8ab05a" strokeWidth={0.9} />
+      <path d="M6.2 21.8 Q6.4 14.6 13 14.2 Q19.6 14.6 19.8 21.8 Q16.8 23 13 22.4 Q9.2 23 6.2 21.8 Z" fill="#fbf4dc" stroke="#b8a878" strokeWidth={0.5} />
+      <path d="M8 21 q1.2 1 2 0 q1.2 1 2 0 q1.2 1 2 0 q1.2 1 2 0 q1.2 1 2 0" fill="none" stroke="#e4d6a8" strokeWidth={0.4} />
+      {/* ⚠️ 2026-10-11 Aki「緑の粒が毒に見える」→ 皮つきの小さなくし切りをアイスに挿す（果肉は淡い黄緑、皮は濃い緑と網目） */}
+      {[[9.6, 15.6, -18, 1], [16.8, 15.2, 20, 1], [13.2, 13.6, 0, 1.1]].map(([x, y, a, z], k) => (
+        <g key={k} transform={`translate(${x} ${y}) rotate(${a}) scale(${z})`}>
+          {/* 皮（下の弧・濃い緑と網目）→ 果肉（淡い黄緑）→ 切り口（上の直線） */}
+          <path d="M-4.4 -1 L4.4 -1 Q4.2 3.4 0 3.8 Q-4.2 3.4 -4.4 -1 Z" fill="#dff0a0" stroke="#4e6a2a" strokeWidth={0.35} />
+          <path d="M-4.2 0.6 Q-3.6 3.2 0 3.6 Q3.6 3.2 4.2 0.6 Q3.2 3 0 3 Q-3.2 3 -4.2 0.6 Z" fill="#4e7a2a" />
+          <path d="M-3 2.4 L-2.2 2.9 M-0.8 3.1 L0.4 3.2 M1.8 2.9 L2.8 2.4" stroke="#d8e4b4" strokeWidth={0.22} />
+          <path d="M-3.6 -0.4 L3.6 -0.4" stroke="#f8ffd8" strokeWidth={0.45} strokeLinecap="round" opacity={0.9} />
+          <ellipse cx={-1} cy={0.8} rx={0.5} ry={0.28} fill="#f4ecbc" /><ellipse cx={1.2} cy={0.9} rx={0.5} ry={0.28} fill="#f4ecbc" />
+        </g>
+      ))}
+      <path d="M15.4 12.4 L18.6 8.6 L19.8 9.2" fill="none" stroke="#a87a3a" strokeWidth={0.9} strokeLinecap="round" />
+      {/* くし形のメロン（手前） */}
+      <path d="M8 34.6 Q24 46 41 33.4 L39.6 29.6 Q24 38.6 9.4 30.6 Z" fill="#c8e690" stroke="#2e3e1a" strokeWidth={0.5} />
+      <path d="M9.4 30.6 Q24 38.6 39.6 29.6 L39.2 31.8 Q24 40.6 9.6 32.8 Z" fill="#eaf6b8" />
+      <path d="M8 34.6 Q24 46 41 33.4" fill="none" stroke="#5a7a32" strokeWidth={1.5} strokeLinecap="round" />
+      <path d="M9 36 Q24 45 40.2 34.6" fill="none" stroke="#d8e4b4" strokeWidth={0.3} strokeDasharray="0.8 0.6" />
+      {[[16, 33.4], [21, 35], [26.4, 35], [31.6, 33.4]].map(([x, y], k) => (
+        <ellipse key={k} cx={x} cy={y} rx={0.8} ry={0.45} fill="#f4ecbc" stroke="#b8a868" strokeWidth={0.2} />
+      ))}
+      <path d="M13 33 Q22 37.6 31 35.4" fill="none" stroke="#fff" strokeWidth={0.55} strokeLinecap="round" opacity={0.8} />
+    </g>
+  );
+}
+/* 稲敷のミルキークイーン：朱塗りの重箱に白米、箸
+   ⚠️ 2026-10-11 Aki「浮いた米が不自然。重箱がひし形に見えるレイアウトで」→ 斜め上から見た重箱（ひし形）。米粒は一面の白の中に艶でだけ描く */
+function FoodIbMilkyQueen() {
+  /* ひし形：上 (24,9) 右 (44,20) 下 (24,31) 左 (4,20)。箱の厚みは下へ 7 */
+  const gl = [[18, 15.4, -20], [24, 13.6, 25], [29.6, 16, -10], [14.6, 19.4, 15], [21, 19, -30], [27.4, 20.6, 20], [33.6, 19.6, -15], [18.6, 23.4, 10], [24.6, 24.6, -25], [30.4, 23.8, 30], [23.6, 17.8, 5]];
+  return (
+    <g>
+      <Food3Shadow cx={24} cy={41} rx={20} />
+      {/* 箱の側面（黒漆・金の線） */}
+      <path d="M4 20 L24 31 L24 38 L4 27 Z" fill="#1e1010" stroke="#000" strokeWidth={0.5} />
+      <path d="M24 31 L44 20 L44 27 L24 38 Z" fill="#2e1a18" stroke="#000" strokeWidth={0.5} />
+      <path d="M4.6 25.4 L24 36 L43.4 25.4" fill="none" stroke="#c8a24a" strokeWidth={0.5} />
+      {/* 縁（朱） */}
+      <path d="M24 9 L44 20 L24 31 L4 20 Z" fill="#1a0c0c" stroke="#000" strokeWidth={0.5} />
+      <path d="M24 10.6 L41.2 20 L24 29.4 L6.8 20 Z" fill="#b02a1e" />
+      {/* 白米：内側いっぱい、ふっくら */}
+      <path d="M24 12 Q33 15.6 39.4 20 Q33 24.4 24 28 Q15 24.4 8.6 20 Q15 15.6 24 12 Z" fill="#fbfaf2" stroke="#ddd6c2" strokeWidth={0.3} />
+      <path d="M24 13.4 Q31 16.4 36 19.4 Q30 18 24 18.4 Q17 18.8 12 20.6 Q16 16.2 24 13.4 Z" fill="#ffffff" opacity={0.9} />
+      {gl.map(([x, y, a], k) => (
+        <ellipse key={k} cx={x} cy={y} rx={1.1} ry={0.5} transform={`rotate(${a} ${x} ${y})`} fill="none" stroke="#e4ddc8" strokeWidth={0.22} />
+      ))}
+      <path d="M17 16 Q21 14.2 25 14" fill="none" stroke="#fff" strokeWidth={0.8} strokeLinecap="round" />
+      <Food3Steam x={24} y={11} />
+      {/* 箸（手前に置く） */}
+      <path d="M8 43.4 L42 37.4" stroke="#7a3a1a" strokeWidth={1.1} strokeLinecap="round" />
+      <path d="M8.6 44.8 L42.6 38.8" stroke="#8a4a22" strokeWidth={1.1} strokeLinecap="round" />
+      <ellipse cx={37} cy={39.6} rx={2.4} ry={1.1} fill="#c8c8d0" stroke="#6a6a7a" strokeWidth={0.3} />
+    </g>
+  );
+}
+/* 流山の白みりん：澄んだ琥珀色の一升瓶と、小皿に注いだ一口 */
+function FoodChShiroMirin() {
+  return (
+    <g>
+      <Food3Shadow cx={24} rx={17} />
+      {/* 瓶 */}
+      <path d="M18.6 4 L23.4 4 L23.4 9 Q23.6 12 26.4 15 Q28 17 28 20 L28 39.6 Q28 41 26.6 41 L15.4 41 Q14 41 14 39.6 L14 20 Q14 17 15.6 15 Q18.4 12 18.6 9 Z" fill="#e8c86a" fillOpacity={0.75} stroke="#7a5a1a" strokeWidth={0.55} />
+      <path d="M14.4 20 L27.6 20 L27.6 39.4 Q27.6 40.4 26.6 40.4 L15.4 40.4 Q14.4 40.4 14.4 39.4 Z" fill="#d8a83a" opacity={0.75} />
+      <rect x={18.2} y={2.4} width={5.6} height={3.2} rx={0.6} fill="#c8a24a" stroke="#5a4010" strokeWidth={0.4} />
+      {/* 和紙の札（文字は入れない。白い地に朱の印） */}
+      <path d="M15.2 23 L26.8 23 L26.8 35 L15.2 35 Z" fill="#fbf6e8" stroke="#b8a888" strokeWidth={0.35} />
+      <path d="M21 25 L21 32.6" stroke="#2a1a10" strokeWidth={1.4} strokeLinecap="round" />
+      <path d="M18.4 26.4 L18.4 30" stroke="#2a1a10" strokeWidth={0.7} strokeLinecap="round" opacity={0.7} />
+      <rect x={23.2} y={31} width={2.2} height={2.2} fill="#c0281a" />
+      <path d="M16 15.4 Q15 20 15.4 38" fill="none" stroke="#fff" strokeWidth={0.8} strokeLinecap="round" opacity={0.65} />
+      {/* 小皿 */}
+      <ellipse cx={36} cy={37} rx={8} ry={2.8} fill="#f4f2ec" stroke="#8a8478" strokeWidth={0.5} />
+      <ellipse cx={36} cy={36.6} rx={5.6} ry={1.8} fill="#eccb6e" />
+      <ellipse cx={34.4} cy={36.2} rx={2} ry={0.55} fill="#fffbe0" opacity={0.85} />
+      <path d="M30 38.6 Q36 40.6 42 38.6" fill="none" stroke="#2a4a8a" strokeWidth={0.4} opacity={0.6} />
+    </g>
+  );
+}
+
 const FOOD_ART_3 = {
   kg_oiri: FoodKgOiri,
   kg_momo: FoodKgMomo,
@@ -86431,6 +86817,7 @@ const FOOD_ART_3 = {
   ib_nashi: FoodIbNashi,
   ib_hitachigyu: FoodIbHitachigyu,
   ib_sashimacha: FoodIbSashimacha,
+  ib_renkonten: FoodIbRenkonTen, ib_melontrio: FoodIbMelonTrio, ib_milkyqueen: FoodIbMilkyQueen, ch_shiromirin: FoodChShiroMirin,
 };
 /* ==== 東北のご当地グルメの絵（2026-10-09）。⚠️ viewBox 0 0 48 48・静止・defs と id を使わない ==== */
 function Food4Plate({ cx = 24, cy = 31, rx = 19, ry = 6.5, c = "#f2ede4", rim = "#b8ae9e" }) {
@@ -95274,11 +95661,26 @@ function AdvBottomBar({ lang }) {
   const [boxN, setBoxN] = useState(countBox);
   /* ⚠️ 残りの点も帯に出す。開かないと気づかず、溜めたまま進むことになる */
   const [skLeft, setSkLeft] = useState(() => skillPointsOf().left);
+  /* ★ レベルと経験値の帯（2026-10-10）。⚠️ 経験値が入るたび（oo-level）に読み直す */
+  const [lvS, setLvS] = useState(() => loadLv());
+  useEffect(() => {
+    const on = () => { setLvS(loadLv()); setSkLeft(skillPointsOf().left); };
+    window.addEventListener("oo-level", on);
+    return () => window.removeEventListener("oo-level", on);
+  }, []);
   const close = () => {
     setOpen(null); setBoxN(countBox()); setSkLeft(skillPointsOf().left);
   };
+  const LTb = lvT(lang);
+  const need = LV_NEED[lvS.lv] || 0;
   return (
     <>
+      <div className="adv-lv">
+        <b>{LTb.lv(lvS.lv)}</b>
+        <i className="adv-lv-st">★{lvStarOf(lvS.lv)}</i>
+        <span className="adv-lv-bar"><i style={{ width: `${lvS.lv >= LV_MAX ? 100 : Math.min(100, (lvS.exp / Math.max(1, need)) * 100)}%` }} /></span>
+        <em>{lvS.lv >= LV_MAX ? LTb.max : LTb.next(lvS.exp, need)}</em>
+      </div>
       <div className="adv-foot">
         <button type="button" className="adv-foot-btn" onClick={() => setOpen("equip")}>
           {a.equipTitle}
@@ -95770,7 +96172,154 @@ function GlyphSpider() {
   );
 }
 
+/*
+  ============================================================
+  【マスの効果の演出】2026-10-10 Aki「砲撃マスで大砲を飛ばしたり、効果が確定したときに簡易で軽いアニメーション（戦闘の必殺と同じ程度）」。
+  ★ 盤の上に約1.1秒だけ重ねる。⚠️ 押せない（pointer-events: none）。速い点滅は使わない。
+  ★ マスの種類ごとに「型」を決め（TFX_FAM）、良い目・悪い目・外れで色と動きを変える。
+  ★ 中央に短い札（+15% など）を出す。何が起きたかは記録にも残る。
+  ============================================================
+*/
+const TFX_ELEM_COL = { fire: "#FF7A3A", water: "#4AB8FF", wind: "#8AE8B0", earth: "#C8A050", light: "#FFF0A0", dark: "#B07AFF" };
+const TFX_SUIT_COL = { swords: "#BFE0FF", wands: "#FF9A50", cups: "#7AE0FF", pentacles: "#FFD860" };
+function tfxFamilyOf(k) {
+  const row = ADV_SPECIALS.find((x) => x.key === k) || {};
+  if (k === "cannon") return "cannon";
+  if (row.attr && PHYS_KEYS.indexOf(row.attr) >= 0) return "blade";
+  if (row.attr) return "elem";
+  if (row.suit || k === "lake") return "gauge";
+  if (row.res || k === "armorer") return "shield";
+  if (row.allAttr) return "rainbow";
+  if (row.heal || k === "fruit" || k === "kaki" || k === "healer") return "heal";
+  if (row.food) return "steam";
+  return ({ fog: "mist", chain: "chain", statue: "curse", thief: "thief", hoard: "dragon", lost: "lost", bear: "claw",
+    clover: "clover", spider: "web", train: "scroll", merchant: "coins", anvil: "sparks", challenge: "letter",
+    tunnel: "tunnel", shufM: "swirl", shufP: "swirl", barber: "snip", boost: "burst", event: "event" })[k] || "puff";
+}
+function TileFx({ fx }) {
+  if (!fx) return null;
+  /* ★ 2026-10-10 Aki「画面が静止して文字が表示されるのは滑稽」→ 踏んだマスの絵そのものが跳び出して弾ける。盤も揺れる・脈打つ（adv-iso-wrap の fx-*） */
+  const Gl = fx.k && ADV_GLYPH[fx.k];
+  const n = (m) => Array.from({ length: m }, (_, i) => i);
+  const fam = fx.fam;
+  const P = (cls, i, extra) => <i key={`${cls}${i}`} className={cls} style={{ "--i": i, ...extra }} />;
+  let parts = null;
+  if (fam === "cannon") parts = (
+    <>
+      <i className="tfx-cannon-body" />
+      <i className="tfx-ball" />
+      {fx.tone > 0 && <i className="tfx-boom" />}
+      {fx.tone > 0 && n(8).map((i) => P("tfx-shard", i, { "--a": `${i * 45}deg` }))}
+      {fx.tone <= 0 && <i className="tfx-splash" />}
+    </>
+  );
+  else if (fam === "elem" || fam === "gauge" || fam === "heal" || fam === "steam") parts = (
+    <>
+      <i className="tfx-ring" />
+      {n(fam === "heal" ? 10 : 12).map((i) => P(`tfx-up ${fam}`, i, { "--x": `${((i * 37) % 100) - 50}%`, "--d": `${(i * 53) % 260}ms` }))}
+    </>
+  );
+  else if (fam === "blade") parts = <>{n(3).map((i) => P("tfx-slash", i, { "--d": `${i * 110}ms` }))}<i className="tfx-ring" /></>;
+  else if (fam === "shield") parts = <><i className="tfx-shield" /><i className="tfx-shield s2" /></>;
+  else if (fam === "rainbow") parts = <>{n(6).map((i) => P("tfx-arc", i, { "--c": ["#FF6A6A", "#FFB04A", "#FFF07A", "#7AE08E", "#6AB8FF", "#B07AFF"][i] }))}</>;
+  else if (fam === "mist" || fam === "curse") parts = <>{n(7).map((i) => P(`tfx-smoke ${fam}`, i, { "--x": `${((i * 29) % 80) - 40}%`, "--d": `${i * 70}ms` }))}</>;
+  else if (fam === "chain") parts = <>{n(9).map((i) => P("tfx-link", i, { "--a": `${-40 + i * 10}deg` }))}{fx.tone >= 0 && <i className="tfx-break" />}</>;
+  else if (fam === "thief") parts = <><i className="tfx-dash" />{n(5).map((i) => P("tfx-speed", i, { "--y": `${30 + i * 9}%` }))}</>;
+  else if (fam === "dragon") parts = <><i className="tfx-roar" /><i className="tfx-roar r2" /></>;
+  else if (fam === "lost") parts = <><i className="tfx-q" /><i className="tfx-q q2" /></>;
+  else if (fam === "claw") parts = <>{n(3).map((i) => P("tfx-claw", i, { "--d": `${i * 70}ms`, "--x": `${-14 + i * 14}px` }))}</>;
+  else if (fam === "clover" || fam === "web" || fam === "scroll" || fam === "letter" || fam === "snip") parts = (
+    <><i className={`tfx-icon ${fam}`} />{n(8).map((i) => P("tfx-spark", i, { "--a": `${i * 45}deg` }))}</>
+  );
+  else if (fam === "coins" || fam === "sparks") parts = <>{n(10).map((i) => P(`tfx-coin ${fam}`, i, { "--x": `${((i * 41) % 120) - 60}px`, "--d": `${(i * 37) % 200}ms` }))}</>;
+  else if (fam === "tunnel") parts = <><i className="tfx-hole" /><i className="tfx-hole h2" /></>;
+  else if (fam === "swirl") parts = <>{n(10).map((i) => P("tfx-orbit", i, { "--a": `${i * 36}deg`, "--c": i % 2 ? "#B07AFF" : "#6AD8FF" }))}</>;
+  else if (fam === "event") parts = (
+    fx.ev === "hp" ? <>{n(7).map((i) => P("tfx-smoke poison", i, { "--x": `${((i * 29) % 80) - 40}%`, "--d": `${i * 60}ms` }))}</>
+      : fx.ev === "pot" ? <>{n(9).map((i) => P("tfx-shardg", i, { "--a": `${i * 40}deg` }))}<i className="tfx-ring" /></>
+      : fx.ev === "elem" ? <>{n(9).map((i) => P("tfx-link", i, { "--a": `${-40 + i * 10}deg` }))}</>
+      : fx.ev === "heal" ? <>{n(10).map((i) => P("tfx-up heal", i, { "--x": `${((i * 37) % 100) - 50}%`, "--d": `${(i * 53) % 260}ms` }))}</>
+      : fx.ev === "potUp" ? <>{n(6).map((i) => P("tfx-coin bottle", i, { "--x": `${((i * 41) % 100) - 50}px`, "--d": `${(i * 47) % 200}ms` }))}</>
+      : <>{n(10).map((i) => P("tfx-orbit", i, { "--a": `${i * 36}deg`, "--c": i % 2 ? "#B07AFF" : "#6AD8FF" }))}</>
+  );
+  else if (fam === "burst") parts = <><i className="tfx-ring big" />{n(16).map((i) => P("tfx-ray", i, { "--a": `${i * 22.5}deg` }))}</>;
+  else parts = <i className="tfx-puff" />;
+  return (
+    <div className={`tfx tfxf-${fam} ${fx.tone > 0 ? "good" : fx.tone < 0 ? "bad" : "none"}`} key={fx.id}
+      style={{ "--c": fx.col || (fx.tone < 0 ? "#FF6A5A" : fx.tone > 0 ? "#F6DE96" : "#C8C0D8") }} aria-hidden="true">
+      <i className="tfx-wash" />
+      {Gl && <svg className="tfx-glyph" viewBox="-10 -12 20 20"><Gl /></svg>}
+      <div className="tfx-stage">{parts}</div>
+      {fx.tag && <b className="tfx-tag">{fx.tag}{fx.sub && <small className="tfx-sub">{fx.sub}</small>}</b>}
+    </div>
+  );
+}
+
+/* ボス前の増幅：金の縁に宝石の鋲を打った豪華なルーレット。台座つき、上に宝石の針（2026-10-10 Aki） */
+function GlyphBossWheel() {
+  const N = 8, R = 5.6, cx = 0, cy = -2.6;
+  const cols = ["#C8283A", "#F0C040", "#6A2AA8", "#1E9A8A", "#C8283A", "#F0C040", "#6A2AA8", "#2A6AD8"];
+  const seg = (i) => {
+    const a0 = (i / N) * Math.PI * 2 - Math.PI / 2, a1 = ((i + 1) / N) * Math.PI * 2 - Math.PI / 2;
+    return `M${cx} ${cy} L${(cx + Math.cos(a0) * R).toFixed(2)} ${(cy + Math.sin(a0) * R).toFixed(2)} A${R} ${R} 0 0 1 ${(cx + Math.cos(a1) * R).toFixed(2)} ${(cy + Math.sin(a1) * R).toFixed(2)} Z`;
+  };
+  return (
+    <g>
+      <ellipse cx="0" cy="4.8" rx="6.8" ry="1.8" fill={GlyphShadowFill} />
+      {/* 台座 */}
+      <path d="M-4.2 4.6 L-3.0 2.4 L3.0 2.4 L4.2 4.6 Q0 5.6 -4.2 4.6 Z" fill="#B8862A" stroke="#4A2A04" strokeWidth="0.45" />
+      <path d="M1.4 2.4 L3.0 2.4 L4.2 4.6 Q3.2 4.9 2.2 5.0 Z" fill="#7A5210" />
+      <rect x="-0.9" y="1.6" width="1.8" height="1.2" fill="#D8A83A" stroke="#4A2A04" strokeWidth="0.3" />
+      {/* 外の金の縁 */}
+      <circle cx={cx} cy={cy} r={R + 1.3} fill="#E8B840" stroke="#4A2A04" strokeWidth="0.5" />
+      <circle cx={cx} cy={cy} r={R + 0.55} fill="#7A4A08" />
+      {Array.from({ length: N }, (_, i) => <path key={i} d={seg(i)} fill={cols[i]} stroke="#FFE8A0" strokeWidth="0.25" />)}
+      {Array.from({ length: N }, (_, i) => {
+        const a = ((i + 0.5) / N) * Math.PI * 2 - Math.PI / 2;
+        return <circle key={`g${i}`} cx={(cx + Math.cos(a) * (R - 1.6)).toFixed(2)} cy={(cy + Math.sin(a) * (R - 1.6)).toFixed(2)} r="0.35" fill="#FFF4C8" opacity="0.85" />;
+      })}
+      {/* 縁の宝石の鋲 */}
+      {Array.from({ length: 12 }, (_, i) => {
+        const a = (i / 12) * Math.PI * 2;
+        return <circle key={`s${i}`} cx={(cx + Math.cos(a) * (R + 0.95)).toFixed(2)} cy={(cy + Math.sin(a) * (R + 0.95)).toFixed(2)} r="0.38"
+          fill={i % 3 === 0 ? "#FF4A6A" : i % 3 === 1 ? "#5AD8FF" : "#FFFBE0"} stroke="#4A2A04" strokeWidth="0.15" />;
+      })}
+      {/* 中心の宝石 */}
+      <circle cx={cx} cy={cy} r="1.5" fill="#F8D060" stroke="#4A2A04" strokeWidth="0.35" />
+      <circle cx={cx} cy={cy} r="0.8" fill="#C8283A" />
+      <circle cx={cx - 0.25} cy={cy - 0.3} r="0.25" fill="#FFFFFF" opacity="0.9" />
+      {/* 上の針（宝石つき） */}
+      <path d={`M-1.1 ${cy - R - 2.6} L1.1 ${cy - R - 2.6} L0 ${cy - R + 0.6} Z`} fill="#F0C040" stroke="#4A2A04" strokeWidth="0.35" />
+      <circle cx="0" cy={cy - R - 2.7} r="0.75" fill="#FF4A6A" stroke="#4A2A04" strokeWidth="0.25" />
+      {/* 艶とまたたき */}
+      <path d={`M${cx - R + 0.6} ${cy - 1.2} A${R - 0.6} ${R - 0.6} 0 0 1 ${cx - 1.2} ${cy - R + 0.6}`} fill="none" stroke="#FFFFFF" strokeWidth="0.5" opacity="0.5" />
+      <path d={GlyphStar4(6.2, -8.6, 1.3)} fill="#FFF6C8" />
+      <path d={GlyphStar4(-6.4, 0.8, 0.9)} fill="#FFF6C8" />
+    </g>
+  );
+}
+
+/* 修行の札：紐で結んだ巻物と、光る筆。⚠️ 文字は書かない（線だけ） */
+function GlyphTrain() {
+  return (
+    <g>
+      <ellipse cx="0" cy="4.6" rx="6.2" ry="1.7" fill={GlyphShadowFill} />
+      <rect x="-6.0" y="-4.2" width="12.0" height="7.4" rx="0.6" fill="#F2E6C8" stroke="#5A4420" strokeWidth="0.45" />
+      <rect x="-7.0" y="-4.8" width="1.6" height="8.6" rx="0.8" fill="#9A5A2A" stroke="#3A1A08" strokeWidth="0.4" />
+      <rect x="5.4" y="-4.8" width="1.6" height="8.6" rx="0.8" fill="#9A5A2A" stroke="#3A1A08" strokeWidth="0.4" />
+      {[-2.4, -0.6, 1.2].map((y) => <path key={y} d={`M-4.4 ${y} h${y === 1.2 ? 5.6 : 8.4}`} stroke="#8A7A5A" strokeWidth="0.45" strokeLinecap="round" />)}
+      <path d="M-0.4 -4.2 v7.4" stroke="#C83A3A" strokeWidth="0.9" />
+      <path d="M-0.4 3.2 q-1.2 1.4 -2.2 1.2 M-0.4 3.2 q1.2 1.4 2.2 1.2" stroke="#C83A3A" strokeWidth="0.6" fill="none" strokeLinecap="round" />
+      <path d="M2.4 -6.6 L6.4 -9.0" stroke="#3A2A1A" strokeWidth="0.9" strokeLinecap="round" />
+      <path d="M1.6 -6.0 Q2.0 -7.0 2.8 -6.9 L2.2 -5.6 Z" fill="#1A1A1A" />
+      <path d={GlyphStar4(-4.6, -7.0, 1.3)} fill="#FFE88A" />
+    </g>
+  );
+}
+
 const ADV_GLYPH = {
+  bossWheel: GlyphBossWheel,
+  train: GlyphTrain,
   spider: GlyphSpider,
   merchant: GlyphMerchant,
   challenge: GlyphChallenge,
@@ -95791,6 +96340,8 @@ const ADV_GLYPH = {
 
 /* 台の地の色（天面の基本色）。⚠️ 既存のマス（宝箱の金・お店の朱・雑魚の赤・回復の桃・井戸の青灰・イベントの紫…）と見分けが付くこと */
 const ADV_GLYPH_TILE = {
+  bossWheel: [214, 164, 60],
+  train: [196, 168, 120],
   spider: [120, 132, 150],
   merchant: [52, 124, 116],
   challenge: [180, 56, 62],
@@ -97696,7 +98247,8 @@ const AdvBoard = memo(function AdvBoard({ walking, map, seed, pref, area, heroOn
             const seen = visited.includes(n.key);
             /* ★ 選んだ選択の札は、選んだマスの絵と色になる（段の色の縁を残す） */
             const pd = picks && picks[n.key];
-            const nk = pd ? pd.kind : n.kind;
+            /* ★ 2026-10-10 Aki：ボス前のマス（主の手前の道）は豪華なルーレットの絵（ボス前の増幅） */
+            const nk = pd ? pd.kind : (n.front && n.kind === "road") ? "bossWheel" : n.kind;
             const c = TILE_COLOR(nk, here, seen);
             /* ⚠️ 2026-09-30 Aki：「前みたいに立体感」。台の厚みを 5→10（主は 8→14）。影も広く深く */
             const R = HEX_R, H = HEX_H, D = n.kind === "boss" ? 14 : 10;
@@ -98100,12 +98652,34 @@ function AdventurePanel({ lang, items, onItem }) {
   const [tickets, setTickets] = useState(() => loadTickets());
   const [tkRoll, setTkRoll] = useState(null);
   const [tkSkip, setTkSkip] = useState(null);
+  /* ★ 耐性の印に触れたときの短い説明（2026-10-11）。⚠️ 2.6秒で消える。もう一度触れると出し直す */
+  const [chipTip, setChipTip] = useState(null);
+  const chipTipTimer = useRef(null);
+  const showChipTip = (t) => {
+    setChipTip({ t, id: Date.now() });
+    if (chipTipTimer.current) clearTimeout(chipTipTimer.current);
+    chipTipTimer.current = setTimeout(() => setChipTip(null), 2600);
+  };
   const tkHoldRef = useRef(false);
   const [tkGot, setTkGot] = useState(null);
   /* 愚者の道に入った知らせ（2.8秒） */
   const [foolShow, setFoolShow] = useState(null);
   /* ご当地グルメを手に入れた知らせ */
   const [gmGot, setGmGot] = useState(null);
+  /*
+    ★ 2026-10-12 Aki「料理をとったとき閉じるを押さないと消えない。テンポが悪いので一瞬だけ表示して消す」。
+    ⚠️ 消す時計は timers.current に入れない（盤の切り替えで timers が掃除されると、消えずに残っていた）。この効果だけで消す。
+  */
+  useEffect(() => {
+    if (!gmGot) return undefined;
+    const id = gmGot.id;
+    const t = setTimeout(() => setGmGot((v) => (v && v.id === id ? null : v)), GM_GOT_MS);
+    return () => clearTimeout(t);
+  }, [gmGot && gmGot.id]); // eslint-disable-line react-hooks/exhaustive-deps
+  /* レベルアップの知らせ */
+  const [lvUp, setLvUp] = useState(null);
+  /* マスの効果の演出（TileFx） */
+  const [tileFx, setTileFx] = useState(null);
   /*
     持って行く料理を食べる（探索の始め）。⚠️ 一つ減らす。無ければ何もしない。
     ★ 最大HPが上がる料理は、今のHPも上限まで満たして出発する。
@@ -98346,6 +98920,8 @@ function AdventurePanel({ lang, items, onItem }) {
   const [jnDone, setJnDone] = useState(false);
   /* 制覇の演出（クリア→宝箱の一覧→開封）。⚠️ 閉じたら8つの画面へ戻る */
   const [conq, setConq] = useState(null);
+  /* ★ 負け・行き止まりでも、拾った箱があれば宝箱のリザルトを一度だけ出す（2026-10-12 Aki） */
+  const loseShowRef = useRef(null);
   /* 通った節。⚠️ 通った道が分かると、次はどこを狙うか決められる */
   const [visited, setVisited] = useState([]);
   const timers = useRef([]);
@@ -98375,7 +98951,7 @@ function AdventurePanel({ lang, items, onItem }) {
     ★ 手に入れた知らせ（料理・チケット・名産品）は、盤を離れたら必ず消す。残ったまま別の画面に重なると、
       その画面の操作を塞ぐ。県・区分・名所が変わるたびに消す。
   */
-  useEffect(() => { setGmGot(null); setTkGot(null); setMeiGot(null); }, [pref, area, stage]);
+  useEffect(() => { setGmGot(null); setTkGot(null); setMeiGot(null); setLvUp(null); }, [pref, area, stage]);
   /* ★ 二つ目の選択の札。⚠️ 一つ目のルーレット・確認が全部済んでから開く */
   useEffect(() => {
     if (!pickAgain || roul || rerollAsk || spiderAsk) return undefined;
@@ -98421,23 +98997,32 @@ function AdventurePanel({ lang, items, onItem }) {
         for (const c of caps) { const r = c.getBoundingClientRect(); if (r.height > 0) bottom = Math.max(bottom, r.bottom); }
         return bottom;
       };
-      const bottom = capBottom();
-      if (bottom > 0 && typeof window !== "undefined") {
-        const y = Math.max(0, (window.scrollY || window.pageYOffset || 0) + bottom - (window.innerHeight || 0) + 6);
-        window.scrollTo({ top: y, behavior: "smooth" });
-        /*
-          ⚠️ 戦闘の画面は寄せている途中にも高さが変わる（敵や札が後から並ぶ）。
-            寄せ終わったころにもう一度測り、ずれていれば直す（小さなずれだけ。読んでいる途中に大きく飛ばさない）。
-        */
-        [900, 1900, 2900].forEach((wait) => timers.current.push(setTimeout(() => {
-          const b2 = capBottom();
-          if (!b2) return;
-          const d = b2 - (window.innerHeight || 0) + 6;
-          if (Math.abs(d) > 2 && Math.abs(d) < 160) window.scrollBy({ top: d, behavior: "smooth" });
-        }, wait)));
-      } else {
-        el2.scrollIntoView({ behavior: "smooth", block: "start" });
-      }
+      /*
+        ⚠️⚠️ 2026-10-12 Aki「発動がちょうど完全に見える位置が戦闘開始の初期位置」：効いていなかった。
+          原因：140ms の時点では必殺の欄がまだ描かれておらず、枠の上端へ寄せる側に落ちていた。
+          さらに後の直しは 160px 未満のずれしか直さないので、上端のまま残っていた。
+        ★ 必殺の欄が現れるまで最大3秒待ってから寄せる。寄せた後の3回の測り直しは、ずれの大きさに関係なく直す。
+        ★ 画面の高さは visualViewport（スマホのアドレスバーを除いた見えている高さ）で測る。
+      */
+      const viewH = () => (window.visualViewport && window.visualViewport.height) || window.innerHeight || 0;
+      const fit = (smooth) => {
+        const b = capBottom();
+        if (!b) return false;
+        const d = b - viewH() + 4;
+        if (Math.abs(d) > 2) window.scrollBy({ top: d, behavior: smooth ? "smooth" : "auto" });
+        return true;
+      };
+      let tries = 0;
+      const wait = () => {
+        if (!battleRef.current) return;
+        if (fit(true)) {
+          [700, 1500, 2600].forEach((w) => timers.current.push(setTimeout(() => fit(true), w)));
+          return;
+        }
+        if (++tries < 30) timers.current.push(setTimeout(wait, 100));
+        else el2.scrollIntoView({ behavior: "smooth", block: "start" });
+      };
+      wait();
     }, 140));
     return undefined;
   });
@@ -99411,6 +99996,18 @@ function AdventurePanel({ lang, items, onItem }) {
   const over = !zako && !roulBusy && !goldRun && (dead || (node.kind === "boss" && fought)
     || (node.kind !== "boss" && !(node.next || []).length && !wellPending));
   /*
+    ★ 2026-10-12 Aki「ボス前の三択で外れても宝箱につきリザルトが出るように」。
+    ★ 制覇でない終わり（外れの道・倒れた）で、この探索の箱が残っていれば、宝箱の一覧→開封を自動で一度だけ出す。
+  */
+  if (over && bossEnd !== "win" && !conq) {
+    const lmark = `lose:${walking}:${seed}:${at}`;
+    if (loseShowRef.current !== lmark) {
+      loseShowRef.current = lmark;
+      const ids = runChestsAlive(runModRef.current.chests).map((c) => c.id);
+      if (ids.length) timers.current.push(setTimeout(() => setConq({ ids, id: Date.now(), lose: true }), 900));
+    }
+  }
+  /*
     ⚠️⚠️ 主のマスに着いたら、それ以上は絶対に動かさないこと。
       主は戦う場所であって、通過点ではない。next が残っていると、
       戦いの前後に一本道の送りが働いて袋小路へ飛ぶ（実際そうなっていた）。
@@ -99589,6 +100186,27 @@ function AdventurePanel({ lang, items, onItem }) {
     return ch;
   };
   const chestText = (ch) => (ch.hi ? a.advChestHi(ch.hi) : a.advChest(tierStars(ch.tier)));
+  /*
+    経験値（2026-10-10 Aki）。base … 補正前の量。⚠️ レベル差の補正（lvExpRate）はここで一度だけ掛ける。
+    ★ 上がったら知らせる（スキルポイント・装備の★）。
+  */
+  const gainExp = (base) => {
+    const st = isWardStage(pref, area) ? 12 : starOfStage(rank, walking);
+    const lv0 = loadLv().lv;
+    const r = lvExpRate(lv0, st);
+    const n = Math.max(1, Math.round(base * r));
+    const res = addExp(n);
+    const LT = lvT(lang);
+    setLog((l) => [...l, LT.got(n, r)]);
+    if (res.ups.length) {
+      const sheets = {};
+      res.ups.forEach((L) => { const sh = lvStarOf(L); sheets[sh] = (sheets[sh] || 0) + (LV_PTS[L] || 0); });
+      const eqUp = lvStarOf(res.lv) > lvStarOf(lv0) ? lvStarOf(res.lv) : 0;
+      const id = Date.now();
+      setLvUp({ id, lv: res.lv, sheets, eqUp });
+      timers.current.push(setTimeout(() => setLvUp((v) => (v && v.id === id ? null : v)), 3500));
+    }
+  };
   /* 道の入口に着いたとき。⚠️ 愚者の道なら知らせる（スタートのルーレット・外れの井戸・抜け穴の三つの入り方すべて） */
   const enterLane = (headKey) => {
     const i = (map.lanes || []).findIndex((l2) => l2.head === headKey);
@@ -99739,8 +100357,34 @@ function AdventurePanel({ lang, items, onItem }) {
     if (add.rareRes) addRare("res", Math.round(add.rareRes * 10) / 10);
     setLog((l) => [...l, a.sp.directBonus(cnt)]);
   };
+  /*
+    マスの効果の演出を出す（TileFx の注）。tone … 良い目 1／悪い目 −1／外れ 0。tag … 中央の短い札。
+    ⚠️ 最大の速さでは短く。
+  */
+  const playTileFx = (k, key, tagOverride, toneOverride, col) => {
+    const v = toneOverride != null ? toneOverride : advOptVal(k === "event" ? "event" : k === "boost" ? "boost" : "sp", { key });
+    const tone = toneOverride != null ? toneOverride : typeof v === "number" ? (v > 0 ? 1 : v < 0 ? -1 : 0) : 0;
+    const mc = /^n(\d)$/.exec(key || "");
+    const m1 = /^v(-?\d+)$/.exec(key || "");
+    const tag = tagOverride != null ? tagOverride : m1 ? (Number(m1[1]) ? `${Number(m1[1]) > 0 ? "+" : "−"}${Math.abs(Number(m1[1]))}%` : (ADV_BAD_TILES.indexOf(k) >= 0 ? a.sp.dodge : a.sp.nothing))
+      : mc ? (Number(mc[1]) ? `${lang === "ja" ? "封印 " : "Sealed "}${a.sp.chainOpt(Number(mc[1]), false)}` : (a.sp.opt.none || "…"))
+      : (a.sp.opt && a.sp.opt[key]) || (tone === 0 ? (ADV_BAD_TILES.indexOf(k) >= 0 ? a.sp.dodge : a.sp.nothing) : null);
+    const row = ADV_SPECIALS.find((x) => x.key === k) || {};
+    const color = col || (row.attr && TFX_ELEM_COL[row.attr]) || (row.suit && TFX_SUIT_COL[row.suit]) || null;
+    const id = Date.now() + Math.random();
+    const fast = (advSpeedRef.current || 1) >= SPEED_STEPS[SPEED_STEPS.length - 1];
+    setTileFx({ id, fam: tfxFamilyOf(k), tone, tag, col: color, k: ADV_GLYPH[k] ? k : k === "boost" ? "bossWheel" : null, ev: k === "event" ? key : null });
+    /* ⚠️ 目は決まったので、ルーレットの盤は下げる（演出と重ねない）。⚠️ 三択の札の画面（pickPanel）は残す */
+    setRoul((r) => (r && !r.pickPanel ? null : r));
+    timers.current.push(setTimeout(() => setTileFx((f) => (f && f.id === id ? null : f)), fast ? 750 : 1350));
+  };
   const applySpecial = (k, key, alive, su, descOf) => {
     const S = a.sp;
+    /* ★ 演出の札は客観的な一行（「腐食耐性 +12%」「ポーション −1」）。数字だけにしない */
+    /* ★ 2026-10-11 Aki「増幅・耐性・魔法・物理はパーセントだけ」→ 倍率・耐性の数値の目は「+12%」だけ（はずれ／回避は文言のまま） */
+    const rowF = ADV_SPECIALS.find((x) => x.key === k) || {};
+    const pctOnly = (rowF.attr || rowF.suit || rowF.res || rowF.allAttr || k === "armorer" || k === "lake") && /^v-?[1-9]\d*$/.test(key || "");
+    playTileFx(k, key, pctOnly ? null : ((descOf && descOf[key]) || (S.desc[k] || {})[key] || null), null, su && TFX_SUIT_COL[su]);
     const say = (extra) => setLog((l) => [...l, `【${S.name[k]}】${(descOf && descOf[key]) || (S.desc[k] || {})[key] || ""}${extra || ""}`]);
     const row = ADV_SPECIALS.find((x) => x.key === k) || {};
     /* ★ 数値の目（v＋値）。値は%（耐性は点）。⚠️ runSpecial の NUM と揃える */
@@ -99812,6 +100456,7 @@ function AdventurePanel({ lang, items, onItem }) {
         }
       }
     } else if (k === "clover") { if (key === "plus") modRun((m) => ({ ...m, reroll: (m.reroll || 0) + 1 })); say(); }
+    else if (k === "train") { const d = key === "t100" ? 1 : key === "t50" ? 0.5 : 0.3; modRun((m) => ({ ...m, expMul: (m.expMul || 0) + d })); say(); }
     else if (k === "lost") { if (key === "minus") modRun((m) => ({ ...m, spins: (m.spins || 0) - 1 })); say(); }
     else if (k === "cannon") {
       const d = key === "hit8" ? 0.08 : key === "hit4" ? 0.04 : 0;
@@ -99924,6 +100569,7 @@ function AdventurePanel({ lang, items, onItem }) {
       }
     }
     else if (k === "fruit") opts = [O("p10", 2), O("p5", 2), O("m5", 1)];
+    else if (k === "train") opts = [O("t30", 2), O("t50", 2), O("t100", 1)];
     else if (k === "lake") opts = [O("c20", 1), O("c10", 2), O("none", 1)];
     else if (k === "shufM" || k === "shufP") opts = [O("s1", 2), O("s2", 2), O("s3", 1)];
     else if (k === "healer") {
@@ -99937,7 +100583,7 @@ function AdventurePanel({ lang, items, onItem }) {
     /* ★ 選択の札は三択を開く（openPick） */
     if (k === "pick") { openPick(nd); return; }
     /* ★ 幸運の蜘蛛（ADV_SPIDER_RATE の注）。回さずに一つ持つ */
-    if (k === "spider") { modRun((m0) => ({ ...m0, spider: (m0.spider || 0) + 1 })); setLog((l) => [...l, a.sp.spiderGot]); return; }
+    if (k === "spider") { modRun((m0) => ({ ...m0, spider: (m0.spider || 0) + 1 })); setLog((l) => [...l, a.sp.spiderGot]); playTileFx("spider", null, a.sp.name.spider, 1); return; }
     const quietFood = () => setLog((l) => [...l, `【${a.sp.name[k]}】${a.sp.nothing}`]);
     const m = runModRef.current;
     const S = a.sp;
@@ -99978,10 +100624,9 @@ function AdventurePanel({ lang, items, onItem }) {
         modRun((m2) => ({ ...m2, gmRun: [...(m2.gmRun || []), d.id] }));
         const nm = lang === "ja" ? d.name : d.en;
         setLog((l) => [...l, `【${S.name[k]}】${GT.gotLog(nm)}`]);
+        playTileFx(k, null, "★".repeat(d.tier), 1);
         const gid = Date.now();
         setGmGot({ d, ...r, id: gid });
-        /* ⚠️ 道の途中なので短め（次のマスのルーレットに被らないように） */
-        timers.current.push(setTimeout(() => setGmGot((v) => (v && v.id === gid ? null : v)), 2500));
       };
       if (opts2.length === 1) { give(opts2[0].d); return; }
       const optsF = opts2.map((o) => ({ key: o.d.id, w: o.w, label: "★".repeat(o.tier), desc: `${"★".repeat(o.tier)} ${lang === "ja" ? o.d.name : o.d.en}` }));
@@ -99999,6 +100644,7 @@ function AdventurePanel({ lang, items, onItem }) {
         desc: key === "hurt" ? S.bearDesc.hurt(hurtP) : S.bearDesc[key] }));
       const say2 = (txt) => setLog((l) => [...l, `【${S.name[k]}】${txt}`]);
       guardBad(k, "sp", optsBr, (o) => {
+        playTileFx("bear", o.key, S.bearOpt[o.key] || null);
         if (o.key === "calm") { say2(S.bearDesc.calm); return; }
         if (o.key === "hurt") { setHp((v) => Math.max(1, Math.round(v * (1 - hurtP / 100)))); say2(S.bearDesc.hurt(hurtP)); return; }
         if (o.key === "fight") {
@@ -100057,8 +100703,10 @@ function AdventurePanel({ lang, items, onItem }) {
     const NUM = k === "cannon" ? null : advNumOf(k, !!su);
     if (NUM) {
       const lab = numLab(k, suNm);
-      NUM.forEach(([p]) => { descOf[`v${p}`] = (p ? S.pct(lab, p) : S.nothing) + (k === "kaki" ? S.kakiPlus(ADV_KAKI_MAGIC) : ""); });
-      const optsN = NUM.map(([p, w]) => ({ key: `v${p}`, w, label: p ? `${p > 0 ? "+" : "−"}${Math.abs(p)}` : (S.opt.none || "—"), desc: descOf[`v${p}`] }));
+      /* ⚠️ 2026-10-10 Aki：0 の目は「はずれ」。悪いマス（霧など）で悪い効果が無かったときは「回避」 */
+      const zero = ADV_BAD_TILES.indexOf(k) >= 0 ? S.dodge : S.nothing;
+      NUM.forEach(([p]) => { descOf[`v${p}`] = (p ? S.pct(lab, p) : zero) + (k === "kaki" ? S.kakiPlus(ADV_KAKI_MAGIC) : ""); });
+      const optsN = NUM.map(([p, w]) => ({ key: `v${p}`, w, label: p ? `${p > 0 ? "+" : "−"}${Math.abs(p)}` : zero, desc: descOf[`v${p}`] }));
       guardBad(k, "sp", optsN, (o) => applySpecial(k, o.key, [], su, descOf), k, S.name[k]);
       return;
     }
@@ -100111,7 +100759,9 @@ function AdventurePanel({ lang, items, onItem }) {
         const lab = numLab(x.key, su ? suitLabel(su, lang) : "");
         /* ★ 代償（ADV_PICK_COST_RATE の注） */
         let cost = null, pv = p;
-        if (Math.random() < ADV_PICK_COST_RATE) {
+        /* ⚠️ 2026-10-12 Aki「柿がユニークになってない」→ 柿の木はユニーク（段なし・代償なし。値の段は内側で引くだけ） */
+        const uniq = x.key === "kaki";
+        if (!uniq && Math.random() < ADV_PICK_COST_RATE) {
           /* ★ 同じ系統から（ADV_PICK_OPP の注） */
           const any = (l2) => (l2.length ? l2[Math.floor(Math.random() * l2.length)] : null);
           let tp = null, key = null;
@@ -100146,10 +100796,10 @@ function AdventurePanel({ lang, items, onItem }) {
         }
         const band = advPickBand(pv);
         /* ★ 2026-10-10 Aki：札は「腐食耐性 大」の形（数値は書かない） */
-        const eff = `${pickLab(x.key, su ? suitLabel(su, lang) : "")} ${S.pl.size[tier]}`;
+        const eff = uniq ? pickLab(x.key, "") : `${pickLab(x.key, su ? suitLabel(su, lang) : "")} ${S.pl.size[tier]}`;
         /* ⚠️ 代償は「代償：瘴気耐性 小」の形。大きさは札の段の一つ下（最低は小） */
         if (cost) cost.short = `${pickCostLab(cost)} ${S.pl.size[Math.max(1, Math.min(4, tier - 1))]}`;
-        return { kind: x.key, num: true, tier, p: pv, su, eff, band, lab, cost };
+        return { kind: x.key, num: true, tier: uniq ? 0 : tier, p: pv, su, eff, band, lab, cost };
       }
       /*
         ⚠️⚠️ 2026-10-10 Aki「マス効果の説明がほとんど『ルーレットで決まる』になっているのは致命的」。
@@ -100207,6 +100857,18 @@ function AdventurePanel({ lang, items, onItem }) {
         const c = o.cost;
         spinRoulette("sp", optsP, (r) => {
           applySpecial(o.kind, r.key, [], o.su, descOf);
+          /* ★ 代償も演出の札に同時に出す（赤） */
+          /*
+            ⚠️ 2026-10-12 Aki「メリットはパーセントだけなのに代償は説明まであってアンバランス」
+            → 代償も印＋「−3%」だけ（赤）。属性・溜まり・耐性は盤の左上の札と同じ印。回復量・最大HPは短い名前（印が無いので）。
+          */
+          if (c) {
+            const DM = c.type === "charge" ? DECK_MARKS[c.key] : null;
+            const ic = c.type === "attr" ? <AttrGlyph k={c.key} size={14} /> : c.type === "res" ? <ResMark k={c.key} size={14} />
+              : DM ? <DM.Icon size={14} color={DM.color} strokeWidth={2.4} /> : null;
+            const subEl = <span className="tfx-sub-in">{ic || <em>{pickCostLab(c)}</em>}{`−${c.v}%`}</span>;
+            setTileFx((f) => (f ? { ...f, sub: subEl } : f));
+          }
           if (c) {
             if (c.type === "attr") addAttr(c.key, -c.v / 100);
             else if (c.type === "charge") addCharge(c.key, -c.v / 100);
@@ -100215,7 +100877,7 @@ function AdventurePanel({ lang, items, onItem }) {
             else addMaxHp(-c.v / 100);
             setLog((l) => [...l, `【${S.name[o.kind] || o.kind}】${S.pickCost}：${c.text}`]);
           }
-        }, o.kind, `${S.name[o.kind] || o.kind}（${S.pickTier[o.tier]}）`);
+        }, o.kind, `${S.name[o.kind] || o.kind}（${o.tier ? S.pickTier[o.tier] : S.pickBet}）`);
       } else runSpecial({ ...of.nd, kind: o.kind });
     }, ms(byAuto ? 520 : 380)));
   };
@@ -100284,8 +100946,9 @@ function AdventurePanel({ lang, items, onItem }) {
         const after = runMaxOf(runModRef.current);
         if (after > before) setHp((v) => (v <= 0 ? v : Math.min(after, v + (after - before))));
         setLog((l) => [...l, S.boostLog(k)]);
+        playTileFx("boost", o.key, `×${k}`, 1);
         if (andThen) andThen();
-      }, null, S.boostTitle);
+      }, "bossWheel", S.boostTitle);
   };
   const boostPending = toBossHere && !runMod.boost;
   if (boostPending && !over && !busy && !roulBusy && phase === "idle") {
@@ -100312,7 +100975,11 @@ function AdventurePanel({ lang, items, onItem }) {
   /* その探索のあいだ効いている変化の札（盤の左上）。⚠️ 良いものは緑、悪いものは赤 */
   /* 変化の札。⚠️ lab のあるものは一行まとめ（中の値ごとに＋は緑・−は赤） */
   const runChipEl = (c, key) => (c.items
-    ? <span key={key} className="line"><b>{c.lab}</b>{c.items.map((x, j) => <i key={j} className={x.none ? "none" : x.rare ? "rare" : x.good ? "up" : "down"}>{x.t}</i>)}</span>
+    ? <span key={key} className="line"><b>{c.lab}</b>{c.items.map((x, j) => (
+        <i key={j} className={`${x.none ? "none" : x.rare ? "rare" : x.good ? "up" : "down"}${x.tip ? " tip" : ""}`}
+          title={x.tip || x.nm || undefined}
+          onClick={x.tip ? (e) => { e.stopPropagation(); showChipTip(x.tip); } : undefined}
+          onPointerDown={x.tip ? (e) => e.stopPropagation() : undefined}>{x.ic}{x.t}</i>))}</span>
     : <span key={key} className={c.rare ? "rare" : c.good ? "good" : ""}>{c.t}</span>);
   const runChips = (() => {
     const m = runMod, C = a.runTag, out = [];
@@ -100323,6 +100990,17 @@ function AdventurePanel({ lang, items, onItem }) {
       ★ 値は合計（虹の丘・鎧職人の分も足した実際の値）を属性ごとに。0は出さない。
     */
     const pc = (p) => `${p > 0 ? "+" : "−"}${Math.abs(p)}%`;
+    /*
+      ★ 2026-10-11 Aki「増幅・耐性・魔法・物理のマスバフは＋−を書かず印だけ（全は全でいい）。印に合わせる／触ると簡潔な説明（耐性だけ）」。
+      ⚠️ 値の向きは色（緑＝上がった・赤＝下がった）と印の左の数字。名前は title（読み上げ用）に残す。
+    */
+    const pa = (p) => `${Math.abs(p)}%`;
+    /* 耐性の説明：「腐食耐性：選んだカードが不発になる妨害を防ぐ」。⚠️ 括弧の中（効き目）だけを使う */
+    const resTipOf = (k2) => {
+      const nm = a.sp.opt[k2] || k2, w = String((a.sp.resWhat || {})[k2] || "");
+      const inner = (/[（(]([^）)]+)[）)]/.exec(w) || [])[1] || w;
+      return lang === "ja" ? `${nm}：${inner}妨害を防ぐ` : `${nm}: resists the hindrance where ${inner.toLowerCase()}`;
+    };
     /* ⚠️ slot … 盤の上の固定の三行（耐性・物理・魔法）。空でも行は出す（位置が動かないように） */
     /* ⚠️ 2026-10-05 Aki「効果が大きいバフを左に（考えやすいように）」：値の大きい順（マイナスは右端） */
     const line = (lab, items, slot) => { if (items.length || slot) out.push({ lab, items: items.slice().sort((x, y) => (y.v || 0) - (x.v || 0)), slot }); };
@@ -100331,25 +101009,26 @@ function AdventurePanel({ lang, items, onItem }) {
       ⚠️ 虹の丘の分は「全」として黄色で先に出し、属性ごとの値からは引く（同じ分を二度見せない）。
     */
     /* ⚠️ 柿の木の分（rare.magic）は魔法の行だけの「全」に足す */
-    const rA0 = ((m.rare || {}).attr) || 0, rR = ((m.rare || {}).res) || 0;
+    // ⚠️ 全の分（rare）は属性・耐性ごとの値に既に入っている（引かない）
     const attrLine = (lab, keys, slot) => {
-      const rA = rA0 + (slot === "magic" ? (((m.rare || {}).magic) || 0) : 0);
+      /* ★ 2026-10-11 Aki「『全』の表示はなくして、全UPはそれぞれの属性に分配して全部表示」→ 全の分は引かずに、属性ごとの合計で出す */
+      const rA = 0;
       const it = keys.filter((k2) => Math.abs(((m.attr || {})[k2] || 0) - rA) > 0.0049)
-        .map((k2) => { const v = Math.round(((m.attr || {})[k2] - rA) * 100); return { t: `${a.attrShort[k2]}${pc(v)}`, good: v > 0, v }; });
-      if (rA > 0.0049) it.unshift({ t: `${C.all}${pc(Math.round(rA * 100))}`, rare: true, v: Math.round(rA * 100) });
+        .map((k2) => { const v = Math.round(((m.attr || {})[k2] - rA) * 100); return { ic: <AttrGlyph k={k2} size={10} />, t: pa(v), good: v > 0, v, nm: a.attrShort[k2] }; });
       line(lab, it, slot);
     };
     attrLine(C.grpMagic, ATTR_KEYS.filter((k2) => PHYS_KEYS.indexOf(k2) < 0), "magic");
     attrLine(C.grpPhys, PHYS_KEYS, "phys");
     line(C.grpCharge, SP_SUITS.filter((k2) => Math.abs((m.charge || {})[k2] || 0) > 0.0049)
-      .map((k2) => { const v = Math.round(m.charge[k2] * 100); return { t: `${suitLabel(k2, lang)}${pc(v)}`, good: v > 0, v }; }), "charge");
+      .map((k2) => { const v = Math.round(m.charge[k2] * 100); const DM = DECK_MARKS[k2]; return { ic: DM ? <DM.Icon size={10} color={DM.color} strokeWidth={2.4} /> : null, t: DM ? pa(v) : `${suitLabel(k2, lang)}${pc(v)}`, good: v > 0, v, nm: suitLabel(k2, lang) }; }), "charge");
     if (m.heal) out.push({ t: C.heal(Math.round(m.heal * 100)), good: m.heal > 0 });
     if (m.potHeal) out.push({ t: C.potHeal(Math.round(m.potHeal * 100)), good: true });
     if (m.cards) out.push({ t: C.cards(m.cards), good: m.cards > 0 });
     {
-      const it = RUN_RES_KEYS.filter((k2) => Math.abs(((m.res || {})[k2] || 0) - rR) > 0.04)
-        .map((k2) => { const d = Math.round((m.res[k2] - rR) * 10) / 10; return { t: `${String(a.sp.opt[k2] || k2).replace(/耐性$| res$/, "")}${d > 0 ? "+" : "−"}${Math.abs(d)}%`, good: d > 0, v: d }; });
-      if (rR > 0.04) it.unshift({ t: `${C.all}+${Math.round(rR * 10) / 10}%`, rare: true, v: rR });
+      /* ★ 2026-10-11 全状態異常耐性も6種へ分配して出す（「全」の札は出さない） */
+      const it = RUN_RES_KEYS.filter((k2) => Math.abs(((m.res || {})[k2] || 0)) > 0.04)
+        .map((k2) => { const d = Math.round(m.res[k2] * 10) / 10; return { ic: <ResMark k={k2} size={10} />, t: `${Math.abs(d)}%`, good: d > 0, v: d,
+          nm: a.sp.opt[k2] || k2, tip: resTipOf(k2) }; });
       line(C.grpRes, it, "res");
     }
     if (m.bossCut) out.push({ t: C.bossCut(Math.round(m.bossCut * 100)), good: true });
@@ -100359,6 +101038,7 @@ function AdventurePanel({ lang, items, onItem }) {
     /* ★ 持ち物（四つ葉の引き直し・幸運の蜘蛛）。黄色 */
     if (m.reroll > 0) out.push({ t: C.reroll(m.reroll), good: true, rare: true });
     if (m.spider > 0) out.push({ t: C.spider, good: true, rare: true });
+    if (m.expMul > 0) out.push({ t: lvT(lang).expMul(Math.round((1 + m.expMul) * 10) / 10), good: true, rare: true });
     return out;
   })();
   /*
@@ -100699,6 +101379,7 @@ function AdventurePanel({ lang, items, onItem }) {
           */
           setUsedNodes((v) => [...v, nd.key]);
           guardBad("event", "event", EVENT_FX.map((e) => ({ key: e.key, w: e.w, label: a.evName[e.key] })), (o) => {
+            playTileFx("event", o.key, a.evName[o.key] || null);
             const mx = runMaxOf(runModRef.current);
             if (o.key === "hp") { const d = Math.round(mx * 0.15); setHp((v) => Math.max(1, v - d)); setLog((l) => [...l, a.evLog.hp(d)]); }
             else if (o.key === "pot") { setCarryPot((v) => Math.max(0, v - 1)); setLog((l) => [...l, a.evLog.pot]); }
@@ -100866,7 +101547,12 @@ function AdventurePanel({ lang, items, onItem }) {
               新しい品を引いたときの嬉しさが薄れる。
           */
           if (got) {
-            if (got.fresh) setMeiGot(got);
+            if (got.fresh) {
+              const mid = Date.now();
+              setMeiGot({ ...got, id: mid });
+              /* ⚠️ timers.current には入れない（盤の掃除で消えずに残るのを防ぐ）。GM_GOT_MS の注 */
+              setTimeout(() => setMeiGot((v) => (v && v.id === mid ? null : v)), GM_GOT_MS);
+            }
             setLog((l) => [...l, where + (got.fresh ? a.meiNew(got.name) : a.meiAgain(got.name, got.count))]);
           }
         } else if (nd && nd.kind === "gate") {
@@ -100914,7 +101600,7 @@ function AdventurePanel({ lang, items, onItem }) {
     setRoul(null); setSpinsUsed(0); setMapCurse({});
     setRunMod(eatPack(advRun0())); setZakoKind(null); zakoKindRef.current = null; setGoldRun(null);
     /* ⚠️ 知らせも消す（前の回の料理の知らせが残ると、次の回の操作を塞ぐ） */
-    setGmGot(null); setTkGot(null); setMeiGot(null);
+    setGmGot(null); setTkGot(null); setMeiGot(null); setLvUp(null);
   };
   return (
     <div className="adv-wrap">
@@ -100966,7 +101652,8 @@ function AdventurePanel({ lang, items, onItem }) {
           </div>
         ))}
       </div>
-      <div className="adv-iso-wrap" ref={mapRef}>
+      <div className={`adv-iso-wrap${tileFx ? (tileFx.tone < 0 ? " fx-bad" : tileFx.tone > 0 ? " fx-good" : " fx-none") : ""}`} ref={mapRef}>
+      <TileFx fx={tileFx} />
       {/* ★ 画面の型（SP／PC）の切り替え。戦闘の左上と同じボタン・同じ設定（2026-10-05 Aki） */}
       <button type="button" className="bt-layout adv-layout" title={a.layoutTip || ""}
         onClick={() => { const v = advLayout === "sp" ? "pc" : "sp"; setAdvLayout(v); try { localStorage.setItem(LS_BT_LAYOUT, v); } catch (e) { /* */ } }}>
@@ -101076,7 +101763,7 @@ function AdventurePanel({ lang, items, onItem }) {
                     <span className="adv-pick-nm">{a.sp.name[o.kind] || o.kind}</span>
                     <span className="adv-pick-eff">{o.eff}</span>
                     {(o.cost || o.costShow) && <span className="adv-pick-cost">{a.sp.pickCost}：{o.cost ? (o.cost.short || o.cost.text) : o.costShow}</span>}
-                    <span className="adv-pick-tier">{o.num ? a.sp.pickTier[o.tier] : a.sp.pickBet}</span>
+                    <span className="adv-pick-tier">{o.num && o.tier ? a.sp.pickTier[o.tier] : a.sp.pickBet}</span>
                   </button>
                 );
               })}
@@ -101109,6 +101796,7 @@ function AdventurePanel({ lang, items, onItem }) {
         ★ 上は四行（一行に収め、はみ出す分は右端で薄く切る）。行を詰めて、前の三行ぶんの高さに収める。
         ★ ほかの変化・封印は下（ルーレット残りの上）へ。
       */}
+      {chipTip && <div key={chipTip.id} className="adv-chiptip" role="status">{chipTip.t}</div>}
       <div className="adv-curse">
         {["charge", "res", "magic", "phys"].map((sl) => {
           const c = runChips.find((x) => x.slot === sl);
@@ -101187,6 +101875,20 @@ function AdventurePanel({ lang, items, onItem }) {
       </button>
       <span className="adv-weather-tag">{a.weatherName[weather]}</span>
       <div className="adv-hp-tag">
+        {/*
+          ★ 2026-10-12 Aki「MAPのHPの左横に獲得した宝箱も表示して（レアリティによって色が違うように）」。
+          ★ この探索で拾って、まだ箱のまま残っているもの（盗まれた・溢れた箱は出ない）。段の高い順。6個を超えたら「+n」。
+        */}
+        {(() => {
+          const cs = runChestsAlive(runMod.chests).slice().sort((x, y) => (y.hi || lmcTierOf(y.tier).star) - (x.hi || lmcTierOf(x.tier).star));
+          if (!cs.length) return null;
+          return (
+            <span className="adv-hp-chests" aria-label={`${cs.length}`}>
+              {cs.slice(0, 6).map((c) => <EquipIcon key={c.id} item={{ tier: c.tier || "bronze", key: "chest" }} size={16} />)}
+              {cs.length > 6 && <i>+{cs.length - 6}</i>}
+            </span>
+          );
+        })()}
         <span className="adv-hp-bar">
           <span className="adv-hp-fill"
             style={{ width: `${Math.max(0, (hp / statsOf(rank).maxHP) * 100)}%` }} />
@@ -101273,12 +101975,25 @@ function AdventurePanel({ lang, items, onItem }) {
           </div>
         </div>
       )}
-      {gmGot && (
-        <div className="mei-pop" key={gmGot.id} onClick={() => setGmGot(null)} onPointerUp={(e) => { if (e.target === e.currentTarget) setGmGot(null); }}>
+      {lvUp && (
+        <div className="mei-pop lv-pop" key={lvUp.id} onClick={() => setLvUp(null)}>
           <div className="mei-pop-in" onClick={(e) => e.stopPropagation()}>
+            <b className="lv-pop-t">{lvT(lang).up}</b>
+            <span className="lv-pop-lv">{lvT(lang).upLead(lvUp.lv)}</span>
+            {Object.keys(lvUp.sheets).filter((k2) => lvUp.sheets[k2] > 0).map((k2) => (
+              <span key={k2} className="lv-pop-line">{lvT(lang).upPts((a.zodiac && a.zodiac[k2 - 1]) || `★${k2}`, lvUp.sheets[k2])}</span>
+            ))}
+            {lvUp.eqUp > 0 && <span className="lv-pop-line eq">{lvT(lang).upEq(lvUp.eqUp)}</span>}
+            <button type="button" className="adv-back win" onClick={() => setLvUp(null)}>{a.close}</button>
+          </div>
+        </div>
+      )}
+      {gmGot && (
+        /* ★ 2026-10-12 Aki：一瞬だけ出して消える（閉じるボタンなし・操作を止めない）。GM_GOT_MS の注 */
+        <div className="mei-pop gm-quick" key={gmGot.id} style={{ "--gmq": `${GM_GOT_MS}ms` }}>
+          <div className="mei-pop-in">
             <span className="mei-pop-tag">{gmGot.fresh ? a.meiFirst : gourmetT(lang).got}</span>
             <GourmetCard d={gmGot.d} lang={lang} big count={gmGot.count} seen />
-            <button type="button" className="adv-back win" onPointerUp={(e) => { e.stopPropagation(); setGmGot(null); }} onClick={(e) => { e.stopPropagation(); setGmGot(null); }}>{a.close}</button>
           </div>
         </div>
       )}
@@ -101416,6 +102131,8 @@ function AdventurePanel({ lang, items, onItem }) {
             const zk = zakoKindRef.current;
             zakoKindRef.current = null; setZakoKind(null);
             if (win) setZakoWins((v) => v + 1);
+            /* ★ 経験値：雑魚 ×1、特別な雑魚 ×2 */
+            if (win) gainExp(lvExpBase(laneStar) * (zk ? 2 : 1));
             if (win && zk) {
               /* ⚠️ ヒグマだけ★+3 */
               const ch = pushRunChest(laneStar + (zk === "higuma" ? 3 : 2));
@@ -101489,6 +102206,8 @@ function AdventurePanel({ lang, items, onItem }) {
                 着いただけで記録すると、負けても踏破になる。
             */
             if (win) grantTicket(TICKET_DROP.boss, isWardStage(pref, area) ? 12 : starOfStage(rank, walking));
+            /* ★ 経験値：主 ×5。修行の札の倍率はボスを倒したときだけ効く */
+            if (win) gainExp(lvExpBase(laneStar) * 5 * (1 + (runModRef.current.expMul || 0)));
             /* ★ ご当地グルメ。その区分の三品から一品（GOURMET_DROP） */
             if (win) {
               const gd = rollGourmet(pref, area);
@@ -101498,8 +102217,6 @@ function AdventurePanel({ lang, items, onItem }) {
                 setLog((l) => [...l, GT.gotLog(lang === "ja" ? gd.name : gd.en)]);
                 const gid = Date.now();
                 setGmGot({ d: gd, ...r, id: gid });
-                /* ⚠️ 押さなくても4秒で閉じる（オート・放置の邪魔をしない） */
-                timers.current.push(setTimeout(() => setGmGot((v) => (v && v.id === gid ? null : v)), 4000));
               }
             }
             if (win) {
@@ -101521,14 +102238,12 @@ function AdventurePanel({ lang, items, onItem }) {
         ⚠️ 押すまで残す。すぐ消すと読む前に流れる。
         ⚠️ 盤を塞がない位置に出す（画面の中央に重ねて、押せば閉じる）。
       */}
+      {/* ★ 2026-10-12 Aki「料理はどのタイミングで獲得しても勝手に消える。閉じるはいらない」→ 名産品の札も同じく一瞬だけ */}
       {meiGot && (
-        <div className="mei-pop" onClick={() => setMeiGot(null)}>
-          <div className="mei-pop-in" onClick={(e) => e.stopPropagation()}>
+        <div className="mei-pop gm-quick" key={meiGot.id || meiGot.name} style={{ "--gmq": `${GM_GOT_MS}ms` }}>
+          <div className="mei-pop-in">
             {meiGot.fresh && <span className="mei-pop-tag">{a.meiFirst}</span>}
             <MeiCard it={meiGot} pref={meiGot.pref} lang={lang} big count={meiGot.count} />
-            <button type="button" className="adv-back win" onClick={() => setMeiGot(null)}>
-              {a.close}
-            </button>
           </div>
         </div>
       )}
@@ -101647,6 +102362,8 @@ function AdventurePanel({ lang, items, onItem }) {
                 */
                 modRun((m) => ({ ...m, chests: [...(m.chests || []), cb.id] }));
                 setLog((l) => [...l, a.advChestHi ? a.advChestHi(cb.star) : ""]);
+                /* ★ 経験値：制覇の札の評価（可1・良1.5・優2・秀3・極5）。修行の札の倍率も乗る */
+                gainExp(lvExpBase(laneStar) * (LV_GRADE_MUL[seek] || 1) * (1 + (runModRef.current.expMul || 0)));
                 return cb;
               }} />
           )}
@@ -101679,7 +102396,7 @@ function AdventurePanel({ lang, items, onItem }) {
                 <button className="draw-btn adv-go" onClick={restart}>
                   <span className="adv-go-shine" />
                   <Sparkles size={18} />{t.advAgain}
-                  {auto && <AutoCount sec={5} onGo={restart} />}
+                  {auto && !conq && <AutoCount sec={5} onGo={restart} />}
                 </button>
                 <button type="button" className="adv-back"
                   onClick={() => { setStage(null); setPool(null); setPicked([]); goPhase("idle"); }}>
@@ -101691,8 +102408,8 @@ function AdventurePanel({ lang, items, onItem }) {
         </div>
       )}
       {conq && (
-        <ConquerShow key={conq.id} lang={lang} ids={conq.ids} auto={auto} stage={walking}
-          onDone={() => { setConq(null); restart(); setStage(null); }} />
+        <ConquerShow key={conq.id} lang={lang} ids={conq.ids} auto={auto} stage={walking} lose={!!conq.lose}
+          onDone={() => { if (conq.lose) { setConq(null); return; } setConq(null); restart(); setStage(null); }} />
       )}
       {/*
         【ログ】2026-09-29 Aki：「いま居るのは・行ける先・中心から何環め・移動履歴・何かが立ちふさがった、も全部ログとして下に分離」。
@@ -121299,7 +122016,8 @@ export default function TarotDraw() {
           ★ どの端末でも、盤の中の動きは全部止める。駒の移動（transition）と視点の滑り（transition）は残る。
           ⚠️ 天気の粒（雨・雪）も止めると宙に浮いた点になるので、層ごと隠す（天気の名前の札は残す）。
         */
-        .adv-iso-wrap *, .adv-iso-wrap *::before, .adv-iso-wrap *::after { animation: none !important; }
+        /* ⚠️⚠️ 2026-10-10：マスの効果の演出（.tfx）だけは止めない。止めると「静止した画面に文字だけ」になる（Aki「滑稽」） */
+        .adv-iso-wrap *:not(.tfx):not(.tfx *), .adv-iso-wrap *:not(.tfx *)::before, .adv-iso-wrap *:not(.tfx *)::after { animation: none !important; }
         .adv-iso-wrap .adv-weather { display: none !important; }
         .adv-roul { position: absolute; inset: 0; z-index: 6; display: flex; align-items: center; justify-content: center;
           background: rgba(8,6,16,0.45); pointer-events: none; }
@@ -121337,6 +122055,15 @@ export default function TarotDraw() {
         span.line > b { font-weight: 700; color: #FFE08A; margin-right: 1px; }
         span.line > i { font-style: normal; color: #B8FFCC; white-space: nowrap; }
         span.line > i.down { color: #FFB8C6; }
+        /* ★ 印＋数字（2026-10-11）。⚠️ 印は文字の高さに合わせる */
+        span.line > i { display: inline-flex; align-items: center; gap: 1px; }
+        span.line > i > svg { flex: none; display: block; }
+        /* ★ 耐性の印は触れると説明が出る。⚠️ 盤の札の列は pointer-events:none なので、ここだけ受ける */
+        span.line > i.tip { pointer-events: auto; cursor: help; text-decoration: underline dotted rgba(237,228,255,0.45); text-underline-offset: 2px; }
+        .adv-chiptip { position: absolute; left: 8px; right: 64px; top: 108px; z-index: 7; pointer-events: none; font-size: 10.5px; line-height: 15px;
+          padding: 4px 8px; border-radius: 8px; color: #F4EEFF; background: rgba(24,18,44,0.95); border: 1px solid rgba(190,170,255,0.6);
+          box-shadow: 0 4px 12px rgba(0,0,0,0.4); animation: advChipTip 2.6s ease both; }
+        @keyframes advChipTip { 0% { opacity: 0; transform: translateY(-3px); } 8%, 82% { opacity: 1; transform: none; } 100% { opacity: 0; } }
         /* ★ レアなマスの効果は黄（悪いのは赤、ふつうは緑）。⚠️ 色だけに頼らず「全」「ボス確定」と書いてある */
         span.line > i.rare { color: #FFE27A; font-weight: 700; }
         .adv-curse span.rare, .adv-runres-chips span.rare { color: #FFF4C8; background: rgba(110,84,14,0.9); border-color: rgba(255,214,90,0.8); }
@@ -121411,6 +122138,18 @@ export default function TarotDraw() {
         .adv-layout { z-index: 5; }
         .adv-step { margin-top: 2px; }
         .adv-step-hint { margin: 6px 0 0; font-size: 11px; line-height: 1.4; text-align: center; color: rgba(237,228,255,0.6); }
+        /*
+          ⚠️ 2026-10-12 Aki「スマホで手動のとき『進む』が下端にないので、スワイプすると地図の方を動かしてしまう」。
+          ★ スマホ幅では「進む／ルーレットを回す」を画面の下端（下のタブの上）に固定する。親指で押せて、地図に触れずに済む。
+        */
+        /* ★ 2026-10-12 Aki「下端って操作する人間視点の下端」→ 画面（手で持った端末）の下端に固定。スクロール位置に関係なく親指の位置にある */
+        @media (max-width: 760px) {
+          .adv-step { position: fixed; left: 50%; transform: translateX(-50%);
+            bottom: calc(12px + env(safe-area-inset-bottom, 0px)); z-index: 40; margin: 0;
+            width: min(260px, calc(100vw - 140px)); }
+          .adv-step .adv-go { width: 100%; box-shadow: 0 6px 18px rgba(0,0,0,0.55); }
+          .adv-step-hint { display: none; }
+        }
         .adv-iso-hero { will-change: transform; }
         .adv-iso-over { position: absolute; inset: 0; width: 100%; height: 100%; display: block; pointer-events: none; }
         /* ★ 画面の外にあるあいだは描かない。⚠️ 窓の大きさは aspect-ratio で決まるので、中身を飛ばしても高さは変わらない */
@@ -128584,6 +129323,141 @@ export default function TarotDraw() {
         .gm-note { opacity: 0.75; }
         .gm-pack-btn { font-size: 10px; padding: 3px 8px; }
         .gm-slots { margin: 4px 2px 10px; }
+        /* ---- マスの効果の演出（TileFx） ---- */
+        .tfx { position: absolute; inset: 0; z-index: 8; pointer-events: none; display: flex; align-items: center; justify-content: center; overflow: hidden; }
+        .tfx-stage { position: relative; width: 150px; height: 150px; transform: scale(1.45); }
+        /* ★ 踏んだマスの絵：下から跳び出し、回りながら膨らみ、弾けて消える */
+        .tfx-glyph { position: absolute; left: 50%; top: 50%; width: 120px; height: 120px; margin: -60px 0 0 -60px; overflow: visible;
+          filter: drop-shadow(0 6px 10px rgba(0,0,0,0.6)) drop-shadow(0 0 14px var(--c)); animation: tfxGlyph 1.25s cubic-bezier(0.2,0.9,0.3,1) both; }
+        @keyframes tfxGlyph {
+          0% { transform: translateY(70px) scale(0.2) rotate(-25deg); opacity: 0; }
+          22% { transform: translateY(-18px) scale(1.25) rotate(8deg); opacity: 1; }
+          34% { transform: translateY(0) scale(1.0) rotate(0); }
+          62% { transform: translateY(-6px) scale(1.08) rotate(0); opacity: 1; }
+          100% { transform: translateY(-40px) scale(1.9) rotate(0); opacity: 0; }
+        }
+        .tfx.bad .tfx-glyph { animation-name: tfxGlyphBad; filter: drop-shadow(0 6px 10px rgba(0,0,0,0.6)) drop-shadow(0 0 16px #FF4A3A); }
+        @keyframes tfxGlyphBad {
+          0% { transform: translateY(-80px) scale(1.6) rotate(15deg); opacity: 0; }
+          20% { transform: translateY(0) scale(1.1) rotate(0); opacity: 1; }
+          30% { transform: translateY(6px) scale(1.15, 0.9); }
+          40% { transform: translateY(0) scale(1); }
+          70% { transform: translateY(0) scale(1); opacity: 1; filter: grayscale(0.6) drop-shadow(0 0 16px #FF4A3A); }
+          100% { transform: translateY(30px) scale(0.6) rotate(-20deg); opacity: 0; }
+        }
+        /* 色の波：盤全体にやわらかく一度だけ広がる（点滅させない） */
+        .tfx-wash { position: absolute; inset: -20%; background: radial-gradient(circle at 50% 50%, var(--c), transparent 60%); opacity: 0;
+          animation: tfxWash 1s ease-out 0.15s both; mix-blend-mode: screen; }
+        .tfx.bad .tfx-wash { mix-blend-mode: multiply; background: radial-gradient(circle at 50% 50%, transparent 20%, rgba(120,0,20,0.7) 90%); }
+        @keyframes tfxWash { 0% { opacity: 0; transform: scale(0.4); } 35% { opacity: 0.55; } 100% { opacity: 0; transform: scale(1.3); } }
+        /* 盤ごと：良い目は一度だけ脈打つ。悪い目は揺れる */
+        .adv-iso-wrap.fx-good { animation: tfxBoardPulse 0.6s ease-out 0.2s both; }
+        .adv-iso-wrap.fx-bad { animation: tfxBoardShake 0.5s ease-in-out 0.2s both; }
+        @keyframes tfxBoardPulse { 0% { transform: scale(1); } 35% { transform: scale(1.025); } 100% { transform: scale(1); } }
+        @keyframes tfxBoardShake { 0%, 100% { transform: translate(0,0); } 20% { transform: translate(-6px, 2px); } 40% { transform: translate(5px, -3px); } 60% { transform: translate(-4px, 2px); } 80% { transform: translate(3px, -1px); } }
+        .tfx-smoke.poison { background: rgba(110,190,70,0.75); }
+        .tfx-shardg { width: 8px; height: 12px; margin: -6px -4px; background: rgba(170,230,255,0.85); clip-path: polygon(50% 0, 100% 60%, 30% 100%, 0 40%);
+          animation: tfxSpark 0.8s ease-out 0.15s both; }
+        .tfx-coin.bottle { width: 12px; height: 18px; border-radius: 4px 4px 6px 6px; background: #E85A8A; border: 2px solid #6A1A3A; }
+        .tfx-stage > i { position: absolute; left: 50%; top: 50%; display: block; }
+        .tfx-tag { position: absolute; left: 50%; top: 50%; transform: translate(-50%, 54px); font-size: 18px; font-weight: 800; letter-spacing: 0.02em; max-width: 92%; text-align: center; line-height: 1.3; white-space: normal !important; display: flex; flex-direction: column; align-items: center;
+          color: var(--c); text-shadow: 0 2px 0 #000, 0 0 10px rgba(0,0,0,0.8); animation: tfxTag 1.2s ease-out 0.25s both; }
+        .tfx.bad .tfx-tag { color: #FF8A7A; }
+        .tfx-sub { display: block; font-size: 14px; color: #FF8A7A; margin-top: 2px; }
+        .tfx-sub-in { display: inline-flex; align-items: center; gap: 3px; }
+        .tfx-sub-in > svg { flex: none; }
+        .tfx-sub-in > em { font-style: normal; font-size: 12px; margin-right: 2px; }
+        @keyframes tfxTag { 0% { opacity: 0; transform: translate(-50%, 90px) scale(0.6); } 25% { opacity: 1; transform: translate(-50%, 70px) scale(1.1); } 70% { opacity: 1; transform: translate(-50%, 60px) scale(1); } 100% { opacity: 0; transform: translate(-50%, 30px) scale(0.9); } }
+        .tfx-ring { width: 20px; height: 20px; margin: -10px 0 0 -10px; border-radius: 50%; border: 3px solid var(--c); box-shadow: 0 0 18px var(--c); animation: tfxRing 0.9s ease-out both; }
+        .tfx-ring.big { border-width: 5px; }
+        @keyframes tfxRing { 0% { transform: scale(0.3); opacity: 1; } 100% { transform: scale(6); opacity: 0; } }
+        .tfx-up { width: 8px; height: 8px; margin: -4px; border-radius: 50%; background: var(--c); box-shadow: 0 0 8px var(--c);
+          left: calc(50% + var(--x)) !important; top: 70% !important; animation: tfxUp 1s ease-out var(--d) both; }
+        .tfx-up.heal { border-radius: 60% 0 60% 0; width: 10px; height: 10px; background: #7AE08E; box-shadow: 0 0 6px #7AE08E; }
+        .tfx-up.steam { background: rgba(255,255,255,0.7); box-shadow: 0 0 10px #fff; width: 12px; height: 12px; }
+        .tfx.bad .tfx-up { background: #FF6A5A; box-shadow: 0 0 8px #FF6A5A; animation-name: tfxDown; top: 20% !important; }
+        @keyframes tfxUp { 0% { transform: translateY(0) scale(0.4); opacity: 0; } 25% { opacity: 1; } 100% { transform: translateY(-90px) scale(1); opacity: 0; } }
+        @keyframes tfxDown { 0% { transform: translateY(0) scale(1); opacity: 0; } 25% { opacity: 1; } 100% { transform: translateY(80px) scale(0.4); opacity: 0; } }
+        .tfx-slash { width: 130px; height: 4px; margin: -2px 0 0 -65px; border-radius: 2px; background: linear-gradient(90deg, transparent, #fff, var(--c), transparent);
+          transform: rotate(-35deg); animation: tfxSlash 0.45s ease-out var(--d) both; }
+        .tfx-slash:nth-child(2) { transform: rotate(25deg); }
+        .tfx-slash:nth-child(3) { transform: rotate(-5deg); }
+        @keyframes tfxSlash { 0% { clip-path: inset(0 100% 0 0); opacity: 1; } 60% { clip-path: inset(0 0 0 0); opacity: 1; } 100% { clip-path: inset(0 0 0 100%); opacity: 0; } }
+        .tfx-shield { width: 70px; height: 80px; margin: -40px 0 0 -35px; clip-path: polygon(50% 0, 100% 18%, 92% 70%, 50% 100%, 8% 70%, 0 18%);
+          background: radial-gradient(circle at 50% 30%, rgba(255,255,255,0.7), var(--c) 60%, transparent 100%); opacity: 0.8; animation: tfxShield 1s ease-out both; }
+        .tfx-shield.s2 { animation-delay: 0.18s; opacity: 0.5; }
+        @keyframes tfxShield { 0% { transform: scale(0.3); opacity: 0; } 30% { transform: scale(1.05); opacity: 0.85; } 100% { transform: scale(1.6); opacity: 0; } }
+        .tfx-arc { width: 120px; height: 60px; margin: -40px 0 0 -60px; border-radius: 120px 120px 0 0; border: 5px solid var(--c); border-bottom: none;
+          transform: scale(calc(0.4 + var(--i) * 0.13)); opacity: 0; animation: tfxArc 1.1s ease-out calc(var(--i) * 50ms) both; }
+        @keyframes tfxArc { 0% { opacity: 0; clip-path: inset(0 100% 0 0); } 40% { opacity: 0.9; clip-path: inset(0 0 0 0); } 100% { opacity: 0; } }
+        .tfx-smoke { width: 46px; height: 46px; margin: -23px; border-radius: 50%; left: calc(50% + var(--x)) !important; filter: blur(6px);
+          background: rgba(120,110,150,0.8); animation: tfxSmoke 1.1s ease-out var(--d) both; }
+        .tfx-smoke.curse { background: rgba(150,70,200,0.75); }
+        @keyframes tfxSmoke { 0% { transform: scale(0.3); opacity: 0; } 40% { opacity: 0.85; } 100% { transform: scale(2.2) translateY(-20px); opacity: 0; } }
+        .tfx-link { width: 16px; height: 10px; margin: -5px -8px; border: 3px solid #C8C8D8; border-radius: 6px;
+          transform: rotate(var(--a)) translateX(46px); animation: tfxLink 1s ease-out both; }
+        @keyframes tfxLink { 0% { opacity: 0; transform: rotate(calc(var(--a) + 90deg)) translateX(70px); } 40% { opacity: 1; transform: rotate(var(--a)) translateX(40px); } 100% { opacity: 0; transform: rotate(var(--a)) translateX(40px); } }
+        .tfx-break { width: 60px; height: 60px; margin: -30px; border-radius: 50%; box-shadow: 0 0 24px #FFF4B0; animation: tfxRing 0.8s ease-out 0.4s both; }
+        .tfx-dash { width: 34px; height: 44px; margin: -22px -17px; border-radius: 40% 40% 20% 20%; background: #2A2030; box-shadow: 0 0 0 2px #6A5A80;
+          animation: tfxDash 0.9s ease-in both; }
+        @keyframes tfxDash { 0% { transform: translateX(-120px) skewX(-10deg); opacity: 0; } 30% { opacity: 1; } 100% { transform: translateX(140px) skewX(-20deg); opacity: 0; } }
+        .tfx-speed { width: 60px; height: 2px; margin-left: -30px; top: var(--y) !important; background: linear-gradient(90deg, transparent, #fff); animation: tfxDash 0.7s ease-in both; }
+        .tfx-roar { width: 40px; height: 40px; margin: -20px; border-radius: 50%; border: 4px solid #FF6A3A; animation: tfxRing 0.9s ease-out both; }
+        .tfx-roar.r2 { animation-delay: 0.25s; }
+        .tfxf-dragon .tfx-stage { animation: tfxShake 0.5s ease-in-out 2; }
+        @keyframes tfxShake { 0%, 100% { transform: translateX(0); } 25% { transform: translateX(-4px); } 75% { transform: translateX(4px); } }
+        .tfx-q { width: 40px; height: 40px; margin: -20px; border-radius: 50%; border: 3px dashed var(--c); animation: tfxSpin 1.1s ease-out both; }
+        .tfx-q.q2 { width: 70px; height: 70px; margin: -35px; animation-direction: reverse; }
+        @keyframes tfxSpin { 0% { transform: rotate(0) scale(0.5); opacity: 0; } 30% { opacity: 1; } 100% { transform: rotate(270deg) scale(1.2); opacity: 0; } }
+        .tfx-claw { width: 6px; height: 90px; margin: -45px -3px; border-radius: 3px; background: linear-gradient(#fff, #FF5A4A); transform: translateX(var(--x)) rotate(20deg);
+          animation: tfxClaw 0.5s ease-out var(--d) both; }
+        @keyframes tfxClaw { 0% { clip-path: inset(0 0 100% 0); opacity: 1; } 60% { clip-path: inset(0 0 0 0); opacity: 1; } 100% { opacity: 0; } }
+        .tfx-icon { width: 54px; height: 54px; margin: -27px; border-radius: 50%; background: radial-gradient(circle, rgba(255,255,255,0.9), var(--c) 55%, transparent 72%);
+          animation: tfxPop 1.1s ease-out both; }
+        .tfx-icon.clover { --c: #6ED65A; } .tfx-icon.web { --c: #DDE6F2; } .tfx-icon.scroll { --c: #F2E6C8; } .tfx-icon.letter { --c: #FF8A7A; } .tfx-icon.snip { --c: #BCC4D0; }
+        @keyframes tfxPop { 0% { transform: scale(0.2); opacity: 0; } 30% { transform: scale(1.2); opacity: 1; } 100% { transform: scale(1.6); opacity: 0; } }
+        .tfx-spark { width: 6px; height: 6px; margin: -3px; border-radius: 50%; background: #FFF4B0; box-shadow: 0 0 8px #FFE070;
+          animation: tfxSpark 0.9s ease-out 0.1s both; }
+        @keyframes tfxSpark { 0% { transform: rotate(var(--a)) translateX(0); opacity: 1; } 100% { transform: rotate(var(--a)) translateX(64px); opacity: 0; } }
+        .tfx-coin { width: 14px; height: 14px; margin: -7px; border-radius: 50%; background: #F2C440; border: 2px solid #8A6A10;
+          left: calc(50% + var(--x)) !important; top: 10% !important; animation: tfxCoin 1s cubic-bezier(0.4,0,0.8,0.6) var(--d) both; }
+        .tfx-coin.sparks { width: 5px; height: 5px; border: none; background: #FFB040; box-shadow: 0 0 6px #FF8A20; }
+        @keyframes tfxCoin { 0% { transform: translateY(-20px); opacity: 0; } 20% { opacity: 1; } 100% { transform: translateY(110px); opacity: 0; } }
+        .tfx-hole { width: 30px; height: 30px; margin: -15px; border-radius: 50%; background: radial-gradient(circle, #000, transparent 70%); animation: tfxHole 1.1s ease-in both; }
+        .tfx-hole.h2 { border: 3px solid var(--c); background: none; animation-delay: 0.15s; }
+        @keyframes tfxHole { 0% { transform: scale(0.2); opacity: 0; } 40% { transform: scale(2.4); opacity: 1; } 100% { transform: scale(0.1); opacity: 0; } }
+        .tfx-orbit { width: 10px; height: 10px; margin: -5px; border-radius: 50%; background: var(--c); box-shadow: 0 0 8px var(--c); animation: tfxOrbit 1.1s ease-in-out both; }
+        @keyframes tfxOrbit { 0% { transform: rotate(var(--a)) translateX(10px); opacity: 0; } 30% { opacity: 1; } 100% { transform: rotate(calc(var(--a) + 360deg)) translateX(56px); opacity: 0; } }
+        .tfx-ray { width: 3px; height: 70px; margin: -70px -1.5px 0; transform-origin: 50% 100%; background: linear-gradient(transparent, #FFF0A0);
+          transform: rotate(var(--a)); animation: tfxRay 1s ease-out both; }
+        @keyframes tfxRay { 0% { opacity: 0; transform: rotate(var(--a)) scaleY(0.2); } 30% { opacity: 1; } 100% { opacity: 0; transform: rotate(var(--a)) scaleY(1.4); } }
+        .tfx-puff { width: 40px; height: 40px; margin: -20px; border-radius: 50%; background: rgba(200,192,216,0.5); filter: blur(4px); animation: tfxPop 0.9s ease-out both; }
+        .tfx-cannon-body { width: 34px; height: 16px; margin: 30px 0 0 -75px; border-radius: 4px 8px 8px 4px; background: #3A3A42; box-shadow: inset 0 -3px #22222A;
+          transform: rotate(-30deg); animation: tfxRecoil 0.4s ease-out both; }
+        @keyframes tfxRecoil { 0% { transform: rotate(-30deg) translateX(0); } 30% { transform: rotate(-30deg) translateX(-8px); } 100% { transform: rotate(-30deg) translateX(0); } }
+        .tfx-ball { width: 14px; height: 14px; margin: -7px; border-radius: 50%; background: #1A1A22; box-shadow: 0 0 0 2px #5A5A66;
+          animation: tfxBall 0.6s cubic-bezier(0.3,0,0.7,1) both; }
+        @keyframes tfxBall { 0% { transform: translate(-60px, 30px); } 50% { transform: translate(0, -40px); } 100% { transform: translate(55px, 0); } }
+        .tfx-boom { width: 30px; height: 30px; margin: -15px; border-radius: 50%; left: calc(50% + 55px) !important;
+          background: radial-gradient(circle, #FFF8C0, #FF9A3A 50%, transparent 72%); animation: tfxBoom 0.6s ease-out 0.55s both; }
+        @keyframes tfxBoom { 0% { transform: scale(0.2); opacity: 0; } 30% { transform: scale(2.4); opacity: 1; } 100% { transform: scale(3); opacity: 0; } }
+        .tfx-shard { width: 5px; height: 5px; margin: -2.5px; left: calc(50% + 55px) !important; background: #FFB040; border-radius: 1px;
+          animation: tfxSpark 0.6s ease-out 0.6s both; }
+        .tfx-splash { width: 26px; height: 8px; margin: -4px -13px; left: calc(50% + 55px) !important; border-radius: 50%; border: 2px solid #C8C0D8; animation: tfxRing 0.6s ease-out 0.55s both; }
+        @media (prefers-reduced-motion: reduce) { .tfx * { animation-duration: 0.01ms !important; } }
+        .adv-lv { display: flex; align-items: center; gap: 8px; margin: 10px 4px 4px; font-size: 11px; color: var(--parchment); }
+        .adv-lv b { color: var(--gold); font-family: 'Cinzel', serif; letter-spacing: 0.04em; font-size: 12px; }
+        .adv-lv-st { font-style: normal; font-size: 10px; color: #FFD860; }
+        .adv-lv-bar { flex: 1; height: 6px; border-radius: 3px; background: rgba(255,255,255,0.08); overflow: hidden; }
+        .adv-lv-bar i { display: block; height: 100%; background: linear-gradient(90deg, #7AE08E, #F6DE96); border-radius: 3px; transition: width 0.6s ease; }
+        .adv-lv em { font-style: normal; font-size: 10px; color: var(--muted); min-width: 64px; text-align: right; }
+        .lv-pop .mei-pop-in { background: rgba(20,14,36,0.92); border: 1px solid rgba(246,222,150,0.6); border-radius: 14px; padding: 18px 22px; }
+        .lv-pop-t { font-family: 'Cinzel', serif; font-size: 26px; letter-spacing: 0.12em; color: #F6DE96; text-shadow: 0 0 12px rgba(246,222,150,0.6); }
+        .lv-pop-lv { font-size: 14px; color: var(--parchment); }
+        .lv-pop-line { font-size: 12px; color: #9fe8b0; }
+        .lv-pop-line.eq { color: #FFD860; }
+        .eq-cell.lvlock { opacity: 0.55; }
+        .eq-lvlock { display: block; font-size: 9.5px; color: #FF9A8A; margin-top: 2px; }
         .adv-ask-row { display: flex; gap: 10px; justify-content: center; align-items: center; flex-wrap: wrap; margin-top: 6px; }
         .adv-ask-row .adv-go { width: auto; min-width: 150px; padding: 10px 18px; }
         .gm-slots-t { font-size: 11px; color: var(--gold-soft); display: flex; gap: 8px; align-items: baseline; }
@@ -128676,6 +129550,9 @@ export default function TarotDraw() {
           font-size: 12px; padding: 3px 12px; border-radius: 10px;
           background: #F08C6E; color: #1A1226; font-weight: 700;
         }
+        /* 料理の札（一瞬だけ）。⚠️ 下の盤やボタンを押せるように、触れても受けない */
+        .mei-pop.gm-quick { pointer-events: none; background: rgba(7,4,16,0.35); animation: gmQuick var(--gmq, 1500ms) ease both; }
+        @keyframes gmQuick { 0% { opacity: 0; } 12%, 78% { opacity: 1; } 100% { opacity: 0; } }
         @keyframes meiPop {
           0% { opacity: 0; transform: scale(0.8) translateY(8px); }
           100% { opacity: 1; transform: scale(1) translateY(0); }
@@ -129696,6 +130573,9 @@ export default function TarotDraw() {
           transition: width 320ms cubic-bezier(0.3,0,0.2,1);
         }
         .adv-hp-num { font-family: 'Cinzel', serif; font-size: 11px; color: #9FE0A6; }
+        .adv-hp-chests { display: inline-flex; align-items: center; gap: 1px; margin-right: 2px; }
+        .adv-hp-chests > svg, .adv-hp-chests > span { flex: none; }
+        .adv-hp-chests > i { font-style: normal; font-size: 10px; color: #FFE9A8; margin-left: 2px; }
         /*
           起きたこと。
           ⚠️ 畳んだ見出しに最新の一行を出す。開かないと何も分からないのでは不便。
