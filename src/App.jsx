@@ -14588,15 +14588,39 @@ function statResistOf(S) {
   return ["power", "guard", "speed", "vital", "skill", "mind", "spirit", "luck"]
     .reduce((x, k) => x + STAT_RESIST_EACH * ((S[k] || 0) / ((S[k] || 0) + 100)), 0);
 }
-function debuffBlockRate(move, eqb, sk, S) {
+/*
+  【敵の耐性無視・耐性貫通】2026-11-02 Aki「耐性貫通するデバフ」「耐性20%なら耐性無視20%みたいな敵のパラメーター」。
+  ★ ign（耐性無視）… こちらの耐性（防ぐ率）から、この割合ぶん引く（耐性20%・無視20% → 0%）。割合の点の引き算。上限 PIERCE_IGN_CAP。
+  ★ thru（貫通）… 並べた妨害は耐性を丸ごと無視する（防ぐ率 0）。⚠️ 慎重に：複数の妨害へ付けるのは超強いボスと蠍座モチーフのボスだけ。
+  ⚠️ 既定はすべて無し（今の釣り合いは動かさない）。どの敵に付けるかは下の表に足す。
+      PIERCE_BY_STAR  … 主（雑魚は対象外）の★ごと。例：{ 12: { ign: 0.1 } }
+      PIERCE_BY_ELEM  … 主のタイプ（foeElemOf）ごと。例：{ dark: { thru: ["rot"] } }
+      デバッグ：window.__ooPierce = { ign: 0.2, thru: ["rot"] } で全員に付けて確かめられる。
+  ⚠️ 防ぐ手段のうち「状態異常ガード」「次のターンまで受けない」「隠者・太陽」「エターナル」は貫通しない（耐性だけを無視する）。
+*/
+const PIERCE_IGN_CAP = 0.3;
+const PIERCE_BY_STAR = {};
+const PIERCE_BY_ELEM = {};
+function foePierceOf(star, zako, elem) {
+  let o = null;
+  try { if (typeof window !== "undefined" && window.__ooPierce) o = window.__ooPierce; } catch (e) { /* */ }
+  if (!o && !zako) {
+    const a1 = PIERCE_BY_STAR[star | 0], b1 = PIERCE_BY_ELEM[elem];
+    if (a1 || b1) o = { ign: ((a1 && a1.ign) || 0) + ((b1 && b1.ign) || 0), thru: [...((a1 && a1.thru) || []), ...((b1 && b1.thru) || [])] };
+  }
+  return o ? { ign: Math.max(0, Math.min(PIERCE_IGN_CAP, o.ign || 0)), thru: o.thru || [] } : null;
+}
+function debuffBlockRate(move, eqb, sk, S, pierce) {
   const k = DEBUFF_WARD_KEY[move];
   if (!k) return 0;
+  if (pierce && pierce.thru && pierce.thru.indexOf(move) >= 0) return 0;
   /* ⚠️ 装備（その耐性＋打ち消し）・マス・料理は、それぞれの上限で止めてから足す */
   const eqP = Math.min(EQUIP_WARD_CAP, ((eqb && eqb[k]) || 0) + ((eqb && eqb.nullify) || 0)) / 100;
   const runP = Math.min(ADV_RUN_CAP.res, ((eqb && eqb.runRes && eqb.runRes[k]) || 0)) / 100;
   const cookP = Math.min(COOK_WARD_CAP, ((eqb && eqb.cookRes && eqb.cookRes[k]) || 0)) / 100;
   const skP = ((sk && sk.ward && sk.ward[SKILL_WARD_OF[k] || k]) || 0) / 100;
-  return Math.min(DEBUFF_BLOCK_CAP, eqP + runP + cookP + skP + statResistOf(S));
+  const tot = Math.min(DEBUFF_BLOCK_CAP, eqP + runP + cookP + skP + statResistOf(S));
+  return pierce && pierce.ign ? Math.max(0, tot - pierce.ign) : tot;
 }
 function equipBlocks(bonus, moveKind) {
   if (!bonus) return false;
@@ -79342,6 +79366,23 @@ function BattlePanel({ lang, star, stageName, onEnd, theme, rank, zako, startHP,
   */
   const S0base = useMemo(() => statsOf(rank || 0), [rank]);
   const S0 = useMemo(() => (runK.hp === 1 ? S0base : { ...S0base, maxHP: Math.max(1, Math.round(S0base.maxHP * runK.hp)) }), [S0base, runK]);
+  /* ★ 戦闘画面の遺物の説明（2026-11-02 Aki）。マウスは乗せているあいだ／タップは数秒、離れる・外を触る・時間で消える */
+  const [relTip, setRelTip] = useState(null);
+  const relTipT = useRef(0);
+  const hideRelTip = () => { clearTimeout(relTipT.current); setRelTip(null); };
+  const showRelTip = (e, id, hold) => {
+    const r = e.currentTarget.getBoundingClientRect();
+    clearTimeout(relTipT.current);
+    setRelTip({ id, x: r.left + r.width / 2, top: r.top, bottom: r.bottom });
+    if (!hold) relTipT.current = setTimeout(() => setRelTip(null), 2600);
+  };
+  useEffect(() => {
+    if (!relTip) return undefined;
+    const off = (e) => { if (!(e.target && e.target.closest && e.target.closest(".rel-it"))) hideRelTip(); };
+    document.addEventListener("pointerdown", off, true);
+    return () => document.removeEventListener("pointerdown", off, true);
+  }, [relTip]);
+  useEffect(() => () => clearTimeout(relTipT.current), []);
   const [st, setSt] = useState(() => ({
     /* ⚠️ 削られたまま入れること。全快で始めると持ち越しが無意味になる */
     /* ★ 遺物「応急の包み」：始めに最大HPの10%回復 */
@@ -81450,7 +81491,7 @@ function BattlePanel({ lang, star, stageName, onEnd, theme, rank, zako, startHP,
       if ((next.actGuard || 0) > 0) return false;
       if ((k === "roar" || k === "despair" || k === "rot") && s.fx.hermit > 0) return false;
       if ((k === "roar" || k === "despair") && s.fx.sun > 0) return false;
-      if (DEBUFF_WARD_KEY[k] && Math.random() < debuffBlockRate(k, s.eq, s.sk, next.stats || S0)) return false;
+      if (DEBUFF_WARD_KEY[k] && Math.random() < debuffBlockRate(k, s.eq, s.sk, next.stats || S0, foePierceOf(setup.star, setup.zako, foeElemOf(i, stageName)))) return false;
       if (k === "roar") {
         if (s.turnNext && s.turnNext.suit === "pentacles") return false;
         const before = next.mult;
@@ -81629,7 +81670,7 @@ function BattlePanel({ lang, star, stageName, onEnd, theme, rank, zako, startHP,
         return;
       }
       if (DEBUFF_WARD_KEY[move]
-        && Math.random() < debuffBlockRate(move, s.eq, s.sk, next.stats || S0)) {
+        && Math.random() < debuffBlockRate(move, s.eq, s.sk, next.stats || S0, foePierceOf(setup.star, setup.zako, foeElemOf(i, stageName)))) {
         next.note = a.resisted;
         pop("me", a.resisted, "info");
         fx(`foe${i}`, "block");
@@ -82591,7 +82632,7 @@ function BattlePanel({ lang, star, stageName, onEnd, theme, rank, zako, startHP,
             const t = (st.relFire || {})[id] || 0;
             const R = REL_BY_ID[id];
             return (
-              <span key={`${id}-${t}`} className={`rel-it${RELIC_ART_READY[id] ? " art" : ""}${t ? " fire" : ""}${(id === "maw" && (runK.relCnt || {}).mawBroken) || (id === "lizard" && ((runK.relCnt || {}).lizardUsed || st.relRevived)) || (id === "bones" && ((runK.relCnt || {}).bonesUsed || st.relBonesUsed)) ? " spent" : ""}`} style={{ "--tc": ACT_TIER_COLOR[(R && R.tier) || 1] }} title={`${relT(lang).name[id] || id}：${relT(lang).desc[id] || ""}`}>
+              <span key={`${id}-${t}`} className={`rel-it${RELIC_ART_READY[id] ? " art" : ""}${t ? " fire" : ""}${(id === "maw" && (runK.relCnt || {}).mawBroken) || (id === "lizard" && ((runK.relCnt || {}).lizardUsed || st.relRevived)) || (id === "bones" && ((runK.relCnt || {}).bonesUsed || st.relBonesUsed)) ? " spent" : ""}`} style={{ "--tc": ACT_TIER_COLOR[(R && R.tier) || 1] }} onPointerEnter={(e) => { if (e.pointerType === "mouse") showRelTip(e, id, true); }} onPointerLeave={(e) => { if (e.pointerType === "mouse") hideRelTip(); }} onClick={(e) => showRelTip(e, id, false)}>
                 <RelIcon id={id} size={RELIC_ART_READY[id] ? (runK.rel.length > 9 ? 19 : 25) : (runK.rel.length > 9 ? 12 : 15)} />
                 {R && R.stack ? <i>{(runK.relCnt || {})[id] || 0}</i> : null}
                 {id === "ancient" && st.relAnc && DECK_MARKS[st.relAnc] ? (() => { const DMa = DECK_MARKS[st.relAnc]; return <b className="rel-sub"><DMa.Icon size={8} color={DMa.color} strokeWidth={3} /></b>; })() : null}
@@ -82601,6 +82642,21 @@ function BattlePanel({ lang, star, stageName, onEnd, theme, rank, zako, startHP,
           })}
         </div>
       )}
+      {relTip && typeof document !== "undefined" && ((() => {
+        const R = REL_BY_ID[relTip.id];
+        const SS = REL_SET_OF[relTip.id];
+        const W = typeof window !== "undefined" ? window.innerWidth : 400;
+        const left = Math.max(112, Math.min(W - 112, relTip.x));
+        const below = relTip.top < 110;
+        const tc = ACT_TIER_COLOR[(R && R.tier) || 1];
+        return (
+          <div className="rel-tip" style={{ left, top: below ? relTip.bottom + 8 : relTip.top - 8, transform: below ? "translate(-50%, 0)" : "translate(-50%, -100%)", borderColor: tc }}>
+            <b style={{ color: tc }}>{relT(lang).name[relTip.id] || relTip.id}</b>
+            {SS ? <em>{lang === "ja" ? SS.ja : SS.en}</em> : null}
+            <span>{relT(lang).desc[relTip.id] || ""}</span>
+          </div>
+        );
+      })())}
       {/* ⚠️ 「魔術師のみ」のスイッチはデバッグ画面へ移した（戦闘の横の列を詰めるため） */}
       {/*
         盾と消耗品。
@@ -82641,7 +82697,7 @@ function BattlePanel({ lang, star, stageName, onEnd, theme, rank, zako, startHP,
             <span key={k} className={`act-ban-i${b.ok ? "" : " miss"}`} style={{ "--tc": ACT_TIER_COLOR[b.lv], animationDelay: `${k * 320}ms` }}>
               {st.act && <SkillMark build={st.act.build} n={b.n} lv={b.lv} size={20} />}
               {st.act && <ActPatternMarks build={st.act.build} n={b.n} size={11} />}
-              <b>{b.nm}</b>{!b.ok && <em>{actT(lang).miss}</em>}
+              <b>{b.nm}</b>
               {actBan.list.length > 1 && k > 0 && <i className="act-ban-x">{actT(lang).chain(k + 1)}</i>}
             </span>
           ))}
@@ -107995,7 +108051,7 @@ const HERO_I18N = {
     choose: "この星座にする", current: "選択中", build: (b) => `${b}のビルド`,
     stageNote: "区分の1面で見習い（ビルド）を、4面目でそのビルドの星座を選びます。放置のときは見習いも専門もランダムで進みます。ここでは見た目（A・B・C）と、星座ごとの姿を見られます。7面目と区分の主では覚醒の姿になります。",
     formBase: "通常の姿", formAw: "覚醒の姿",
-    pickApp: "見習いを選ぶ", pickAppLead: "この区分の旅をどのビルドで進めるか選びます。区分の主を倒すか全滅するまで変わりません。",
+    pickLook: "見た目", pickLookQ: "どの姿で旅をしますか？（見た目は、あとからキャラ画面でも変えられます）", pickApp: "見習いを選ぶ", pickAppLead: "この区分の旅をどのビルドで進めるか選びます。区分の主を倒すか全滅するまで変わりません。",
     pickSign: "専門を選ぶ", pickSignLead: "4面目からは、選んだ星座の姿で旅をします。",
     back: "戻る",
     appRow: "見習い（1〜3面・スタイルで決まる）",
@@ -108006,7 +108062,7 @@ const HERO_I18N = {
     choose: "Choose this sign", current: "Chosen", build: (b) => `${b} build`,
     stageNote: "At stage 1 of an area you pick an apprentice (your build); at stage 4 you pick a sign of that build. In idle mode the apprentice and the sign are picked at random. Here you can set your look (A/B/C) and browse every sign. From stage 7 and against the area boss you take your awakened form.",
     formBase: "Base form", formAw: "Awakened",
-    pickApp: "Choose your apprentice", pickAppLead: "Pick the build for this area's journey. It stays until you beat the area boss or fall.",
+    pickLook: "Look", pickLookQ: "Which look will you travel with? (You can change it later on the Characters screen.)", pickApp: "Choose your apprentice", pickAppLead: "Pick the build for this area's journey. It stays until you beat the area boss or fall.",
     pickSign: "Choose your specialty", pickSignLead: "From stage 4 you travel in the form of the sign you choose.",
     back: "Back",
     appRow: "Apprentices (stages 1–3, set by your style)",
@@ -108267,7 +108323,11 @@ function HeroEvolveHost({ lang }) {
 function HeroPickModal({ lang, kind, suit, onPick, onCancel }) {
   const t = heroT(lang);
   const C = OO_CHARS3.CHARS;
-  const look = loadHero().l;
+  /* ★ 2026-11-02 Aki「見習いを選ぶ前に性別（見た目 A中性／B男／C女）を選ぶ」：選んだらすぐ保存して、下の見習いの絵も替わる */
+  /* ⚠️ 見習いの絵を見せる前に、まず見た目を選ばせる（kind=app のとき）。選んだら絵を出す。専門の画面は今までどおり */
+  const [look, setLookSt] = useState(() => loadHero().l);
+  const [lookDone, setLookDone] = useState(kind !== "app");
+  const setLook = (l) => { setLookSt(l); saveHero({ ...loadHero(), l }); setLookDone(true); };
   const keys = kind === "app" ? HERO_SUITS.map((su) => `app_${su}`) : (HERO_SUIT_SIGNS[suit] || HERO_SUIT_SIGNS.swords);
   const def = kind === "app" ? `app_${heroBuildDefault()}` : heroSignDefault(suit);
   const nameOf = (k) => (kind === "app" ? t.appName[k] : lang === "ja" ? C[k].ja : t.name[k]);
@@ -108277,7 +108337,17 @@ function HeroPickModal({ lang, kind, suit, onPick, onCancel }) {
       <div className="hero-pick-box">
         <p className="hero-pick-t">{kind === "app" ? t.pickApp : t.pickSign}</p>
         <p className="hero-pick-lead">{kind === "app" ? t.pickAppLead : t.pickSignLead}</p>
-        <div className={`hero-pick-grid${kind === "app" ? " four" : ""}`}>
+        {kind === "app" && !lookDone && (
+          <div className="hero-look-first">
+            <p className="hero-look-q">{t.pickLookQ}</p>
+            <div className="hero-look-btns" role="group" aria-label={t.pickLook}>
+              {["a", "b", "c"].map((l) => (
+                <button key={l} type="button" className={`hero-look-btn${look === l ? " last" : ""}`} onClick={() => setLook(l)}>{t.looks[l]}</button>
+              ))}
+            </div>
+          </div>
+        )}
+        {lookDone && <div className={`hero-pick-grid${kind === "app" ? " four" : ""}`}>
           {keys.map((k) => (
             <button key={k} type="button" className={`hero-pick-cell${k === def ? " last" : ""}`}
               onClick={() => onPick(kind === "app" ? k.replace("app_", "") : k)}>
@@ -108286,7 +108356,7 @@ function HeroPickModal({ lang, kind, suit, onPick, onCancel }) {
               <small>{subOf(k)}</small>
             </button>
           ))}
-        </div>
+        </div>}
         {onCancel && <button type="button" className="adv-back hero-pick-back" onClick={onCancel}>{t.back}</button>}
       </div>
     </div>
@@ -113885,19 +113955,27 @@ function AdventurePanel({ lang, items, onItem }) {
     const up = Math.random() < (equipBonus(equippedGear()).chestUp || 0) / 100 ? 1 : 0;
     const ch = pushChest(laneStar, { pref, area }, seekBox(), hi || 0, Math.max(0, (star | 0) - laneStar) + up);
     addRunChests([ch.id]);
-    chestRelic();
     return ch;
   };
-  /* ★ 宝箱から遺物（REL_CHEST_RATE の注）。遺物のマスと同じ引き方（relDraw） */
-  const chestRelic = () => {
+  /*
+    ★ 宝箱から遺物（REL_CHEST_RATE の注）。2026-11-02 Aki「ボスを倒したあとに、MAPで集めた宝箱を開けるなら、遺物の抽選もそこで」：
+      拾った瞬間ではなく、主を倒して宝箱が確定するとき、この面で集めた箱の数だけ REL_CHEST_RATE で引く（一つの面で REL_CHEST_CAP まで）。
+      ⚠️ 倒せずに終わった（全滅・道をそれた）面では引かない。引いた遺物は次の面から効く。遺物のマスと同じ引き方（relDraw）
+  */
+  const chestRelicAtBoss = () => {
     const m = runModRef.current;
-    if (!REL_CHEST_ON || !m.areaRun || (m.relChest || 0) >= REL_CHEST_CAP || Math.random() >= REL_CHEST_RATE) return;
+    if (!REL_CHEST_ON || !m.areaRun) return null;
+    const n = runChestsAlive(m.chests).length;
+    let hit = 0;
+    for (let i = 0; i < n && (m.relChest || 0) + hit < REL_CHEST_CAP; i++) if (Math.random() < REL_CHEST_RATE) hit++;
+    if (!hit) return null;
     const left = relOfferable(m.relics, m.build);
-    if (!left.length) return;
+    if (!left.length) return null;
     const id = relDraw(left, m);
     modRun((mm) => ({ ...mm, relChest: (mm.relChest || 0) + 1 }));
     setLog((l) => [...l, lang === "ja" ? "【宝箱】遺物が入っていた" : "【Chest】A relic was inside"]);
     relGain(id);
+    return id;
   };
   const chestText = (ch) => (ch.hi ? a.advChestHi(ch.hi) : a.advChest(`${tierStars(ch.tier)}・${chestRarName(ch.rar, lang)}`));
   /*
@@ -113966,7 +114044,20 @@ function AdventurePanel({ lang, items, onItem }) {
       if (ok) { grantBossSure(); SFX.chime("maj"); }
       setLog((l) => [...l, ok ? TK.ok(TK.name[k]) : TK.ng(TK.name[k])]);
     }, 1300));
-    timers.current.push(setTimeout(() => setTkRoll(null), 2700));
+    timers.current.push(setTimeout(() => {
+      setTkRoll(null);
+      /* ★ 2026-11-02 Aki「チケットが成功したのにタロットカードを引くのはおかしい。成功したら即座にボスへ」：演出が終わったら札を配らず主のマスへ移る
+         （小MAPの「大当たり」と同じ移り方）。外れたら今までどおり三択 */
+      if (ok) {
+        const B = map.find((n) => n.kind === "boss");
+        if (B) {
+          setPool(null); setPicked([]);
+          setAt(B.key);
+          setVisited((v) => (v.includes(B.key) ? v : [...v, B.key]));
+          setSteps((n) => n + 1);
+        }
+      }
+    }, 2700));
   };
   /* 最大HPを動かす。⚠️ 下げたら今のHPも上限まで。上げたら増えたぶんだけ今のHPも増やす */
   /*
@@ -115744,6 +115835,13 @@ function AdventurePanel({ lang, items, onItem }) {
             ))}
           </div>
         ))}
+        {/* ★ 2026-11-02 Aki「地の利・天の利の下に増幅・耐性・魔法・物理の倍率変動も（盤が見づらくなるので）」：盤の上から外へ移した */}
+        <div className="adv-curse out">
+          {["charge", "res", "magic", "phys"].map((sl) => {
+            const c = runChips.find((x) => x.slot === sl);
+            return c ? runChipEl({ ...c, items: c.items.length ? c.items : [{ t: "—", none: true }] }, `fx${sl}`) : null;
+          })}
+        </div>
       </div>
       <div className={`adv-iso-wrap${tileFx ? (tileFx.tone < 0 ? " fx-bad" : tileFx.tone > 0 ? " fx-good" : " fx-none") : ""}`} ref={mapRef}>
       <TileFx fx={tileFx} />
@@ -115954,12 +116052,6 @@ function AdventurePanel({ lang, items, onItem }) {
         ★ ほかの変化・封印は下（ルーレット残りの上）へ。
       */}
       {chipTip && <div key={chipTip.id} className="adv-chiptip" role="status">{chipTip.t}</div>}
-      <div className="adv-curse">
-        {["charge", "res", "magic", "phys"].map((sl) => {
-          const c = runChips.find((x) => x.slot === sl);
-          return c ? runChipEl({ ...c, items: c.items.length ? c.items : [{ t: "—", none: true }] }, `fx${sl}`) : null;
-        })}
-      </div>
       {(mapCurse.elem || mapCurse.noSp || (mapCurse.spSeal || []).length > 0 || runChips.some((x) => !x.slot)) && (
         <div className="adv-curse2">
           {mapCurse.elem && <span>{a.curseTag.elem((a.familyName && a.familyName[mapCurse.elem]) || mapCurse.elem)}</span>}
@@ -116396,6 +116488,7 @@ function AdventurePanel({ lang, items, onItem }) {
               const ctx = runCtxOf(walking);
               if (ctx) {
                 const r0 = loadAreaRun(ctx.mark);
+                chestRelicAtBoss();
                 const m = runModRef.current;
                 /* ★ 遺物「貯金箱」：面をクリアするたび+2 */
                 const coin = fracRound(((m.coin || 0) + g + (relHas(m, "piggy") ? REL_K.piggy : 0)
@@ -136305,6 +136398,10 @@ function TarotDrawMain() {
         .adv-curse { right: 64px; gap: 1px; }
         span.line > i.none { color: rgba(237,228,255,0.45); }
         /* 下の段（封印・回復・ボス確定など）。⚠️ 下から上へ積む。二段まで（自キャラに届かない） */
+        /* ★ 盤の外（地の利・天の利の下）へ移した四行。折り返して全部見せる */
+        .adv-curse.out { position: static; right: auto; left: auto; top: auto; gap: 3px; pointer-events: auto; margin-top: 1px; }
+        .adv-curse.out span.line { flex-wrap: wrap; overflow: visible; max-width: 100%; font-size: 11px; line-height: 17px; padding: 0 7px; -webkit-mask-image: none; mask-image: none; }
+        .adv-curse.out span.line b { font-size: 11px; font-weight: 700; color: #FFE08A; margin-right: 2px; }
         .adv-curse2 { position: absolute; left: 8px; right: 8px; bottom: 58px; z-index: 5; pointer-events: none;
           display: flex; flex-wrap: wrap-reverse; gap: 3px; max-height: 36px; overflow: hidden; }
         .adv-curse2 span { font-size: 10px; line-height: 15px; padding: 0 7px; border-radius: 8px; color: #FFE0E6;
@@ -144171,6 +144268,12 @@ function TarotDrawMain() {
         .hero-name i { font-style: normal; margin-right: 6px; color: #E8C46A; }
         .hero-sub { margin: 0 0 8px; font-size: 12px; opacity: 0.8; }
         .hero-line { margin: 0 0 12px; font-size: 13px; line-height: 1.7; }
+        .hero-look-first { margin: 10px 0 6px; }
+        .hero-look-q { font-size: 13px; color: #EDE4FF; text-align: center; margin: 0 0 12px; line-height: 1.5; }
+        .hero-look-btns { display: flex; flex-direction: column; gap: 10px; }
+        .hero-look-btn { padding: 18px 8px; border-radius: 14px; cursor: pointer; font-size: 17px; font-weight: 700; color: #F4EEFF; letter-spacing: 0.08em;
+          background: rgba(40,30,80,0.7); border: 1.5px solid rgba(190,170,255,0.45); }
+        .hero-look-btn.last { border-color: rgba(232,196,106,0.85); color: #F4D98A; }
         .hero-seg { display: flex; gap: 6px; margin: 0 0 10px; }
         .hero-seg button { flex: 1 1 0; padding: 8px 4px; border-radius: 10px; cursor: pointer; font-size: 13px;
           border: 1px solid rgba(255,243,214,0.24); background: rgba(28,22,58,0.62); color: #FFF3D6; white-space: nowrap; }
@@ -144987,6 +145090,11 @@ function TarotDrawMain() {
           background: radial-gradient(circle at 35% 28%, rgba(255,255,255,0.20), rgba(0,0,0,0.28) 70%);
           box-shadow: inset 0 0 0 1.5px var(--tc, rgba(255,235,190,0.38)), 0 0 5px color-mix(in srgb, var(--tc, #C9D2DC) 45%, transparent); }
         .rel-shelf.dense .rel-it { width: 18px; height: 18px; border-radius: 5px; }
+        .rel-it { cursor: pointer; }
+        .rel-tip { position: fixed; z-index: 99999; width: max-content; max-width: 224px; box-sizing: border-box; padding: 7px 10px; border-radius: 9px; border: 1.5px solid #FFE08A;
+          background: rgba(18, 12, 38, 0.96); color: #F4EEFF; font-size: 11.5px; line-height: 1.45; text-align: left; pointer-events: none; white-space: pre-line; box-shadow: 0 4px 14px rgba(0,0,0,0.6); }
+        .rel-tip b { display: block; font-size: 12.5px; margin-bottom: 2px; }
+        .rel-tip em { display: block; font-style: normal; font-size: 10px; color: #C9BFE8; margin-bottom: 2px; }
         .rel-it.fire { animation: relFire 0.9s ease-out; }
         .rel-it.spent { filter: grayscale(1); opacity: 0.45; }
         /* ★ 遺物の絵（台つき）。⚠️ 棚の枠は描かない（台が枠の代わり） */
